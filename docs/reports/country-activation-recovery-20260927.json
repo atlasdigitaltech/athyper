@@ -1,0 +1,304 @@
+{
+  "schema": "athyper.dev-publication-activation-checkpoint/1",
+  "capturedAt": "2026-09-27T05:19:04.779Z",
+  "releaseId": "1efcf86a-75e3-4a79-9154-ea62f5abdc7d",
+  "sourceSignature": {
+    "releaseId": "1efcf86a-75e3-4a79-9154-ea62f5abdc7d",
+    "keyId": "athyper-dev-publication-ed25519-20260905",
+    "signatureVerified": true,
+    "publicKeyFingerprint": "sha256:991a13cab4e7c9b916d1ac55d58a28ea6abc6612f61c0607c82a775ef6b583c9"
+  },
+  "runtimeTrust": {
+    "keyId": "athyper-publication-dev-signing-v1",
+    "domain": "dev",
+    "manifestSchema": "athyper.dev-publication-trust/1",
+    "fingerprint": "sha256:17d9e7f7a4941edd93c9f5259395938f75004c8cce8e33a5e28d986c169c8646",
+    "signVerify": true,
+    "legacyKeyExcluded": true
+  },
+  "planes": {
+    "studio": {
+      "rows": {
+        "count": 247
+      },
+      "heads": [
+        {
+          "head": {
+            "row_version": 1,
+            "activated_at": "2026-09-27T05:17:14.046248+00:00",
+            "artifact_hash": "c5e28fb0cf3de4c566916a4bca1139714fccf0aaed46ed1a3e761f64d8f5864c",
+            "publication_key": "metadata.reference.country",
+            "source_release_no": 1,
+            "applied_release_id": "01a0e14b-c3b6-7dec-8926-881234ffc023"
+          }
+        }
+      ],
+      "applied": [
+        {
+          "applied": {
+            "id": "01a0e14b-c3b6-7dec-8926-881234ffc023",
+            "status": "active",
+            "manifest": {
+              "compiler": {
+                "name": "athyper.compiled-entity-artifact",
+                "version": "1.0.0"
+              },
+              "evidence": {
+                "sourceRevisionId": "01a0de4c-fb22-753e-8f4e-1d5cdf97d45b",
+                "sourceContractHash": "a9d1b21360b9ac72a181b52a13e0975e67e6370b25105ad3f7399d50c9257454",
+                "sourceDescriptorHash": "5d46ec092a33a02c117fd46c54d13216da91f481aa2ff1c0bd6b9cac75fe40e0",
+                "qualificationReceiptSha256": "53e6e27f2576aa066ff92ac25351a258c615aee786f74156b7678ec727b7bff4"
+              },
+              "createdAt": "2026-09-27T04:57:34.311Z",
+              "mediaType": "application/vnd.athyper.publication-artifact.v1+json",
+              "releaseId": "1efcf86a-75e3-4a79-9154-ea62f5abdc7d",
+              "releaseNo": 1,
+              "targetPlane": "studio",
+              "artifactKind": "compiled_entity_runtime",
+              "signingKeyId": "athyper-publication-dev-signing-v1",
+              "payloadSha256": "6feb4f561b04620c1378a1c6687601f77705c5571711937e97793510fdc8ef6c",
+              "artifactSchema": "athyper.publication-artifact.v1",
+              "publicationKey": "metadata.reference.country",
+              "signatureAlgorithm": "Ed25519",
+              "contractSchemaVersion": "2.0.0",
+              "descriptorSchemaVersion": "2.0.0"
+            },
+            "staged_at": "2026-09-27T05:17:14.037591+00:00",
+            "created_by": "athyper_worker",
+            "rejected_at": null,
+            "verified_at": "2026-09-27T05:17:14.044117+00:00",
+            "activated_at": "2026-09-27T05:17:14.046248+00:00",
+            "failure_code": null,
+            "artifact_hash": "c5e28fb0cf3de4c566916a4bca1139714fccf0aaed46ed1a3e761f64d8f5864c",
+            "deployment_id": "01a0e14b-c32d-70ad-99c1-b0737ed6ad85",
+            "publication_key": "metadata.reference.country",
+            "source_release_id": "1efcf86a-75e3-4a79-9154-ea62f5abdc7d",
+            "source_release_no": 1,
+            "verification_evidence": {
+              "payload_hash": "6feb4f561b04620c1378a1c6687601f77705c5571711937e97793510fdc8ef6c",
+              "target_plane": "studio",
+              "manifest_valid": true,
+              "signing_key_id": "athyper-publication-dev-signing-v1",
+              "runtime_compatible": true,
+              "signature_verified": true,
+              "signature_algorithm": "Ed25519",
+              "payload_schema_version": "2.0"
+            }
+          }
+        }
+      ]
+    },
+    "neon": {
+      "rows": {
+        "count": 247
+      },
+      "heads": [
+        {
+          "head": {
+            "row_version": 1,
+            "activated_at": "2026-09-27T05:17:14.006557+00:00",
+            "artifact_hash": "9aaa40131a3b5fc1d15f58c5102fc006f37b242656f4d76052c2f83b9124972c",
+            "publication_key": "metadata.reference.country",
+            "source_release_no": 1,
+            "applied_release_id": "01a0e14b-c387-73b0-90f5-17fa09561d41"
+          }
+        }
+      ],
+      "applied": [
+        {
+          "applied": {
+            "id": "01a0e14b-c387-73b0-90f5-17fa09561d41",
+            "status": "active",
+            "manifest": {
+              "compiler": {
+                "name": "athyper.compiled-entity-artifact",
+                "version": "1.0.0"
+              },
+              "evidence": {
+                "sourceRevisionId": "01a0de4c-fb22-753e-8f4e-1d5cdf97d45b",
+                "sourceContractHash": "a9d1b21360b9ac72a181b52a13e0975e67e6370b25105ad3f7399d50c9257454",
+                "sourceDescriptorHash": "e6b57d84353f5929ab1dd2b0573a9b38aaf61babf37d6b6ca00c374eb0d9d667",
+                "qualificationReceiptSha256": "520c98d9476e2937e69ea91e5e13c57ae71c2ab20b3ed965687fab3c02192bfb"
+              },
+              "createdAt": "2026-09-27T04:57:34.311Z",
+              "mediaType": "application/vnd.athyper.publication-artifact.v1+json",
+              "releaseId": "1efcf86a-75e3-4a79-9154-ea62f5abdc7d",
+              "releaseNo": 1,
+              "targetPlane": "neon",
+              "artifactKind": "compiled_entity_runtime",
+              "signingKeyId": "athyper-publication-dev-signing-v1",
+              "payloadSha256": "f5933c88befebea69cda2305cf17ba5faf5a24df20eff4c2ba15bd25ed5b8a80",
+              "artifactSchema": "athyper.publication-artifact.v1",
+              "publicationKey": "metadata.reference.country",
+              "signatureAlgorithm": "Ed25519",
+              "contractSchemaVersion": "2.0.0",
+              "descriptorSchemaVersion": "2.0.0"
+            },
+            "staged_at": "2026-09-27T05:17:13.990979+00:00",
+            "created_by": "athyper_worker",
+            "rejected_at": null,
+            "verified_at": "2026-09-27T05:17:14.002799+00:00",
+            "activated_at": "2026-09-27T05:17:14.006557+00:00",
+            "failure_code": null,
+            "artifact_hash": "9aaa40131a3b5fc1d15f58c5102fc006f37b242656f4d76052c2f83b9124972c",
+            "deployment_id": "01a0e14b-c2b5-7759-97f0-9ffc15934f6d",
+            "publication_key": "metadata.reference.country",
+            "source_release_id": "1efcf86a-75e3-4a79-9154-ea62f5abdc7d",
+            "source_release_no": 1,
+            "verification_evidence": {
+              "payload_hash": "f5933c88befebea69cda2305cf17ba5faf5a24df20eff4c2ba15bd25ed5b8a80",
+              "target_plane": "neon",
+              "manifest_valid": true,
+              "signing_key_id": "athyper-publication-dev-signing-v1",
+              "runtime_compatible": true,
+              "signature_verified": true,
+              "signature_algorithm": "Ed25519",
+              "payload_schema_version": "2.0"
+            }
+          }
+        }
+      ]
+    },
+    "mesh": {
+      "rows": {
+        "count": 247
+      },
+      "heads": [
+        {
+          "head": {
+            "row_version": 1,
+            "activated_at": "2026-09-27T05:17:13.949435+00:00",
+            "artifact_hash": "718a8f7a92bca91d485d6dd69c97ca2fc153e0d760a8b6d89da5ca1bc147a106",
+            "publication_key": "metadata.reference.country",
+            "source_release_no": 1,
+            "applied_release_id": "01a0e14b-c351-78ad-b73a-0e3db00eaef7"
+          }
+        }
+      ],
+      "applied": [
+        {
+          "applied": {
+            "id": "01a0e14b-c351-78ad-b73a-0e3db00eaef7",
+            "status": "active",
+            "manifest": {
+              "compiler": {
+                "name": "athyper.compiled-entity-artifact",
+                "version": "1.0.0"
+              },
+              "evidence": {
+                "sourceRevisionId": "01a0de4c-fb22-753e-8f4e-1d5cdf97d45b",
+                "sourceContractHash": "a9d1b21360b9ac72a181b52a13e0975e67e6370b25105ad3f7399d50c9257454",
+                "sourceDescriptorHash": "5de00624ea420c69b7a2280fcefd1dc68f1eab175757be33fdb63bc4db9ca668",
+                "qualificationReceiptSha256": "5d15235ca262adff262b5c69ea2ff38d63d830b8cc3e111183efba12c0025e5c"
+              },
+              "createdAt": "2026-09-27T04:57:34.311Z",
+              "mediaType": "application/vnd.athyper.publication-artifact.v1+json",
+              "releaseId": "1efcf86a-75e3-4a79-9154-ea62f5abdc7d",
+              "releaseNo": 1,
+              "targetPlane": "mesh",
+              "artifactKind": "compiled_entity_runtime",
+              "signingKeyId": "athyper-publication-dev-signing-v1",
+              "payloadSha256": "60ba76a348a2ef37affc585d16c27917a591d8b8820d3486af0179481a5fbfef",
+              "artifactSchema": "athyper.publication-artifact.v1",
+              "publicationKey": "metadata.reference.country",
+              "signatureAlgorithm": "Ed25519",
+              "contractSchemaVersion": "2.0.0",
+              "descriptorSchemaVersion": "2.0.0"
+            },
+            "staged_at": "2026-09-27T05:17:13.936771+00:00",
+            "created_by": "athyper_worker",
+            "rejected_at": null,
+            "verified_at": "2026-09-27T05:17:13.943511+00:00",
+            "activated_at": "2026-09-27T05:17:13.949435+00:00",
+            "failure_code": null,
+            "artifact_hash": "718a8f7a92bca91d485d6dd69c97ca2fc153e0d760a8b6d89da5ca1bc147a106",
+            "deployment_id": "01a0e14b-c2b5-78eb-a829-8d5eee60c247",
+            "publication_key": "metadata.reference.country",
+            "source_release_id": "1efcf86a-75e3-4a79-9154-ea62f5abdc7d",
+            "source_release_no": 1,
+            "verification_evidence": {
+              "payload_hash": "60ba76a348a2ef37affc585d16c27917a591d8b8820d3486af0179481a5fbfef",
+              "target_plane": "mesh",
+              "manifest_valid": true,
+              "signing_key_id": "athyper-publication-dev-signing-v1",
+              "runtime_compatible": true,
+              "signature_verified": true,
+              "signature_algorithm": "Ed25519",
+              "payload_schema_version": "2.0"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "deployments": [
+    {
+      "id": "01a0e14b-c2b5-7759-97f0-9ffc15934f6d",
+      "command_id": "72a0252d-10d9-4173-9322-26a0af6c1240",
+      "artifact_id": "e3514f0d-cc45-4af9-8003-ba22038fedff",
+      "target_plane": "neon",
+      "target_environment": "local",
+      "target_instance": "*",
+      "status": "activated",
+      "attempt_no": 1,
+      "correlation_id": null,
+      "dispatched_at": "2026-09-27T05:17:13.947Z",
+      "received_at": "2026-09-27T05:17:13.988Z",
+      "staged_at": "2026-09-27T05:17:14.001Z",
+      "verified_at": "2026-09-27T05:17:14.004Z",
+      "activated_at": "2026-09-27T05:17:14.014Z",
+      "failed_at": null,
+      "failure_code": null,
+      "failure_detail": null,
+      "created_at": "2026-09-27T05:17:13.674Z",
+      "created_by": "c0febdd1-491c-46b8-8113-160be767b88d"
+    },
+    {
+      "id": "01a0e14b-c2b5-78eb-a829-8d5eee60c247",
+      "command_id": "d9fa1118-ed20-4118-b138-1d2f11f9dc82",
+      "artifact_id": "d51f3dce-cbf0-44ab-a7df-a3d275baee24",
+      "target_plane": "mesh",
+      "target_environment": "local",
+      "target_instance": "*",
+      "status": "activated",
+      "attempt_no": 1,
+      "correlation_id": null,
+      "dispatched_at": "2026-09-27T05:17:13.875Z",
+      "received_at": "2026-09-27T05:17:13.933Z",
+      "staged_at": "2026-09-27T05:17:13.941Z",
+      "verified_at": "2026-09-27T05:17:13.944Z",
+      "activated_at": "2026-09-27T05:17:13.958Z",
+      "failed_at": null,
+      "failure_code": null,
+      "failure_detail": null,
+      "created_at": "2026-09-27T05:17:13.669Z",
+      "created_by": "c0febdd1-491c-46b8-8113-160be767b88d"
+    },
+    {
+      "id": "01a0e14b-c32d-70ad-99c1-b0737ed6ad85",
+      "command_id": "8c7d9e89-39ce-43d4-97dd-89de5b333adb",
+      "artifact_id": "d026377c-cd8d-48d9-8e42-4c63c3869f8f",
+      "target_plane": "studio",
+      "target_environment": "local",
+      "target_instance": "*",
+      "status": "activated",
+      "attempt_no": 1,
+      "correlation_id": null,
+      "dispatched_at": "2026-09-27T05:17:14.011Z",
+      "received_at": "2026-09-27T05:17:14.036Z",
+      "staged_at": "2026-09-27T05:17:14.042Z",
+      "verified_at": "2026-09-27T05:17:14.044Z",
+      "activated_at": "2026-09-27T05:17:14.050Z",
+      "failed_at": null,
+      "failure_code": null,
+      "failure_detail": null,
+      "created_at": "2026-09-27T05:17:13.790Z",
+      "created_by": "c0febdd1-491c-46b8-8113-160be767b88d"
+    }
+  ],
+  "limits": [
+    "Browser list/detail and collaboration acceptance not performed in this checkpoint.",
+    "No QA/staging/production deployment.",
+    "Local receipt file is not immutable audit storage."
+  ]
+}

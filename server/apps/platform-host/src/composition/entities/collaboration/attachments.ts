@@ -36,7 +36,9 @@ export function createAttachmentSectionProvider(
               created_at: Date | string;
               updated_at: Date | string | null;
               series_revision: string;
-            }>`WITH visible AS (SELECT DISTINCT ON (attachment.series_id) attachment.id::text,attachment.series_id::text,link.id::text link_id,link.pinned_attachment_id::text,link.link_kind,link.folder_id::text,folder.name folder_name,link.metadata->>'category' category,attachment.version_no,attachment.file_name,series.display_name,attachment.content_type,attachment.size_bytes,attachment.status,attachment.created_at,attachment.updated_at,series.revision_no::text series_revision FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id LEFT JOIN document.attachment_folder folder ON folder.tenant_id=link.tenant_id AND folder.id=link.folder_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.id=COALESCE(link.pinned_attachment_id,series.current_attachment_id) AND attachment.is_active AND attachment.is_virus_scanned AND attachment.status='active' AND (attachment.expires_at IS NULL OR attachment.expires_at>clock_timestamp()) ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.series_id,(link.pinned_attachment_id IS NOT NULL) DESC,link.created_at DESC,link.id DESC,attachment.created_at DESC,attachment.id DESC) SELECT * FROM visible ORDER BY created_at DESC,id DESC LIMIT ${limit + 1}`.execute(
+              added_by_display_name?: string;
+              added_at?: Date | string;
+            }>`WITH visible AS (SELECT DISTINCT ON (attachment.series_id) attachment.id::text,attachment.series_id::text,link.id::text link_id,link.pinned_attachment_id::text,link.link_kind,link.folder_id::text,folder.name folder_name,link.metadata->>'category' category,attachment.version_no,attachment.file_name,series.display_name,attachment.content_type,attachment.size_bytes,attachment.status,attachment.created_at,attachment.updated_at,link.created_at added_at,(SELECT display_name FROM document.collaboration_principal_candidates('',link.created_by)) added_by_display_name,series.revision_no::text series_revision FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id LEFT JOIN document.attachment_folder folder ON folder.tenant_id=link.tenant_id AND folder.id=link.folder_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.id=COALESCE(link.pinned_attachment_id,series.current_attachment_id) AND attachment.is_active AND attachment.is_virus_scanned AND attachment.status='active' AND (attachment.expires_at IS NULL OR attachment.expires_at>clock_timestamp()) ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.series_id,(link.pinned_attachment_id IS NOT NULL) DESC,link.created_at DESC,link.id DESC,attachment.created_at DESC,attachment.id DESC) SELECT * FROM visible ORDER BY created_at DESC,id DESC LIMIT ${limit + 1}`.execute(
               tx,
             )
           ).rows,
@@ -64,7 +66,9 @@ export function createAttachmentSectionProvider(
               created_at: Date | string;
               updated_at: Date | string | null;
               series_revision: string;
-            }>`SELECT attachment.id::text,attachment.series_id::text,link.id::text link_id,NULL::text pinned_attachment_id,link.link_kind,link.folder_id::text,folder.name folder_name,link.metadata->>'category' category,attachment.version_no,attachment.file_name,series.display_name,attachment.content_type,attachment.size_bytes,attachment.status,attachment.created_at,attachment.updated_at,series.revision_no::text series_revision FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id LEFT JOIN document.attachment_folder folder ON folder.tenant_id=link.tenant_id AND folder.id=link.folder_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.uploaded_by=${context.principalId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.status IN ('pending','uploading','uploaded','processing','failed','quarantined','rejected') ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${limit + 1}`.execute(
+              added_by_display_name?: string;
+              added_at?: Date | string;
+            }>`SELECT attachment.id::text,attachment.series_id::text,link.id::text link_id,NULL::text pinned_attachment_id,link.link_kind,link.folder_id::text,folder.name folder_name,link.metadata->>'category' category,attachment.version_no,attachment.file_name,series.display_name,attachment.content_type,attachment.size_bytes,attachment.status,attachment.created_at,attachment.updated_at,link.created_at added_at,(SELECT display_name FROM document.collaboration_principal_candidates('',link.created_by)) added_by_display_name,series.revision_no::text series_revision FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id LEFT JOIN document.attachment_folder folder ON folder.tenant_id=link.tenant_id AND folder.id=link.folder_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.uploaded_by=${context.principalId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.status IN ('pending','uploading','uploaded','processing','failed','quarantined','rejected') ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${limit + 1}`.execute(
               tx,
             )
           ).rows,
@@ -118,7 +122,8 @@ export function createAttachmentSectionProvider(
                         file_name: string;
                         status: string;
                         created_at: Date | string;
-                      }>`SELECT id::text,version_no,file_name,status,created_at FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND series_id=${seriesId}::uuid ORDER BY version_no DESC,id DESC`.execute(
+                        uploaded_by_display_name?: string;
+                      }>`SELECT id::text,version_no,file_name,status,created_at,(SELECT display_name FROM document.collaboration_principal_candidates('',attachment.uploaded_by)) uploaded_by_display_name FROM document.attachment attachment WHERE tenant_id=${context.tenantId}::uuid AND series_id=${seriesId}::uuid ORDER BY version_no DESC,id DESC`.execute(
                         tx,
                       )
                     ).rows,
@@ -150,6 +155,8 @@ export function createAttachmentSectionProvider(
           processingStatus: row.status,
           revision: row.series_revision,
           createdAt: new Date(row.created_at).toISOString(),
+          ...(row.added_at ? {addedAt:new Date(row.added_at).toISOString()} : {}),
+          ...(row.added_by_display_name ? {addedByDisplayName:row.added_by_display_name} : {}),
           versionHistory: (histories.get(row.series_id) ?? []).map((version) =>
             Object.freeze({
               id: version.id,
@@ -157,6 +164,7 @@ export function createAttachmentSectionProvider(
               fileName: version.file_name,
               status: version.status,
               createdAt: new Date(version.created_at).toISOString(),
+              ...(version.uploaded_by_display_name ? {uploadedByDisplayName:version.uploaded_by_display_name} : {}),
             }),
           ),
         }),

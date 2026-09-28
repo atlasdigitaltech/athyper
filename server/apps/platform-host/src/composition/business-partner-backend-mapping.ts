@@ -1,10 +1,10 @@
-import { businessPartnerPermissionTransitions } from "./business-partner-permission-transitions.js";
+import { requireEntityPermissionTransitions } from "./shared/entity-runtime/permission-transitions.js";
 import type { AuthorizationRequest } from "@athyper/server-contract-auth";
 import {
   entityScopeResolvers,
   type EntityAuthorizationProfileV1,
 } from "@athyper/server-contract-metadata";
-import type { EntityBackendTarget } from "@athyper/server-service-records";
+import type { EntityBackendTarget, EntityBackendPermissionTransition } from "@athyper/server-service-records";
 
 const string = (v: unknown): string | undefined =>
   typeof v === "string" && v.length > 0 && v.length <= 160 ? v : undefined;
@@ -12,10 +12,11 @@ const string = (v: unknown): string | undefined =>
  * deliberately excluded: neither may repair a missing enforcement coordinate. */
 export function createBusinessPartnerBackendMapping(
   profile: EntityAuthorizationProfileV1,
+  transitions?: readonly EntityBackendPermissionTransition[],
 ) {
   if (profile.entityCode !== "business_partner" || profile.planeKey !== "neon")
     throw new Error("BP backend mapping requires the NEON BP profile");
-  const permissionTransitions = businessPartnerPermissionTransitions(profile);
+  const permissionTransitions = requireEntityPermissionTransitions(profile, transitions);
   return {
     permissionTransitions,
     owns(request: AuthorizationRequest) {

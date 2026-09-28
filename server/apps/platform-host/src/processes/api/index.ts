@@ -1,46 +1,16 @@
 import { startProcessMetricsEndpoint } from "../process-metrics-endpoint.js";
-import { loadBusinessPartnerAuthorizationDeployment } from "../../composition/business-partner-authorization-deployment.js";
 import { createServer } from "node:http";
-import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 import {
   createHttpApplication,
   HttpDrainController,
 } from "@athyper/server-runtime-http";
 import { createRedisRateLimitStore } from "@athyper/server-adapter-cache-redis";
 
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../../composition/create-container.js";
-import { registerAdapters } from "../../composition/register-adapters.js";
-import { registerPlatform } from "../../composition/register-platform.js";
-import { registerRuntimes } from "../../composition/register-runtimes.js";
-import { registerBusinessPartnerMetrics } from "../../composition/register-business-partner-metrics.js";
-import { registerServices } from "../../composition/register-services.js";
+import { bootstrap } from "../../kernel/bootstrap.js";
 import { captureOperationalError } from "../../monitoring/error-collector.js";
 
 export async function start(): Promise<void> {
-  const config = loadConfig();
-  const lifecycle = createLifecycle();
-  const container = createContainer();
-  registerAdapters(container, config, lifecycle);
-  registerRuntimes(container, config, lifecycle);
-  registerPlatform(container, config);
-  const authorizationDeployment = loadBusinessPartnerAuthorizationDeployment(
-    process.env.BP_AUTHORIZATION_DEPLOYMENT_CONFIG_PATH,
-    container,
-    config,
-  );
-  registerServices(
-    container,
-    { ...authorizationDeployment?.dependencies },
-    config,
-    lifecycle,
-  );
-  await authorizationDeployment?.verifyStartup();
-  registerBusinessPartnerMetrics(
-    container,
-    lifecycle,
-    config.businessPartnerMetricsTargets ?? [],
-  );
+  const { config, lifecycle, container } = await bootstrap("api");
 
   const drainController = new HttpDrainController();
   let startupComplete = false;

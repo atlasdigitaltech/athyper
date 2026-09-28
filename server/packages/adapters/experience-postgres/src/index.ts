@@ -36,6 +36,8 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     context: VerifiedRequestContext,
     work: (database: Database) => Promise<Result>,
   ): Promise<Result> {
+    if (!context || !context.tenantId?.trim() || !context.principalId?.trim())
+      throw new Error("TRANSACTION_ACTOR_REQUIRED");
     if (this.runner) return this.runner(context, work);
     const scoped = async (transaction: Database) => {
       await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true), set_config('app.current_principal_id',${context.principalId},true)`.execute(
@@ -43,6 +45,10 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       );
       return work(transaction);
     };
+    // An existing transaction is already scoped by its request coordinator.
+    // Never replace its actor from repository arguments: doing so would let
+    // substituted coordinates cross the RLS boundary. Missing settings stay
+    // missing, so database policies continue to fail closed.
     return this.database.isTransaction
       ? work(this.database)
       : this.database.transaction().execute(scoped);

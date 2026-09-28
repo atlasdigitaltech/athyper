@@ -27,6 +27,8 @@ import {
 } from "@athyper/platform-entity-list-view/lookup-directory";
 import {
   Button,
+  readBrowserStorage,
+  writeBrowserStorage,
   Input,
   Label,
   Dialog,
@@ -236,7 +238,7 @@ export function EntityLookup({
     const controller = new AbortController();
     try {
       const stored: unknown = JSON.parse(
-        localStorage.getItem(recentKey) ?? "[]",
+        readBrowserStorage(recentKey) ?? "[]",
       );
       const ids = Array.isArray(stored)
         ? stored
@@ -338,9 +340,9 @@ export function EntityLookup({
       if (options.recent.enabled && recentKey)
         try {
           const prior: unknown = JSON.parse(
-            localStorage.getItem(recentKey) ?? "[]",
+            readBrowserStorage(recentKey) ?? "[]",
           );
-          localStorage.setItem(
+          writeBrowserStorage(
             recentKey,
             JSON.stringify(
               [

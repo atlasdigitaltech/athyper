@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { useModalIsolation } from "@athyper/platform-ui";
 import { RecordFooterSource } from "./record-footer";
+import { RecordInformationControl } from "./record-information";
 
 export function SkipToContent({ label }: { readonly label: string }) {
   return (
@@ -16,6 +17,7 @@ export function GlobalFooter() {
     <footer className="athyper-shell__footer">
       <span>© 2026 Atlas Digital Technology Solutions</span>
       <RecordFooterSource />
+      <RecordInformationControl />
     </footer>
   );
 }

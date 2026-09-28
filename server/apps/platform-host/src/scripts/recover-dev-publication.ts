@@ -9,7 +9,6 @@ import { registerAdapters } from "../composition/register-adapters.js";
 import { registerRuntimes } from "../composition/register-runtimes.js";
 import { registerPlatform } from "../composition/register-platform.js";
 import { registerServices } from "../composition/register-services.js";
-import { loadBusinessPartnerAuthorizationDeployment } from "../composition/business-partner-authorization-deployment.js";
 import { loadDeploymentEntityReleaseReview } from "../composition/entity-release-review-deployment.js";
 import { loadDevPublicationConfiguration } from "../composition/dev-publication.js";
 import { sql, type Kysely } from "kysely";
@@ -25,14 +24,12 @@ try {
   registerAdapters(container, config, lifecycle);
   registerRuntimes(container, config, lifecycle);
   registerPlatform(container, config);
-  const authorization = loadBusinessPartnerAuthorizationDeployment(process.env.BP_AUTHORIZATION_DEPLOYMENT_CONFIG_PATH, container, config);
   const reviewPath = process.env.ENTITY_RELEASE_REVIEW_CONFIG_PATH;
   const review = reviewPath ? loadDeploymentEntityReleaseReview(reviewPath, {
     neon: container.adapters.neonDatabase!.database as unknown as Kysely<Record<string, never>>,
     studio: container.adapters.athyperDatabase!.database as unknown as Kysely<Record<string, never>>,
   }) : undefined;
-  registerServices(container, { ...authorization?.dependencies, ...(review ? { entityAuthorizationReleaseReview: review } : {}) }, config, lifecycle);
-  await authorization?.verifyStartup();
+  registerServices(container, { ...(review ? { entityAuthorizationReleaseReview: review } : {}) }, config, lifecycle);
   const result = await runWithRequestContext({ requestId: request.requestId, correlationId: request.requestId, tenantId: scope.tenantId, principalId: scope.publisher.principalId, planeKey: "neon" }, async () => {
     const publication = container.services.publication!;
     const database = (container.adapters.jobAthyperDatabase ?? container.adapters.athyperDatabase)!.database as unknown as Kysely<Record<string, never>>;

@@ -1,12 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 type Audience = "public" | "internal" | "private";
-const labels = { public: "Public", internal: "Internal", private: "Private" };
-const descriptions = {
-  public: "People authorized to view this record",
-  internal: "Authorized internal participants",
-  private: "Only you",
-};
 
 /** Only the audiences admitted by the capability are offered. */
 export function CommentAudiencePicker({
@@ -20,6 +15,9 @@ export function CommentAudiencePicker({
   readonly disabled: boolean;
   readonly onChange: (value: Audience) => void;
 }) {
+  const intl = useEntityI18n();
+  const labels = { public: intl.message("comments.public"), internal: intl.message("comments.internal"), private: intl.message("comments.private") };
+  const descriptions = { public: intl.message("comments.publicHelp"), internal: intl.message("comments.internalHelp"), private: intl.message("comments.privateHelp") };
   const root = useRef<HTMLDetailsElement>(null);
   const close = () => {
     root.current?.removeAttribute("open");
@@ -76,7 +74,7 @@ export function CommentAudiencePicker({
     >
       <summary
         role="button"
-        aria-label={`Audience: ${labels[value]}`}
+        aria-label={intl.message("comments.audienceLabel", { audience: labels[value] })}
         aria-haspopup="menu"
         aria-disabled={disabled}
         tabIndex={disabled ? -1 : 0}
@@ -86,7 +84,7 @@ export function CommentAudiencePicker({
       >
         {labels[value]} <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </summary>
-      <div role="menu" aria-label="Comment audience">
+      <div role="menu" aria-label={intl.message("comments.audience")}>
         {options.map((option) => (
           <button
             key={option}

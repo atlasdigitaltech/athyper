@@ -9,6 +9,8 @@ test("shared composer sends the comment previously covered by the retired BP she
   await expect.poll(() => page.evaluate(() => (window as any).commentCalls
     .find((call: any) => call.method === "POST" && call.path.endsWith("/comments"))?.body.text))
     .toBe("Reviewed certificate renewal.");
+  await expect(editor).toHaveCount(0);
+  await page.getByRole("button",{name:"＋ Add comment",exact:true}).click();
   await expect(editor).toBeEmpty();
 });
 test("mentions use server matching threads and independent pagination",async({page})=>{
@@ -77,6 +79,7 @@ test.beforeEach(async ({ page }) => {
   );
   await page.goto("https://comments.test/");
   await page.evaluate(bundle);
+  await page.getByRole("button",{name:/Add (the first )?comment/}).click();
 });
 test("audience selection is keyboard accessible, capability limited and saved in the draft", async ({
   page,
@@ -183,7 +186,7 @@ test("edit errors preserve text; report/history open focused dialogs and reactio
   await expect(item.getByRole("button",{name:"Report comment",exact:true})).toHaveCount(0);
   await item.locator("summary").click();
   await item.getByRole("button", { name: "Reply", exact: true }).click();
-  await expect(page.locator(".a-comment-compose-slot").getByText("Replying to Test Author", { exact: true })).toBeVisible();
+  await expect(page.locator(".a-comment-compose-slot").getByText("Reply to Test Author", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Cancel reply", exact: true }).click();
 });
 
@@ -349,6 +352,7 @@ test("one bottom composer preserves new-comment and reply drafts and shows flat 
   await child.getByRole("button",{name:"Reply",exact:true}).click();
   await expect(editor).toBeEmpty();await editor.fill("Nested reply");
   await page.getByRole("button",{name:"Send reply",exact:true}).click();
+  await page.getByRole("button",{name:"Resume draft",exact:true}).click();
   await expect(page.getByRole("button",{name:"Send",exact:true})).toBeVisible();
   await expect(editor).toContainText("Unfinished new comment");
   expect(await page.evaluate(()=>(window as any).commentCalls.some((call:any)=>call.path.endsWith("/reply-fixture/replies")))).toBe(true);
@@ -381,7 +385,7 @@ test("comments group by author while sort order applies within each group", asyn
   await expect(content).toHaveText(['Late Bob','Alice comment','Early Bob']);
 });
 
-test("inline edit cancels without changing the comment or the bottom draft", async ({page}) => {
+for (const activation of ['pointer','keyboard']) test(`inline edit cancels without changing the comment or the bottom draft (${activation})`, async ({page}) => {
   const draft=page.locator('.a-comment-compose-slot').getByRole('textbox',{name:'Comment',exact:true});
   await draft.fill('Keep my new comment draft');
   const item=page.locator('.a-comment-item');
@@ -390,11 +394,22 @@ test("inline edit cancels without changing the comment or the bottom draft", asy
   const edit=item.getByRole('region',{name:'Edit comment',exact:true});
   await edit.getByRole('textbox',{name:'Comment',exact:true}).fill('Discard this edit');
   await expect(edit.getByRole('button',{name:'Review latest saved revision'})).toHaveCount(0);
-  await edit.getByRole('button',{name:'Cancel',exact:true}).click();
+  const cancel=edit.getByRole('button',{name:'Cancel editing',exact:true});
+  if(activation==='keyboard') { await cancel.focus(); await page.keyboard.press('Enter'); }
+  else await cancel.click();
   await expect(edit).toHaveCount(0);
+  await page.waitForTimeout(700);
+  await expect(page.getByRole('tooltip',{name:'Comment actions',exact:true})).toHaveCount(0);
+  await expect(item).toBeFocused();
   await expect(item).toContainText('Original comment');
   await expect(draft).toHaveText('Keep my new comment draft');
   expect(await page.evaluate(()=>(window as any).commentCalls.filter((call:any)=>call.method==='PATCH').length)).toBe(0);
+  await page.keyboard.press('Tab');
+  await expect(item.locator('summary')).toBeFocused();
+  await expect(page.getByRole('tooltip',{name:'Comment actions',exact:true})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('tooltip',{name:'Comment actions',exact:true})).toHaveCount(0);
+  await expect(item.locator('details')).not.toHaveAttribute('open','');
 });
 
 test("comment deletion confirms, keeps failures local and exposes only deletion metadata",async({page})=>{
@@ -477,8 +492,8 @@ test("compact comment editors grow, scroll at the cap, and use compact edit acti
   await item.locator('summary').click();
   await item.getByRole('button',{name:'Edit',exact:true}).click();
   const edit=item.getByRole('region',{name:'Edit comment',exact:true});
-  await expect(edit.locator('.a-composer-frame__header')).toHaveText('Edit comment');
-  await expect(edit.getByRole('button',{name:'Save comment',exact:true})).toHaveText('Save');
+  await expect(edit.locator('.a-composer-frame__header')).toHaveText('Edit commentPublic');
+  await expect(edit.getByRole('button',{name:'Save comment',exact:true})).toHaveText('Save changes');
 });
 
 test("edit supports audience-scoped mentions and explains locked visibility", async ({page}) => {
@@ -489,8 +504,20 @@ test("edit supports audience-scoped mentions and explains locked visibility", as
   await expect(edit.getByRole('button',{name:'Audience: Public'})).toHaveCount(0);
   await expect(edit.getByRole('textbox',{name:'Comment',exact:true})).toBeFocused();
   const audience=edit.locator('.a-rich-comment-composer__locked-audience');
+  await expect(edit.locator('.a-composer-frame__header .a-rich-comment-composer__locked-audience')).toHaveText('Public');
+  await expect(edit.locator('.a-composer-frame__footer .a-rich-comment-composer__audience')).toHaveCount(0);
+  await expect(edit.locator('.a-composer-frame__footer .a-rich-comment-composer__locked-audience')).toHaveCount(0);
+  const close=edit.getByRole('button',{name:'Minimize composer',exact:true});
+  for (const width of [1440,390]) {
+    await page.setViewportSize({width,height:900});
+    const badgeBox=await audience.boundingBox(),closeBox=await close.boundingBox();
+    expect(badgeBox!.x+badgeBox!.width).toBeLessThan(closeBox!.x);
+    expect(Math.abs(badgeBox!.y+badgeBox!.height/2-closeBox!.y-closeBox!.height/2)).toBeLessThan(2);
+  }
   await audience.focus();
-  await expect(edit.getByRole('tooltip',{name:'Visibility is fixed after posting. Editing keeps the original audience.'})).toHaveCSS('opacity','1');
+  await expect(edit.getByRole('tooltip',{name:'Visibility cannot be changed after posting.'})).toHaveCSS('opacity','1');
+  await page.keyboard.press('Escape');
+  await expect(edit.getByRole('tooltip')).toHaveCount(0);
   await edit.locator('summary[aria-label="Mention a participant"]').click();
   await edit.getByRole('textbox',{name:'Mention a participant',exact:true}).fill('Alex');
   await edit.getByRole('button',{name:'Alex Reviewer',exact:true}).click();
@@ -541,25 +568,27 @@ test("comment dialogs escape the feed and do not scroll the workspace on open",a
   }
 });
 
-test("full-view replies stay beside their target and preserve the editor across view changes", async ({page})=>{
+test("full-view replies stay in the bottom composer and preserve the editor across view changes", async ({page})=>{
   await page.evaluate(()=>{(window as any).setFull(true);(window as any).groupComments();});
   const editor=page.getByRole("textbox",{name:"Comment",exact:true});
   await editor.fill("Root draft");
   const target=page.locator("#comment-early");
   await target.getByRole("button",{name:"Reply",exact:true}).click();
-  await expect(target.getByRole("textbox",{name:"Comment",exact:true})).toBeFocused();
+  const bottom=page.locator(".a-comment-compose-dock > .a-comment-compose-placement");
+  await expect(bottom.getByRole("textbox",{name:"Comment",exact:true})).toBeFocused();
+  await expect(target.getByRole("textbox")).toHaveCount(0);
   await expect(editor).toHaveCount(1);
   await editor.fill("Reply draft survives moving");
   await editor.evaluate(el=>(window as any).originalEditor=el);
   await page.evaluate(()=>(window as any).setFull(false));
-  await expect(page.locator(".a-collaboration-comments > .a-comment-compose-placement").getByRole("textbox")).toContainText("Reply draft survives moving");
+  await expect(page.locator(".a-comment-compose-dock > .a-comment-compose-placement").getByRole("textbox")).toContainText("Reply draft survives moving");
   await page.evaluate(()=>(window as any).setFull(true));
   expect(await editor.evaluate(el=>el===(window as any).originalEditor)).toBe(true);
-  await expect(target.getByRole("textbox")).toContainText("Reply draft survives moving");
+  await expect(bottom.getByRole("textbox")).toContainText("Reply draft survives moving");
   await page.getByRole("button",{name:"Mentions",exact:true}).click();
-  await expect(page.locator(".a-collaboration-comments > .a-comment-compose-placement").getByRole("textbox")).toContainText("Reply draft survives moving");
+  await expect(page.locator(".a-comment-compose-dock > .a-comment-compose-placement").getByRole("textbox")).toContainText("Reply draft survives moving");
   await page.getByRole("button",{name:"All",exact:true}).click();
-  await expect(target.getByRole("textbox")).toContainText("Reply draft survives moving");
+  await expect(bottom.getByRole("textbox")).toContainText("Reply draft survives moving");
   await page.getByRole("button",{name:"Cancel reply",exact:true}).click();
   await expect(editor).toContainText("Root draft");
 });
@@ -585,4 +614,79 @@ test('notification deep link bounds automatic paging and allows manual continuat
    await page.getByRole('button',{name:'Load more replies',exact:true}).click();
  }
  await expect(page.getByText('Reply page 8',{exact:true})).toBeVisible();
+});
+
+test("collapsed composer preserves a draft and returns to reading after sending",async({page})=>{
+  const editor=page.getByRole('textbox',{name:'Comment',exact:true});
+  await editor.fill('Keep this draft');
+  await page.getByRole('button',{name:'Minimize composer',exact:true}).click();
+  await expect(editor).toHaveCount(0);
+  await page.getByRole('button',{name:'Resume draft',exact:true}).click();
+  await expect(editor).toBeFocused();
+  await expect(editor).toContainText('Keep this draft');
+  await page.getByRole('button',{name:'Send',exact:true}).click();
+  await expect(page.getByRole('button',{name:'＋ Add comment',exact:true})).toBeVisible();
+  await expect(editor).toHaveCount(0);
+});
+
+
+test("reply and edit drafts survive minimizing with distinct resume actions",async({page})=>{
+ const item=page.locator('.a-comment-item').first();
+ await item.getByRole('button',{name:'Reply',exact:true}).click();
+ const reply=page.locator('.a-comment-compose-slot');
+ await reply.getByRole('textbox',{name:'Comment',exact:true}).fill('Keep this reply');
+ await reply.getByRole('button',{name:'Minimize composer',exact:true}).click();
+ await page.getByRole('button',{name:'Resume reply',exact:true}).click();
+ await expect(reply.getByRole('textbox',{name:'Comment',exact:true})).toContainText('Keep this reply');
+ await expect(reply.getByRole('textbox',{name:'Comment',exact:true})).toBeFocused();
+ await reply.getByRole('button',{name:'Cancel reply',exact:true}).click();
+ await item.locator('summary').click();await item.getByRole('button',{name:'Edit',exact:true}).click();
+ const edit=item.getByRole('region',{name:'Edit comment',exact:true});
+ await edit.getByRole('textbox',{name:'Comment',exact:true}).fill('Keep this edit');
+ await edit.getByRole('button',{name:'Minimize composer',exact:true}).click();
+ await expect(edit.getByRole('textbox',{name:'Comment',exact:true})).toHaveCount(0);
+ await edit.getByRole('button',{name:'Resume editing',exact:true}).click();
+ await expect(edit.getByRole('textbox',{name:'Comment',exact:true})).toContainText('Keep this edit');
+ await expect(edit.getByRole('textbox',{name:'Comment',exact:true})).toBeFocused();
+ await edit.getByRole('button',{name:'Cancel editing',exact:true}).click();
+ await expect(item).toContainText('Original comment');
+});
+
+test("editing and creation take turns without losing drafts on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 740 });
+  await page.evaluate(() => (window as any).setFull(true));
+  const creation = page.locator('.a-comment-compose-slot');
+  await creation.getByRole('textbox', { name: 'Comment', exact: true }).fill('New comment draft');
+  const item = page.locator('.a-comment-item').first();
+  // Put the editable final comment below the fold, as in a long discussion.
+  await item.evaluate(node => { node.style.marginTop = '1000px'; });
+  await item.locator('summary').click();
+  await item.getByRole('button', { name: 'Edit', exact: true }).click();
+  const edit = item.getByRole('region', { name: 'Edit comment', exact: true });
+  await expect(creation).toBeHidden();
+  await expect(page.locator('.a-comment-compose-dock')).toHaveCSS('position', 'static');
+  await edit.getByRole('textbox', { name: 'Comment', exact: true }).fill('Edited draft');
+  await expect(edit.getByRole('button', { name: 'Save comment', exact: true })).toBeInViewport();
+  await page.getByRole('button', { name: 'Resume draft', exact: true }).click();
+  await expect(edit.getByRole('textbox')).toHaveCount(0);
+  await expect(creation.getByRole('textbox')).toContainText('New comment draft');
+  await edit.getByRole('button', { name: 'Resume editing', exact: true }).click();
+  await expect(creation).toBeHidden();
+  await expect(edit.getByRole('textbox')).toContainText('Edited draft');
+  await expect(edit.getByRole('button', { name: 'Save comment', exact: true })).toBeInViewport();
+  await edit.getByRole('button', { name: 'Cancel editing', exact: true }).click();
+  await expect(page.locator('.a-comment-compose-dock')).toHaveCSS('position', 'sticky');
+});
+
+test("posting shows one actionable toast without an inline success row", async ({ page }) => {
+  const item = page.locator('.a-comment-item').first();
+  const id = (await item.getAttribute('id'))!.replace(/^comment-/, '');
+  await page.evaluate(id => (window as any).postedCommentId = id, id);
+  await page.getByRole('textbox', { name: 'Comment', exact: true }).fill('A new comment');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(page.locator('.a-global-toast')).toHaveCount(1);
+  await expect(page.locator('.a-comment-posted')).toHaveCount(0);
+  await page.getByRole('button', { name: 'View comment', exact: true }).click();
+  await expect(item).toBeFocused();
+  await expect(page.locator('.a-global-toast')).toHaveCount(0);
 });

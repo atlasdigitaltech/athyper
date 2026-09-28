@@ -115,6 +115,7 @@ export interface ShellActivityDataSource {
 }
 
 interface ShellActivityCenterProps {
+  readonly headerActions?: () => readonly HTMLElement[];
   readonly activeTab: ShellActivityTab;
   readonly dataSource?: ShellActivityDataSource;
   readonly onTabChange: (tab: ShellActivityTab) => void;
@@ -122,6 +123,7 @@ interface ShellActivityCenterProps {
 }
 
 export function ShellActivityCenter({
+  headerActions,
   activeTab,
   dataSource,
   onTabChange,
@@ -220,6 +222,7 @@ export function ShellActivityCenter({
     >
       <Drawer.Panel
         id="athyper-activity-center"
+        interactionRoots={headerActions}
         size="standard"
         variant="activity"
         mobilePresentation="fullscreen"
@@ -228,7 +231,7 @@ export function ShellActivityCenter({
         <Drawer.Header
           appearance="panel"
           icon={<ActivityGlyph kind={activeTab} />}
-          title="Activity center"
+          title={activeTab === "notifications" ? "Notifications" : "Inbox"}
           description="Updates and work that need your attention"
           actions={
             fullPageHref ? (

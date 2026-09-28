@@ -21,7 +21,7 @@ function parameter(value: string | string[] | undefined): string { const result 
 function formMode(value: unknown): "create" | "edit" { if (value !== "create" && value !== "edit") throw new RecordServiceError(400, "INVALID_FORM_MODE", "mode must be create or edit"); return value; }
 function recordId(value:unknown):string{const result=Array.isArray(value)?value[0]:value;if(typeof result!=="string"||!result||result.length>200)throw new RecordServiceError(400,"INVALID_RECORD_ID","recordId is invalid");return result;}
 function asHttpError(error: unknown): unknown {
-  if (error instanceof RecordServiceError) return new HttpError(error.statusCode, error.code, error.message);
+  if (error instanceof RecordServiceError) return new HttpError(error.statusCode, error.code, error.message, error.params ? { params: error.params } : undefined);
   // This compatibility reader predates typed service errors. Match only its
   // known missing-release condition; compilation/integrity failures remain 500s.
   if (error instanceof Error && error.message === "COMPILED_ENTITY_APPLICATION_RELEASE_UNAVAILABLE") {

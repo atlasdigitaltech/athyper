@@ -239,6 +239,7 @@ export function HeaderActions({
           onClose={closeAction}
         >
           <ShellActivityCenter
+            headerActions={() => root.current ? [root.current] : []}
             activeTab={active}
             dataSource={activity}
             onTabChange={onActiveChange}

@@ -1,4 +1,5 @@
 "use client";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { visitRichText, isAttachmentNode, mapRichText } from "./rich-text-types";
 import { validateUploadFile } from "./upload-lifecycle";
 import { ComposerFrame, ComposerHeader, ComposerFooter, Tooltip } from "@athyper/platform-ui";
@@ -24,6 +25,7 @@ export interface RichCommentSubmission {
 }
 export interface RichCommentComposerProps {
   readonly header?: React.ReactNode;
+  readonly headerActions?: React.ReactNode;
   readonly supportingContent?: React.ReactNode;
   readonly searchMentions?: (query:string,visibility:"public"|"internal"|"private")=>Promise<readonly {id:string;displayName:string}[]>;
   readonly entityType: string;
@@ -56,7 +58,18 @@ const EMPTY: RichTextDocument = { type: "doc", schema: RICH_TEXT_SCHEMA, content
 
 /** Dependency-light replacement composer; editor frameworks can wrap the same document callbacks later. */
 export function RichCommentComposer(props: RichCommentComposerProps) {
+  const intl = useEntityI18n();
   const filePicker = useRef<HTMLInputElement>(null);
+  const mentionPicker = useRef<HTMLDetailsElement>(null);
+  // Native pickers restore trigger focus after Cancel. That is not a fresh
+  // request for its tooltip; re-enable only on deliberate hover or Tab.
+  const [attachmentTooltipDismissed, setAttachmentTooltipDismissed] = useState(false);
+  useEffect(() => {
+    const input = filePicker.current;
+    const cancel = () => setAttachmentTooltipDismissed(true);
+    input?.addEventListener("cancel", cancel);
+    return () => input?.removeEventListener("cancel", cancel);
+  }, [props.allowAttachments, props.prepareAttachments]);
   const editorLabelId = useId();
   const [value, setValue] = useState(props.initialDocument ?? EMPTY); const [uploadCount, setUploadCount] = useState(0); const [submitting, setSubmitting] = useState(false); const [error, setError] = useState<string>();
   const audiences = props.allowedAudiences?.length ? props.allowedAudiences : ["internal"] as const;
@@ -68,6 +81,37 @@ export function RichCommentComposer(props: RichCommentComposerProps) {
   const searchMentions = useEffectEvent(async (query: string, audience: "public" | "internal" | "private") =>
     await props.searchMentions?.(query, audience) ?? []);
   const mentionsEnabled = Boolean(props.searchMentions);
+  useEffect(() => {
+    const picker = mentionPicker.current;
+    if (!mentionsEnabled || !picker) return;
+    const owner = picker.ownerDocument;
+    const close = () => {
+      picker.open = false;
+      setMentionQuery("");
+      setMentionOptions([]);
+    };
+    const outside = (event: Event) => {
+      if (picker.open && event.target instanceof Node && !picker.contains(event.target)) close();
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !picker.open) return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      picker.querySelector("summary")?.focus({preventScroll:true});
+    };
+    const toggle = () => { if (!picker.open) close(); };
+    owner.addEventListener("pointerdown", outside, true);
+    owner.addEventListener("focusin", outside);
+    owner.addEventListener("keydown", escape, true);
+    picker.addEventListener("toggle", toggle);
+    return () => {
+      owner.removeEventListener("pointerdown", outside, true);
+      owner.removeEventListener("focusin", outside);
+      owner.removeEventListener("keydown", escape, true);
+      picker.removeEventListener("toggle", toggle);
+    };
+  }, [mentionsEnabled]);
   useEffect(() => {
     setMentionOptions(current => current.length ? [] : current);
     if (!mentionsEnabled || !mentionQuery.trim()) return;
@@ -100,6 +144,21 @@ export function RichCommentComposer(props: RichCommentComposerProps) {
     // typing caret, which otherwise leaves a successful paste invisible.
     if (editor.current) editor.current.innerHTML = serializeForClipboard(next)["text/html"] ?? "";
   }, [props.onDraftChange, value,visibility]);
+  const selectMention = (person: {id:string;displayName:string}) => {
+    append({type:"doc",schema:RICH_TEXT_SCHEMA,content:[{type:"paragraph",content:[{type:"mention",attrs:{principalId:person.id,label:person.displayName}}]}]});
+    setMentionQuery("");
+    setMentionOptions([]);
+    if (mentionPicker.current) mentionPicker.current.open = false;
+    if (editor.current) {
+      editor.current.focus({preventScroll:true});
+      const range = document.createRange();
+      range.selectNodeContents(editor.current);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  };
   useEffect(() => { if (editor.current && document.activeElement !== editor.current) editor.current.innerHTML = serializeForClipboard(value)["text/html"] ?? ""; }, [value]);
 
   const onPaste = useCallback(async (event: React.ClipboardEvent<HTMLDivElement>) => {
@@ -161,6 +220,43 @@ export function RichCommentComposer(props: RichCommentComposerProps) {
 
   const [linkEditing,setLinkEditing] = useState(false), [linkUrl,setLinkUrl] = useState("");
   const linkSelection = useRef<Range | undefined>(undefined);
+  const closeLink = () => {
+    setLinkEditing(false);
+    setError(undefined);
+    editor.current?.focus({preventScroll:true});
+  };
+  const insertLink = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const href = linkUrl.trim();
+    try {
+      const url = new URL(href);
+      if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Invalid protocol");
+    } catch {
+      setError("Enter a valid http or https link.");
+      return;
+    }
+    const element = editor.current;
+    if (!element) return;
+    try {
+      element.focus({preventScroll:true});
+      const selection = window.getSelection();
+      const range = linkSelection.current;
+      if (selection && range && element.contains(range.commonAncestorContainer)) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      document.execCommand("createLink", false, href);
+      // Only advertise clipboard formats we actually provide. Plain text is
+      // not the application's internal rich-document JSON representation.
+      const converted = convertClipboard({getData:type =>
+        type === "text/html" ? element.innerHTML : type === "text/plain" ? element.innerText : ""});
+      if (converted) commit(converted.document);
+      closeLink();
+      setError(undefined);
+    } catch {
+      setError("The link could not be inserted. Try again.");
+    }
+  };
   const format = (command: "bold" | "italic" | "underline" | "createLink") => {
     editor.current?.focus();
     if (command === "createLink") {
@@ -170,20 +266,25 @@ export function RichCommentComposer(props: RichCommentComposerProps) {
     } else document.execCommand(command);
     editor.current?.dispatchEvent(new InputEvent("input", { bubbles: true }));
   };
-  return <ComposerFrame className={props.className} data-collaboration-composer="rich-json" header={props.header ? <ComposerHeader>{props.header}</ComposerHeader> : undefined}>
-    {linkEditing ? <form className="a-rich-comment-composer__link" onSubmit={event=>{event.preventDefault();const href=linkUrl.trim();if(!/^https?:\/\//i.test(href)){setError("Enter an http or https link.");return;}editor.current?.focus();const selection=window.getSelection();if(selection&&linkSelection.current){selection.removeAllRanges();selection.addRange(linkSelection.current);}document.execCommand("createLink",false,href);if(editor.current){const converted=convertClipboard({getData:type=>type==="text/html"?editor.current!.innerHTML:editor.current!.innerText});if(converted)commit(converted.document);}setLinkEditing(false);setError(undefined);}}><label>Link URL<input type="url" value={linkUrl} onChange={event=>setLinkUrl(event.currentTarget.value)} placeholder="https://" autoFocus /></label><button type="submit">Insert link</button><button type="button" onClick={()=>setLinkEditing(false)}>Cancel</button></form> : null}
-    <span id={editorLabelId} className="a-rich-comment-composer__editor-label a-visually-hidden">Comment</span>
-    <div ref={editor} className="a-rich-comment-composer__editor" data-composer-editor="" role="textbox" aria-multiline="true" aria-labelledby={editorLabelId} contentEditable={!busy} suppressContentEditableWarning onPaste={(event) => void onPaste(event)} onInput={onInput} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); void submit(); } }} data-empty={!serializedValue["text/plain"]?.trim()} aria-placeholder={props.placeholder ?? "Write a comment…"} data-placeholder={props.placeholder ?? "Write a comment…"} />
+  const audienceLabel = intl.message(`comments.${visibility}`);
+  const lockedAudience = props.audienceLockedReason ? <Tooltip label={props.audienceLockedReason}><span className="a-rich-comment-composer__locked-audience" tabIndex={0} aria-label={intl.message("comments.visibilityLabel", {audience: audienceLabel, reason: props.audienceLockedReason})}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>{audienceLabel}</span></Tooltip> : null;
+  return <ComposerFrame className={props.className} data-collaboration-composer="rich-json" header={props.header || lockedAudience || props.headerActions ? <ComposerHeader>{props.header}{lockedAudience || props.headerActions ? <div className="a-rich-comment-composer__header-actions">{lockedAudience}{props.headerActions}</div> : null}</ComposerHeader> : undefined}>
+    {linkEditing ? <form className="a-rich-comment-composer__link" onSubmit={insertLink} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();event.stopPropagation();closeLink();}}}>
+      <label>{intl.message("comments.linkUrl")}<input type="url" required value={linkUrl} onChange={event=>setLinkUrl(event.currentTarget.value)} placeholder="https://" autoFocus /></label>
+      <div className="a-rich-comment-composer__link-actions"><button type="submit" disabled={busy}>{intl.message("comments.insertLink")}</button><button type="button" onClick={closeLink}>{intl.message("action.cancel")}</button></div>
+    </form> : null}
+    <span id={editorLabelId} className="a-rich-comment-composer__editor-label a-visually-hidden">{intl.message("comments.label")}</span>
+    <div ref={editor} className="a-rich-comment-composer__editor" data-composer-editor="" role="textbox" aria-multiline="true" aria-labelledby={editorLabelId} contentEditable={!busy} suppressContentEditableWarning onPaste={(event) => void onPaste(event)} onInput={onInput} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); void submit(); } }} data-empty={!serializedValue["text/plain"]?.trim()} aria-placeholder={props.placeholder ?? intl.message("comments.placeholder")} data-placeholder={props.placeholder ?? intl.message("comments.placeholder")} />
 
-    {attachmentIds.length ? <ul className="a-rich-comment-composer__attachments" aria-label="Comment attachments">{attachmentIds.map((id) => <li key={id}>{attachmentLabel(value,id)}<button type="button" disabled={busy} aria-label={`Remove attachment ${attachmentLabel(value,id)}`} onClick={()=>commit(withoutAttachment(value,id))}>×</button></li>)}</ul> : null}
-    {uploadCount > 0 ? <p role="status">Uploading {uploadCount} file{uploadCount === 1 ? "" : "s"}…</p> : null}
+    {attachmentIds.length ? <ul className="a-rich-comment-composer__attachments" aria-label={intl.message("comments.attachments")}>{attachmentIds.map((id) => <li key={id}>{attachmentLabel(value,id)}<button type="button" disabled={busy} aria-label={`Remove attachment ${attachmentLabel(value,id)}`} onClick={()=>commit(withoutAttachment(value,id))}>×</button></li>)}</ul> : null}
+    {uploadCount > 0 ? <p role="status">{intl.message("comments.uploading", {count: uploadCount})}</p> : null}
     {error ? <p role="alert">{error}</p> : null}
     {props.supportingContent}
     <ComposerFooter className="a-rich-comment-composer__footer">
-    <div role="toolbar" aria-label="Comment formatting"><button type="button" disabled={busy} onClick={() => format("bold")}><strong>B</strong><span className="a-visually-hidden">Bold</span></button><button type="button" disabled={busy} onClick={() => format("italic")}><em>I</em><span className="a-visually-hidden">Italic</span></button><button type="button" disabled={busy} onClick={() => format("underline")}><u>U</u><span className="a-visually-hidden">Underline</span></button><button type="button" disabled={busy} onClick={() => format("createLink")}>Link</button>{props.allowAttachments && props.prepareAttachments ? <><Tooltip label="Attach files"><button type="button" aria-label="Attach files to comment" disabled={busy} onClick={()=>filePicker.current?.click()}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m21 11-9 9a6 6 0 0 1-8.5-8.5L13 2a4 4 0 0 1 5.7 5.7l-9.5 9.5a2 2 0 0 1-2.8-2.8L15 6"/></svg></button></Tooltip><input ref={filePicker} type="file" multiple hidden aria-label="Choose comment attachments" onChange={event=>{const files=Array.from(event.currentTarget.files??[]);event.currentTarget.value="";void pickFiles(files);}}/></> : null}</div>
-    {props.searchMentions ? <Tooltip label="Mention a participant"><details className="a-rich-comment-composer__mentions"><summary aria-label="Mention a participant">@</summary><div><label>Mention a participant<input value={mentionQuery} onChange={event=>setMentionQuery(event.currentTarget.value)} /></label><ul aria-label="Matching participants">{mentionOptions.map(person=><li key={person.id}><button type="button" disabled={busy} onClick={()=>{append({type:"doc",schema:RICH_TEXT_SCHEMA,content:[{type:"paragraph",content:[{type:"mention",attrs:{principalId:person.id,label:person.displayName}}]}]});setMentionQuery("");}}>{person.displayName}</button></li>)}</ul></div></details></Tooltip>:null}
+    <div role="toolbar" aria-label={intl.message("comments.formatting")}><button type="button" disabled={busy} onClick={() => format("bold")}><strong>B</strong><span className="a-visually-hidden">{intl.message("comments.bold")}</span></button><button type="button" disabled={busy} onClick={() => format("italic")}><em>I</em><span className="a-visually-hidden">{intl.message("comments.italic")}</span></button><button type="button" disabled={busy} onClick={() => format("underline")}><u>U</u><span className="a-visually-hidden">{intl.message("comments.underline")}</span></button><button type="button" disabled={busy} onClick={() => format("createLink")}>{intl.message("comments.link")}</button>{props.allowAttachments && props.prepareAttachments ? <><Tooltip label={intl.message("comments.attach")}><button type="button" aria-label={intl.message("comments.attachLabel")} disabled={busy} data-tooltip-dismissed={attachmentTooltipDismissed || undefined} onPointerEnter={()=>setAttachmentTooltipDismissed(false)} onKeyUp={event=>{if(event.key==="Tab")setAttachmentTooltipDismissed(false);}} onClick={()=>{setAttachmentTooltipDismissed(true);filePicker.current?.click();}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m21 11-9 9a6 6 0 0 1-8.5-8.5L13 2a4 4 0 0 1 5.7 5.7l-9.5 9.5a2 2 0 0 1-2.8-2.8L15 6"/></svg></button></Tooltip><input ref={filePicker} type="file" multiple hidden aria-label={intl.message("comments.chooseAttachments")} onChange={event=>{setAttachmentTooltipDismissed(true);const files=Array.from(event.currentTarget.files??[]);event.currentTarget.value="";void pickFiles(files);}}/></> : null}</div>
+    {props.searchMentions ? <Tooltip label={intl.message("comments.mention")}><details ref={mentionPicker} className="a-rich-comment-composer__mentions"><summary aria-label={intl.message("comments.mention")}>@</summary><div><label>{intl.message("comments.mention")}<input value={mentionQuery} onChange={event=>setMentionQuery(event.currentTarget.value)} /></label><ul aria-label={intl.message("comments.matches")}>{mentionOptions.map(person=><li key={person.id}><button type="button" disabled={busy} onClick={()=>selectMention(person)}>{person.displayName}</button></li>)}</ul></div></details></Tooltip>:null}
     <div className="a-rich-comment-composer__submit-actions">
-    <div className="a-rich-comment-composer__audience">{props.audienceLockedReason ? <Tooltip label={props.audienceLockedReason}><span className="a-rich-comment-composer__locked-audience" tabIndex={0} aria-label={`${visibility.charAt(0).toUpperCase()+visibility.slice(1)} visibility. ${props.audienceLockedReason}`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>{visibility.charAt(0).toUpperCase()+visibility.slice(1)}</span></Tooltip> : <CommentAudiencePicker value={visibility} options={audiences} disabled={busy || audiences.length === 1} onChange={audience=>{setVisibility(audience);props.onDraftChange?.(value,audience);}}/>}</div>{props.onCancel?<button type="button" disabled={busy} onClick={props.onCancel}>{props.cancelLabel??"Cancel"}</button>:null}    <button className="a-rich-comment-composer__send" aria-label={props.submitAriaLabel} type="button" disabled={busy} onClick={() => void submit()}>{submitting ? "Saving…" : props.submitLabel ?? "Send"}</button></div>
+    {!props.audienceLockedReason ? <div className="a-rich-comment-composer__audience"><CommentAudiencePicker value={visibility} options={audiences} disabled={busy || audiences.length === 1} onChange={audience=>{setVisibility(audience);props.onDraftChange?.(value,audience);}}/></div> : null}{props.onCancel?<button type="button" disabled={busy} onClick={props.onCancel}>{props.cancelLabel??intl.message("action.cancel")}</button>:null}    <button className="a-rich-comment-composer__send" aria-label={props.submitAriaLabel} type="button" disabled={busy} onClick={() => void submit()}>{submitting ? intl.message("action.saving") : props.submitLabel ?? intl.message("action.send")}</button></div>
     </ComposerFooter>
   </ComposerFrame>;
 }

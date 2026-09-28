@@ -1,9 +1,9 @@
 "use client";
-import { useId, useRef, type HTMLAttributes, type ReactNode } from "react";
+import { useId, useRef, type HTMLAttributes, type ReactNode, type Ref } from "react";
 
 /** Visual panel chrome only; owners retain navigation, data and open state. */
-export function PanelHeader({icon,title,subtitle,titleId,subtitleId,actions,className="",...props}:Omit<HTMLAttributes<HTMLElement>,"title"> & {icon:ReactNode;title:ReactNode;subtitle?:ReactNode;titleId?:string;subtitleId?:string;actions?:ReactNode}) {
-  return <header {...props} className={`a-panel-header ${className}`}><span className="a-panel-header__icon" aria-hidden="true">{icon}</span><div className="a-panel-header__identity"><strong id={titleId} role="heading" aria-level={2}>{title}</strong>{subtitle?<small id={subtitleId}>{subtitle}</small>:null}</div>{actions?<nav className="a-panel-header__actions" aria-label="Panel actions">{actions}</nav>:null}</header>;
+export function PanelHeader({icon,title,subtitle,titleId,subtitleId,titleRef,actionsLabel="Panel actions",actions,className="",...props}:Omit<HTMLAttributes<HTMLElement>,"title"> & {icon:ReactNode;title:ReactNode;subtitle?:ReactNode;titleId?:string;subtitleId?:string;titleRef?:Ref<HTMLElement>;actionsLabel?:string;actions?:ReactNode}) {
+  return <header {...props} className={`a-panel-header ${className}`}><span className="a-panel-header__icon" aria-hidden="true">{icon}</span><div className="a-panel-header__identity"><strong ref={titleRef} tabIndex={titleRef ? -1 : undefined} id={titleId} role="heading" aria-level={2}>{title}</strong>{subtitle?<small id={subtitleId}>{subtitle}</small>:null}</div>{actions?<nav className="a-panel-header__actions" aria-label={actionsLabel}>{actions}</nav>:null}</header>;
 }
 
 export type PanelTab = {key:string;label:string;count?:number;id?:string;panelId:string;accessibleLabel?:string};

@@ -1,4 +1,8 @@
 import { PublicationContractError } from "./errors.js";
+import { capabilityAuthoringMode } from "./capability-authoring-mode.js";
+import { parseCapabilityProfile, validateCapabilityProfileBinding } from "./capability-profile.js";
+import { capabilityProfileBinding, type CapabilityProfileSource } from "./capability-profile-binding.js";
+import { isCommonCapabilityAction, capabilityActionMetadata } from "./common-capability-permissions.js";
 import { parseEntityNotificationConfiguration, compileEntityNotificationConfiguration, type EntityNotificationConfiguration } from "./notification-policy.js";
 import type {
   CompiledEntityArtifactV2,
@@ -21,7 +25,7 @@ export interface CapabilityPolicyReference {
   readonly hash: string;
   readonly plane: "neon" | "mesh" | "studio";
 }
-export interface EntityCapabilityAuthoringMember {
+export interface EntityCapabilityAuthoringMember extends CapabilityProfileSource {
   readonly capabilityKey: EntityCapabilityKind;
   readonly declaration: CapabilityDeclaration;
   readonly binding?: CommentBinding | AttachmentBinding;
@@ -37,9 +41,10 @@ export function capabilityArtifactMembers(
   for (const member of members) {
     if (!member || !["comments", "attachments"].includes(member.capabilityKey))
       fail(entityCode, "unknown capability member");
+    const mode = capabilityAuthoringMode(member, `${entityCode}.capabilities.${member.capabilityKey}`);
     object(
       member,
-      ["id", "capabilityKey", "declaration", "binding"],
+      ["id", "capabilityKey", "declaration", "binding", "profile", "profileDefinition", "overrides"],
       `${entityCode}.capabilities.${member.capabilityKey}`,
     );
     if (Object.hasOwn(capabilities, member.capabilityKey))
@@ -56,7 +61,7 @@ export function capabilityArtifactMembers(
           ? "commentBinding"
           : "attachmentBinding"
       ] = parseCapabilityBinding(
-        member.binding,
+        mode === "profile" ? capabilityProfileBinding(member, entityCode) : member.binding,
         member.capabilityKey,
         entityCode,
       );
@@ -75,6 +80,7 @@ export interface CapabilityAction {
   readonly idempotency: "none" | "required";
 }
 export interface CapabilityBinding {
+  readonly profilePolicy?: CapabilityPolicyReference;
   readonly notifications?: EntityNotificationConfiguration;
   readonly schemaVersion: 1;
   readonly serviceKey: string;
@@ -131,6 +137,7 @@ export interface AttachmentBinding extends CapabilityBinding {
 }
 const kinds = ["comments", "attachments"] as const;
 const base = [
+  "profilePolicy",
   "notifications",
   "schemaVersion",
   "serviceKey",
@@ -345,6 +352,8 @@ export function parseCapabilityBinding(
   list(v.layouts, ["drawer", "content"], `${path}.layouts`);
   if (v.retentionPolicy !== undefined)
     reference(v.retentionPolicy, `${path}.retentionPolicy`);
+  if (v.profilePolicy !== undefined)
+    reference(v.profilePolicy, `${path}.profilePolicy`);
   if (!Array.isArray(v.actions) || !v.actions.length)
     fail(`${path}.actions`, "read action required");
   const found = new Set<string>();
@@ -361,11 +370,16 @@ export function parseCapabilityBinding(
     found.add(k);
     key(a.permissionCode, `${p}.permissionCode`);
     literal(a.handlerKey, `platform.${kind}.${k}.v1`, `${p}.handlerKey`);
+    // Validate common tuples even without a runtime registry (Studio authoring
+    // and persisted-payload parsing). Do not borrow a read permission for writes.
+    if (String(a.permissionCode).startsWith("common.") && !isCommonCapabilityAction(kind, {
+      key: k, permissionCode: String(a.permissionCode), handlerKey: String(a.handlerKey),
+    })) fail(p, "unsupported common capability permission/action/handler");
     list([a.concurrency], ["none", "revision"], `${p}.concurrency`);
     list([a.idempotency], ["none", "required"], `${p}.idempotency`);
-    if (["update_own", "rename", "version", "folder"].includes(k))
+    if (capabilityActionMetadata(kind, k).concurrency === "revision")
       literal(a.concurrency, "revision", `${p}.concurrency`);
-    if (["create", "finalize", "reply"].includes(k))
+    if (capabilityActionMetadata(kind, k).requiredIdempotency)
       literal(a.idempotency, "required", `${p}.idempotency`);
   }
   if (!found.has("read")) fail(path, "read action required");
@@ -564,7 +578,8 @@ export function validateEntityCapabilities(
           if (
             !registry.handlers.has(action.handlerKey) ||
             !registry.permissions?.has(action.permissionCode) ||
-            !action.permissionCode.startsWith(`${core.plane}.`)
+            (!action.permissionCode.startsWith(`${core.plane}.`) &&
+              !isCommonCapabilityAction(kind, action))
           )
             fail(
               operation.artifactKey,
@@ -572,6 +587,7 @@ export function validateEntityCapabilities(
             );
       }
       for (const ref of [
+        binding.profilePolicy,
         binding.retentionPolicy,
         kind === "comments"
           ? (binding as CommentBinding).audiencePolicy
@@ -590,6 +606,14 @@ export function validateEntityCapabilities(
               operation.artifactKey,
               "policy must be an immutable same-plane release dependency",
             );
+          if (ref === binding.profilePolicy) {
+            if (dep.artifactType !== "capability_profile" || dep.entityCode !== core.entityCode)
+              fail(operation.artifactKey, "profile must be a capability-profile artifact for the owner");
+            const profile = parseCapabilityProfile(dep.content.profile);
+            if (profile.capabilityKey !== kind)
+              fail(operation.artifactKey, "profile capability kind mismatch");
+            validateCapabilityProfileBinding(profile, binding);
+          }
         }
       if (
         kind === "comments" &&

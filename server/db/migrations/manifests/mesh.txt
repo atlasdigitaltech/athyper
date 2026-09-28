@@ -1,1 +1,2 @@
 # Canonical development baseline. Add only new post-baseline upgrades here.
+20260926_common_reference_permission.sql

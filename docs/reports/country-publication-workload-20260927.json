@@ -1,0 +1,433 @@
+{
+  "schema": "athyper.dev-entity-publication-inventory/1",
+  "capturedAt": "2026-09-27T04:05:29.997Z",
+  "entityCode": "country",
+  "productHash": "fc8be6632cf1c3c0ef0f741bbe519120a99171fd2a95582e322393edd40af8b7",
+  "readOnly": true,
+  "planes": {
+    "studio": {
+      "rows": {
+        "count": 247
+      },
+      "heads": [],
+      "applied": []
+    },
+    "neon": {
+      "rows": {
+        "count": 247
+      },
+      "heads": [],
+      "applied": []
+    },
+    "mesh": {
+      "rows": {
+        "count": 247
+      },
+      "heads": [],
+      "applied": []
+    }
+  },
+  "workloads": [
+    {
+      "container": "athyper-dev-source-api-1",
+      "image": "sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df",
+      "startedAt": "2026-09-27T04:01:51.271169666Z",
+      "status": "running",
+      "health": "healthy",
+      "configPath": "/run/dev-publication/server.json",
+      "configSource": "/home/chandravel_natarajan/.athyper/instances/dev/secrets/dev-publication/server.json",
+      "configModifiedAt": "2026-09-21T09:29:36.677Z",
+      "scopedPublication": {
+        "configPath": "/run/publication-workload/server.json",
+        "configSource": "/home/chandravel_natarajan/.athyper/instances/dev/secrets/dev-publication-athyper/workload.json",
+        "readOnly": true,
+        "authorityTenantId": "11111111-1111-4111-8111-111111111111",
+        "tenantId": "11111111-1111-4111-8111-111111111111",
+        "realmKey": "platform-control",
+        "authorPrincipalId": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+        "publisherPrincipalId": "c0febdd1-491c-46b8-8113-160be767b88d"
+      },
+      "config": {
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "tenantCode": "cirrusatlantic",
+        "entityCode": "business_partner",
+        "targets": [
+          "neon"
+        ],
+        "authorPrincipalId": "2c33ecfb-e1e9-4e61-a9f1-a38ef8cd0d25",
+        "publisherPrincipalId": "e545079f-4992-4f2e-bc92-8038a8dd9a22"
+      }
+    },
+    {
+      "container": "athyper-dev-source-worker-1",
+      "image": "sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df",
+      "startedAt": "2026-09-27T04:01:51.270137487Z",
+      "status": "running",
+      "health": "healthy",
+      "configPath": "/run/dev-publication/server.json",
+      "configSource": "/home/chandravel_natarajan/.athyper/instances/dev/secrets/dev-publication/server.json",
+      "configModifiedAt": "2026-09-21T09:29:36.677Z",
+      "scopedPublication": {
+        "configPath": "/run/publication-workload/server.json",
+        "configSource": "/home/chandravel_natarajan/.athyper/instances/dev/secrets/dev-publication-athyper/workload.json",
+        "readOnly": true,
+        "authorityTenantId": "11111111-1111-4111-8111-111111111111",
+        "tenantId": "11111111-1111-4111-8111-111111111111",
+        "realmKey": "platform-control",
+        "authorPrincipalId": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+        "publisherPrincipalId": "c0febdd1-491c-46b8-8113-160be767b88d"
+      },
+      "config": {
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "tenantCode": "cirrusatlantic",
+        "entityCode": "business_partner",
+        "targets": [
+          "neon"
+        ],
+        "authorPrincipalId": "2c33ecfb-e1e9-4e61-a9f1-a38ef8cd0d25",
+        "publisherPrincipalId": "e545079f-4992-4f2e-bc92-8038a8dd9a22"
+      }
+    }
+  ],
+  "productHashWithoutRuntimeBindings": "2e6cc1eeec0dd357c1db0b5ec139ccd58c800532932985bb3a3fbaabdb00ff0f",
+  "entities": [
+    {
+      "id": "b7e5b981-2227-4720-ba5d-040a48ab6842",
+      "tenant_id": null,
+      "module_id": "98d52467-f245-14d2-4e5a-2cc3e65f3464",
+      "entity_code": "country",
+      "entity_class": "reference",
+      "ownership_model": "system",
+      "status": "draft",
+      "status_changed_at": null,
+      "status_changed_by": null,
+      "created_at": "2026-09-26T12:57:46.512Z",
+      "created_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "updated_at": null,
+      "updated_by": null
+    }
+  ],
+  "drafts": [
+    {
+      "row": {
+        "id": "28e155d7-9f18-48fd-9f4d-847ff80f7e87",
+        "tenant_id": null,
+        "entity_id": "b7e5b981-2227-4720-ba5d-040a48ab6842",
+        "change_set_code": "system-reference.2e6cc1eeec0dd357c1db0b5ec139ccd58c800532932985bb3a3fbaabdb00ff0f.28e155d7-9f18-48fd-9f4d-847ff80f7e87",
+        "branch_code": "system-reference.2e6cc1eeec0dd357c1db0b5ec139ccd58c800532932985bb3a3fbaabdb00ff0f",
+        "base_release_id": null,
+        "parent_change_set_id": null,
+        "status": "draft",
+        "lock_version": "1",
+        "title": "Countries",
+        "change_summary": null,
+        "change_reason_code": null,
+        "ticket_reference": null,
+        "submitted_at": null,
+        "submitted_by": null,
+        "reviewed_at": null,
+        "reviewed_by": null,
+        "approved_at": null,
+        "approved_by": null,
+        "rejected_at": null,
+        "rejected_by": null,
+        "rejection_reason": null,
+        "published_at": null,
+        "published_by": null,
+        "status_changed_at": null,
+        "status_changed_by": null,
+        "created_at": "2026-09-26T12:57:46.512Z",
+        "created_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+        "updated_at": "2026-09-26T12:57:46.512Z",
+        "updated_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d"
+      },
+      "marker": [
+        {
+          "schema": "athyper.system-reference-source/1",
+          "moduleCode": "ent",
+          "productHash": "2e6cc1eeec0dd357c1db0b5ec139ccd58c800532932985bb3a3fbaabdb00ff0f",
+          "targetPlanes": [
+            "studio",
+            "neon",
+            "mesh"
+          ]
+        }
+      ],
+      "contractHash": "259eb6b00119e4f685d43fa72806d78c8845422c4df79b34acc20dc262d12cae",
+      "descriptorHash": "aa8be223e5b28ed65a916404366a47e90910fda71f879141eb23609c453d1e2e",
+      "originalSaveUnchanged": true,
+      "validationIssues": [],
+      "testsPassed": true,
+      "testCount": 0,
+      "sectionCounts": {
+        "classProfiles": 0,
+        "runtimeProfiles": 1,
+        "fields": 22,
+        "keys": 2,
+        "keyFields": 2,
+        "searchProfiles": 1,
+        "searchFields": 4,
+        "relations": 0,
+        "relationTargets": 0,
+        "relationFields": 0,
+        "operations": 2,
+        "operationPermissions": 2,
+        "operationRules": 0,
+        "operationScopeBindings": 2,
+        "changeCaseBindings": 0,
+        "operationContextRequirements": 0,
+        "fieldReferenceBindings": 0,
+        "materializationBindings": 0,
+        "materializationFieldMappings": 0,
+        "surfaces": 2,
+        "surfaceSections": 0,
+        "surfaceFieldBindings": 44,
+        "surfaceOperations": 0,
+        "flows": 0,
+        "flowSteps": 0,
+        "lifecycleBindings": 0,
+        "lifecycleOperationBindings": 0,
+        "policyBindings": 0,
+        "capabilities": 2,
+        "fieldPolicyBindings": 0,
+        "numberingBindings": 0,
+        "tests": 0
+      },
+      "runtimeProfiles": [
+        {
+          "id": "a6ad4987-c176-4386-91e5-56f06d6001a6",
+          "profileKey": "default",
+          "backingKind": "table",
+          "storagePlane": "studio",
+          "storageSchema": "shared",
+          "storageObject": "country",
+          "apiExposure": "api",
+          "readMode": "generic",
+          "writeMode": "none",
+          "createMode": "form_only",
+          "concurrencyMode": "none"
+        }
+      ],
+      "operations": [
+        {
+          "id": "6c7dffbd-d571-4d79-ad24-e079b8efff77",
+          "operationKey": "list",
+          "operationKind": "read",
+          "label": "Countries",
+          "executionMode": "synchronous",
+          "idempotencyMode": "none",
+          "requiresMfa": false,
+          "auditEventCode": "country.list",
+          "status": "active"
+        },
+        {
+          "id": "9d33d667-0c24-4a58-821e-3c6b48ee792a",
+          "operationKey": "read",
+          "operationKind": "read",
+          "label": "View record",
+          "executionMode": "synchronous",
+          "idempotencyMode": "none",
+          "requiresMfa": false,
+          "auditEventCode": "country.read",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "row": {
+        "id": "bded3c66-95b6-43b9-b8fd-df8e003e54e9",
+        "tenant_id": null,
+        "entity_id": "b7e5b981-2227-4720-ba5d-040a48ab6842",
+        "change_set_code": "system-reference.fc8be6632cf1c3c0ef0f741bbe519120a99171fd2a95582e322393edd40af8b7.bded3c66-95b6-43b9-b8fd-df8e003e54e9",
+        "branch_code": "system-reference.fc8be6632cf1c3c0ef0f741bbe519120a99171fd2a95582e322393edd40af8b7",
+        "base_release_id": null,
+        "parent_change_set_id": null,
+        "status": "draft",
+        "lock_version": "1",
+        "title": "Countries",
+        "change_summary": null,
+        "change_reason_code": null,
+        "ticket_reference": null,
+        "submitted_at": null,
+        "submitted_by": null,
+        "reviewed_at": null,
+        "reviewed_by": null,
+        "approved_at": null,
+        "approved_by": null,
+        "rejected_at": null,
+        "rejected_by": null,
+        "rejection_reason": null,
+        "published_at": null,
+        "published_by": null,
+        "status_changed_at": null,
+        "status_changed_by": null,
+        "created_at": "2026-09-26T15:19:41.976Z",
+        "created_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+        "updated_at": "2026-09-26T15:19:41.976Z",
+        "updated_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d"
+      },
+      "marker": [
+        {
+          "schema": "athyper.system-reference-source/1",
+          "moduleCode": "ent",
+          "productHash": "fc8be6632cf1c3c0ef0f741bbe519120a99171fd2a95582e322393edd40af8b7",
+          "targetPlanes": [
+            "studio",
+            "neon",
+            "mesh"
+          ]
+        }
+      ],
+      "contractHash": "a9d1b21360b9ac72a181b52a13e0975e67e6370b25105ad3f7399d50c9257454",
+      "descriptorHash": "5d46ec092a33a02c117fd46c54d13216da91f481aa2ff1c0bd6b9cac75fe40e0",
+      "originalSaveUnchanged": true,
+      "validationIssues": [],
+      "testsPassed": true,
+      "testCount": 0,
+      "sectionCounts": {
+        "classProfiles": 0,
+        "runtimeProfiles": 1,
+        "fields": 22,
+        "keys": 2,
+        "keyFields": 2,
+        "searchProfiles": 1,
+        "searchFields": 4,
+        "relations": 0,
+        "relationTargets": 0,
+        "relationFields": 0,
+        "operations": 2,
+        "operationPermissions": 2,
+        "operationRules": 0,
+        "operationScopeBindings": 2,
+        "changeCaseBindings": 0,
+        "operationContextRequirements": 0,
+        "fieldReferenceBindings": 0,
+        "materializationBindings": 0,
+        "materializationFieldMappings": 0,
+        "surfaces": 2,
+        "surfaceSections": 0,
+        "surfaceFieldBindings": 44,
+        "surfaceOperations": 0,
+        "flows": 0,
+        "flowSteps": 0,
+        "lifecycleBindings": 0,
+        "lifecycleOperationBindings": 0,
+        "policyBindings": 0,
+        "capabilities": 2,
+        "fieldPolicyBindings": 0,
+        "numberingBindings": 0,
+        "tests": 0
+      },
+      "runtimeProfiles": [
+        {
+          "id": "233379d7-df3f-46e5-8bfa-d43a136f81f7",
+          "profileKey": "default",
+          "backingKind": "table",
+          "storagePlane": "studio",
+          "storageSchema": "shared",
+          "storageObject": "country",
+          "apiExposure": "api",
+          "readMode": "generic",
+          "writeMode": "none",
+          "createMode": "form_only",
+          "concurrencyMode": "none"
+        }
+      ],
+      "operations": [
+        {
+          "id": "2b65f034-e8cd-446d-b60a-c5514220398e",
+          "operationKey": "read",
+          "operationKind": "read",
+          "label": "View record",
+          "executionMode": "synchronous",
+          "idempotencyMode": "none",
+          "requiresMfa": false,
+          "auditEventCode": "country.read",
+          "status": "active"
+        },
+        {
+          "id": "7ca2b5dc-85b8-4e50-8b7c-a1dc3d36ec9c",
+          "operationKey": "list",
+          "operationKind": "read",
+          "label": "Countries",
+          "executionMode": "synchronous",
+          "idempotencyMode": "none",
+          "requiresMfa": false,
+          "auditEventCode": "country.list",
+          "status": "active"
+        }
+      ]
+    }
+  ],
+  "draftDifferences": [
+    {
+      "path": "surfaces.1.layoutConfig.systemReferenceProduct.productHash",
+      "before": "2e6cc1eeec0dd357c1db0b5ec139ccd58c800532932985bb3a3fbaabdb00ff0f",
+      "after": "fc8be6632cf1c3c0ef0f741bbe519120a99171fd2a95582e322393edd40af8b7"
+    },
+    {
+      "path": "surfaces.1.layoutConfig.authorizationRuntime",
+      "before": null,
+      "after": {
+        "bindings": [
+          {
+            "handler": "entity.record.list.v1",
+            "operation": "list",
+            "resolver": "tenant.record.v1"
+          },
+          {
+            "handler": "entity.record.read.v1",
+            "operation": "read",
+            "resolver": "tenant.record.v1"
+          }
+        ],
+        "runtimeVersion": "entity-authorization.v1",
+        "schemaVersion": 1
+      }
+    }
+  ],
+  "authoringReleases": [],
+  "publicationReleases": [],
+  "deployments": [],
+  "policyCount": {
+    "count": 0
+  },
+  "workloadPrincipals": [
+    {
+      "id": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+      "code": "dev.metadata.author",
+      "auth_epoch": 0,
+      "principal_type": "service_account",
+      "status": "active",
+      "tenant_code": "athyper",
+      "tenant_id": "11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "id": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "code": "dev.metadata.publisher",
+      "auth_epoch": 0,
+      "principal_type": "service_account",
+      "status": "active",
+      "tenant_code": "athyper",
+      "tenant_id": "11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "id": "2c33ecfb-e1e9-4e61-a9f1-a38ef8cd0d25",
+      "code": "dev.metadata.author",
+      "auth_epoch": 0,
+      "principal_type": "service_account",
+      "status": "active",
+      "tenant_code": "cirrusatlantic",
+      "tenant_id": "44444444-4444-4444-8444-444444444444"
+    },
+    {
+      "id": "e545079f-4992-4f2e-bc92-8038a8dd9a22",
+      "code": "dev.metadata.publisher",
+      "auth_epoch": 0,
+      "principal_type": "service_account",
+      "status": "active",
+      "tenant_code": "cirrusatlantic",
+      "tenant_id": "44444444-4444-4444-8444-444444444444"
+    }
+  ]
+}

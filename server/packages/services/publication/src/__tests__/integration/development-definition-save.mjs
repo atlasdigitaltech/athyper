@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {createHash,randomUUID} from 'node:crypto';
 import {Kysely,PostgresDialect,sql} from 'kysely';
 import pg from 'pg';
-import {BusinessPartnerDefinitionService} from '../../business-partner-definition-service.ts';
+import {BusinessPartnerDefinitionService} from '../../entity-definition-service.ts';
 import {KyselyPublicationAuthorityRepository} from '../../kysely-authority-repository.ts';
 
 if(!process.argv.includes('--confirm=LOCAL-DEV-ROLLBACK'))throw new Error('Explicit development rollback test required');

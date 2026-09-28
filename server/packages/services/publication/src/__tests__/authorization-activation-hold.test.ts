@@ -2,7 +2,7 @@ import {Kysely,PostgresDialect} from 'kysely';
 import {expect,it,vi} from 'vitest';
 import {KyselyPublicationAuthorityWork} from '../kysely-publication-authority-work.js';
 function fixture(target=true,approval?:()=>Promise<void>){
- const database=new Kysely<Record<string,never>>({dialect:new PostgresDialect({pool:{connect:async()=>({query:async()=>({rows:target?[{publication_release_id:'release'}]:[]}),release(){}})} as any})});
+ const database=new Kysely<Record<string,never>>({dialect:new PostgresDialect({pool:{connect:async()=>({query:async(text:string)=>({rows:target && !text.includes("a.artifact_kind='compiled_entity_runtime'")?[{publication_release_id:'release'}]:[]}),release(){}})} as any})});
  const authority={getDeployment:async()=>({deploymentStatus:'pending',targetPlane:'neon'}),transitionDeployment:vi.fn(),listRecoverableDeployments:async()=>[{deploymentId:'deployment',targetPlane:'neon'}]};
  const work=new KyselyPublicationAuthorityWork({database,authority,authorizeEntityActivation:approval} as any);
  return{work,authority};

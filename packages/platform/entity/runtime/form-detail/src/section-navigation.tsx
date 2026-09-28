@@ -70,6 +70,7 @@ export function useEntitySectionScroll({
   scopeKey,
   enabled = true,
   initialSection,
+  firstSectionAtPageTop = false,
   onObserve,
   getThreshold,
   fallbackSelector,
@@ -82,6 +83,8 @@ export function useEntitySectionScroll({
   scopeKey: string;
   enabled?: boolean;
   initialSection?: string;
+  /** Record overview starts with its identity header; later sections remain anchored. */
+  firstSectionAtPageTop?: boolean;
   onObserve: (key: string) => void;
   getThreshold: () => number;
   fallbackSelector?: string;
@@ -111,8 +114,13 @@ export function useEntitySectionScroll({
         : undefined;
     if (!target) return;
     scrollingTo.current = activeSection;
+    const align = () => {
+      if (firstSectionAtPageTop && activeSection === initialSection)
+        window.scrollTo({ top: 0, behavior: "instant" });
+      else target.scrollIntoView({ block: "start", behavior: "instant" });
+    };
     const frame = requestAnimationFrame(() => {
-      target.scrollIntoView({ block: "start", behavior: "instant" });
+      align();
       if (navigationRevision > 0) target.focus({ preventScroll: true });
     });
     const release = () => {
@@ -123,7 +131,7 @@ export function useEntitySectionScroll({
         ? undefined
         : new ResizeObserver(() => {
             if (scrollingTo.current === activeSection)
-              target.scrollIntoView({ block: "start", behavior: "instant" });
+              align();
           });
     const content = root.current.querySelector(contentSelector);
     if (content) observer?.observe(content);

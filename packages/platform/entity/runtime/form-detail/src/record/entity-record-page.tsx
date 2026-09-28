@@ -159,9 +159,10 @@ function EntityRecordPageInstance({
           continuousSections={sectionView}
           continuousScrollRoot={contentScrollRef}
           collaborationSectionKeys={["comments", "attachments"]}
-          onSelectSection={(sectionKey) => {
+          onSelectSection={(sectionKey, tabKey) => {
             const next = new URL(window.location.href);
             next.searchParams.set("section", sectionKey);
+            if (tabKey) next.searchParams.set("tab", tabKey);
             if (collaborationFull) {
               next.searchParams.delete("collaborationMode");
               next.searchParams.set("panel", "closed");

@@ -1,0 +1,801 @@
+{
+  "capturedAt": "2026-09-27T05:35:23.533Z",
+  "scope": "DEV only",
+  "operation": "Add published permissions to existing managed test-admin roles; no identity or scope mutations",
+  "transactions": [
+    {
+      "stage": "rollback-check",
+      "plane": "studio",
+      "added": 18,
+      "permissions": [
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        }
+      ]
+    },
+    {
+      "stage": "rollback-check",
+      "plane": "neon",
+      "added": 18,
+      "permissions": [
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        }
+      ]
+    },
+    {
+      "stage": "rollback-check",
+      "plane": "mesh",
+      "added": 18,
+      "permissions": [
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        }
+      ]
+    },
+    {
+      "stage": "committed",
+      "plane": "studio",
+      "added": 18,
+      "permissions": [
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        }
+      ]
+    },
+    {
+      "stage": "committed",
+      "plane": "neon",
+      "added": 18,
+      "permissions": [
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        }
+      ]
+    },
+    {
+      "stage": "committed",
+      "plane": "mesh",
+      "added": 18,
+      "permissions": [
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.archive",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.download",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.finalize",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.attachment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.archive_own",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.create",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.read",
+          "assigned": true
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "permission": "common.collaboration.comment.update_own",
+          "assigned": true
+        }
+      ]
+    },
+    {
+      "stage": "verified",
+      "plane": "studio",
+      "added": 0,
+      "permissions": []
+    },
+    {
+      "stage": "verified",
+      "plane": "neon",
+      "added": 0,
+      "permissions": []
+    },
+    {
+      "stage": "verified",
+      "plane": "mesh",
+      "added": 0,
+      "permissions": []
+    }
+  ],
+  "verification": [
+    {
+      "plane": "studio",
+      "result": {
+        "members": [
+          {
+            "tenant": "athyper",
+            "user": "athyper.owner",
+            "permissions": 62
+          },
+          {
+            "tenant": "athyper",
+            "user": "athyper.admin",
+            "permissions": 62
+          },
+          {
+            "tenant": "cirrusatlantic",
+            "user": "catl.owner",
+            "permissions": 62
+          },
+          {
+            "tenant": "cirrusatlantic",
+            "user": "catl.admin",
+            "permissions": 62
+          }
+        ],
+        "uncoveredPublishedPermissions": 0
+      }
+    },
+    {
+      "plane": "neon",
+      "result": {
+        "members": [
+          {
+            "tenant": "athyper",
+            "user": "athyper.admin",
+            "permissions": 187
+          },
+          {
+            "tenant": "athyper",
+            "user": "athyper.owner",
+            "permissions": 187
+          },
+          {
+            "tenant": "cirrusatlantic",
+            "user": "catl.admin",
+            "permissions": 187
+          },
+          {
+            "tenant": "cirrusatlantic",
+            "user": "catl.owner",
+            "permissions": 187
+          }
+        ],
+        "uncoveredPublishedPermissions": 0
+      }
+    },
+    {
+      "plane": "mesh",
+      "result": {
+        "members": [
+          {
+            "tenant": "athyper",
+            "user": "athyper.owner",
+            "permissions": 61
+          },
+          {
+            "tenant": "athyper",
+            "user": "athyper.admin",
+            "permissions": 61
+          },
+          {
+            "tenant": "cirrusatlantic",
+            "user": "catl.admin",
+            "permissions": 61
+          },
+          {
+            "tenant": "cirrusatlantic",
+            "user": "catl.owner",
+            "permissions": 61
+          }
+        ],
+        "uncoveredPublishedPermissions": 0
+      }
+    }
+  ]
+}

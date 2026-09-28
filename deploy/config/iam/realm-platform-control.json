@@ -115,7 +115,31 @@
       ]
     }
   ],
+  "clientScopeMappings": {
+    "account": [
+      { "client": "account-console", "roles": ["manage-account", "view-groups"] }
+    ]
+  },
   "clients": [
+    {
+      "clientId": "account-console",
+      "name": "${client_account-console}",
+      "rootUrl": "${authBaseUrl}",
+      "baseUrl": "/realms/platform-control/account/",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": ["/realms/platform-control/account/*"],
+      "webOrigins": [],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "defaultClientScopes": ["roles"],
+      "optionalClientScopes": []
+    },
     {
       "clientId": "athyper-studio",
       "name": "athyper Platform Admin Console",

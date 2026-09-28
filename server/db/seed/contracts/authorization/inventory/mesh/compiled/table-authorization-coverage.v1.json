@@ -103,7 +103,7 @@
         "../apps/platform-host/src/composition/supplier-process-submission.ts",
         "../apps/platform-host/src/composition/supplier-process-tasks.ts",
         "../apps/platform-host/src/monitoring/business-partner-metrics.ts",
-        "../packages/contracts/master-data/src/business-partner-requests.ts",
+        "../packages/contracts/entity-governance/src/entity-change-case.ts",
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
         "../packages/planes/neon/src/business-partner-profile-match.ts",
         "../packages/services/master-data/src/business-partner-invitation-service.ts",

@@ -5,6 +5,15 @@
   "defaultScopeBehavior": "deny_undeclared",
   "permissions": [
     {
+      "permissionCode": "common.platform.reference.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "mesh.ai.agent.use",
       "scopes": [
         {
@@ -571,5 +580,5 @@
       ]
     }
   ],
-  "sha256": "78620352cbc1ae9a051cee435856331705e3a90406306a09eaa061d43c9eb397"
+  "sha256": "99769eb22aa1bf929629407795ac778ca64eda16233e7cee0408a018289e2869"
 }

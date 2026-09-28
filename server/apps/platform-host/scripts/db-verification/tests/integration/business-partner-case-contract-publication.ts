@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { randomUUID, generateKeyPairSync, sign, verify } from "node:crypto";
 import { Pool } from "pg";
 import { Kysely, PostgresDialect, sql } from "kysely";
-import { BusinessPartnerCaseContractService } from "@athyper/server-service-publication/business-partner-case-contract-service";
+import { BusinessPartnerCaseContractService } from "@athyper/server-service-publication/entity-case-contract-service";
 import { KyselyPublicationAuthorityRepository } from "@athyper/server-service-publication/kysely-authority-repository";
 import { KyselyPublicationAuthorityWork } from "@athyper/server-service-publication/kysely-publication-authority-work";
 import {

@@ -11,6 +11,20 @@ import { createExperienceInvalidationHooks, createExperienceService, createMemor
 const tenantId = "10000000-0000-4000-8000-000000000001";
 const principalId = "20000000-0000-4000-8000-000000000001";
 const moduleId = "30000000-0000-4000-8000-000000000001";
+it("admits published entity reads through catalog permissions and refreshes release admission without stale cache", async () => {
+  let available = true;
+  const runtime = createExperienceService({ repositories: createExactPlaneRepositoryProvider({ neon: repository() }),
+    cache: createMemoryExperienceCache(), readPublishedEntityRoutes: async () => available ? [
+      { entityCode: "example_dictionary", releaseId: moduleId, operations: { list: "finance.invoice.read", read: "finance.invoice.read" } },
+      { entityCode: "private_dictionary", releaseId: moduleId, operations: { list: "missing.permission" } },
+    ] : [] });
+  const first = await runtime.bootstrap(context);
+  expect(first.entityRoutes).toHaveLength(2);
+  expect(first.entityRoutes?.[0]).toMatchObject({ entityCode: "example_dictionary", moduleCode: "invoicing", workspaceCode: "finance" });
+  expect(validateRuntimeSchema(experienceBootstrapSchema, first)).toEqual(first);
+  available = false;
+  expect((await runtime.bootstrap(context)).entityRoutes).toEqual([]);
+});
 const context: VerifiedRequestContext = {
   planeKey: "neon", realmKey: "neon", tenantId, principalId, authEpoch: 4, requestId: "request-1", profileHash: "profile-1",
   permissions: { planeKey: "neon", tenantId, principalId, principalFingerprint: "principal-fp", profileHash: "profile-1", schemaHash: "schema-1", resolvedAt: 1, allowed: ["finance.invoice.read", "unknown.permission.read"], denied: [], planLocked: [], planeExcluded: [], entries: [], authorizationScopes: [] },

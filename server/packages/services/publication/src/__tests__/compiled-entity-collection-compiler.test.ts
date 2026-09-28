@@ -14,7 +14,18 @@ const evidence = JSON.parse(
     "utf8",
   ),
 );
-const native = evidence.artifact.descriptor;
+// Historical evidence remains immutable; this is a new explicit authoring input.
+const native = {
+  ...evidence.artifact.descriptor,
+  collectionCompilation: {
+    schemaVersion: 1,
+    entityCode: "business_partner_request",
+    planeKey: "neon",
+    subjectEntityCode: "master.business_partner",
+    permissionCode: "neon.relationship.entity_case.read",
+    detailRouteTemplate: "/app/entity/business_partner_request/:recordId",
+  },
+};
 const catalog = [
   {
     id: "11111111-1111-4111-8111-111111111111",
@@ -23,6 +34,49 @@ const catalog = [
     scopeKinds: ["operating_organization"],
   },
 ];
+it("does not infer bindings for historical or unbound graphs", () => {
+  expect(() => compileDocumentCollection(evidence.artifact.descriptor, "neon", catalog))
+    .toThrow("DOCUMENT_COLLECTION_COMPILATION_INVALID");
+});
+it.each(["changeCaseBindings", "operationContextRequirements", "fieldReferenceBindings", "materializationBindings", "materializationFieldMappings"])(
+  "never discards unsupported collection governance declarations: %s", key => {
+    expect(() => compileDocumentCollection({ ...native, [key]: [{}] }, "neon", catalog)).toThrow();
+    expect(() => compileDocumentCollection({ ...native, [key]: [] }, "neon", catalog)).not.toThrow();
+  },
+);
+it("compiles a non-BP subject from explicit reviewed bindings", () => {
+  const graph = structuredClone(native);
+  graph.entity.entityCode = "asset_change";
+  graph.collectionCompilation = {
+    schemaVersion: 1, entityCode: "asset_change", planeKey: "neon",
+    subjectEntityCode: "master.asset", permissionCode: "neon.assets.case.read",
+    detailRouteTemplate: "/app/entity/asset_change/:recordId",
+  };
+  graph.collectionRelationship.subject.value = "master.asset";
+  graph.authorization.entityCode = "asset_change";
+  for (const operation of graph.authorization.operations)
+    operation.permissionCode = "neon.assets.case.read";
+  for (const link of graph.operationPermissions) link.permissionCode = "neon.assets.case.read";
+  const result = compileDocumentCollection(graph, "neon", [{ ...catalog[0]!, code: "neon.assets.case.read" }]);
+  expect(result.entityCode).toBe("asset_change");
+  expect(result.collectionRelationship.subject.value).toBe("master.asset");
+  expect(result.detailRouteTemplate).toBe("/app/entity/asset_change/:recordId");
+  expect(result.operations.read?.permissionCode).toBe("neon.assets.case.read");
+});
+it.each(["version", "plane", "entity", "permission", "route", "extra", "duplicateCatalog", "resolver", "authorization"])(
+  "rejects inconsistent metadata/catalog binding: %s", mutation => {
+    const graph = structuredClone(native);
+    if (mutation === "version") graph.collectionCompilation.schemaVersion = 2;
+    if (mutation === "plane") graph.collectionCompilation.planeKey = "mesh";
+    if (mutation === "entity") graph.collectionCompilation.entityCode = "other";
+    if (mutation === "permission") graph.collectionCompilation.permissionCode = "neon.other.read";
+    if (mutation === "route") graph.collectionCompilation.detailRouteTemplate = "https://untrusted/:recordId";
+    if (mutation === "extra") Object.assign(graph.collectionCompilation, { sql: "select *" });
+    if (mutation === "resolver") graph.operationScopeBindings[0].resolverKey = "tenant.record.v1";
+    if (mutation === "authorization") graph.authorization.operations[0].permissionCode = "neon.other.read";
+    expect(() => compileDocumentCollection(graph, "neon", mutation === "duplicateCatalog" ? [...catalog, ...catalog] : catalog)).toThrow();
+  },
+);
 it("converts the reviewed native graph to a runtime-consumable scoped child descriptor", () => {
   const compiled = compileDocumentCollection(native, "neon", catalog);
   const parsed = parseEntityRuntimeDescriptor({

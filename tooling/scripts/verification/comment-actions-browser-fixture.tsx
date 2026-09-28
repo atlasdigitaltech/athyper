@@ -60,6 +60,7 @@ const client = {
     }
     if(path.endsWith("/sections/attachments")) return {capability:{actions:[{key:"create"},{key:"finalize"}],allowedContentTypes:["application/pdf","image/png"],maxFileBytes:26214400}};
     if (path.endsWith("/drafts")) return { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" };
+    if ((window as any).postedCommentId && path === "/api/collab/comments" && options?.method !== "GET") return { id: (window as any).postedCommentId };
     return {};
   },
 };

@@ -56,7 +56,7 @@ test("S2 completes validation, maker-checker workflow, and People-only materiali
 
 test("S2 keeps person and workforce fields out of MESH and generic BP exports", async () => {
   const [mesh, records] = await Promise.all([
-    read("packages/services/publication/src/business-partner-foundation-definition.ts"),
+    read("packages/services/publication/src/entity-foundation-definition.ts"),
     read("packages/services/records/src/transfer/transfer-service.ts"),
   ]);
   assert.match(mesh, /person\./);

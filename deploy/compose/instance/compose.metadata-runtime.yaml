@@ -1,0 +1,9 @@
+# Opt-in transition across active publication formats, never entity names.
+# Compiled-only plane configuration still takes precedence; errors fail closed.
+services:
+  api:
+    environment:
+      METADATA_FORMAT_ROUTING: "true"
+  worker:
+    environment:
+      METADATA_FORMAT_ROUTING: "true"

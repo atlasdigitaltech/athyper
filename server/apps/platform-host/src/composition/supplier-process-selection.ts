@@ -6,7 +6,7 @@ import type { AuditRecorder } from "@athyper/server-contract-audit";
 import {
   businessPartnerRequestPermissions,
   type BusinessPartnerRequestRepository,
-} from "@athyper/server-contract-master-data";
+} from "@athyper/server-contract-entity-governance";
 import type { ProcessSelectionPublication } from "@athyper/server-contract-control-admin";
 import type {
   ProcessSelectionEvidence,

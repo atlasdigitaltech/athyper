@@ -199,6 +199,7 @@ export interface EntityListDataOperationsV1 {
 }
 
 export interface EntityListDescriptorV1 {
+  readonly localizedLabels?: import("@athyper/contract-platform-entity-runtime").EntityPresentationLocalizationV1;
   readonly standardViews?: readonly import("./standard-views.js").EffectiveStandardViewV1[];
   readonly serverViews?: boolean;
   /** Client-resolved catalog, never persisted as record metadata. */
@@ -310,6 +311,7 @@ export interface EntityListResultV1 {
 }
 
 export interface EntityApplicationDescriptorV1 {
+  readonly localizedLabels?: import("@athyper/contract-platform-entity-runtime").EntityPresentationLocalizationV1;
   readonly intakeSurfaces?: readonly import("@athyper/contract-platform-entity-runtime").EntityIntakeSurfaceV1[];
   readonly intakeFlows?: readonly import("@athyper/contract-platform-entity-runtime").EntityIntakeFlowV1[];
   readonly schemaVersion: 1;

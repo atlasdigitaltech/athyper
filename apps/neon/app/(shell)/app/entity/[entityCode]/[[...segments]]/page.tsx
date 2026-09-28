@@ -6,6 +6,7 @@ import { NeonRouteEntitlement } from "@/lib/experience-runtime";
 import { notFound } from "next/navigation";
 import { resolveEntityRecordContext, entityRecordAuthorizationPath } from "@/lib/entity-route-context";
 import { EntityRecordRoute } from "@/lib/entity-record-adapters";
+import { renderEntityReadRoute } from "@athyper/platform-entity-form-detail/read-route";
 
 /**
  * Internal shared entity entry point. Public catalog aliases rewrite here; this
@@ -28,7 +29,9 @@ export default async function SharedEntityApplicationPage({
     </NeonRouteEntitlement>
   );
   const route = resolveNeonEntityApplicationInternalRoute(entityCode, segments);
-  if (!route) notFound();
+  if (!route) {
+    return renderEntityReadRoute({ entityCode, segments }, notFound);
+  }
   return (
     <NeonRouteEntitlement
       workspaceCode={route.workspaceCode}

@@ -22,6 +22,26 @@ test("filtered files retain version history",async({page})=>{
   await page.getByRole("button",{name:"Version history",exact:true}).click();
   await expect(page.getByRole("list",{name:"Version history"})).toContainText("v0");
 });
+test("status refresh preserves open version history without duplicate requests", async ({page}) => {
+  await page.evaluate(() => (window as any).setFileMode("content"));
+  await page.getByRole("button", {name:"Version history",exact:true}).click();
+  const history = page.getByRole("list", {name:"Version history"});
+  await expect(history).toContainText("v0");
+  const count = () => page.evaluate(() => (window as any).fileCalls.filter((c:any) => c.body?.includeHistory).length);
+  const before = await count();
+  for (let i=0;i<3;i++) {
+    await page.evaluate(() => (window as any).refreshFiles());
+    await expect(history).toContainText("v0");
+  }
+  await page.waitForTimeout(250);
+  expect(await count()).toBe(before);
+  await page.evaluate(() => { (window as any).slowHistory=true; (window as any).fileRevision=2; (window as any).refreshFiles(); });
+  await expect.poll(count).toBe(before+1);
+  await expect(history).toContainText("v0");
+  await page.evaluate(() => { (window as any).historyTenant="tenant-b"; (window as any).refreshFiles(); });
+  await page.waitForTimeout(400); // Deliberately uncancellable mock must not repopulate another scope.
+  await expect(history).toHaveCount(0);
+});
 test("file deep links resolve beyond the loaded page",async({page})=>{
   await page.evaluate(()=>{
     (window as any).hiddenFiles=[{id:"hidden",fileName:"off-page.pdf",processingStatus:"active",version:1}];
@@ -260,6 +280,7 @@ test.beforeEach(async ({ page }) => {
   );
   await page.goto("https://files.test/");
   await page.evaluate(bundle);
+  await page.getByRole("button",{name:"＋ Add files",exact:true}).click();
 });
 test("record content search replaces browsing, highlights safe snippets and paginates", async ({
   page,
@@ -512,7 +533,6 @@ test("duplicate cancellation performs no upload and version actions distinguish 
       ),
     ),
   ).toBe(false);
-  await page.locator(".a-attachment-card summary").click();
   await page
     .getByRole("button", { name: "Version history", exact: true })
     .click();
@@ -701,7 +721,7 @@ test("content filters remain available and invalidate previous result pages", as
   ).toHaveCount(0);
 });
 
-test("upload-first layout keeps filters and folder navigation ordered at every width", async ({
+test("upload opens below the action row at every width", async ({
   page,
 }) => {
   for (const [mode, width] of [
@@ -716,7 +736,9 @@ test("upload-first layout keeps filters and folder navigation ordered at every w
       folders = page.getByRole("navigation", { name: "Record folders" });
     const uploadBox = (await upload.boundingBox())!,
       searchBox = (await search.boundingBox())!;
-    expect(uploadBox.y + uploadBox.height).toBeLessThanOrEqual(searchBox.y);
+    expect(uploadBox.y).toBeGreaterThanOrEqual(searchBox.y + searchBox.height);
+    const addBox=(await page.getByRole("button",{name:"＋ Add files",exact:true}).boundingBox())!;
+    expect(uploadBox.y).toBeGreaterThanOrEqual(addBox.y + addBox.height);
     await page.getByRole("button", { name: "Filters", exact: true }).click();
     const filter = page.getByRole("combobox", { name: "Folder", exact: true });
     await expect(filter).toBeVisible();
@@ -763,6 +785,9 @@ test("folder menus escape the scrolling strip and support keyboard dismissal", a
   );
   await page.keyboard.press("Tab");
   await expect(action).toBeFocused();
+  // A deliberately focused action may own a tooltip. Escape dismisses that
+  // first, without also activating/dismissing its containing menu.
+  if (await page.getByRole("tooltip").count()) await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await expect(action).toHaveCount(0);
   await expect(trigger).toBeFocused();
@@ -857,6 +882,8 @@ test("upload completion batches toast and waits for list visibility before clear
   ]);
   const queue = page.getByRole("list", { name: "Upload queue" });
   await expect(queue).toContainText("Uploaded · Processing");
+  await page.getByRole("button",{name:"＋ Add files",exact:true}).click();
+  await expect(queue).toBeVisible();
   await expect(page.locator(".a-global-toast")).toContainText(
     "2 files uploaded",
   );
@@ -999,11 +1026,11 @@ test("full-view rows expose version history and filenames open preview", async (
   await expect(history).toBeVisible();
   await history.click();
   await expect(
-    row.getByRole("button", { name: "Hide history", exact: true }),
+    row.getByRole("button", { name: "Version history", exact: true }),
   ).toHaveAttribute("aria-expanded", "true");
-  await expect(
-    row.getByText("Previous versions are retained.", { exact: false }),
-  ).toBeVisible();
+  await row.getByRole("button", {name:"About version history"}).hover();
+  await expect(page.getByRole("tooltip")).toContainText("Previous versions are retained.");
+  await page.keyboard.press("Escape");
   await row.getByRole("button", { name: "proof.pdf", exact: true }).click();
   await expect(
     page.getByRole("complementary", { name: "Selected file preview" }),
@@ -1037,18 +1064,17 @@ test("history toggles in full view and closes directly in the side panel", async
   page,
 }) => {
   const row = page.getByRole("group", { name: "proof.pdf", exact: true });
-  await row.locator("summary").click();
   await page
     .getByRole("button", { name: "Version history", exact: true })
     .click();
-  await row.getByRole("button", { name: "Hide history", exact: true }).click();
+  await row.getByRole("button", { name: "Version history", exact: true }).click();
   await expect(row.locator(".a-version-note")).toHaveCount(0);
-  await expect(row.locator("summary")).toBeFocused();
+  await expect(row.getByRole("button", {name:"Version history",exact:true})).toBeFocused();
   await page.evaluate(() => (window as any).setFileMode("content"));
   await row
     .getByRole("button", { name: "Version history", exact: true })
     .click();
-  const hide = row.getByRole("button", { name: "Hide history", exact: true });
+  const hide = row.getByRole("button", { name: "Version history", exact: true });
   await expect(hide).toHaveAttribute("aria-expanded", "true");
   await hide.click();
   await expect(row.locator(".a-version-note")).toHaveCount(0);
@@ -1086,7 +1112,7 @@ test("image thumbnails load only near the viewport, preserve tile size and fall 
   await tile.scrollIntoViewIfNeeded();
   const image = tile.locator("img");
   await expect(image).toBeVisible();
-  await expect(tile).toHaveCSS("width", "48px");
+  await expect(tile).toHaveCSS("width", "40px");
   await expect(image).toHaveCSS("object-fit", "contain");
   await expect(tile.locator(".a-attachment-thumbnail__badge")).toHaveText(
     "PNG",
@@ -1097,7 +1123,7 @@ test("image thumbnails load only near the viewport, preserve tile size and fall 
     tile.getByRole("img", { name: "Image (PNG)", exact: true }),
   ).toBeVisible();
   await page.evaluate(() => (window as any).setFileMode("content"));
-  await expect(tile).toHaveCSS("width", "56px");
+  await expect(tile).toHaveCSS("width", "40px");
   await tile
     .getByRole("button", { name: "Preview screenshot.png", exact: true })
     .click();
@@ -1178,4 +1204,105 @@ test("files can be moved to Unfiled without removing their record link", async (
     .getByRole("button", { name: "Unfiled", exact: true })
     .click();
   await expect(row).toBeVisible();
+});
+
+test("collapsing upload controls retains validation feedback and drag reveals the target",async({page})=>{
+  const zone=page.getByRole('region',{name:'File upload drop zone'});
+  await page.getByLabel('Upload files',{exact:true}).setInputFiles({name:'bad.txt',mimeType:'text/plain',buffer:Buffer.from('bad')});
+  await expect(zone.getByRole('alert')).toBeVisible();
+  await page.getByRole('button',{name:'＋ Add files',exact:true}).click();
+  await expect(zone.getByRole('alert')).toBeVisible();
+  await expect(zone.getByText('Drag and drop files here',{exact:true})).toBeHidden();
+  const data=await page.evaluateHandle(()=>{const data=new DataTransfer();data.items.add(new File(['pdf'],'proof.pdf',{type:'application/pdf'}));return data;});
+  await page.locator('.a-attachment-workspace').dispatchEvent('dragenter',{dataTransfer:data});
+  await expect(zone.getByText('Drag and drop files here',{exact:true})).toBeVisible();
+});
+
+for (const [mode,width] of [['content',1440],['content',1024],['content',768],['content',390],['content',320],['pinned',1440]] as const) test(`compact file controls adapt to ${mode} at ${width}px`,async({page})=>{
+  await page.setViewportSize({width,height:900});
+  await page.evaluate(mode=>(window as any).setFileMode(mode),mode);
+  await page.getByRole('button',{name:'＋ Add files',exact:true}).click();
+  const search=page.getByRole('searchbox');
+  const add=page.getByRole('button',{name:'＋ Add files',exact:true});
+  const names=page.getByRole('radio',{name:'File names',exact:true});
+  await names.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('radio',{name:'File contents',exact:true})).toBeChecked();
+  await page.keyboard.press('ArrowLeft');
+  await expect(names).toBeChecked();
+  const segment=names.locator('xpath=..');
+  const segmentBox=(await segment.boundingBox())!,fillBox=(await segment.locator('span').boundingBox())!;
+  expect(Math.abs(segmentBox.y-fillBox.y)).toBeLessThan(1);
+  expect(Math.abs(segmentBox.height-fillBox.height)).toBeLessThan(1);
+  if(mode==='content' && width===1440) {
+    expect((await add.boundingBox())!.width).toBeGreaterThanOrEqual(240);
+    expect((await add.boundingBox())!.width).toBeLessThanOrEqual(280);
+  }
+  const searchBox=(await search.boundingBox())!,addBox=(await add.boundingBox())!;
+  if(mode==='content' && width>=1024) expect(Math.abs(searchBox.y-addBox.y)).toBeLessThan(12);
+  else expect(addBox.y).toBeGreaterThan(searchBox.y+searchBox.height);
+  await expect(page.locator('.a-attachment-workspace__count')).toContainText('file');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  for(const button of [add,page.getByRole('button',{name:'Filters',exact:true}),page.getByRole('button',{name:'New folder',exact:true})]) {
+    const box=(await button.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(40);
+    expect(box.height).toBeGreaterThanOrEqual(40);
+  }
+  await page.screenshot({path:`/tmp/compact-files-${mode}-${width}.png`});
+});
+
+for (const mode of ['content','pinned'] as const) test(`upload disclosure keeps its trigger stable in ${mode}`,async({page})=>{
+  await page.setViewportSize({width:1440,height:1000});
+  await page.evaluate(mode=>{(window as any).setFileMode(mode);document.documentElement.dataset.theme='dark';},mode);
+  const add=page.getByRole('button',{name:'＋ Add files',exact:true});
+  await expect(add).toHaveAttribute('aria-expanded','true');
+  await add.click();
+  await expect(add).toHaveAttribute('aria-expanded','false');
+  const before=(await add.boundingBox())!;
+  const closedColor=await add.evaluate(el=>getComputedStyle(el).backgroundColor);
+  await add.click();
+  await expect(add).toHaveAttribute('aria-expanded','true');
+  expect(Math.abs((await add.boundingBox())!.y-before.y)).toBeLessThan(1);
+  expect(Math.abs((await add.boundingBox())!.width-before.width)).toBeLessThan(1);
+  expect(await add.evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe(closedColor);
+  const target=page.locator('.a-files-upload-area');
+  expect((await target.boundingBox())!.y).toBeGreaterThanOrEqual(before.y+before.height);
+  expect((await target.boundingBox())!.y+(await target.boundingBox())!.height).toBeLessThanOrEqual((await page.locator('.a-files-browse-summary').boundingBox())!.y);
+  await expect(target).toHaveAttribute('id',(await add.getAttribute('aria-controls'))!);
+  await page.screenshot({path:`/tmp/files-disclosure-${mode}-dark.png`});
+});
+
+for (const mode of ["content", "pinned"]) test(`single-version history stays closable and shows attribution in ${mode}`, async ({page}) => {
+  await page.evaluate(mode => { (window as any).singleVersion=true; (window as any).setFileName("single.pdf"); (window as any).setFileMode(mode); },mode);
+  const row=page.getByRole("group",{name:"single.pdf",exact:true});
+  await expect(row).toContainText("Added by Record Contributor");
+  const toggle=row.getByRole("button",{name:"Version history",exact:true});
+  await toggle.click();
+  const history=row.getByRole("list",{name:"Version history",exact:true});
+  await expect(history.locator(":scope > li")).toHaveCount(1);
+  await expect(history).toContainText("Uploaded by Version Uploader");
+  await expect(toggle).toHaveAttribute("aria-expanded","true");
+  await toggle.click();await expect(history).toHaveCount(0);
+  await expect(toggle).toHaveAttribute("aria-expanded","false");await expect(toggle).toBeFocused();
+});
+
+test("mixed upload results show one warning with a review action", async ({ page }) => {
+  let uploads = 0;
+  await page.route('https://storage.test/upload', route => {
+    uploads++;
+    return route.fulfill({ status: uploads === 1 ? 200 : 500, headers: { 'access-control-allow-origin': '*' } });
+  });
+  await page.getByLabel('Upload files', { exact: true }).setInputFiles([
+    { name: 'success.pdf', mimeType: 'application/pdf', buffer: Buffer.from('one') },
+    { name: 'failed.pdf', mimeType: 'application/pdf', buffer: Buffer.from('two') },
+  ]);
+  const toast = page.locator('.a-global-toast');
+  await expect(toast).toHaveCount(1);
+  await expect(toast).toHaveClass(/a-toast--warning/);
+  await expect(toast).toContainText('Some uploads failed');
+  await toast.getByRole('button', { name: 'Review uploads', exact: true }).click();
+  const queue = page.getByRole('list', { name: 'Upload queue' });
+  await expect(queue).toBeFocused();
+  await expect(queue).toContainText('failed.pdf');
+  await expect(toast).toHaveCount(0);
 });

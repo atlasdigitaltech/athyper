@@ -1,0 +1,61 @@
+Date: 2026-09-26
+
+Command:
+COLLECTION_PREPARATION_POSTGRES_TEST=1 pnpm --dir server/apps/platform-host test src/composition/__tests__/collection-preparation.postgres.test.ts
+Final run: exit 0, 1 test file passed, 16 tests passed.
+Start: 16:29:35
+Duration: 1.74s
+An earlier run also passed 16/16.
+
+Database: dedicated disposable container, athyper/postgres:16.15-hardened.
+Loopback ephemeral port; tmpfs data; no existing database URL/application volumes.
+Teardown: container stopped and auto-removed. Subsequent container listing empty.
+
+Executed unchanged function bodies extracted from current repository DDL:
+- publication.fn_prepare_document_collection_release
+- publication.fn_transition_release
+- snapshot.fn_compute_entity_release_artifact_hash
+
+Fixture boundary:
+- Minimal tables/domains with primary/unique/foreign-key constraints, not complete application DDL/triggers/RLS.
+- Context helper functions use transaction-local tenant/principal settings.
+- Preparation and transition functions owned by a NOSUPERUSER NOBYPASSRLS fixture role.
+- Caller uses a separate NOSUPERUSER NOBYPASSRLS role with preparation EXECUTE only, no table write grants.
+- Persisted signature is fixture data; this suite does not cryptographically sign or verify artifacts.
+- Tests roll back their fixture transactions; no runtime activation is performed.
+
+Cases (16):
+1 approved preparation, computed artifact hash, exact replay without duplicate rows
+2 wrong tenant
+3 wrong publishing actor
+4 reviewer equals author
+5 draft instead of approved change set
+6 wrong target plane
+7 wrong signature algorithm
+8 descriptor binding tamper
+9 descriptor field tamper
+10 descriptor governance addition
+11 unknown descriptor property
+12 presentation tamper
+13 missing normalized governance array
+14 nonempty governance data even in the persisted snapshot
+15 conflicting replay preserves existing artifact
+16 caller cannot write publication tables directly
+
+Separate default full host suite:
+pnpm --dir server/apps/platform-host test
+Exit 0. Test files: 73 passed, 3 skipped (76).
+Tests: 532 passed, 25 skipped (557). Duration 5.41s.
+Skipped by default: 16 collection preparation + 8 scope tests + 1 Mesh readiness test.
+Collection tests were explicitly executed above; scope/Mesh live suites were not rerun here.
+Gates: COLLECTION_PREPARATION_POSTGRES_TEST, ENTITY_SCOPE_POSTGRES_TEST, MESH_READINESS_TEST_DOCKER respectively.
+
+Separate host typecheck:
+pnpm --dir server/apps/platform-host typecheck
+Exit 2. Only:
+src/composition/entity-case-preflight.ts(2,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartnerCaseRepository'.
+
+Studio/publication code did not change this turn; their prior green results are historical.
+Diff integrity passed.
+No DDL deployment to application databases, signed-release activation, full-schema RLS qualification,
+live rollback, isolated-profile startup or login verification is claimed.

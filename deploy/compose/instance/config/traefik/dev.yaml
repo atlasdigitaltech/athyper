@@ -1,7 +1,18 @@
 http:
   routers:
+    platform-control:
+      # Human enrollment only. Do not intercept the separate workload /execute route.
+      rule: 'Host(`api.dev.athyper.test`) && (Path(`/api/platform-control/session`) || Path(`/api/studio/publication-policies`) || PathRegexp(`^/api/studio/publication-policies/[^/]+/activate$`))'
+      entryPoints: [web]
+      service: platform-control
+      priority: 200
     iam:
-      { rule: Host(`iam.dev.athyper.test`), entryPoints: [web], service: iam }
+      {
+        rule: Host(`iam.dev.athyper.test`),
+        entryPoints: [web],
+        service: iam,
+        middlewares: [iam-public-origin],
+      }
     api:
       {
         rule: Host(`api.dev.athyper.test`),
@@ -66,7 +77,21 @@ http:
         service: problem,
         priority: 1,
       }
+  middlewares:
+    # The public ingress terminates TLS and redirects HTTP before this internal
+    # gateway. Pin the canonical DEV IAM origin instead of trusting caller-
+    # supplied forwarding headers or reporting this private HTTP hop to Keycloak.
+    # This gateway has no published web port; do not reuse on a public HTTP route.
+    iam-public-origin:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+          X-Forwarded-Port: "443"
+          X-Forwarded-Host: iam.dev.athyper.test
   services:
+    platform-control:
+      loadBalancer:
+        servers: [{ url: http://control-api:4010 }]
     api-failover:
       { failover: { healthCheck: {}, service: api, fallback: problem } }
     neon-failover:

@@ -23,7 +23,7 @@ import { processSelectionCanonical } from "@athyper/server-platform-governance";
 import { HttpError } from "@athyper/server-runtime-http";
 import { readSupplierProcessWorkflow } from "./supplier-process-workflow.js";
 import type { createSupplierProcessEditPolicy } from "./supplier-process-edit-policy.js";
-import type { PatchBusinessPartnerRequestCommand } from "@athyper/server-contract-master-data";
+import type { PatchBusinessPartnerRequestCommand } from "@athyper/server-contract-entity-governance";
 
 type Tx = Transaction<Record<string, never>>;
 type Human = Extract<

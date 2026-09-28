@@ -1,4 +1,5 @@
 import { featurePercentageCohort } from "@athyper/server-foundation";
+import { admitEntityRoutes, type PublishedEntityRouteCandidate } from "./entity-route-admission.js";
 import { createHash } from "node:crypto";
 import {
   parseExperienceSurface,
@@ -62,6 +63,7 @@ import { ExperienceAccessError } from "@athyper/server-contract-experience";
 export { ExperienceAccessError } from "@athyper/server-contract-experience";
 
 export interface ExperienceServiceOptions {
+  readonly readPublishedEntityRoutes?: (context: VerifiedRequestContext) => Promise<readonly PublishedEntityRouteCandidate[]>;
   readonly repositories: ExperienceRepositoryProvider;
   readonly cache?: ExperienceCache;
   readonly readRuntimeDefaults?: (
@@ -127,7 +129,8 @@ export function createExperienceService(options: ExperienceServiceOptions) {
         "unversioned";
       const cacheKey = `experience:${context.planeKey}:${context.tenantId}:${context.principalId}:${context.authEpoch}:${context.profileHash}:${input.clientVersion ?? "-"}:${entitlementRevision}:${featureRevision}:${runtimeDefaults?.configurationRevision ?? "default"}`;
       const cacheGeneration = options.cache?.generation;
-      const cached = await options.cache?.get(cacheKey);
+      // Active publication changes must not inherit a cached route allowlist.
+      const cached = options.readPublishedEntityRoutes ? undefined : await options.cache?.get(cacheKey);
       if (isBootstrap(cached)) return cached;
       const identity = await repository.readIdentity(context, at);
       assertIdentityAdmission(context, identity);
@@ -228,7 +231,10 @@ export function createExperienceService(options: ExperienceServiceOptions) {
           }),
         ),
       ].sort();
+      const entityRoutes = options.readPublishedEntityRoutes
+        ? admitEntityRoutes(await options.readPublishedEntityRoutes(context), catalog, permissions) : undefined;
       const result: ExperienceBootstrap = {
+        ...(entityRoutes ? { entityRoutes } : {}),
         schemaVersion: 1,
         state: "ready",
         planeKey: context.planeKey,
@@ -242,6 +248,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
           catalog: [...catalog.associations, ...catalog.permissions],
           features: featureRows,
           auth: authorizationRevision(context),
+          entityRoutes,
         }),
         ...presentation,
         profile,

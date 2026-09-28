@@ -1,4 +1,5 @@
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
+import { capabilityArtifactMembers } from "@athyper/server-contract-publication";
 import {
   compileEntityAuthorizationRuntime,
   compileEntityAuthorization,
@@ -34,14 +35,16 @@ export function graphDependencies(
   const references: GraphDependency[] = [];
   const add = (reference: GraphDependency) => references.push(reference);
   for (const capability of graph.capabilities ?? []) {
-    if (!capability.declaration.enabled || !capability.binding) continue;
-    add({kind:"handler",key:capability.binding.serviceKey});
-    add({kind:"resolver",key:capability.binding.admissionResolverKey});
-    for (const action of capability.binding.actions) {
+    if (!capability.declaration.enabled) continue;
+    const binding = capabilityArtifactMembers(graph.entity.entityCode, [capability]).operationBindings[
+      capability.capabilityKey === "comments" ? "commentBinding" : "attachmentBinding"]!;
+    add({kind:"handler",key:binding.serviceKey});
+    add({kind:"resolver",key:binding.admissionResolverKey});
+    for (const action of binding.actions) {
       add({kind:"handler",key:action.handlerKey});
       add({kind:"permission",key:action.permissionCode});
     }
-    for (const ref of [capability.binding.retentionPolicy, "audiencePolicy" in capability.binding ? capability.binding.audiencePolicy : undefined])
+    for (const ref of [binding.profilePolicy, binding.retentionPolicy, "audiencePolicy" in binding ? binding.audiencePolicy : undefined])
       if(ref) add({kind:"policy",key:`${ref.artifactKey}@${ref.hash}`,plane:ref.plane});
   }
   for (const target of graph.relationTargets ?? [])
@@ -83,6 +86,17 @@ export function graphDependencies(
     if (operation.status !== "deprecated" && operation.handlerKey)
       add({ kind: "handler", key: operation.handlerKey });
   }
+  for (const binding of graph.fieldReferenceBindings ?? []) {
+    if (binding.status === "deprecated") continue;
+    if (binding.targetEntityCode)
+      add({ kind: "entity", key: binding.targetEntityCode });
+    if (binding.resolverKey) add({ kind: "resolver", key: binding.resolverKey });
+  }
+  for (const binding of graph.materializationBindings ?? [])
+    if (binding.status !== "deprecated") {
+      add({ kind: "entity", key: binding.targetEntityCode });
+      add({ kind: "handler", key: binding.materializerKey });
+    }
   for (const profile of graph.runtimeProfiles ?? []) {
     for (const key of [profile.readHandlerKey, profile.writeHandlerKey])
       if (key)

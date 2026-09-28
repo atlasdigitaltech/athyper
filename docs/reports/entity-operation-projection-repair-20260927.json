@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-09-27T06:15:51.166Z",
+  "environment": "dev",
+  "releaseId": "1efcf86a-75e3-4a79-9154-ea62f5abdc7d",
+  "planes": {
+    "studio": {
+      "appliedReleaseId": "01a0e14b-c3b6-7dec-8926-881234ffc023",
+      "releaseNo": 1,
+      "artifactHash": "c5e28fb0cf3de4c566916a4bca1139714fccf0aaed46ed1a3e761f64d8f5864c",
+      "publishedOperationBindings": 0,
+      "historicalHeadUnchanged": true
+    },
+    "neon": {
+      "appliedReleaseId": "01a0e14b-c387-73b0-90f5-17fa09561d41",
+      "releaseNo": 1,
+      "artifactHash": "9aaa40131a3b5fc1d15f58c5102fc006f37b242656f4d76052c2f83b9124972c",
+      "publishedOperationBindings": 0,
+      "historicalHeadUnchanged": true
+    },
+    "mesh": {
+      "appliedReleaseId": "01a0e14b-c351-78ad-b73a-0e3db00eaef7",
+      "releaseNo": 1,
+      "artifactHash": "718a8f7a92bca91d485d6dd69c97ca2fc153e0d760a8b6d89da5ca1bc147a106",
+      "publishedOperationBindings": 0,
+      "historicalHeadUnchanged": true
+    }
+  }
+}

@@ -19,7 +19,7 @@ export function EntityRuntimeWorkspace({
   readonly renderHeader: (header: Readonly<Record<string, unknown>>, revision: string, actions: readonly EntityRuntimeActionPlan[], navigation: EntityRuntimeHeaderNavigation) => ReactNode;
   readonly renderSection?: (input: { readonly sectionKey: string; readonly resource: EntityRuntimeSectionResource; readonly retry: () => void }) => ReactNode;
   readonly renderBody?: (input: { readonly navigation: EntityRuntimeHeaderNavigation; readonly content: ReactNode }) => ReactNode;
-  readonly onSelectSection?: (sectionKey: string) => void;
+  readonly onSelectSection?: (sectionKey: string, tabKey?: string) => void;
   /** Called for a viewport update. Consumers should use replaceState, not pushState. */
   readonly onObserveSection?: (sectionKey: string) => void;
   readonly sectionNavigation?: "rail" | "header";
@@ -63,12 +63,12 @@ export function EntityRuntimeWorkspace({
   const activeSection = workspace.activeSectionKey ?? bootstrap?.plan.sections[0]?.key;
   const collaborationKeys = JSON.stringify(collaborationSectionKeys);
   const collaborationSections = useMemo(() => (JSON.parse(collaborationKeys) as string[]).flatMap(key => sectionItems.find(section => section.key === key) ?? []),[collaborationKeys,sectionItems]);
-  const selectSection = useCallback((sectionKey:string) => {
+  const selectSection = useCallback((sectionKey:string, tabKey?:string) => {
     workspace.selectSection(sectionKey);
     const continuous = bootstrap?.plan.navigation?.tabs.some(tab => tab.sectionDisplay === "continuous" && tab.sectionKeys.includes(sectionKey)) ?? false;
     manualScrollLock.current = continuous;
     setScrollRequest(continuous ? sectionKey : undefined);
-    onSelectSection?.(sectionKey);
+    onSelectSection?.(sectionKey, tabKey);
   },[workspace.selectSection,bootstrap?.plan.navigation,onSelectSection,continuousSections]);
   const renderSectionRef = useRef<(sectionKey:string)=>ReactNode>(()=>null);
   const renderCollaboration = useCallback((sectionKey:string)=>renderSectionRef.current(sectionKey),[]);
@@ -198,7 +198,7 @@ function ContinuousSection({ item, selected, initial, state, scrollRoot, scrollT
 export interface EntityRuntimeHeaderNavigation {
   readonly sections: readonly { readonly key: string; readonly label: string }[];
   readonly activeSection: string; readonly navigation?: EntityRuntimeNavigationPlan; readonly summaryView?: EntityRuntimeSummaryViewPlan;
-  readonly onSelectSection: (sectionKey: string) => void;
+  readonly onSelectSection: (sectionKey: string, tabKey?: string) => void;
   /** A browser projection backed by this workspace's admitted section cache. */
   readonly collaboration?: Readonly<{
     readonly sections: readonly { readonly key: string; readonly label: string }[];

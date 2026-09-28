@@ -47,6 +47,8 @@ export interface EntityRuntimeSectionHandler {
 }
 
 export interface EntityRuntimeSummaryHandler {
+  /** Required for discovery on normalized runtime-contract detail pages. */
+  authorize?(input: Parameters<EntityRuntimeSummaryHandler["read"]>[0]): Promise<boolean>;
   read(input: {
     readonly context: VerifiedRequestContext;
     readonly release: CompiledEntityResolvedRelease;
@@ -57,6 +59,11 @@ export interface EntityRuntimeSummaryHandler {
     readonly requestCache: Map<string, Promise<unknown>>;
   }): Promise<unknown>;
 }
+
+/** Capability readers do not require a fabricated page-section artifact. */
+export interface EntityRuntimeCollaborationHandler {
+  read(input: Omit<Parameters<EntityRuntimeSectionHandler["read"]>[0], "section">): ReturnType<EntityRuntimeSectionHandler["read"]>;
+}
 export interface EntityRuntimeSummaryHandlerRegistry {
   get(provider: string): EntityRuntimeSummaryHandler | undefined;
 }
@@ -64,10 +71,11 @@ export interface EntityRuntimeSummaryHandlerRegistry {
 export interface EntityRuntimeSectionHandlerRegistry {
   get(handlerKey: string): EntityRuntimeSectionHandler | undefined;
   /** Platform capability bindings are selected by published service key, never entity code. */
-  getService?(serviceKey: string): EntityRuntimeSectionHandler | undefined;
+  getService?(serviceKey: string): EntityRuntimeCollaborationHandler | undefined;
 }
 
 export function createEntityRuntimeResourceService(options: {
+  readonly publishedSummary?: (input: { context: VerifiedRequestContext; entityCode: string; recordId: string; resourceContext?: EntityRuntimeResourceContext }, release: CompiledEntityResolvedRelease) => Promise<unknown>;
   readonly capabilities?: ReturnType<typeof createEntityCapabilityPolicy>;
   readonly reader: PinnedCompiledEntityReader;
   readonly displayChoices?: (context: VerifiedRequestContext, catalog: string, values?: readonly string[]) => Promise<readonly { value: string; label: { labelKey: string; defaultText: string } }[]>;
@@ -120,7 +128,16 @@ export function createEntityRuntimeResourceService(options: {
       readonly surfaceKey: string;
       readonly resourceContext?: EntityRuntimeResourceContext;
     }) {
-      const model = await resolveSurface(options.reader, input.context, input.entityCode, input.surfaceKey);
+      const release = await options.reader.resolve(coordinate(input.context, input.entityCode));
+      if (!release) return null;
+      // Retained compiled experiences may contain both a runtime contract and
+      // an explicit legacy surface. Keep that surface on its established path;
+      // normalized publications need no fabricated presentation artifact.
+      if (release.artifactIndex.has(`${input.entityCode}/runtime`) && !release.artifactIndex.has(`${input.entityCode}/presentation.${input.surfaceKey}`)) {
+        if (input.surfaceKey !== "detail") return null;
+        return options.publishedSummary ? options.publishedSummary(input, release) : null;
+      }
+      const model = await options.reader.surfaceModel({ ...coordinate(input.context, input.entityCode), releaseId: release.release.releaseId, releaseHash: release.release.releaseHash }, input.surfaceKey);
       if (!model) return null;
       const plan = await pagePlan(options.reader, input.context, model.release, model.core, model.surface, input.surfaceKey);
       if (!plan.summaryView || !options.summaries) return null;

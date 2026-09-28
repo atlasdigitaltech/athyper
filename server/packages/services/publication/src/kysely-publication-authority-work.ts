@@ -1,7 +1,7 @@
 import {
   businessPartnerCasePublicationIdentity,
   compileCompanyCaseOperationBindings,
-} from "./business-partner-company-case-contract.js";
+} from "./entity-operation-binding-compiler.js";
 import {
   compileEntityAuthorizationPublication,
   type EntityAuthorizationPublicationInput,
@@ -9,14 +9,16 @@ import {
 import {
   compileDocumentCollection,
   withDocumentCollectionSource,
-} from "./compiled-entity-collection-compiler.js";
+} from "./shared/collections/compiler.js";
 import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
 import type { EntityRuntimeProjection } from "@athyper/server-contract-publication";
 import { tryGetRequestContext } from "@athyper/server-foundation/context";
 import { createHash } from "node:crypto";
+import { compileRuntimePublication, qualifyRuntimePublication, type CompiledRuntimePublication, type UnsignedPublication } from "./compilation/compiled-runtime.js";
 import {
   PUBLICATION_ARTIFACT_MEDIA_TYPE_V1,
   PUBLICATION_ARTIFACT_SCHEMA_V1,
+  parseDevEntitySuccessorPolicy,
   type PublicationArtifactDocumentV1,
   type PublicationArtifactStore,
   type PublicationCanonicalizer,
@@ -36,7 +38,7 @@ import {
 import {
   BUSINESS_PARTNER_DEFINITION_COMPILER_VERSION,
   compileBusinessPartnerDefinition,
-} from "./business-partner-definition-compiler.js";
+} from "./entity-definition-compiler.js";
 
 type Row = Record<string, unknown>;
 type Database = Record<string, never>;
@@ -52,6 +54,8 @@ export interface KyselyPublicationAuthorityWorkOptions {
   readonly targetEnvironment: string;
   readonly targetPlanes: readonly PublicationPlane[];
   readonly targetInstance?: string;
+  /** Trusted source lowering and persisted qualification; absent denies split publication. */
+  readonly compiledRuntimePublication?: CompiledRuntimePublication;
   /** Absent means authorization releases may be signed but cannot dispatch. */
   readonly authorizeEntityActivation?: (releaseId: string) => Promise<void>;
   readonly caseOperationCatalog?: () => Promise<
@@ -107,6 +111,14 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
   private async compileScoped(
     releaseId: string,
   ): Promise<{ readonly compilationIds: readonly string[] }> {
+    const declaredSplit = (await sql<Row>`SELECT id FROM publication.release WHERE id=${releaseId}::uuid AND metadata->>'artifactKind'='compiled_entity_runtime'`.execute(this.options.database)).rows;
+    if (declaredSplit.length) {
+      const available = (await sql<Row>`SELECT to_regprocedure('publication.fn_compiled_entity_compilation_source_v3(uuid)') IS NOT NULL AS available`.execute(this.options.database)).rows[0]?.["available"];
+      if (!available) throw permanent("COMPILED_PUBLICATION_SOURCE_ADAPTER_REQUIRED");
+      const split = await sql<Row>`SELECT * FROM publication.fn_compiled_entity_compilation_source_v3(${releaseId}::uuid)`.execute(this.options.database);
+      if (!split.rows.length) throw permanent("COMPILED_PUBLICATION_APPROVED_SOURCE_REQUIRED");
+      return this.compileSplitSources(releaseId, split.rows);
+    }
     let result =
       await sql<Row>`SELECT pr.id publication_release_id,pr.tenant_id,pr.release_key,pr.release_no,pr.release_kind,
         pr.compatibility_level,pr.minimum_runtime_version,r.id revision_id,r.bundle_code,r.semantic_version,
@@ -467,6 +479,40 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     return { compilationIds };
   }
 
+  private async compileSplitSources(releaseId: string, rows: Row[]) {
+    const dependencies = this.options.compiledRuntimePublication;
+    if (!dependencies) throw permanent("COMPILED_PUBLICATION_ADAPTER_REQUIRED");
+    const targets = rows[0]!["target_planes"];
+    if (!Array.isArray(targets) || !targets.length || new Set(targets).size !== targets.length
+      || targets.some(p => !this.options.targetPlanes.includes(planeValue(p)))
+      || rows.length !== targets.length || new Set(rows.map(r => r["plane_key"])).size !== rows.length
+      || rows.some(r => !targets.includes(r["plane_key"]))) throw permanent("PUBLICATION_TARGET_COMPILATION_SOURCE_MISSING");
+    const compilationIds: string[] = [];
+    for (const row of rows) {
+      const plane = planeValue(row["plane_key"]);
+      const successor = number(row, "release_no") > 1 ? parseDevEntitySuccessorPolicy(row["successor_policy"]) : undefined;
+      const expectedPredecessor = successor?.targets.find(t => t.plane === plane);
+      if (successor && (!expectedPredecessor || successor.entityId !== string(row, "source_entity_id"))) throw permanent("COMPILED_PUBLICATION_SUCCESSOR_SOURCE_MISMATCH");
+      const unsigned = await compileRuntimePublication({ releaseId, releaseNo: number(row, "release_no"), publicationKey: string(row, "release_key"), plane,
+        tenantId: row["source_tenant_id"] === null ? null : string(row, "source_tenant_id"), entityCode: string(row, "entity_code"), revisionId: string(row, "revision_id"),
+        sourceEntityId: string(row, "source_entity_id"), sourceReleaseHash: string(row, "source_release_hash"),
+        sourceContractHash: this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(object(row, "contract_json"))),
+        sourceDescriptorHash: this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(object(row, "compiled_json"))),
+        generatedAt: date(row, "created_at"), native: object(row, "compiled_json"), contract: object(row, "contract_json"),
+        ...(expectedPredecessor ? { expectedPredecessor } : {}),
+      }, dependencies, this.options.canonicalizer, this.options.signingKeyId);
+      const unsignedHash = this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(unsigned));
+      const id = stableUuid(`publication-compilation:${releaseId}:${plane}:compiled_entity_runtime`);
+      await sql`INSERT INTO publication.artifact_compilation(id,publication_release_id,plane_code,artifact_kind,unsigned_document,unsigned_hash,compiler_name,compiler_version,created_by)
+        VALUES(${id}::uuid,${releaseId}::uuid,${plane},'compiled_entity_runtime',${JSON.stringify(unsigned)}::jsonb,${unsignedHash},'athyper.compiled-entity-artifact','1.1.0',${string(row, "published_by")}::uuid)
+        ON CONFLICT(publication_release_id,plane_code,artifact_kind) DO NOTHING`.execute(this.options.database);
+      const saved = required((await sql<Row>`SELECT id,unsigned_hash FROM publication.artifact_compilation WHERE publication_release_id=${releaseId}::uuid AND plane_code=${plane} AND artifact_kind='compiled_entity_runtime'`.execute(this.options.database)).rows[0], "PUBLICATION_COMPILATION_NOT_FOUND");
+      if (string(saved, "unsigned_hash") !== unsignedHash) throw permanent("PUBLICATION_COMPILATION_CONFLICT");
+      compilationIds.push(string(saved, "id"));
+    }
+    return { compilationIds };
+  }
+
   private async signScoped(
     compilationId: string,
   ): Promise<{ readonly deploymentId: string }> {
@@ -484,6 +530,14 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       string(row, "unsigned_hash")
     )
       throw permanent("PUBLICATION_COMPILATION_HASH_MISMATCH");
+    if (artifactKind === "compiled_entity_runtime") {
+      if (!this.options.compiledRuntimePublication) throw permanent("COMPILED_PUBLICATION_ADAPTER_REQUIRED");
+      const document = unsigned as unknown as UnsignedPublication;
+      if (document.envelope.releaseId !== string(row, "publication_release_id") || document.envelope.targetPlane !== plane
+        || document.envelope.releaseNo !== number(row, "release_no") || document.envelope.publicationKey !== string(row, "release_key")
+        || document.manifest.signingKeyId !== this.options.signingKeyId) throw permanent("COMPILED_PUBLICATION_COORDINATES_INVALID");
+      await qualifyRuntimePublication(document, this.options.compiledRuntimePublication, this.options.canonicalizer, "sign");
+    }
     const projection = (
       unsigned as unknown as { envelope: { payload: EntityRuntimeProjection } }
     ).envelope?.payload;
@@ -609,6 +663,19 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
   }
 
   private async assertActivationApproved(deploymentId: string): Promise<void> {
+    const split = (await sql<Row>`SELECT a.publication_release_id,a.plane_code,c.unsigned_document,c.unsigned_hash FROM publication.deployment d
+      JOIN publication.artifact a ON a.id=d.artifact_id JOIN publication.artifact_compilation c
+        ON c.publication_release_id=a.publication_release_id AND c.plane_code=a.plane_code AND c.artifact_kind=a.artifact_kind
+      WHERE d.id=${deploymentId}::uuid AND a.artifact_kind='compiled_entity_runtime'`.execute(this.options.database)).rows;
+    if (split.length) {
+      if (split.length !== 1 || !this.options.compiledRuntimePublication) throw permanent("COMPILED_PUBLICATION_ADAPTER_REQUIRED");
+      const row = split[0]!, document = object(row, "unsigned_document") as unknown as UnsignedPublication;
+      if (this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(document)) !== string(row, "unsigned_hash")
+        || document.envelope.releaseId !== string(row, "publication_release_id") || document.envelope.targetPlane !== row["plane_code"])
+        throw permanent("PUBLICATION_COMPILATION_HASH_MISMATCH");
+      await qualifyRuntimePublication(document, this.options.compiledRuntimePublication, this.options.canonicalizer, "dispatch");
+      return;
+    }
     const rows = (
       await sql<Row>`SELECT a.publication_release_id FROM publication.deployment d
       JOIN publication.artifact a ON a.id=d.artifact_id
@@ -876,6 +943,7 @@ function artifactKindValue(
 ): import("@athyper/server-contract-publication").PublicationArtifactKind {
   if (
     value !== "entity_runtime" &&
+    value !== "compiled_entity_runtime" &&
     value !== "business_partner_definition_bundle"
   )
     throw permanent("PUBLICATION_ARTIFACT_KIND_INVALID");

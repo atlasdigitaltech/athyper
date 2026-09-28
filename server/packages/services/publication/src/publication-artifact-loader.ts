@@ -1,3 +1,4 @@
+import { runtimeVersionCompatible } from "./runtime-version.js";
 import {collectionPublicationFromGraph,parseCollectionPublicationDescriptor,collectionPublicationKey} from "@athyper/server-contract-publication";
 import { parseEntityRuntimeDescriptor, parseCompiledRuntimeContract, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
 import { authoredAuthorization } from "./entity-authorization-compiler.js";
@@ -19,7 +20,7 @@ import {
   type PublicationVerifier,
   type PublicationErrorCode,
 } from "@athyper/server-contract-publication";
-import { parseBusinessPartnerDefinitionBundle } from "./business-partner-definition-service.js";
+import { parseBusinessPartnerDefinitionBundle } from "./entity-definition-service.js";
 
 export interface PublicationArtifactLoaderOptions {
   readonly store: PublicationArtifactStore;
@@ -81,7 +82,7 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       signature: document.signature,
     });
     if (!signatureVerified) throw failure("ARTIFACT_SIGNATURE_INVALID");
-    const runtimeCompatible = compatible(
+    const runtimeCompatible = runtimeVersionCompatible(
       this.options.runtimeVersion,
       envelope.minimumRuntimeVersion,
     );
@@ -132,6 +133,15 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       try {
         validateCompiledRuntimeContracts(envelope.payload.artifacts);
         for (const artifact of envelope.payload.artifacts.filter(item => item.artifactType === "runtime_contract")) {
+          // Source release identity is not the compiled package hash. Recheck
+          // the compiler's provenance assertion against the signed manifest.
+          const source = (artifact.content.descriptor as Record<string, unknown>)?.source;
+          if (source !== undefined && (!source || typeof source !== "object" || Array.isArray(source) ||
+            typeof (source as Record<string, unknown>).entity_id !== "string" ||
+            typeof (source as Record<string, unknown>).release_hash !== "string" ||
+            (source as Record<string, unknown>).entity_id !== manifest.evidence?.sourceEntityId ||
+            (source as Record<string, unknown>).release_hash !== manifest.evidence?.sourceReleaseHash))
+            throw failure("ARTIFACT_MANIFEST_INVALID");
           const descriptor = parseCompiledRuntimeContract(artifact, { releaseId: envelope.releaseId, releaseNo: envelope.releaseNo });
           if (descriptor.authorizationRuntime) {
             if (!this.options.authorizationRuntime) throw failure("RUNTIME_INCOMPATIBLE");
@@ -415,20 +425,6 @@ function parseDocument(bytes: Uint8Array): PublicationArtifactDocumentV1 {
   }
 }
 
-function compatible(current: string, minimum?: string): boolean {
-  if (!minimum) return true;
-  const left = version(current);
-  const right = version(minimum);
-  for (let index = 0; index < 3; index += 1) {
-    if (left[index]! > right[index]!) return left[index]! > right[index]!;
-  }
-  return true;
-}
-function version(value: string): readonly [number, number, number] {
-  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(value);
-  if (!match) throw failure("RUNTIME_INCOMPATIBLE");
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
 function failure(code: PublicationErrorCode) {
   return new PublicationContractError(code, code);
 }

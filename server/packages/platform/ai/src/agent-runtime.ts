@@ -14,7 +14,6 @@ import {
   businessPartnerAssistanceInstruction,
   businessPartnerMissingScopeMessage,
 } from "./business-partner-assistance.js";
-import { selectLocalBusinessPartnerTools } from "./business-partner-tool-selection.js";
 import { parseAtlasInsightResult } from "@athyper/server-contract-ai";
 import { atlasEvidenceHash } from "./message-lineage.js";
 import type { AtlasReadReplayEvidence } from "@athyper/server-contract-ai";
@@ -365,15 +364,7 @@ export class AtlasAgentRuntime {
             command.userText,
             businessContext?.page,
           ) ??
-            (binding.providerId === "ollama" &&
-            (!businessContext ||
-              businessContext.page.entityCode === "business_partner")
-              ? selectLocalBusinessPartnerTools(
-                  applicableDefinitions,
-                  command.userText,
-                  businessContext?.page,
-                )
-              : applicableDefinitions),
+            applicableDefinitions,
         );
     const pageInstruction = businessContext
       ? `

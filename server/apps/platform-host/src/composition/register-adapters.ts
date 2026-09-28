@@ -1,6 +1,9 @@
+import { readFileSync, statSync } from "node:fs";
 import { qualifyPreviewRenderer } from "@athyper/server-adapter-preview-renderer";
 import { sql } from "kysely";
 import { createAuthorizationWriterDatabases } from "./authorization-writer-databases.js";
+import { selectDatabaseConfiguration } from "./infrastructure/database-selection.js";
+import type { RegistrationPlan } from "../kernel/registration-plan.js";
 import {
   createKeycloakAuthAdapter,
   type KeycloakAuthAdapter,
@@ -94,6 +97,7 @@ import { tryGetRequestContext } from "@athyper/server-foundation/context";
 import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
 import {
   CachedPublicationKeyResolver,
+  TrustScopedPublicationKeyResolver,
   Ed25519PublicationSigner,
   Ed25519PublicationVerifier,
   sha256,
@@ -179,7 +183,9 @@ export function registerAdapters(
   config: HostConfig,
   lifecycle: LifecycleManager,
   dependencyOverrides: Partial<AdapterRegistrationDependencies> = {},
+  plan?: RegistrationPlan,
 ): void {
+  config = selectDatabaseConfiguration(config, plan);
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...dependencyOverrides };
   let openTelemetry: OpenTelemetryAdapter | undefined;
 
@@ -663,6 +669,7 @@ export function registerAdapters(
   if (config.wave0.authorizationWriterConnectionsPath) {
     const writers = createAuthorizationWriterDatabases(
       config.wave0.authorizationWriterConnectionsPath,
+      plan?.databasePlanes,
     );
     container.adapters.authorizationWriterDatabases = writers.databases;
     lifecycle.onReady(() => writers.qualify());
@@ -725,13 +732,20 @@ export function registerAdapters(
         };
       },
     );
-    if (
+    if (!config.publication.secretStore && (
       !config.infisical.endpoint ||
       !config.infisical.token ||
       !config.infisical.workspaceId
-    )
+    ))
       throw new Error("Publication requires Infisical configuration");
-    const secretStore = container.adapters.secretStore!;
+    const dedicated = config.publication.secretStore;
+    if (dedicated && (!config.publication.trust || !statSync(dedicated.tokenFile).isFile()
+      || (statSync(dedicated.tokenFile).mode & 0o077) !== 0)) throw Error("PUBLICATION_SECRET_FILE_INVALID");
+    const secretStore = dedicated ? (dependencies.createSecretStore ?? createInfisicalSecretStore)({
+      endpoint: dedicated.endpoint, workspaceId: dedicated.workspaceId, environment: dedicated.environment,
+      token: readFileSync(dedicated.tokenFile, "utf8").trim(),
+    }) : container.adapters.secretStore!;
+    if (dedicated) lifecycle.onShutdown(() => secretStore.close?.());
     if (
       !config.publication.signingKeyId ||
       !config.publication.publicKeyReference
@@ -739,7 +753,7 @@ export function registerAdapters(
       throw new Error(
         "Publication requires signing key ID and public key reference",
       );
-    const resolver = new CachedPublicationKeyResolver(secretStore, [
+    const publicationKeys = [
       {
         keyId: config.publication.signingKeyId,
         ...(config.publication.privateKeyReference
@@ -747,7 +761,19 @@ export function registerAdapters(
           : {}),
         publicKeyReferences: [config.publication.publicKeyReference],
       },
-    ]);
+    ];
+    if (config.env !== "local" && !config.publication.trust)
+      throw new Error("PUBLICATION_TRUST_CONFIGURATION_REQUIRED");
+    if (config.publication.trust &&
+      config.publication.trust.domain !== (config.env === "local" ? "dev" : "production"))
+      throw new Error("PUBLICATION_TRUST_ENVIRONMENT_MISMATCH");
+    const resolver = config.publication.trust
+      ? new TrustScopedPublicationKeyResolver(secretStore, {
+          ...config.publication.trust,
+          access: config.publication.authoringEnabled || config.publication.compileEnabled || config.publication.dispatchEnabled ? "sign_and_verify" : "verify",
+          keys: publicationKeys,
+        })
+      : new CachedPublicationKeyResolver(secretStore, publicationKeys);
     container.adapters.publicationVerifier = new Ed25519PublicationVerifier(
       resolver,
     );

@@ -2,8 +2,18 @@ import { compileEntityIntakeSurfaces } from "./intake-surface-projection.js";
 import { compileEntityIntakeFlows } from "./intake-projection.js";
 import { createHash } from "node:crypto";
 import { parseEntityRuntimeDescriptor } from "./descriptor-parser.js";
+import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceGraph, assertCommonReferenceDescriptor } from "@athyper/server-contract-metadata";
 
 type Row = Record<string, any>;
+
+/** Search and filter are independent authorizations; configuration cannot grant either. */
+export function projectFieldQueryAccess(queryUses: readonly string[], configuredSearch: boolean) {
+  return {
+    sortable: queryUses.includes("sort"),
+    filterable: queryUses.includes("filter"),
+    searchable: queryUses.includes("search") && configuredSearch,
+  };
+}
 
 /** A standalone list surface does not replace its registered application shell.
  * An explicitly authored application remains a complete replacement. Existing
@@ -60,7 +70,7 @@ export interface NativeProjectionRegistration {
     schema: string;
     object: string;
     idField: string;
-    tenantField: string;
+    tenantField?: string;
     versionField?: string;
     statusField?: string;
   };
@@ -86,6 +96,9 @@ export function compileNativeRuntimeProjection(input: {
   permissions: readonly { code: string; scopeKinds: readonly string[] }[];
 }) {
   const { native, registration } = input;
+  const commonReference = native.referenceCapability === COMMON_REFERENCE_VIEW_PERMISSION ||
+    (Array.isArray(native.operationPermissions) && native.operationPermissions.some(p => p.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION));
+  if (commonReference) assertCommonReferenceGraph(native, registration.plane);
   const object = (value: unknown): Row => {
     if (!value || typeof value !== "object" || Array.isArray(value))
       throw Error("NATIVE_PROJECTION_OBJECT_REQUIRED");
@@ -194,6 +207,7 @@ export function compileNativeRuntimeProjection(input: {
   const intakeSurfaces = compileEntityIntakeSurfaces(native);
   const runtimeInputs = new Set(intakeSurfaces.flatMap(s => s.sections.flatMap(section => section.fields.map(f => f.key))));
   const descriptor = {
+    ...(commonReference ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION } : {}),
     schema: "athyper.entity-runtime-descriptor/1.0",
     entityCode: registration.entityCode,
     planeKey: registration.plane,
@@ -229,10 +243,7 @@ export function compileNativeRuntimeProjection(input: {
         type: field.dataType,
         required: false,
         writableOn: [],
-        sortable: policy.queryUses.includes("sort"),
-        filterable: policy.queryUses.includes("filter"),
-        searchable:
-          policy.queryUses.includes("filter") && searchableFields.has(field.id),
+        ...projectFieldQueryAccess(policy.queryUses, searchableFields.has(field.id)),
         list: {
           ...choices.list,
           label: binding?.labelOverride ?? display?.label ?? field.fieldKey,
@@ -276,6 +287,7 @@ export function compileNativeRuntimeProjection(input: {
     ),
   };
   // Invoke the real runtime parser before an artifact can be staged or signed.
+  if (commonReference) assertCommonReferenceDescriptor(descriptor, registration.plane);
   const compiledHash = createHash("sha256")
     .update(JSON.stringify(descriptor))
     .digest("hex");

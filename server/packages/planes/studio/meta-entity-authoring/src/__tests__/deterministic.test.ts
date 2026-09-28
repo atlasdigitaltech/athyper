@@ -5,6 +5,7 @@ import {
   compileListPresentation,
   runContractTests,
   validateGraph,
+  sha256,
 } from "../deterministic.js";
 
 const graph = (reverse = false): MetaEntityGraph => ({
@@ -69,6 +70,21 @@ describe("deterministic meta entity pipeline", () => {
       "0b1bf3a2f241cffb693498445c9029dbfc5e642c293eeb2a336ce8a504f58943",
     );
     expect(first.descriptorHash).toBe(
+      "bb8f34e8cc6817778c06ae40ebe999495ab0f794df2fc25e2800ad8d140bb332",
+    );
+    // Governance bindings intentionally participate in every newly compiled
+    // descriptor. Prove the exact delta from the historical fixture, not merely
+    // that a replacement hash matches today's output.
+    const previousShape = { ...first.descriptor };
+    for (const key of [
+      "changeCaseBindings", "operationContextRequirements",
+      "fieldReferenceBindings", "materializationBindings", "materializationFieldMappings",
+    ]) {
+      expect(first.descriptor).toHaveProperty(key, []);
+      delete previousShape[key];
+    }
+    expect(first.descriptor).not.toHaveProperty("collectionCompilation");
+    expect(sha256(previousShape)).toBe(
       "b95907f0dc3f6b3c2e90a6ed1bd2cbecdbf4540fae93abfe73416ec44e99356c",
     );
     expect(first.compiler.version).toBe("1.1.0");

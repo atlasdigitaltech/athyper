@@ -154,6 +154,10 @@ const operation = createOperation<Readonly<Record<string, unknown>>, Readonly<{ 
 
 /** Typed browser boundary for compiled entity resources. It never selects a table or handler. */
 export const entityRuntimeClient = Object.freeze({
+  collaboration: (client: HttpClient, input: { entityCode: string; recordId: string; kind: "comments" | "attachments"; cursor?: string; threadRootId?: string; commentFilter?: "mentions"; signal?: AbortSignal }) =>
+    client.request(createOperation<EntityRuntimeSectionResource>({ method: "GET", path: () => `/entity-runtime/${encodePathSegment(input.entityCode)}/records/${encodePathSegment(input.recordId)}/collaboration/${input.kind}`, parse: parseSection }), {
+      query: { ...(input.cursor ? { cursor: input.cursor } : {}), ...(input.threadRootId ? { threadRootId: input.threadRootId } : {}), ...(input.commentFilter ? { commentFilter: input.commentFilter } : {}) }, signal: input.signal,
+    }),
   bootstrap: (client: HttpClient, input: { readonly entityCode: string; readonly recordId: string; readonly surfaceKey: string; readonly resourceContext?: EntityRuntimeResourceContext; readonly signal?: AbortSignal }) =>
     client.request(bootstrap, {
       params: { entityCode: input.entityCode, recordId: input.recordId },

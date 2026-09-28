@@ -17,12 +17,14 @@ const bundle = buildSync({
     loader: "tsx",
     contents: `
 import React,{useState,useContext} from 'react';import{createRoot}from'react-dom/client';
+import{PanelHeader}from'@athyper/platform-ui';
 import{EntityCollaborationSurface}from'./packages/platform/entity/runtime/form-detail/src/collaboration-surface';
 import{WorkspaceSidePanelContext}from'./packages/platform/shell/shell/src/workspace-side-panel';
 import{CollaborationToolbarContext}from'./packages/platform/entity/runtime/form-detail/src/collaboration-visibility';
 function Content({name}){const toolbar=useContext(CollaborationToolbarContext);const[value,setValue]=useState('');return <div><label>{name}<input value={value} onChange={event=>setValue(event.target.value)}/></label>{name==='comments'?<div data-testid='comment-toolbar' ref={toolbar}/>:null}</div>}
 function App(){const[full,setFull]=useState(false);const[open,setOpen]=useState(true),[pinned,setPinned]=useState(true),[active,setActive]=useState('comments'),[owner,setOwner]=useState();const claim=React.useCallback(panel=>setOwner(panel.id),[]),release=React.useCallback(id=>setOwner(current=>current===id?undefined:current),[]);return <WorkspaceSidePanelContext.Provider value={{owner,claim,release}}><button onClick={()=>setOwner('atlas')}>Atlas</button><button onClick={()=>{setOpen(true);window.dispatchEvent(new CustomEvent('athyper:collaboration-open'))}}>Open comments</button><main><label hidden={full}>Record name<input defaultValue="Saved name"/></label><nav><button onClick={()=>setActive("comments")}>Record Comments</button><button onClick={()=>setActive("attachments")}>Record Files</button></nav><EntityCollaborationSurface recordEditing fullView={full} onFullViewChange={setFull} open={open} pinned={pinned} activeSectionKey={active} sections={[{key:'comments',label:'Comments'},{key:'attachments',label:'Files'}]} onOpenChange={setOpen} onPinnedChange={setPinned} onActiveSectionChange={setActive} preloadSection={()=>{}} renderSection={key=><Content name={key}/>}/></main></WorkspaceSidePanelContext.Provider>}
 createRoot(document.getElementById('root')).render(<App/>);
+window.mountAtlasReference=()=>{const node=document.createElement('section');node.className='athyper-atlas-workspace';document.body.append(node);createRoot(node).render(<PanelHeader className='athyper-atlas-workspace__header' title='Atlas AI' subtitle='Neon · Workspace assistant' icon={<span>A</span>} actions={<button>×</button>}/>)};
 `,
   },
   alias: {
@@ -62,7 +64,7 @@ test("one draft survives display modes, tabs, Atlas handoff and close/reopen", a
   await expect(panel).toHaveAttribute("data-mode", "content");
   await expect(editor).toHaveValue("Unsaved draft");
   await page
-    .getByRole("button", { name: "Close full view and return to side panel" })
+    .getByRole("button", { name: "Open Collaboration in side view", exact: true })
     .click();
   await expect(panel).toHaveAttribute("data-mode", "pinned");
   await page.getByRole("tab", { name: "Files" }).click();
@@ -79,11 +81,8 @@ test("one draft survives display modes, tabs, Atlas handoff and close/reopen", a
     .getByRole("button", { name: "Open comments", exact: true })
     .click();
   await expect(editor).toHaveValue("Unsaved draft");
-  await page.getByRole("button", { name: "Unpin collaboration" }).click();
-  await expect(
-    page.getByRole("dialog", { name: "Collaboration" }),
-  ).toBeVisible();
-  await page.keyboard.press("Escape");
+  await expect(panel).toHaveAttribute("data-mode", "pinned");
+  await page.getByRole("button", { name: "Close collaboration", exact: true }).click();
   await expect(page.locator("#entity-record-collaboration")).toBeHidden();
   await page
     .getByRole("button", { name: "Open comments", exact: true })
@@ -95,7 +94,7 @@ test("one draft survives display modes, tabs, Atlas handoff and close/reopen", a
     "filter",
   );
 });
-test("keyboard resizing respects bounds and compact screens use a full-width drawer", async ({
+test("keyboard resizing respects bounds and compact screens use full content view", async ({
   page,
 }) => {
   const separator = page.getByRole("separator", {
@@ -109,13 +108,13 @@ test("keyboard resizing respects bounds and compact screens use a full-width dra
   await page.keyboard.press("Home");
   await expect(separator).toHaveAttribute("aria-valuenow", "360");
   await page.setViewportSize({ width: 390, height: 844 });
-  const panel = page.getByRole("dialog", { name: "Collaboration" });
+  const panel = page.getByRole("region", { name: "Collaboration", exact: true });
   await expect(panel).toBeVisible();
-  await expect(panel).toHaveAttribute("data-mode", "drawer");
-  expect(Math.round((await panel.boundingBox())!.width)).toBe(390);
-  await page.getByRole("tab", { name: "Comments" }).focus();
-  await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("tab", { name: "Files" })).toBeFocused();
+  await expect(panel).toHaveAttribute("data-mode", "content");
+  await expect(page.getByRole("tablist")).toHaveCount(0);
+  await page.getByRole("button", { name: "Record Files", exact: true }).click();
+  await expect(page.getByLabel("attachments", { exact: true })).toBeVisible();
+  expect((await panel.boundingBox())!.width).toBeLessThanOrEqual(390);
 });
 
 test("full view uses external navigation and preserves unsaved record fields", async ({
@@ -127,8 +126,8 @@ test("full view uses external navigation and preserves unsaved record fields", a
     .getByRole("button", { name: "Open collaboration in full view" })
     .click();
   await expect(field).toBeHidden();
-  await expect(page.getByTestId("comment-toolbar").getByRole("button", {name:"Open Collaboration in side view",exact:true})).toBeVisible();
-  await expect(page.getByTestId("comment-toolbar").getByRole("button", {name:"Close full view and return to side panel",exact:true})).toBeVisible();
+  await expect(page.locator(".a-collaboration-panel__header").getByRole("button", {name:"Open Collaboration in side view",exact:true})).toBeVisible();
+  await expect(page.locator(".a-collaboration-panel__header").getByRole("button", {name:"Close collaboration",exact:true})).toBeVisible();
   await expect(page.getByRole("tablist")).toHaveCount(0);
   await expect(
     page.getByText("Comments and files save separately from record changes."),
@@ -146,12 +145,8 @@ test("full view uses external navigation and preserves unsaved record fields", a
 
 test("Collaboration side header matches Atlas height and typography", async ({ page }) => {
   await expect(page.locator(".a-collaboration-panel__header")).toBeVisible();
-  await page.evaluate(() => {
-    const atlas = document.createElement("section");
-    atlas.className = "athyper-atlas-workspace";
-    atlas.innerHTML = '<header class="athyper-atlas-workspace__header"><span class="athyper-atlas-workspace__mark">A</span><div><strong>Atlas AI</strong><small>Neon · Workspace assistant</small></div><nav><button>×</button></nav></header>';
-    document.body.append(atlas);
-  });
+  await page.evaluate(() => (window as unknown as {mountAtlasReference():void}).mountAtlasReference());
+  await expect(page.locator(".athyper-atlas-workspace__header")).toBeVisible();
   const styles = await page.evaluate(() => {
     const read = (selector: string) => {
       const header = document.querySelector(selector)!;

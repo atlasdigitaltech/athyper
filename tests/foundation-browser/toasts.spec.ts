@@ -67,3 +67,34 @@ test("desktop toast is centered and permits consecutive actions beside it",async
  const title=page.locator(".a-toast--success > strong");
  expect(await title.evaluate(el=>el.getBoundingClientRect().height<=parseFloat(getComputedStyle(el).lineHeight)*2+1)).toBe(true);
 });
+
+test("action notifications last longer, target the latest action, and clear after use", async ({ page }) => {
+  await page.evaluate(() => {
+    const push = (window as any).pushToast;
+    push({ tone: 'success', title: 'Comment posted', action: { label: 'View comment', onClick: () => (window as any).viewed = 'old' } });
+    push({ tone: 'success', title: 'Comment posted', action: { label: 'View comment', onClick: () => (window as any).viewed = 'latest' } });
+  });
+  await expect(page.locator('.a-global-toast')).toHaveCount(1);
+  await page.clock.runFor(6000);
+  const action = page.getByRole('button', { name: 'View comment', exact: true });
+  await expect(action).toBeVisible();
+  await action.focus();
+  await page.clock.runFor(11000);
+  await action.click();
+  expect(await page.evaluate(() => (window as any).viewed)).toBe('latest');
+  await expect(page.locator('.a-global-toast')).toHaveCount(0);
+});
+
+test("notifications clear bottom composer controls", async ({ page }) => {
+  await page.evaluate(() => {
+    const dock = document.createElement('div');
+    dock.setAttribute('data-toast-avoid', '');
+    dock.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;height:160px';
+    document.body.append(dock);
+    (window as any).pushToast({ tone: 'success', title: 'Comment posted' });
+  });
+  await page.clock.runFor(100);
+  const toast = (await page.locator('.a-global-toast').boundingBox())!;
+  const dock = (await page.locator('[data-toast-avoid]').boundingBox())!;
+  expect(toast.y + toast.height).toBeLessThan(dock.y);
+});

@@ -1,3 +1,17 @@
+.a-entity-record__group > [role="menu"] > button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  padding: var(--a-space-2) var(--a-space-3);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.a-entity-record__group > [role="menu"] > button:focus-visible {
+  outline: var(--a-border-width) solid var(--a-primary);
+  outline-offset: calc(-1 * var(--a-border-width));
+  background: var(--a-selection-subtle);
+}
 .a-entity-record {
   min-width: 0;
   font-family: var(--a-font-sans);
@@ -48,7 +62,7 @@
   top: 1rem;
 }
 .a-entity-record-summary-view > section {
-  border: 1px solid var(--a-color-border, #ccd6e3);
+  border: var(--a-border-width) solid var(--a-border);
   border-radius: 0.75rem;
   background: var(--a-color-surface, #fff);
   padding: 1rem;
@@ -67,7 +81,7 @@
   gap: 0.125rem;
 }
 .a-entity-record-summary-view dt {
-  color: var(--a-color-text-muted, #5d6b82);
+  color: var(--a-muted-foreground);
   text-transform: capitalize;
 }
 .a-entity-record-summary-view dd {
@@ -191,7 +205,7 @@
   min-block-size: 12rem;
   border: 1px solid var(--a-border);
   border-radius: var(--a-radius-md, 0.5rem);
-  background: var(--a-surface-subtle);
+  background: var(--a-muted);
 }
 /* On wide screens, contextual navigation and decision support remain visible while the
    continuous record document owns the only scroll surface. */
@@ -542,4 +556,11 @@
    heading to the bottom of the center pane. */
 .a-runtime-continuous-sections__tail {
   min-block-size: max(18rem, 60dvh);
+}
+.a-entity-record :is(.a-entity-record__tabs button, .a-entity-record__group > summary, .a-entity-record__group > [role="menu"] > button, [role="tab"]),
+.a-metadata-detail :is(.a-entity-record__tabs button, .a-entity-record__group > summary, .a-entity-record__group > [role="menu"] > button, [role="tab"]) {
+  font-family: var(--a-font-sans);
+  font-size: var(--a-font-size-sm);
+  font-weight: var(--a-font-weight-regular);
+  line-height: var(--a-line-height-snug);
 }

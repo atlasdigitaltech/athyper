@@ -249,9 +249,13 @@ BEGIN
  IF r.entity_code<>'business_partner_request' OR r.release_kind<>'publish' OR r.target_planes IS DISTINCT FROM ARRAY['neon']::text[]
  OR r.contract_signature IS NULL OR r.signature_algorithm IS DISTINCT FROM 'Ed25519' THEN RAISE EXCEPTION 'DOCUMENT_COLLECTION_REVIEW_REQUIRED';END IF;
  g:=r.contract_json;
+ -- This read-only collection adapter cannot execute governance bindings.
+ FOREACH branch IN ARRAY ARRAY['changeCaseBindings','operationContextRequirements','fieldReferenceBindings','materializationBindings','materializationFieldMappings'] LOOP
+  IF coalesce(g->branch,'[]'::jsonb) IS DISTINCT FROM '[]'::jsonb THEN RAISE EXCEPTION 'DOCUMENT_COLLECTION_GOVERNANCE_UNSUPPORTED'; END IF;
+ END LOOP;
  IF jsonb_typeof(p_descriptor) IS DISTINCT FROM 'object' OR p_descriptor->'entity' IS DISTINCT FROM g->'entity'
- OR p_descriptor-ARRAY['entity','fields','keys','keyFields','searchProfiles','searchFields','relations','relationTargets','relationFields','operations','operationPermissions','operationRules','operationScopeBindings','surfaces','surfaceSections','surfaceFieldBindings','surfaceOperations','flows','flowSteps','lifecycleBindings','lifecycleOperationBindings','policyBindings','fieldPolicyBindings','numberingBindings','classProfiles','runtimeProfiles','authorization','collectionRelationship','listPresentation']<>'{}'::jsonb THEN RAISE EXCEPTION 'DOCUMENT_COLLECTION_SOURCE_MISMATCH';END IF;
- FOREACH branch IN ARRAY ARRAY['fields','keys','keyFields','searchProfiles','searchFields','relations','relationTargets','relationFields','operations','operationPermissions','operationRules','operationScopeBindings','surfaces','surfaceSections','surfaceFieldBindings','surfaceOperations','flows','flowSteps','lifecycleBindings','lifecycleOperationBindings','policyBindings','fieldPolicyBindings','numberingBindings','classProfiles','runtimeProfiles'] LOOP
+ OR p_descriptor-ARRAY['entity','fields','keys','keyFields','searchProfiles','searchFields','relations','relationTargets','relationFields','operations','operationPermissions','operationRules','operationScopeBindings','changeCaseBindings','operationContextRequirements','fieldReferenceBindings','materializationBindings','materializationFieldMappings','surfaces','surfaceSections','surfaceFieldBindings','surfaceOperations','flows','flowSteps','lifecycleBindings','lifecycleOperationBindings','policyBindings','fieldPolicyBindings','numberingBindings','classProfiles','runtimeProfiles','authorization','collectionRelationship','collectionCompilation','listPresentation']<>'{}'::jsonb THEN RAISE EXCEPTION 'DOCUMENT_COLLECTION_SOURCE_MISMATCH';END IF;
+ FOREACH branch IN ARRAY ARRAY['fields','keys','keyFields','searchProfiles','searchFields','relations','relationTargets','relationFields','operations','operationPermissions','operationRules','operationScopeBindings','changeCaseBindings','operationContextRequirements','fieldReferenceBindings','materializationBindings','materializationFieldMappings','surfaces','surfaceSections','surfaceFieldBindings','surfaceOperations','flows','flowSteps','lifecycleBindings','lifecycleOperationBindings','policyBindings','fieldPolicyBindings','numberingBindings','classProfiles','runtimeProfiles'] LOOP
   IF jsonb_typeof(p_descriptor->branch) IS DISTINCT FROM 'array' THEN RAISE EXCEPTION 'DOCUMENT_COLLECTION_BRANCH_INVALID';END IF;
   SELECT coalesce(jsonb_agg(value ORDER BY value::text),'[]'::jsonb) INTO lhs FROM jsonb_array_elements(p_descriptor->branch);
   SELECT coalesce(jsonb_agg(value ORDER BY value::text),'[]'::jsonb) INTO rhs FROM jsonb_array_elements(coalesce(g->branch,'[]'::jsonb));
@@ -259,13 +263,22 @@ BEGIN
  END LOOP;
  SELECT s->'layoutConfig' INTO STRICT layout FROM jsonb_array_elements(g->'surfaces') s WHERE s->'layoutConfig' ? 'collectionRelationship' AND coalesce(s->>'status','active')<>'deprecated';
  IF p_descriptor->'authorization' IS DISTINCT FROM layout->'authorization' OR p_descriptor->'collectionRelationship' IS DISTINCT FROM layout->'collectionRelationship'
+ OR p_descriptor->'collectionCompilation' IS DISTINCT FROM layout->'collectionCompilation'
+ OR layout->'collectionCompilation' IS DISTINCT FROM jsonb_build_object(
+   'schemaVersion',1,'entityCode',r.entity_code,'planeKey',r.target_planes[1],
+   'subjectEntityCode',layout->'collectionRelationship'->'subject'->>'value',
+   'permissionCode',(SELECT p->>'permissionCode' FROM jsonb_array_elements(g->'operationPermissions') p
+     JOIN jsonb_array_elements(g->'operations') o ON o->>'id'=p->>'entityOperationId'
+     WHERE o->>'operationKey'='read' AND o->>'status' IS DISTINCT FROM 'deprecated'
+       AND p->>'status' IS DISTINCT FROM 'deprecated' AND p->>'targetPlane'=r.target_planes[1]),
+   'detailRouteTemplate','/app/entity/'||r.entity_code||'/:recordId')
  OR layout->'collectionRelationship'->'subject'->>'value' IS DISTINCT FROM 'master.business_partner'
  OR layout->'collectionRelationship'->'scope'->>'contextRef' IS DISTINCT FROM 'operatingOrganizationId' THEN RAISE EXCEPTION 'DOCUMENT_COLLECTION_POLICY_MISMATCH';END IF;
  -- This adapter supports the reviewed simple read-only collection presentation.
  -- Future layout features require compiler/adapter support, not unchecked JSON.
  SELECT value INTO STRICT list_surface FROM jsonb_array_elements(g->'surfaces')
  WHERE value->>'surfaceKind'='list' AND value->>'status' IS DISTINCT FROM 'deprecated';
- IF layout - ARRAY['authorization','collectionRelationship','defaultState','supportedModes'] <> '{}'::jsonb
+ IF layout - ARRAY['authorization','collectionRelationship','collectionCompilation','defaultState','supportedModes'] <> '{}'::jsonb
  OR coalesce(layout->'defaultState','{}'::jsonb)-ARRAY['sort'] <> '{}'::jsonb
  OR coalesce(g->'surfaceOperations','[]'::jsonb)<>'[]'::jsonb
  OR coalesce(g->'searchProfiles','[]'::jsonb)<>'[]'::jsonb

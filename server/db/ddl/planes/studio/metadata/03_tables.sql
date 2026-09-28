@@ -961,7 +961,7 @@ CREATE TABLE metadata.entity_operation_permission (
     CONSTRAINT entity_operation_permission_tenant_id_uq UNIQUE NULLS NOT DISTINCT (tenant_id, id),
     CONSTRAINT entity_operation_permission_plane_uq
         UNIQUE NULLS NOT DISTINCT (tenant_id, entity_operation_id, target_plane),
-    CONSTRAINT entity_operation_permission_plane_chk CHECK (target_plane IN ('neon', 'mesh')),
+    CONSTRAINT entity_operation_permission_plane_chk CHECK (target_plane IN ('studio', 'neon', 'mesh')),
     CONSTRAINT entity_operation_permission_code_chk
         CHECK (permission_code ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,7}$'),
     CONSTRAINT entity_operation_permission_kind_chk
@@ -1230,7 +1230,7 @@ CREATE TABLE metadata.entity_operation_scope_binding (
     CONSTRAINT entity_operation_scope_binding_key_chk
         CHECK (binding_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT entity_operation_scope_binding_plane_chk
-        CHECK (target_plane IN ('neon', 'mesh')),
+        CHECK (target_plane IN ('studio', 'neon', 'mesh')),
     CONSTRAINT entity_operation_scope_binding_decision_chk
         CHECK (decision_mode IN ('entity_resource', 'collection')),
     CONSTRAINT entity_operation_scope_binding_scope_chk
@@ -1273,6 +1273,87 @@ CREATE TABLE metadata.entity_operation_scope_binding (
 
 COMMENT ON TABLE metadata.entity_operation_scope_binding IS
   'Admin-authored, change-set-owned scope-coordinate recipe. Plane compilers freeze it into immutable artifacts; consumer authz tables are projections only.';
+
+-- Published execution remains trusted host code. These bindings declare only
+-- configuration and immutable coordinates; they never carry executable SQL or scripts.
+CREATE TABLE metadata.entity_change_case_binding (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid, entity_id uuid NOT NULL,
+    change_set_id uuid NOT NULL, entity_operation_id uuid NOT NULL, binding_key text NOT NULL,
+    case_kind text NOT NULL, case_entity_code text NOT NULL DEFAULT 'entity_case', workflow_key text,
+    materialization_binding_key text, status metadata.entity_member_status_d NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT entity_change_case_binding_pkey PRIMARY KEY(id),
+    CONSTRAINT entity_change_case_binding_tenant_id_uq UNIQUE NULLS NOT DISTINCT(tenant_id,id),
+    CONSTRAINT entity_change_case_binding_key_uq UNIQUE NULLS NOT DISTINCT(tenant_id,change_set_id,binding_key),
+    CONSTRAINT entity_change_case_binding_operation_uq UNIQUE NULLS NOT DISTINCT(tenant_id,entity_operation_id),
+    CONSTRAINT entity_change_case_binding_key_chk CHECK(binding_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT entity_change_case_binding_kind_chk CHECK(case_kind IN ('governed_change','direct_change')),
+    CONSTRAINT entity_change_case_binding_entity_chk CHECK(case_entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT entity_change_case_binding_workflow_chk CHECK(workflow_key IS NULL OR workflow_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT entity_change_case_binding_materialization_chk CHECK(materialization_binding_key IS NULL OR materialization_binding_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT entity_change_case_binding_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+
+CREATE TABLE metadata.entity_operation_context_requirement (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid, entity_id uuid NOT NULL,
+    change_set_id uuid NOT NULL, entity_operation_id uuid NOT NULL, coordinate_key text NOT NULL,
+    source_kind text NOT NULL, source_field_key text, required boolean NOT NULL DEFAULT true,
+    status metadata.entity_member_status_d NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT entity_operation_context_requirement_pkey PRIMARY KEY(id),
+    CONSTRAINT entity_operation_context_requirement_tenant_id_uq UNIQUE NULLS NOT DISTINCT(tenant_id,id),
+    CONSTRAINT entity_operation_context_requirement_uq UNIQUE NULLS NOT DISTINCT(tenant_id,entity_operation_id,coordinate_key),
+    CONSTRAINT entity_operation_context_requirement_key_chk CHECK(coordinate_key ~ '^[a-z][a-zA-Z0-9_]{0,126}$'),
+    CONSTRAINT entity_operation_context_requirement_source_chk CHECK(source_kind IN ('tenant_context','request_field','record_field')),
+    CONSTRAINT entity_operation_context_requirement_source_field_chk CHECK((source_kind='tenant_context')=(source_field_key IS NULL)),
+    CONSTRAINT entity_operation_context_requirement_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+
+CREATE TABLE metadata.entity_field_reference_binding (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid, entity_id uuid NOT NULL,
+    change_set_id uuid NOT NULL, entity_field_id uuid NOT NULL, binding_key text NOT NULL,
+    reference_kind text NOT NULL, target_entity_code text, lookup_domain text, resolver_key text,
+    require_active boolean NOT NULL DEFAULT true, status metadata.entity_member_status_d NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT entity_field_reference_binding_pkey PRIMARY KEY(id),
+    CONSTRAINT entity_field_reference_binding_tenant_id_uq UNIQUE NULLS NOT DISTINCT(tenant_id,id),
+    CONSTRAINT entity_field_reference_binding_key_uq UNIQUE NULLS NOT DISTINCT(tenant_id,change_set_id,binding_key),
+    CONSTRAINT entity_field_reference_binding_field_uq UNIQUE NULLS NOT DISTINCT(tenant_id,entity_field_id),
+    CONSTRAINT entity_field_reference_binding_kind_chk CHECK(reference_kind IN ('entity_relation','lookup_domain','resolver')),
+    CONSTRAINT entity_field_reference_binding_target_chk CHECK(target_entity_code IS NULL OR target_entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT entity_field_reference_binding_lookup_chk CHECK(lookup_domain IS NULL OR lookup_domain ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT entity_field_reference_binding_resolver_chk CHECK(resolver_key IS NULL OR resolver_key ~ '^[a-z][a-z0-9_.:-]{1,126}$'),
+    CONSTRAINT entity_field_reference_binding_kind_target_chk CHECK((reference_kind='entity_relation')=(target_entity_code IS NOT NULL) AND (reference_kind='lookup_domain')=(lookup_domain IS NOT NULL) AND (reference_kind='resolver')=(resolver_key IS NOT NULL)),
+    CONSTRAINT entity_field_reference_binding_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+
+CREATE TABLE metadata.entity_materialization_binding (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid, entity_id uuid NOT NULL,
+    change_set_id uuid NOT NULL, binding_key text NOT NULL, target_entity_code text NOT NULL,
+    materializer_key text NOT NULL, target_collection_key text, status metadata.entity_member_status_d NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT entity_materialization_binding_pkey PRIMARY KEY(id),
+    CONSTRAINT entity_materialization_binding_tenant_id_uq UNIQUE NULLS NOT DISTINCT(tenant_id,id),
+    CONSTRAINT entity_materialization_binding_key_uq UNIQUE NULLS NOT DISTINCT(tenant_id,change_set_id,binding_key),
+    CONSTRAINT entity_materialization_binding_target_chk CHECK(target_entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT entity_materialization_binding_handler_chk CHECK(materializer_key ~ '^[a-z][a-z0-9_.:-]{1,126}\\.v[1-9][0-9]*$'),
+    CONSTRAINT entity_materialization_binding_collection_chk CHECK(target_collection_key IS NULL OR target_collection_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT entity_materialization_binding_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+
+CREATE TABLE metadata.entity_materialization_field_mapping (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid, entity_materialization_binding_id uuid NOT NULL,
+    source_field_key text NOT NULL, target_field_key text NOT NULL, transform_key text, required boolean NOT NULL DEFAULT false,
+    position smallint NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT entity_materialization_field_mapping_pkey PRIMARY KEY(id),
+    CONSTRAINT entity_materialization_field_mapping_tenant_id_uq UNIQUE NULLS NOT DISTINCT(tenant_id,id),
+    CONSTRAINT entity_materialization_field_mapping_position_uq UNIQUE NULLS NOT DISTINCT(tenant_id,entity_materialization_binding_id,position),
+    CONSTRAINT entity_materialization_field_mapping_source_uq UNIQUE NULLS NOT DISTINCT(tenant_id,entity_materialization_binding_id,source_field_key),
+    CONSTRAINT entity_materialization_field_mapping_field_chk CHECK(source_field_key ~ '^[a-z][a-z0-9_]{0,62}$' AND target_field_key ~ '^[a-z][a-z0-9_]{0,62}$'),
+    CONSTRAINT entity_materialization_field_mapping_transform_chk CHECK(transform_key IS NULL OR transform_key ~ '^[a-z][a-z0-9_.:-]{1,126}\\.v[1-9][0-9]*$'),
+    CONSTRAINT entity_materialization_field_mapping_position_chk CHECK(position>=0),
+    CONSTRAINT entity_materialization_field_mapping_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
 -- A change-set member, not a runtime-profile extension. The same typed policy
 -- is projected into Core/Operation at publication; surfaces cannot override it.
 CREATE TABLE metadata.entity_capability (
@@ -1281,6 +1362,9 @@ CREATE TABLE metadata.entity_capability (
  capability_key text NOT NULL CHECK(capability_key IN ('comments','attachments')),
  declaration jsonb NOT NULL CHECK(jsonb_typeof(declaration)='object'),
  binding jsonb CHECK(binding IS NULL OR jsonb_typeof(binding)='object'),
+ profile jsonb CHECK(profile IS NULL OR jsonb_typeof(profile)='object'),
+ profile_definition jsonb CHECK(profile_definition IS NULL OR jsonb_typeof(profile_definition)='object'),
+ overrides jsonb CHECK(overrides IS NULL OR jsonb_typeof(overrides)='object'),
  created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
  updated_at timestamptz, updated_by uuid,
  UNIQUE NULLS NOT DISTINCT(tenant_id,id),

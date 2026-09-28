@@ -167,6 +167,8 @@ export function createEffectiveLocalization(input: CreateLocalizationInput = {})
 
 export interface IntlRuntime {
   readonly localization: EffectiveLocalization;
+  /** Published labels are plain text, not user-supplied ICU templates. */
+  text(value: string | { readonly labelKey: string; readonly defaultText: string }): string;
   message(id: string, values?: MessageValues): string;
   number(value: number | bigint, options?: Intl.NumberFormatOptions): string;
   date(value: Date | number | string, options?: Intl.DateTimeFormatOptions): string;
@@ -181,14 +183,21 @@ export function createIntlRuntime(input: { readonly localization: EffectiveLocal
   const localization = input.localization;
   const formatter = (id: string): IntlMessageFormat => {
     const cached = compiled.get(id); if (cached) return cached;
-    const translated = input.messages[id], fallback = input.fallbackMessages?.[id];
+    const translated = Object.hasOwn(input.messages, id) ? input.messages[id] : undefined;
+    const fallback = input.fallbackMessages && Object.hasOwn(input.fallbackMessages, id) ? input.fallbackMessages[id] : undefined;
     const source = translated ?? fallback ?? id;
     if (translated === undefined) input.onDiagnostic?.({ kind: "missing-message", locale: localization.catalogLocale, messageId: id, ...(fallback ? { fallbackLocale: PLATFORM_CATALOG_LOCALE } : {}) });
-    try { const result = new IntlMessageFormat(source, localization.uiLocale); compiled.set(id, result); return result; }
+    try { const result = new IntlMessageFormat(source, translated === undefined && fallback !== undefined ? PLATFORM_CATALOG_LOCALE : localization.catalogLocale); compiled.set(id, result); return result; }
     catch (cause) { input.onDiagnostic?.({ kind: "invalid-message", locale: localization.catalogLocale, messageId: id }); if (fallback && fallback !== source) return new IntlMessageFormat(fallback, PLATFORM_CATALOG_LOCALE); throw cause; }
   };
   const runtime: IntlRuntime = {
     localization,
+    text(value) {
+      if (typeof value === "string") return value;
+      const translated = Object.hasOwn(input.messages, value.labelKey) ? input.messages[value.labelKey] : undefined;
+      const fallback = input.fallbackMessages && Object.hasOwn(input.fallbackMessages, value.labelKey) ? input.fallbackMessages[value.labelKey] : undefined;
+      return translated ?? fallback ?? value.defaultText;
+    },
     message(id, values) { const result = formatter(id).format(values as Record<string, PrimitiveType | FormatXMLElementFn<string, string>> | undefined); return Array.isArray(result) ? result.join("") : String(result); },
     number(value, options) { return new Intl.NumberFormat(localization.formatLocale, { numberingSystem: localization.numberingSystem, ...options }).format(value); },
     date(value, options) { const date = value instanceof Date ? value : new Date(value); return new Intl.DateTimeFormat(localization.formatLocale, { timeZone: localization.timeZone, calendar: localization.calendar, numberingSystem: localization.numberingSystem, ...options }).format(date); },

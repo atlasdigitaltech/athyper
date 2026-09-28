@@ -9,6 +9,7 @@ import {
   type EntityCapabilityKind,
 } from "@athyper/server-contract-publication";
 import type { PinnedCompiledEntityReader } from "@athyper/server-platform-metadata";
+import { resolveEffectiveCollaborationControls, type CollaborationOperationalControls } from "./effective-collaboration-controls.js";
 
 export class EntityCapabilityPolicyError extends Error {
   readonly statusCode = 403;
@@ -71,8 +72,10 @@ export function createEntityCapabilityPolicy(options: {
   readonly authorizer: Authorizer;
   readonly authorizeParent: (
     input: EntityCapabilityRequest,
+    release: NonNullable<Awaited<ReturnType<PinnedCompiledEntityReader["resolve"]>>>,
   ) => Promise<EntityCapabilityParentAdmission>;
   readonly audience?: EntityCapabilityAudienceResolver;
+  readonly operationalControls?: (input: EntityCapabilityRequest) => Promise<CollaborationOperationalControls>;
 }) {
   return {
     async resolve(
@@ -111,15 +114,17 @@ export function createEntityCapabilityPolicy(options: {
       );
       if (!declaration.enabled) return deny();
       const operation = await options.reader.operation(release);
-      const binding = parseCapabilityBinding(
+      const publishedBinding = parseCapabilityBinding(
         operation.content[
           input.kind === "comments" ? "commentBinding" : "attachmentBinding"
         ],
         input.kind,
         input.entityCode,
       );
+      const operational = await options.operationalControls?.(input) ?? { revision: "published-only" };
+      const binding = resolveEffectiveCollaborationControls(publishedBinding, operational);
       const action = binding.actions.find((a) => a.key === input.action);
-      const parent = await options.authorizeParent(input);
+      const parent = await options.authorizeParent(input, release);
       if (!action || !parent) return deny();
       const baseResource = {
         tenantId: input.context.tenantId,
@@ -202,7 +207,10 @@ export function createEntityCapabilityPolicy(options: {
         if (action.idempotency === "required" && (typeof value.idempotencyKey !== "string" || value.idempotencyKey.length < 8))
           return deny();
       }
-      if ("maxFileBytes" in binding) {
+      if ("maxFileBytes" in binding && ["create", "version", "finalize"].includes(input.action)) {
+        // Zero bytes or zero batch slots disables new uploads, even when a
+        // preliminary admission call has not supplied size metadata yet.
+        if (binding.maxFileBytes === 0 || binding.maxBatchCount === 0) return deny();
         if (
           value.sizeBytes !== undefined &&
           (!Number.isSafeInteger(value.sizeBytes) ||
@@ -211,12 +219,14 @@ export function createEntityCapabilityPolicy(options: {
             value.sizeBytes > binding.maxFileBytes)
         )
           return deny();
+        if (value.batchCount !== undefined &&
+            (!Number.isSafeInteger(value.batchCount) || Number(value.batchCount) < 1 || Number(value.batchCount) > binding.maxBatchCount)) return deny();
         if (
           value.contentType !== undefined &&
           !binding.allowedContentTypes.includes(String(value.contentType))
         )
           return deny();
-      } else {
+      } else if (!("maxFileBytes" in binding)) {
         if (
           typeof value.text === "string" &&
           value.text.length > binding.maxTextLength
@@ -265,7 +275,7 @@ export function createEntityCapabilityPolicy(options: {
         action,
         releaseHash: release.release.releaseHash,
         policyHash: operation.artifactHash,
-        projection: projectEntityCapability(binding, allowed),
+        projection: { ...projectEntityCapability(binding, allowed), configurationRevision: operational.revision, releaseHash: release.release.releaseHash },
       };
     },
   };

@@ -1,4 +1,5 @@
 import { assertCanonicalReadSourceCatalog } from "./canonical-read-catalog.js";
+import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceDescriptor, assertCommonReferenceGraph } from "@athyper/server-contract-metadata";
 import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
 import { createHash } from "node:crypto";
 import {
@@ -132,6 +133,10 @@ export async function compileEntityAuthorizationPublication(
       "Invalid entity authorization publication review receipt",
     );
   const authored = authoredAuthorization(c.contract);
+  if (profile.operations.some(operation => operation.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION)) {
+    assertCommonReferenceGraph(c.contract, d.plane);
+    assertCommonReferenceDescriptor(d.descriptor, d.plane);
+  }
   if (
     hash(authored["authorization"]) !== hash(profile) ||
     hash(
@@ -181,9 +186,10 @@ export async function compileEntityAuthorizationPublication(
       const permission = catalog.get(operation.permissionCode);
       if (
         !permission ||
-        !new RegExp(
+        (permission.code !== COMMON_REFERENCE_VIEW_PERMISSION && !new RegExp(
           `^${d.plane}\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$`,
-        ).test(permission.code) ||
+        ).test(permission.code)) ||
+        (permission.code === COMMON_REFERENCE_VIEW_PERMISSION && (permission.kind !== "capability" || permission.scopeKinds.length !== 1 || permission.scopeKinds[0] !== "tenant")) ||
         permission.code.split(".").slice(1, 3).includes("action") ||
         !["entity_operation", "capability"].includes(permission.kind)
       )

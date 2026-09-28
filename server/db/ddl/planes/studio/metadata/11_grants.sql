@@ -165,3 +165,12 @@ $$;
 REVOKE ALL ON metadata.pii_inventory FROM PUBLIC;
 GRANT SELECT ON metadata.pii_inventory TO athyperapp;
 DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT ON metadata.pii_inventory TO athyperadmin; END IF; END $$;
+
+DO $$ DECLARE t text; BEGIN
+  FOREACH t IN ARRAY ARRAY['entity_change_case_binding','entity_operation_context_requirement',
+    'entity_field_reference_binding','entity_materialization_binding','entity_materialization_field_mapping'] LOOP
+    EXECUTE format('REVOKE ALL ON metadata.%I FROM PUBLIC,athyperapp',t);
+    EXECUTE format('GRANT SELECT ON metadata.%I TO athyperapp',t);
+    EXECUTE format('GRANT ALL ON metadata.%I TO athyperadmin',t);
+  END LOOP;
+END $$;

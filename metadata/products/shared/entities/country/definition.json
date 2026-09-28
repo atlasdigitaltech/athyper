@@ -1,0 +1,315 @@
+{
+  "schema": "athyper.shared-reference-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
+  "definition": {
+    "runtimeBindings": [
+      {
+        "operation": "list",
+        "handler": "entity.record.list.v1",
+        "resolver": "tenant.record.v1"
+      },
+      {
+        "operation": "read",
+        "handler": "entity.record.read.v1",
+        "resolver": "tenant.record.v1"
+      }
+    ],
+    "entityCode": "country",
+    "title": {
+      "labelKey": "entity.country.title",
+      "defaultText": "Countries"
+    },
+    "storageObject": "country",
+    "codeField": "code",
+    "titleField": "name",
+    "fields": [
+      {
+        "key": "id",
+        "label": {
+          "labelKey": "entity.country.fields.id",
+          "defaultText": "Record ID"
+        },
+        "type": "uuid",
+        "required": true
+      },
+      {
+        "key": "code",
+        "label": {
+          "labelKey": "entity.country.fields.code",
+          "defaultText": "ISO alpha-2"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "name",
+        "label": {
+          "labelKey": "entity.country.fields.name",
+          "defaultText": "Name"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "code3",
+        "label": {
+          "labelKey": "entity.country.fields.code3",
+          "defaultText": "ISO alpha-3"
+        },
+        "type": "string"
+      },
+      {
+        "key": "numeric3",
+        "label": {
+          "labelKey": "entity.country.fields.numeric3",
+          "defaultText": "ISO numeric code"
+        },
+        "type": "string"
+      },
+      {
+        "key": "official_name",
+        "label": {
+          "labelKey": "entity.country.fields.official_name",
+          "defaultText": "Official name"
+        },
+        "type": "string"
+      },
+      {
+        "key": "region",
+        "label": {
+          "labelKey": "entity.country.fields.region",
+          "defaultText": "Region"
+        },
+        "type": "string"
+      },
+      {
+        "key": "subregion",
+        "label": {
+          "labelKey": "entity.country.fields.subregion",
+          "defaultText": "Subregion"
+        },
+        "type": "string"
+      },
+      {
+        "key": "calling_code",
+        "label": {
+          "labelKey": "entity.country.fields.calling_code",
+          "defaultText": "Calling code"
+        },
+        "type": "string"
+      },
+      {
+        "key": "phone_trunk_prefix",
+        "label": {
+          "labelKey": "entity.country.fields.phone_trunk_prefix",
+          "defaultText": "National trunk prefix"
+        },
+        "type": "string"
+      },
+      {
+        "key": "phone_national_pattern",
+        "label": {
+          "labelKey": "entity.country.fields.phone_national_pattern",
+          "defaultText": "National number pattern"
+        },
+        "type": "string"
+      },
+      {
+        "key": "phone_example",
+        "label": {
+          "labelKey": "entity.country.fields.phone_example",
+          "defaultText": "Phone example"
+        },
+        "type": "string"
+      },
+      {
+        "key": "has_postal_codes",
+        "label": {
+          "labelKey": "entity.country.fields.has_postal_codes",
+          "defaultText": "Uses postal codes"
+        },
+        "type": "boolean",
+        "required": true
+      },
+      {
+        "key": "postal_code_pattern",
+        "label": {
+          "labelKey": "entity.country.fields.postal_code_pattern",
+          "defaultText": "Postal code pattern"
+        },
+        "type": "string"
+      },
+      {
+        "key": "postal_code_label",
+        "label": {
+          "labelKey": "entity.country.fields.postal_code_label",
+          "defaultText": "Postal code label"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "postal_code_example",
+        "label": {
+          "labelKey": "entity.country.fields.postal_code_example",
+          "defaultText": "Postal code example"
+        },
+        "type": "string"
+      },
+      {
+        "key": "region_label",
+        "label": {
+          "labelKey": "entity.country.fields.region_label",
+          "defaultText": "Region label"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "postal_position",
+        "label": {
+          "labelKey": "entity.country.fields.postal_position",
+          "defaultText": "Postal position"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "address_format",
+        "label": {
+          "labelKey": "entity.country.fields.address_format",
+          "defaultText": "Address format"
+        },
+        "type": "string"
+      },
+      {
+        "key": "status",
+        "label": {
+          "labelKey": "entity.country.fields.status",
+          "defaultText": "Status"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "created_at",
+        "label": {
+          "labelKey": "entity.country.fields.created_at",
+          "defaultText": "Created"
+        },
+        "type": "datetime",
+        "required": true
+      },
+      {
+        "key": "updated_at",
+        "label": {
+          "labelKey": "entity.country.fields.updated_at",
+          "defaultText": "Updated"
+        },
+        "type": "datetime"
+      }
+    ],
+    "columns": [
+      "code",
+      "name",
+      "code3",
+      "region",
+      "subregion",
+      "calling_code",
+      "status"
+    ],
+    "searchFields": [
+      "code",
+      "code3",
+      "name",
+      "official_name"
+    ],
+    "navigation": {
+      "mode": "scroll",
+      "tabs": [
+        {
+          "key": "overview",
+          "label": "Overview",
+          "sectionKeys": [
+            "overview",
+            "phone",
+            "address",
+            "audit"
+          ],
+          "localizedLabel": {
+            "labelKey": "navigation.overview",
+            "defaultText": "Overview"
+          }
+        }
+      ]
+    },
+    "sections": [
+      {
+        "key": "overview",
+        "label": {
+          "labelKey": "entity.country.sections.overview",
+          "defaultText": "Country"
+        },
+        "fields": [
+          "name",
+          "official_name",
+          "code",
+          "code3",
+          "numeric3",
+          "region",
+          "subregion",
+          "status"
+        ]
+      },
+      {
+        "key": "phone",
+        "label": {
+          "labelKey": "entity.country.sections.phone",
+          "defaultText": "Phone"
+        },
+        "fields": [
+          "calling_code",
+          "phone_trunk_prefix",
+          "phone_national_pattern",
+          "phone_example"
+        ]
+      },
+      {
+        "key": "address",
+        "label": {
+          "labelKey": "entity.country.sections.address",
+          "defaultText": "Postal and address"
+        },
+        "fields": [
+          "has_postal_codes",
+          "postal_code_label",
+          "postal_code_pattern",
+          "postal_code_example",
+          "region_label",
+          "postal_position",
+          "address_format"
+        ]
+      },
+      {
+        "key": "audit",
+        "label": {
+          "labelKey": "entity.country.sections.audit",
+          "defaultText": "Audit"
+        },
+        "fields": [
+          "created_at",
+          "updated_at"
+        ]
+      }
+    ],
+    "entityLabel": {
+      "labelKey": "entity.country.label",
+      "defaultText": "Country"
+    }
+  }
+}

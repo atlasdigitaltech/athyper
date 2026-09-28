@@ -40,6 +40,8 @@ export interface MetaEntityAuthoringRepository {
     branchCode: string;
     title: string;
     actorId: string;
+    /** Explicit immutable ancestry, checked against this entity/tenant before insertion. */
+    baseRelease?: { readonly releaseId: string; readonly releaseHash: string };
     registration?: {
       schemaVersion: 1;
       moduleCode: string;
@@ -82,7 +84,10 @@ export interface MetaEntityAuthoringRepository {
     breakGlass?: BreakGlassEvidence;
   }): Promise<MetaEntityChangeSet>;
   createRelease(input: {
-    expectedSourceReleaseId?: string;
+    /** null explicitly requires first publication; undefined preserves ordinary publication. */
+    expectedSourceReleaseId?: string | null;
+    /** Canonical compiler hash of the reviewed persisted graph, not the SQL ledger hash. */
+    expectedContractHash?: string;
     changeSetId: string;
     expectedRevision: number;
     actorId: string;

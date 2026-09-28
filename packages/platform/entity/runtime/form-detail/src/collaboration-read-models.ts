@@ -13,6 +13,8 @@ export interface PinnedFile {
   readonly sizeBytes?: number;
 }
 export interface AttachmentRow extends Readonly<Record<string, unknown>> {
+  readonly addedByDisplayName?: string;
+  readonly addedAt?: string;
   readonly id: string;
   readonly fileName: string;
   readonly displayName?: string;

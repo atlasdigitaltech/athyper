@@ -1,4 +1,5 @@
 import { AuthoringConflictError, AuthoringPolicyError } from "@athyper/server-contract-meta-entity-authoring";
+import { isCanonicalEntityCode } from "@athyper/contract-platform-entity-runtime";
 import type {
   Authorizer,
   VerifiedRequestContext,
@@ -26,7 +27,7 @@ export function registerMetaEntityAuthoringRoutes(
 ) {
   app.get("/api/meta-entity-authoring/inspection/notifications/:entityCode",o.authenticate,handler(async(q,s)=>{
     const entityCode=String(q.params.entityCode);
-    if(!/^[a-z][a-z0-9_]{1,62}$/.test(entityCode)){s.status(400).json({code:"INVALID_ENTITY_CODE"});return;}
+    if(!isCanonicalEntityCode(entityCode)){s.status(400).json({code:"INVALID_ENTITY_CODE"});return;}
     const context=await allowed(o,s,"publication.deployment.view");if(!context)return;
     s.setHeader("Cache-Control","private, no-store");
     if(!o.inspectNotificationConfiguration){s.status(503).json({code:"NOTIFICATION_INSPECTION_UNAVAILABLE"});return;}

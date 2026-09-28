@@ -71,6 +71,25 @@ it("registers only shared service keys without eager database reads", () => {
   expect(f.run).not.toHaveBeenCalled();
 });
 
+it("resolves comment and reply authors through the scoped directory without weakening visibility", async () => {
+  const f = fixture(query => query.sql.startsWith("SELECT comment.id") ? [
+    comment("named", {author_display_name:"Example Author",reply_to_name:"Example Parent"}),
+    comment("unavailable", {author_display_name:null,reply_to_name:null}),
+  ] : []);
+  const result = await f.providers.getService("platform.comments.v1")!.read({...input,core:{entityCode:"reference_record"}});
+  expect((result.data as any).items[0]).toMatchObject({authorDisplayName:"Example Author",replyToName:"Example Parent"});
+  expect((result.data as any).items[1]).not.toHaveProperty("authorDisplayName");
+  expect((result.data as any).items[1]).not.toHaveProperty("replyToName");
+  const query=f.queries[0]!;
+  expect(query.sql).toContain("collaboration_principal_candidates('',comment.commenter_id)");
+  expect(query.sql).toContain("collaboration_principal_candidates('',parent.commenter_id)");
+  expect(query.sql).not.toContain("JOIN master.principal");
+  expect(query.sql).toContain("comment.visibility IN ('public','internal') OR comment.commenter_id=");
+  expect(query.parameters).toContain("tenant");
+  expect(query.parameters).toContain("viewer");
+  expect(query.parameters).toContain("record");
+});
+
 it("preserves comment aliases, tenant/record visibility, private drafts and tombstone projection", async () => {
   const f = fixture((query) => {
     if (query.sql.includes("FROM document.comment_draft"))
@@ -205,6 +224,8 @@ const attachment = (id: string, date: string, status = "active") => ({
   status,
   created_at: date,
   series_revision: "4",
+  added_by_display_name: "Record Contributor",
+  added_at: date,
 });
 it("preserves attachment visibility, uploader-only pending transfers, versions and continuation", async () => {
   const f = fixture((query) => {
@@ -224,6 +245,7 @@ it("preserves attachment visibility, uploader-only pending transfers, versions a
         id: "version",
         version_no: 1,
         file_name: "old.pdf",
+        uploaded_by_display_name: "Version Uploader",
         status: "active",
         created_at: "2026-09-22T00:00:00Z",
       },
@@ -243,7 +265,8 @@ it("preserves attachment visibility, uploader-only pending transfers, versions a
           id: "pending",
           processingStatus: "processing",
           sizeBytes: 1024,
-          versionHistory: [{ id: "version", version: 1 }],
+          addedByDisplayName: "Record Contributor",
+          versionHistory: [{ id: "version", version: 1, uploadedByDisplayName:"Version Uploader" }],
         },
         { id: "active", version: 2, revision: "4" },
       ],

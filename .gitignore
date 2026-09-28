@@ -96,6 +96,9 @@ next-env.d.ts
 !.env.example
 !*.env.example
 
+# Private DEV identity onboarding material and local operational receipts.
+/.athyper/instances/dev/secrets/platform-control-onboarding/
+
 # Grafana provisioning config dirs are named *.env but contain YAML, not secrets
 !deploy/config/telemetry/provisioning.env/
 !deploy/config/telemetry/provisioning.env/**

@@ -1,17 +1,7 @@
 import {
-  assertDedicatedJobStore,
   createQueueMaintenance,
 } from "@athyper/server-runtime-jobs";
-import { loadConfig } from "../../config/index.js";
-import { createLifecycle } from "@athyper/server-foundation/lifecycle";
-import { createContainer } from "../../composition/create-container.js";
-import { registerAdapters } from "../../composition/register-adapters.js";
-import { registerPlatform } from "../../composition/register-platform.js";
-import {
-  registerRuntimes,
-  startRuntimes,
-} from "../../composition/register-runtimes.js";
-import { registerServices } from "../../composition/register-services.js";
+import { bootstrap } from "../../kernel/bootstrap.js";
 import { startProcessHeartbeat } from "../process-heartbeat.js";
 import { startProcessMetricsEndpoint } from "../process-metrics-endpoint.js";
 
@@ -19,15 +9,8 @@ import { startProcessMetricsEndpoint } from "../process-metrics-endpoint.js";
 // through the shared composition root before reconciliation starts.
 
 export async function start(): Promise<void> {
-  const config = loadConfig();
-  if (config.bullMq.url)
-    assertDedicatedJobStore(config.bullMq.url, config.redis.url);
-  const lifecycle = createLifecycle();
-  const container = createContainer();
-  registerAdapters(container, config, lifecycle);
-  registerRuntimes(container, config, lifecycle);
-  registerPlatform(container, config);
-  registerServices(container, {}, config, lifecycle);
+  const { config, lifecycle, container } = await bootstrap("scheduler");
+  const { startRuntimes } = await import("../../composition/register-runtimes.js");
   await startRuntimes(container, config.mode);
   const registry = container.adapters.processMetrics;
   const lastSuccess = registry?.gauge(

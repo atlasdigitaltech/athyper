@@ -22,43 +22,6 @@ test("BS360-02 keeps summary reads bounded, masked, tenant-bound, and owner-awar
   assert.match(repository, /LIMIT 5/);
 });
 
-test("BS360-02 wires safe routes, compatibility, and an explicit relay allowlist", async () => {
-  const [routes, contracts, legacy, relay, host] = await Promise.all([
-    read("packages/services/master-data/src/business-partner/legacy-360/routes.ts"),
-    read("packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts"),
-    read(
-      "packages/services/master-data/src/business-partner-request-routes.ts",
-    ),
-    read("../packages/platform/gateway/bff-relay/src/index.ts"),
-    read("apps/platform-host/src/composition/register-services.ts"),
-  ]);
-  assert.match(contracts, /\/360\/summary/);
-  assert.match(routes, /contracts.summary/);
-  assert.match(routes, /private, no-store/);
-  assert.match(legacy, /aggregate360\?\.legacyAggregate/);
-  assert.match(relay, /BUSINESS_PARTNER_360_SUMMARY_OPERATION/);
-  for (const route of [
-    "identity",
-    "contacts",
-    "addresses",
-    "identifiers",
-    "roles",
-    "company-configuration",
-    "banking",
-    "qualifications",
-    "certificates",
-    "credit",
-    "workforce",
-    "requests",
-    "activity",
-    "business-activity",
-    "network",
-  ])
-    assert.match(relay, new RegExp(`(?:\"${route}\"|\\b${route}\\b)`));
-  assert.match(host, /registerBusinessPartner360Routes/);
-  assert.match(host, /createPermissionAuthorizer/);
-});
-
 test("BS360-02 routes records to the shared runtime with cancellation-safe state", async () => {
   const [shell, client, entry, page, resource, url, location] = await Promise.all([
     read(
@@ -135,7 +98,7 @@ test("BS360-00 locks the permission catalog and DDL manifest", async () => {
 
 test("BS360-00 stages a v1 STUDIO descriptor and removes the legacy risk-band presentation", async () => {
   const definition = await read(
-    "packages/services/publication/src/business-partner-foundation-definition.ts",
+    "packages/services/publication/src/entity-foundation-definition.ts",
   );
   const legacyUi = await read(
     "../packages/planes/neon/business-partner/src/index.tsx",

@@ -13,8 +13,8 @@ import {
 import { compileNativeRuntimeProjection } from "@athyper/server-platform-metadata";
 import {
   compileDocumentCollection,
-  localPreviewRoot,
-} from "@athyper/server-service-publication";
+} from "@athyper/server-service-publication/shared/collections/compiler";
+import { localPreviewRoot } from "@athyper/server-service-publication/shared/preview/environment";
 
 type Database = Kysely<Record<string, never>>;
 type Plane = "studio" | "neon" | "mesh";
@@ -114,7 +114,7 @@ export function localGraphPreview(options: {
           ).rows;
           if (native.collectionRelationship) {
             // Use the same registered collection compiler as native publication.
-            // It fixes storage, subject, resolver and allowed summary fields.
+            // Requires reviewed product bindings; storage/resolver/fields stay registered.
             const descriptor = compileDocumentCollection(
               native,
               plane,

@@ -333,6 +333,8 @@ export {
   MinusIcon,
   NetworkIcon,
   PanelRightIcon,
+  PinIcon,
+  PinOffIcon,
   PanelsTopLeftIcon,
   PhoneIcon,
   PlusIcon,

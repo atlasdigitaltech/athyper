@@ -1,6 +1,7 @@
 import {collectionPublicationFromGraph} from "@athyper/server-contract-publication";
-import { capabilityArtifactMembers, parseCapabilityBinding, parseCapabilityDeclaration } from "@athyper/server-contract-publication";
-import { compileEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
+import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceGraph } from "@athyper/server-contract-metadata";
+import { capabilityArtifactMembers, capabilityAuthoringMode, PublicationContractError, parseCapabilityBinding, parseCapabilityDeclaration } from "@athyper/server-contract-publication";
+import { compileEntityIntakeSurfaces, parsePresentationLocalization, isCanonicalEntityCode } from "@athyper/contract-platform-entity-runtime";
 import { compileEntityAi } from "./entity-ai.js";
 import { compileRuntimeRestoration } from "./runtime-restoration.js";
 import {
@@ -13,7 +14,7 @@ import {
   validateRecordPresentationReferences,
   validateRelatedPresentationOwner,
 } from "@athyper/contract-platform-entity-runtime";
-import { compileCollectionRelationship } from "./collection-relationship.js";
+import { compileCollectionRelationship, compileCollectionCompilation } from "./collection-relationship.js";
 import { compileListExperience } from "./list-experience.js";
 import { createHash } from "node:crypto";
 import type {
@@ -92,12 +93,10 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
   for (const [index, member] of (graph.capabilities ?? []).entries()) {
     try {
       if (!member || !["comments", "attachments"].includes(member.capabilityKey) || capabilityKeys.has(member.capabilityKey)) throw new Error("Unknown or duplicate capability");
-      if (Object.keys(member).some(key=>!["id","capabilityKey","declaration","binding"].includes(key))) throw new Error("Unknown capability member property");
+      capabilityAuthoringMode(member, `capabilities[${index}]`);
       capabilityKeys.add(member.capabilityKey);
-      const declaration = parseCapabilityDeclaration(member.declaration, member.capabilityKey, entityCode);
-      if(declaration.enabled) parseCapabilityBinding(member.binding, member.capabilityKey, entityCode);
-      else if(member.binding !== undefined) throw new Error("Disabled capability has policy");
-    } catch (error) { issues.push({code:"ENTITY_CAPABILITY_INVALID",path:`capabilities[${index}]`,message:error instanceof Error?error.message:"Invalid capability"}); }
+      capabilityArtifactMembers(entityCode, [member]);
+    } catch (error) { issues.push({code:error instanceof PublicationContractError ? error.code : "ENTITY_CAPABILITY_INVALID",path:`capabilities[${index}]`,message:error instanceof Error?error.message:"Invalid capability"}); }
   }
   if (
     graph.entity.entityClass !== undefined &&
@@ -126,8 +125,7 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
         message: "Surface layout must match the native storage domain",
       });
   if (
-    typeof entityCode !== "string" ||
-    !/^[a-z][a-z0-9_]{1,62}$/.test(entityCode)
+    !isCanonicalEntityCode(entityCode)
   ) {
     issues.push({
       code: "ENTITY_CODE_INVALID",
@@ -178,6 +176,9 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
     "numberingBindings",
     issues,
   );
+  uniqueKeys(graph.changeCaseBindings ?? [], "bindingKey", "changeCaseBindings", issues);
+  uniqueKeys(graph.fieldReferenceBindings ?? [], "bindingKey", "fieldReferenceBindings", issues);
+  uniqueKeys(graph.materializationBindings ?? [], "bindingKey", "materializationBindings", issues);
   boundedRows(graph, issues);
   requiredGraphValues(graph, issues);
   const fieldKeys = new Set(
@@ -300,6 +301,20 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
     "operationScopeBindings",
     issues,
   );
+  references(graph.changeCaseBindings, "entityOperationId", ids(graph.operations), "changeCaseBindings", issues);
+  references(graph.operationContextRequirements, "entityOperationId", ids(graph.operations), "operationContextRequirements", issues);
+  references(graph.fieldReferenceBindings, "entityFieldId", ids(graph.fields), "fieldReferenceBindings", issues);
+  references(graph.materializationFieldMappings, "entityMaterializationBindingId", ids(graph.materializationBindings), "materializationFieldMappings", issues);
+  const materializationKeys = new Set((graph.materializationBindings ?? []).map((binding) => binding.bindingKey));
+  const workflowKeys = new Set((graph.flows ?? []).map((flow) => flow.flowKey));
+  for (const [index, binding] of (graph.changeCaseBindings ?? []).entries()) {
+    if (binding.workflowKey && !workflowKeys.has(binding.workflowKey)) issues.push({ code: "CHANGE_CASE_WORKFLOW_MISSING", path: `changeCaseBindings.${index}.workflowKey`, message: `Unknown workflow ${binding.workflowKey}` });
+    if (binding.materializationBindingKey && !materializationKeys.has(binding.materializationBindingKey)) issues.push({ code: "CHANGE_CASE_MATERIALIZATION_MISSING", path: `changeCaseBindings.${index}.materializationBindingKey`, message: `Unknown materialization binding ${binding.materializationBindingKey}` });
+  }
+  for (const [index, binding] of (graph.fieldReferenceBindings ?? []).entries()) {
+    const configured = Number(Boolean(binding.targetEntityCode)) + Number(Boolean(binding.lookupDomain)) + Number(Boolean(binding.resolverKey));
+    if (configured !== 1) issues.push({ code: "FIELD_REFERENCE_BINDING_INVALID", path: `fieldReferenceBindings.${index}`, message: "Exactly one reference target, lookup domain, or resolver is required" });
+  }
   references(
     graph.flowSteps,
     "entityFlowId",
@@ -496,6 +511,8 @@ export function compileGraph(
 ): CompiledMetaEntityArtifact {
   const validation = validateGraph(graph);
   if (validation.issues.length) throw new Error("META_ENTITY_GRAPH_INVALID");
+  const commonReference = (graph.operationPermissions ?? []).some(p => p.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION);
+  if (commonReference) assertCommonReferenceGraph(graph);
   const ai = compileEntityAi(graph);
   const authorization = compileEntityAuthorization(graph);
   const authorizationRuntime = compileEntityAuthorizationRuntime(graph);
@@ -533,14 +550,17 @@ export function compileGraph(
   if (directoryRules.length > 1)
     throw new TypeError("Only one directory scope rule is allowed");
   const collectionRelationship = compileCollectionRelationship(graph);
+  const collectionCompilation = compileCollectionCompilation(graph);
   const collectionConfiguration=collectionPublicationFromGraph(graph);
   const descriptor = canonicalValue({
+    ...(commonReference ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION } : {}),
     ...(collectionConfiguration?{collectionConfiguration}:{}),
     ...(authorization ? { authorization } : {}),
     ...(authorizationRuntime ? { authorizationRuntime } : {}),
     ...(ai ? { ai } : {}),
     ...(directoryRules[0] ? { directoryScope: directoryRules[0] } : {}),
     ...(collectionRelationship ? { collectionRelationship } : {}),
+    ...(collectionCompilation ? { collectionCompilation } : {}),
     ...(recordPresentation ? { recordPresentation } : {}),
     entity: graph.entity,
     ...(graph.capabilities?.length ? capabilityArtifactMembers(graph.entity.entityCode, graph.capabilities) : {}),
@@ -553,6 +573,11 @@ export function compileGraph(
     relationTargets: graph.relationTargets ?? [],
     relationFields: graph.relationFields ?? [],
     operations: graph.operations,
+    changeCaseBindings: graph.changeCaseBindings ?? [],
+    operationContextRequirements: graph.operationContextRequirements ?? [],
+    fieldReferenceBindings: graph.fieldReferenceBindings ?? [],
+    materializationBindings: graph.materializationBindings ?? [],
+    materializationFieldMappings: graph.materializationFieldMappings ?? [],
     operationPermissions: graph.operationPermissions ?? [],
     operationRules: graph.operationRules ?? [],
     operationScopeBindings: graph.operationScopeBindings ?? [],
@@ -660,6 +685,7 @@ export function compileListPresentation(
     schemaVersion: 1,
     experience: compileListExperience(graph, surface),
     title: surface.title,
+    ...(config["localizedLabels"] === undefined ? {} : { localizedLabels: parsePresentationLocalization(config["localizedLabels"]) }),
     ...(config["filterPresentation"] !== undefined
       ? { filterPresentation: config["filterPresentation"] }
       : {}),
@@ -778,6 +804,11 @@ const ORDER_INDEPENDENT_ARRAYS = new Set([
   "operationPermissions",
   "operationRules",
   "operationScopeBindings",
+  "changeCaseBindings",
+  "operationContextRequirements",
+  "fieldReferenceBindings",
+  "materializationBindings",
+  "materializationFieldMappings",
   "surfaces",
   "surfaceSections",
   "surfaceFieldBindings",
@@ -807,6 +838,11 @@ const OPTIONAL_ARRAY_BRANCHES = [
   "operationPermissions",
   "operationRules",
   "operationScopeBindings",
+  "changeCaseBindings",
+  "operationContextRequirements",
+  "fieldReferenceBindings",
+  "materializationBindings",
+  "materializationFieldMappings",
   "surfaces",
   "surfaceSections",
   "surfaceFieldBindings",

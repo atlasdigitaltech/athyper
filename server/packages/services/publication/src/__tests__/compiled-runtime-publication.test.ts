@@ -6,6 +6,8 @@ import {
   compiledEntityRuntimeProjection,
 } from "../compiled-entity-artifact-compiler.js";
 import { VerifiedPublicationArtifactLoader } from "../publication-artifact-loader.js";
+import { parseCompiledEntityReleaseEnvelope } from "@athyper/server-contract-publication";
+import * as metadataRuntime from "@athyper/server-platform-metadata";
 
 const profile = JSON.parse(
   readFileSync(
@@ -142,6 +144,7 @@ const input = {
 it("compiles executable server and UI contracts into one deterministic release", () => {
   const result = compileCompiledEntityArtifacts(input);
   expect(result.report.artifactCount).toBe(3);
+  expect(result.release).not.toHaveProperty("signature");
   expect(
     result.release.artifacts.some((a) => a.artifactType === "runtime_contract"),
   ).toBe(true);
@@ -158,12 +161,19 @@ it("compiles executable server and UI contracts into one deterministic release",
   ).toThrow("AUTHORIZATION_REQUIRED");
 });
 
-async function load(qualify?: (profile: unknown, bindings: unknown) => void) {
-  const compilation = compileCompiledEntityArtifacts(input);
+async function load(qualify?: (profile: unknown, bindings: unknown) => void, mode?: string, current = "2.0.0", minimum?: string) {
+  const source = { entity_id: "source-entity", release_hash: "source-release-hash" };
+  const compilation = compileCompiledEntityArtifacts(mode?.startsWith("provenance") ? {
+    ...input, runtimeContracts: { [entityCode]: { ...descriptor, source } },
+  } : mode === "unsafe-pattern" ? { ...input, runtimeContracts: { [entityCode]: {
+    ...descriptor, fields: descriptor.fields.map((field: Record<string, unknown>) => ({ ...field, validation: { pattern: "^(a+)+$" } })),
+  } } } : input);
   const releaseId = "00000000-0000-4000-8000-000000000001",
     at = "2026-09-25T00:00:00Z",
     publicationKey = `metadata.compiled_entity.${entityCode}`;
-  const payload = compiledEntityRuntimeProjection(compilation, at, entityCode);
+  const projection = compiledEntityRuntimeProjection(compilation, at, entityCode);
+  const payload = mode === "legacy" ? { ...projection, release: { ...projection.release,
+    signature: { algorithm: "undefined", keyId: "undefined", value: "undefined" } } } : projection;
   const envelope = {
     schema: "athyper.publication-artifact.v1",
     publicationKey,
@@ -174,6 +184,7 @@ async function load(qualify?: (profile: unknown, bindings: unknown) => void) {
     artifactKind: "compiled_entity_runtime",
     generatedAt: at,
     compatibilityLevel: "backward_compatible",
+    ...(minimum !== undefined ? { minimumRuntimeVersion: minimum } : {}),
     payload,
   };
   const manifest = {
@@ -191,9 +202,11 @@ async function load(qualify?: (profile: unknown, bindings: unknown) => void) {
     signatureAlgorithm: "Ed25519",
     signingKeyId: "test",
     createdAt: at,
+    ...(mode?.startsWith("provenance") ? { evidence: { sourceEntityId: source.entity_id,
+      sourceReleaseHash: mode === "provenance-invalid" ? "different-source" : source.release_hash } } : {}),
   };
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");
-  const signature = sign(
+  const signature = mode === "bad-signature" ? Buffer.alloc(64).toString("base64") : sign(
     null,
     canonicalBytes({ envelope, manifest }),
     privateKey,
@@ -211,7 +224,7 @@ async function load(qualify?: (profile: unknown, bindings: unknown) => void) {
         ),
     },
     canonicalizer: { canonicalBytes, sha256 },
-    runtimeVersion: "2.0.0",
+    runtimeVersion: current,
     ...(qualify ? { authorizationRuntime: { qualify } } : {}),
   });
   return loader.load({
@@ -230,6 +243,18 @@ async function load(qualify?: (profile: unknown, bindings: unknown) => void) {
     signature,
   });
 }
+it("rejects unsafe patterns during compilation and independently at signed target admission", async () => {
+  await expect(load(vi.fn(), "unsafe-pattern")).rejects.toThrow("Unsupported metadata field pattern");
+  // Simulate an older compiler which admitted this syntax. The target must still reject
+  // a correctly hashed, genuinely signed document; skip only the compiler-side check.
+  const validation = vi.spyOn(metadataRuntime, "validateCompiledRuntimeContracts").mockImplementationOnce(() => {});
+  try {
+    await expect(load(vi.fn(), "unsafe-pattern")).rejects.toMatchObject({
+      code: "RUNTIME_INCOMPATIBLE", cause: { code: "METADATA_FIELD_PATTERN_INVALID" },
+    });
+    expect(validation.mock.calls.length).toBeGreaterThanOrEqual(2);
+  } finally { validation.mockRestore(); }
+});
 it("qualifies the compiled server authorization before accepting a signed release", async () => {
   const qualify = vi.fn();
   expect((await load(qualify)).verification.runtimeCompatible).toBe(true);
@@ -247,4 +272,39 @@ it("rejects handler incompatibility even when the signature is valid", async () 
       throw Error("UNKNOWN_HANDLER");
     }),
   ).rejects.toThrow("RUNTIME_INCOMPATIBLE");
+});
+
+it("verifies the outer signature for compiled releases without an inner signature", async () => {
+  expect((await load(() => {})).verification.signatureVerified).toBe(true);
+  await expect(load(() => {}, "bad-signature")).rejects.toThrow("ARTIFACT_SIGNATURE_INVALID");
+});
+it("preserves legacy placeholder bytes covered by a real outer signature", async () => {
+  expect((await load(() => {}, "legacy")).verification.signatureVerified).toBe(true);
+});
+it("cross-checks source provenance at target admission even for correctly signed documents", async () => {
+  expect((await load(() => {}, "provenance-valid")).verification.signatureVerified).toBe(true);
+  await expect(load(() => {}, "provenance-invalid")).rejects.toThrow("ARTIFACT_MANIFEST_INVALID");
+});
+it("does not manufacture inner signature strings or coerce invalid legacy values", () => {
+  const release = compileCompiledEntityArtifacts(input).release;
+  expect(parseCompiledEntityReleaseEnvelope(release)).not.toHaveProperty("signature");
+  expect(parseCompiledEntityReleaseEnvelope({ ...release, signature: {} }).signature).toEqual({});
+  for (const signature of [null, { algorithm: 123 }, { value: undefined }, { other: "x" }])
+    expect(() => parseCompiledEntityReleaseEnvelope({ ...release, signature })).toThrow("Legacy inner signature metadata is invalid");
+});
+
+it.each([
+  ["1.9.9", "2.0.0", false], ["2.0.0", "2.0.0", true], ["3.0.0", "2.9.9", true],
+  ["2.1.9", "2.2.0", false], ["2.3.0", "2.2.9", true],
+  ["2.2.1", "2.2.2", false], ["2.2.3", "2.2.2", true],
+  ["2.0.0-rc.1", "2.0.0", false], ["2.0.0", "2.0.0-rc.1", true],
+  ["2.0.0-rc.2", "2.0.0-rc.10", false], ["2.0.0+build", "2.0.0", true],
+])("loader enforces runtime %s >= %s (%s)", async (current, minimum, allowed) => {
+  const run = load(() => {}, undefined, current, minimum);
+  if (allowed) expect((await run).verification.runtimeCompatible).toBe(true);
+  else await expect(run).rejects.toThrow("RUNTIME_INCOMPATIBLE");
+});
+it.each(["2", "2.0", "02.0.0", "2.0.0garbage", "2.0.0-01", "2.0.0-", "2.0.0+", " 2.0.0"])("loader rejects malformed version %s", async value => {
+  await expect(load(() => {}, undefined, "2.0.0", value)).rejects.toThrow();
+  await expect(load(() => {}, undefined, value, "2.0.0")).rejects.toThrow();
 });

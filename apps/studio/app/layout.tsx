@@ -1,8 +1,9 @@
-import "@athyper/platform-entity-list-view/styles.css";
 import "@athyper/platform-theme/styles.css";
 import "@athyper/platform-iam-identity-gate/styles.css";
 import "@athyper/product-studio-shell/styles.css";
 import "@athyper/platform-shell-activity-center-data/styles.css";
+import "@athyper/platform-entity-list-view/styles.css";
+import "@athyper/platform-entity-form-detail/styles.css";
 import { getPlaneWebMetadata } from "@athyper/platform-iam-identity-gate";
 import { ThemeScript } from "@athyper/platform-theme";
 import { isThemeFamily } from "@athyper/platform-theme/tokens";

@@ -1,7 +1,7 @@
 "use client";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 
-type Entry = { panel: HTMLElement; outside: readonly HTMLElement[] };
+type Entry = { panel: HTMLElement; outside: readonly HTMLElement[]; companions: readonly HTMLElement[] };
 type Branch = { owner: HTMLElement; element: HTMLElement };
 type State = {
   entries: Entry[];
@@ -15,7 +15,7 @@ const states = new WeakMap<Document, State>();
 function roots(state: State): HTMLElement[] {
   const top = state.entries.at(-1);
   if (!top) return [];
-  const allowed = [top.panel, ...top.outside];
+  const allowed = [top.panel, ...top.companions, ...top.outside];
   for (const branch of state.branches) {
     if (allowed.some((root) => root.contains(branch.owner)))
       allowed.push(branch.element);
@@ -109,6 +109,7 @@ export function useModalIsolation(
   options: {
     readonly initialFocus?: () => HTMLElement | null;
     readonly outside?: () => readonly HTMLElement[];
+    readonly companions?: () => readonly HTMLElement[];
     readonly onEscape?: () => void;
     readonly restoreFocus?: boolean;
   } = {},
@@ -127,6 +128,7 @@ export function useModalIsolation(
     const entry: Entry = {
       panel: element,
       outside: latest.current.outside?.() ?? [],
+      companions: latest.current.companions?.() ?? [],
     };
     state.entries.push(entry);
     doc.body.style.overflow = "hidden";

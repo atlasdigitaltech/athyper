@@ -5,13 +5,9 @@ import { describe, expect, it } from "vitest";
 describe("plane transaction coordinator", () => {
   it("stamps the service actor instead of relying on ambient request context", async () => {
     const root = resolve(import.meta.dirname, "../../../../..");
-    const source = await readFile(
-      resolve(root, "apps/platform-host/src/composition/register-services.ts"),
+    const coordinator = await readFile(
+      resolve(root, "apps/platform-host/src/composition/infrastructure/transactions.ts"),
       "utf8",
-    );
-    const coordinator = source.slice(
-      source.indexOf("function createPlaneTransactionCoordinator"),
-      source.indexOf("function internalRecipientContext"),
     );
 
     expect(coordinator).toContain("run(planeKey, actor, work)");

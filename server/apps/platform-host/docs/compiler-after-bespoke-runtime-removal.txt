@@ -1,0 +1,2 @@
+src/composition/entity-case-preflight.ts(2,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartnerCaseRepository'.
+ ELIFECYCLE  Command failed with exit code 2.

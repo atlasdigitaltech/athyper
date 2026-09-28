@@ -9,7 +9,11 @@
     ".": "./src/index.ts",
     "./react": "./src/react.tsx",
     "./server": "./src/server.ts",
-    "./entity-messages": "./src/entity-messages.ts"
+    "./entity-messages": "./src/entity-messages.ts",
+    "./entity-catalogs": "./src/entity-catalogs.ts",
+    "./entity-labels": "./src/entity-labels.ts",
+    "./entity-errors": "./src/entity-errors.ts",
+    "./entity-react": "./src/entity-react.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

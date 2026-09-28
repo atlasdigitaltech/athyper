@@ -59,6 +59,7 @@ export interface EffectiveFeature {
 }
 
 export interface ExperienceBootstrap {
+  readonly entityRoutes?: readonly import("./entity-route-admission.js").EntityRouteAdmission[];
   readonly schemaVersion: 1;
   readonly state: "ready" | "context_not_ready";
   readonly planeKey: PlaneKey;
@@ -152,6 +153,11 @@ export const experienceBootstrapSchema = {
   additionalProperties: false,
   required: ["schemaVersion", "state", "planeKey", "tenantId", "principalId", "revision", "identity", "tenant", "profile", "localization", "localePolicy", "workspaces", "permissions", "features", "nextActions"],
   properties: {
+    entityRoutes: { type: "array", items: { type: "object", additionalProperties: false,
+      required: ["entityCode", "releaseId", "operation", "permissionCode", "workspaceCode", "moduleCode"], properties: {
+        entityCode: { type: "string", pattern: "^[a-z][a-z0-9_]{1,62}$" }, releaseId: { type: "string", format: "uuid" },
+        operation: { enum: ["list", "read"] }, permissionCode: { type: "string" }, workspaceCode: { type: "string" }, moduleCode: { type: "string" }, sharedInfrastructure: { type: "boolean" },
+      } } },
     schemaVersion: { const: 1 },
     state: { enum: ["ready", "context_not_ready"] },
     planeKey: { enum: ["studio", "neon", "mesh"] },

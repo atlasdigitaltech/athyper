@@ -1,15 +1,18 @@
 "use client";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 
 import { readBrowserPreference, writeBrowserPreference } from "./record/browser-preferences";
 
-import { CollaborationVisibilityContext, CollaborationPresentationContext, CollaborationToolbarContext } from "./collaboration-visibility";
-import { PanelHeader, PanelTabs, Tooltip, useModalIsolation } from "@athyper/platform-ui";
+import { CollaborationVisibilityContext, CollaborationPresentationContext } from "./collaboration-visibility";
+import { PanelHeader, PanelTabs, Tooltip } from "@athyper/platform-ui";
 import {
   CloseIcon,
   MessageSquareIcon,
   FileTextIcon,
   Maximize2Icon,
   PanelRightIcon,
+
+
 } from "@athyper/platform-icons";
 import { useWorkspaceSidePanel } from "@athyper/platform-shell";
 import { createPortal } from "react-dom";
@@ -24,14 +27,17 @@ import {
 
 type CollaborationSection = { readonly key: string; readonly label: string };
 const preference = "athyper.collaboration.panel";
+const minPanelWidth = 360;
+const maxPanelWidth = 560;
 
-/** One persistent tree across dock, overlay and page content; never clone a composer. */
+/** One persistent tree across dock and page content; never clone a composer. */
 export function EntityCollaborationSurface({
   open,
   fullView,
   onFullViewChange,
   recordEditing = false,
-  pinned = true,
+  showFullClose = false,
+
   activeSectionKey,
   sections,
   onOpenChange,
@@ -44,6 +50,7 @@ export function EntityCollaborationSurface({
   readonly fullView?: boolean;
   readonly onFullViewChange?: (full:boolean)=>void;
   readonly recordEditing?: boolean;
+  readonly showFullClose?: boolean;
   readonly pinned?: boolean;
   readonly activeSectionKey?: string;
   readonly sections: readonly CollaborationSection[];
@@ -53,6 +60,7 @@ export function EntityCollaborationSurface({
   readonly preloadSection: (sectionKey: string) => void;
   readonly renderSection: (sectionKey: string) => ReactNode;
 }) {
+  const intl = useEntityI18n();
   const slot = useWorkspaceSidePanel();
   const [host, setHost] = useState<HTMLDivElement>();
   const mount = useRef<HTMLDivElement>(null);
@@ -65,39 +73,39 @@ export function EntityCollaborationSurface({
   const wasOpen = useRef(false);
   const claim = slot?.claim,
     release = slot?.release;
-  const [localFull, setLocalFull] = useState(false),
+  const [localFull, setLocalFull] = useState(true),
     [compact, setCompact] = useState(false),
-    [width, setWidth] = useState(420);
+    [width, setWidth] = useState(maxPanelWidth);
   const [contentTop, setContentTop] = useState(0),
     [ready, setReady] = useState(false),
     [visited, setVisited] = useState<readonly string[]>([]);
   const root = useRef<HTMLElement>(null),
     opener = useRef<HTMLElement | null>(null);
-  const full = fullView ?? localFull;
+  const full = compact || (fullView ?? localFull);
   const changeFull = (next: boolean) => {
     if(onFullViewChange) onFullViewChange(next); else setLocalFull(next);
-    requestAnimationFrame(() =>
-      next
-        ? root.current?.focus()
-        : root.current
-            ?.querySelector<HTMLElement>(
-              '[aria-label="Open collaboration in full view"]',
-            )
-            ?.focus(),
-    );
+    requestAnimationFrame(() => root.current?.focus({preventScroll:true}));
   };
+  useEffect(() => {
+    if (compact && open && fullView === false) onFullViewChange?.(true);
+  }, [compact, open, fullView, onFullViewChange]);
   const close = () => {
+    if (fullView === undefined) setLocalFull(true);
     onOpenChange(false);
     requestAnimationFrame(() => {
-      if (opener.current?.isConnected) opener.current.focus();
+      if (opener.current?.isConnected && opener.current !== document.body) {
+        opener.current.focus({ preventScroll: true });
+      } else {
+        // Direct links have no opener: return to the record's navigation, not body.
+        document.querySelector<HTMLElement>(".a-metadata-detail__navigation [role=tab][tabindex='0'], .a-entity-record__tabs button[aria-current='page'], .a-metadata-detail__navigation button")?.focus({ preventScroll: true });
+      }
     });
   };
-  const [commentToolbar,setCommentToolbar]=useState<HTMLDivElement|null>(null);
   const active = sections.some((section) => section.key === activeSectionKey)
     ? activeSectionKey!
     : sections[0]?.key;
   const visible = open && (!slot || slot.owner === "collaboration");
-  const mode = full ? "content" : pinned && !compact ? "pinned" : "drawer";
+  const mode: "content" | "pinned" | "drawer" = full ? "content" : "pinned";
   useLayoutEffect(() => {
     if (!host) return;
     // Move the same portal host rather than reparenting React children. Drafts,
@@ -112,21 +120,22 @@ export function EntityCollaborationSurface({
         : "0px",
     );
   }, [host, mode]);
-  useEffect(() => {
+  // Restore width only; collaboration always docks when side view is requested.
+  useLayoutEffect(() => {
     const media = window.matchMedia("(max-width:1100px)");
     const update = () => setCompact(media.matches);
     update();
     media.addEventListener("change", update);
     const saved = readBrowserPreference(preference);
-    if (typeof saved.pinned === "boolean") onPinnedChange?.(saved.pinned);
+    onPinnedChange?.(true);
     if (typeof saved.width === "number" && Number.isFinite(saved.width))
-      setWidth(Math.max(360, Math.min(560, saved.width)));
+      setWidth(Math.max(minPanelWidth, Math.min(maxPanelWidth, saved.width)));
     setReady(true);
     return () => media.removeEventListener("change", update);
   }, []);
   useEffect(() => {
-    if (ready) writeBrowserPreference(preference, { pinned, width });
-  }, [pinned, width, ready]);
+    if (ready) writeBrowserPreference(preference, { width });
+  }, [width, ready]);
   useEffect(() => {
     if (active && open) {
       preloadSection(active);
@@ -146,39 +155,40 @@ export function EntityCollaborationSurface({
   useEffect(() => () => release?.("collaboration"), [release]);
   useEffect(() => {
     const activate = () => {
-      opener.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null;
+      const focused = document.activeElement;
+      // Internal tab switches must not replace the external return target.
+      if (focused instanceof HTMLElement && !root.current?.contains(focused))
+        opener.current = focused;
       claim?.({ id: "collaboration", pinned: mode === "pinned", width });
     };
     window.addEventListener("athyper:collaboration-open", activate);
     return () =>
       window.removeEventListener("athyper:collaboration-open", activate);
   }, [claim, mode, width]);
-  const scrollPositions=useRef(new Map<string,{page:number;feed:number}>());
+  // Preserve the reading offset across page and dock layouts without remounting content.
+  const scrollPositions=useRef(new Map<string,number>());
   useLayoutEffect(()=>{
     if(!visible || !active)return;
-    const key=`${mode==="content"?"content":"side"}:${active}`;
+    const key=active;
     const body=root.current?.querySelector<HTMLElement>(`#collaboration-section-${active}`);
-    const feed=body?.querySelector<HTMLElement>(".a-comment-feed") ?? body;
+    const getFeed=()=>body?.querySelector<HTMLElement>(".a-comment-feed") ?? body;
     const saved=scrollPositions.current.get(key);
-    const restore=requestAnimationFrame(()=>{if(saved){window.scrollTo({top:saved.page,behavior:"instant"});if(feed)feed.scrollTop=saved.feed;}});
-    const remember=()=>scrollPositions.current.set(key,{page:window.scrollY,feed:feed?.scrollTop??0});
-    window.addEventListener("scroll",remember,true);
-    return()=>{cancelAnimationFrame(restore);window.removeEventListener("scroll",remember,true);};
-  },[mode,active,visible]);
-  useModalIsolation(root, visible && mode === "drawer", {
-    initialFocus: () =>
-      root.current?.querySelector<HTMLElement>("button") ?? null,
-    outside: () =>
-      root.current?.previousElementSibling instanceof HTMLElement &&
-      root.current.previousElementSibling.classList.contains(
-        "a-collaboration-backdrop",
-      )
-        ? [root.current.previousElementSibling]
-        : [],
-  });
+    const restore=requestAnimationFrame(()=>{
+      const feed=getFeed();if(!feed)return;
+      if(mode==="content") {
+        const top=saved ? feed.getBoundingClientRect().top+window.scrollY+saved : 0;
+        window.scrollTo({top,behavior:"instant"});
+      } else if(saved!==undefined) feed.scrollTop=saved;
+    });
+    const remember=(event: Event)=>{
+      const feed=getFeed();if(!feed)return;
+      if(mode==="content") scrollPositions.current.set(key,Math.max(0,-feed.getBoundingClientRect().top));
+      else if(event.target===feed) scrollPositions.current.set(key,feed.scrollTop);
+    };
+    if(mode==="content") window.addEventListener("scroll",remember);
+    else body?.addEventListener("scroll",remember,true);
+    return()=>{cancelAnimationFrame(restore);window.removeEventListener("scroll",remember);body?.removeEventListener("scroll",remember,true);};
+  },[mode,active,visible,host,visited]);
   useEffect(() => {
     if (!visible || mode !== "content") return;
     const measure = () =>
@@ -195,80 +205,57 @@ export function EntityCollaborationSurface({
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };
-  }, [mode, visible]);
+  }, [mode, visible, active]);
   if (!sections.length || !active) return null;
   const resize = (event: React.PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
   };
-  const panelControls = (<div className="a-collaboration-panel__controls">
-            {full ? (
-              <Tooltip portal label="Open Collaboration in side view"><button
+  const panelControls = (<div key={`${mode}:${active}:${visible}`} className="a-collaboration-panel__controls">
+            {full ? (compact ? null :
+              <Tooltip portal onlyWhenTruncated label={intl.message("collaboration.openSide")}><button
                 type="button"
                 onClick={() => changeFull(false)}
-                aria-label="Open Collaboration in side view"
+                aria-label={intl.message("collaboration.openSide")}
               >
                 <PanelRightIcon size={18} />
-                <span>Open Collaboration in side view</span>
+                <span data-tooltip-label>{intl.message("collaboration.side")}</span>
               </button></Tooltip>
             ) : (
               <>
-                <Tooltip portal side="bottom" label={pinned ? "Unpin Collaboration from the right side" : "Pin Collaboration to the right side"}><button
-                  type="button"
-                  onClick={() => onPinnedChange?.(!pinned)}
-                  aria-label={
-                    pinned
-                      ? "Unpin collaboration"
-                      : "Pin collaboration to right"
-                  }
-                  aria-pressed={pinned}
-                >
-                  <PanelRightIcon size={18} />
-                </button></Tooltip>
-                <Tooltip portal side="bottom" label="Open Collaboration in full view"><button
+                <Tooltip portal side="bottom" label={intl.message("collaboration.openFull")}><button
                   type="button"
                   onClick={() => changeFull(true)}
-                  aria-label="Open collaboration in full view"
+                  aria-label={intl.message("collaboration.fullLabel")}
                 >
                   <Maximize2Icon size={18} />
                 </button></Tooltip>
               </>
             )}
-            <Tooltip portal side={full ? "top" : "bottom"} label={full ? "Close full view and return to side panel" : "Close Collaboration"}><button
+            {!full || recordEditing || showFullClose ? <Tooltip portal side="bottom" label={intl.message("collaboration.close")}><button
               type="button"
-              aria-label={
-                full
-                  ? "Close full view and return to side panel"
-                  : "Close collaboration"
-              }
-              onClick={() => (full ? changeFull(false) : close())}
+              aria-label={intl.message("collaboration.closeLabel")}
+              onClick={close}
             >
               <CloseIcon size={18} />
-            </button></Tooltip>
+            </button></Tooltip> : null}
           </div>);
   const panel = (
     <>
-      {visible && mode === "drawer" ? (
-        <button
-          className="a-collaboration-backdrop"
-          aria-label="Close collaboration"
-          onClick={close}
-        />
-      ) : null}
       <section
         ref={root}
         id="entity-record-collaboration"
         className="a-collaboration-panel"
         data-mode={mode}
+        data-section={active}
         hidden={!visible}
         tabIndex={-1}
-        role={mode === "drawer" ? "dialog" : "region"}
-        aria-modal={mode === "drawer" ? true : undefined}
-        aria-label="Collaboration"
+        role="region"
+        aria-label={intl.message("collaboration.title")}
         onKeyDown={(event) => {
           if (
             event.key === "Escape" &&
             !event.defaultPrevented &&
-            mode === "drawer"
+            mode === "pinned"
           ) {
             event.preventDefault();
             close();
@@ -286,18 +273,18 @@ export function EntityCollaborationSurface({
             className="a-collaboration-panel__resize"
             role="separator"
             tabIndex={0}
-            aria-label="Resize collaboration"
+            aria-label={intl.message("collaboration.resizeLabel")}
             aria-orientation="vertical"
-            aria-valuemin={360}
-            aria-valuemax={560}
+            aria-valuemin={minPanelWidth}
+            aria-valuemax={maxPanelWidth}
             aria-valuenow={width}
             onPointerDown={resize}
             onPointerMove={(event) => {
               if (event.currentTarget.hasPointerCapture(event.pointerId))
                 setWidth(
                   Math.max(
-                    360,
-                    Math.min(560, window.innerWidth - event.clientX),
+                    minPanelWidth,
+                    Math.min(maxPanelWidth, intl.localization.direction === "rtl" ? event.clientX : window.innerWidth - event.clientX),
                   ),
                 );
             }}
@@ -308,14 +295,14 @@ export function EntityCollaborationSurface({
                 event.preventDefault();
                 setWidth((current) =>
                   event.key === "Home"
-                    ? 360
+                    ? minPanelWidth
                     : event.key === "End"
-                      ? 560
+                      ? maxPanelWidth
                       : Math.max(
-                          360,
+                          minPanelWidth,
                           Math.min(
-                            560,
-                            current + (event.key === "ArrowLeft" ? 20 : -20),
+                            maxPanelWidth,
+                            current + ((event.key === "ArrowLeft") !== (intl.localization.direction === "rtl") ? 20 : -20),
                           ),
                         ),
                 );
@@ -323,9 +310,13 @@ export function EntityCollaborationSurface({
             }}
           />
         ) : null}
-        {!full ? <PanelHeader className="a-collaboration-panel__header" icon={active === "attachments" ? <FileTextIcon size={20}/> : <MessageSquareIcon size={20}/>} title="Collaboration" subtitle="Comments and files for this record" actions={panelControls}/> : <header className="a-collaboration-panel__header" hidden={active === "comments" && Boolean(commentToolbar)}>{active === "comments" && commentToolbar ? createPortal(panelControls,commentToolbar) : panelControls}</header>}
-        {recordEditing ? <p className="a-collaboration-save-note">Comments and files save separately from record changes.</p> : null}
-        <PanelTabs hidden={full && Boolean(onFullViewChange)} className="a-collaboration-panel__tabs" label="Collaboration sections" value={active} onValueChange={onActiveSectionChange} items={sections.map(section=>({key:section.key,label:section.key==="attachments"?"Files":section.key==="comments"?"Comments":section.label,id:`collaboration-tab-${section.key}`,panelId:`collaboration-section-${section.key}`}))}/>
+        {!full ? <PanelHeader className="a-collaboration-panel__header" icon={active === "attachments" ? <FileTextIcon size={20}/> : <MessageSquareIcon size={20}/>} title={active === "attachments" ? intl.message("collaboration.files") : active === "comments" ? intl.message("collaboration.comments") : sections.find(section => section.key === active)?.label ?? intl.message("collaboration.title")} subtitle={intl.message("collaboration.description")} actions={panelControls}/> : <header className="a-collaboration-panel__header">
+          <h2>{active === "attachments" ? <FileTextIcon size={20}/> : <MessageSquareIcon size={20}/>} {active === "attachments" ? intl.message("collaboration.files") : active === "comments" ? intl.message("collaboration.comments") : sections.find(section => section.key === active)?.label}</h2>
+          {panelControls}
+        </header>}
+
+        {recordEditing ? <p className="a-collaboration-save-note">{intl.message("collaboration.separateSave")}</p> : null}
+        <PanelTabs hidden={full && Boolean(onFullViewChange)} className="a-collaboration-panel__tabs" label={intl.message("collaboration.sections")} value={active} onValueChange={onActiveSectionChange} items={sections.map(section=>({key:section.key,label:section.key==="attachments"?intl.message("collaboration.files"):section.key==="comments"?intl.message("collaboration.comments"):section.label,id:`collaboration-tab-${section.key}`,panelId:`collaboration-section-${section.key}`}))}/>
         {sections
           .filter((section) => visited.includes(section.key))
           .map((section) => (
@@ -341,7 +332,7 @@ export function EntityCollaborationSurface({
               <CollaborationVisibilityContext.Provider
                 value={visible && active === section.key}
               >
-                <CollaborationPresentationContext.Provider value={mode}><CollaborationToolbarContext.Provider value={setCommentToolbar}>{renderSection(section.key)}</CollaborationToolbarContext.Provider></CollaborationPresentationContext.Provider>
+                <CollaborationPresentationContext.Provider value={mode}>{renderSection(section.key)}</CollaborationPresentationContext.Provider>
               </CollaborationVisibilityContext.Provider>
             </div>
           ))}

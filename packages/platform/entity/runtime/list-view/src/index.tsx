@@ -1,4 +1,5 @@
 "use client";
+import { SurfaceErrorBoundary } from "@athyper/platform-ui";
 import { rollbackBookmarks } from "./bookmark-state";
 import { entityLocationSearch } from "./entity-location";
 import { retryRequiresDescriptor } from "./retry-policy";
@@ -42,6 +43,9 @@ import { EntityNavigation, EntityNavigationSkeleton } from "./navigation";
 import { EntityOverviewRuntime } from "./overview";
 export { EntityOverview, type EntityOverviewProps } from "./overview";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { localizeEntityLabels } from "@athyper/platform-i18n/entity-labels";
+import { localizedEntityError } from "@athyper/platform-i18n/entity-errors";
 import { resolveEntityText } from "@athyper/contract-platform-entity-list";
 
 import {
@@ -319,6 +323,7 @@ function ScopeControlRenderer({
 }
 
 export function EntityListRuntime(props: EntityListRuntimeProps) {
+  const intl = useEntityI18n();
   const [selection, setSelection] = useState<{
     entityCode: string;
     value?: EntityListScopeCoordinateV1;
@@ -332,11 +337,11 @@ export function EntityListRuntime(props: EntityListRuntimeProps) {
     onScopeCoordinateChange: (value: EntityListScopeCoordinateV1 | undefined) =>
       setSelection({ entityCode: props.entityCode, value }),
   };
-  return props.applicationOnly ? (
+  return <SurfaceErrorBoundary resetKey={props.entityCode} message={intl.message("error.unavailable")} retryLabel={intl.message("entity.retry")}>{props.applicationOnly ? (
     <EntityApplicationRuntime {...effective} />
   ) : (
     <EntityCollectionRuntime {...effective} />
-  );
+  )}</SurfaceErrorBoundary>;
 }
 function EntityApplicationRuntime(props: EntityListRuntimeProps) {
   return <EntityTaskHeaderProvider><EntityApplicationContent {...props}/></EntityTaskHeaderProvider>;
@@ -357,7 +362,9 @@ function EntityApplicationContent({
   const taskHeader = useEntityTaskHeader();
   const [listInformation, setListInformation] = useState<{ description?: string; count?: string }>();
   const locale = useOptionalI18n()?.localization.uiLocale;
-  const [descriptor, setDescriptor] = useState<EntityApplicationDescriptorV1>();
+  const [sourceDescriptor, setDescriptor] = useState<EntityApplicationDescriptorV1>();
+  const entityIntl = useEntityI18n();
+  const descriptor = useMemo(() => sourceDescriptor && localizeEntityLabels(sourceDescriptor, entityIntl), [sourceDescriptor, entityIntl]);
   const [scopeSnapshot, setScopeSnapshot] = useState<{
     entityCode: string;
     scope: EntityListDescriptorV1["scope"];
@@ -434,7 +441,7 @@ function EntityApplicationContent({
     );
   const header = descriptor.surface.header,
     Icon = header?.iconKey ? resolveIcon(header.iconKey) : LayoutIcon;
-  const title = header
+  const title = descriptor.localizedLabels?.title ? descriptor.surface.title : header
       ? resolveEntityText(header.title, locale)
       : descriptor.surface.title,
     description = header?.description
@@ -554,7 +561,9 @@ function EntityCollectionRuntime({
   const inherited = useEntityApplication();
   const locale = useOptionalI18n()?.localization.uiLocale;
   const actionReasonId = useId();
-  const [descriptor, setDescriptor] = useState<EntityListDescriptorV1>();
+  const [sourceDescriptor, setDescriptor] = useState<EntityListDescriptorV1>();
+  const entityIntl = useEntityI18n();
+  const descriptor = useMemo(() => sourceDescriptor && localizeEntityLabels(sourceDescriptor, entityIntl), [sourceDescriptor, entityIntl]);
   const [scopeSnapshot, setScopeSnapshot] = useState<{
     entityCode: string;
     scope: EntityListDescriptorV1["scope"];
@@ -984,7 +993,7 @@ function EntityCollectionRuntime({
     );
   const header = descriptor.surface.header;
   const HeaderIcon = header?.iconKey ? resolveIcon(header.iconKey) : LayoutIcon;
-  const title = header
+  const title = descriptor.localizedLabels?.title ? descriptor.surface.title : header
     ? resolveEntityText(header.title, locale)
     : descriptor.surface.title;
   const description = header
@@ -1440,6 +1449,7 @@ function ListChrome({
     [resetOpen, setResetOpen] = useState(false),
     [views, setViews] = useState<readonly SavedListView[]>([]);
   const viewLocale = useOptionalI18n()?.localization.uiLocale;
+  const entityIntl = useEntityI18n();
   const closeDrawer = useCallback((open: boolean) => {
     if (!open) setActiveDrawer(undefined);
   }, []);
@@ -1771,11 +1781,11 @@ function ListChrome({
             <MenuTrigger
               className="a-entity-list__more-trigger"
               variant="secondary"
-              aria-label="Controls"
-              title="Controls"
+              aria-label={entityIntl.message("entity.controls")}
+              title={entityIntl.message("entity.controls")}
             >
               <SlidersHorizontalIcon size={16} />
-              <span className="a-entity-list__more-label">Controls</span>
+              <span className="a-entity-list__more-label">{entityIntl.message("entity.controls")}</span>
             </MenuTrigger>
             <MenuContent className="a-entity-list__more-menu">
               {scopeControl ? (
@@ -5171,7 +5181,9 @@ function ErrorState({
   readonly applicationName?: string;
   readonly entityName?: string;
 }) {
-  const model = classifyAppError({ error, applicationName: entityName });
+  const intl = useEntityI18n();
+  const classification = classifyAppError({ error, applicationName: entityName });
+  const model = {...classification, description: localizedEntityError(error, intl, classification.description)};
   if (application) return <ErrorSurface model={model} reset={retry} surface="content" applicationName={applicationName} />;
   return (
     <Card
@@ -5189,7 +5201,7 @@ function ErrorState({
               ? "The latest results could not be loaded"
               : "This list is unavailable"}
         </h2>
-        <p>{model.kind === "not-found" || model.kind === "service-unavailable" ? model.description : "We couldn’t load this page. Please try again."}</p>
+        <p>{localizedEntityError(error, intl, model.kind === "not-found" || model.kind === "service-unavailable" ? model.description : "We couldn’t load this page. Please try again.")}</p>
       </div>
       {model.canRetry ? (
         <Button size="small" variant="secondary" onClick={retry}>

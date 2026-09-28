@@ -7,6 +7,13 @@ const realm = JSON.parse(readFileSync(sourcePath, "utf8"));
 const platformSourcePath = resolve("deploy/config/iam/realm-platform-control.json");
 const platformOutputPath = resolve("deploy/config/iam/realm-platform-control-clean-slate.json");
 const platformRealm = JSON.parse(readFileSync(platformSourcePath, "utf8"));
+// Explicit built-in client declaration avoids losing role token mappers when
+// importing a realm with its own clientScopes collection.
+const accountConsole = platformRealm.clients?.find(client => client.clientId === "account-console");
+if (!accountConsole?.defaultClientScopes?.includes("roles") || accountConsole.fullScopeAllowed !== false
+  || !platformRealm.clientScopeMappings?.account?.some(mapping => mapping.client === "account-console" && mapping.roles.includes("manage-account"))) {
+  throw new Error("Platform account-console must retain restricted account role mappings and the roles token scope.");
+}
 
 const managedClients = Object.freeze({
   "studio-web": { variable: "STUDIO_IAM_CLIENT_SECRET", host: "studio" },

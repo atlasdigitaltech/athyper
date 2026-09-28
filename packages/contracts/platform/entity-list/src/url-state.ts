@@ -1,5 +1,5 @@
 import { ENTITY_LIST_MAX_FILTERS, ENTITY_LIST_MAX_URL_LENGTH, ENTITY_LIST_MAX_VISIBLE_COLUMNS } from "./types";
-import { parseListLocationState, parseSaveableListState } from "./parsers";
+import { parseEntityListDescriptor, parseListLocationState, parseSaveableListState } from "./parsers";
 import type { EntityListDescriptorV1, JsonValue, ListFilterOperator, ListLocationStateV1, ListSortV1, SaveableListStateV1, SpreadsheetStateV1 } from "./types";
 
 export interface ListLocationCodecOptions {
@@ -10,6 +10,9 @@ export interface ListLocationCodecOptions {
 }
 
 export function decodeListLocationState(input: URLSearchParams | string, descriptor: EntityListDescriptorV1, options: ListLocationCodecOptions = {}): ListLocationStateV1 {
+  // Descriptor and saved-base failures are programming/configuration errors,
+  // not optional URL input. Never swallow them in the normalization boundary.
+  parseEntityListDescriptor(descriptor);
   const serialized = typeof input === "string" ? (input.startsWith("?") ? input.slice(1) : input) : input.toString();
   const base = normalizedBase(descriptor, options.baseState);
   if (serialized.length > ENTITY_LIST_MAX_URL_LENGTH) return locationFromBase(base, descriptor);
@@ -29,7 +32,7 @@ export function decodeListLocationState(input: URLSearchParams | string, descrip
   const columns = decodeColumns(parameters, base.columns);
   const spreadsheet = decodeSpreadsheet(parameters, base.spreadsheet);
   const group = parameters.get("group.clear") === "1" ? undefined : parameters.has("group") ? parameters.get("group") ?? undefined : base.group;
-  return parseListLocationState({
+  try { return parseListLocationState({
     standardViewKey: parameters.has("standardView") ? parameters.get("standardView") || undefined : base.standardViewKey,
     ...(parameters.has("q") ? parameters.get("q") ? { query: parameters.get("q") } : {} : base.query ? { query: base.query } : {}),
     filters: hasFilterParameter ? filters : [...base.filters],
@@ -44,7 +47,10 @@ export function decodeListLocationState(input: URLSearchParams | string, descrip
     ...(parameters.get("cursor") ? { cursor: parameters.get("cursor") } : {}),
     ...(parameters.has("page") ? { pageIndex: Number(parameters.get("page")) } : {}),
     ...(parameters.has("pageSize") ? { pageSize: Number(parameters.get("pageSize")) } : {}),
-  }, descriptor);
+  }, descriptor); } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    return locationFromBase(base, descriptor);
+  }
 }
 
 export function encodeListLocationState(state: ListLocationStateV1, descriptor: EntityListDescriptorV1, options: ListLocationCodecOptions = {}): URLSearchParams {

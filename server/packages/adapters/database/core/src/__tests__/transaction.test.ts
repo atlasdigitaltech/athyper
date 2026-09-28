@@ -11,6 +11,10 @@ interface TestDatabase {
 }
 
 describe("KyselyTransactionRunner", () => {
+  it("rejects incomplete tenant actors before constructing stamp SQL", () => {
+    for (const actor of [{tenantId:"",principalId:"actor"}, {tenantId:"tenant",principalId:""}, {tenantId:" ",principalId:"actor"}])
+      expect(() => createTransactionActorStampQuery(actor)).toThrow("TRANSACTION_ACTOR_REQUIRED");
+  });
   it("stamps the actor before invoking work", async () => {
     const transaction = {} as Transaction<TestDatabase>;
     const order: string[] = [];

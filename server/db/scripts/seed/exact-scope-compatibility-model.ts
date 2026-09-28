@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { COMMON_REFERENCE_VIEW_PERMISSION } from "@athyper/server-contract-metadata";
 import type { CatalogPlane } from "./canonical-catalog-v2-model.js";
 
 export type ScopeKind = "tenant" | "workspace" | "module" | "company_code" | "legal_entity" | "operating_organization" | "network_account" | "network_relationship" | "resource";
@@ -63,6 +64,7 @@ export function validateExactScopeCompatibility(contract: ExactScopeCompatibilit
   const extra = actual.filter((code) => !expectedPermissionCodes.includes(code));
   if (missing.length || extra.length) throw new Error(`scope compatibility coverage mismatch: missing=${missing.join(",")} extra=${extra.join(",")}`);
   for (const item of contract.permissions) {
+    if (item.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION && (item.scopes.length !== 1 || item.scopes[0]?.kind !== "tenant" || item.scopes[0]?.propagation !== "exact")) throw new Error("Common reference requires exact tenant scope only");
     if (!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,}$/.test(item.permissionCode)) throw new Error(`invalid permission code: ${item.permissionCode}`);
     if (item.scopes.length === 0) throw new Error(`permission has no declared scopes: ${item.permissionCode}`);
     unique(item.scopes.map((scope) => `${scope.kind}/${scope.propagation}`), `scope coordinate for ${item.permissionCode}`);
@@ -75,6 +77,11 @@ export function validateExactScopeCompatibility(contract: ExactScopeCompatibilit
 }
 
 export function scopesFor(plane: CatalogPlane, permissionCode: string): PermissionScopeDeclaration["scopes"] {
+  if (permissionCode === COMMON_REFERENCE_VIEW_PERMISSION) return [{ kind: "tenant", propagation: "exact" }];
+  // Machine enrollment and use are tenant-bound authority, not workspace-wide
+  // authoring permissions. Policy pins further constrain the exact source.
+  if (plane === "studio" && ["studio.metadata.publication_policy.create", "studio.metadata.publication_policy.activate",
+    "studio.metadata.contract.publish_automated"].includes(permissionCode)) return [{ kind: "tenant", propagation: "exact" }];
   const scopes: Array<{ kind: ScopeKind; propagation: ScopePropagation }> = [{ kind: "tenant", propagation: "exact" }];
   const segments = permissionCode.split(".");
   if (segments.length !== 4 || segments[0] !== plane) throw new Error(`scope permission must be exact ${plane}.domain.entity.operation: ${permissionCode}`);

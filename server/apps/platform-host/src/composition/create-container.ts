@@ -1,5 +1,4 @@
 import type { createKyselyEntitlementRuntime } from "@athyper/server-platform-entitlements";
-import type { MasterDataServices } from "@athyper/server-service-master-data";
 import type { KeycloakAuthAdapter } from "@athyper/server-adapter-auth-keycloak";
 import type { RedisCacheAdapter } from "@athyper/server-adapter-cache-redis";
 import type { RedisNotificationEventBus } from "@athyper/server-adapter-cache-redis";
@@ -25,7 +24,6 @@ import type {
   PublicationPlane,
 } from "@athyper/server-contract-publication";
 import type {
-  BusinessPartnerDefinitionService,
   PublicationOrchestrator,
 } from "@athyper/server-service-publication";
 import type { PdfRenderer } from "@athyper/server-contract-rendering";
@@ -73,10 +71,6 @@ import type { CollaborationService } from "@athyper/server-contract-collaboratio
 import type { DocumentSearchService } from "@athyper/server-contract-search";
 import type { NumberingService } from "@athyper/server-contract-numbering";
 import type {
-  BusinessPartnerEligibilityService,
-  BusinessPartnerInvitationService,
-  BusinessPartnerRequestService,
-  WorkforceService,
 } from "@athyper/server-contract-master-data";
 import type {
   BookPeriodService,
@@ -84,16 +78,8 @@ import type {
   RoundingResolver,
 } from "@athyper/server-service-finance";
 import type {
-  BusinessPartnerAccountBankLinkageService,
-  BusinessPartnerProfileMatchService,
-  BusinessPartnerProfileProjectionService,
   NeonFinanceRegistration,
 } from "@athyper/server-plane-neon";
-import type {
-  BusinessPartnerBankDisclosureService,
-  BusinessPartnerNetworkExchangeService,
-  BusinessPartnerProfilePublicationService,
-} from "@athyper/server-plane-mesh";
 import type {
   ChannelConsentService,
   CycleCertificationService,
@@ -247,7 +233,7 @@ export interface Container {
     readonly httpRegistrars: Array<(application: Application) => void>;
   };
   readonly services: {
-    masterData?: MasterDataServices;
+    contactVerificationStatus?: { readonly available: boolean; readonly reason?: string };
     records?: {
       readonly lists: Pick<
         import("@athyper/server-service-records").EntityListService,
@@ -278,21 +264,6 @@ export interface Container {
     notifications?: NotificationDispatcher;
     jobs?: JobAdministration;
     numbering?: NumberingService;
-    businessPartnerRequests?: BusinessPartnerRequestService;
-    businessPartnerGovernedImport?: ReturnType<
-      typeof import("./business-partner-bound-import.js").createBusinessPartnerBoundImport
-    >;
-    businessPartner360?: import("@athyper/server-contract-master-data").BusinessPartner360Service;
-    workforce?: WorkforceService;
-    businessPartnerInvitations?: BusinessPartnerInvitationService;
-    businessPartnerAtlasInsights?: import("@athyper/server-contract-ai").AtlasBusinessPartnerInsightOwner;
-    businessPartnerEligibility?: BusinessPartnerEligibilityService;
-    businessPartnerProfilePublications?: BusinessPartnerProfilePublicationService;
-    businessPartnerProfileProjections?: BusinessPartnerProfileProjectionService;
-    businessPartnerProfileMatches?: BusinessPartnerProfileMatchService;
-    businessPartnerBankDisclosures?: BusinessPartnerBankDisclosureService;
-    businessPartnerNetworkExchange?: BusinessPartnerNetworkExchangeService;
-    businessPartnerAccountBankLinkage?: BusinessPartnerAccountBankLinkageService;
     publication?: {
       readonly loaders?: Readonly<Partial<Record<PublicationPlane, PublicationArtifactLoader>>>;
       readonly authority: PublicationAuthorityRepository;
@@ -302,7 +273,6 @@ export interface Container {
       readonly orchestrators: Readonly<
         Partial<Record<PublicationPlane, PublicationOrchestrator>>
       >;
-      readonly definitions?: BusinessPartnerDefinitionService;
     };
   };
 }

@@ -1,4 +1,5 @@
 "use client";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { CollectionContinuation } from "./collection-continuation";
 import { hasRichTextContent, mapRichText, visitRichText } from "@athyper/platform-communications-collaboration-ui";
 import { downloadAttachment } from "./attachment-download";
@@ -35,6 +36,7 @@ import {
   ReplyIcon,
   EyeIcon,
   DownloadIcon,
+  CloseIcon,
 } from "@athyper/platform-icons";
 import {
   RichCommentComposer,
@@ -143,14 +145,47 @@ export type ReplyTarget = {
   name: string;
   excerpt: string;
 };
+/** Reveal newly opened editors, and re-check when a mobile keyboard resizes the viewport. */
+function useComposerReveal(ref: RefObject<HTMLDivElement | null>, open: boolean) {
+  useEffect(() => {
+    if (!open) return;
+    let frame = 0;
+    const reveal = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const node = ref.current;
+        if (!node) return;
+        const viewport = window.visualViewport;
+        const workspace = node.closest<HTMLElement>(".a-collaboration-comments");
+        workspace?.style.setProperty("--comment-viewport-height", `${viewport?.height ?? window.innerHeight}px`);
+        workspace?.style.setProperty("--comment-keyboard-inset", `${Math.max(0, window.innerHeight - (viewport?.height ?? window.innerHeight) - (viewport?.offsetTop ?? 0))}px`);
+        node.scrollIntoView({ block: "nearest", behavior: "instant" });
+        const bottom = (viewport?.height ?? window.innerHeight) + (viewport?.offsetTop ?? 0) - 12;
+        const overflow = node.getBoundingClientRect().bottom - bottom;
+        if (overflow > 0) window.scrollBy({ top: overflow, behavior: "instant" });
+      });
+    };
+    reveal();
+    window.visualViewport?.addEventListener("resize", reveal);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.visualViewport?.removeEventListener("resize", reveal);
+      const workspace = ref.current?.closest<HTMLElement>(".a-collaboration-comments");
+      workspace?.style.removeProperty("--comment-viewport-height");
+      workspace?.style.removeProperty("--comment-keyboard-inset");
+    };
+  }, [ref, open]);
+}
 export const ReplyComposerContext = createContext<{
+  activeEditor?: "create" | "edit";
+  activate: (editor?: "create" | "edit") => void;
   target?: ReplyTarget;
   sent?: { rootId: string; id?: string; sequence: number };
   host?: HTMLDivElement;
   fallback?: RefObject<HTMLDivElement | null>;
   inline?: boolean;
   select: (target: ReplyTarget) => void;
-}>({ select: () => {} });
+}>({ select: () => {}, activate: () => {} });
 /** Move the same editor DOM so changing presentation never restarts uploads. */
 export function ReplyComposerPlacement({
   fallback = false,
@@ -189,6 +224,7 @@ export function CommentsWorkspace({
   recordId: string;
   onChanged: () => void;
 }) {
+  const intl = useEntityI18n();
   const [linkNotice, setLinkNotice] = useState<string>();
   const commentItems = useMemo(() => collectionItems(resource.data), [resource.data]);
   const [replyNotice, setReplyNotice] = useState<string>();
@@ -244,10 +280,18 @@ export function CommentsWorkspace({
       id?: string;
       sequence: number;
     }>();
+  const [activeEditor, activateEditor] = useState<"create" | "edit">();
+  const composerOpen = activeEditor === "create";
+  const setComposerOpen = (open: boolean) => activateEditor(open ? "create" : undefined);
+  const [hasDraft, setHasDraft] = useState(() => Boolean(valueRecord(valueRecord(resource.data)?.draft)));
+  const composeToggle = useRef<HTMLButtonElement>(null);
+  const { push: notify } = useToasts();
+  const draftPresent = (draft?: Readonly<Record<string, unknown>>) => Boolean(draft && (draft.text || (draft.content && hasRichTextContent(draft.content as RichTextDocument))));
   const drafts = useRef(new Map<string, Readonly<Record<string, unknown>>>());
   const busyRef = useRef(false);
   const composer = useRef<HTMLDivElement>(null),
     fallback = useRef<HTMLDivElement>(null);
+  useComposerReveal(composer, composerOpen);
   const fullView = useContext(CollaborationPresentationContext) === "content";
   const [host, setHost] = useState<HTMLDivElement>();
   useEffect(() => {
@@ -272,7 +316,7 @@ export function CommentsWorkspace({
           '[contenteditable="true"]',
         );
         editor?.focus({ preventScroll: true });
-        editor?.scrollIntoView({ block: "nearest" });
+        if (!fullView) editor?.scrollIntoView({ block: "nearest" });
       });
       return () => cancelAnimationFrame(frame);
     }
@@ -280,21 +324,25 @@ export function CommentsWorkspace({
   return (
     <ReplyComposerContext.Provider
       value={{
+        activeEditor,
+        activate: activateEditor,
         target,
         sent,
         host,
         fallback,
-        inline: fullView,
+        inline: false,
         select: (next) => {
           if (busyRef.current) {
             setReplyNotice("Finish sending the current reply before starting another.");
             return;
           }
+          setComposerOpen(true);
           setTarget(next);
+          focusComposer();
         },
       }}
     >
-      <div className="a-collaboration-comments">
+      <div className="a-collaboration-comments" data-editing={activeEditor === "edit" || undefined}>
         <div className="a-comment-feed">
           {linkNotice ? <p role="status">{linkNotice}</p> : null}
           <CommentCollection
@@ -308,16 +356,24 @@ export function CommentsWorkspace({
             onLoadMentionsPage={onLoadMentionsPage}
           />
           {hasMore(resource.data) && onLoadMore ? (
-            <CollectionContinuation cursor={String(valueRecord(resource.data)?.nextCursor)} automatic={false} label="Load more comments" loading={loadingMore} failed={!!loadMoreError} onLoadMore={onLoadMore} />
+            <CollectionContinuation cursor={String(valueRecord(resource.data)?.nextCursor)} automatic={false} label={intl.message("comments.loadMore")} loading={loadingMore} failed={!!loadMoreError} onLoadMore={onLoadMore} />
           ) : null}
         </div>
+        <div className="a-comment-compose-dock" data-toast-avoid>
+        {(target ? actions.has("reply") : actions.has("create")) ? <div className="a-comment-compose-toggle" hidden={composerOpen}>
+          <button ref={composeToggle} type="button" aria-expanded={composerOpen} onClick={() => { setComposerOpen(!composerOpen); if (!composerOpen) focusComposer(); }}>
+            {target ? intl.message("comments.resumeReply") : hasDraft ? intl.message("comments.resumeDraft") : commentItems.length ? intl.message("comments.add") : intl.message("comments.addFirst")}
+          </button>
+        </div> : null}
         <ReplyComposerPlacement fallback />
+        </div>
         {host && (target ? actions.has("reply") : actions.has("create"))
           ? createPortal(
-              <div ref={composer} className="a-comment-compose-slot">
+              <div ref={composer} className="a-comment-compose-slot" hidden={!composerOpen}>
                 {replyNotice ? <p role="status">{replyNotice}</p> : null}
                 <CommentComposer
                   key={draftKey}
+                  onMinimize={() => { setComposerOpen(false); requestAnimationFrame(() => composeToggle.current?.focus({preventScroll:true})); }}
                   entityCode={entityCode}
                   recordId={recordId}
                   parentCommentId={target?.id}
@@ -333,11 +389,29 @@ export function CommentsWorkspace({
                     busyRef.current = busy;
                     if (!busy) setReplyNotice(undefined);
                   }}
-                  onDraftSnapshot={(draft) =>
-                    drafts.current.set(draftKey, draft)
-                  }
+                  onDraftSnapshot={(draft) => {
+                    drafts.current.set(draftKey, draft);
+                    setHasDraft(draftPresent(draft));
+                  }}
                   onPosted={(id) => {
                     drafts.current.delete(draftKey);
+                    setComposerOpen(false);
+                    setHasDraft(draftPresent(drafts.current.get("root")));
+                    notify({
+                      tone: "success",
+                      title: intl.message(target ? "comments.replyPosted" : "comments.postedTitle"),
+                      ...(id ? { action: { label: intl.message("comments.view"), onClick: () => {
+                        const comment = document.getElementById(`comment-${id}`);
+                        if (comment?.getClientRects().length) {
+                          comment.setAttribute("tabindex", "-1");
+                          comment.focus({ preventScroll: true });
+                          comment.scrollIntoView({ block: "center" });
+                        } else {
+                          setLinkNotice("Your comment was posted. Load more comments or adjust the filters to find it.");
+                        }
+                      } } } : {}),
+                    });
+                    requestAnimationFrame(() => composeToggle.current?.focus({preventScroll:true}));
                     if (target)
                       setSent({
                         rootId: target.rootId,
@@ -350,6 +424,7 @@ export function CommentsWorkspace({
                     target
                       ? () => {
                           setTarget(undefined);
+                          setHasDraft(draftPresent(drafts.current.get("root")));
                           focusComposer();
                         }
                       : undefined
@@ -378,6 +453,7 @@ export function CommentComposer({
   onPosted,
   onBusyChange,
   onDismiss,
+  onMinimize,
 }: {
   readonly entityCode: string;
   readonly recordId: string;
@@ -391,7 +467,9 @@ export function CommentComposer({
   readonly onDraftSnapshot?: (draft: Readonly<Record<string, unknown>>) => void;
   readonly onPosted?: (id?: string) => void;
   readonly onDismiss?: () => void;
+  readonly onMinimize?: () => void;
 }) {
+  const intl = useEntityI18n();
   const { push: notify } = useToasts();
   const client = useApiClient(),
     [error, setError] = useState<string>();
@@ -518,9 +596,9 @@ export function CommentComposer({
         : await client.request(commentCreate, { body, idempotencyKey });
       await clearDraft();
       submissionIntent.current = undefined;
-      notify({
+      if (!onPosted) notify({
         tone: "success",
-        title: parentCommentId ? "Reply posted" : "Comment posted",
+        title: parentCommentId ? intl.message("comments.replyPosted") : intl.message("comments.postedTitle"),
       });
       justPosted.current = true;
       onChanged();
@@ -541,9 +619,10 @@ export function CommentComposer({
         <>
           <span className="a-comment-composer-title">
             {parentCommentId
-              ? `Replying to ${replyToName ?? "participant"}`
-              : "Add a comment"}
+              ? `Reply to ${replyToName ?? "participant"}`
+              : intl.message("comments.composerTitle")}
           </span>
+          {onMinimize ? <Tooltip portal label={intl.message("comments.minimize")}><button className="a-comment-minimize" type="button" aria-label={intl.message("comments.minimize")} onClick={onMinimize}><CloseIcon size={18}/></button></Tooltip> : null}
           {replyExcerpt ? (
             <p className="a-comment-reply-excerpt">{replyExcerpt}</p>
           ) : null}
@@ -589,9 +668,9 @@ export function CommentComposer({
       onDraftChange={saveDraft}
       onSubmit={submit}
       onBusyChange={onBusyChange}
-      submitLabel={parentCommentId ? "Send reply" : "Send"}
+      submitLabel={parentCommentId ? intl.message("comments.sendReply") : intl.message("action.send")}
       onCancel={onDismiss}
-      cancelLabel="Cancel reply"
+      cancelLabel={intl.message("comments.cancelReply")}
     />
   );
 }
@@ -623,6 +702,7 @@ export function CommentCollection({
     cursor?: string,
   ) => Promise<EntityRuntimeSectionResource>;
 }) {
+  const intl = useEntityI18n();
   const { push: notify } = useToasts();
   const client = useApiClient(),
     identity = useSessionIdentity();
@@ -630,6 +710,12 @@ export function CommentCollection({
     [error, setError] = useState<string>();
   const [editing, setEditing] = useState<Readonly<Record<string, unknown>>>(),
     [history, setHistory] = useState<Readonly<Record<string, unknown>>>();
+  const composerActivity = useContext(ReplyComposerContext);
+  const editMinimized = composerActivity.activeEditor !== "edit";
+  const setEditMinimized = (minimized: boolean) => composerActivity.activate(minimized ? undefined : "edit");
+  const editContainer = useRef<HTMLDivElement>(null);
+  useComposerReveal(editContainer, Boolean(editing) && !editMinimized);
+  const resumeEdit = useRef<HTMLButtonElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<string>();
   const [feedError, setFeedError] = useState<string>();
   const [reportReason, setReportReason] = useState("");
@@ -717,15 +803,17 @@ export function CommentCollection({
     if (mutationPending.current) return;
     if (editing) {
       const id = String(editing.id);
+      // Restore the reading position, not an action trigger: focusing the
+      // remounted menu summary immediately opens its focus tooltip.
       requestAnimationFrame(() =>
         document
           .getElementById(`comment-${id}`)
-          ?.querySelector<HTMLElement>("summary")
-          ?.focus(),
+          ?.focus({ preventScroll: true }),
       );
     }
     historyEpoch.current++;
     void cleanupEditDraft().catch((cause) => setError(message(cause)));
+    if (composerActivity.activeEditor === "edit") composerActivity.activate(undefined);
     setEditing(undefined);
     setHistory(undefined);
     setReportingId(undefined);
@@ -776,7 +864,7 @@ export function CommentCollection({
     try {
       await client.request(commentDelete(id), {});
       setDeleteTarget(undefined);
-      notify({ tone: "success", title: "Comment deleted" });
+      notify({ tone: "success", title: intl.message("comments.deleted") });
       onChanged();
     } catch (cause) {
       setError(message(cause));
@@ -790,12 +878,13 @@ export function CommentCollection({
     closeAction();
     editDraftScope.current = `entity_edit_${crypto.randomUUID().replaceAll("-", "")}`;
     setEditConflict(false);
+    setEditMinimized(false);
     setEditing(item);
     requestAnimationFrame(() =>
       document
         .getElementById(`comment-${item.id}`)
         ?.querySelector<HTMLElement>('[contenteditable="true"]')
-        ?.focus(),
+        ?.focus({ preventScroll: true }),
     );
   }
   const reactionsPending = useRef(new Set<string>());
@@ -842,7 +931,7 @@ export function CommentCollection({
       });
       setReportingId(undefined);
       setReportDetail("");
-      notify({ tone: "success", title: "Report submitted for review" });
+      notify({ tone: "success", title: intl.message("comments.reportSubmitted") });
       onChanged();
     } catch (cause) {
       setError(message(cause));
@@ -852,31 +941,29 @@ export function CommentCollection({
     }
   }
   const historyContent = history ? (
-    <section aria-label="Saved revisions" aria-busy={history.loading === true}>
-      {history.loading ? <p role="status">Loading history…</p> : null}
+    <section aria-label={intl.message("comments.savedRevisions")} aria-busy={history.loading === true}>
+      {history.loading ? <p role="status">{intl.message("comments.loadingHistory")}</p> : null}
       {history.deletion ? (
         <div>
-          <p>
-            Comment deleted
-            {valueRecord(history.deletion)?.deletedAt
-              ? ` · ${collaborationTime(valueRecord(history.deletion)?.deletedAt)}`
+          <p>{intl.message("comments.deleted")}{valueRecord(history.deletion)?.deletedAt
+              ? ` · ${collaborationTime(valueRecord(history.deletion)?.deletedAt, intl)}`
               : ""}
           </p>
-          <p>Previous comment content is unavailable after deletion.</p>
+          <p>{intl.message("comments.deletedHelp")}</p>
         </div>
       ) : null}
       {Array.isArray(history.items) && history.items.length ? (
         history.items.map((entry: any) => (
           <article className="a-comment-history-entry" key={entry.revision}>
-            <strong>Revision {entry.revision}</strong>
+            <strong>{intl.message("comments.revision", {revision: Number(entry.revision)})}</strong>
             <time dateTime={entry.createdAt}>
-              {collaborationTime(entry.createdAt)}
+              {collaborationTime(entry.createdAt, intl)}
             </time>
             <div className="a-comment-content">{renderComment(entry)}</div>
           </article>
         ))
       ) : !history.loading && !error && !history.deletion ? (
-        <p>No saved revisions are available.</p>
+        <p>{intl.message("comments.noRevisions")}</p>
       ) : null}
       {typeof history.nextRevision === "number" ? (
         <Button
@@ -888,9 +975,7 @@ export function CommentCollection({
               Number(history.nextRevision),
             )
           }
-        >
-          Older revisions
-        </Button>
+        >{intl.message("comments.olderRevisions")}</Button>
       ) : null}
       {editing &&
       Array.isArray(history.items) &&
@@ -904,19 +989,17 @@ export function CommentCollection({
             });
             setError(undefined);
           }}
-        >
-          Use reviewed revision and keep my unsaved text
-        </Button>
+        >{intl.message("comments.keepUnsaved")}</Button>
       ) : null}
       {!editing ? (
-        <Button type="button" onClick={closeAction}>
-          Close history
-        </Button>
+        <Button type="button" onClick={closeAction}>{intl.message("comments.closeHistory")}</Button>
       ) : null}
     </section>
   ) : null;
   const editContent = editing ? (
     <>
+      {editMinimized ? <div className="a-comment-compose-toggle"><button ref={resumeEdit} type="button" aria-expanded={false} onClick={() => {setEditMinimized(false); requestAnimationFrame(() => editContainer.current?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus({preventScroll:true}));}}>{intl.message("comments.resumeEdit")}</button></div> : null}
+      <div ref={editContainer} className="a-comment-edit-editor" hidden={editMinimized}>
       <RichCommentComposer
         key={String(editing.id)}
         entityType={entityCode}
@@ -927,15 +1010,16 @@ export function CommentCollection({
             ? mentionSearch(client, entityCode, recordId)
             : undefined
         }
-        audienceLockedReason="Visibility is fixed after posting. Editing keeps the original audience."
+        audienceLockedReason={intl.message("comments.audienceLocked")}
         allowedAudiences={[
           editing.visibility as "public" | "internal" | "private",
         ]}
-        header="Edit comment"
-        submitLabel="Save"
-        submitAriaLabel="Save comment"
+        header={<span>{intl.message("comments.edit")}</span>}
+        headerActions={<Tooltip portal label={intl.message("comments.minimize")}><button className="a-comment-minimize" type="button" aria-label={intl.message("comments.minimize")} onClick={() => {setEditMinimized(true);requestAnimationFrame(() => resumeEdit.current?.focus({preventScroll:true}));}}><CloseIcon size={18}/></button></Tooltip>}
+        submitLabel={intl.message("action.saveChanges")}
+        submitAriaLabel={intl.message("comments.save")}
         onCancel={closeAction}
-        cancelLabel="Cancel"
+        cancelLabel={intl.message("comments.cancelEdit")}
         maxAttachments={capability?.maxAttachments}
         allowAttachments={Boolean(capability?.maxAttachments)}
         prepareAttachments={async (document, visibility) => {
@@ -966,9 +1050,10 @@ export function CommentCollection({
               },
             });
             await cleanupEditDraft();
+            composerActivity.activate(undefined);
             setEditing(undefined);
             setHistory(undefined);
-            notify({ tone: "success", title: "Comment updated" });
+            notify({ tone: "success", title: intl.message("comments.updated") });
             onChanged();
           } catch (cause) {
             setEditConflict(
@@ -989,33 +1074,32 @@ export function CommentCollection({
             type="button"
             disabled={Boolean(busy) || history?.loading === true}
             onClick={() => void loadHistory(String(editing.id))}
-          >
-            Review latest saved revision
-          </Button>
+          >{intl.message("comments.reviewLatest")}</Button>
         </div>
       ) : null}
       {historyContent}
       {error ? <p role="alert">{error}</p> : null}
+      </div>
     </>
   ) : null;
   const title = deleteTarget
-    ? "Delete comment?"
+    ? intl.message("comments.deleteTitle")
     : editing
-      ? "Edit comment"
+      ? intl.message("comments.edit")
       : reportingId
-        ? "Report comment"
-        : "Comment history";
+        ? intl.message("comments.reportTitle")
+        : intl.message("comments.historyTitle");
   const dialogOpen = Boolean(
     deleteTarget || reportingId || (history && !editing),
   );
   return (
     <>
-      <div className="a-comment-filters" aria-label="Filter loaded comments">
-        <div role="group" aria-label="Comment filters">
+      <div className="a-comment-filters" aria-label={intl.message("comments.filterLoaded")}>
+        <div role="group" aria-label={intl.message("comments.filters")}>
           {[
-            ["all", "All"],
-            ["mentions", "Mentions"],
-            ["internal", "Internal"],
+            ["all", intl.message("comments.all")],
+            ["mentions", intl.message("comments.mentions")],
+            ["internal", intl.message("comments.internal")],
           ].map(([key, label]) => (
             <button
               key={key}
@@ -1030,7 +1114,7 @@ export function CommentCollection({
         </div>
         <div className="a-comment-view-options">
           <label>
-            <span className="a-visually-hidden">Comment order</span>
+            <span className="a-visually-hidden">{intl.message("comments.order")}</span>
             <select
               disabled={Boolean(editing)}
               value={newestFirst ? "newest" : "oldest"}
@@ -1038,20 +1122,20 @@ export function CommentCollection({
                 setNewestFirst(event.currentTarget.value === "newest")
               }
             >
-              <option value="oldest">Oldest first</option>
-              <option value="newest">Newest first</option>
+              <option value="oldest">{intl.message("comments.oldest")}</option>
+              <option value="newest">{intl.message("comments.newest")}</option>
             </select>
           </label>
           <label>
-            <span className="a-visually-hidden">Group comments by</span>
+            <span className="a-visually-hidden">{intl.message("comments.groupBy")}</span>
             <select
               disabled={Boolean(editing)}
-              aria-label="Group comments by"
+              aria-label={intl.message("comments.groupBy")}
               value={groupBy}
               onChange={(event) => setGroupBy(event.currentTarget.value)}
             >
-              <option value="date">Group by date</option>
-              <option value="user">Group by user</option>
+              <option value="date">{intl.message("comments.groupDate")}</option>
+              <option value="user">{intl.message("comments.groupUser")}</option>
             </select>
           </label>
         </div>
@@ -1061,18 +1145,18 @@ export function CommentCollection({
         <EmptySectionState
           centered
           icon={<MessageCircleIcon size={24} />}
-          title={items.length ? "No matching comments" : "No comments yet"}
+          title={items.length ? intl.message("comments.noMatches") : intl.message("comments.emptyTitle")}
           detail={
             items.length
-              ? "Try another comment filter."
-              : "Start the conversation below."
+              ? intl.message("comments.tryFilter")
+              : intl.message("comments.emptyDescription")
           }
         />
       ) : null}
       {commentFilter === "mentions" ? <>
-        {mentionBusy ? <p role="status">Finding mentions…</p> : null}
-        {mentionError ? <p role="alert">{mentionError} <button onClick={() => void loadMentions()}>Retry</button></p> : null}
-        {mentionCursor ? <button disabled={mentionBusy} onClick={() => void loadMentions(mentionCursor)}>Load more mentions</button> : null}
+        {mentionBusy ? <p role="status">{intl.message("comments.findingMentions")}</p> : null}
+        {mentionError ? <p role="alert">{mentionError} <button onClick={() => void loadMentions()}>{intl.message("action.retry")}</button></p> : null}
+        {mentionCursor ? <button disabled={mentionBusy} onClick={() => void loadMentions(mentionCursor)}>{intl.message("comments.moreMentions")}</button> : null}
       </> : null}
       <Dialog
         open={dialogOpen}
@@ -1084,8 +1168,7 @@ export function CommentCollection({
           {deleteTarget ? (
             <>
               <p>
-                This removes the comment from the conversation. Existing replies
-                remain visible.
+                {intl.message("comments.deleteHelp")}
               </p>
               <div className="a-comment-action-dialog__footer">
                 <Button
@@ -1093,16 +1176,14 @@ export function CommentCollection({
                   type="button"
                   disabled={Boolean(busy)}
                   onClick={closeAction}
-                >
-                  Cancel
-                </Button>
+                >{intl.message("action.cancel")}</Button>
                 <Button
                   variant="danger"
                   type="button"
                   disabled={Boolean(busy)}
                   onClick={() => void remove(deleteTarget)}
                 >
-                  {busy ? "Deleting…" : "Delete comment"}
+                  {busy ? "Deleting…" : intl.message("comments.deleteAction")}
                 </Button>
               </div>
             </>
@@ -1115,13 +1196,10 @@ export function CommentCollection({
               }}
             >
               <p>
-                Tell the reviewer what needs attention. Reporting does not
-                remove the comment.
+                {intl.message("comments.reportHelp")}
               </p>
-              <label>
-                Reason
-                <select
-                  aria-label="Reason"
+              <label>{intl.message("comments.reason")}<select
+                  aria-label={intl.message("comments.reason")}
                   autoFocus
                   required
                   value={reportReason}
@@ -1129,25 +1207,21 @@ export function CommentCollection({
                     setReportReason(event.currentTarget.value)
                   }
                 >
-                  <option value="" disabled>
-                    Select a reason
-                  </option>
-                  <option value="spam">Spam</option>
-                  <option value="harassment">Harassment</option>
-                  <option value="misinformation">Misinformation</option>
-                  <option value="off_topic">Off-topic</option>
-                  <option value="other">Other</option>
+                  <option value="" disabled>{intl.message("comments.selectReason")}</option>
+                  <option value="spam">{intl.message("comments.spam")}</option>
+                  <option value="harassment">{intl.message("comments.harassment")}</option>
+                  <option value="misinformation">{intl.message("comments.misinformation")}</option>
+                  <option value="off_topic">{intl.message("comments.offTopic")}</option>
+                  <option value="other">{intl.message("comments.other")}</option>
                 </select>
               </label>
-              <label>
-                Additional context (optional)
-                <textarea
+              <label>{intl.message("comments.optionalContext")}<textarea
                   value={reportDetail}
                   maxLength={4000}
                   onChange={(event) =>
                     setReportDetail(event.currentTarget.value)
                   }
-                  placeholder="Describe the concern (optional)"
+                  placeholder={intl.message("comments.concern")}
                 />
               </label>
               <div className="a-comment-action-dialog__footer">
@@ -1156,11 +1230,9 @@ export function CommentCollection({
                   type="button"
                   disabled={Boolean(busy)}
                   onClick={closeAction}
-                >
-                  Cancel
-                </Button>
+                >{intl.message("action.cancel")}</Button>
                 <Button type="submit" disabled={Boolean(busy) || !reportReason}>
-                  {busy ? "Submitting…" : "Submit report"}
+                  {busy ? "Submitting…" : intl.message("comments.submitReport")}
                 </Button>
               </div>
             </form>
@@ -1182,16 +1254,13 @@ export function CommentCollection({
               const day =
                 groupBy === "user"
                   ? String(item.authorDisplayName ?? "Participant")
-                  : new Date(String(item.createdAt)).toLocaleDateString(
-                      undefined,
+                  : intl.date(String(item.createdAt),
                       { year: "numeric", month: "short", day: "numeric" },
                     );
               const previous = index
                 ? groupBy === "user"
                   ? String(visibleComments[index - 1]?.authorId)
-                  : new Date(
-                      String(visibleComments[index - 1]?.createdAt),
-                    ).toLocaleDateString(undefined, {
+                  : intl.date(String(visibleComments[index - 1]?.createdAt), {
                       year: "numeric",
                       month: "short",
                       day: "numeric",
@@ -1272,6 +1341,7 @@ export function CommentThread({
     cursor?: string,
   ) => Promise<EntityRuntimeSectionResource>;
 }) {
+  const intl = useEntityI18n();
   const replyComposer = useContext(ReplyComposerContext);
   const activeEdit = useContext(CommentEditContext);
   const received = useRef(0),
@@ -1446,7 +1516,8 @@ export function CommentThread({
     const event = replyComposer.sent;
     if (event?.rootId === rootId && event.sequence !== received.current) {
       received.current = event.sequence;
-      reveal.current = event.id ?? rootId;
+      // Refresh replies without moving the reader; View comment is explicit.
+      reveal.current = undefined;
       void load();
     }
   }, [replyComposer.sent]);
@@ -1529,8 +1600,8 @@ export function CommentThread({
         onClick={toggle}
       >
         {loading
-          ? "Loading replies…"
-          : `${expanded ? "Hide" : "Show"} ${replyCount === undefined ? "replies" : `${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}`}
+          ? intl.message("comments.loadingReplies")
+          : expanded ? intl.message("comments.hideReplies", {count: replyCount ?? 0}) : replyCount === undefined ? intl.message("comments.showReplyList") : intl.message("comments.showReplies", {count: replyCount})}
       </button>
     )
   ) : null;
@@ -1551,7 +1622,7 @@ export function CommentThread({
         threadAction={threadAction}
       />
       {onLoadThreadPage ? (
-        <section aria-label="Replies">
+        <section aria-label={intl.message("comments.replies")}>
           {parentNotice ? <p role="status">{parentNotice}</p> : null}
           {expanded && Array.isArray(page?.items) ? (
             <div className="a-comment-reply-group">
@@ -1602,9 +1673,7 @@ export function CommentThread({
               type="button"
               disabled={loading}
               onClick={() => void load(page.nextCursor as string)}
-            >
-              Load more replies
-            </button>
+            >{intl.message("comments.moreReplies")}</button>
           ) : null}
         </section>
       ) : null}
@@ -1652,6 +1721,7 @@ export function CommentItem({
   readonly onEdit: (item: Readonly<Record<string, unknown>>) => Promise<void>;
   readonly onRemove: (id: string) => Promise<void>;
 }) {
+  const intl = useEntityI18n();
   // Root comments are validated by the section boundary and replies by
   // CommentThread.load(), before either can reach the render path.
   const item = rawItem as CommentRow;
@@ -1664,14 +1734,14 @@ export function CommentItem({
   const reportState = String(report?.status ?? item.reportStatus ?? "");
   const reportLabel =
     reportState === "reviewing"
-      ? "Report under review"
+      ? intl.message("comments.reportReview")
       : ["resolved", "dismissed", "approved", "rejected", "removed"].includes(
             reportState,
           )
-        ? "Report resolved"
+        ? intl.message("comments.reportResolved")
         : reportState === "open"
-          ? "Report pending review"
-          : "Report submitted";
+          ? intl.message("comments.reportPending")
+          : intl.message("comments.reportSent");
   const editContext = useContext(CommentEditContext);
   const editingHere = editContext.id === String(item.id);
   const replyComposer = useContext(ReplyComposerContext);
@@ -1698,22 +1768,20 @@ export function CommentItem({
         </span>
         <strong>{author}</strong>
         <time dateTime={String(item.createdAt)} title={String(item.createdAt)}>
-          {collaborationTime(item.createdAt)}
+          {collaborationTime(item.createdAt, intl)}
         </time>
-        <span className="a-comment-audience">{String(item.visibility)}</span>
+        <span className="a-comment-audience">{intl.message(`comments.${item.visibility}`)}</span>
         {!item.tombstone && Number(item.revision) > 1 ? (
           <span
             title={
               item.updatedAt
-                ? `Edited ${collaborationTime(item.updatedAt)}`
-                : "Comment edited"
+                ? intl.message("comments.editedAt", {date: collaborationTime(item.updatedAt, intl)})
+                : intl.message("comments.editedLabel")
             }
-          >
-            Edited
-          </span>
+          >{intl.message("comments.edited")}</span>
         ) : null}
         {!item.tombstone && !editContext.id ? (
-          <CollaborationActions label="Comment actions">
+          <CollaborationActions label={intl.message("comments.actions")}>
             {actions.has("flag") && !item.tombstone ? (
               <button
                 type="button"
@@ -1722,7 +1790,7 @@ export function CommentItem({
                   hasReport ? setReportOpen(true) : void onFlag(String(item.id))
                 }
               >
-                {hasReport ? "View your report" : "Report comment"}
+                {hasReport ? intl.message("comments.viewReport") : intl.message("comments.reportTitle")}
               </button>
             ) : null}
             {!item.tombstone && item.authorId === identity ? (
@@ -1731,27 +1799,21 @@ export function CommentItem({
                   <button
                     type="button"
                     onClick={() => void onHistory(String(item.id))}
-                  >
-                    History
-                  </button>
+                  >{intl.message("comments.history")}</button>
                 ) : null}
                 {actions.has("update_own") ? (
                   <button
                     type="button"
                     disabled={itemBusy}
                     onClick={() => void onEdit(item)}
-                  >
-                    Edit
-                  </button>
+                  >{intl.message("action.edit")}</button>
                 ) : null}
                 {actions.has("archive_own") ? (
                   <button
                     type="button"
                     disabled={itemBusy}
                     onClick={() => void onRemove(String(item.id))}
-                  >
-                    Delete
-                  </button>
+                  >{intl.message("action.delete")}</button>
                 ) : null}
               </>
             ) : null}
@@ -1767,7 +1829,7 @@ export function CommentItem({
           <ReplyIcon size={14} aria-hidden="true" />
           <span className="a-comment-parent-reference__text">
             {item.replyToDeleted
-              ? "Replying to a deleted comment"
+              ? intl.message("comments.deletedReply")
               : `Replying to ${String(item.replyToName ?? "participant")}${item.replyToExcerpt ? `: “${String(item.replyToExcerpt).replace(/\s+/g, " ").slice(0, 140)}”` : ""}`}
           </span>
         </button>
@@ -1778,36 +1840,36 @@ export function CommentItem({
         </div>
       ) : null}
       <Dialog open={reportOpen && hasReport} onOpenChange={setReportOpen}>
-        <DialogContent title="Your report" className="a-comment-action-dialog">
+        <DialogContent title={intl.message("comments.yourReport")} className="a-comment-action-dialog">
           <dl className="a-comment-report-details">
-            <dt>Status</dt>
+            <dt>{intl.message("comments.status")}</dt>
             <dd>{reportLabel}</dd>
-            <dt>Reason</dt>
+            <dt>{intl.message("comments.reason")}</dt>
             <dd>
               {(
                 {
-                  spam: "Spam",
-                  harassment: "Harassment",
-                  misinformation: "Misinformation",
-                  off_topic: "Off-topic",
-                  other: "Other",
-                  user_report: "General concern",
+                  spam: intl.message("comments.spam"),
+                  harassment: intl.message("comments.harassment"),
+                  misinformation: intl.message("comments.misinformation"),
+                  off_topic: intl.message("comments.offTopic"),
+                  other: intl.message("comments.other"),
+                  user_report: intl.message("comments.generalConcern"),
                 } as Record<string, string>
               )[String(report?.reason)] ?? "Not available"}
             </dd>
-            <dt>Additional context</dt>
+            <dt>{intl.message("comments.context")}</dt>
             <dd>
-              {String(report?.detail ?? "No additional context provided.")}
+              {String(report?.detail ?? intl.message("comments.noContext"))}
             </dd>
-            <dt>Submitted</dt>
+            <dt>{intl.message("comments.submitted")}</dt>
             <dd>
               {report?.submittedAt
-                ? collaborationTime(report.submittedAt)
+                ? collaborationTime(report.submittedAt, intl)
                 : "Not available"}
             </dd>
             {report?.decision ? (
               <>
-                <dt>Outcome</dt>
+                <dt>{intl.message("comments.outcome")}</dt>
                 <dd>
                   {(
                     {
@@ -1820,40 +1882,36 @@ export function CommentItem({
               </>
             ) : null}
           </dl>
-          <p>No reviewer response has been shared.</p>
+          <p>{intl.message("comments.noResponse")}</p>
           <div className="a-comment-action-dialog__footer">
             <Button
               variant="secondary"
               type="button"
               onClick={() => setReportOpen(false)}
-            >
-              Close
-            </Button>
+            >{intl.message("action.close")}</Button>
           </div>
         </DialogContent>
       </Dialog>
       {item.tombstone ? (
         <div className="a-comment-tombstone">
-          <span>Comment deleted</span>
+          <span>{intl.message("comments.deleted")}</span>
           {item.authorId === identity && actions.has("history") ? (
             <button
               type="button"
               className="a-comment-deletion-history"
               onClick={() => void onHistory(String(item.id))}
-            >
-              View deletion details
-            </button>
+            >{intl.message("comments.deletionDetails")}</button>
           ) : null}
         </div>
       ) : editingHere ? (
-        <section className="a-comment-inline-edit" aria-label="Edit comment">
+        <section className="a-comment-inline-edit" aria-label={intl.message("comments.edit")}>
           {editContext.editor}
         </section>
       ) : (
         <>
           <div className="a-comment-content">{renderComment(item)}</div>
           {Array.isArray(item.pinnedFiles) && item.pinnedFiles.length ? (
-            <ul aria-label="Pinned files">
+            <ul aria-label={intl.message("comments.pinnedFiles")}>
               {item.pinnedFiles.map((file) => (
                 <li key={String(file.attachmentId)}>
                   <CommentFile
@@ -1880,20 +1938,15 @@ export function CommentItem({
             disabled={itemBusy}
             onClick={() => void onReply(String(item.id), author)}
           >
-            <ReplyIcon size={14} /> Reply
-          </button>
+            <ReplyIcon size={14} />{intl.message("comments.reply")}</button>
         ) : null}
         {actions.has("reply") &&
         !item.tombstone &&
         !canReply ? (
           <>
-            <span className="a-comment-depth-limit">
-              Maximum reply depth reached
-            </span>
+            <span className="a-comment-depth-limit">{intl.message("comments.maxDepth")}</span>
             {onReplyRoot ? (
-              <button type="button" onClick={() => void onReplyRoot()}>
-                Reply to main comment
-              </button>
+              <button type="button" onClick={() => void onReplyRoot()}>{intl.message("comments.replyMain")}</button>
             ) : null}
           </>
         ) : null}
@@ -1912,7 +1965,7 @@ export function CommentItem({
                 item.reactions.find((reaction) => reaction.code === "thumbs_up")
                   ?.count,
               ) > 0 ? (
-                <span aria-label="Like count">
+                <span aria-label={intl.message("comments.likeCount")}>
                   {Number(
                     item.reactions.find(
                       (reaction) => reaction.code === "thumbs_up",
@@ -1942,6 +1995,7 @@ export function CommentFile({
   version: string;
   size?: unknown;
 }) {
+  const intl = useEntityI18n();
   const previewButtonId = useId();
   const client = useApiClient();
   const [error, setError] = useState<string>(),
@@ -1962,7 +2016,7 @@ export function CommentFile({
           {name}
         </button>
         <small>
-          {size != null ? `${collaborationFileSize(size)} · ` : ""}v{version}
+          {size != null ? `${collaborationFileSize(size, intl)} · ` : ""}v{version}
         </small>
       </div>
       <FileAction
@@ -2002,9 +2056,7 @@ export function CommentFile({
                   ?.focus({ preventScroll: true }),
               );
             }}
-          >
-            Close preview
-          </button>
+          >{intl.message("action.closePreview")}</button>
           <AttachmentPreview attachmentId={attachmentId} document />
         </div>
       ) : null}

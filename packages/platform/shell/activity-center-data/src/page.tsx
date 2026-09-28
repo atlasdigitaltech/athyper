@@ -87,7 +87,7 @@ export function ActivityCenterPage({
       aria-labelledby="activity-page-title"
     >
       <ContentHeader
-        title="Activity center"
+        title={<span className="athyper-activity-page__title">{kind === "notifications" ? <BellIcon size={24}/> : <InboxIcon size={24}/>} {kind === "notifications" ? "Notifications" : "Inbox"}</span>}
         titleId="activity-page-title"
         description="Updates and work that need your attention."
         actions={

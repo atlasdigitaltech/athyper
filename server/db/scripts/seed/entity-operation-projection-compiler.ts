@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
+import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceGraph } from "@athyper/server-contract-metadata";
 import type { CanonicalCatalogV2, CatalogPlane } from "./canonical-catalog-v2-model.js";
 import type { ExactScopeCompatibilityContract, ScopeKind } from "./exact-scope-compatibility-model.js";
 
-type TargetPlane = Exclude<CatalogPlane, "studio">;
+type TargetPlane = CatalogPlane;
 type CoordinateSource = "tenant_context" | "request_field" | "record_field" | "collection_field" | "relation_resolver";
 
 export interface MetadataReleaseProjectionSource {
@@ -16,6 +17,8 @@ export interface MetadataReleaseProjectionSource {
     compiledHash: string;
   };
   targetPlane: TargetPlane;
+  /** Immutable compiled native descriptor; required to qualify shared-reference enrollment. */
+  compiledDescriptor?: Readonly<Record<string, unknown>>;
   operations: readonly { id: string; operationKey: string; status: "active" | "deprecated" }[];
   operationPermissions: readonly {
     entityOperationId: string; targetPlane: TargetPlane; permissionCode: string;
@@ -78,9 +81,17 @@ export function compileEntityOperationProjection(input: {
     rejectNonCanonical(permissionRow.permissionCode, release.targetPlane);
     const permission = catalog.get(permissionRow.permissionCode);
     if (!permission || permission.permissionKind !== permissionRow.permissionKind) throw new Error(`canonical permission ID is unresolved or kind-mismatched: ${permissionRow.permissionCode}`);
-    if (permission.entity !== release.source.entityCode || permission.operation !== operation.operationKey) throw new Error(`permission coordinate does not match entity operation: ${permissionRow.permissionCode}`);
+    if (permissionRow.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION) {
+      if (permission.permissionKind !== "capability" || !["list", "read", "view"].includes(operation.operationKey) || !release.compiledDescriptor || sha256(canonical(release.compiledDescriptor)) !== release.source.compiledHash)
+        throw new Error("COMMON_REFERENCE_IMMUTABLE_DESCRIPTOR_REQUIRED");
+      assertCommonReferenceGraph(release.compiledDescriptor, release.targetPlane);
+      const authored = (release.compiledDescriptor.operations as {id?: string; operationKey: string}[]).find(item => item.id === operation.id);
+      if (!authored || authored.operationKey !== operation.operationKey || (release.compiledDescriptor.entity as {entityCode: string}).entityCode !== release.source.entityCode)
+        throw new Error("COMMON_REFERENCE_SOURCE_MISMATCH");
+    } else if (permission.entity !== release.source.entityCode || permission.operation !== operation.operationKey) throw new Error(`permission coordinate does not match entity operation: ${permissionRow.permissionCode}`);
     const compatibleScopes = scopeContract.get(permissionRow.permissionCode);
     if (!compatibleScopes) throw new Error(`permission has no exact scope compatibility: ${permissionRow.permissionCode}`);
+    if (permissionRow.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION && (compatibleScopes.length !== 1 || compatibleScopes[0]?.kind !== "tenant" || compatibleScopes[0]?.propagation !== "exact")) throw new Error("COMMON_REFERENCE_EXACT_TENANT_SCOPE_REQUIRED");
     const scopes = release.operationScopeBindings.filter((item) => item.status === "active" && item.targetPlane === release.targetPlane && item.entityOperationId === operation.id);
     if (!scopes.length) throw new Error(`entity operation has no exact scope coordinates: ${release.source.entityCode}.${operation.operationKey}`);
     unique(scopes.map((item) => item.scopeKind), `scope kind for ${release.source.entityCode}.${operation.operationKey}`);
@@ -121,6 +132,7 @@ export function compileEntityOperationProjection(input: {
 }
 
 function rejectNonCanonical(code: string, plane: TargetPlane): void {
+  if (code === COMMON_REFERENCE_VIEW_PERMISSION) return;
   const parts=code.split(".");
   if(parts.length!==4||parts[0]!==plane||parts[1]==="action"||parts[2]==="action")throw new Error(`non-canonical permission binding rejected: ${code}`);
 }

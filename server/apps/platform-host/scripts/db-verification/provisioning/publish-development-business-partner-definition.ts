@@ -3,8 +3,8 @@
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
-import { createBusinessPartnerFoundationDefinition } from "@athyper/server-service-publication/business-partner-foundation-definition";
-import { compileBusinessPartnerDefinition } from "@athyper/server-service-publication/business-partner-definition-compiler";
+import { createBusinessPartnerFoundationDefinition } from "@athyper/server-service-publication/entity-foundation-definition";
+import { compileBusinessPartnerDefinition } from "@athyper/server-service-publication/entity-definition-compiler";
 
 const CONFIRMATION = "LOCAL-BUSINESS-PARTNER-DEFINITION-3.1.1";
 const PUBLICATION_KEY =

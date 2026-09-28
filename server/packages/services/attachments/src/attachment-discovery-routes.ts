@@ -9,7 +9,7 @@ import type { AttachmentRouteOptions } from "./attachment-routes.js";
 type Tx = Transaction<Record<string, never>>;
 type Identity = { planeKey: "neon" | "studio" | "mesh"; tenantId: string; principalId: string; attachmentId: string };
 type Row = { id: string; sha256: string; content_type: string; derivative_content_type: string | null; storage_key: string | null; status: string; last_error_code?: string | null; scan_status: string | null; size_bytes: number; file_name: string; extracted_text: string | null };
-type BrowseRow = { id: string; pinned_attachment_id: string | null; link_kind: string; version_history: unknown; series_id: string; link_id: string; folder_id: string | null; folder_name: string | null; category: string | null; version_no: number; file_name: string; display_name: string | null; content_type: string | null; size_bytes: number | string | null; status: string; created_at: Date | string; series_revision: string };
+type BrowseRow = { added_at?: Date | string; added_by_display_name?: string; id: string; pinned_attachment_id: string | null; link_kind: string; version_history: unknown; series_id: string; link_id: string; folder_id: string | null; folder_name: string | null; category: string | null; version_no: number; file_name: string; display_name: string | null; content_type: string | null; size_bytes: number | string | null; status: string; created_at: Date | string; series_revision: string };
 const renditions = new Set(["thumbnail_sm", "thumbnail_md", "page_preview", "preview_default"]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export interface AttachmentDiscoveryOptions {
@@ -75,7 +75,7 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
       if (!await options.authorizeCapability(context,"search",{entityType,entityId})) throw new DiscoveryError(403,"ENTITY_CAPABILITY_DENIED");
       const rows = await options.transactions.run(context.planeKey, context, async tx => {
         await sql`SET LOCAL statement_timeout = '2000ms'`.execute(tx);
-        return (await sql<Row>`SELECT DISTINCT a.id::text,a.file_name,a.content_type,
+        return (await sql<Row>`SELECT DISTINCT a.id,a.file_name,a.content_type,
           substring(a.extracted_text FROM greatest(1,strpos(lower(a.extracted_text),lower(${q.trim()}))-80) FOR 320) extracted_text
           FROM document.attachment_link l JOIN document.attachment_series s ON s.tenant_id=l.tenant_id AND s.id=l.attachment_series_id
           JOIN document.attachment a ON a.tenant_id=s.tenant_id AND a.id=coalesce(l.pinned_attachment_id,s.current_attachment_id)
@@ -112,11 +112,11 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
         const admitted = await options.authorizeCapability(context,includeHistory ? "version" : "preview",{entityType,entityId,attachmentId});
         if (!admitted || admitted.entityType !== entityType || admitted.entityId !== entityId) throw new DiscoveryError(403,"ENTITY_CAPABILITY_DENIED");
       }
+      // Select one deterministic link/version per series before applying the
+      // cursor; otherwise an older pin can reappear on a subsequent page.
+      // Materialize the bounded page before principal/history enrichment.
       const rows = await options.transactions.run(context.planeKey, context, async tx => (await sql<BrowseRow>`WITH visible AS (
-        SELECT DISTINCT ON (a.series_id) a.id::text,a.series_id::text,l.id::text link_id,l.pinned_attachment_id::text,l.link_kind,l.folder_id::text,folder.name folder_name,coalesce(l.metadata->>'category','general') category,a.version_no,a.file_name,s.display_name,a.content_type,a.size_bytes,a.status,a.created_at,s.revision_no::text series_revision,
-          CASE WHEN ${includeHistory === true} THEN COALESCE((SELECT jsonb_agg(jsonb_build_object('id',v.id::text,'version',v.version_no,'fileName',v.file_name,'status',v.status,'createdAt',v.created_at) ORDER BY v.version_no DESC,v.id DESC)
-            FROM document.attachment v WHERE v.tenant_id=a.tenant_id AND v.series_id=a.series_id
-              AND (v.status='active' OR v.uploaded_by=${context.principalId}::uuid)), '[]'::jsonb) ELSE NULL END version_history
+        SELECT DISTINCT ON (a.series_id) a.id::text,a.series_id::text,l.id::text link_id,l.pinned_attachment_id::text,l.link_kind,l.folder_id::text,folder.name folder_name,coalesce(l.metadata->>'category','general') category,a.version_no,a.file_name,s.display_name,a.content_type,a.size_bytes,a.status,a.created_at,l.created_at added_at,l.created_by added_by,s.revision_no::text series_revision
         FROM document.attachment_link l
         JOIN document.attachment_series s ON s.tenant_id=l.tenant_id AND s.id=l.attachment_series_id
         JOIN document.attachment a ON a.tenant_id=s.tenant_id AND a.id=coalesce(l.pinned_attachment_id,s.current_attachment_id)
@@ -128,10 +128,18 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
           ${name?.trim() ? exactName ? sql`AND lower(a.file_name)=lower(${name.trim()})` : sql`AND strpos(lower(a.file_name || ' ' || coalesce(s.display_name,'')),lower(${name.trim()}))>0` : sql``}
           ${folderId ? sql`AND l.folder_id=${folderId}::uuid` : unfiled ? sql`AND l.folder_id IS NULL` : sql``}
           ${category ? sql`AND coalesce(l.metadata->>'category','general')=${category}` : sql``}
-          ${after ? sql`AND (a.created_at,a.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${after}::uuid)` : sql``}
         ORDER BY a.series_id,(l.pinned_attachment_id IS NOT NULL) DESC,l.created_at DESC,l.id DESC,a.created_at DESC,a.id DESC
-      ) SELECT * FROM visible ORDER BY created_at DESC,id::uuid DESC LIMIT 51`.execute(tx)).rows);
-      const items = rows.slice(0,50).map(row => ({ id:row.id,seriesId:row.series_id,linkId:row.link_id,linkKind:row.link_kind,...(row.pinned_attachment_id ? {pinnedAttachmentId:row.pinned_attachment_id}:{}),...(includeHistory ? {versionHistory:row.version_history ?? []}:{}),...(row.folder_id ? {folderId:row.folder_id}:{ }),...(row.folder_name ? {folderName:row.folder_name}:{}),category:row.category ?? "general",version:row.version_no,fileName:row.file_name,...(row.display_name ? {displayName:row.display_name}:{}),...(row.content_type ? {contentType:row.content_type}:{}),...(row.size_bytes === null ? {} : {sizeBytes:Number(row.size_bytes)}),processingStatus:row.status,revision:row.series_revision,createdAt:new Date(row.created_at).toISOString() }));
+      ), page AS MATERIALIZED (
+        SELECT * FROM visible
+        ${after ? sql`WHERE (created_at,id::uuid)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${after}::uuid)` : sql``}
+        ORDER BY created_at DESC,id::uuid DESC LIMIT 51
+      ) SELECT page.*,
+        (SELECT display_name FROM document.collaboration_principal_candidates('',page.added_by)) added_by_display_name,
+        CASE WHEN ${includeHistory === true} THEN COALESCE((SELECT jsonb_agg(jsonb_build_object('id',v.id::text,'version',v.version_no,'fileName',v.file_name,'status',v.status,'createdAt',v.created_at,'uploadedByDisplayName',(SELECT display_name FROM document.collaboration_principal_candidates('',v.uploaded_by))) ORDER BY v.version_no DESC,v.id DESC)
+          FROM document.attachment v WHERE v.tenant_id=${context.tenantId}::uuid AND v.series_id=page.series_id::uuid
+            AND (v.status='active' OR v.uploaded_by=${context.principalId}::uuid)), '[]'::jsonb) ELSE NULL END version_history
+      FROM page ORDER BY created_at DESC,id::uuid DESC`.execute(tx)).rows);
+      const items = rows.slice(0,50).map(row => ({ id:row.id,...(row.added_at ? {addedAt:new Date(row.added_at).toISOString()}:{}),...(row.added_by_display_name ? {addedByDisplayName:row.added_by_display_name}:{}),seriesId:row.series_id,linkId:row.link_id,linkKind:row.link_kind,...(row.pinned_attachment_id ? {pinnedAttachmentId:row.pinned_attachment_id}:{}),...(includeHistory ? {versionHistory:row.version_history ?? []}:{}),...(row.folder_id ? {folderId:row.folder_id}:{ }),...(row.folder_name ? {folderName:row.folder_name}:{}),category:row.category ?? "general",version:row.version_no,fileName:row.file_name,...(row.display_name ? {displayName:row.display_name}:{}),...(row.content_type ? {contentType:row.content_type}:{}),...(row.size_bytes === null ? {} : {sizeBytes:Number(row.size_bytes)}),processingStatus:row.status,revision:row.series_revision,createdAt:new Date(row.created_at).toISOString() }));
       return {items,...(rows.length>50 ? {nextCursor:rows[49]!.id} : {})};
     },
   };

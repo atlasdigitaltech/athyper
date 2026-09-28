@@ -42,9 +42,10 @@ if (!(mode in MODES)) {
   process.exit(1);
 }
 
-const { start } = await MODES[mode]();
-
-await start().catch((err: unknown) => {
+await (async () => {
+  const { start } = await MODES[mode]();
+  await start();
+})().catch((err: unknown) => {
   captureFatalError(err, "boot");
   console.error(
     "[fatal] boot_failed",

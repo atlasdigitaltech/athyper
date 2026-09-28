@@ -361,6 +361,8 @@ DECLARE
     v_previous uuid;
     v_descriptor runtime_meta.entity_descriptor%ROWTYPE;
     v_contract_id uuid;
+    v_expected jsonb;
+    v_previous_release runtime_meta.applied_release%ROWTYPE;
 BEGIN
     PERFORM pg_advisory_xact_lock(hashtextextended((SELECT publication_key FROM runtime_meta.applied_release WHERE id=p_applied_release_id),0));
     SELECT * INTO v_candidate FROM runtime_meta.applied_release WHERE id=p_applied_release_id FOR UPDATE;
@@ -377,7 +379,29 @@ BEGIN
     END IF;
 
     SELECT * INTO v_head FROM runtime_meta.release_activation_head WHERE publication_key=v_candidate.publication_key FOR UPDATE;
-    IF FOUND THEN
+    -- Successor authority is part of the verified signed manifest, never the
+    -- caller-supplied activation evidence. First-release compatibility remains.
+    IF v_candidate.manifest->>'artifactKind'='compiled_entity_runtime' AND v_candidate.source_release_no>1 THEN
+      IF jsonb_typeof(v_candidate.manifest#>'{evidence,expectedPredecessor}') IS DISTINCT FROM 'string' THEN
+        RAISE EXCEPTION 'RELEASE_PREDECESSOR_REQUIRED' USING ERRCODE='object_not_in_prerequisite_state';
+      END IF;
+      v_expected:=(v_candidate.manifest#>>'{evidence,expectedPredecessor}')::jsonb;
+      SELECT * INTO v_previous_release FROM runtime_meta.applied_release WHERE id=v_head.applied_release_id FOR SHARE;
+      IF v_head.applied_release_id IS NULL OR jsonb_typeof(v_expected) IS DISTINCT FROM 'object'
+        OR (SELECT count(*) FROM jsonb_object_keys(v_expected))<>9
+        OR (v_expected->>'appliedReleaseId'=v_head.applied_release_id::text
+          AND v_expected->>'sourceReleaseId'=v_previous_release.source_release_id::text
+          AND v_expected->>'sourceReleaseNo'=v_head.source_release_no::text
+          AND v_expected->>'artifactHash'=v_head.artifact_hash
+          AND v_expected->>'headVersion'=v_head.row_version::text
+          AND v_expected->>'publicationKey'=v_candidate.publication_key
+          AND v_expected->>'plane'=v_candidate.manifest->>'targetPlane'
+          AND v_expected->>'environment'='local' AND v_expected->>'instance'='dev'
+          AND v_candidate.source_release_no=v_head.source_release_no+1) IS NOT TRUE THEN
+        RAISE EXCEPTION 'RELEASE_PREDECESSOR_CHANGED' USING ERRCODE='object_not_in_prerequisite_state';
+      END IF;
+    END IF;
+    IF v_head.applied_release_id IS NOT NULL THEN
       IF v_candidate.source_release_no<=v_head.source_release_no THEN RAISE EXCEPTION 'RELEASE_SEQUENCE_NOT_FORWARD' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
       v_previous:=v_head.applied_release_id;
       PERFORM authz.fn_retire_entity_operation_projection(v_previous,clock_timestamp());

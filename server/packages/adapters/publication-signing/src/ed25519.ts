@@ -1,11 +1,12 @@
 import type { PublicationSigner, PublicationVerifier } from "@athyper/server-contract-publication";
 import { createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
-import type { CachedPublicationKeyResolver } from "./key-resolver.js";
+interface SigningKeyResolver { signingKey(keyId: string): Promise<Uint8Array> }
+interface VerificationKeyResolver { verificationKeys(keyId: string): Promise<readonly Uint8Array[]> }
 
 const ALGORITHM = "Ed25519";
 
 export class Ed25519PublicationSigner implements PublicationSigner {
-  constructor(private readonly keys: CachedPublicationKeyResolver) {}
+  constructor(private readonly keys: SigningKeyResolver) {}
 
   async sign(input: { readonly keyId: string; readonly algorithm: string; readonly bytes: Uint8Array }): Promise<{ readonly signature: string }> {
     requireEd25519(input.algorithm);
@@ -19,7 +20,7 @@ export class Ed25519PublicationSigner implements PublicationSigner {
 }
 
 export class Ed25519PublicationVerifier implements PublicationVerifier {
-  constructor(private readonly keys: CachedPublicationKeyResolver) {}
+  constructor(private readonly keys: VerificationKeyResolver) {}
 
   async verify(input: { readonly keyId: string; readonly algorithm: string; readonly bytes: Uint8Array; readonly signature: string }): Promise<boolean> {
     requireEd25519(input.algorithm);

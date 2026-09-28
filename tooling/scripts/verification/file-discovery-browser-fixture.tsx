@@ -1,6 +1,8 @@
 import { ApiTransportError } from "@athyper/platform-api-client";
 import { ToastProvider } from "../../../packages/platform/shell/app-foundation/src/toasts";
 export { useToasts } from "../../../packages/platform/shell/app-foundation/src/toasts";
+// App-foundation mock: these read-only browser fixtures do not carry credentials.
+export const readBrowserCsrfToken = () => undefined;
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { CompiledEntitySectionContent } from "../../../packages/platform/entity/runtime/form-detail/src/compiled-section-content";
@@ -17,6 +19,7 @@ const client = {
         : operation.path;
     calls.push({ path, ...options });
     if (path.endsWith("/browse")) {
+      if (options.body?.includeHistory && (window as any).slowHistory) await new Promise(resolve=>setTimeout(resolve,300));
       if ((window as any).slowBrowse) await new Promise(resolve=>setTimeout(resolve,200));
       const body = options.body;
       const rows = [...((window as any).fileRows ?? []), ...((window as any).hiddenFiles ?? [])];
@@ -108,7 +111,7 @@ export function useApiClient() {
   return client;
 }
 export function useSessionIdentity() {
-  return { scope: { principalId: "owner" } };
+  return { scope: { principalId: "owner", tenantId: (window as any).historyTenant ?? "tenant-a" } };
 }
 function Fixture() {
   const [mode, setMode] = useState<"pinned" | "content">("pinned");
@@ -160,17 +163,20 @@ function Fixture() {
           contentType: "application/pdf",
           sizeBytes: 1000,
           createdAt: "2026-09-22",
+          addedByDisplayName: "Record Contributor",
+          addedAt: "2026-09-22",
           version: 1,
-          revision: "1",
+          revision: String((window as any).fileRevision ?? 1),
           versionHistory: [
             {
               id: "first",
               version: 1,
               fileName: "proof.pdf",
               status: "active",
+              uploadedByDisplayName: "Version Uploader",
             },
             { id: "old", version: 0, fileName: "proof.pdf", status: "active" },
-          ],
+          ].slice(0, (window as any).singleVersion ? 1 : undefined),
           category: "general",
           processingStatus: (window as any).pendingFile
             ? "processing"

@@ -1,5 +1,5 @@
 "use client";
-import { writeRecordLocation } from "./write-record-location";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { useEffect, useRef } from "react";
 import {
   ChevronDownIcon,
@@ -20,6 +20,7 @@ export function RecordModeNavigation({
   onSectionViewChange,
   collaboration,
   onOpenCollaboration,
+  sectionSettings = true,
 }: {
   readonly collaborationFull?: boolean;
   readonly collaborationSection?: string;
@@ -30,7 +31,9 @@ export function RecordModeNavigation({
   readonly onSectionViewChange: (value: boolean) => void;
   readonly collaboration?: EntityRuntimeHeaderNavigation["collaboration"];
   readonly onOpenCollaboration: (sectionKey: string) => void;
+  readonly sectionSettings?: boolean;
 }) {
+  const intl = useEntityI18n();
   const viewMenu = useDismissibleDetails();
   const available = new Map(
     navigation.sections.map((section) => [section.key, section]),
@@ -48,7 +51,7 @@ export function RecordModeNavigation({
       tab.sectionKeys.some((key) => available.has(key)),
   );
   return (
-    <nav className="a-entity-record__tabs" aria-label="Record views">
+    <nav className="a-entity-record__tabs" aria-label={intl.message("navigation.recordViews")}>
       {!configuredTabs.length
         ? navigation.sections.map((section) => (
             <button
@@ -88,7 +91,7 @@ export function RecordModeNavigation({
               selectSection(navigation, tab.sectionKeys[0]!, tab.key)
             }
           >
-            {tab.label.defaultText}
+            {intl.text(tab.label)}
           </button>
         ),
       )}
@@ -102,8 +105,7 @@ export function RecordModeNavigation({
               ? "page"
               : undefined
           }
-          aria-label={`Open ${section.key === "attachments" ? "Files" : section.key === "comments" ? "Comments" : section.label}`}
-          title={section.label}
+          aria-label={intl.message("navigation.openSection", {section: section.key === "attachments" ? intl.message("collaboration.files") : section.key === "comments" ? intl.message("collaboration.comments") : section.label})}
           onClick={() => onOpenCollaboration(section.key)}
         >
           {section.key === "comments" ? (
@@ -111,58 +113,49 @@ export function RecordModeNavigation({
           ) : (
             <FileTextIcon aria-hidden="true" />
           )}
-          <span>{section.key === "attachments" ? "Files" : "Comments"}</span>
+          <span>{section.key === "attachments" ? intl.message("collaboration.files") : intl.message("collaboration.comments")}</span>
         </button>
       ))}
-      <details ref={viewMenu} className="a-entity-record__view-control">
-        <summary aria-label="View settings">
+      {sectionSettings || navigation.summaryView ? <details ref={viewMenu} className="a-entity-record__view-control">
+        <summary aria-label={intl.message("navigation.settings")}>
           <SettingsIcon aria-hidden="true" />
         </summary>
-        <div role="menu" aria-label="View settings">
-          <p>View settings</p>
+        <div role="group" aria-label={intl.message("navigation.settings")}>
+          <p>{intl.message("navigation.settings")}</p>
           <button
             type="button"
-            role="menuitemcheckbox"
-            aria-checked="true"
+            aria-pressed="true"
             disabled
           >
-            <span className="a-entity-record__view-setting-copy">
-              Content view
-            </span>
+            <span className="a-entity-record__view-setting-copy">{intl.message("navigation.contentView")}</span>
             <span className="a-entity-record__toggle" aria-hidden="true" />
           </button>
-          <button
+          {sectionSettings ? <button
             type="button"
-            role="menuitemcheckbox"
-            aria-checked={sectionView}
+            aria-pressed={sectionView}
             onClick={() => {
               onSectionViewChange(!sectionView);
               viewMenu.current?.removeAttribute("open");
             }}
           >
-            <span className="a-entity-record__view-setting-copy">
-              Section view
-            </span>
+            <span className="a-entity-record__view-setting-copy">{intl.message("navigation.sectionView")}</span>
             <span className="a-entity-record__toggle" aria-hidden="true" />
-          </button>
+          </button> : null}
           {navigation.summaryView ? (
             <button
               type="button"
-              role="menuitemcheckbox"
-              aria-checked={view === "summary"}
+              aria-pressed={view === "summary"}
               onClick={() => {
                 onViewChange(view === "summary" ? "content" : "summary");
                 viewMenu.current?.removeAttribute("open");
               }}
             >
-              <span className="a-entity-record__view-setting-copy">
-                Summary view
-              </span>
+              <span className="a-entity-record__view-setting-copy">{intl.message("navigation.summaryView")}</span>
               <span className="a-entity-record__toggle" aria-hidden="true" />
             </button>
           ) : null}
         </div>
-      </details>
+      </details> : null}
     </nav>
   );
 }
@@ -175,6 +168,22 @@ function SectionTabGroup({
   navigation: EntityRuntimeHeaderNavigation;
   active: boolean;
 }) {
+  const intl = useEntityI18n();
+  return <RecordSectionMenu label={intl.text(tab.label)} active={active}
+    sections={tab.sectionKeys.flatMap(key => navigation.sections.find(section => section.key === key) ?? [])}
+    activeSection={navigation.activeSection}
+    onSelect={key => selectSection(navigation, key, tab.key)} />;
+}
+
+/** Shared section picker for both record compositions; receives authorized sections only. */
+export function RecordSectionMenu({ label, sections, activeSection, active, onSelect, compact = false }: {
+  label: string;
+  sections: readonly { key: string; label: string }[];
+  activeSection: string;
+  active: boolean;
+  onSelect: (key: string) => void;
+  compact?: boolean;
+}) {
   const menu = useDismissibleDetails();
   return (
     <details
@@ -182,22 +191,36 @@ function SectionTabGroup({
       className="a-entity-record__group"
       data-active={active || undefined}
     >
-      <summary aria-current={active ? "page" : undefined}>
-        {tab.label.defaultText} <ChevronDownIcon aria-hidden="true" />
+      <summary aria-label={compact ? `${label} sections` : undefined} aria-current={active ? "page" : undefined}
+        onKeyDown={event => {
+          if (event.key !== "ArrowDown") return;
+          event.preventDefault(); event.stopPropagation();
+          menu.current?.setAttribute("open", "");
+          menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
+        }}>
+        {compact ? null : label} <ChevronDownIcon aria-hidden="true" />
       </summary>
-      <div role="menu" aria-label={`${tab.label.defaultText} sections`}>
-        {tab.sectionKeys.map((key) => (
+      <div role="menu" aria-label={`${label} sections`} onKeyDown={event => {
+        const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+        const index = items.indexOf(document.activeElement as HTMLButtonElement);
+        const next = event.key === "ArrowDown" ? (index + 1) % items.length
+          : event.key === "ArrowUp" ? (index - 1 + items.length) % items.length
+          : event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : undefined;
+        if (next !== undefined) { event.preventDefault(); event.stopPropagation(); items[next]?.focus(); }
+      }}>
+        {sections.map(({key, label: sectionLabel}) => (
           <button
             key={key}
             type="button"
             role="menuitem"
-            aria-current={navigation.activeSection === key ? "page" : undefined}
+            aria-current={activeSection === key ? "page" : undefined}
             onClick={() => {
-              selectSection(navigation, key, tab.key);
               menu.current?.removeAttribute("open");
+              menu.current?.querySelector<HTMLElement>("summary")?.focus();
+              onSelect(key);
             }}
           >
-            {navigation.sections.find((section) => section.key === key)?.label}
+            {sectionLabel}
           </button>
         ))}
       </div>
@@ -236,11 +259,7 @@ function selectSection(
   sectionKey: string,
   tabKey: string,
 ) {
-  navigation.onSelectSection(sectionKey);
-  const next = new URL(window.location.href);
-  next.searchParams.set("tab", tabKey);
-  next.searchParams.set("section", sectionKey);
-  writeRecordLocation(next, "replace");
+  navigation.onSelectSection(sectionKey, tabKey);
 }
 
 export function RecordHeaderActions({
@@ -254,6 +273,7 @@ export function RecordHeaderActions({
   readonly error?: string;
   readonly onExecute: (operationKey: string) => Promise<void>;
 }) {
+  const intl = useEntityI18n();
   const startFlows = actions.filter(
     (action) => action.interaction === "start_flow",
   );
@@ -263,7 +283,7 @@ export function RecordHeaderActions({
     <div className="a-record-page-header__actions">
       {startFlows.length ? (
         <details ref={menu} className="a-record-page-header__actions-menu">
-          <summary className="a-button a-button--secondary">Actions</summary>
+          <summary className="a-button a-button--secondary">{intl.message("action.actions")}</summary>
           <div>
             {startFlows.map((action) => (
               <Button
@@ -277,7 +297,7 @@ export function RecordHeaderActions({
                   void onExecute(action.operationKey);
                 }}
               >
-                {action.label.defaultText}
+                {intl.text(action.label)}
               </Button>
             ))}
             {error ? <p role="alert">{error}</p> : null}

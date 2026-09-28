@@ -6599,6 +6599,8 @@ model principal {
   entity_entity_status_changed_byToprincipal                                                             entity[]                                      @relation("entity_status_changed_byToprincipal")
   entity_entity_updated_byToprincipal                                                                    entity[]                                      @relation("entity_updated_byToprincipal")
   entity_capability                                                                                      entity_capability[]
+  entity_change_case_binding_entity_change_case_binding_created_byToprincipal                            entity_change_case_binding[]                  @relation("entity_change_case_binding_created_byToprincipal")
+  entity_change_case_binding_entity_change_case_binding_updated_byToprincipal                            entity_change_case_binding[]                  @relation("entity_change_case_binding_updated_byToprincipal")
   entity_change_set_entity_change_set_approved_byToprincipal                                             entity_change_set[]                           @relation("entity_change_set_approved_byToprincipal")
   entity_change_set_entity_change_set_created_byToprincipal                                              entity_change_set[]                           @relation("entity_change_set_created_byToprincipal")
   entity_change_set_entity_change_set_published_byToprincipal                                            entity_change_set[]                           @relation("entity_change_set_published_byToprincipal")
@@ -6614,6 +6616,8 @@ model principal {
   entity_field_entity_field_updated_byToprincipal                                                        entity_field[]                                @relation("entity_field_updated_byToprincipal")
   entity_field_policy_binding_entity_field_policy_binding_created_byToprincipal                          entity_field_policy_binding[]                 @relation("entity_field_policy_binding_created_byToprincipal")
   entity_field_policy_binding_entity_field_policy_binding_updated_byToprincipal                          entity_field_policy_binding[]                 @relation("entity_field_policy_binding_updated_byToprincipal")
+  entity_field_reference_binding_entity_field_reference_binding_created_byToprincipal                    entity_field_reference_binding[]              @relation("entity_field_reference_binding_created_byToprincipal")
+  entity_field_reference_binding_entity_field_reference_binding_updated_byToprincipal                    entity_field_reference_binding[]              @relation("entity_field_reference_binding_updated_byToprincipal")
   entity_flow_entity_flow_created_byToprincipal                                                          entity_flow[]                                 @relation("entity_flow_created_byToprincipal")
   entity_flow_entity_flow_updated_byToprincipal                                                          entity_flow[]                                 @relation("entity_flow_updated_byToprincipal")
   entity_flow_step_entity_flow_step_created_byToprincipal                                                entity_flow_step[]                            @relation("entity_flow_step_created_byToprincipal")
@@ -6626,10 +6630,16 @@ model principal {
   entity_lifecycle_binding_entity_lifecycle_binding_updated_byToprincipal                                entity_lifecycle_binding[]                    @relation("entity_lifecycle_binding_updated_byToprincipal")
   entity_lifecycle_operation_binding_entity_lifecycle_operation_binding_created_byToprincipal            entity_lifecycle_operation_binding[]          @relation("entity_lifecycle_operation_binding_created_byToprincipal")
   entity_lifecycle_operation_binding_entity_lifecycle_operation_binding_updated_byToprincipal            entity_lifecycle_operation_binding[]          @relation("entity_lifecycle_operation_binding_updated_byToprincipal")
+  entity_materialization_binding_entity_materialization_binding_created_byToprincipal                    entity_materialization_binding[]              @relation("entity_materialization_binding_created_byToprincipal")
+  entity_materialization_binding_entity_materialization_binding_updated_byToprincipal                    entity_materialization_binding[]              @relation("entity_materialization_binding_updated_byToprincipal")
+  entity_materialization_field_mapping_entity_materialization_field_mapping_created_byToprincipal        entity_materialization_field_mapping[]        @relation("entity_materialization_field_mapping_created_byToprincipal")
+  entity_materialization_field_mapping_entity_materialization_field_mapping_updated_byToprincipal        entity_materialization_field_mapping[]        @relation("entity_materialization_field_mapping_updated_byToprincipal")
   entity_numbering_binding_entity_numbering_binding_created_byToprincipal                                entity_numbering_binding[]                    @relation("entity_numbering_binding_created_byToprincipal")
   entity_numbering_binding_entity_numbering_binding_updated_byToprincipal                                entity_numbering_binding[]                    @relation("entity_numbering_binding_updated_byToprincipal")
   entity_operation_entity_operation_created_byToprincipal                                                entity_operation[]                            @relation("entity_operation_created_byToprincipal")
   entity_operation_entity_operation_updated_byToprincipal                                                entity_operation[]                            @relation("entity_operation_updated_byToprincipal")
+  entity_operation_context_requirement_entity_operation_context_requirement_created_byToprincipal        entity_operation_context_requirement[]        @relation("entity_operation_context_requirement_created_byToprincipal")
+  entity_operation_context_requirement_entity_operation_context_requirement_updated_byToprincipal        entity_operation_context_requirement[]        @relation("entity_operation_context_requirement_updated_byToprincipal")
   entity_operation_permission_entity_operation_permission_created_byToprincipal                          entity_operation_permission[]                 @relation("entity_operation_permission_created_byToprincipal")
   entity_operation_permission_entity_operation_permission_updated_byToprincipal                          entity_operation_permission[]                 @relation("entity_operation_permission_updated_byToprincipal")
   entity_operation_rule_entity_operation_rule_created_byToprincipal                                      entity_operation_rule[]                       @relation("entity_operation_rule_created_byToprincipal")
@@ -7479,18 +7489,22 @@ model entity {
   tenant                                                                 tenant?                                   @relation(fields: [tenant_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "metadata_entity_tenant_fk")
   principal_entity_updated_byToprincipal                                 principal?                                @relation("entity_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "metadata_entity_updated_by_fk")
   entity_capability                                                      entity_capability[]
+  entity_change_case_binding                                             entity_change_case_binding[]
   entity_change_set                                                      entity_change_set[]
   entity_contract_test_case                                              entity_contract_test_case[]
   entity_field                                                           entity_field[]
   entity_field_policy_binding                                            entity_field_policy_binding[]
+  entity_field_reference_binding                                         entity_field_reference_binding[]
   entity_flow                                                            entity_flow[]
   entity_flow_step                                                       entity_flow_step[]
   entity_key                                                             entity_key[]
   entity_key_field                                                       entity_key_field[]
   entity_lifecycle_binding                                               entity_lifecycle_binding[]
   entity_lifecycle_operation_binding                                     entity_lifecycle_operation_binding[]
+  entity_materialization_binding                                         entity_materialization_binding[]
   entity_numbering_binding                                               entity_numbering_binding[]
   entity_operation                                                       entity_operation[]
+  entity_operation_context_requirement                                   entity_operation_context_requirement[]
   entity_operation_permission                                            entity_operation_permission[]
   entity_operation_rule                                                  entity_operation_rule[]
   entity_operation_scope_binding                                         metadata_entity_operation_scope_binding[]
@@ -7563,24 +7577,57 @@ model entity_baseline_import_revocation {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model entity_capability {
-  id                String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String?           @db.Uuid
-  entity_id         String            @db.Uuid
-  change_set_id     String            @db.Uuid
-  capability_key    String
-  declaration       Json
-  binding           Json?
-  created_at        DateTime          @default(now()) @db.Timestamptz(6)
-  created_by        String            @db.Uuid
-  updated_at        DateTime?         @db.Timestamptz(6)
-  updated_by        String?           @db.Uuid
-  principal         principal         @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_actor_fk")
-  entity_change_set entity_change_set @relation(fields: [change_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_changeset_fk")
-  entity            entity            @relation(fields: [entity_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_entity_fk")
-  tenant            tenant?           @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_tenant_fk")
+  id                 String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id          String?           @db.Uuid
+  entity_id          String            @db.Uuid
+  change_set_id      String            @db.Uuid
+  capability_key     String
+  declaration        Json
+  binding            Json?
+  created_at         DateTime          @default(now()) @db.Timestamptz(6)
+  created_by         String            @db.Uuid
+  updated_at         DateTime?         @db.Timestamptz(6)
+  updated_by         String?           @db.Uuid
+  profile            Json?
+  profile_definition Json?
+  overrides          Json?
+  principal          principal         @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_actor_fk")
+  entity_change_set  entity_change_set @relation(fields: [change_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_changeset_fk")
+  entity             entity            @relation(fields: [entity_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_entity_fk")
+  tenant             tenant?           @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_tenant_fk")
 
   @@unique([tenant_id, change_set_id, capability_key])
   @@unique([tenant_id, id])
+  @@schema("metadata")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_change_case_binding {
+  id                                                         String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                  String?           @db.Uuid
+  entity_id                                                  String            @db.Uuid
+  change_set_id                                              String            @db.Uuid
+  entity_operation_id                                        String            @db.Uuid
+  binding_key                                                String
+  case_kind                                                  String
+  case_entity_code                                           String            @default("entity_case")
+  workflow_key                                               String?
+  materialization_binding_key                                String?
+  status                                                     String            @default("active")
+  created_at                                                 DateTime          @default(now()) @db.Timestamptz(6)
+  created_by                                                 String            @db.Uuid
+  updated_at                                                 DateTime?         @db.Timestamptz(6)
+  updated_by                                                 String?           @db.Uuid
+  entity_change_set                                          entity_change_set @relation(fields: [change_set_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_change_case_binding_change_set_fk")
+  principal_entity_change_case_binding_created_byToprincipal principal         @relation("entity_change_case_binding_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_change_case_binding_created_by_fk")
+  entity                                                     entity            @relation(fields: [entity_id], references: [id], onUpdate: NoAction, map: "entity_change_case_binding_entity_fk")
+  entity_operation                                           entity_operation  @relation(fields: [entity_operation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_change_case_binding_operation_fk")
+  principal_entity_change_case_binding_updated_byToprincipal principal?        @relation("entity_change_case_binding_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_case_binding_updated_by_fk")
+
+  @@unique([tenant_id, change_set_id, binding_key], map: "entity_change_case_binding_key_uq")
+  @@unique([tenant_id, entity_operation_id], map: "entity_change_case_binding_operation_uq")
+  @@unique([tenant_id, id], map: "entity_change_case_binding_tenant_id_uq")
   @@schema("metadata")
 }
 
@@ -7621,6 +7668,7 @@ model entity_change_set {
   updated_by                                                                     String?                                   @db.Uuid
   atlas_learning_inbox                                                           atlas_learning_inbox[]
   entity_capability                                                              entity_capability[]
+  entity_change_case_binding                                                     entity_change_case_binding[]
   principal_entity_change_set_approved_byToprincipal                             principal?                                @relation("entity_change_set_approved_byToprincipal", fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_approved_by_fk")
   entity_release_entity_change_set_base_release_idToentity_release               entity_release?                           @relation("entity_change_set_base_release_idToentity_release", fields: [base_release_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_base_release_fk")
   principal_entity_change_set_created_byToprincipal                              principal                                 @relation("entity_change_set_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_change_set_created_by_fk")
@@ -7636,14 +7684,17 @@ model entity_change_set {
   entity_contract_test_case                                                      entity_contract_test_case[]
   entity_field                                                                   entity_field[]
   entity_field_policy_binding                                                    entity_field_policy_binding[]
+  entity_field_reference_binding                                                 entity_field_reference_binding[]
   entity_flow                                                                    entity_flow[]
   entity_flow_step                                                               entity_flow_step[]
   entity_key                                                                     entity_key[]
   entity_key_field                                                               entity_key_field[]
   entity_lifecycle_binding                                                       entity_lifecycle_binding[]
   entity_lifecycle_operation_binding                                             entity_lifecycle_operation_binding[]
+  entity_materialization_binding                                                 entity_materialization_binding[]
   entity_numbering_binding                                                       entity_numbering_binding[]
   entity_operation                                                               entity_operation[]
+  entity_operation_context_requirement                                           entity_operation_context_requirement[]
   entity_operation_permission                                                    entity_operation_permission[]
   entity_operation_rule                                                          entity_operation_rule[]
   entity_operation_scope_binding                                                 metadata_entity_operation_scope_binding[]
@@ -7738,36 +7789,37 @@ model entity_contract_test_case {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model entity_field {
-  id                                           String                         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                    String?                        @db.Uuid
-  entity_id                                    String                         @db.Uuid
-  change_set_id                                String                         @db.Uuid
+  id                                           String                           @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                    String?                          @db.Uuid
+  entity_id                                    String                           @db.Uuid
+  change_set_id                                String                           @db.Uuid
   field_key                                    String
   description                                  String?
   data_type                                    String
   type_config                                  Json
-  cardinality                                  String                         @default("one")
-  value_origin                                 String                         @default("stored")
-  write_mode                                   String                         @default("mutable")
+  cardinality                                  String                           @default("one")
+  value_origin                                 String                           @default("stored")
+  write_mode                                   String                           @default("mutable")
   storage_path                                 String?
   default_spec                                 Json?
   computation_spec                             Json?
   validation_spec                              Json?
-  data_classification                          String                         @default("internal")
+  data_classification                          String                           @default("internal")
   retention_policy_code                        String?
-  status                                       String                         @default("active")
+  status                                       String                           @default("active")
   replacement_field_key                        String?
   deprecated_since_release_no                  BigInt?
   planned_removal_release_no                   BigInt?
-  created_at                                   DateTime                       @default(now()) @db.Timestamptz(6)
-  created_by                                   String                         @db.Uuid
-  updated_at                                   DateTime?                      @db.Timestamptz(6)
-  updated_by                                   String?                        @db.Uuid
-  entity_change_set                            entity_change_set              @relation(fields: [change_set_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_field_change_set_fk")
-  principal_entity_field_created_byToprincipal principal                      @relation("entity_field_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_field_created_by_fk")
-  entity                                       entity                         @relation(fields: [entity_id], references: [id], onUpdate: NoAction, map: "entity_field_entity_fk")
-  principal_entity_field_updated_byToprincipal principal?                     @relation("entity_field_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_field_updated_by_fk")
+  created_at                                   DateTime                         @default(now()) @db.Timestamptz(6)
+  created_by                                   String                           @db.Uuid
+  updated_at                                   DateTime?                        @db.Timestamptz(6)
+  updated_by                                   String?                          @db.Uuid
+  entity_change_set                            entity_change_set                @relation(fields: [change_set_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_field_change_set_fk")
+  principal_entity_field_created_byToprincipal principal                        @relation("entity_field_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_field_created_by_fk")
+  entity                                       entity                           @relation(fields: [entity_id], references: [id], onUpdate: NoAction, map: "entity_field_entity_fk")
+  principal_entity_field_updated_byToprincipal principal?                       @relation("entity_field_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_field_updated_by_fk")
   entity_field_policy_binding                  entity_field_policy_binding[]
+  entity_field_reference_binding               entity_field_reference_binding[]
   entity_key_field                             entity_key_field[]
   entity_lifecycle_binding                     entity_lifecycle_binding[]
   entity_numbering_binding                     entity_numbering_binding[]
@@ -7817,6 +7869,37 @@ model entity_field_policy_binding {
   @@unique([tenant_id, id], map: "entity_field_policy_binding_tenant_id_uq")
   @@index([change_set_id, entity_field_id, binding_stage, priority], map: "entity_field_policy_binding_field_ix")
   @@index([policy_definition_id, change_set_id], map: "entity_field_policy_binding_policy_ix")
+  @@schema("metadata")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_field_reference_binding {
+  id                                                             String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                      String?           @db.Uuid
+  entity_id                                                      String            @db.Uuid
+  change_set_id                                                  String            @db.Uuid
+  entity_field_id                                                String            @db.Uuid
+  binding_key                                                    String
+  reference_kind                                                 String
+  target_entity_code                                             String?
+  lookup_domain                                                  String?
+  resolver_key                                                   String?
+  require_active                                                 Boolean           @default(true)
+  status                                                         String            @default("active")
+  created_at                                                     DateTime          @default(now()) @db.Timestamptz(6)
+  created_by                                                     String            @db.Uuid
+  updated_at                                                     DateTime?         @db.Timestamptz(6)
+  updated_by                                                     String?           @db.Uuid
+  entity_change_set                                              entity_change_set @relation(fields: [change_set_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_field_reference_binding_change_set_fk")
+  principal_entity_field_reference_binding_created_byToprincipal principal         @relation("entity_field_reference_binding_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_field_reference_binding_created_by_fk")
+  entity                                                         entity            @relation(fields: [entity_id], references: [id], onUpdate: NoAction, map: "entity_field_reference_binding_entity_fk")
+  entity_field                                                   entity_field      @relation(fields: [entity_field_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_field_reference_binding_field_fk")
+  principal_entity_field_reference_binding_updated_byToprincipal principal?        @relation("entity_field_reference_binding_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_field_reference_binding_updated_by_fk")
+
+  @@unique([tenant_id, entity_field_id], map: "entity_field_reference_binding_field_uq")
+  @@unique([tenant_id, change_set_id, binding_key], map: "entity_field_reference_binding_key_uq")
+  @@unique([tenant_id, id], map: "entity_field_reference_binding_tenant_id_uq")
   @@schema("metadata")
 }
 
@@ -8021,6 +8104,58 @@ model entity_lifecycle_operation_binding {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_materialization_binding {
+  id                                                             String                                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                      String?                                @db.Uuid
+  entity_id                                                      String                                 @db.Uuid
+  change_set_id                                                  String                                 @db.Uuid
+  binding_key                                                    String
+  target_entity_code                                             String
+  materializer_key                                               String
+  target_collection_key                                          String?
+  status                                                         String                                 @default("active")
+  created_at                                                     DateTime                               @default(now()) @db.Timestamptz(6)
+  created_by                                                     String                                 @db.Uuid
+  updated_at                                                     DateTime?                              @db.Timestamptz(6)
+  updated_by                                                     String?                                @db.Uuid
+  entity_change_set                                              entity_change_set                      @relation(fields: [change_set_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_materialization_binding_change_set_fk")
+  principal_entity_materialization_binding_created_byToprincipal principal                              @relation("entity_materialization_binding_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_materialization_binding_created_by_fk")
+  entity                                                         entity                                 @relation(fields: [entity_id], references: [id], onUpdate: NoAction, map: "entity_materialization_binding_entity_fk")
+  principal_entity_materialization_binding_updated_byToprincipal principal?                             @relation("entity_materialization_binding_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_materialization_binding_updated_by_fk")
+  entity_materialization_field_mapping                           entity_materialization_field_mapping[]
+
+  @@unique([tenant_id, change_set_id, binding_key], map: "entity_materialization_binding_key_uq")
+  @@unique([tenant_id, id], map: "entity_materialization_binding_tenant_id_uq")
+  @@schema("metadata")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_materialization_field_mapping {
+  id                                                                   String                         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                            String?                        @db.Uuid
+  entity_materialization_binding_id                                    String                         @db.Uuid
+  source_field_key                                                     String
+  target_field_key                                                     String
+  transform_key                                                        String?
+  required                                                             Boolean                        @default(false)
+  position                                                             Int                            @db.SmallInt
+  created_at                                                           DateTime                       @default(now()) @db.Timestamptz(6)
+  created_by                                                           String                         @db.Uuid
+  updated_at                                                           DateTime?                      @db.Timestamptz(6)
+  updated_by                                                           String?                        @db.Uuid
+  entity_materialization_binding                                       entity_materialization_binding @relation(fields: [entity_materialization_binding_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_materialization_field_mapping_binding_fk")
+  principal_entity_materialization_field_mapping_created_byToprincipal principal                      @relation("entity_materialization_field_mapping_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_materialization_field_mapping_created_by_fk")
+  principal_entity_materialization_field_mapping_updated_byToprincipal principal?                     @relation("entity_materialization_field_mapping_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_materialization_field_mapping_updated_by_fk")
+
+  @@unique([tenant_id, entity_materialization_binding_id, position], map: "entity_materialization_field_mapping_position_uq")
+  @@unique([tenant_id, entity_materialization_binding_id, source_field_key], map: "entity_materialization_field_mapping_source_uq")
+  @@unique([tenant_id, id], map: "entity_materialization_field_mapping_tenant_id_uq")
+  @@schema("metadata")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model entity_numbering_binding {
@@ -8086,6 +8221,7 @@ model entity_operation {
   created_by                                                        String                                    @db.Uuid
   updated_at                                                        DateTime?                                 @db.Timestamptz(6)
   updated_by                                                        String?                                   @db.Uuid
+  entity_change_case_binding                                        entity_change_case_binding[]
   entity_contract_test_case                                         entity_contract_test_case[]
   entity_field_policy_binding                                       entity_field_policy_binding[]
   entity_flow_entity_flow_completion_operation_idToentity_operation entity_flow[]                             @relation("entity_flow_completion_operation_idToentity_operation")
@@ -8096,6 +8232,7 @@ model entity_operation {
   principal_entity_operation_created_byToprincipal                  principal                                 @relation("entity_operation_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_operation_created_by_fk")
   entity                                                            entity                                    @relation(fields: [entity_id], references: [id], onUpdate: NoAction, map: "entity_operation_entity_fk")
   principal_entity_operation_updated_byToprincipal                  principal?                                @relation("entity_operation_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_operation_updated_by_fk")
+  entity_operation_context_requirement                              entity_operation_context_requirement[]
   entity_operation_permission                                       entity_operation_permission[]
   entity_operation_rule                                             entity_operation_rule[]
   entity_operation_scope_binding                                    metadata_entity_operation_scope_binding[]
@@ -8107,6 +8244,34 @@ model entity_operation {
   @@index([tenant_id, change_set_id, status, operation_kind, operation_key], map: "ix_entity_operation_change_set")
   @@index([tenant_id, permission_code, status], map: "ix_entity_operation_legacy_permission_code", where: raw("(permission_code IS NOT NULL)"))
   @@index([tenant_id, change_set_id, input_surface_key, result_surface_key], map: "ix_entity_operation_surfaces")
+  @@schema("metadata")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_operation_context_requirement {
+  id                                                                   String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                            String?           @db.Uuid
+  entity_id                                                            String            @db.Uuid
+  change_set_id                                                        String            @db.Uuid
+  entity_operation_id                                                  String            @db.Uuid
+  coordinate_key                                                       String
+  source_kind                                                          String
+  source_field_key                                                     String?
+  required                                                             Boolean           @default(true)
+  status                                                               String            @default("active")
+  created_at                                                           DateTime          @default(now()) @db.Timestamptz(6)
+  created_by                                                           String            @db.Uuid
+  updated_at                                                           DateTime?         @db.Timestamptz(6)
+  updated_by                                                           String?           @db.Uuid
+  entity_change_set                                                    entity_change_set @relation(fields: [change_set_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_operation_context_requirement_change_set_fk")
+  principal_entity_operation_context_requirement_created_byToprincipal principal         @relation("entity_operation_context_requirement_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_operation_context_requirement_created_by_fk")
+  entity                                                               entity            @relation(fields: [entity_id], references: [id], onUpdate: NoAction, map: "entity_operation_context_requirement_entity_fk")
+  entity_operation                                                     entity_operation  @relation(fields: [entity_operation_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_operation_context_requirement_operation_fk")
+  principal_entity_operation_context_requirement_updated_byToprincipal principal?        @relation("entity_operation_context_requirement_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_operation_context_requirement_updated_by_fk")
+
+  @@unique([tenant_id, id], map: "entity_operation_context_requirement_tenant_id_uq")
+  @@unique([tenant_id, entity_operation_id, coordinate_key], map: "entity_operation_context_requirement_uq")
   @@schema("metadata")
 }
 

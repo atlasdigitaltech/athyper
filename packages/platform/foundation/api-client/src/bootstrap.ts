@@ -18,6 +18,7 @@ export type LocaleCatalogStatus = "draft" | "translating" | "review" | "qualifie
 export interface ExperienceLocaleCatalog { readonly localeCode:SupportedLocale;readonly englishName:string;readonly nativeName:string;readonly direction:TextDirection;readonly rolloutWave:0|1|2|3;readonly status:LocaleCatalogStatus;readonly coveragePct:number;readonly linguisticReviewPassed:boolean;readonly layoutReviewPassed:boolean;readonly automatedTestsPassed:boolean;readonly qualified:boolean; }
 export interface ExperienceLocalePolicy { readonly planeKey:"studio"|"neon"|"mesh";readonly catalogs:readonly ExperienceLocaleCatalog[];readonly enabledLocales:readonly SupportedLocale[];readonly defaultLocale:SupportedLocale;readonly fallbackLocale:"en";readonly revision:string; }
 export interface ExperienceBootstrap {
+  readonly entityRoutes?: readonly EntityRouteAdmission[];
   readonly schemaVersion: 1; readonly state: "ready" | "context_not_ready"; readonly planeKey: SanitizedSession["plane"];
   readonly tenantId: string; readonly principalId: string; readonly revision: string; readonly profile: ExperienceProfile;
   readonly localization: EffectiveLocalization;
@@ -26,6 +27,21 @@ export interface ExperienceBootstrap {
   readonly tenant: Readonly<{ id: string; code: string; displayName: string;countryCode?:string;logoAssetRef?:string }>;
   readonly workspaces: readonly ExperienceWorkspace[]; readonly permissions: readonly string[];
   readonly features: Readonly<Record<string, ExperienceFeature>>; readonly nextActions: readonly ("select_context" | "retry_later")[];
+}
+
+export interface EntityRouteAdmission {
+  readonly sharedInfrastructure?: boolean;
+  readonly entityCode: string; readonly releaseId: string; readonly operation: "list" | "read";
+  readonly permissionCode: string; readonly workspaceCode: string; readonly moduleCode: string;
+}
+
+function parseEntityRoutes(value: unknown): readonly EntityRouteAdmission[] {
+  return array(value, "entityRoutes").map(candidate => {
+    const row = object(candidate, "entityRoute"), entityCode = text(row.entityCode, "entityCode"), releaseId = text(row.releaseId, "releaseId");
+    if (!/^[a-z][a-z0-9_]{1,62}$/.test(entityCode) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(releaseId)) throw new TypeError("Invalid published entity route");
+    return Object.freeze({ entityCode, releaseId, ...(row.sharedInfrastructure === undefined ? {} : { sharedInfrastructure: boolean(row.sharedInfrastructure, "sharedInfrastructure") }), operation: oneOf(row.operation, ["list", "read"] as const, "operation"),
+      permissionCode: code(row.permissionCode, "permissionCode"), workspaceCode: code(row.workspaceCode, "workspaceCode"), moduleCode: code(row.moduleCode, "moduleCode") });
+  });
 }
 
 export const experienceQueryKeys = Object.freeze({
@@ -48,9 +64,11 @@ export function parseExperienceBootstrap(value: unknown): ExperienceBootstrap {
   const featuresRecord = object(record.features, "features"), features: Record<string, ExperienceFeature> = {};
   for (const [key, candidate] of Object.entries(featuresRecord)) { const feature = object(candidate, `features.${key}`), featureCode = code(feature.code, `features.${key}.code`); if (featureCode !== key) throw new TypeError(`features.${key}.code must match its key`); features[key] = Object.freeze({ code: featureCode, enabled: boolean(feature.enabled, `features.${key}.enabled`), source: oneOf(feature.source, ["catalog_default", "rollout", "tenant_override", "kill_switch", "version_constraint"] as const, `features.${key}.source`) }); }
   const result: ExperienceBootstrap = { schemaVersion: 1, state, planeKey, tenantId: text(record.tenantId, "tenantId"), principalId: text(record.principalId, "principalId"), revision: text(record.revision, "revision"), identity,tenant,profile, localization,localePolicy, workspaces: Object.freeze(workspaces), permissions: strings(record.permissions, "permissions"), features: Object.freeze(features), nextActions: oneOfStrings(record.nextActions, ["select_context", "retry_later"] as const, "nextActions") };
+  const entityRoutes = record.entityRoutes === undefined ? undefined : parseEntityRoutes(record.entityRoutes);
+  if (entityRoutes?.length && state !== "ready") throw new TypeError("context_not_ready must not expose entity routes");
   if(result.tenant.id!==result.tenantId)throw new TypeError("tenant identity must match tenantId");
   if (state === "context_not_ready" && (result.workspaces.length || result.permissions.length || Object.keys(result.features).length)) throw new TypeError("context_not_ready bootstrap must not expose access");
-  return Object.freeze(result);
+  return Object.freeze({ ...result, ...(entityRoutes ? { entityRoutes: Object.freeze(entityRoutes) } : {}) });
 }
 
 export function parsePlatformBootstrap(value: unknown): PlatformBootstrap {

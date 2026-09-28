@@ -1,0 +1,7 @@
+Date: 2026-09-26
+Command: pnpm --dir server/apps/platform-host typecheck
+Exit: 2
+
+src/composition/entity-case-preflight.ts(2,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartnerCaseRepository'.
+
+1 diagnostic; 0 in register-services.ts. Preflight remains unchanged pending governance decisions.

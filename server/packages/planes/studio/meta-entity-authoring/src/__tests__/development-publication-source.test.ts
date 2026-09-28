@@ -1,9 +1,9 @@
 import { Kysely, PostgresDialect } from "kysely";
 import { expect, it, vi } from "vitest";
 import { KyselyMetaEntityAuthoringRepository } from "../kysely-authoring-repository.js";
-it("rejects a moved published head under the repository lock before creating a release", async () => {
+it.each(["older-release", null])("rejects a moved published head for expected source %s under the repository lock before creating a release", async expectedSourceReleaseId => {
   const query = vi.fn(async (text: string) => ({
-    rows: text.includes("status='approved'")
+    rows: text.startsWith("SELECT tenant_id FROM metadata.entity_change_set") ? [{ tenant_id: "tenant" }] : text.includes("status='approved'")
       ? [{ id: "draft", tenant_id: "tenant", entity_id: "entity" }]
       : text.includes("validation_status='valid'")
         ? [{ id: "snapshot", contract_hash: "expected" }]
@@ -21,11 +21,12 @@ it("rejects a moved published head under the repository lock before creating a r
   });
   try {
     await expect(
-      new KyselyMetaEntityAuthoringRepository(db).createRelease({
+      new KyselyMetaEntityAuthoringRepository(db, async () => {}).createRelease({
         changeSetId: "draft",
         expectedRevision: 1,
         actorId: "publisher",
-        expectedSourceReleaseId: "older-release",
+        expectedSourceReleaseId,
+        expectedContractHash: "expected",
         artifact: { contractHash: "expected" } as never,
         targetPlanes: ["neon"],
         releaseKind: "publish",

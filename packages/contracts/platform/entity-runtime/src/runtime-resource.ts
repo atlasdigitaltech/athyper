@@ -3,6 +3,8 @@
  * They deliberately contain references and authorized projections only: physical
  * storage bindings, policy evaluator inputs and handler internals stay server-side.
  */
+import { isObjectRecord, isBoundedNonBlankText } from "./validation/values";
+
 export type EntityRuntimeResourceState =
   | "ready"
   | "empty"
@@ -58,7 +60,7 @@ const keyPattern = /^[a-z][a-z0-9_.-]{0,126}$/;
 const hashPattern = /^sha256:[a-f0-9]{64}$/;
 
 function record(value: unknown, name: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value))
+  if (!isObjectRecord(value))
     throw new TypeError(`${name} must be an object`);
   return value as Record<string, unknown>;
 }
@@ -85,9 +87,7 @@ export function parseEntityRuntimeLocalizedText(
   if (
     typeof item.labelKey !== "string" ||
     !keyPattern.test(item.labelKey) ||
-    typeof item.defaultText !== "string" ||
-    !item.defaultText.trim() ||
-    item.defaultText.length > 500
+    !isBoundedNonBlankText(item.defaultText, 500)
   )
     throw new TypeError("localized text is invalid");
   return Object.freeze({ labelKey: item.labelKey, defaultText: item.defaultText });

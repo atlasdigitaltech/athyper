@@ -85,8 +85,11 @@ export function createRuntimeMetaCompiledEntityReleaseSource(
            AND (payload.tenant_id IS NULL OR payload.tenant_id=${coordinate.tenantId}::uuid)
            AND (${coordinate.releaseId ?? null}::text IS NULL OR payload.payload_json->'release'->>'releaseId'=${coordinate.releaseId ?? null})
            AND (${coordinate.releaseHash ?? null}::text IS NULL OR payload.payload_json->'release'->>'releaseHash'=${coordinate.releaseHash ?? null})
-         ORDER BY (payload.tenant_id IS NOT NULL) DESC,
-                  (payload.coordinates->>'entityCode'=${coordinate.entityCode}) DESC,
+         -- An entity's own publication outranks incidental reference members in
+         -- another entity's bundle. Tenant precedence applies within that tier.
+         -- Missing owner coordinates must not sort ahead of explicit ownership.
+         ORDER BY CASE WHEN payload.coordinates->>'entityCode'=${coordinate.entityCode} THEN 0 ELSE 1 END,
+                  (payload.tenant_id IS NOT NULL) DESC,
                   applied.activated_at DESC
          LIMIT 1
       `.execute(executor);

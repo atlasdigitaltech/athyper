@@ -5,23 +5,26 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./shared/preview/environment": "./src/shared/preview/environment.ts",
+    "./shared/case-contract/model": "./src/shared/case-contract/model.ts",
+    "./shared/collections/compiler": "./src/shared/collections/compiler.ts",
     "./kysely-publication-authority-work": "./src/kysely-publication-authority-work.ts",
     "./kysely-authority-repository": "./src/kysely-authority-repository.ts",
     "./kysely-local-projection-repository": "./src/kysely-local-projection-repository.ts",
     "./publication-artifact-loader": "./src/publication-artifact-loader.ts",
     "./publication-orchestrator": "./src/publication-orchestrator.ts",
-    "./business-partner-foundation-definition": "./src/business-partner-foundation-definition.ts",
-    "./business-partner-definition-compiler": "./src/business-partner-definition-compiler.ts",
+    "./entity-foundation-definition": "./src/entity-foundation-definition.ts",
+    "./entity-definition-compiler": "./src/entity-definition-compiler.ts",
     "./compiled-entity-artifact-compiler": "./src/compiled-entity-artifact-compiler.ts",
     "./compiled-entity-collection-compiler": "./src/compiled-entity-collection-compiler.ts",
-    "./business-partner-case-contract-service": "./src/business-partner-case-contract-service.ts"
+    "./entity-case-contract-service": "./src/entity-case-contract-service.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
     "test:integration:publication-authority-repository": "pnpm exec tsx src/__tests__/integration/publication-authority-repository.mjs",
-    "test:integration:case-contract-publication": "tsx src/__tests__/integration/business-partner-case-contract-publication.ts",
+    "test:integration:case-contract-publication": "tsx src/__tests__/integration/entity-case-contract-publication.ts",
     "test:integration:three-plane": "pnpm exec tsx src/__tests__/integration/three-plane-local-projection.mjs"
   },
   "dependencies": {

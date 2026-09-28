@@ -1,0 +1,1755 @@
+{
+  "schema": "athyper.host-source-inventory/1",
+  "note": "Static candidate inventory; dynamic registrations require manual ownership review. No runtime or compilation verification.",
+  "files": [
+    {
+      "file": "src/composition/activity-presentation.ts",
+      "lines": 142,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/atlas-attachment-knowledge.ts",
+      "lines": 405,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 324,
+          "callee": "knowledge.registerSource"
+        },
+        {
+          "line": 380,
+          "callee": "registerContractRoute"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/atlas-document-grounding.ts",
+      "lines": 259,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/atlas-inference-admission.ts",
+      "lines": 156,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/atlas-record-question.ts",
+      "lines": 12,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/atlas-semantic-index.ts",
+      "lines": 369,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/authorization-management-config.ts",
+      "lines": 106,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/authorization-writer-databases.ts",
+      "lines": 78,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-action-runtime.ts",
+      "lines": 53,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-authorization-shadow.ts",
+      "lines": 647,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-backend-mapping.ts",
+      "lines": 268,
+      "missingLocalImports": [
+        {
+          "specifier": "./business-partner-permission-transitions.js",
+          "typeOnly": false,
+          "missing": true
+        }
+      ],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-bound-import.ts",
+      "lines": 69,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-context-admission.ts",
+      "lines": 23,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-definition-authorizer.ts",
+      "lines": 20,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-export-runtime.ts",
+      "lines": 27,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-import-runtime.ts",
+      "lines": 110,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-reference-admission.ts",
+      "lines": 26,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-stored-scopes.ts",
+      "lines": 157,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/business-partner-target-read-policy.ts",
+      "lines": 73,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/capability-registry.ts",
+      "lines": 84,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/comment-descendants.ts",
+      "lines": 24,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/coordination/entity-release-review/register.ts",
+      "lines": 13,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/create-container.ts",
+      "lines": 320,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/database-qualification.ts",
+      "lines": 64,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/dev-publication.ts",
+      "lines": 509,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/dev-runtime-publication.ts",
+      "lines": 345,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entities/collaboration/attachments.ts",
+      "lines": 177,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entities/collaboration/comments.ts",
+      "lines": 208,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entities/collaboration/contracts.ts",
+      "lines": 14,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entities/collaboration/index.ts",
+      "lines": 21,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entities/partner-capability-operations.ts",
+      "lines": 34,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entities/partner-section-contract.ts",
+      "lines": 31,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entities/record-display-choices.ts",
+      "lines": 99,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entity-attachment-admission.ts",
+      "lines": 116,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entity-authorization-registration.ts",
+      "lines": 55,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entity-case-backend-mapping.ts",
+      "lines": 44,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entity-case-preflight.ts",
+      "lines": 59,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entity-metadata-hooks.ts",
+      "lines": 62,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entity-release-review-deployment.ts",
+      "lines": 211,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/entity-runtime-handler-registry.ts",
+      "lines": 23,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/finance-routes.ts",
+      "lines": 441,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 52,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 78,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 95,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 123,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 160,
+          "callee": "registerContractRoute"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/graph-preview-ai-bindings.ts",
+      "lines": 31,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 18,
+          "callee": "registered[binding].includes"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/local-graph-preview.ts",
+      "lines": 281,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/local-verification-delivery.ts",
+      "lines": 40,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/mesh-exchange-readiness.ts",
+      "lines": 49,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/meta-entity-activation-inspection.ts",
+      "lines": 109,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/meta-entity-authoring-authorizer.ts",
+      "lines": 28,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/publication-plane.ts",
+      "lines": 23,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/publication-provenance-recovery.ts",
+      "lines": 57,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/register-adapters.ts",
+      "lines": 863,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 253,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 254,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 289,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 305,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 325,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 352,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 362,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 474,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 484,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 503,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 523,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 540,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 557,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 621,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 642,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 660,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 669,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 696,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 715,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 767,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 792,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 804,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 816,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 828,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 833,
+          "callee": "lifecycle.onShutdown"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/register-contact-verification.ts",
+      "lines": 51,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 31,
+          "callee": "container.platform.httpRegistrars.push"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/register-invalidation-workers.ts",
+      "lines": 114,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 106,
+          "callee": "lifecycle.onShutdown"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/register-platform.ts",
+      "lines": 1761,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 194,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 195,
+          "callee": "registerIdentityContextDiscovery"
+        },
+        {
+          "line": 258,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 276,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 277,
+          "callee": "registerProjectionReconciliationRoutes"
+        },
+        {
+          "line": 284,
+          "callee": "registerProjectionReconciliationWorker"
+        },
+        {
+          "line": 285,
+          "callee": "registerExternalWorkerIdentityDelivery"
+        },
+        {
+          "line": 286,
+          "callee": "registerCustomerPortalDelivery"
+        },
+        {
+          "line": 287,
+          "callee": "registerIdentitySagaWorker"
+        },
+        {
+          "line": 289,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 290,
+          "callee": "registerIdentitySagaRoutes"
+        },
+        {
+          "line": 299,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 300,
+          "callee": "registerIamRoutes"
+        },
+        {
+          "line": 305,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 306,
+          "callee": "registerTrustedDeviceRoutes"
+        },
+        {
+          "line": 308,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 309,
+          "callee": "registerAuditRoutes"
+        },
+        {
+          "line": 387,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 431,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 474,
+          "callee": "registerIdentityReplayRoutes"
+        },
+        {
+          "line": 483,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 613,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 653,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 747,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 800,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 861,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 951,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 1095,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 1202,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 1723,
+          "callee": "container.runtimes.jobs?.register"
+        },
+        {
+          "line": 1728,
+          "callee": "container.runtimes.health.register"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/register-runtimes.ts",
+      "lines": 206,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 97,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 115,
+          "callee": "lifecycle.onShutdown"
+        },
+        {
+          "line": 117,
+          "callee": "lifecycle.onShutdown"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/register-services.ts",
+      "lines": 8181,
+      "missingLocalImports": [
+        {
+          "specifier": "./business-partner-case-authority.js",
+          "typeOnly": false,
+          "missing": true
+        },
+        {
+          "specifier": "./business-partner-qualification-runtime.js",
+          "typeOnly": false,
+          "missing": true
+        },
+        {
+          "specifier": "./business-partner-reveal-runtime.js",
+          "typeOnly": false,
+          "missing": true
+        },
+        {
+          "specifier": "./business-partner-case-runtime.js",
+          "typeOnly": false,
+          "missing": true
+        },
+        {
+          "specifier": "./business-partner-read-runtime.js",
+          "typeOnly": false,
+          "missing": true
+        },
+        {
+          "specifier": "./entities/business-partner-record-providers.js",
+          "typeOnly": false,
+          "missing": true
+        }
+      ],
+      "registrations": [
+        {
+          "line": 897,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 898,
+          "callee": "bpShadow.register"
+        },
+        {
+          "line": 1107,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 1108,
+          "callee": "registerExperienceRoutes"
+        },
+        {
+          "line": 1115,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 1132,
+          "callee": "registerPublication"
+        },
+        {
+          "line": 1271,
+          "callee": "registerContactVerification"
+        },
+        {
+          "line": 1349,
+          "callee": "registerNeonFinance"
+        },
+        {
+          "line": 1440,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 1441,
+          "callee": "registerFinanceRoutes"
+        },
+        {
+          "line": 1451,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 1452,
+          "callee": "registerFinanceHttpRoutes"
+        },
+        {
+          "line": 1459,
+          "callee": "registerFinanceJobHandlers"
+        },
+        {
+          "line": 1464,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 1484,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 1736,
+          "callee": "jobs.register"
+        },
+        {
+          "line": 1808,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 1809,
+          "callee": "registerParameterRoutes"
+        },
+        {
+          "line": 1818,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2020,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2021,
+          "callee": "registerControlServiceRoutes"
+        },
+        {
+          "line": 2029,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2030,
+          "callee": "registerCycleConfigRoutes"
+        },
+        {
+          "line": 2037,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2038,
+          "callee": "registerRuntimeCommandRoutes"
+        },
+        {
+          "line": 2045,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2046,
+          "callee": "registerAuthorizationManagementRoutes"
+        },
+        {
+          "line": 2053,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2068,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2093,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2111,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2124,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2143,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2153,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2217,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2218,
+          "callee": "registerBusinessPartnerProfilePublicationRoutes"
+        },
+        {
+          "line": 2233,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2305,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2306,
+          "callee": "registerBusinessPartnerBankDisclosureRoutes"
+        },
+        {
+          "line": 2321,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2392,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2393,
+          "callee": "registerBusinessPartnerNetworkExchangeRoutes"
+        },
+        {
+          "line": 2414,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2437,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2438,
+          "callee": "registerBusinessPartnerProfileProjectionRoutes"
+        },
+        {
+          "line": 2453,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2522,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2523,
+          "callee": "registerBusinessPartnerAccountBankLinkageRoutes"
+        },
+        {
+          "line": 2538,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2717,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 2738,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 2800,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 2889,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 2905,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 2978,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2979,
+          "callee": "registerGovernanceRoutes"
+        },
+        {
+          "line": 2991,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 2992,
+          "callee": "registerGovernanceComplianceRoutes"
+        },
+        {
+          "line": 3879,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 3880,
+          "callee": "registerEntityRuntimeRoutes"
+        },
+        {
+          "line": 3898,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 3898,
+          "callee": "registerCycleCompletionRoutes"
+        },
+        {
+          "line": 3904,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 3910,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4045,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4045,
+          "callee": "registerEntityIntakeOperationRoutes"
+        },
+        {
+          "line": 4132,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4133,
+          "callee": "registerBusinessPartnerRequestRoutes"
+        },
+        {
+          "line": 4149,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4150,
+          "callee": "registerBusinessPartnerGovernedImportRoutes"
+        },
+        {
+          "line": 4258,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4259,
+          "callee": "registerHrStage2Routes"
+        },
+        {
+          "line": 4432,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4433,
+          "callee": "registerBusinessPartnerRequestRoutes"
+        },
+        {
+          "line": 4449,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4450,
+          "callee": "registerGovernedInternalBusinessPartnerRoutes"
+        },
+        {
+          "line": 4465,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4466,
+          "callee": "registerWorkforceRoutes"
+        },
+        {
+          "line": 4472,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4473,
+          "callee": "registerSupplierWorkforceRequisitionRoutes"
+        },
+        {
+          "line": 4479,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4480,
+          "callee": "registerWorkerEngagementIamRoutes"
+        },
+        {
+          "line": 4486,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4487,
+          "callee": "registerWorkerEngagementLifecycleRoutes"
+        },
+        {
+          "line": 4493,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4494,
+          "callee": "registerBusinessPartnerInvitationRoutes"
+        },
+        {
+          "line": 4511,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4512,
+          "callee": "registerBusinessPartnerEligibilityRoutes"
+        },
+        {
+          "line": 4527,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4528,
+          "callee": "registerBusinessPartnerProfileMatchRoutes"
+        },
+        {
+          "line": 4543,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 4579,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 4619,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 4654,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 4688,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 4722,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 4745,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 4750,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 4771,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 4813,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 4846,
+          "callee": "registerStudioAuthoring"
+        },
+        {
+          "line": 4854,
+          "callee": "registerStudioOnboarding"
+        },
+        {
+          "line": 4901,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4902,
+          "callee": "registerCollaborationRoutes"
+        },
+        {
+          "line": 4940,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 4943,
+          "callee": "registerIntegrationJobs"
+        },
+        {
+          "line": 4959,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 4960,
+          "callee": "registerIntegrationRoutes"
+        },
+        {
+          "line": 5005,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5006,
+          "callee": "registerSavedViewRoutes"
+        },
+        {
+          "line": 5012,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5013,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5013,
+          "callee": "registerViewCollectionRoutes"
+        },
+        {
+          "line": 5219,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5227,
+          "callee": "registerJobAdministrationRoutes"
+        },
+        {
+          "line": 5236,
+          "callee": "jobs.register"
+        },
+        {
+          "line": 5241,
+          "callee": "jobs.register"
+        },
+        {
+          "line": 5260,
+          "callee": "jobs.register"
+        },
+        {
+          "line": 5273,
+          "callee": "jobs.register"
+        },
+        {
+          "line": 5278,
+          "callee": "jobs.register"
+        },
+        {
+          "line": 5283,
+          "callee": "jobs.register"
+        },
+        {
+          "line": 5288,
+          "callee": "jobs.register"
+        },
+        {
+          "line": 5300,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 5342,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 5370,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5407,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5408,
+          "callee": "registerNotificationRoutes"
+        },
+        {
+          "line": 5441,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5442,
+          "callee": "registerPolicyRoutes"
+        },
+        {
+          "line": 5589,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5590,
+          "callee": "registerEntityViewRoutes"
+        },
+        {
+          "line": 5602,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5602,
+          "callee": "registerReferenceChoiceRoutes"
+        },
+        {
+          "line": 5607,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5607,
+          "callee": "registerSharedReferenceDirectoryRoutes"
+        },
+        {
+          "line": 5687,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5688,
+          "callee": "registerEntityListRoutes"
+        },
+        {
+          "line": 5701,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5702,
+          "callee": "registerRecordBookmarkRoutes"
+        },
+        {
+          "line": 5709,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5710,
+          "callee": "registerRecordSnapshotRoutes"
+        },
+        {
+          "line": 5729,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5730,
+          "callee": "registerRecordTransferRoutes"
+        },
+        {
+          "line": 5733,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5734,
+          "callee": "registerPublicRecordTransferRoutes"
+        },
+        {
+          "line": 5736,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 5751,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 5792,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5793,
+          "callee": "registerRecordsRoutes"
+        },
+        {
+          "line": 5837,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 5845,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 5860,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5861,
+          "callee": "registerWorkflowRoutes"
+        },
+        {
+          "line": 5900,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 5926,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5927,
+          "callee": "registerDocumentSearchRoutes"
+        },
+        {
+          "line": 5950,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 5951,
+          "callee": "registerContentRoutes"
+        },
+        {
+          "line": 5981,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 6006,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 6029,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 6054,
+          "callee": "extractionScheduler?.schedule"
+        },
+        {
+          "line": 6057,
+          "callee": "derivativeScheduler?.schedule"
+        },
+        {
+          "line": 6113,
+          "callee": "lifecycle?.onShutdown"
+        },
+        {
+          "line": 6117,
+          "callee": "derivativeScheduler.schedule"
+        },
+        {
+          "line": 6118,
+          "callee": "extractionScheduler.schedule"
+        },
+        {
+          "line": 6120,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6120,
+          "callee": "registerAttachmentDiscoveryRoutes"
+        },
+        {
+          "line": 6123,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6124,
+          "callee": "registerAttachmentRoutes"
+        },
+        {
+          "line": 6140,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 6145,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 6150,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 6159,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 6305,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6310,
+          "callee": "container.runtimes.jobs?.register"
+        },
+        {
+          "line": 6315,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6316,
+          "callee": "registerDocumentRoutes"
+        },
+        {
+          "line": 6324,
+          "callee": "registerAtlas"
+        },
+        {
+          "line": 6332,
+          "callee": "registerVerification"
+        },
+        {
+          "line": 6348,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6349,
+          "callee": "registerAtlasExperienceRoutes"
+        },
+        {
+          "line": 6361,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 6381,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6382,
+          "callee": "registerAtlasSurfaceDraftRoutes"
+        },
+        {
+          "line": 6436,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6437,
+          "callee": "registerAtlasAttachmentKnowledge"
+        },
+        {
+          "line": 6717,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6718,
+          "callee": "registerAtlasRoutes"
+        },
+        {
+          "line": 6743,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 6757,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6758,
+          "callee": "registerAtlasSurfaceDraftRoutes"
+        },
+        {
+          "line": 6929,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 6941,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6942,
+          "callee": "registerAtlasRoutes"
+        },
+        {
+          "line": 6972,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6973,
+          "callee": "registerAtlasSurfaceDraftRoutes"
+        },
+        {
+          "line": 6980,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 6981,
+          "callee": "registerAtlasAdminRoutes"
+        },
+        {
+          "line": 6994,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 7012,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 7020,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 7332,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 7333,
+          "callee": "registerDevPublicationRoutes"
+        },
+        {
+          "line": 7336,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 7337,
+          "callee": "registerAtlasLearningInboxRoutes"
+        },
+        {
+          "line": 7373,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 7374,
+          "callee": "registerMetaEntityAuthoringRoutes"
+        },
+        {
+          "line": 7398,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 7458,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 7459,
+          "callee": "registerOnboardingRoutes"
+        },
+        {
+          "line": 7477,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 7533,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 7594,
+          "callee": "container.runtimes.health.register"
+        },
+        {
+          "line": 7606,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 7614,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 7622,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 7768,
+          "callee": "container.runtimes.jobs.register"
+        },
+        {
+          "line": 7925,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 7926,
+          "callee": "registerPublicationRoutes"
+        },
+        {
+          "line": 7937,
+          "callee": "registerBusinessPartnerCaseContractRoutes"
+        },
+        {
+          "line": 7946,
+          "callee": "registerBusinessPartnerCaseContractRoutes"
+        },
+        {
+          "line": 7956,
+          "callee": "registerBusinessPartnerDefinitionRoutes"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/scoped-meta-entity-authoring.ts",
+      "lines": 53,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-information-sla.ts",
+      "lines": 9,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-process-communications.ts",
+      "lines": 665,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-process-document-runtime.ts",
+      "lines": 171,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 36,
+          "callee": "registerContractRoute"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-process-documents.ts",
+      "lines": 702,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-process-edit-policy.ts",
+      "lines": 72,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-process-selection.ts",
+      "lines": 210,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 204,
+          "callee": "registerProcessSelectionPreviewRoutes"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-process-submission.ts",
+      "lines": 245,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-process-task-routes.ts",
+      "lines": 197,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 34,
+          "callee": "registerContractRoute"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-process-tasks.ts",
+      "lines": 742,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/supplier-process-workflow.ts",
+      "lines": 58,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/task-edit-policy-authoring.ts",
+      "lines": 115,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 101,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 102,
+          "callee": "registerContractRoute"
+        }
+      ],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/task-rule-publication.ts",
+      "lines": 75,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/tenant-publication-orchestrator.ts",
+      "lines": 48,
+      "missingLocalImports": [],
+      "registrations": [],
+      "syntaxDiagnostics": []
+    },
+    {
+      "file": "src/composition/verification-routes.ts",
+      "lines": 1099,
+      "missingLocalImports": [],
+      "registrations": [
+        {
+          "line": 107,
+          "callee": "registerWorkerProbe"
+        },
+        {
+          "line": 113,
+          "callee": "container.platform.httpRegistrars.push"
+        },
+        {
+          "line": 114,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 132,
+          "callee": "registerContractRoute"
+        },
+        {
+          "line": 921,
+          "callee": "container.runtimes.jobs.register"
+        }
+      ],
+      "syntaxDiagnostics": []
+    }
+  ]
+}

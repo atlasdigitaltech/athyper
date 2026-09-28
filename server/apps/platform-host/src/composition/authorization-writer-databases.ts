@@ -5,7 +5,7 @@ import { createNeonDatabaseAdapter } from "@athyper/server-adapter-db-neon";
 import { createMeshDatabaseAdapter } from "@athyper/server-adapter-db-mesh";
 
 type Plane = "studio" | "neon" | "mesh";
-export function createAuthorizationWriterDatabases(path: string) {
+export function createAuthorizationWriterDatabases(path: string, planes?: readonly Plane[]) {
   if (statSync(path).size > 65536)
     throw new Error("AUTHZ_WRITER_CONNECTIONS_INVALID");
   let input: any;
@@ -44,7 +44,7 @@ export function createAuthorizationWriterDatabases(path: string) {
     )
       throw new Error("AUTHZ_WRITER_CONNECTIONS_INVALID");
   }
-  const adapters = Object.entries(input.connections).map(
+  const adapters = Object.entries(input.connections).filter(([plane]) => !planes || planes.includes(plane as Plane)).map(
     ([plane, connectionString]) => ({
       plane: plane as Plane,
       adapter: factories[plane as Plane]({

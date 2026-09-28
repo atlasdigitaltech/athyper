@@ -24,7 +24,8 @@ const selectedProfile = parseEntityAuthorizationProfile({
       : o,
   ),
 });
-const mapping = createBusinessPartnerBackendMapping(selectedProfile);
+// This release uses exact permissions; no permission aliases are configured.
+const mapping = createBusinessPartnerBackendMapping(selectedProfile, []);
 const request = (
   permissionCode: string,
   resource: Record<string, unknown> = {},
@@ -100,7 +101,7 @@ it("routes legacy section amendment to the selected deferral without enabling it
       (o) => o.key !== "section_propose_change",
     ),
     deferredOperations: ["section_propose_change"],
-  });
+  }, []);
   expect(
     deferred.target(
       request("neon.relationship.business_partner_amend.create", {

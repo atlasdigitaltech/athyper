@@ -5,6 +5,15 @@
   "defaultScopeBehavior": "deny_undeclared",
   "permissions": [
     {
+      "permissionCode": "common.platform.reference.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "studio.ai.agent.use",
       "scopes": [
         {
@@ -142,6 +151,15 @@
       ]
     },
     {
+      "permissionCode": "studio.metadata.contract.publish_automated",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "studio.metadata.contract.review",
       "scopes": [
         {
@@ -215,6 +233,24 @@
         },
         {
           "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.publication_policy.activate",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.publication_policy.create",
+      "scopes": [
+        {
+          "kind": "tenant",
           "propagation": "exact"
         }
       ]
@@ -316,5 +352,5 @@
       ]
     }
   ],
-  "sha256": "65583ae45bb0ed956e1db14c989e6ddb9f3ab52f882fff805e87b410d8ab3e78"
+  "sha256": "0425cc24654a98a13a8f25d584eda9e9fb56fdf0aee6c3e355f8e78822ff0eba"
 }

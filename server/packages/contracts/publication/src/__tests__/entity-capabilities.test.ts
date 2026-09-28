@@ -16,6 +16,30 @@ const source = (name: string) =>
   JSON.parse(readFileSync(new URL(name, root), "utf8"));
 const bindings = () => source("operation.json");
 describe("typed entity capabilities", () => {
+  it.each(["studio", "neon", "mesh"])("qualifies exact common capability permissions in %s without bypassing registration", (plane) => {
+    const core = source("core.json"), op = bindings();
+    core.plane = op.plane = plane;
+    core.capabilities.attachments = { enabled: false };
+    delete op.attachmentBinding;
+    const binding = op.commentBinding;
+    binding.actions = [{ key: "read", permissionCode: "common.collaboration.comment.read", handlerKey: "platform.comments.read.v1", concurrency: "none", idempotency: "none" }];
+    binding.features = { replies: false, edits: false, reactions: false, mentions: false, drafts: false, reporting: false, history: false };
+    binding.reactionCodes = [];
+    binding.attachments = { allowed: false, maxCount: 0, pinVersion: true };
+    const artifacts = () => [core, op].map(parseCompiledEntityArtifact);
+    const registry = {
+      handlers: new Set(["platform.comments.v1", "platform.comments.read.v1"]),
+      permissions: new Set(["common.collaboration.comment.read"]),
+      resolvers: new Set(["platform.records.admission.v1"]),
+      renderers: new Set(["platform.comments.v1"]), evaluators: new Set<string>(),
+    };
+    expect(() => validateEntityCapabilities(artifacts(), registry)).not.toThrow();
+    registry.permissions.clear();
+    expect(() => validateEntityCapabilities(artifacts(), registry)).toThrow(/unregistered/);
+    registry.permissions.add("common.collaboration.comment.read");
+    registry.handlers.delete("platform.comments.read.v1");
+    expect(() => validateEntityCapabilities(artifacts(), registry)).toThrow(/unregistered/);
+  });
   it("defaults omitted capabilities to disabled and rejects unknown normative properties", () => {
     expect(
       parseCapabilityDeclaration(undefined, "comments", "customer"),

@@ -26,7 +26,7 @@ import {
   HistoryIcon,
   LibraryBigIcon,
   Maximize2Icon,
-  PanelRightIcon,
+  PinIcon,
   PlusIcon,
   SearchIcon,
   SlidersHorizontalIcon,
@@ -348,10 +348,10 @@ export function PlatformHome({
                   )
                 }
               >
-                <PanelRightIcon size={19} />
+                <PinIcon size={19} />
               </button>
             </Tooltip>
-            <Tooltip label="Open Atlas in full screen">
+            <Tooltip label="Open Atlas in full view">
               <a
                 href="/atlas?from=%2Fhome"
                 onClick={(event) => {
@@ -359,7 +359,7 @@ export function PlatformHome({
                   if (surface) surface.fullscreen();
                   else window.location.assign(atlas.fullscreenHref("/home"));
                 }}
-                aria-label="Open Atlas in full screen"
+                aria-label="Open Atlas in full view"
               >
                 <Maximize2Icon size={19} />
               </a>

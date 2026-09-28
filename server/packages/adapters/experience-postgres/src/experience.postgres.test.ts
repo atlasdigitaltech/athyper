@@ -38,7 +38,12 @@ describe.runIf(enabled)("experience projection against current all-plane DDL", (
         if (identity?.subscriptionPlanId) {
           const catalog = await repository.readCatalog(context, identity.subscriptionPlanId);
           expect(catalog).toBeDefined();
-          expect(catalog?.associations.map((entry) => [entry.workspaceSortOrder, entry.moduleSortOrder])).toEqual([...catalog!.associations].sort((a, b) => a.workspaceSortOrder - b.workspaceSortOrder || a.moduleSortOrder - b.moduleSortOrder).map((entry) => [entry.workspaceSortOrder, entry.moduleSortOrder]));
+          // Workspaces can share a sort order. Preserve workspace grouping and
+          // the repository's deterministic code tie-breakers before modules.
+          expect(catalog!.associations).toEqual([...catalog!.associations].sort((a, b) =>
+            a.workspaceSortOrder - b.workspaceSortOrder ||
+            a.workspaceCode.localeCompare(b.workspaceCode) ||
+            a.moduleSortOrder - b.moduleSortOrder || a.moduleCode.localeCompare(b.moduleCode)));
           if (plane === "studio") expect(catalog?.permissions.map((permission) => permission.code)).toContain("studio.platform.catalog.manage");
         }
         const features = await repository.readFeatures(context, new Date());

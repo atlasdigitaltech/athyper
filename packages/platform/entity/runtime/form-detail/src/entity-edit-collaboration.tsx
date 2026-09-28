@@ -1,4 +1,5 @@
 "use client";
+import { readCollaborationFull } from "./record/record-url-state";
 import { writeRecordLocation } from "./record/write-record-location";
 import { useEffect, useState, type ReactNode, type ComponentProps } from "react";
 import { EntityRuntimeWorkspace } from "./entity-runtime-workspace";
@@ -30,7 +31,7 @@ function read() {
       : new URLSearchParams(window.location.search);
   return {
     open: isCollaborationRequested(q.toString()),
-    full: q.get("collaborationMode") === "content",
+    full: readCollaborationFull(),
     section: q.get("collaborationSection") ?? "comments",
   };
 }
@@ -52,7 +53,7 @@ function ExistingRecordCollaboration({
     url.searchParams.set("panel", next.open ? "collaboration" : "closed");
     url.searchParams.set("collaborationSection", next.section);
     if (next.full) url.searchParams.set("collaborationMode", "content");
-    else url.searchParams.delete("collaborationMode");
+    else url.searchParams.set("collaborationMode", "side");
     writeRecordLocation(url, "push");
     setState(next);
   };
@@ -78,7 +79,7 @@ function ExistingRecordCollaboration({
                     : undefined
                 }
                 onClick={() => {
-                  change({ ...state, open: true, section: section.key });
+                  change({ ...state, full: state.open ? state.full : true, open: true, section: section.key });
                   window.dispatchEvent(
                     new CustomEvent("athyper:collaboration-open"),
                   );

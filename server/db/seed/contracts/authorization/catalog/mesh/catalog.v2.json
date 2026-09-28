@@ -6,6 +6,19 @@
   "idStrategy": "uuidv5:namespace=uuidv5(dns,athyper.authorization.catalog.v2);name={canonicalCode}",
   "permissions": [
     {
+      "permissionId": "51f45819-773a-566d-a4bc-69784c28afb2",
+      "canonicalCode": "common.platform.reference.view",
+      "product": "common",
+      "domain": "platform",
+      "entity": "reference",
+      "operation": "view",
+      "permissionKind": "capability",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "lifecycle": "proposed",
+      "definitionSha256": "62eeccb95220b38bf2bc138394ec753a6e9bc59be6a1a3d43a9a43c373bdb608"
+    },
+    {
       "permissionId": "350c8f62-aa90-5a2c-89bb-e7dcde74a8d7",
       "canonicalCode": "mesh.ai.agent.use",
       "product": "mesh",
@@ -448,5 +461,5 @@
       "definitionSha256": "6f0370db47043ec21e8f5a9a8a50fa91c376da4eaa57c8798b34b430b11c6b81"
     }
   ],
-  "sha256": "49c2beee6a1d8bf7d968109a7f88aea84fbac510a1fb0181ac3207ff1355ed35"
+  "sha256": "68e7ed06b58c004ce2d95c6f1d5936ebfa748be1a1a5faa6e9cf23820f8c5192"
 }

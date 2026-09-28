@@ -1,14 +1,22 @@
-# Existing DEV renderer only; no new instance or renderer is provisioned.
+# Existing qualified DEV renderer/parser; no new services are provisioned.
 # Overlay on ~/.athyper/instances/dev/workspace/source.compose.json.
 services:
   api:
     environment:
       PREVIEW_RENDERER_BASE_URL: http://preview-renderer:3000
+      DOCPARSER_URL: http://qualified-docparser:9998
+      DOCPARSER_MAX_INPUT_BYTES: "20971520"
+      DOCPARSER_MAX_TEXT_CHARS: "200000"
+      DOCPARSER_TIMEOUT_MS: "35000"
     networks:
       athyper-dev-preview: {}
   worker:
     environment:
       PREVIEW_RENDERER_BASE_URL: http://preview-renderer:3000
+      DOCPARSER_URL: http://qualified-docparser:9998
+      DOCPARSER_MAX_INPUT_BYTES: "20971520"
+      DOCPARSER_MAX_TEXT_CHARS: "200000"
+      DOCPARSER_TIMEOUT_MS: "35000"
     networks:
       athyper-dev-preview: {}
 networks:

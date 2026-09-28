@@ -1,4 +1,5 @@
-import { parseEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
+import { parseEntityIntakeSurfaces, parsePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
+import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceDescriptor, compileFieldPattern } from "@athyper/server-contract-metadata";
 import { parseEntityIntakeFlows } from "@athyper/contract-platform-entity-runtime";
 import { parseEntityAuthorizationRuntime } from "@athyper/server-contract-metadata";
 import { parseEntityAiDescriptor } from "@athyper/server-contract-metadata";
@@ -25,6 +26,12 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
   if (value["schema"] !== "athyper.entity-runtime-descriptor/1.0") throw new Error("Unsupported entity descriptor schema");
   if (row.plane_code !== "studio" && row.plane_code !== "neon" && row.plane_code !== "mesh" && row.plane_code !== "athyper") throw new Error("Invalid entity descriptor plane");
   const planeKey = normalizePlaneKey(row.plane_code as PlaneKeyInput);
+  const rawOperations = value["operations"];
+  if (value["referenceCapability"] === COMMON_REFERENCE_VIEW_PERMISSION ||
+      (rawOperations && typeof rawOperations === "object" && !Array.isArray(rawOperations) &&
+       Object.values(rawOperations).some(operation => operation && typeof operation === "object" && operation.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION))) {
+    assertCommonReferenceDescriptor(value, planeKey);
+  }
   if (value["entityCode"] !== row.entity_code || normalizePlaneKey(String(value["planeKey"]) as PlaneKeyInput) !== planeKey) throw new Error("Entity descriptor coordinate mismatch");
   const storage = object(value["storage"], "storage");
   const fields = array(value["fields"], "fields").map(parseField);
@@ -64,6 +71,7 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
   if (!Number.isSafeInteger(releaseNo) || releaseNo < 1) throw new Error("Invalid descriptor release number");
   return Object.freeze({
     schema: "athyper.entity-runtime-descriptor/1.0",
+    ...(value["referenceCapability"] === COMMON_REFERENCE_VIEW_PERMISSION ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION } : {}),
     entityCode: row.entity_code,
     ...(value["detailRouteTemplate"] === undefined ? {} : { detailRouteTemplate: routeTemplate(value["detailRouteTemplate"]) }),
     planeKey,
@@ -161,6 +169,7 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
     ...(schemaVersion ? { schemaVersion } : {}),
     ...(item["experience"] === undefined ? {} : { experience: parsePublishedListExperience(item["experience"]) }),
     ...(item["title"] === undefined ? {} : { title: string(item["title"], "listPresentation.title") }),
+    ...(item["localizedLabels"] === undefined ? {} : { localizedLabels: parsePresentationLocalization(item["localizedLabels"]) }),
     ...(item["description"] === undefined ? {} : { description: string(item["description"], "listPresentation.description") }),
     ...(item["identityField"] === undefined ? {} : { identityField: identifier(item["identityField"], "listPresentation.identityField") }),
     ...(item["defaultColumns"] === undefined ? {} : { defaultColumns: array(item["defaultColumns"], "listPresentation.defaultColumns").map((value) => identifier(value, "listPresentation.defaultColumns item")) }),
@@ -201,6 +210,7 @@ function validateListPresentation(presentation: EntityListPresentationDescriptor
     return field;
   };
   if (presentation.identityField) requireField(presentation.identityField, "listPresentation.identityField");
+  for (const key of Object.keys(presentation.localizedLabels?.fields ?? {})) requireField(key, "listPresentation.localizedLabels.fields");
   const columns = presentation.defaultState?.columns ?? presentation.defaultColumns ?? [];
   if (columns.length > 100) throw new Error("listPresentation default columns must not exceed one hundred fields");
   if (new Set(columns).size !== columns.length) throw new Error("listPresentation default columns must be unique");
@@ -237,6 +247,9 @@ function validateListPresentation(presentation: EntityListPresentationDescriptor
 
 function parseField(raw: unknown): EntityFieldDescriptor {
   const item = object(raw, "field");
+  const validation = item["validation"];
+  if (validation && typeof validation === "object" && Object.hasOwn(validation, "pattern"))
+    compileFieldPattern((validation as Record<string, unknown>)["pattern"]);
   const type = string(item["type"], "field.type") as EntityFieldDescriptor["type"];
   if (!["string","text","integer","decimal","money","boolean","date","datetime","uuid","enum","reference","json"].includes(type)) throw new Error(`Unsupported field type: ${type}`);
   const writableOn = array(item["writableOn"], "field.writableOn").map((entry) => string(entry, "field.writableOn"));

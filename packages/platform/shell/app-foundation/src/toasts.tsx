@@ -7,9 +7,10 @@ export interface ToastMessage {
   readonly title: string;
   readonly detail?: string;
   readonly tone: "info" | "success" | "warning" | "danger";
-  /** Success defaults to five seconds; other tones remain persistent. */
+  /** Success defaults to five seconds, or ten with an action; other tones remain persistent. */
   readonly durationMs?: number;
   readonly dedupeKey?: string;
+  readonly action?: { readonly label: string; readonly onClick: () => void };
 }
 const ToastContext = createContext<{
   messages: readonly ToastMessage[];
@@ -21,7 +22,7 @@ export function useToasts() {
   if (!value) throw new Error("useToasts requires ToastProvider");
   return value;
 }
-const transient = (message: Omit<ToastMessage,"id">) => (message.durationMs ?? (message.tone === "success" ? 5000 : 0)) > 0;
+const transient = (message: Omit<ToastMessage,"id">) => (message.durationMs ?? (message.tone === "success" ? (message.action ? 10000 : 5000) : 0)) > 0;
 
 /** Mounted inside the authenticated context boundary; stale async callers cannot repopulate it. */
 export function ToastProvider({children}: {children: ReactNode}) {
@@ -36,7 +37,7 @@ export function ToastProvider({children}: {children: ReactNode}) {
   },[]);
   const push = useCallback((message:Omit<ToastMessage,"id">)=>{
     if(!active.current)return "";
-    const duplicate=current.current.find(item=>message.dedupeKey ? item.dedupeKey===message.dedupeKey : item.tone===message.tone && item.title===message.title && item.detail===message.detail);
+    const duplicate=current.current.find(item=>message.dedupeKey ? item.dedupeKey===message.dedupeKey : !message.action && !item.action && item.tone===message.tone && item.title===message.title && item.detail===message.detail);
     if(duplicate)return duplicate.id;
     const id=`toast-${++sequence.current}`;
     // Routine successes replace one another; important persistent messages remain.
@@ -62,6 +63,50 @@ function GlobalToastHost({messages,dismiss}:{messages:readonly ToastMessage[];di
     document.addEventListener("visibilitychange",sync);sync();
     return()=>{observer.disconnect();document.removeEventListener("visibilitychange",sync);};
   },[]);
+  useEffect(() => {
+    if (!messages.length) return;
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const host = ref.current;
+        const region = host?.querySelector<HTMLElement>(".a-toast-region");
+        if (!host || !region) return;
+        const bounds = region.getBoundingClientRect();
+        let offset = 0;
+        for (const element of document.querySelectorAll<HTMLElement>("[data-toast-avoid]")) {
+          if (!element.getClientRects().length) continue;
+          const rect = element.getBoundingClientRect();
+          if (rect.right > bounds.left && rect.left < bounds.right && rect.bottom > window.innerHeight / 2 && rect.top < window.innerHeight)
+            offset = Math.max(offset, window.innerHeight - rect.top);
+        }
+        host.style.setProperty("--a-toast-bottom-offset", `${offset}px`);
+      });
+    };
+    const resize = new ResizeObserver(update);
+    resize.observe(document.body);
+    const observeControls = () => {
+      resize.disconnect();
+      resize.observe(document.body);
+      document.querySelectorAll("[data-toast-avoid]").forEach(node => resize.observe(node));
+      update();
+    };
+    const mutation = new MutationObserver(observeControls);
+    mutation.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+    document.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
+    observeControls();
+    return () => {
+      cancelAnimationFrame(frame);
+      resize.disconnect();
+      mutation.disconnect();
+      document.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+      ref.current?.style.removeProperty("--a-toast-bottom-offset");
+    };
+  }, [messages.length]);
   // Do not exempt notifications from modal isolation. Pause timers and announcements
   // until the background is usable again; the host never takes keyboard focus.
   return <div ref={ref} className="a-global-toast-host">
@@ -72,7 +117,7 @@ function GlobalToastHost({messages,dismiss}:{messages:readonly ToastMessage[];di
 }
 function TimedToast({message,blocked,dismiss}:{message:ToastMessage;blocked:boolean;dismiss:(id:string)=>void}) {
   const [hovered,setHovered]=useState(false),[focused,setFocused]=useState(false);
-  const remaining=useRef(message.durationMs ?? (message.tone==="success"?5000:0));
+  const remaining=useRef(message.durationMs ?? (message.tone==="success"?(message.action?10000:5000):0));
   useEffect(()=>{
     if(blocked || hovered || focused || remaining.current<=0)return;
     const start=Date.now(),timer=window.setTimeout(()=>dismiss(message.id),remaining.current);
@@ -83,6 +128,7 @@ function TimedToast({message,blocked,dismiss}:{message:ToastMessage;blocked:bool
     onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
     onFocusCapture={()=>setFocused(true)} onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFocused(false);}}>
     {message.detail?<p>{message.detail}</p>:null}
+    {message.action ? <Button className="a-global-toast__action" variant="ghost" onClick={() => { message.action!.onClick(); dismiss(message.id); }}>{message.action.label}</Button> : null}
     <Button variant="ghost" size="icon" aria-label="Dismiss notification" onClick={()=>dismiss(message.id)}>×</Button>
   </Toast>;
 }

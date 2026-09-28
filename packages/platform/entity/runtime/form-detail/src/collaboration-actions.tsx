@@ -3,6 +3,7 @@ import { Tooltip, registerModalBranch } from "@athyper/platform-ui";
 import { createPortal } from "react-dom";
 import { MoreHorizontalIcon } from "@athyper/platform-icons";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import type { IntlRuntime } from "@athyper/platform-i18n";
 
 /** Native disclosure keeps actions keyboard accessible without browser prompts. */
 export function CollaborationActions({
@@ -34,7 +35,12 @@ export function CollaborationActions({
     document.addEventListener("pointerdown", outside);
     document.addEventListener("keydown", escape);
     const reposition = (event: Event) => {
-      if (portal && !(event.target instanceof Node && menuRef.current?.contains(event.target))) close();
+      if (!portal || !ref.current?.open || (event.target instanceof Node && menuRef.current?.contains(event.target))) return;
+      const anchor = ref.current.getBoundingClientRect();
+      if (anchor.bottom < 0 || anchor.top > window.innerHeight) { close(); return; }
+      // Opening a menu can follow a browser scroll-to-focus event. Keep it
+      // anchored instead of immediately dismissing the user's action.
+      setPosition({ top: anchor.bottom + 4, left: anchor.right - 208 });
     };
     window.addEventListener("resize", reposition);
     document.addEventListener("scroll", reposition, true);
@@ -78,25 +84,25 @@ export function CollaborationActions({
   </details></Tooltip>;
 
 }
-export function collaborationTime(value: unknown) {
+export function collaborationTime(value: unknown, intl?: IntlRuntime) {
   const date = new Date(String(value));
   return Number.isNaN(date.getTime())
     ? ""
-    : new Intl.DateTimeFormat(undefined, {
+    : intl ? intl.date(date, {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : new Intl.DateTimeFormat(undefined, {
         month: "short",
         day: "numeric",
         hour: "numeric",
         minute: "2-digit",
       }).format(date);
 }
-export function collaborationFileSize(value: unknown) {
+export function collaborationFileSize(value: unknown, intl?: IntlRuntime) {
   if (value === null || value === undefined) return "";
   const bytes = Number(value);
   return Number.isFinite(bytes)
     ? bytes < 1024
-      ? `${bytes} B`
+      ? `${intl ? intl.number(bytes) : bytes} B`
       : bytes < 1024 * 1024
-        ? `${Math.round(bytes / 1024)} KB`
-        : `${(bytes / 1024 / 1024).toFixed(1)} MB`
+        ? `${intl ? intl.number(Math.round(bytes / 1024)) : Math.round(bytes / 1024)} KB`
+        : `${intl ? intl.number(bytes / 1024 / 1024, {minimumFractionDigits:1,maximumFractionDigits:1}) : (bytes / 1024 / 1024).toFixed(1)} MB`
     : "";
 }

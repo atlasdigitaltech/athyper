@@ -1,11 +1,18 @@
 import { collaborationEntityCode, collaborationEntityTypes } from "@athyper/server-platform-collaboration";
 import { parseCollectionState } from "@athyper/contract-platform-collection";
-import {createPartnerCapabilityOperations} from './entities/partner-capability-operations.js';
 import { activityCollectionState, collectionActivityQuery, type ActivityQuery } from "@athyper/contract-platform-activity";
 import { createActivityPresentation } from "./activity-presentation.js";
 import { createCollaborationSectionProviders } from "./entities/collaboration/index.js";
-import { businessPartnerContextAdmission } from "./business-partner-context-admission.js";
-import { admitBusinessPartnerProfileReferences } from "./business-partner-reference-admission.js";
+import { registerStudioOnboarding } from "./spaces/studio/trustiam/onb/register.js";
+import { registerEntityMetadata } from "./shared/entity-runtime/metadata.js";
+import { readPublishedEntityRouteCandidates } from "./shared/entity-runtime/route-admission.js";
+import { createEntityReadRuntime } from "./shared/entity-runtime/read-runtime.js";
+import { createEntityCollaborationService, createPublishedSummaryService } from "@athyper/server-platform-experience";
+import { createEntityReadRegistrations } from "./shared/entity-runtime/read-registrations.js";
+import { createPublishedParentAdmission } from "./shared/entity-runtime/published-parent-admission.js";
+import { createPublishedRecordHeader } from "./shared/entity-runtime/published-record-header.js";
+import { registerEntityReadHttp } from "./shared/entity-runtime/routes.js";
+import { createPlaneTransactionCoordinator } from "./infrastructure/transactions.js";
 import { createEntityAttachmentAdmission, type AttachmentCapabilitySubject } from "./entity-attachment-admission.js";
 import { createAttachmentDiscoveryService, registerAttachmentDiscoveryRoutes } from "@athyper/server-service-attachments";
 import { createRecordParticipantResolver } from "@athyper/server-platform-experience";
@@ -13,35 +20,12 @@ import { createKyselyPermissionResolver } from "@athyper/server-platform-iam";
 import { expireCommentDrafts } from "@athyper/server-platform-collaboration";
 import { createEntityCapabilityPolicy, EntityCapabilityPolicyError, canReplyAtDepth } from "@athyper/server-platform-experience";
 import { createMetaEntityActivationInspector } from "./meta-entity-activation-inspection.js";
-import { sweepSupplierInformation } from "./supplier-information-sla.js";
 import { createTaskEditPolicyAuthoring, mountTaskEditPolicyAuthoring } from "./task-edit-policy-authoring.js";
-import { createSupplierProcessCommunications } from "./supplier-process-communications.js";
 import { HttpError } from "@athyper/server-runtime-http";
-import type { Authorizer } from "@athyper/server-contract-auth";
-import { createSupplierProcessDocuments } from "./supplier-process-documents.js";
-import { mountSupplierProcessDocuments, createSupplierProcessDocumentPoll } from "./supplier-process-document-runtime.js";
-import { createSupplierProcessTasks } from "./supplier-process-tasks.js";
-import { createSupplierProcessEditPolicy } from "./supplier-process-edit-policy.js";
-import { mountSupplierProcessTasks } from "./supplier-process-task-routes.js";
-import { createSupplierProcessSubmission } from "./supplier-process-submission.js";
-import { createKyselyProcessDocumentIntentPort } from "@athyper/server-platform-governance";
-import { createSupplierProcessSelectionService, mountSupplierProcessSelectionPreview } from "./supplier-process-selection.js";
-import { supplierRequirementSurface } from "@athyper/server-service-master-data";
-import { addressFormChoices, bankFormChoices, bankFormSources, createSharedReferenceDirectory, isSharedReferenceSourceKey, registerSharedReferenceDirectoryRoutes, requiresSharedReferenceDependency } from "@athyper/server-service-records";
-import { validateProfileIntake } from "@athyper/server-service-master-data";
-import {validateDataInput,dataFieldVisible} from "@athyper/server-contract-metadata";
-import { companySetupCaseInitialSchema, readPublishedNotificationConfiguration, readPublishedCollectionConfiguration } from "@athyper/server-service-publication";
-import {
-  createBusinessPartnerCompanyPilotService,
-  BP_COMPANY_PILOT_CASE_ENTITY,
-  BP_COMPANY_PILOT_ENTITY,
-  BP_COMPANY_PILOT_PERMISSION_PREFIX,
-  type BusinessPartnerRequestServiceOptions,
-} from "@athyper/server-service-master-data";
+import { addressFormChoices, bankFormChoices, bankFormSources, createSharedReferenceDirectory, isSharedReferenceSourceKey, requiresSharedReferenceDependency } from "@athyper/server-service-records";
+import { readPublishedNotificationConfiguration, readPublishedCollectionConfiguration } from "@athyper/server-service-publication";
 import { localGraphPreview } from "./local-graph-preview.js";
 import { prepareDocumentCollectionRelease } from "@athyper/server-plane-studio";
-import { businessPartnerInitialCaseSchema } from "@athyper/server-service-publication";
-import { businessPartnerCaseAuthority, localBusinessPartnerCaseAuthority } from "./business-partner-case-authority.js";
 import { RedisInferenceAdmission } from "./atlas-inference-admission.js";
 import { parseAtlasSemanticConfig } from "./atlas-semantic-index.js";
 import { createAtlasDocumentGrounding } from "./atlas-document-grounding.js";
@@ -49,38 +33,18 @@ import { registerAtlasAttachmentKnowledge } from "./atlas-attachment-knowledge.j
 import { createAuthenticatedEntityReleaseReview } from "@athyper/server-service-publication";
 import { getRequestContext as authoringRequestContext } from "@athyper/server-foundation/context";
 import { createMetaEntityAuthoringAuthorizer, createMetaEntityInspectionAuthorizer } from "./meta-entity-authoring-authorizer.js";
-import {
-  createBusinessPartnerQualificationRuntimeRegistrations,
-  qualificationPreflight,
-} from "./business-partner-qualification-runtime.js";
-import { createBusinessPartnerRevealRuntimeRegistrations } from "./business-partner-reveal-runtime.js";
 import { createScopedMetaEntityAuthoringRepository } from "./scoped-meta-entity-authoring.js";
 import { createDevRuntimePublication } from "./dev-runtime-publication.js";
 import { loadDevPublicationConfiguration, registerDevPublicationRoutes } from "./dev-publication.js";
-import {
-  createBusinessPartnerCaseRuntimeRegistrations,
-  assertBusinessPartnerCaseRuntimeSemantics,
-} from "./business-partner-case-runtime.js";
-import {
-  createBusinessPartnerReadRuntimeRegistrations,
-} from "./business-partner-read-runtime.js";
-import { createBusinessPartnerActionRuntimeRegistrations } from "./business-partner-action-runtime.js";
-import {
-  createBusinessPartnerBoundImport,
-  createBusinessPartnerImportRegistration,
-} from "./business-partner-bound-import.js";
-import {
-  isPublishedBusinessPartnerTargetRead,
-  isPublishedBusinessPartnerTargetReveal,
-} from "./business-partner-target-read-policy.js";
-import { businessPartnerImportPolicy } from "./business-partner-import-runtime.js";
-import { createBusinessPartnerExportRegistration } from "./business-partner-export-runtime.js";
-import { registerBusinessPartnerGovernedImportRoutes } from "@athyper/server-service-master-data";
-import { createPartnerClassificationService, registerPartnerClassificationRoutes } from "@athyper/server-service-master-data";
-import { createBusinessPartnerRecordProviders } from "./entities/business-partner-record-providers.js";
-import { createPartnerDecisionViews, createPartnerCompanyProfileViews } from "@athyper/server-service-master-data";
+import { registerPublicationWorkloadRoutes } from "./shared/publication/workload-routes.js";
+import { createCapabilityQualification } from "./shared/publication/capability-qualification.js";
+import { qualifyPreviewRenderer } from "@athyper/server-adapter-preview-renderer";
+import { loadPublicationWorkloadConfiguration } from "./shared/publication/workload-configuration.js";
+import { createCompiledRuntimePublication } from "./shared/publication/compiled-runtime.js";
 import { createRecordDisplayChoices } from "./entities/record-display-choices.js";
-import { createEntityAuthorizationRuntimeRegistry } from "@athyper/server-contract-metadata";
+import type { EntityAuthorizationRuntimeRegistration } from "@athyper/server-contract-metadata";
+import { createPublicationRuntimeQualification } from "./shared/entity-runtime/publication-qualification.js";
+import { prepareSystemReferenceRelease } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { createConfiguredAuthorizationManagement } from "./authorization-management-config.js";
 import {
   AtlasLearningCandidateService,
@@ -97,15 +61,10 @@ import {
   baselineJsonHash,
   sha256 as baselineContentHash,
 } from "@athyper/server-plane-studio";
-import { createBusinessPartnerStoredScopes } from "./business-partner-stored-scopes.js";
-import { createEntityCasePreflight } from "./entity-case-preflight.js";
+import { createEntityScopeRegistry, type EntityScopeBinding } from "./shared/entity-runtime/scope-registry.js";
+import { createEntityParentAdmission, type EntityParentScopeBinding } from "./shared/entity-runtime/parent-admission.js";
 import { createEntityCaseBackendMapping } from "./entity-case-backend-mapping.js";
 import { createKyselyContextRefresh } from "@athyper/server-platform-iam";
-import { createBusinessPartnerBackendMapping } from "./business-partner-backend-mapping.js";
-import {
-  createBusinessPartnerAuthorizationShadow,
-  createBusinessPartnerShadowScopes,
-} from "./business-partner-authorization-shadow.js";
 import { createAtlasBusinessContextResolver } from "@athyper/server-platform-ai";
 import { readFileSync } from "node:fs";
 import {
@@ -116,26 +75,12 @@ import {
   createAtlasLocalGenerationServices,
   parseAtlasLocalConfiguration,
 } from "@athyper/server-platform-ai";
-import {
-  queueLocalVerificationEmail,
-  localVerificationEmailHandler,
-} from "./local-verification-delivery.js";
-import {
-  KyselyContactChallengeRepository,
-  createContactVerificationAuthority,
-  createMasterDataAuthority,
-} from "@athyper/server-service-master-data";
+import { registerContactVerification, type ContactVerificationFactory } from "./register-contact-verification.js";
 import { createKyselyEntitlementRuntime } from "@athyper/server-platform-entitlements";
-import { registerMasterData } from "./register-master-data.js";
-import {
-  createProviderEvidenceVerifier,
-  KyselyMasterDataRepository,
-} from "@athyper/server-service-master-data";
-import type { MasterDataServiceOptions } from "@athyper/server-service-master-data";
 import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
-import { checkMeshExchangeReadiness } from "./mesh-exchange-readiness.js";
 import { TenantPublicationOrchestrator } from "./tenant-publication-orchestrator.js";
-import { createBusinessPartnerDefinitionAuthorizer } from "./business-partner-definition-authorizer.js";
+import { createRevisionAuthorizer, type RevisionPermissions } from "./shared/entity-runtime/revision-authorizer.js";
+import { createEntityRuntimeHandlerRegistry } from "./entity-runtime-handler-registry.js";
 import type {
   CommandExecutionStore,
   OutboxWriter,
@@ -217,13 +162,7 @@ import type {
   ParameterRepository,
   RoundingRepository,
 } from "@athyper/server-contract-control-admin";
-import {
-  createIamAuthenticationMiddleware,
-  createPermissionAuthorizer,
-  readSourcePermissionRequirement,
-  createShadowAuthorizer,
-  readVerifiedRequestContext,
-} from "@athyper/server-platform-iam";
+import { createIamAuthenticationMiddleware, createShadowAuthorizer, readVerifiedRequestContext } from "@athyper/server-platform-iam";
 import {
   createExperienceInvalidationHooks,
   createExperienceService,
@@ -236,17 +175,6 @@ import {
   registerExperienceRoutes,
 } from "@athyper/server-platform-experience";
 import { KyselyExperiencePlaneRepository } from "@athyper/server-adapter-experience-postgres";
-import {
-  createDistributedDescriptorCache,
-  createDistributedCompiledEntityArtifactCache,
-  createMetadataService,
-  createCompiledMetadataReader,
-  createRuntimeMetaCompiledEntityReleaseSource,
-  createRuntimeDescriptorRepository,
-  PinnedCompiledEntityReader,
-  CompiledEntityFlowReader,
-  projectPinnedIntakeApplication,
-} from "@athyper/server-platform-metadata";
 import {
   createCachedPolicyRepository,
   createKyselyPolicyRepository,
@@ -276,9 +204,7 @@ import {
   createKyselySavedViewRepository,
   createSavedViewService,
   registerSavedViewRoutes,
-  registerEntityViewRoutes,
   registerViewCollectionRoutes,
-  registerReferenceChoiceRoutes,
   createReferenceHistoryStore,
 } from "@athyper/server-platform-preferences";
 import {
@@ -287,29 +213,7 @@ import {
   createKyselyPrincipalDirectory,
   registerCollaborationRoutes,
 } from "@athyper/server-platform-collaboration";
-import {
-  REPORT_PACK_JOB,
-  REPORT_PACK_QUEUE,
-  REPORT_PACK_RECOVERY_JOB,
-  createChannelConsentService,
-  createCycleCertificationService,
-  createCycleDeviationService,
-  createCycleRunService,
-  createCycleTaskService,
-  createLegalHoldService,
-  createModerationService,
-  createReportPackJobHandler,
-  createReportPackRecoveryHandler,
-  createReportPackService,
-  KyselyChannelConsentRepository,
-  KyselyCommentModerationRepository,
-  KyselyCycleExecutionRepository,
-  KyselyLegalHoldRepository,
-  KyselyReportPackRepository,
-  registerGovernanceComplianceRoutes,
-  registerGovernanceRoutes,
-  registerCycleCompletionRoutes,
-} from "@athyper/server-platform-governance";
+import { REPORT_PACK_JOB, REPORT_PACK_QUEUE, REPORT_PACK_RECOVERY_JOB, createChannelConsentService, createCycleCertificationService, createCycleDeviationService, createCycleRunService, createCycleTaskService, createLegalHoldService, createModerationService, createReportPackJobHandler, createReportPackRecoveryHandler, createReportPackService, KyselyChannelConsentRepository, KyselyCommentModerationRepository, KyselyCycleExecutionRepository, KyselyLegalHoldRepository, KyselyReportPackRepository, registerGovernanceComplianceRoutes, registerGovernanceRoutes } from "@athyper/server-platform-governance";
 import {
   assertControlServiceRoutePlaneSafety,
   controlAdminFoundation,
@@ -341,110 +245,10 @@ import {
   type ControlServiceRouteFlags,
   type RuntimeCommandExecutor,
 } from "@athyper/server-platform-control-admin";
-import {
-  ATLAS_KNOWLEDGE_QUEUE,
-  ATLAS_MONITORING_QUEUE,
-  INGEST_ATLAS_KNOWLEDGE_JOB,
-  RUN_ATLAS_DRIFT_JOB,
-  AtlasAgentRuntime,
-  AtlasBindingRegistry,
-  AtlasProviderRegistry,
-  AtlasRegisteredToolCoordinator,
-  AtlasResponseFeedbackService,
-  KyselyAtlasResponseFeedbackStore,
-  createAtlasEntityRecordTool,
-  AtlasSurfaceDraftGenerator,
-  AtlasThreadService,
-  AtlasToolRegistry,
-  createAtlasRecordDataGateway,
-  createBusinessPartnerAtlasTools,
-  createBusinessPartnerCaseTools,
-  createBusinessPartnerInsightTools,
-  createBusinessPartnerAtlasCommandBus,
-  AtlasToolService,
-  AtlasExperienceConfigurationService,
-  KyselyAtlasAttachmentContextResolver,
-  KyselyAtlasExperienceConfigurationRepository,
-  KyselyAtlasTenantQuotaManager,
-  createAtlasA2Services,
-  createAtlasConversationServices,
-  createAtlasDriftHandler,
-  createAtlasKnowledgeIngestionHandler,
-  KyselyAtlasToolProposalStore,
-  registerAtlasAdminRoutes,
-  hasPermission as hasAtlasPermission,
-  registerAtlasExperienceRoutes,
-  registerAtlasRoutes,
-  registerAtlasSurfaceDraftRoutes,
-  type AtlasKnowledgeJobAuthority,
-  type AtlasPromptResolver,
-} from "@athyper/server-platform-ai";
-import {
-  createCommandEnvelopeFactory,
-  createGuestAccessExpiryHandler,
-  createOnboardingSaga,
-  createStudioCatalogMetadataReader,
-  createStudioMetadataDraftImportAdapter,
-  createStudioRecordCollectionScopeResolver,
-  EXPIRE_ONBOARDING_GUEST_ACCESS_JOB,
-  KyselyMetaEntityAuthoringRepository,
-  KyselyOnboardingSagaRepository,
-  MetaEntityAuthoringService,
-  OnboardingCaseLifecycleService,
-  OnboardingMaintenanceService,
-  ONBOARDING_MAINTENANCE_QUEUE,
-  PublicationServiceMetaEntityAdapter,
-  registerMetaEntityAuthoringRoutes,
-  prepareNotificationConfigurationRelease,
-  prepareCollectionConfigurationRelease,
-  registerOnboardingRoutes,
-} from "@athyper/server-plane-studio";
-import {
-  BUSINESS_PARTNER_DELIVERY_QUEUE,
-  BusinessPartnerDeliveryWorker,
-  createBusinessPartnerDeliveryHandler,
-  createBusinessPartnerReconciliationHandler,
-  createBusinessPartnerBankDisclosureService,
-  createBusinessPartnerNetworkExchangeService,
-  createHttpSelfRegistrationPolicyAdapter,
-  createBusinessPartnerProfilePublicationService,
-  createMeshRecordCollectionScopeResolver,
-  createMeshRelationshipRequestImportAdapter,
-  DELIVER_BUSINESS_PARTNER_EVENTS_JOB,
-  KyselyBusinessPartnerBankDisclosureRepository,
-  KyselyBusinessPartnerNetworkExchangeRepository,
-  KyselyBusinessPartnerDeliveryRepository,
-  KyselyBusinessPartnerProfilePublicationRepository,
-  RECONCILE_BUSINESS_PARTNER_EVENTS_JOB,
-  registerBusinessPartnerBankDisclosureRoutes,
-  registerBusinessPartnerNetworkExchangeRoutes,
-  resolveMeshNetworkAccountContext,
-  registerBusinessPartnerProfilePublicationRoutes,
-  type BusinessPartnerDeliveryItem,
-  type DeliveryDisposition,
-} from "@athyper/server-plane-mesh";
-import {
-  createBusinessPartnerAccountBankLinkageService,
-  createBusinessPartnerProfileMatchService,
-  createBusinessPartnerProfileProjectionService,
-  createNeonBusinessPartnerImportAdapter,
-  createNeonRecordCollectionScopeResolver,
-  financeJobDefinitions,
-  financeSliceOrder,
-  KyselyBusinessPartnerAccountBankRepository,
-  meshAccountBankPermissions,
-  KyselyBusinessPartnerProfileMatchRepository,
-  KyselyBusinessPartnerProfileProjectionRepository,
-  registerBusinessPartnerAccountBankLinkageRoutes,
-  registerBusinessPartnerProfileMatchRoutes,
-  registerBusinessPartnerProfileProjectionRoutes,
-  registerFinance as registerNeonFinance,
-  registerFinanceHttpRoutes,
-  registerFinanceJobHandlers,
-  type FinanceRegistrationPorts,
-  type MeshBankDisclosureEnvelope,
-  type MeshBusinessPartnerProfileEnvelope,
-} from "@athyper/server-plane-neon";
+import { ATLAS_KNOWLEDGE_QUEUE, ATLAS_MONITORING_QUEUE, INGEST_ATLAS_KNOWLEDGE_JOB, RUN_ATLAS_DRIFT_JOB, AtlasAgentRuntime, AtlasBindingRegistry, AtlasProviderRegistry, AtlasRegisteredToolCoordinator, AtlasResponseFeedbackService, KyselyAtlasResponseFeedbackStore, createAtlasEntityRecordTool, AtlasSurfaceDraftGenerator, AtlasThreadService, AtlasToolRegistry, createAtlasRecordDataGateway, AtlasToolService, AtlasExperienceConfigurationService, KyselyAtlasAttachmentContextResolver, KyselyAtlasExperienceConfigurationRepository, KyselyAtlasTenantQuotaManager, createAtlasA2Services, createAtlasConversationServices, createAtlasDriftHandler, createAtlasKnowledgeIngestionHandler, KyselyAtlasToolProposalStore, registerAtlasAdminRoutes, hasPermission as hasAtlasPermission, registerAtlasExperienceRoutes, registerAtlasRoutes, registerAtlasSurfaceDraftRoutes, type AtlasKnowledgeJobAuthority, type AtlasPromptResolver } from "@athyper/server-platform-ai";
+import { createStudioCatalogMetadataReader, createStudioMetadataDraftImportAdapter, createStudioRecordCollectionScopeResolver, KyselyMetaEntityAuthoringRepository, MetaEntityAuthoringService, PublicationServiceMetaEntityAdapter, registerMetaEntityAuthoringRoutes, prepareNotificationConfigurationRelease, prepareCollectionConfigurationRelease } from "@athyper/server-plane-studio";
+import { createMeshRecordCollectionScopeResolver, createMeshRelationshipRequestImportAdapter } from "@athyper/server-plane-mesh";
+import { createNeonRecordCollectionScopeResolver, financeJobDefinitions, financeSliceOrder, registerFinance as registerNeonFinance, registerFinanceHttpRoutes, registerFinanceJobHandlers, type FinanceRegistrationPorts } from "@athyper/server-plane-neon";
 import {
   createDeliverySweepHandler,
   createDurableNotificationDeliveryRepository,
@@ -571,120 +375,9 @@ import {
   createKyselyNumberingRepository,
   DefaultNumberingService,
 } from "@athyper/server-service-numbering";
-import {
-  createBusinessPartnerJournalActivityReader,
-  BookPeriodService,
-  CloseReadinessService,
-  FinanceNumberingService,
-  FinancePostingGuard,
-  KyselyBookPeriodRepository,
-  KyselyCloseReadinessRepository,
-  KyselyFinanceFoundationReader,
-  KyselyFinanceNumberingPolicyReader,
-  KyselyFinanceNumberingRepository,
-  KyselyRoundingPolicyReader,
-  RoundingResolver,
-  SnapshotFinanceSourceDocumentReader,
-  financeFoundation,
-  snapshotFinancePermissionChecker,
-} from "@athyper/server-service-finance";
-import {
-  BUSINESS_PARTNER_INVITATION_MAINTENANCE_QUEUE,
-  createBusinessPartnerEligibilityService,
-  createBusinessPartnerInvitationExpiryHandler,
-  createBusinessPartnerInvitationExternalGuard,
-  createBusinessPartnerInvitationService,
-  createBusinessPartnerRequestService,
-  createBusinessPartnerIntakeCommandMapper,
-  createBusinessPartnerIntakeOperationProvider,
-  createBusinessPartnerRequestValidator,
-  createGovernedInternalBusinessPartnerCaseService,
-  createSupplierActivationReevaluationHandler,
-  createSupplierQualificationExpiryHandler,
-  createSupplierWorkforceRequisitionService,
-  createSupplierWorkforceCommandGuard,
-  createWorkerEngagementIamService,
-  createWorkerEngagementLifecycleService,
-  createHttpSupplierWorkforceDistributionEligibility,
-  createWorkforceService,
-  createHrStage2Service,
-  EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB,
-  EXPIRE_SUPPLIER_QUALIFICATIONS_JOB,
-  KyselyBusinessPartnerEligibilityRepository,
-  evaluateSupplierOnboardingCompletion,
-  authorizeSupplierActivationReadiness,
-  KyselyBusinessPartnerInvitationRepository,
-  KyselyBusinessPartnerOnboardingCycleCoordinator,
-  KyselyBusinessPartnerCaseRepository,
-  KyselyGovernedInternalBusinessPartnerCaseRepository,
-  KyselyWorkforceRepository,
-  KyselyWorkforceRequestRepository,
-  KyselySupplierWorkforceRequisitionRepository,
-  KyselyWorkerEngagementIamRepository,
-  KyselyWorkerEngagementLifecycleRepository,
-  MasterDataError,
-  REEVALUATE_SUPPLIER_ACTIVATIONS_JOB,
-  registerBusinessPartnerEligibilityRoutes,
-  registerBusinessPartnerInvitationRoutes,
-  registerBusinessPartnerRequestRoutes,
-  registerGovernedInternalBusinessPartnerRoutes,
-  registerWorkforceRoutes,
-  registerHrStage2Routes,
-  registerSupplierWorkforceRequisitionRoutes,
-  registerWorkerEngagementIamRoutes,
-  registerWorkerEngagementLifecycleRoutes,
-  SUPPLIER_READINESS_MAINTENANCE_QUEUE,
-} from "@athyper/server-service-master-data";
-import {
-  createBusinessPartner360Service,
-  createBusinessPartnerAtlasInsightOwner,
-  createHttpBusinessPartner360MeshNetworkAdapter,
-  createLastValidBusinessPartner360DefinitionResolver,
-  createSecretStoreProtectedValueResolver,
-  createUnavailableBusinessPartner360ActivityProviders,
-  KyselyBusinessPartner360Repository,
-  parseBusinessPartner360Definition,
-  registerBusinessPartner360Routes,
-} from "@athyper/server-service-master-data";
-import {
-  BUSINESS_PARTNER_360_PERMISSIONS,
-  parseSupplierWorkforcePolicyCoordinates,
-} from "@athyper/server-contract-master-data";
+import { BookPeriodService, CloseReadinessService, FinanceNumberingService, FinancePostingGuard, KyselyBookPeriodRepository, KyselyCloseReadinessRepository, KyselyFinanceFoundationReader, KyselyFinanceNumberingPolicyReader, KyselyFinanceNumberingRepository, KyselyRoundingPolicyReader, RoundingResolver, SnapshotFinanceSourceDocumentReader, financeFoundation, snapshotFinancePermissionChecker } from "@athyper/server-service-finance";
 import { registerFinanceRoutes } from "./finance-routes.js";
-import {
-  createKyselyRecordRepository,
-  createKyselyCommandExecutionStore,
-  createEntityBackendAuthorizer,
-  createRecordMutationService,
-  createRecordListExecutor,
-  createRecordQueryService,
-  createEntityListService,
-  createRecordBookmarkService,
-  createRecordSnapshotService,
-  KyselyRecordSnapshotRepository,
-  registerRecordSnapshotRoutes,
-  registerRecordsRoutes,
-  registerEntityListRoutes,
-  parseEntityListScopeCoordinate,
-  registerRecordBookmarkRoutes,
-  KyselyRecordTransferStore,
-  createMetadataImportRowValidator,
-  createObjectStorageRecordTransferArtifactStore,
-  createObjectStorageImportWorkbookIntake,
-  createRecordTransferJobDispatcher,
-  createRecordTransferService,
-  createRecordImportHandler,
-  GovernedImportAdapterRegistry,
-  createRecordExportHandler,
-  registerRecordTransferRoutes,
-  registerPublicRecordTransferRoutes,
-  RECORD_TRANSFER_QUEUE,
-  EXECUTE_RECORD_IMPORT_JOB,
-  EXECUTE_RECORD_EXPORT_JOB,
-  MAINTAIN_RECORD_TRANSFERS_JOB,
-  RECORD_TRANSFER_MAINTENANCE_QUEUE,
-  createRecordTransferMaintenanceHandler,
-} from "@athyper/server-service-records";
+import { createKyselyRecordRepository, createKyselyCommandExecutionStore, createEntityBackendAuthorizer, createRecordMutationService, createRecordBookmarkService, createRecordSnapshotService, KyselyRecordSnapshotRepository, registerRecordsRoutes, parseEntityListScopeCoordinate, KyselyRecordTransferStore, createMetadataImportRowValidator, createObjectStorageRecordTransferArtifactStore, createObjectStorageImportWorkbookIntake, createRecordTransferJobDispatcher, createRecordTransferService, createRecordImportHandler, GovernedImportAdapterRegistry, createRecordExportHandler, registerRecordTransferRoutes, registerPublicRecordTransferRoutes, RECORD_TRANSFER_QUEUE, EXECUTE_RECORD_IMPORT_JOB, EXECUTE_RECORD_EXPORT_JOB, MAINTAIN_RECORD_TRANSFERS_JOB, RECORD_TRANSFER_MAINTENANCE_QUEUE, createRecordTransferMaintenanceHandler } from "@athyper/server-service-records";
 import { sql, type Kysely, type Transaction } from "kysely";
 import { stampTransactionActor } from "@athyper/server-adapter-db-core";
 import {
@@ -692,45 +385,27 @@ import {
   MetaEntityArtifactSigner,
   sha256,
 } from "@athyper/server-adapter-publication-signing";
-import {
-  APPLY_PUBLICATION_RELEASE_JOB,
-  COMPILE_PUBLICATION_ARTIFACT_JOB,
-  SIGN_PUBLICATION_ARTIFACT_JOB,
-  DISPATCH_PUBLICATION_JOB,
-  createPublicationAuthorityHandlers,
-  createPublicationApplyHandler,
-  createPublicationRecoveryHandler,
-  createPublicationRollbackHandler,
-  KyselyLocalProjectionRepository,
-  LocalBusinessPartnerDefinitionConsumer,
-  LocalMeshBusinessPartnerDefinitionConsumer,
-  KyselyPublicationAuthorityRepository,
-  KyselyPublicationAuthorityWork,
-  BusinessPartnerDefinitionService,
-  BusinessPartnerCaseContractService,
-  registerBusinessPartnerCaseContractRoutes,
-  KyselyPublicationOperationsRepository,
-  PublicationOrchestrator,
-  PublicationOperationsService,
-  PUBLICATION_APPLY_QUEUE,
-  PUBLICATION_AUTHORITY_QUEUE,
-  PUBLICATION_MAINTENANCE_QUEUE,
-  RECOVER_STALLED_PUBLICATIONS_JOB,
-  ROLLBACK_PUBLICATION_RELEASE_JOB,
-  registerPublicationRoutes,
-  registerBusinessPartnerDefinitionRoutes,
-  VerifiedPublicationArtifactLoader,
-} from "@athyper/server-service-publication";
+import { APPLY_PUBLICATION_RELEASE_JOB, COMPILE_PUBLICATION_ARTIFACT_JOB, SIGN_PUBLICATION_ARTIFACT_JOB, DISPATCH_PUBLICATION_JOB, createPublicationAuthorityHandlers, createPublicationApplyHandler, createPublicationRecoveryHandler, createPublicationRollbackHandler, KyselyLocalProjectionRepository, KyselyPublicationAuthorityRepository, KyselyPublicationAuthorityWork, KyselyPublicationOperationsRepository, PublicationOrchestrator, PublicationOperationsService, PUBLICATION_APPLY_QUEUE, PUBLICATION_AUTHORITY_QUEUE, PUBLICATION_MAINTENANCE_QUEUE, RECOVER_STALLED_PUBLICATIONS_JOB, ROLLBACK_PUBLICATION_RELEASE_JOB, registerPublicationRoutes, VerifiedPublicationArtifactLoader } from "@athyper/server-service-publication";
 import type { PublicationPlane } from "@athyper/server-contract-publication";
 import type { HostConfig } from "../config/index.js";
 import type { Container } from "./create-container.js";
 import { registerVerification } from "./verification-routes.js";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 type RecordTransaction = Transaction<Record<string, never>>;
 
 export interface ServiceRegistrationDependencies {
-  readonly businessPartnerBackendAuthorizationTenantId?: string;
+  readonly compiledRuntimePublication?: ConstructorParameters<typeof KyselyPublicationAuthorityWork>[0]["compiledRuntimePublication"];
+  readonly entityParentScopeBindings?: readonly EntityParentScopeBinding[];
+  readonly taskPolicyPermissions?: RevisionPermissions;
+  readonly entityScopeBindings?: readonly EntityScopeBinding[];
+  readonly entityBackends?: readonly Omit<Parameters<typeof createEntityBackendAuthorizer>[0], "authority">[];
+  readonly documentBindings?: Pick<Parameters<typeof createDocumentService<RecordTransaction>>[0], "resolveTrustedSource" | "authorizeArtifact">;
+  readonly notificationPolicy?: Parameters<typeof createCollaborationNotificationPolicy>[0]["fallback"];
+  readonly entityResourceProviders?: Pick<Parameters<typeof createEntityRuntimeResourceService>[0], "headers" | "sections" | "summaries">;
+  readonly entityIntakeProviders?: Parameters<typeof registerEntityIntakeOperationRoutes>[1]["providers"];
+  /** Actual callable host bindings. Published metadata cannot populate this list. */
+  readonly entityAuthorizationRuntimeRegistrations?: readonly EntityAuthorizationRuntimeRegistration[];
   /** Read-only, bounded observer. No grant changes or enforce selection through this port. */
   /** Explicit deployment wiring to immutable authenticated review storage and
    * current reviewer authority; absence remains a compiler denial. */
@@ -752,16 +427,6 @@ export interface ServiceRegistrationDependencies {
         "scopes" | "refreshContext"
       >
     >;
-  readonly businessPartnerBackendAuthorization?: Omit<
-    Parameters<typeof createEntityBackendAuthorizer>[0],
-    "authority" | "owns" | "target" | "refreshContext"
-  > &
-    Partial<
-      Pick<
-        Parameters<typeof createEntityBackendAuthorizer>[0],
-        "refreshContext"
-      >
-    >;
   readonly entityAuthorizationShadow?: Omit<
     Parameters<typeof createShadowAuthorizer>[0],
     "authority"
@@ -769,13 +434,8 @@ export interface ServiceRegistrationDependencies {
   /** Immutable source/destination adapters required by qualified Neon finance slices. */
   readonly finance?: FinanceRegistrationPorts;
   readonly metadata?: MetadataReader;
-  /** Override the default PostgreSQL repository and optionally supply a trusted evidence verifier. */
-  readonly masterData?: Partial<
-    Pick<
-      MasterDataServiceOptions<RecordTransaction>,
-      "repository" | "evidenceVerifier"
-    >
-  >;
+  /** Optional trusted adapter; never inferred from configuration or replaced with a stub. */
+  readonly contactVerification?: ContactVerificationFactory;
   readonly repository?: RecordRepository<RecordTransaction>;
   readonly workflowRepository?: WorkflowRepository<RecordTransaction>;
   readonly workflowCommandExecutions?: CommandExecutionStore<
@@ -893,32 +553,8 @@ export function registerServices(
   config?: HostConfig,
   lifecycle?: LifecycleManager,
 ): void {
-  let intakeReferenceRecord: ReturnType<typeof createEntityListService>["record"] | undefined;
-  let intakeApplicationDescriptor: ReturnType<typeof createEntityListService>["applicationDescriptor"] | undefined;
-  let compiledBusinessPartnerApplicationDescriptor: ReturnType<typeof createEntityListService>["applicationDescriptor"] | undefined;
   const { iam, authorizer: baseAuthorizer, audit } = container.platform;
   if (!iam || !baseAuthorizer || !audit) return;
-  const bpShadow =
-    config?.businessPartnerAuthorizationShadow &&
-    container.adapters.neonDatabase
-      ? createBusinessPartnerAuthorizationShadow({
-          config: config.businessPartnerAuthorizationShadow,
-          scopes: createBusinessPartnerShadowScopes(
-            container.adapters.neonDatabase.database as unknown as Kysely<
-              Record<string, never>
-            >,
-          ),
-          emit: (event) => console.info(JSON.stringify(event)),
-        })
-      : undefined;
-  if (config?.businessPartnerAuthorizationShadow && !bpShadow)
-    throw new Error("BP shadow requires the NEON database");
-  if (bpShadow)
-    container.platform.httpRegistrars.push((application) =>
-      bpShadow.register(application),
-    );
-  let processDocumentAuthority: Authorizer | undefined;
-  let processReviewGate: ((context: VerifiedRequestContext, caseId: string, tx: RecordTransaction) => Promise<unknown>) | undefined;
   const refreshEntityContext = createKyselyContextRefresh({
     run: (identity, work) => {
       const adapter =
@@ -933,107 +569,11 @@ export function registerServices(
         .execute(work);
     },
   });
-  const caseScopes = () => {
-    if (!container.adapters.neonDatabase)
-      throw new Error("CASE_OWNERSHIP_DATABASE_UNAVAILABLE");
-    const database = container.adapters.neonDatabase
-      .database as unknown as Kysely<Record<string, never>>;
-    return createBusinessPartnerStoredScopes(
-      database,
-      createEntityCasePreflight(database),
-    );
-  };
   const observeAuthority = (authority: typeof baseAuthorizer) => {
-    if (
-      bpShadow &&
-      dependencies.businessPartnerBackendAuthorization?.rollout.mode ===
-        "enforce"
-    )
-      throw new Error(
-        "BP legacy shadow and target enforcement require separate rollout selections",
-      );
-    const bpBackend = dependencies.businessPartnerBackendAuthorization
-      ? createEntityBackendAuthorizer({
-          ...dependencies.businessPartnerBackendAuthorization,
-          ...createBusinessPartnerBackendMapping(
-            dependencies.businessPartnerBackendAuthorization.profile,
-          ),
-          owns: (
-            request: import("@athyper/server-contract-auth").AuthorizationRequest,
-          ) =>
-            (!dependencies.businessPartnerBackendAuthorizationTenantId ||
-              request.context.tenantId ===
-                dependencies.businessPartnerBackendAuthorizationTenantId) &&
-            (!dependencies.entityCaseBackendAuthorization ||
-              request.resource?.["entityCode"] !== "entity_case") &&
-            createBusinessPartnerBackendMapping(
-              dependencies.businessPartnerBackendAuthorization!.profile,
-            ).owns(request),
-          scopes: {
-            resolve: (input) =>
-              dependencies.businessPartnerBackendAuthorization!.scopes.resolve(
-                input,
-              ),
-            preflight: async (input) => {
-              if (
-                input.operationKey === "qualification" ||
-                input.operationKey === "qualification_company"
-              ) {
-                const service = container.services.businessPartnerEligibility;
-                return service
-                  ? qualificationPreflight(service, input)
-                  : "not_applicable";
-              }
-              if (
-                input.operationKey === "bank_reveal" ||
-                input.operationKey === "tax_reveal" || input.operationKey === "identifier_reveal"
-              ) {
-                if (!input.recordId) return "not_applicable";
-                return (
-                  container.services.businessPartner360?.preflightReveal?.({
-                    context: input.context,
-                    businessPartnerId: input.recordId,
-                    kind: input.operationKey === "bank_reveal" ? "bank" : input.operationKey === "identifier_reveal" ? "identifier" : "tax",
-                    historical: input.historical,
-                  }) ?? "not_applicable"
-                );
-              }
-              if (input.operationKey === "import")
-                return (
-                  container.services.businessPartnerGovernedImport?.preflight(
-                    input,
-                  ) ?? "not_applicable"
-                );
-              if (input.operationKey === "export") {
-                if (input.historical) return "workflow_blocked";
-                const transfers = container.services.records?.transfers;
-                if (!transfers) return "not_applicable";
-                await transfers.preflightExport(
-                  input.context,
-                  "business_partner",
-                  {
-                    ...(input.coordinates
-                      ? { scopeCoordinate: input.coordinates }
-                      : {}),
-                  },
-                );
-                return "allowed";
-              }
-              return dependencies.businessPartnerBackendAuthorization!.scopes.preflight(
-                input,
-              );
-            },
-          },
-          refreshContext:
-            dependencies.businessPartnerBackendAuthorization.refreshContext ??
-            refreshEntityContext,
-          authority: businessPartnerCaseAuthority(
-            authority,
-            dependencies.businessPartnerBackendAuthorization.profile,
-            dependencies.businessPartnerBackendAuthorizationTenantId,
-          ),
-        })
-      : dependencies.entityCaseBackendAuthorization ? authority : localBusinessPartnerCaseAuthority(authority);
+    const entityAuthority = (dependencies.entityBackends ?? []).reduce(
+      (current, binding) => createEntityBackendAuthorizer({ ...binding, authority: current }),
+      authority,
+    );
     const backend = dependencies.entityCaseBackendAuthorization
       ? createEntityBackendAuthorizer({
           ...dependencies.entityCaseBackendAuthorization,
@@ -1041,14 +581,17 @@ export function registerServices(
             dependencies.entityCaseBackendAuthorization.profile,
           ),
           scopes:
-            dependencies.entityCaseBackendAuthorization.scopes ?? caseScopes(),
+            dependencies.entityCaseBackendAuthorization.scopes ?? createEntityScopeRegistry(
+              dependencies.entityCaseBackendAuthorization.profile,
+              dependencies.entityScopeBindings ?? [],
+            ),
           refreshContext:
             dependencies.entityCaseBackendAuthorization.refreshContext ??
             refreshEntityContext,
-          authority: bpBackend,
+          authority: entityAuthority,
         })
-      : bpBackend;
-    const selected = bpShadow ? bpShadow.wrap(backend) : backend;
+      : entityAuthority;
+    const selected = backend;
     return dependencies.entityAuthorizationShadow
       ? createShadowAuthorizer({
           ...dependencies.entityAuthorizationShadow,
@@ -1057,6 +600,9 @@ export function registerServices(
       : selected;
   };
   const authorizer = observeAuthority(baseAuthorizer);
+  // Filled with the very same service instance mounted by the generic record routes.
+  // The publication callback resolves it when a job runs, not during bootstrap.
+  let installedReadQueries: ReturnType<typeof createEntityReadRuntime>["queries"] | undefined;
 
   const recordDatabases = {
     ...(container.adapters.neonDatabase
@@ -1112,6 +658,13 @@ export function registerServices(
     const experience = createExperienceService({
       repositories: experienceRepositories,
       cache: experienceCache,
+      readPublishedEntityRoutes: async context => {
+        const adapter = experienceAdapters[context.planeKey];
+        const metadata = container.platform.metadata;
+        if (!adapter || !metadata) return [];
+        return readPublishedEntityRouteCandidates(context, metadata, work =>
+          adapter.withTenantTransaction(tx => work(tx as unknown as Kysely<Record<string, never>>)));
+      },
       ...(config?.wave0.controlAdminParametersEnabled
         ? {
             readRuntimeDefaults: createExperienceParameterConsumer(
@@ -1188,64 +741,17 @@ export function registerServices(
         runtime: (() => {
           const runtime = {
             qualify(profile: unknown, bindings: unknown) {
-              assertBusinessPartnerCaseRuntimeSemantics(profile);
               if (dependencies.entityAuthorizationPublication) {
-                dependencies.entityAuthorizationPublication.runtime.qualify(
-                  profile,
-                  bindings,
-                );
+                dependencies.entityAuthorizationPublication.runtime.qualify(profile, bindings);
                 return;
               }
-              const cases = container.services.businessPartnerRequests;
-              if (!cases) throw Error("BP_CASE_RUNTIME_SERVICE_UNAVAILABLE");
-              const records = container.services.records;
-              const providers = container.services.businessPartner360;
-              if (!records?.surfaces || !providers)
-                throw Error("BP_READ_RUNTIME_SERVICE_UNAVAILABLE");
-              const imports = container.services.businessPartnerGovernedImport;
-              if (!imports)
-                throw Error("BP_IMPORT_RUNTIME_SERVICE_UNAVAILABLE");
-              if (!records.transfers)
-                throw Error("BP_EXPORT_RUNTIME_SERVICE_UNAVAILABLE");
-              const eligibility = container.services.businessPartnerEligibility;
-              if (!eligibility)
-                throw Error("BP_QUALIFICATION_RUNTIME_SERVICE_UNAVAILABLE");
-              createEntityAuthorizationRuntimeRegistry(
-                [
-                  ...createBusinessPartnerCaseRuntimeRegistrations(
-                    cases,
-                    caseScopes(),
-                  ),
-                  ...createBusinessPartnerReadRuntimeRegistrations(
-                    records.surfaces,
-                    providers,
-                    caseScopes(),
-                    (context, entityCode, scopeCoordinate) => { const surfaces = records.surfaces; if (!surfaces) throw Error("BP_READ_RUNTIME_SERVICE_UNAVAILABLE"); if (!compiledBusinessPartnerApplicationDescriptor) throw Error("COMPILED_ENTITY_APPLICATION_DESCRIPTOR_UNAVAILABLE"); return compiledBusinessPartnerApplicationDescriptor(context, entityCode, scopeCoordinate); },
-                  ),
-                  ...createBusinessPartnerRevealRuntimeRegistrations(
-                    providers,
-                    caseScopes(),
-                  ),
-                  ...createBusinessPartnerQualificationRuntimeRegistrations(
-                    eligibility,
-                    caseScopes(),
-                  ),
-                  ...createBusinessPartnerActionRuntimeRegistrations(
-                    cases,
-                    records.queries,
-                    caseScopes(),
-                  ),
-                  createBusinessPartnerImportRegistration(
-                    imports,
-                    caseScopes(),
-                  ),
-                  createBusinessPartnerExportRegistration(
-                    records.transfers,
-                    caseScopes(),
-                  ),
+              createPublicationRuntimeQualification({
+                registrations: [
+                  ...(dependencies.entityAuthorizationRuntimeRegistrations ?? []),
+                  ...(installedReadQueries ? createEntityReadRegistrations(installedReadQueries, profile) : []),
                 ],
-                { sourceConstraints: baseAuthorizer.checkSourceConstraints },
-              ).qualify(profile, bindings);
+                sourceConstraints: baseAuthorizer.checkSourceConstraints,
+              }).qualify(profile, bindings);
             },
           };
           localGraphRuntimeQualifiers.set(container, runtime);
@@ -1276,6 +782,19 @@ export function registerServices(
             return rows;
           }),
       },
+      dependencies.taskPolicyPermissions,
+      dependencies.compiledRuntimePublication ?? (() => {
+        if (config.mode !== "worker") return undefined;
+        const configuration = loadPublicationWorkloadConfiguration(process.env, config.env);
+        if (!configuration) return undefined;
+        const authority = metadataDatabases.studio;
+        if (!authority) throw Error("PUBLICATION_AUTHORITY_DATABASE_UNAVAILABLE");
+        return createCompiledRuntimePublication({ authority, configuration, targets() {
+          const targets = publicationTargetQualifications.get(container);
+          if (!targets) throw Error("PUBLICATION_TARGET_QUALIFICATION_UNAVAILABLE");
+          return targets;
+        } });
+      })(),
     );
   }
   if (
@@ -1288,8 +807,8 @@ export function registerServices(
       ),
       { code: "CONTROL_ADMIN_RUNTIME_STORE_REQUIRED" },
     );
+  registerContactVerification(container, config?.contactVerification, dependencies.contactVerification);
   if (!dependencies.metadata && Object.keys(metadataDatabases).length === 0) {
-    registerMasterData(container);
     return;
   }
 
@@ -1570,7 +1089,7 @@ export function registerServices(
         ? { studio: new KyselyCycleExecutionRepository("studio", transactions) }
         : {}),
       ...(metadataDatabases.neon
-        ? { neon: new KyselyCycleExecutionRepository("neon", transactions, evaluateSupplierOnboardingCompletion) }
+        ? { neon: new KyselyCycleExecutionRepository("neon", transactions) }
         : {}),
       ...(metadataDatabases.mesh
         ? { mesh: new KyselyCycleExecutionRepository("mesh", transactions) }
@@ -2186,691 +1705,6 @@ export function registerServices(
       },
     );
   }
-  if (container.adapters.meshDatabase) {
-    const meshDatabase = container.adapters.meshDatabase
-      .database as unknown as Kysely<Record<string, never>>;
-    const meshProfileAuthorizer = createPermissionAuthorizer({
-      policyGate: {
-        async evaluate(input) {
-          if (input.permissionCode === "mesh.business_partner_profile.read")
-            return { allowed: true, reason: "recipient_scoped_read" };
-          if (
-            [
-              "mesh.business_partner_profile.publish",
-              "mesh.business_partner_profile.withdraw",
-            ].includes(input.permissionCode)
-          )
-            return {
-              allowed:
-                input.resource?.["recipientRelationshipValidated"] === true,
-              reason: "recipient_relationship_validation_required",
-            };
-          return {
-            allowed: false,
-            reason: "mesh_profile_publication_policy_not_configured",
-          };
-        },
-      },
-    });
-    const profilePublications = createBusinessPartnerProfilePublicationService({
-      authorizer: meshProfileAuthorizer,
-      repository: new KyselyBusinessPartnerProfilePublicationRepository(),
-      transactions: transactions as never,
-      audit: audit as never,
-      outbox: createDatabaseOutboxWriter("mesh-business-partner") as never,
-      definition: new LocalMeshBusinessPartnerDefinitionConsumer({
-        local:
-          container.services.publication?.projections.mesh ??
-          new KyselyLocalProjectionRepository(meshDatabase),
-      }),
-    });
-    container.services.businessPartnerProfilePublications = profilePublications;
-    const publicationCount = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_mesh_business_partner_profile_publication_http_total",
-      "MESH Business Partner profile publication HTTP operations by outcome",
-    );
-    const publicationDuration =
-      container.adapters.openTelemetry?.metrics.histogram(
-        "athyper_mesh_business_partner_profile_publication_http_duration_ms",
-        "MESH Business Partner profile publication HTTP operation duration",
-      );
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerProfilePublicationRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: profilePublications,
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          publicationCount?.increment(labels);
-          publicationDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.runtimes.health.register(
-      "business-partner-profile-publications.mesh",
-      async () => {
-        try {
-          const result = await sql<{
-            snapshot_table: string | null;
-            publication_table: string | null;
-            event_table: string | null;
-            permission_count: number;
-          }>`SELECT to_regclass('snapshot.network_account_profile_publication')::text snapshot_table,to_regclass('mesh.network_account_profile_publication')::text publication_table,to_regclass('mesh.network_account_profile_publication_event')::text event_table,(SELECT count(*)::int FROM authz.permission WHERE canonical_code LIKE 'mesh.business_partner_profile.%' AND status='published') permission_count`.execute(
-            meshDatabase,
-          );
-          const row = result.rows[0];
-          return row?.snapshot_table &&
-            row.publication_table &&
-            row.event_table &&
-            row.permission_count === 3
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "MESH Business Partner profile publication DDL or permission contract is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "MESH profile publication readiness check failed",
-          };
-        }
-      },
-    );
-    const meshBankAuthorizer = createPermissionAuthorizer({
-      policyGate: {
-        async evaluate(input) {
-          const allowed =
-            input.resource?.["recipientRelationshipValidated"] === true;
-          return {
-            allowed,
-            sodSatisfied: allowed,
-            reason: "directional_relationship_validation_required",
-          };
-        },
-      },
-    });
-    const bankDisclosures = createBusinessPartnerBankDisclosureService({
-      ...(container.adapters.secretStore
-        ? {
-            protectedIdentifiers: createSecretStoreProtectedValueResolver(
-              container.adapters.secretStore,
-            ),
-          }
-        : {}),
-      authorizer: meshBankAuthorizer,
-      repository: new KyselyBusinessPartnerBankDisclosureRepository(),
-      transactions: transactions as never,
-      audit: audit as never,
-      outbox: createDatabaseOutboxWriter("mesh-business-partner") as never,
-    });
-    container.services.businessPartnerBankDisclosures = bankDisclosures;
-    const bankDisclosureCount =
-      container.adapters.openTelemetry?.metrics.counter(
-        "athyper_mesh_business_partner_bank_disclosure_http_total",
-        "MESH bank disclosure HTTP operations by outcome",
-      );
-    const bankDisclosureDuration =
-      container.adapters.openTelemetry?.metrics.histogram(
-        "athyper_mesh_business_partner_bank_disclosure_http_duration_ms",
-        "MESH bank disclosure HTTP operation duration",
-      );
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerBankDisclosureRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: bankDisclosures,
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          bankDisclosureCount?.increment(labels);
-          bankDisclosureDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.runtimes.health.register(
-      "business-partner-bank-disclosures.mesh",
-      async () => {
-        try {
-          const result = await sql<{
-            snapshot_table: string | null;
-            disclosure_table: string | null;
-            event_table: string | null;
-            permission_count: number;
-          }>`SELECT to_regclass('snapshot.bank_account_disclosure')::text snapshot_table,to_regclass('mesh.bank_account_disclosure')::text disclosure_table,to_regclass('mesh.bank_account_disclosure_event')::text event_table,(SELECT count(*)::int FROM authz.permission WHERE canonical_code LIKE 'mesh.bank_disclosure.%' AND status='published') permission_count`.execute(
-            meshDatabase,
-          );
-          const row = result.rows[0];
-          return row?.snapshot_table &&
-            row.disclosure_table &&
-            row.event_table &&
-            row.permission_count === 4
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "MESH bank disclosure DDL or permission contract is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "MESH bank disclosure readiness check failed",
-          };
-        }
-      },
-    );
-    const networkExchange = createBusinessPartnerNetworkExchangeService({
-      authorizer: createPermissionAuthorizer({
-        policyGate: {
-          async evaluate(input) {
-            const selected = input.context.permissions.networkAccountId;
-            return {
-              allowed: Boolean(selected),
-              reason: selected
-                ? "verified_network_account_context"
-                : "network_account_context_required",
-            };
-          },
-        },
-      }),
-      repository: new KyselyBusinessPartnerNetworkExchangeRepository(),
-      transactions: transactions as never,
-      ...(process.env["MESH_SELF_REGISTRATION_POLICY_URL"]
-        ? {
-            selfRegistrationPolicy: createHttpSelfRegistrationPolicyAdapter({
-              endpoint: process.env["MESH_SELF_REGISTRATION_POLICY_URL"],
-              bearerToken:
-                process.env["MESH_SELF_REGISTRATION_POLICY_BEARER_TOKEN"],
-            }),
-          }
-        : {}),
-    });
-    container.services.businessPartnerNetworkExchange = networkExchange;
-    const networkExchangeCount =
-      container.adapters.openTelemetry?.metrics.counter(
-        "athyper_mesh_business_partner_exchange_http_total",
-        "MESH Business Partner relationship and registration exchange HTTP operations by outcome",
-      );
-    const networkExchangeDuration =
-      container.adapters.openTelemetry?.metrics.histogram(
-        "athyper_mesh_business_partner_exchange_http_duration_ms",
-        "MESH Business Partner relationship and registration exchange HTTP operation duration",
-      );
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerNetworkExchangeRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: networkExchange,
-        resolveAccountContext: async (context, requested) => {
-          const catalog = container.platform.experience?.service;
-          if (!catalog)
-            throw new Error("Mesh account directory is unavailable");
-          return resolveMeshNetworkAccountContext(context, requested, catalog);
-        },
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          networkExchangeCount?.increment(labels);
-          networkExchangeDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.runtimes.health.register(
-      "business-partner-network-exchange.mesh",
-      () => checkMeshExchangeReadiness(meshDatabase),
-    );
-  }
-  if (container.adapters.neonDatabase) {
-    const neonDatabase = container.adapters.neonDatabase
-      .database as unknown as Kysely<Record<string, never>>;
-    const profileProjections = createBusinessPartnerProfileProjectionService({
-      authorizer,
-      repository: new KyselyBusinessPartnerProfileProjectionRepository(),
-      transactions: transactions as never,
-    });
-    container.services.businessPartnerProfileProjections = profileProjections;
-    const projectionCount = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_neon_business_partner_profile_projection_http_total",
-      "NEON MESH Business Partner profile projection HTTP operations by outcome",
-    );
-    const projectionDuration =
-      container.adapters.openTelemetry?.metrics.histogram(
-        "athyper_neon_business_partner_profile_projection_http_duration_ms",
-        "NEON MESH Business Partner profile projection HTTP operation duration",
-      );
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerProfileProjectionRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: profileProjections,
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          projectionCount?.increment(labels);
-          projectionDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.runtimes.health.register(
-      "business-partner-profile-projections.neon",
-      async () => {
-        try {
-          const result = await sql<{
-            inbox_table: string | null;
-            snapshot_table: string | null;
-            projection_table: string | null;
-            attempt_table: string | null;
-            permission_count: number;
-          }>`SELECT to_regclass('control.mesh_business_partner_profile_inbox')::text inbox_table,to_regclass('snapshot.mesh_business_partner_profile_received')::text snapshot_table,to_regclass('control.mesh_business_partner_profile_projection')::text projection_table,to_regclass('control.mesh_business_partner_profile_processing_attempt')::text attempt_table,(SELECT count(*)::int FROM authz.permission WHERE canonical_code LIKE 'neon.business_partner_profile_projection.%' AND status='published') permission_count`.execute(
-            neonDatabase,
-          );
-          const row = result.rows[0];
-          return row?.inbox_table &&
-            row.snapshot_table &&
-            row.projection_table &&
-            row.attempt_table &&
-            row.permission_count === 3
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "NEON MESH Business Partner projection DDL or permission contract is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "NEON profile projection readiness check failed",
-          };
-        }
-      },
-    );
-    const accountBankAuthorizer = createPermissionAuthorizer({
-      policyGate: {
-        async evaluate(input) {
-          const allowed = input.resource?.["governedWorkflow"] === true;
-          return {
-            allowed,
-            sodSatisfied: allowed,
-            reason: "governed_account_bank_workflow_required",
-          };
-        },
-      },
-    });
-    const accountBankLinkage = createBusinessPartnerAccountBankLinkageService({
-      authorizer: accountBankAuthorizer,
-      repository: new KyselyBusinessPartnerAccountBankRepository(),
-      transactions: transactions as never,
-      audit: audit as never,
-      ...(container.adapters.secretStore
-        ? { secrets: container.adapters.secretStore }
-        : {}),
-      onboardingCycles:
-        new KyselyBusinessPartnerOnboardingCycleCoordinator(evaluateSupplierOnboardingCompletion) as never,
-    });
-    container.services.businessPartnerAccountBankLinkage = accountBankLinkage;
-    const accountBankCount = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_neon_business_partner_account_bank_http_total",
-      "NEON MESH account and bank linkage HTTP operations by outcome",
-    );
-    const accountBankDuration =
-      container.adapters.openTelemetry?.metrics.histogram(
-        "athyper_neon_business_partner_account_bank_http_duration_ms",
-        "NEON MESH account and bank linkage HTTP operation duration",
-      );
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerAccountBankLinkageRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: accountBankLinkage,
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          accountBankCount?.increment(labels);
-          accountBankDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.runtimes.health.register(
-      "business-partner-account-bank-linkage.neon",
-      async () => {
-        try {
-          const result = await sql<{
-            link_table: string | null;
-            inbox_table: string | null;
-            projection_table: string | null;
-            instrument_table: string | null;
-            instrument_link_table: string | null;
-            bank_table: string | null;
-            permission_count: number;
-          }>`SELECT to_regclass('control.mesh_business_partner_account_link')::text link_table,to_regclass('control.mesh_bank_account_disclosure_inbox')::text inbox_table,to_regclass('control.mesh_bank_account_projection')::text projection_table,to_regclass('master.payment_instrument')::text instrument_table,to_regclass('master.payment_instrument_link')::text instrument_link_table,to_regclass('master.bank_account')::text bank_table,(SELECT count(*)::int FROM authz.permission WHERE canonical_code IN (${sql.join(Object.values(meshAccountBankPermissions))}) AND status='published') permission_count`.execute(
-            neonDatabase,
-          );
-          const row = result.rows[0];
-          return row?.link_table &&
-            row.inbox_table &&
-            row.projection_table &&
-            row.instrument_table &&
-            row.instrument_link_table &&
-            row.bank_table &&
-            row.permission_count === Object.keys(meshAccountBankPermissions).length
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "NEON account/bank linkage DDL or permission contract is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "NEON account/bank linkage readiness check failed",
-          };
-        }
-      },
-    );
-  }
-  if (container.adapters.meshDatabase && container.adapters.neonDatabase) {
-    const meshAdapter =
-        container.adapters.jobMeshDatabase ?? container.adapters.meshDatabase,
-      neonAdapter =
-        container.adapters.jobNeonDatabase ?? container.adapters.neonDatabase;
-    const recipientAuthorizer = {
-      async authorize() {
-        return { allowed: true as const };
-      },
-    };
-    const recipientTransactions = {
-      run: <T>(
-        _plane: "neon",
-        actor: {
-          tenantId: string;
-          principalId: string;
-          requestId?: string;
-          correlationId?: string;
-        },
-        work: (transaction: Transaction<Record<string, never>>) => Promise<T>,
-      ) =>
-        neonAdapter.withSystemTransaction(async (transaction) => {
-          await sql`SELECT set_config('app.current_tenant_id',${actor.tenantId},true),set_config('app.current_principal_id',${actor.principalId},true),set_config('app.current_plane_key','neon',true),set_config('app.current_request_id',${actor.requestId ?? ""},true),set_config('app.current_correlation_id',${actor.correlationId ?? ""},true)`.execute(
-            transaction,
-          );
-          return work(transaction as never);
-        }),
-    };
-    const profileReceiver = createBusinessPartnerProfileProjectionService({
-      authorizer: recipientAuthorizer,
-      repository: new KyselyBusinessPartnerProfileProjectionRepository(),
-      transactions: recipientTransactions,
-    });
-    const bankReceiver = createBusinessPartnerAccountBankLinkageService({
-      authorizer: recipientAuthorizer,
-      repository: new KyselyBusinessPartnerAccountBankRepository(),
-      transactions: recipientTransactions,
-      audit: audit as never,
-    });
-    const deliveryCount = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_business_partner_mesh_delivery_total",
-      "MESH to NEON Business Partner delivery and reconciliation outcomes",
-    );
-    const recipient = {
-      async deliver(item: BusinessPartnerDeliveryItem) {
-        const principalId = await recipientPrincipal(item.recipientTenantId);
-        const context = internalRecipientContext(item, principalId),
-          result = await (item.kind === "profile"
-            ? profileReceiver.receive({
-                context,
-                envelope:
-                  item.envelope as unknown as MeshBusinessPartnerProfileEnvelope,
-              })
-            : bankReceiver.receiveBankDisclosure({
-                context,
-                envelope:
-                  item.envelope as unknown as MeshBankDisclosureEnvelope,
-              }));
-        const disposition = String(
-          "processingDisposition" in result
-            ? (result.processingDisposition ?? result.disposition)
-            : result.disposition,
-        );
-        if (
-          !["applied", "duplicate", "stale", "quarantined"].includes(
-            disposition,
-          )
-        )
-          throw new Error("BUSINESS_PARTNER_RECIPIENT_DISPOSITION_INVALID");
-        return {
-          disposition: disposition as DeliveryDisposition,
-          ...(result.reasonCode ? { reasonCode: result.reasonCode } : {}),
-        };
-      },
-      async hasReceipt(item: BusinessPartnerDeliveryItem) {
-        return neonAdapter.withSystemTransaction(async (transaction) => {
-          const table =
-            item.kind === "profile"
-              ? sql`control.mesh_business_partner_profile_inbox`
-              : sql`control.mesh_bank_account_disclosure_inbox`;
-          const processingProof =
-            item.kind === "profile"
-              ? sql`AND (SELECT attempt.disposition FROM control.mesh_business_partner_profile_processing_attempt attempt WHERE attempt.tenant_id=inbox.tenant_id AND attempt.inbox_event_id=inbox.id ORDER BY attempt.attempt_no DESC LIMIT 1) IN ('applied','stale')`
-              : sql`AND EXISTS(SELECT 1 FROM control.mesh_bank_account_projection projection WHERE projection.tenant_id=inbox.tenant_id AND projection.network_relationship_id=inbox.network_relationship_id AND (projection.current_disclosure_version>inbox.disclosure_version OR (projection.current_disclosure_version=inbox.disclosure_version AND projection.current_lifecycle_version>=inbox.lifecycle_version)))`;
-          const row = (
-            await sql<{
-              received: boolean;
-            }>`SELECT EXISTS(SELECT 1 FROM ${table} inbox WHERE inbox.tenant_id=${item.recipientTenantId}::uuid AND inbox.event_id=${item.eventId}::uuid ${processingProof}) received`.execute(
-              transaction,
-            )
-          ).rows[0];
-          return row?.received === true;
-        });
-      },
-    };
-    async function recipientPrincipal(tenantId: string) {
-      const row = await neonAdapter.withSystemTransaction(
-        async (transaction) => {
-          await sql`SELECT set_config('app.current_tenant_id',${tenantId},true),set_config('app.current_plane_key','neon',true)`.execute(
-            transaction,
-          );
-          return (
-            await sql<{
-              id: string;
-            }>`SELECT id FROM master.principal WHERE tenant_id=${tenantId}::uuid AND status='active' AND principal_type='service_account' ORDER BY created_at,id LIMIT 1`.execute(
-              transaction,
-            )
-          ).rows[0];
-        },
-      );
-      if (!row)
-        throw Object.assign(
-          new Error("Recipient tenant has no active delivery service account"),
-          { status: 409, code: "BUSINESS_PARTNER_RECIPIENT_PRINCIPAL_MISSING" },
-        );
-      return row.id;
-    }
-    const repository = new KyselyBusinessPartnerDeliveryRepository((work) =>
-      meshAdapter.withSystemTransaction((transaction) =>
-        work(transaction as never),
-      ),
-    );
-    const worker = new BusinessPartnerDeliveryWorker({
-      workerId: `business-partner-${process.env["HOSTNAME"] ?? "worker"}`,
-      repository,
-      recipient,
-      telemetry: {
-        record(labels) {
-          deliveryCount?.increment(labels);
-        },
-        capture() {},
-      },
-    });
-    const deliveryEnabled =
-        config?.wave0.businessPartnerDeliveryEnabled ?? false,
-      reconciliationEnabled =
-        config?.wave0.businessPartnerReconciliationEnabled ?? false;
-    if (container.runtimes.jobs && deliveryEnabled) {
-      container.runtimes.jobs.register(
-        BUSINESS_PARTNER_DELIVERY_QUEUE,
-        DELIVER_BUSINESS_PARTNER_EVENTS_JOB,
-        createBusinessPartnerDeliveryHandler(worker, repository),
-      );
-      container.runtimes.jobDefinitions.push({
-        code: DELIVER_BUSINESS_PARTNER_EVENTS_JOB,
-        owner: "@athyper/server-plane-mesh",
-        queue: BUSINESS_PARTNER_DELIVERY_QUEUE,
-        name: DELIVER_BUSINESS_PARTNER_EVENTS_JOB,
-        scope: "plane",
-        payloadSchema: {
-          name: DELIVER_BUSINESS_PARTNER_EVENTS_JOB,
-          version: 1,
-        },
-        timeoutMs: 120_000,
-        maxAttempts: 1,
-        executionRetentionDays: 90,
-      });
-    }
-    if (container.runtimes.jobs && reconciliationEnabled) {
-      container.runtimes.jobs.register(
-        BUSINESS_PARTNER_DELIVERY_QUEUE,
-        RECONCILE_BUSINESS_PARTNER_EVENTS_JOB,
-        createBusinessPartnerReconciliationHandler(worker),
-      );
-      container.runtimes.jobDefinitions.push({
-        code: RECONCILE_BUSINESS_PARTNER_EVENTS_JOB,
-        owner: "@athyper/server-plane-mesh",
-        queue: BUSINESS_PARTNER_DELIVERY_QUEUE,
-        name: RECONCILE_BUSINESS_PARTNER_EVENTS_JOB,
-        scope: "plane",
-        payloadSchema: {
-          name: RECONCILE_BUSINESS_PARTNER_EVENTS_JOB,
-          version: 1,
-        },
-        timeoutMs: 120_000,
-        maxAttempts: 1,
-        executionRetentionDays: 90,
-      });
-    }
-    if (container.runtimes.scheduler && deliveryEnabled)
-      container.runtimes.scheduledJobs.push({
-        scheduleId: "business-partner-mesh-delivery",
-        queue: BUSINESS_PARTNER_DELIVERY_QUEUE,
-        name: DELIVER_BUSINESS_PARTNER_EVENTS_JOB,
-        data: { limit: 100 },
-        pattern: { kind: "interval", everyMs: 15_000 },
-        options: {
-          jobId: "business-partner:mesh:delivery",
-          maxAttempts: 1,
-          payloadSchema: {
-            name: DELIVER_BUSINESS_PARTNER_EVENTS_JOB,
-            version: 1,
-          },
-          execution: {
-            planeKey: "mesh",
-            scope: "plane",
-            principalId: "00000000-0000-0000-0000-000000000000",
-          },
-        },
-      });
-    if (container.runtimes.scheduler && reconciliationEnabled)
-      container.runtimes.scheduledJobs.push({
-        scheduleId: "business-partner-mesh-reconciliation",
-        queue: BUSINESS_PARTNER_DELIVERY_QUEUE,
-        name: RECONCILE_BUSINESS_PARTNER_EVENTS_JOB,
-        data: { limit: 250 },
-        pattern: { kind: "interval", everyMs: 300_000 },
-        options: {
-          jobId: "business-partner:mesh:reconciliation",
-          maxAttempts: 1,
-          payloadSchema: {
-            name: RECONCILE_BUSINESS_PARTNER_EVENTS_JOB,
-            version: 1,
-          },
-          execution: {
-            planeKey: "mesh",
-            scope: "plane",
-            principalId: "00000000-0000-0000-0000-000000000000",
-          },
-        },
-      });
-    container.runtimes.health.register(
-      "business-partner-mesh-delivery",
-      async () => {
-        if (!deliveryEnabled)
-          return { status: "healthy", message: "disabled for staged rollout" };
-        try {
-          const schema = await meshAdapter.withSystemTransaction(
-            async (transaction) =>
-              (
-                await sql<{
-                  table_name: string | null;
-                }>`SELECT to_regclass('mesh.business_partner_delivery_acknowledgement')::text table_name`.execute(
-                  transaction,
-                )
-              ).rows[0],
-          );
-          if (!schema?.table_name)
-            return {
-              status: "unhealthy",
-              message:
-                "Business Partner delivery acknowledgement migration is required",
-            };
-          const row = await meshAdapter.withSystemTransaction(
-            async (transaction) =>
-              (
-                await sql<{
-                  pending: number;
-                  dead_letters: number;
-                  oldest_seconds: number | null;
-                }>`SELECT count(*) FILTER(WHERE status IN ('pending','failed','processing'))::int pending,count(*) FILTER(WHERE status='dead_letter')::int dead_letters,extract(epoch FROM clock_timestamp()-min(created_at) FILTER(WHERE status IN ('pending','failed','processing')))::int oldest_seconds FROM event.outbox WHERE topic IN ('mesh-business-partner','mesh-business-partner-profile','mesh-business-partner-bank')`.execute(
-                  transaction,
-                )
-              ).rows[0],
-          );
-          return row &&
-            row.dead_letters === 0 &&
-            Number(row.oldest_seconds ?? 0) < 900
-            ? { status: "healthy", message: `pending=${row.pending}` }
-            : {
-                status: "unhealthy",
-                message: `pending=${row?.pending ?? 0}, dead_letters=${row?.dead_letters ?? 0}, oldest_seconds=${row?.oldest_seconds ?? 0}`,
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Business Partner delivery readiness failed",
-          };
-        }
-      },
-    );
-  }
   if (hasGovernanceDatabase && consent && moderation && cycleConfig) {
     const cycleOptions = {
       authorizer,
@@ -3028,75 +1862,26 @@ export function registerServices(
           access: dependencies.notificationAttachmentAccessPolicy,
         })
       : undefined);
-  // One split-artifact reader is shared by query descriptors and record sections.
-  container.platform.compiledEntityReader = new PinnedCompiledEntityReader({
-    source: createRuntimeMetaCompiledEntityReleaseSource({
-      databases: metadataDatabases,
-      withTenantTransaction: (planeKey, actor, work) =>
-        transactions.run(planeKey, actor, work),
-    }),
-    ...(container.adapters.redisCache
-      ? { cache: createDistributedCompiledEntityArtifactCache(container.adapters.redisCache) }
-      : {}),
+  const metadata = registerEntityMetadata(container, config, metadataDatabases, transactions, dependencies.metadata);
+  let readPublishedParent: Parameters<typeof createPublishedParentAdmission>[0]["read"] | undefined;
+  let readPublishedHeader: Parameters<typeof createPublishedRecordHeader>[0]["read"] | undefined;
+  const publishedParent = createPublishedParentAdmission({ reader: container.platform.compiledEntityReader!,
+    read: (input, descriptor) => readPublishedParent ? readPublishedParent(input, descriptor) : Promise.resolve(false),
   });
-  const compiledMetadata = createCompiledMetadataReader(container.platform.compiledEntityReader);
-  const legacyMetadata = createMetadataService({
-    repository: createRuntimeDescriptorRepository({
-      databases: metadataDatabases,
-      withTenantTransaction: (planeKey, actor, work) => transactions.run(planeKey, actor, work),
-    }),
-    ...(container.adapters.redisCache ? {cache: createDistributedDescriptorCache(container.adapters.redisCache)} : {}),
-  });
-  // Temporary rollout boundary between planes, not entities/pages. A cut-over
-  // plane NEVER falls back to native rows or local graph previews on a miss.
-  const metadata = dependencies.metadata ?? {
-    getEntityDescriptor: ((context, entityCode) =>
-      config?.compiledMetadataPlanes?.includes(context.planeKey)
-        ? compiledMetadata.getEntityDescriptor(context, entityCode)
-        : legacyMetadata.getEntityDescriptor(context, entityCode)
-    ) satisfies import("@athyper/server-contract-metadata").MetadataReader["getEntityDescriptor"],
-  };
-  container.platform.metadata = metadata;
-  const authorizeCapabilityParent = async ({context, entityCode, recordId}: import("@athyper/server-platform-experience").EntityCapabilityRequest) => {
-      if(entityCode==="workforce"&&context.planeKey==="neon"){
-        const rows=await transactions.run(context.planeKey,context,async tx=>(await sql<{company_code_id:string}>`
-          SELECT DISTINCT employment.company_code_id::text
-          FROM master.employee employee
-          JOIN master.employment employment ON employment.tenant_id=employee.tenant_id AND employment.employee_id=employee.id AND employment.status<>'archived'
-          WHERE employee.tenant_id=${context.tenantId}::uuid AND employee.id=${recordId}::uuid AND employee.status<>'archived'
-        `.execute(tx)).rows);
-        if(!rows.length)return false;
-        for(const row of rows)if(!(await authorizer.authorize({context,permissionCode:"neon.workforce.read",resource:{tenantId:context.tenantId,employeeId:recordId,companyCodeId:row.company_code_id}})).allowed)return false;
-        return Object.freeze({scopeResources:Object.freeze(rows.map(row=>Object.freeze({companyCodeId:row.company_code_id})))});
-      }
-      const descriptor = await metadata.getEntityDescriptor(context,entityCode);
+  const registeredParent = createEntityParentAdmission({
+    bindings: dependencies.entityParentScopeBindings ?? [],
+    async read({ context, entityCode, recordId }) {
+      const descriptor = await metadata.getEntityDescriptor(context, entityCode);
       const records = container.services.records?.queries;
-      if(!descriptor?.operations.read || !records || descriptor.planeKey !== context.planeKey) return false;
-      const found = await records.list({context,entityCode,recordIds:[recordId],fields:[descriptor.storage.idField],limit:1,countMode:"none",hydrateReferences:false});
-      if(found.data.length !== 1 || String(found.data[0]?.[descriptor.storage.idField]) !== recordId) return false;
-      // Tenant-owned partner facts do not require commercial assignments.
-      // The capability policy still checks each action's permission. Preserve
-      // server-resolved organization candidates for organization-scoped grants.
-      if(entityCode !== "business_partner") return true;
-      const assignments = await transactions.run(context.planeKey,context,async tx =>
-        (await sql<{operating_organization_id:string}>`
-          SELECT DISTINCT assignment.operating_organization_id::text
-            FROM master.business_partner_operating_organization_assignment assignment
-           WHERE assignment.tenant_id=${context.tenantId}::uuid
-             AND assignment.business_partner_id=${recordId}::uuid
-             AND assignment.status='active'
-             AND assignment.effective_from<=CURRENT_DATE
-             AND (assignment.effective_until IS NULL OR assignment.effective_until>CURRENT_DATE)
-           ORDER BY 1
-        `.execute(tx)).rows,
-      );
-      const scopeResources = [
-        ...(descriptor.directoryScope?.mode === "tenant" ? [Object.freeze({tenantId:context.tenantId})] : []),
-        ...assignments.map(assignment => Object.freeze({operatingOrganizationId:assignment.operating_organization_id})),
-      ];
-      if(!scopeResources.length) return false;
-      return Object.freeze({scopeResources:Object.freeze(scopeResources)});
-  };
+      if (!descriptor?.operations.read || !records || descriptor.planeKey !== context.planeKey) return false;
+      const found = await records.list({ context, entityCode, recordIds: [recordId],
+        fields: [descriptor.storage.idField], limit: 1, countMode: "none", hydrateReferences: false });
+      return found.data.length === 1 && String(found.data[0]?.[descriptor.storage.idField]) === recordId;
+    },
+  });
+  const authorizeCapabilityParent = (input: Parameters<typeof publishedParent>[0], release?: Parameters<typeof publishedParent>[1]) =>
+    (dependencies.entityParentScopeBindings ?? []).some(binding => binding.entityCode === input.entityCode && binding.planeKey === input.context.planeKey)
+      ? registeredParent(input) : publishedParent(input, release);
   const participantPermissions = createKyselyPermissionResolver({run:(identity,work)=>transactions.run(identity.planeKey,identity,work)});
   const recordParticipants = createRecordParticipantResolver({
     async candidates(input,query,limit) {
@@ -3117,6 +1902,10 @@ export function registerServices(
   });
   const capabilityPolicy = createEntityCapabilityPolicy({
     reader: container.platform.compiledEntityReader!, authorizer,
+    operationalControls: async () => ({
+      revision: `object-storage.max-upload-mb:${config?.objectStorage.maxUploadMb ?? 25}`,
+      maxFileBytes: Math.floor((config?.objectStorage.maxUploadMb ?? 25) * 1024 * 1024),
+    }),
     authorizeParent: authorizeCapabilityParent,
     audience: {
       async loadComment({context,entityCode,recordId,commentId,includeDeleted}) {
@@ -3127,6 +1916,11 @@ export function registerServices(
     },
   });
   let attachmentDiscovery: ReturnType<typeof createAttachmentDiscoveryService> | undefined;
+  let qualifyAttachmentPreview: (() => Promise<void>) | undefined;
+  let qualifyAttachmentExtraction: (() => Promise<void>) | undefined;
+  let publishedSummaries: ReturnType<typeof createPublishedSummaryService> | undefined;
+  const entityCollaboration = createEntityCollaborationService({ reader: container.platform.compiledEntityReader!, capabilities: capabilityPolicy,
+    providers: createCollaborationSectionProviders(transactions) });
   const authorizeAttachmentCapability = createEntityAttachmentAdmission({
     load: (context, attachmentId) => transactions.run(context.planeKey, context, async tx =>
       (await sql<AttachmentCapabilitySubject>`SELECT attachment.metadata->>'entity_type' entity_type,attachment.metadata->>'entity_id' entity_id,attachment.admitted_policy_hash,attachment.content_type,attachment.size_bytes,attachment.draft_id::text,attachment.uploaded_by::text,EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id AND link.entity_type=attachment.metadata->>'entity_type' AND link.entity_id=attachment.metadata->>'entity_id') has_record_link,(SELECT link.entity_id FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.pinned_attachment_id=attachment.id AND link.entity_type='document.comment' AND link.link_kind='comment' LIMIT 1) comment_id FROM document.attachment attachment WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.id=${attachmentId}::uuid`.execute(tx)).rows[0]),
@@ -3135,626 +1929,32 @@ export function registerServices(
     resolve: input => capabilityPolicy.resolve(input),
   });
 
-  registerMasterData(
-    container,
-    {
-      authorizeAccess: createMasterDataAuthority(authorizer, metadata),
-      authorizeVerification: createContactVerificationAuthority(authorizer),
-      repository:
-        dependencies.masterData?.repository ?? new KyselyMasterDataRepository(),
-      evidenceVerifier:
-        dependencies.masterData?.evidenceVerifier ??
-        (config?.masterDataVerificationKeys?.length
-          ? createProviderEvidenceVerifier(config.masterDataVerificationKeys)
-          : {
-              verify: async () => {
-                throw new MasterDataError(
-                  503,
-                  "MASTER_DATA_VERIFIER_UNAVAILABLE",
-                  "Contact verification provider is not configured",
-                );
-              },
-            }),
-      metadata,
-      authorizer,
-      transactions: exactTransactions,
-      audit,
-      outbox: dependencies.outbox ?? createDatabaseOutboxWriter("master-data"),
-    },
-    config?.localContactChallenge
-      ? {
-          config: config.localContactChallenge,
-          repository: new KyselyContactChallengeRepository(),
-          deliver: queueLocalVerificationEmail(config.localContactDeliveryKey!),
-        }
-      : undefined,
-  );
-  if (container.adapters.neonDatabase) {
-    const neonDatabase = container.adapters.neonDatabase
-      .database as unknown as Kysely<Record<string, never>>;
-    const compatibilityAccess =
-      container.adapters.openTelemetry?.metrics.counter(
-        "athyper_governed_compatibility_access_total",
-        "G6 compatibility-surface accesses by bounded surface, access, and operation",
-      );
-    for (const [surface, access] of [
-      ["flattened_decision_scope", "read"],
-      ["flattened_decision_scope", "write"],
-      ["business_partner_aliases_cache", "read"],
-      ["workforce_iam" + "_projection", "read"],
-      ["workforce_iam" + "_projection", "write"],
-      ["business_partner_person_group_compatibility", "read"],
-    ] as const)
-      compatibilityAccess?.incrementBy(0, {
-        surface,
-        access,
-        operation: "all",
-      });
-    const repository = new KyselyBusinessPartnerCaseRepository();
-    const businessPartnerAuthority = createPermissionAuthorizer({
-      readSourceRequirement: async (context, permissionCode) => {
-        const database = container.adapters.neonDatabase?.database;
-        if (!database) return null;
-        return database.transaction().execute(async (tx) => {
-          await sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY`.execute(
-            tx,
-          );
-          await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true),set_config('app.current_principal_id',${context.principalId},true)`.execute(
-            tx,
-          );
-          return readSourcePermissionRequirement(
-            tx as unknown as Kysely<Record<string, never>>,
-            context.tenantId,
-            permissionCode,
-          );
-        });
-      },
-      policyGate: {
-        async evaluate(input) {
-          if (
-            input.permissionCode.startsWith(BP_COMPANY_PILOT_PERMISSION_PREFIX)
-          )
-            input = {
-              ...input,
-              permissionCode: input.permissionCode.replace(
-                BP_COMPANY_PILOT_PERMISSION_PREFIX,
-                "neon.relationship.entity_case.",
-              ),
-            };
-          if (input.permissionCode === "neon.relationship.bp_target.import")
-            return businessPartnerImportPolicy(input);
-          if (
-            isPublishedBusinessPartnerTargetRead(
-              input,
-              dependencies.businessPartnerBackendAuthorization?.profile,
-              dependencies.businessPartnerBackendAuthorizationTenantId,
-            )
-          )
-            return {
-              allowed: true,
-              reason: "published_business_partner_target_read",
-            };
-          if (
-            isPublishedBusinessPartnerTargetReveal(
-              input,
-              dependencies.businessPartnerBackendAuthorization?.profile,
-              dependencies.businessPartnerBackendAuthorizationTenantId,
-            )
-          )
-            return {
-              allowed: true,
-              reason: "published_business_partner_target_reveal",
-            };
-          if (
-            [
-              "neon.supplier_registration.invitation.create",
-              "neon.customer_registration.invitation.create",
-            ].includes(input.permissionCode)
-          ) {
-            const proposalOnly =
-              input.resource?.["proposalOnly"] === true &&
-              input.resource?.["makerCheckerEnforced"] === true;
-            return {
-              allowed: proposalOnly,
-              sodSatisfied: proposalOnly,
-              reason: "invitation_governed_proposal_required",
-            };
-          }
-          if (["neon.relationship.entity_case.submit","neon.business_partner_registration.submit"].includes(input.permissionCode))
-            return {
-              allowed: input.resource?.["makerCheckerEnforced"] === true,
-              sodSatisfied: input.resource?.["makerCheckerEnforced"] === true,
-              reason: "maker_checker_policy_required",
-            };
-          if (["neon.relationship.entity_case.decide", "neon.business_partner_registration.decide"].includes(input.permissionCode)) {
-            const submittedBy = input.resource?.["submittedBy"];
-            const separated =
-              typeof submittedBy === "string" &&
-              submittedBy !== input.context.principalId;
-            return {
-              allowed: separated,
-              sodSatisfied: separated,
-              reason: "maker_checker_separation_failed",
-            };
-          }
-          if (
-            ["neon.relationship.entity_case.materialize","neon.business_partner_registration.materialize"].includes(input.permissionCode)
-          ) {
-            const pinned = input.resource?.["approvedEvidencePinned"] === true;
-            return {
-              allowed: pinned,
-              sodSatisfied: pinned,
-              reason: "approved_evidence_required",
-            };
-          }
-          if (input.permissionCode === "neon.supplier.qualification.admin") {
-            const creator = input.resource?.["createdBy"],
-              separated =
-                creator === undefined || creator !== input.context.principalId,
-              controlled =
-                input.resource?.["qualificationControl"] === true &&
-                input.resource?.["makerCheckerEnforced"] === true;
-            return {
-              allowed: controlled && separated,
-              sodSatisfied: controlled && separated,
-              reason: "qualification_control_and_separation_required",
-            };
-          }
-          if (input.permissionCode === "neon.supplier.preference.admin") {
-            const creator = input.resource?.["createdBy"],
-              separated =
-                creator === undefined || creator !== input.context.principalId,
-              controlled =
-                input.resource?.["preferenceControl"] === true &&
-                input.resource?.["makerCheckerEnforced"] === true;
-            return {
-              allowed: controlled && separated,
-              sodSatisfied: controlled && separated,
-              reason: "preference_control_and_separation_required",
-            };
-          }
-          if (input.permissionCode === "neon.customer.credit.create")
-            return {
-              allowed:
-                input.resource?.["creditControl"] === true &&
-                input.resource?.["makerCheckerEnforced"] === true,
-              sodSatisfied: true,
-              reason: "customer_credit_control_required",
-            };
-          if (input.permissionCode === "neon.customer.credit.decide") {
-            const creator = input.resource?.["createdBy"],
-              separated =
-                typeof creator === "string" &&
-                creator !== input.context.principalId,
-              controlled =
-                input.resource?.["creditControl"] === true &&
-                input.resource?.["makerCheckerEnforced"] === true;
-            return {
-              allowed: controlled && separated,
-              sodSatisfied: controlled && separated,
-              reason: "customer_credit_separation_required",
-            };
-          }
-          if (input.permissionCode === "neon.customer.designation.create")
-            return {
-              allowed:
-                input.resource?.["designationControl"] === true &&
-                input.resource?.["makerCheckerEnforced"] === true,
-              sodSatisfied: true,
-              reason: "customer_designation_control_required",
-            };
-          if (input.permissionCode === "neon.customer.designation.decide") {
-            const creator = input.resource?.["createdBy"],
-              separated =
-                typeof creator === "string" &&
-                creator !== input.context.principalId,
-              controlled =
-                input.resource?.["designationControl"] === true &&
-                input.resource?.["makerCheckerEnforced"] === true;
-            return {
-              allowed: controlled && separated,
-              sodSatisfied: controlled && separated,
-              reason: "customer_designation_separation_required",
-            };
-          }
-          if (
-            [
-              "neon.customer.lifecycle.activate",
-              "neon.customer.lifecycle.suspend",
-              "neon.customer.lifecycle.reactivate",
-              "neon.customer.lifecycle.deactivate",
-              "neon.customer.lifecycle.archive",
-            ].includes(input.permissionCode)
-          ) {
-            const requiresReadiness =
-                input.permissionCode.endsWith("activate") ||
-                input.permissionCode.endsWith("reactivate"),
-              pinned = input.resource?.["readinessEvidencePinned"] === true;
-            return {
-              allowed:
-                input.resource?.["makerCheckerEnforced"] === true &&
-                (!requiresReadiness || pinned),
-              sodSatisfied: true,
-              reason: "customer_lifecycle_control_required",
-            };
-          }
-          if (
-            input.permissionCode ===
-            "neon.relationship.business_partner.activate"
-          ) {
-            const pinned = input.resource?.["readinessEvidencePinned"] === true,
-              eligible = input.resource?.["eligible"] === true,
-              internal = input.resource?.["externalApplicant"] === false,
-              elevated = input.context.assurance === "elevated";
-            return {
-              allowed: pinned && eligible && internal && elevated,
-              sodSatisfied: pinned && internal,
-              reason:
-                "supplier_activation_requires_pinned_readiness_and_elevated_internal_authority",
-            };
-          }
-          if (
-            [
-              "neon.relationship.entity_case.create",
-              "neon.relationship.entity_case.read",
-              "neon.relationship.entity_case.update",
-              "neon.relationship.entity_case.validate",
-              "neon.business_partner_registration.create",
-              "neon.business_partner_registration.read",
-              "neon.business_partner_registration.validate",
-              "neon.relationship.business_partner.read",
-              "neon.customer.credit.read",
-              "neon.customer.designation.read",
-              "neon.business_partner_profile_match.create",
-              "neon.business_partner_profile_match.read",
-              "neon.business_partner_profile_match.request",
-              "neon.supplier_registration.invitation.create",
-              "neon.supplier_registration.invitation.read",
-              "neon.supplier_registration.invitation.cancel",
-              "neon.supplier_registration.external.respond",
-              "neon.customer_registration.invitation.create",
-              "neon.customer_registration.invitation.read",
-              "neon.customer_registration.invitation.cancel",
-              "neon.customer_registration.external.respond",
-              "neon.workforce.read",
-              "neon.workforce.request.create",
-              "neon.workforce.request.read",
-              "neon.workforce.review",
-              "neon.workforce.onboarding.execute",
-              "neon.workforce.offboarding.execute",
-              "neon.workforce.pii.read",
-              "neon.workforce.iam.retry",
-              "neon.workforce.integration.import",
-              "neon.hr.setup.read",
-              "neon.hr.setup.write",
-              "neon.hr.setup.catalog.write",
-              "neon.hr.setup.catalog.publish",
-              "neon.hr.setup.publish",
-              "neon.hr.policy.country.write",
-              "neon.hr.policy.publish",
-              "neon.user.directory.read",
-              "neon.user.profile.request",
-              "neon.user.profile.review",
-              "neon.user.admin.write",
-            ].includes(input.permissionCode)
-          )
-            return {
-              allowed: true,
-              reason: "bounded_business_partner_operation",
-            };
-          if (
-            (
-              Object.values(
-                BUSINESS_PARTNER_360_PERMISSIONS,
-              ) as readonly string[]
-            ).includes(input.permissionCode)
-          )
-            return {
-              allowed: true,
-              reason: "bounded_business_partner_360_read",
-            };
-          if (input.permissionCode === "neon.relationship.business_partner_restriction.read")
-            return {
-              allowed: input.resource?.["tenantId"] === input.context.tenantId && typeof input.resource?.["businessPartnerId"] === "string",
-              reason: "bounded_business_partner_restriction_read",
-            };
-          if(['neon.relationship.business_partner.capability_supplier_manage','neon.relationship.business_partner.capability_customer_manage'].includes(input.permissionCode))
-            return {allowed:input.context.planeKey==='neon'&&input.resource?.['tenantId']===input.context.tenantId&&input.resource?.['resourceCode']==='business_partner'&&typeof input.resource?.['businessPartnerId']==='string',reason:'bounded_partner_capability_command'};
-          return {
-            allowed: false,
-            reason: "business_partner_hard_policy_not_configured",
-          };
-        },
+  if (container.platform.compiledEntityReader) {
+    const resourceHeaders = dependencies.entityResourceProviders?.headers ?? createPublishedRecordHeader({
+      reader: container.platform.compiledEntityReader,
+      read: (input, descriptor, fields) => {
+        if (!readPublishedHeader) throw new HttpError(503, "ENTITY_RESOURCE_PROVIDER_UNAVAILABLE", "The authorized record reader is unavailable");
+        return readPublishedHeader(input, descriptor, fields);
       },
     });
-    const businessPartnerAuthorizer = observeAuthority(
-      businessPartnerAuthority,
-    );
-    const validator = createBusinessPartnerRequestValidator<RecordTransaction>({
-      duplicates: {
-        async findExactName(input, transaction) {
-          const result = await sql<{
-            id: string;
-            code: string;
-            name: string;
-          }>`SELECT id::text,code,name
-            FROM master.business_partner
-            WHERE tenant_id=${input.tenantId}::uuid
-              AND (lower(name)=lower(${input.name}) OR EXISTS (SELECT 1 FROM master.business_partner_alias a WHERE a.tenant_id=master.business_partner.tenant_id AND a.business_partner_id=master.business_partner.id AND a.status='active' AND a.effective_from<=CURRENT_DATE AND (a.effective_until IS NULL OR a.effective_until>CURRENT_DATE) AND a.normalized_alias=lower(regexp_replace(btrim(${input.name}), '[[:space:]]+', ' ', 'g'))))
-              AND (${input.excludeBusinessPartnerId ?? null}::uuid IS NULL OR id<>${input.excludeBusinessPartnerId ?? null}::uuid)
-            ORDER BY status='active' DESC,created_at DESC,id LIMIT ${input.limit}`.execute(
-            transaction,
-          );
-          return result.rows.map((row) => ({
-            id: row.id,
-            code: row.code,
-            name: row.name,
-          }));
-        },
-      },
-    });
-    const localDefinitions = new LocalBusinessPartnerDefinitionConsumer({
-      local:
-        container.services.publication?.projections.neon ??
-        new KyselyLocalProjectionRepository(neonDatabase),
-      canonicalizer: { canonicalBytes, sha256 },
-    });
-    const compiledFlows = new CompiledEntityFlowReader(
-      container.platform.compiledEntityReader!,
-    );
-    compiledBusinessPartnerApplicationDescriptor = (context, _entityCode, scopeCoordinate) => projectPinnedIntakeApplication({
-      reader: container.platform.compiledEntityReader!,
-      coordinate: { tenantId: context.tenantId, principalId: context.principalId, planeKey: "neon", entityCode: "business_partner" },
-      entity: { code: "business_partner", label: "Business Partners", pluralLabel: "Business Partners" },
-      intake: { flowArtifactKey: "business_partner/flow.intake", formArtifactKeys: ["business_partner_request/presentation.section.form.request", "business_partner_request/presentation.section.form.supplierRequest"], flow: { key: "request_intake", title: "New business partner request", entryOperation: "request_supplier", completionOperation: "case_submit" } },
-      scope: {
-        status: "ready",
-        // Application descriptors admit scope fingerprints only as opaque hashes.
-        // This stable coordinate is also the cache boundary for a pinned Flow
-        // projection, so it must vary with tenant, entity and chosen context.
-        fingerprint: sha256(canonicalBytes({
-          planeKey: context.planeKey,
-          tenantId: context.tenantId,
-          entityCode: "business_partner",
-          scopeCoordinate: scopeCoordinate ?? {},
-        })),
-        labels: [],
-      },
-    });
-    const protectedValues = container.adapters.secretStore
-      ? createSecretStoreProtectedValueResolver(container.adapters.secretStore)
-      : undefined;
-    const businessPartner360Definitions =
-      createLastValidBusinessPartner360DefinitionResolver({
-        async resolve() {
-          const descriptors = await localDefinitions.descriptors(),
-            view = descriptors.views["neonPartner360"] as
-              Record<string, unknown> | undefined;
-          if (!view || typeof view["version"] !== "string")
-            throw new MasterDataError(
-              503,
-              "BP_360_DEFINITION_UNAVAILABLE",
-              "Verified local Business Partner 360 definition is unavailable",
-            );
-          return parseBusinessPartner360Definition({
-            version: view["version"],
-            hash: sha256(
-              canonicalBytes({
-                bundleHash: descriptors.bundleHash,
-                releaseNo: descriptors.releaseNo,
-                view,
-              }),
-            ),
-            view,
-          });
-        },
-      });
-    const meshNetwork =
-      config?.businessPartner360.meshLiveBaseUrl &&
-      config.businessPartner360.meshLiveCredentialReference &&
-      container.adapters.secretStore
-        ? createHttpBusinessPartner360MeshNetworkAdapter({
-            baseUrl: config.businessPartner360.meshLiveBaseUrl,
-            credentialReference:
-              config.businessPartner360.meshLiveCredentialReference,
-            secrets: container.adapters.secretStore,
-          })
-        : undefined;
-    const businessPartner360 =
-      createBusinessPartner360Service<RecordTransaction>({
-        refreshAuthorizationContext: refreshEntityContext,
-        authorizeCaseRead: async (query, caseId) => {
-          const cases = container.services.businessPartnerRequests;
-          if (!cases)
-            throw new MasterDataError(
-              503,
-              "BP_CHILD_AUTHORIZATION_UNAVAILABLE",
-              "Case authorization is unavailable",
-            );
-          try {
-            await cases.get({ context: query.context, requestId: caseId });
-            return true;
-          } catch (error) {
-            if (
-              error instanceof MasterDataError &&
-              (error.status === 403 || error.status === 404)
-            )
-              return false;
-            throw error;
-          }
-        },
-        authorizer: businessPartnerAuthorizer,
-        repository: new KyselyBusinessPartner360Repository() as never,
-        transactions,
-        audit: audit as never,
-        ...(protectedValues ? { protectedValues } : {}),
-        ...(meshNetwork
-          ? {
-              meshNetwork,
-              meshTimeoutMs: config?.businessPartner360.meshTimeoutMs,
-            }
-          : {}),
-        admitDirectoryRecord: async (query) => {
-          const records = container.services.records;
-          if (!records)
-            throw new MasterDataError(
-              503,
-              "DIRECTORY_UNAVAILABLE",
-              "Record directory admission is unavailable",
-            );
-          const admission = await authorizeCapabilityParent({context:query.context,entityCode:"business_partner",recordId:query.businessPartnerId,kind:"comments",action:"read"});
-          if (!admission)
-            throw new MasterDataError(
-              404,
-              "BP_360_NOT_FOUND",
-              "Business Partner is unavailable",
-            );
-          return {scopeResources: typeof admission === "object" ? admission.scopeResources ?? [] : []};
-        },
-        definitions: businessPartner360Definitions,
-        authorizeCertificateAttachment: async (query, attachmentId) => {
-          try { return Boolean(await authorizeAttachmentCapability(query.context, "download", { attachmentId }, { preflight: true })); }
-          catch { return false; }
-        },
-        metadata,
-        businessActivityProviders:
-          createUnavailableBusinessPartner360ActivityProviders([
-            {
-              code: "finance",
-              async read(input) {
-                if (
-                  input.context.planeKey !== "neon" ||
-                  !input.operatingOrganizationId ||
-                  !input.companyCodeId
-                )
-                  return {
-                    provider: "finance",
-                    state: "unavailable",
-                    metrics: [],
-                    reasonCode: "FINANCE_ACTIVITY_CONTEXT_REQUIRED",
-                    observedAt: new Date().toISOString(),
-                  };
-                const reader = createBusinessPartnerJournalActivityReader({
-                  transactions: {
-                    run: (actor, work) => transactions.run("neon", actor, work),
-                  },
-                  authorize: async (query, permissionCode) => {
-                    const context = await refreshEntityContext(input.context);
-                    return (
-                      await baseAuthorizer.authorize({
-                        context,
-                        permissionCode,
-                        resource: {
-                          tenantId: context.tenantId,
-                          operatingOrganizationId:
-                            query.operatingOrganizationId,
-                          companyCodeId: query.companyCodeId,
-                        },
-                      })
-                    ).allowed;
-                  },
-                });
-                const result = await reader.read({
-                  actor: {
-                    tenantId: input.context.tenantId,
-                    principalId: input.context.principalId,
-                    planeKey: "neon",
-                    correlationId:
-                      input.context.correlationId ?? "bp-journal-activity",
-                  },
-                  businessPartnerId: input.businessPartnerId,
-                  operatingOrganizationId: input.operatingOrganizationId,
-                  companyCodeId: input.companyCodeId,
-                  asOf: input.asOf,
-                });
-                return { provider: "finance", ...result };
-              },
-            },
-          ]),
-      });
-    container.services.businessPartner360 = businessPartner360;
-    const partnerClassifications = createPartnerClassificationService({
-      authorizer: createPermissionAuthorizer({policyGate: {async evaluate(input) {
-        const allowed = input.resource?.["governedWorkflow"] === true;
-        return {allowed, sodSatisfied: allowed, reason: "governed_classification_workflow_required"};
-      }}}),
-      transactions: transactions as never,
-      audit: audit as never,
-    });
-    container.platform.httpRegistrars.push(application => registerPartnerClassificationRoutes(application, {
-      authenticate: createIamAuthenticationMiddleware(iam),
-      readContext: readVerifiedRequestContext,
-      service: partnerClassifications,
-    }));
-    const decisionViews = createPartnerDecisionViews({
-      authorizer: businessPartnerAuthorizer,
-      transactions,
-      async resolveReference(context, entityCode, recordId) {
-        const records = container.services.records;
-        if (!records) return null;
-        try {
-          const descriptor = await metadata.getEntityDescriptor(context, entityCode);
-          const titleField = descriptor?.recordPresentation?.titleField;
-          if (!titleField) return null;
-          const result = await records.queries.get({context,entityCode,recordId});
-          const title = result.data?.[titleField];
-          return typeof title === "string" && title.trim() ? title : null;
-        } catch (error) {
-          const status = (error as {status?:number;statusCode?:number}).status ?? (error as {statusCode?:number}).statusCode;
-          if (status === 403 || status === 404) return null;
-          throw error;
-        }
-      },
-      async admitPartner(context, recordId) {
-        const records = container.services.records;
-        if (!records) throw new MasterDataError(503, "DIRECTORY_UNAVAILABLE", "Record directory unavailable");
-        const result = await records.queries.get({ context, entityCode: "business_partner", recordId });
-        if (!result.data) throw new MasterDataError(404, "BP_360_NOT_FOUND", "Business Partner unavailable");
-      },
-    });
-    const companyProfileViews=createPartnerCompanyProfileViews({
-      authorizer:businessPartnerAuthorizer,transactions,
-      async admitPartner(context,recordId){
-        const records=container.services.records;
-        if(!records)throw new MasterDataError(503,"DIRECTORY_UNAVAILABLE","Record directory unavailable");
-        const result=await records.queries.get({context,entityCode:"business_partner",recordId});
-        if(!result.data)throw new MasterDataError(404,"BP_360_NOT_FOUND","Business Partner unavailable");
-      },
-    });
-    const partnerRecordProviders = createBusinessPartnerRecordProviders(businessPartner360, partnerClassifications, decisionViews, companyProfileViews);
+    publishedSummaries = createPublishedSummaryService({ reader: container.platform.compiledEntityReader, headers: resourceHeaders, providers: dependencies.entityResourceProviders?.summaries });
     const entityRuntime = createEntityRuntimeResourceService({
+      publishedSummary: (input, release) => publishedSummaries!.read(input, release),
       capabilities: capabilityPolicy,
       displayChoices: createRecordDisplayChoices(transactions),
       reader: container.platform.compiledEntityReader!,
-      headers: partnerRecordProviders.headers,
+      headers: resourceHeaders,
       sections: {
-        get: partnerRecordProviders.sections.get,
+        get: key => dependencies.entityResourceProviders?.sections.get(key),
         getService: createCollaborationSectionProviders(transactions).getService,
       },
-      summaries: partnerRecordProviders.summaries,
-    });
-    const partnerCapabilityOperations=createPartnerCapabilityOperations({authorizer:businessPartnerAuthorizer,transactions,
-      async admitPartner(context,recordId){
-        const records=container.services.records;
-        if(!records)throw new EntityRuntimeOperationError(503,'ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE');
-        const result=await records.queries.get({context,entityCode:'business_partner',recordId});
-        if(!result.data)throw new EntityRuntimeOperationError(404,'ENTITY_RUNTIME_RECORD_UNAVAILABLE');
-      },
+      summaries: dependencies.entityResourceProviders?.summaries,
     });
     const entityOperations = createEntityOperationDispatcher({
       capabilities: capabilityPolicy,
       reader: container.platform.compiledEntityReader!,
-      artifacts: {
-        resolve({ entityCode, operationKey }) {
-          if (entityCode === "business_partner_request" && (operationKey === "submit" || operationKey === "materialize"))
-            return { releaseEntityCode: "business_partner", operationEntityCode: "business_partner_request" };
-          return undefined;
-        },
-      },
-      handlers: {
-        get(handlerKey) {
-          const partnerCapability=partnerCapabilityOperations.get(handlerKey);
-          if(partnerCapability)return partnerCapability;
+      handlers: createEntityRuntimeHandlerRegistry({
+        fallback(handlerKey) {
           const capabilityHandler=/^platform\.(comments|attachments)\.([a-z_]+)\.v1$/.exec(handlerKey);
           if(capabilityHandler) return {async execute(command) {
             const {context,entityCode,recordId,input,expectedVersion,idempotencyKey}=command;
@@ -3827,1118 +2027,53 @@ export function registerServices(
             }
             throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
           }};
-          const requests = () => {
-            const service = container.services.businessPartnerRequests;
-            if (!service) throw new EntityRuntimeOperationError(503, "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-            return service;
+          if (handlerKey === "entity.record.export.v1") return {
+            async execute({ context, entityCode, input, idempotencyKey }) {
+              const transfers = container.services.records?.transfers;
+              if (!transfers) throw new EntityRuntimeOperationError(503, "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+              return transfers.requestExport(context, entityCode, input, idempotencyKey);
+            },
           };
-          const createForPartner = (kind: "amend_partner" | "add_supplier" | "add_customer" | "assign_organization" | "configure_company") => ({
-            async execute({ context, recordId, expectedVersion, idempotencyKey, input }: { readonly context: VerifiedRequestContext; readonly recordId: string; readonly expectedVersion?: number; readonly idempotencyKey?: string; readonly input: Readonly<Record<string, unknown>> }) {
-              const header = await businessPartner360.header({ context, businessPartnerId: recordId });
-              if (header.businessPartnerVersion !== expectedVersion)
-                throw new EntityRuntimeOperationError(409, "ENTITY_RUNTIME_OPERATION_VERSION_CONFLICT");
-              const request = await requests().create({
-                ...input,
+          if (handlerKey === "entity.record.import.v1") return {
+            async execute({ context, entityCode, input }) {
+              const transfers = container.services.records?.transfers;
+              if (!transfers) throw new EntityRuntimeOperationError(503, "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+              const operation = input.operation;
+              if (!['create', 'update', 'upsert', 'delete', 'replace'].includes(String(operation)))
+                throw new EntityRuntimeOperationError(400, "ENTITY_RUNTIME_OPERATION_INPUT_VALUE_INVALID");
+              return {
+                ...(await transfers.beginImport(
                 context,
-                idempotencyKey: idempotencyKey!,
-                kind,
-                source: { kind: "manual" },
-                targetBusinessPartnerId: recordId,
-              } as never);
-              return Object.freeze({
-                requestId: request.request.id, version: request.request.rowVersion, status: request.request.status, replayed: request.replayed,
-                changedResources: [
-                  { entityCode: "business_partner_request", recordId: request.request.id, revision: request.request.rowVersion, kinds: ["request", "action_summary"] },
-                  { entityCode: "business_partner", recordId, revision: header.businessPartnerVersion, kinds: ["action_summary"], sectionKeys: kind === "add_supplier" ? ["roles-scope", "supplier-company"] : kind === "add_customer" ? ["roles-scope", "customer-company"] : ["roles-scope"] },
-                ],
-              });
-            },
-          });
-          if (handlerKey === "neon.bp.governed-request.create.v1") return createForPartner("amend_partner");
-          if (handlerKey === "neon.bp.governed-request.role-extension.v1") return {
-            async execute(input) {
-              const role = input.input.requestedRole;
-              if (role !== "supplier" && role !== "customer") throw new EntityRuntimeOperationError(400, "ENTITY_RUNTIME_OPERATION_INPUT_VALUE_INVALID");
-              return createForPartner(role === "supplier" ? "add_supplier" : "add_customer").execute(input);
-            },
-          };
-          if (handlerKey === "neon.bp.governed-request.organization-scope.v1") return createForPartner("assign_organization");
-          if (handlerKey === "neon.bp.governed-request.company-scope.v1") return createForPartner("configure_company");
-          if (handlerKey === "neon.bp.governed-request.submit.v1") return {
-            async execute({ context, recordId, expectedVersion, idempotencyKey }) {
-              const result = await requests().submit({ context, requestId: recordId, expectedVersion: expectedVersion!, idempotencyKey: idempotencyKey! });
-              return Object.freeze({ requestId: result.request.id, version: result.request.rowVersion, status: result.request.status, replayed: result.replayed, changedResources: [{ entityCode: "business_partner_request", recordId, revision: result.request.rowVersion, kinds: ["request", "action_summary"] }, ...(result.request.targetBusinessPartnerId ? [{ entityCode: "business_partner", recordId: result.request.targetBusinessPartnerId, kinds: ["action_summary"] }] : [])] });
-            },
-          };
-          if (handlerKey === "neon.bp.governed-request.materialize.v1") return {
-            async execute({ context, recordId, expectedVersion, idempotencyKey }) {
-              const result = await requests().apply({ context, requestId: recordId, expectedVersion: expectedVersion!, idempotencyKey: idempotencyKey! });
-              return Object.freeze({ requestId: result.request.id, version: result.request.rowVersion, status: result.request.status, replayed: result.replayed, materialization: result.materialization, changedResources: [{ entityCode: "business_partner_request", recordId, revision: result.request.rowVersion, kinds: ["request", "action_summary"] }, { entityCode: "business_partner", recordId: result.materialization.businessPartnerId, kinds: ["header", "action_summary", "summary", "section"], sectionKeys: [
-                "roles-scope",
-                "contacts",
-                "addresses",
-                ...(result.materialization.partnerRole === "supplier" ? ["supplier-company"] : result.materialization.partnerRole === "customer" ? ["customer-company"] : []),
-              ] }] });
+                entityCode,
+                typeof input.sessionId === "string" ? input.sessionId : undefined,
+                operation as never,
+                {
+                  scopeCoordinate: input.scopeCoordinate as never,
+                  conflictPolicy: input.conflictPolicy as never,
+                  atomicity: input.atomicity as never,
+                },
+                )),
+              };
             },
           };
           return undefined;
         },
-      },
+      }),
     });
     container.platform.httpRegistrars.push((application) =>
       registerEntityRuntimeRoutes(application, {
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
         service: entityRuntime,
+        collaboration: entityCollaboration,
         operations: entityOperations,
       }),
     );
-    const supplierSelectionOptions = {
-      authorizer: businessPartnerAuthorizer, repository, transactions, audit,
-      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext,
-    };
-    const supplierCompletionRuns=createCycleRunService({authorizer:businessPartnerAuthorizer,repositories:executionRepositories,authorizeRun:async(context,run,operation)=>{
-      if (context.planeKey!=="neon" || run.data["schema"]!=="athyper.process-run/1" || typeof run.data["caseId"]!=="string") throw new HttpError(404,"SUPPLIER_ONBOARDING_NOT_FOUND","Supplier onboarding was not found");
-      const current=await transactions.run("neon",{tenantId:context.tenantId,principalId:context.principalId},tx=>repository.get(context.tenantId,String(run.data["caseId"]),tx as never));
-      if(!current)throw new HttpError(404,"SUPPLIER_ONBOARDING_NOT_FOUND","Supplier onboarding was not found");
-      const access=await businessPartnerAuthorizer.authorize({context,permissionCode:operation==="readiness"?"neon.relationship.entity_case.read":"neon.relationship.entity_case.materialize",resource:{tenantId:context.tenantId,entityCode:"entity_case",resourceCode:"entity_case",recordId:current.id,requestId:current.id,authorizationTarget:"existing",operatingOrganizationId:current.operatingOrganizationId,...(current.companyCodeId?{companyCodeId:current.companyCodeId}:{}),approvedBy:current.approvedBy,approvedEvidencePinned:Boolean(current.approvedAt&&current.approvedBy&&current.decisionFingerprint)}});
-      if(!access.allowed)throw new HttpError(403,"SUPPLIER_ONBOARDING_FORBIDDEN",access.reason??"Supplier onboarding access is denied");
-    }});
-    container.platform.httpRegistrars.push(application=>registerCycleCompletionRoutes(application,{authenticate:supplierSelectionOptions.authenticate,readContext:supplierSelectionOptions.readContext,cycleRuns:supplierCompletionRuns,supplierOnly:true}));
-    const supplierSelection = createSupplierProcessSelectionService(supplierSelectionOptions);
-    processDocumentAuthority=businessPartnerAuthorizer;
-    const supplierEdits = createSupplierProcessEditPolicy(supplierSelectionOptions);
-    const supplierTasks = createSupplierProcessTasks({ authorizer: businessPartnerAuthorizer, editPolicy: supplierEdits });
-    processReviewGate = (context,caseId,tx) => supplierTasks.start(context,caseId,tx);
-    container.platform.httpRegistrars.push(application => mountSupplierProcessTasks(application, { ...supplierSelectionOptions, service: supplierTasks }));
-    const supplierSubmission = createSupplierProcessSubmission({
-      selection: supplierSelection,
-      documents: createKyselyProcessDocumentIntentPort(),
-      submitCase: (command, tx) => repository.submitForProcess({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, submittedBy: command.context.principalId, idempotencyKey: command.idempotencyKey, correlationId: command.context.correlationId }, tx),
-    });
-    container.platform.httpRegistrars.push(application => mountSupplierProcessSelectionPreview(application, supplierSelectionOptions, supplierSelection));
-    const businessPartnerRequestOptions: BusinessPartnerRequestServiceOptions<RecordTransaction> =
-      {
-        supplierSubmission,
-        guardAmendment: supplierEdits.guard,
-        ...(container.platform.experience ? {
-          validateBusinessContext: businessPartnerContextAdmission(container.platform.experience.service),
-        } : {}),
-        authorizer: businessPartnerAuthorizer,
-        repository,
-        transactions,
-        schemas: {
-          async resolve(input) {
-            try {
-              const selection = businessPartnerFlowSelection(input.kind, input.requestedRole);
-              return await compiledFlows.requestSchema({
-                tenantId: input.context.tenantId, principalId: input.context.principalId,
-                planeKey: "neon", entityCode: "business_partner", flowEntityCode: "business_partner_request", flowKey: selection.flowKey,
-                sourceKind: input.sourceKind,
-              });
-            } catch (error) {
-              throw new MasterDataError(
-                503,
-                "BUSINESS_PARTNER_REQUEST_SCHEMA_UNAVAILABLE",
-                error instanceof Error
-                  ? error.message
-                  : "Verified local Business Partner definition is unavailable",
-              );
-            }
-          },
-        },
-        validator,
-        workflows: {
-          async resolve(input, transaction) {
-            const candidates = await sql<{
-              principal_id: string;
-            }>`SELECT principal_id::text FROM ${sql.raw(input.request.kind === "new_partner" && !input.request.requestedRole ? "document.fn_role_free_partner_registration_approvers" : "document.fn_entity_case_approvers")}(${input.context.tenantId}::uuid,${input.request.operatingOrganizationId ?? null}::uuid,${input.request.companyCodeId ?? null}::uuid,${input.context.principalId}::uuid)`.execute(
-              transaction,
-            );
-            const selection = businessPartnerFlowSelection(input.request.kind, input.request.requestedRole);
-            const artifact = await compiledFlows.workflow({
-              tenantId: input.context.tenantId, principalId: input.context.principalId,
-              planeKey: "neon", entityCode: "business_partner", flowEntityCode: "business_partner_request", flowKey: selection.flowKey,
-              journey: selection.journey, proposedPayload: input.request.proposedPayload,
-            });
-            const approverPrincipalIds = candidates.rows.map(
-              (row) => row.principal_id,
-            );
-            return {
-              code: artifact.code,
-              version: artifact.version,
-              hash: artifact.hash,
-              stageCode: artifact.stageCode,
-              stageName: artifact.stageName,
-              approverPrincipalIds,
-              stages: artifact.stages.map((stage) => ({
-                ...stage,
-                quorum: stage.quorum as {
-                  kind: "all" | "any" | "count" | "percentage";
-                  value?: number;
-                },
-                approverPrincipalIds,
-                escalationPrincipalIds: approverPrincipalIds.slice(1),
-              })),
-            };
-          },
-        },
-        audit,
-        outbox: createDatabaseOutboxWriter("business-partner"),
-        onboardingCycles:
-          new KyselyBusinessPartnerOnboardingCycleCoordinator(evaluateSupplierOnboardingCompletion) as never,
-      };
-    const businessPartnerRequests = createBusinessPartnerRequestService(
-      {...businessPartnerRequestOptions, activationReadiness: authorizeSupplierActivationReadiness, validateIntake: async command => {
-        await transactions.run("neon",command.context,tx=>admitBusinessPartnerProfileReferences(command.extensions,async(domain,code)=>{
-          const row=(await sql<{active:boolean}>`SELECT control.lookup_value_is_active(${domain},${code},${command.context.tenantId}::uuid) AS active`.execute(tx)).rows[0];
-          return row?.active===true;
-        }));
-        if(command.kind!=="new_partner" || command.source.kind!=="manual" || !command.requestedRole)return;
-        if(!intakeApplicationDescriptor)throw new MasterDataError(503,"INTAKE_VALIDATION_UNAVAILABLE","Intake validation is unavailable.");
-        const descriptor=await intakeApplicationDescriptor(command.context,"business_partner",{operatingOrganizationId:command.operatingOrganizationId,...(command.companyCodeId?{companyCodeId:command.companyCodeId}:{})});
-        const publishedSurface=descriptor.intakeSurfaces?.find(s=>s.key==="intake_details");
-        const surface=publishedSurface ? supplierRequirementSurface(publishedSurface,command.requestedRole) : undefined;
-        if(!surface)throw new MasterDataError(503,"INTAKE_VALIDATION_UNAVAILABLE","The published intake form is unavailable.");
-        if(surface.sections.some(s=>s.fields.some(f=>f.control==="repeatableGroup"&&f.extensionGroup))){
-          try { validateProfileIntake(surface,descriptor.intakeSurfaces!,command); } catch(error) { throw new MasterDataError(422,"INTAKE_VALIDATION_FAILED",error instanceof Error?error.message:"Please correct the profile fields."); }
-        }
-        const referenceIds=[...new Set([
-          ...(command.extensions?.relationships??[]).map(row=>row.targetBusinessPartnerId),
-          ...(command.extensions?.governanceRelations??[]).map(row=>row.memberBusinessPartnerId),
-        ].filter((id):id is string=>typeof id==="string"&&Boolean(id)))];
-        for(const id of referenceIds){
-          if(!intakeReferenceRecord)throw new MasterDataError(503,"INTAKE_VALIDATION_UNAVAILABLE","Reference validation is unavailable.");
-          // Recheck normal record read authorization; a browser-supplied UUID is never authority.
-          await intakeReferenceRecord(command.context,"business_partner",id);
-        }
-        const answers=Object.fromEntries(surface.sections.flatMap(s=>s.fields).flatMap(f=>f.control==="input"&&f.payload?.target==="canonical"?[[f.valueKey,command.proposedPayload[f.payload.path]]]:[]));
-        const issues=surface.sections.flatMap(s=>s.fields).flatMap(f=>{
-          if(f.control!=="input"||f.payload?.target!=="canonical"||!dataFieldVisible(f,surface,answers))return [];
-          const issue=validateDataInput(command.draftCapture?{...f,required:false}:f,answers[f.valueKey],surface.validationMessages);
-          return issue?[{...issue,fieldPath:f.payload.path}]:[];
-        });
-        if(issues.length)throw new MasterDataError(422,"INTAKE_VALIDATION_FAILED","Please correct the invalid fields.",issues);
-      }},
-    );
-    const intakeProvider = createBusinessPartnerIntakeOperationProvider({
-      requests: businessPartnerRequests,
-      mapper: createBusinessPartnerIntakeCommandMapper({
-        requests: businessPartnerRequests,
-        descriptor: context => {
-          if (!intakeApplicationDescriptor) throw new MasterDataError(503, "ENTITY_INTAKE_UNAVAILABLE", "The published intake form is unavailable");
-          return intakeApplicationDescriptor(context, "business_partner");
-        },
-        readPartner: (context, id) => {
-          if (!intakeReferenceRecord) throw new MasterDataError(503, "ENTITY_INTAKE_UNAVAILABLE", "Partner lookup is unavailable");
-          return intakeReferenceRecord(context, "business_partner", id);
-        },
-        protect: (context, operatingOrganizationId, kind, value, bank) => {
-          const service = container.services.businessPartnerAccountBankLinkage;
-          if (!service) throw new MasterDataError(503, "ENTITY_INTAKE_PROTECTION_UNAVAILABLE", "Protected value capture is unavailable");
-          return service.protectIntakeValue({ context, operatingOrganizationId, kind, value, ...bank });
-        },
-        async preview(command, current) {
-          const preview = await transactions.run("neon", command.context, tx => supplierEdits.preview(command, tx));
-          if (preview.status === "legacy") return {
-            outcome: ["draft", "returned", "validation_failed"].includes(current.status) ? "reapproval-required" : "denied",
-            message: preview.message,
-          };
-          const result = preview.result!;
-          return { outcome: !preview.editableNow || !result.permitted ? "denied"
-            : result.changedPaths.length === 0 ? "unchanged"
-            : result.effect === "full_reapproval" ? "reapproval-required" : "metadata-only" };
-        },
-      }),
-    });
     container.platform.httpRegistrars.push(application => registerEntityIntakeOperationRoutes(application, {
       authenticate: createIamAuthenticationMiddleware(iam),
       readContext: readVerifiedRequestContext,
-      providers: { get: ({ entityCode, flowKey }) => entityCode === "business_partner" && flowKey === "request_intake" ? {
-        async execute(input) {
-          try { return await intakeProvider.execute(input); }
-          catch (error) {
-            if (error instanceof MasterDataError) throw new HttpError(error.status, error.code, error.message);
-            throw error;
-          }
-        },
-      } : undefined },
+      providers: dependencies.entityIntakeProviders ?? { get: () => undefined },
     }));
-    const companyPilot = createBusinessPartnerCompanyPilotService({
-      ...businessPartnerRequestOptions,
-      repository: new KyselyBusinessPartnerCaseRepository(
-        BP_COMPANY_PILOT_CASE_ENTITY,
-      ),
-      authorizer: businessPartnerAuthority,
-      workflows: {
-        async resolve(input, tx) {
-          const definition =
-            await businessPartnerRequestOptions.workflows.resolve(input, tx);
-          const rows = await sql<{
-            principal_id: string;
-          }>`SELECT principal_id::text FROM document.fn_company_setup_case_approvers(${input.context.tenantId}::uuid,${input.request.companyCodeId ?? null}::uuid,${input.context.principalId}::uuid)`.execute(
-            tx,
-          );
-          const approverPrincipalIds = rows.rows.map((row) => row.principal_id);
-          return {
-            ...definition,
-            approverPrincipalIds,
-            stages: definition.stages?.map((stage) => ({
-              ...stage,
-              approverPrincipalIds,
-              escalationPrincipalIds: approverPrincipalIds.slice(1),
-            })),
-          };
-        },
-      },
-      refreshContext: refreshEntityContext,
-      resolveScope: async (request) => {
-        const resolved = await caseScopes().resolve({
-          ...request,
-          operationKey: "read",
-          phase: "execute",
-          entityCode: BP_COMPANY_PILOT_ENTITY,
-          resolver: "company.record.v1",
-        });
-        return resolved.state === "resolved" &&
-          typeof resolved.coordinates.companyCodeId === "string"
-          ? { companyCodeId: resolved.coordinates.companyCodeId }
-          : null;
-      },
-      requirePublishedOperation: async (context, operation, permissionCode) => {
-        const key = `metadata.entity.master_business_partner_company_setup_request.${context.tenantId.replaceAll("-", "")}`;
-        const row = await transactions.run(
-          "neon",
-          { tenantId: context.tenantId, principalId: context.principalId },
-          async (tx) =>
-            (
-              await sql<{
-                entity_code: string;
-                compiled_json: Record<string, unknown>;
-              }>`SELECT * FROM runtime_meta.fn_active_entity_descriptor(${key},'entity_case_runtime')`.execute(
-                tx,
-              )
-            ).rows[0],
-        );
-        const bindings = row?.compiled_json["operation_scope_bindings"];
-        if (
-          row?.entity_code !== BP_COMPANY_PILOT_CASE_ENTITY ||
-          !Array.isArray(bindings) ||
-          !bindings.some(
-            (binding) =>
-              binding.operationKey === operation &&
-              binding.permissionCode === permissionCode &&
-              binding.scopeKind === "company_code",
-          )
-        )
-          throw new MasterDataError(
-            503,
-            "BP_COMPANY_PILOT_PUBLICATION_REQUIRED",
-            "The company setup operation requires its active signed case contract",
-          );
-      },
-    });
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerRequestRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: companyPilot,
-        companyPilot: true,
-      }),
-    );
-    container.services.businessPartnerRequests = businessPartnerRequests;
-    const governedImport = createBusinessPartnerBoundImport({
-      requests: businessPartnerRequests,
-      metadata,
-      authorizer: businessPartnerAuthorizer,
-      scopes: caseScopes(),
-      refreshContext: refreshEntityContext,
-    });
-    container.services.businessPartnerGovernedImport = governedImport;
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerGovernedImportRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: governedImport,
-      }),
-    );
-    const governedInternalBusinessPartnerCases =
-      createGovernedInternalBusinessPartnerCaseService<RecordTransaction>({
-        authorizer: businessPartnerAuthorizer,
-        repository:
-          new KyselyGovernedInternalBusinessPartnerCaseRepository() as never,
-        transactions,
-      });
-    const workforce = createWorkforceService<RecordTransaction>({
-      authorizer: businessPartnerAuthorizer,
-      repository: new KyselyWorkforceRepository(),
-      requestRepository: new KyselyWorkforceRequestRepository(),
-      requestValidator: {
-        async validate(input, transaction) {
-          const evidence = await sql<{
-            legal_entity: boolean;
-            company: boolean;
-            org_unit: boolean;
-            position: boolean;
-            profile: boolean;
-            target: boolean;
-          }>`SELECT
-        EXISTS(SELECT 1 FROM master.legal_entity x WHERE x.tenant_id=${input.context.tenantId}::uuid AND x.id=${input.request.legalEntityId}::uuid AND x.status='active') legal_entity,
-        (${input.request.companyCodeId ?? null}::uuid IS NULL OR EXISTS(SELECT 1 FROM master.company_code x WHERE x.tenant_id=${input.context.tenantId}::uuid AND x.id=${input.request.companyCodeId ?? null}::uuid AND x.status='active')) company,
-        (${input.request.orgUnitId ?? null}::uuid IS NULL OR EXISTS(SELECT 1 FROM master.org_unit x WHERE x.tenant_id=${input.context.tenantId}::uuid AND x.id=${input.request.orgUnitId ?? null}::uuid AND x.status='active')) org_unit,
-        (${input.request.positionId ?? null}::uuid IS NULL OR EXISTS(SELECT 1 FROM master.position x WHERE x.tenant_id=${input.context.tenantId}::uuid AND x.id=${input.request.positionId ?? null}::uuid AND x.status='active')) position,
-        (${input.request.protectedProfileContentItemId ?? null}::uuid IS NULL OR EXISTS(SELECT 1 FROM document.content_item i JOIN snapshot.content_item_version v ON v.tenant_id=i.tenant_id AND v.id=i.current_version_id WHERE i.tenant_id=${input.context.tenantId}::uuid AND i.id=${input.request.protectedProfileContentItemId ?? null}::uuid AND i.status='PUBLISHED' AND nullif(btrim(v.body_json->>'firstName'),'') IS NOT NULL AND nullif(btrim(v.body_json->>'lastName'),'') IS NOT NULL)) profile,
-        CASE WHEN ${input.request.kind}='onboard_person' THEN true WHEN ${input.request.kind}='add_employment' THEN EXISTS(SELECT 1 FROM master.person p WHERE p.tenant_id=${input.context.tenantId}::uuid AND p.id=${input.request.targetPersonId ?? null}::uuid AND p.status='active') ELSE EXISTS(SELECT 1 FROM master.employment e JOIN master.employee m ON m.tenant_id=e.tenant_id AND m.id=e.employee_id WHERE e.tenant_id=${input.context.tenantId}::uuid AND e.id=${input.request.targetEmploymentId ?? null}::uuid AND e.person_id=${input.request.targetPersonId ?? null}::uuid AND e.employee_id=${input.request.targetEmployeeId ?? null}::uuid AND e.status='active' AND m.person_id=e.person_id) END target`.execute(
-            transaction,
-          );
-          const row = evidence.rows[0]!,
-            checks = [
-              [
-                "workforce.legal_entity.effective",
-                "$.legalEntityId",
-                row.legal_entity,
-              ],
-              ["workforce.company.effective", "$.companyCodeId", row.company],
-              ["workforce.org_unit.effective", "$.orgUnitId", row.org_unit],
-              ["workforce.position.effective", "$.positionId", row.position],
-              [
-                "workforce.profile.ready",
-                "$.protectedProfileContentItemId",
-                row.profile,
-              ],
-              ["workforce.target.consistent", "$.target", row.target],
-            ] as const;
-          return {
-            evaluationId: randomUUID(),
-            evaluatedAt: new Date().toISOString(),
-            ruleset: {
-              code: "workforce.lifecycle.validation",
-              version: 1,
-              hash: createHash("sha256")
-                .update("workforce.lifecycle.validation.v1")
-                .digest("hex"),
-            },
-            valid: checks.every(([, , ok]) => ok),
-            findings: checks.map(([code, path, ok]) => ({
-              ruleCode: code,
-              severity: "error" as const,
-              fieldPath: path,
-              outcome: ok ? ("passed" as const) : ("failed" as const),
-              messageCode: ok
-                ? "WORKFORCE_RULE_PASSED"
-                : "WORKFORCE_RULE_FAILED",
-              evidenceReference: { checked: true },
-            })),
-          };
-        },
-      },
-      requestWorkflows: {
-        async resolve(input, transaction) {
-          const candidates = await sql<{
-            principal_id: string;
-          }>`SELECT principal_id::text FROM document.fn_workforce_request_approvers(${input.context.tenantId}::uuid,${input.request.legalEntityId}::uuid,${input.request.companyCodeId ?? null}::uuid,${input.context.principalId}::uuid)`.execute(
-            transaction,
-          );
-          return {
-            code: "NeonWorkforceLifecycle",
-            version: 1,
-            hash: createHash("sha256")
-              .update("neon.workforce.lifecycle.v1")
-              .digest("hex"),
-            stageCode: "people_review",
-            stageName: "People review",
-            approverPrincipalIds: candidates.rows.map(
-              (row) => row.principal_id,
-            ),
-          };
-        },
-      },
-      transactions,
-      audit,
-      outbox: createDatabaseOutboxWriter("business-partner"),
-      ...(protectedValues ? { protectedValues } : {}),
-    });
-    container.services.workforce = workforce;
-    const hrStage2=createHrStage2Service({
-      authorizer:businessPartnerAuthorizer,
-      transactions,
-      audit,
-    });
-    container.platform.httpRegistrars.push(application=>
-      registerHrStage2Routes(application,{
-        authenticate:createIamAuthenticationMiddleware(iam),
-        readContext:readVerifiedRequestContext,
-        service:hrStage2,
-      }),
-    );
-    const supplierWorkforceEligibility =
-      process.env["MESH_WORKFORCE_ELIGIBILITY_BASE_URL"] &&
-      process.env["MESH_WORKFORCE_ELIGIBILITY_CREDENTIAL_REFERENCE"] &&
-      container.adapters.secretStore
-        ? createHttpSupplierWorkforceDistributionEligibility({
-            baseUrl: process.env["MESH_WORKFORCE_ELIGIBILITY_BASE_URL"],
-            credentialReference:
-              process.env["MESH_WORKFORCE_ELIGIBILITY_CREDENTIAL_REFERENCE"],
-            secrets: container.adapters.secretStore,
-          })
-        : {
-            async evaluate() {
-              return {
-                allowed: false as const,
-                reasonCodes: ["MESH_WORKFORCE_ELIGIBILITY_UNAVAILABLE"],
-              };
-            },
-          };
-    const supplierWorkforcePolicies = parseSupplierWorkforcePolicyCoordinates(
-      process.env["SUPPLIER_WORKFORCE_POLICY_COORDINATES_JSON"],
-    );
-    const supplierWorkforceGuard = createSupplierWorkforceCommandGuard({
-      authorizer: businessPartnerAuthorizer,
-      policies: supplierWorkforcePolicies,
-    });
-    const supplierWorkforceRequisitions =
-      createSupplierWorkforceRequisitionService<RecordTransaction>({
-        authorizer: businessPartnerAuthorizer,
-        repository: new KyselySupplierWorkforceRequisitionRepository(),
-        eligibility: supplierWorkforceEligibility,
-        policies: supplierWorkforcePolicies,
-        transactions,
-      });
-    const workerEngagementIam =
-      createWorkerEngagementIamService<RecordTransaction>({
-        guard: supplierWorkforceGuard,
-        repository: new KyselyWorkerEngagementIamRepository(),
-        transactions,
-      });
-    const workerEngagementLifecycle =
-      createWorkerEngagementLifecycleService<RecordTransaction>({
-        guard: supplierWorkforceGuard,
-        repository: new KyselyWorkerEngagementLifecycleRepository(),
-        transactions,
-      });
-    const businessPartnerInvitations =
-      createBusinessPartnerInvitationService<RecordTransaction>({
-        authorizer: businessPartnerAuthorizer,
-        repository: new KyselyBusinessPartnerInvitationRepository(),
-        transactions,
-        schemas: {
-          async resolve(input) {
-            try {
-              const selection = businessPartnerFlowSelection(input.kind, input.requestedRole);
-              return await compiledFlows.requestSchema({
-                tenantId: input.context.tenantId, principalId: input.context.principalId,
-                planeKey: "neon", entityCode: "business_partner", flowEntityCode: "business_partner_request", flowKey: selection.flowKey,
-                sourceKind: input.sourceKind,
-              });
-            } catch (error) {
-              throw new MasterDataError(
-                503,
-                "BUSINESS_PARTNER_REQUEST_SCHEMA_UNAVAILABLE",
-                error instanceof Error
-                  ? error.message
-                  : "Verified local Business Partner definition is unavailable",
-              );
-            }
-          },
-        },
-        audit,
-        outbox: createDatabaseOutboxWriter("business-partner"),
-        onboardingCycles:
-          new KyselyBusinessPartnerOnboardingCycleCoordinator(evaluateSupplierOnboardingCompletion) as never,
-        requests: businessPartnerRequests,
-        evidence: {
-          async stage(input) {
-            const service = container.services.attachments;
-            if (!service)
-              throw new MasterDataError(
-                503,
-                "BUSINESS_PARTNER_INVITATION_EVIDENCE_UNAVAILABLE",
-                "Attachment service is unavailable",
-              );
-            return service.stage(input);
-          },
-          async finalize(input, contentType) {
-            const service = container.services.attachments;
-            if (!service)
-              throw new MasterDataError(
-                503,
-                "BUSINESS_PARTNER_INVITATION_EVIDENCE_UNAVAILABLE",
-                "Attachment service is unavailable",
-              );
-            return service.finalize(input, contentType);
-          },
-        },
-      });
-    container.services.businessPartnerInvitations = businessPartnerInvitations;
-    const businessPartnerProfileMatches =
-      createBusinessPartnerProfileMatchService({
-        authorizer: businessPartnerAuthorizer,
-        repository: new KyselyBusinessPartnerProfileMatchRepository(),
-        transactions: transactions as never,
-        businessPartnerRequests,
-      });
-    container.services.businessPartnerProfileMatches =
-      businessPartnerProfileMatches;
-    const businessPartnerEligibility =
-      createBusinessPartnerEligibilityService<RecordTransaction>({
-        authorizer: businessPartnerAuthorizer,
-        repository: new KyselyBusinessPartnerEligibilityRepository(),
-        transactions,
-        audit,
-        outbox: createDatabaseOutboxWriter("business-partner"),
-        onboardingCycles:
-          new KyselyBusinessPartnerOnboardingCycleCoordinator(evaluateSupplierOnboardingCompletion) as never,
-      });
-    container.services.businessPartnerEligibility = businessPartnerEligibility;
-    container.services.businessPartnerAtlasInsights =
-      createBusinessPartnerAtlasInsightOwner({
-        summary: businessPartner360,
-        eligibility: businessPartnerEligibility,
-        authorizer: businessPartnerAuthorizer,
-      });
-    const requestCount = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_business_partner_case_http_total",
-      "Business Partner governed-case HTTP operations by outcome",
-    );
-    const requestDuration = container.adapters.openTelemetry?.metrics.histogram(
-      "athyper_business_partner_case_http_duration_ms",
-      "Business Partner governed-case HTTP operation duration",
-    );
-    const eligibilityCount = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_business_partner_eligibility_http_total",
-      "Business Partner eligibility HTTP operations by outcome",
-    );
-    const eligibilityDuration =
-      container.adapters.openTelemetry?.metrics.histogram(
-        "athyper_business_partner_eligibility_http_duration_ms",
-        "Business Partner eligibility HTTP operation duration",
-      );
-    const matchCount = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_business_partner_profile_match_http_total",
-      "MESH Business Partner match/request HTTP operations by outcome",
-    );
-    const matchDuration = container.adapters.openTelemetry?.metrics.histogram(
-      "athyper_business_partner_profile_match_http_duration_ms",
-      "MESH Business Partner match/request HTTP operation duration",
-    );
-    const invitationCount = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_business_partner_invitation_http_total",
-      "Business Partner invitation HTTP operations and rejected external requests",
-    );
-    const invitationDuration =
-      container.adapters.openTelemetry?.metrics.histogram(
-        "athyper_business_partner_invitation_http_duration_ms",
-        "Business Partner invitation HTTP operation duration",
-      );
-    const bp360Count = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_bp360_request_total",
-      "Business Partner 360 operations by safe outcome and section",
-    );
-    const bp360Duration = container.adapters.openTelemetry?.metrics.histogram(
-      "athyper_bp360_duration_ms",
-      "Business Partner 360 operation duration in milliseconds",
-    );
-    const bp360Payload = container.adapters.openTelemetry?.metrics.histogram(
-      "athyper_bp360_payload_bytes",
-      "Business Partner 360 response payload bytes",
-    );
-    const bp360Completeness = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_bp360_completeness_total",
-      "Business Partner 360 completeness outcomes",
-    );
-    const bp360Redaction = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_bp360_redaction_total",
-      "Business Partner 360 redaction notices by classification",
-    );
-    const bp360Reveal = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_bp360_reveal_total",
-      "Business Partner 360 purpose-bound reveal outcomes",
-    );
-    const bp360MeshFallback = container.adapters.openTelemetry?.metrics.counter(
-      "athyper_bp360_mesh_fallback_total",
-      "Business Partner 360 MESH local-projection fallbacks",
-    );
-    const invitationGuard = createBusinessPartnerInvitationExternalGuard({
-      onRejected: (reason) =>
-        invitationCount?.increment({
-          operation: "external_guard",
-          outcome: reason,
-          status_code: reason === "rate_limited" ? "429" : "413",
-        }),
-    });
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerRequestRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: businessPartnerRequests,
-        aggregate360: businessPartner360,
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          requestCount?.increment(labels);
-          requestDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerGovernedInternalBusinessPartnerRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: governedInternalBusinessPartnerCases,
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          requestCount?.increment(labels);
-          requestDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartner360Routes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: businessPartner360,
-        createComment: async (
-          context,
-          businessPartnerId,
-          text,
-          idempotencyKey,
-        ) => {
-          if (!container.services.collaboration)
-            throw new Error("Collaboration is unavailable");
-          await capabilityPolicy.resolve({context,entityCode:"business_partner",recordId:businessPartnerId,kind:"comments",action:"create",input:{text,visibility:"internal"}});
-          return container.services.collaboration.create({
-            context,
-            entityType: "business_partner",
-            entityId: businessPartnerId,
-            contextType: "entity",
-            text,
-            visibility: "internal",
-            idempotencyKey,
-          });
-        },
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-            section: event.section ?? "none",
-            state: event.state ?? "none",
-            reason_code: event.reasonCode ?? "none",
-          };
-          bp360Count?.increment(labels);
-          bp360Duration?.record(event.durationMs, labels);
-          if (event.payloadBytes !== undefined)
-            bp360Payload?.record(event.payloadBytes, {
-              operation: event.operation,
-              section: event.section ?? "none",
-            });
-          if (event.completenessStatus)
-            bp360Completeness?.increment({
-              pack: "composed",
-              status: event.completenessStatus,
-            });
-          for (const fieldClass of event.redactionClasses ?? [])
-            bp360Redaction?.increment({ field_class: fieldClass });
-          if (event.revealClass)
-            bp360Reveal?.increment({
-              field_class: event.revealClass,
-              outcome: event.outcome,
-              reason_code: event.reasonCode ?? "none",
-            });
-          if (event.meshFallbackReason)
-            bp360MeshFallback?.increment({
-              reason_code: event.meshFallbackReason,
-            });
-        },
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerWorkforceRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: workforce,
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerSupplierWorkforceRequisitionRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: supplierWorkforceRequisitions,
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerWorkerEngagementIamRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: workerEngagementIam,
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerWorkerEngagementLifecycleRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: workerEngagementLifecycle,
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerInvitationRoutes(application, {
-        authenticateInternal: createIamAuthenticationMiddleware(iam),
-        authenticateExternal: createIamAuthenticationMiddleware(iam),
-        externalGuard: invitationGuard,
-        readContext: readVerifiedRequestContext,
-        service: businessPartnerInvitations,
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          invitationCount?.increment(labels);
-          invitationDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerEligibilityRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: businessPartnerEligibility,
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          eligibilityCount?.increment(labels);
-          eligibilityDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerBusinessPartnerProfileMatchRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: businessPartnerProfileMatches,
-        telemetry: (event) => {
-          const labels = {
-            operation: event.operation,
-            outcome: event.outcome,
-            status_code: String(event.statusCode),
-          };
-          matchCount?.increment(labels);
-          matchDuration?.record(event.durationMs, labels);
-        },
-      }),
-    );
-    container.runtimes.health.register(
-      "business-partner-profile-matches.neon",
-      async () => {
-        try {
-          const result = await sql<{
-            match_table: string | null;
-            acceptance_table: string | null;
-            event_table: string | null;
-            source_fk: boolean;
-            permission_count: number;
-          }>`SELECT to_regclass('document.mesh_business_partner_match')::text match_table,to_regclass('document.mesh_business_partner_acceptance')::text acceptance_table,to_regclass('document.mesh_business_partner_acceptance_event')::text event_table,EXISTS(SELECT 1 FROM pg_constraint WHERE conname='mesh_business_partner_acceptance_event_case_fk') source_fk,(SELECT count(*)::int FROM authz.permission WHERE canonical_code LIKE 'neon.business_partner_profile_match.%' AND status='published') permission_count`.execute(
-            neonDatabase,
-          );
-          const row = result.rows[0];
-          return row?.match_table &&
-            row.acceptance_table &&
-            row.event_table &&
-            row.source_fk &&
-            row.permission_count === 3
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "MESH Business Partner match/request DDL or permission contract is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "MESH Business Partner match readiness check failed",
-          };
-        }
-      },
-    );
-    container.runtimes.health.register(
-      "business-partner-cases.neon",
-      async () => {
-        try {
-          const result = await sql<{
-            case_table: string | null;
-            evidence_table: string | null;
-            validation_table: string | null;
-            materialization_table: string | null;
-            draft_command: string | null;
-            lifecycle_command: string | null;
-            role_materializer: string | null;
-          }>`SELECT to_regclass('document.entity_case')::text case_table,to_regclass('document.entity_case_command_evidence')::text evidence_table,to_regclass('document.entity_case_validation')::text validation_table,to_regclass('document.entity_case_materialization')::text materialization_table,to_regprocedure('document.command_entity_case_draft(uuid,uuid,bigint,uuid,text,text,text,uuid,text,uuid,text,uuid,bigint,text,jsonb,text,uuid,uuid)')::text draft_command,to_regprocedure('document.command_entity_case_lifecycle(uuid,uuid,text,bigint,uuid,uuid,text,text,uuid,uuid)')::text lifecycle_command,to_regprocedure('master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid)')::text role_materializer`.execute(
-            neonDatabase,
-          );
-          const row = result.rows[0];
-          return row?.case_table &&
-            row.evidence_table &&
-            row.validation_table &&
-            row.materialization_table &&
-            row.draft_command &&
-            row.lifecycle_command &&
-            row.role_materializer
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "Governed Business Partner case pipeline is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Governed Business Partner case readiness check failed",
-          };
-        }
-      },
-    );
-    container.runtimes.health.register(
-      "governed-internal-business-partner.neon",
-      async () => {
-        try {
-          const row = (
-            await sql<{
-              case_table: string | null;
-              draft_command: string | null;
-              lifecycle_command: string | null;
-              materialize_command: string | null;
-            }>`SELECT to_regclass('document.entity_case')::text case_table,to_regprocedure('document.command_entity_case_draft(uuid,uuid,bigint,uuid,text,text,text,uuid,text,uuid,text,uuid,bigint,text,jsonb,text,uuid,uuid)')::text draft_command,to_regprocedure('document.command_entity_case_lifecycle(uuid,uuid,text,bigint,uuid,uuid,text,text,uuid,uuid)')::text lifecycle_command,to_regprocedure('master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid)')::text materialize_command`.execute(
-              neonDatabase,
-            )
-          ).rows[0];
-          return row?.case_table &&
-            row.draft_command &&
-            row.lifecycle_command &&
-            row.materialize_command
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "Governed internal Business Partner command pipeline is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Governed internal Business Partner readiness check failed",
-          };
-        }
-      },
-    );
-    container.runtimes.health.register("workforce-requests.neon", async () => {
-      try {
-        const row = (
-          await sql<{
-            request_table: string | null;
-            validation_table: string | null;
-            guard_function: string | null;
-            approver_function: string | null;
-            permission_count: number;
-          }>`SELECT to_regclass('document.workforce_request')::text request_table,to_regclass('document.workforce_request_validation')::text validation_table,to_regprocedure('document.fn_workforce_request_payload_has_restricted_key(jsonb)')::text guard_function,to_regprocedure('document.fn_workforce_request_approvers(uuid,uuid,uuid,uuid)')::text approver_function,(SELECT count(*)::int FROM authz.permission WHERE canonical_code LIKE 'neon.workforce.request.%' AND status='published') permission_count`.execute(
-            neonDatabase,
-          )
-        ).rows[0];
-        return row?.request_table &&
-          row.validation_table &&
-          row.guard_function &&
-          row.approver_function &&
-          row.permission_count === 6
-          ? { status: "healthy" }
-          : {
-              status: "unhealthy",
-              message:
-                "People-owned workforce validation, workflow, materializer, or permission contract is incomplete",
-            };
-      } catch (error) {
-        return {
-          status: "unhealthy",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Workforce request readiness check failed",
-        };
-      }
-    });
-    container.runtimes.health.register(
-      "business-partner-invitations.neon",
-      async () => {
-        try {
-          const row = (
-            await sql<{
-              invitation_table: string | null;
-              recovery_table: string | null;
-              access_revocation: boolean;
-            }>`SELECT to_regclass('document.business_partner_invitation')::text invitation_table,to_regclass('document.business_partner_invitation_recovery')::text recovery_table,EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='document' AND table_name='business_partner_invitation' AND column_name='applicant_access_revoked_at') access_revocation`.execute(
-              neonDatabase,
-            )
-          ).rows[0];
-          return row?.invitation_table &&
-            row.recovery_table &&
-            row.access_revocation
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "Generalized invitation aggregate, recovery authority, or applicant-access revocation is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Business Partner invitation readiness check failed",
-          };
-        }
-      },
-    );
-    if (container.runtimes.jobs) {
-      container.runtimes.jobs.register(
-        BUSINESS_PARTNER_INVITATION_MAINTENANCE_QUEUE,
-        EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB,
-        createBusinessPartnerInvitationExpiryHandler(
-          businessPartnerInvitations,
-        ),
-      );
-      container.runtimes.jobDefinitions.push({
-        code: EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB,
-        owner: "@athyper/server-service-master-data",
-        queue: BUSINESS_PARTNER_INVITATION_MAINTENANCE_QUEUE,
-        name: EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB,
-        scope: "tenant",
-        payloadSchema: {
-          name: EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB,
-          version: 1,
-        },
-        timeoutMs: 60_000,
-        maxAttempts: 5,
-        executionRetentionDays: 30,
-      });
-    }
-    if (container.runtimes.jobs) {
-      container.runtimes.jobs.register(
-        SUPPLIER_READINESS_MAINTENANCE_QUEUE,
-        EXPIRE_SUPPLIER_QUALIFICATIONS_JOB,
-        createSupplierQualificationExpiryHandler(businessPartnerEligibility),
-      );
-      container.runtimes.jobs.register(
-        SUPPLIER_READINESS_MAINTENANCE_QUEUE,
-        REEVALUATE_SUPPLIER_ACTIVATIONS_JOB,
-        createSupplierActivationReevaluationHandler(businessPartnerEligibility),
-      );
-      for (const code of [
-        EXPIRE_SUPPLIER_QUALIFICATIONS_JOB,
-        REEVALUATE_SUPPLIER_ACTIVATIONS_JOB,
-      ])
-        container.runtimes.jobDefinitions.push({
-          code,
-          owner: "@athyper/server-service-master-data",
-          queue: SUPPLIER_READINESS_MAINTENANCE_QUEUE,
-          name: code,
-          scope: "tenant",
-          payloadSchema: { name: code, version: 1 },
-          timeoutMs: 120_000,
-          maxAttempts: 5,
-          executionRetentionDays: 90,
-        });
-    }
-    container.runtimes.health.register(
-      "business-partner-eligibility.neon",
-      async () => {
-        try {
-          const result = await sql<{
-            qualification_table: string | null;
-            preference_table: string | null;
-            block_table: string | null;
-            risk_table: string | null;
-            activation_evidence_table: string | null;
-            row_version: boolean;
-            idempotency_key: boolean;
-            permission_count: number;
-          }>`SELECT to_regclass('control.business_partner_qualification')::text AS qualification_table,to_regclass('control.supplier_preference_designation')::text AS preference_table,to_regclass('control.business_partner_block')::text AS block_table,to_regclass('master.party_risk_assessment')::text AS risk_table,to_regclass('document.supplier_activation_evidence')::text AS activation_evidence_table,EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='control' AND table_name='business_partner_qualification' AND column_name='row_version' AND is_nullable='NO') AS row_version,EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='control' AND table_name='business_partner_qualification' AND column_name='idempotency_key' AND is_nullable='NO') AS idempotency_key,(SELECT count(*)::int FROM authz.permission WHERE canonical_code IN ('neon.supplier.qualification.admin','neon.supplier.preference.admin','neon.relationship.business_partner.read','neon.relationship.business_partner.activate')) AS permission_count`.execute(
-            neonDatabase,
-          );
-          const row = result.rows[0];
-          return row?.qualification_table &&
-            row.preference_table &&
-            row.block_table &&
-            row.risk_table &&
-            row.activation_evidence_table &&
-            row.row_version &&
-            row.idempotency_key &&
-            row.permission_count === 4
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "Business Partner qualification, preference, or activation contract is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Business Partner eligibility readiness check failed",
-          };
-        }
-      },
-    );
-    container.runtimes.health.register(
-      "business-partner-role-extensions.neon",
-      async () => {
-        try {
-          const result = await sql<{
-            customer_table: string | null;
-            role_materializer: string | null;
-            normalized_command: string | null;
-          }>`SELECT to_regclass('master.customer')::text customer_table,to_regprocedure('master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid)')::text role_materializer,to_regprocedure('control.command_create_business_partner_decision(uuid,text,uuid,text,uuid,uuid,uuid,uuid,jsonb,text,uuid)')::text normalized_command`.execute(
-            neonDatabase,
-          );
-          const row = result.rows[0];
-          return row?.customer_table &&
-            row.role_materializer &&
-            row.normalized_command
-            ? { status: "healthy" }
-            : {
-                status: "unhealthy",
-                message:
-                  "Governed supplier/customer role materialization contract is incomplete",
-              };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Business Partner role extension readiness check failed",
-          };
-        }
-      },
-    );
   }
   registerStudioAuthoring(
     container,
@@ -4947,6 +2082,25 @@ export function registerServices(
     iam,
     authorizer,
     transactions,
+    {
+      databases: metadataDatabases,
+      runtime: { qualify(profile, bindings) {
+        const runtime = localGraphRuntimeQualifiers.get(container);
+        if (!runtime) throw Error("PUBLICATION_RUNTIME_REGISTRY_UNAVAILABLE");
+        runtime.qualify(profile, bindings);
+      } },
+      qualifyCapabilities: createCapabilityQualification({ databases: metadataDatabases, providers: () => ({
+        parentRead: Boolean(readPublishedParent),
+        resourceHeader: Boolean(dependencies.entityResourceProviders?.headers || readPublishedHeader),
+        section: createCollaborationSectionProviders(transactions).getService,
+        comments: container.services.collaboration,
+        attachments: container.services.attachments,
+        discovery: attachmentDiscovery,
+        processing: { qualifyPreview: qualifyAttachmentPreview, qualifyExtraction: qualifyAttachmentExtraction },
+        storage: container.adapters.objectStorageDocuments,
+        scanner: container.adapters.malwareScanner,
+      }) }),
+    },
   );
   registerStudioOnboarding(
     container,
@@ -4954,6 +2108,9 @@ export function registerServices(
     dependencies.onboardingTransport,
     iam,
     authorizer,
+    config?.mode === "api" || config?.mode === "worker" || config?.mode === "scheduler"
+      ? config.mode
+      : undefined,
   );
   if (Object.keys(metadataDatabases).length > 0) {
     container.services.numbering = new DefaultNumberingService(
@@ -5137,14 +2294,6 @@ export function registerServices(
     authorizer,
   });
   const notificationHandlers = new Map(container.adapters.notificationChannels);
-  if (config?.localContactDeliveryKey && notificationHandlers.has("email"))
-    notificationHandlers.set(
-      "email",
-      localVerificationEmailHandler(
-        notificationHandlers.get("email")!,
-        config.localContactDeliveryKey,
-      ),
-    );
   const emailHandler = notificationHandlers.get("email");
   if (emailHandler && sesDeliveryRepository) {
     notificationHandlers.set(
@@ -5176,8 +2325,6 @@ export function registerServices(
     handlers: notificationHandlers,
   });
   container.services.notifications = notifications;
-  let communicationArtifactAuthority: ((context:VerifiedRequestContext,id:string,tx:RecordTransaction)=>Promise<void>) | undefined;
-  const supplierCommunications=createSupplierProcessCommunications({transactions:exactTransactions,consent:consent??denyAllConsent,authorizer:processDocumentAuthority??authorizer,authorizeArtifact:async(context,id,tx)=>{if(!communicationArtifactAuthority)throw Error("SUPPLIER_DOCUMENT_AUTHORITY_UNAVAILABLE");await communicationArtifactAuthority(context,id,tx);}});
 
   const notificationRecipientContext=async(source:import("@athyper/server-contract-notifications").NotificationSourceEvent,principalId:string)=>{
     const row=await transactions.run(source.planeKey,{tenantId:source.tenantId,principalId},async tx=>(await sql<{auth_epoch:number}>`SELECT auth_epoch FROM master.principal WHERE tenant_id=${source.tenantId}::uuid AND id=${principalId}::uuid AND status='active'`.execute(tx)).rows[0]);
@@ -5199,7 +2346,6 @@ export function registerServices(
   };
   if(!notificationAttachmentResolver&&objectStorage)notificationAttachmentResolver=createNotificationAttachmentResolver({transactions,artifacts:dependencies.documentArtifactRepository??createKyselyDocumentArtifactRepository(),storage:objectStorage,access:{async authorize(input){
     const {request,attachment}=input;
-    if(await supplierCommunications.attachmentAccess.authorize(input))return true;
     if(request.planeKey!=="neon"||request.versionPolicy!=="pinned"||request.attachmentVersionId!==attachment.attachmentVersionId)return false;
     // Restrict access to the delivery's parent/comment, not any unrelated file link.
     return exactTransactions.run("neon",{tenantId:request.tenantId,principalId:request.recipientPrincipalId},async tx=>{
@@ -5211,13 +2357,6 @@ export function registerServices(
   }}});
   const activityPresentation=createActivityPresentation(async(context,coordinate)=>{
     try {
-      if(coordinate.entityCode==="business_partner_case"||coordinate.entityCode==="business_partner_request") {
-        if(context.planeKey!=="neon")return undefined;
-        const request=await container.services.businessPartnerRequests?.get({context,requestId:coordinate.recordId});
-        if(!request)return undefined;
-        const name=request.proposedPayload.name??request.proposedPayload.display_name??request.representedPartyName;
-        return {href:`/mdg/business-partner/requests/${encodeURIComponent(request.id)}`,recordLabel:["Business Partner request",typeof name==="string"?name:undefined,request.caseNo??request.requestNo].filter(Boolean).join(" · "),actionLabel:"Review request"};
-      }
       let threadRootId:string|undefined;
       if(coordinate.commentId){
         await capabilityPolicy.resolve({context,entityCode:coordinate.entityCode,recordId:coordinate.recordId,kind:"comments",action:"read",input:{commentId:coordinate.commentId}});
@@ -5237,7 +2376,7 @@ export function registerServices(
       throw error;
     }
   });
-  const collaborationNotificationPolicy=createCollaborationNotificationPolicy({fallback:supplierCommunications.policy,authorize:authorizeNotificationRecipient,async recordHref(source){
+  const collaborationNotificationPolicy=createCollaborationNotificationPolicy({fallback:dependencies.notificationPolicy ?? {async prepare(){return null;},async authorizeRecipient(){return false;}},authorize:authorizeNotificationRecipient,async recordHref(source){
     const context=await notificationRecipientContext(source,source.actorPrincipalId);
     if(!context)return undefined;
     const descriptor=await metadata.getEntityDescriptor(context,String(source.payload.entity_type));
@@ -5250,18 +2389,7 @@ export function registerServices(
     transactions: exactTransactions,
     consent: consent ?? denyAllConsent,
   });
-  const notificationPlanningCount =
-    container.adapters.openTelemetry?.metrics.counter(
-      "athyper_business_partner_notification_planning_total",
-      "Business Partner notification planning outcomes",
-    );
-  const notificationPlanningDuration =
-    container.adapters.openTelemetry?.metrics.histogram(
-      "athyper_business_partner_notification_planning_duration_ms",
-      "Business Partner notification planning duration",
-    );
   const durableDelivery = createDurableNotificationDeliveryRepository({
-    onTerminalFailure:supplierCommunications.onTerminalFailure,
     transactions,
   });
   const outboxPlanning = createKyselyNotificationOutboxRepository({
@@ -5349,24 +2477,13 @@ export function registerServices(
       createNotificationOutboxSweepHandler({
         repository: outboxPlanning,
         planner: notificationPlanner,
-        telemetry: (measurement) => {
-          if (!measurement.eventCode.startsWith("business_partner.")) return;
-          const labels = {
-            lifecycle: businessPartnerNotificationLifecycle(
-              measurement.eventCode,
-            ),
-            outcome: measurement.outcome,
-          };
-          notificationPlanningCount?.increment(labels);
-          notificationPlanningDuration?.record(measurement.durationMs, labels);
-        },
       }),
     );
     jobs.register(
       NOTIFICATION_MAINTENANCE_QUEUE,
       DELIVERY_SWEEP_JOB,
       createDeliverySweepHandler({
-        authorizeDelivery:createEntityNotificationDeliveryGuard({transactions:exactTransactions,consent:consent??denyAllConsent,policy:collaborationNotificationPolicy,route:(source,tx)=>resolveEntityNotificationRoute(source,entityCode=>readPublishedNotificationConfiguration(tx,source.tenantId,entityCode)),fallback:supplierCommunications.authorizeDelivery}),
+        authorizeDelivery:createEntityNotificationDeliveryGuard({transactions:exactTransactions,consent:consent??denyAllConsent,policy:collaborationNotificationPolicy,route:(source,tx)=>resolveEntityNotificationRoute(source,entityCode=>readPublishedNotificationConfiguration(tx,source.tenantId,entityCode)),fallback:async()=>({allowed:false,reason:"NOTIFICATION_ROUTE_UNAVAILABLE"})}),
         repository: durableDelivery,
         handlers: notificationHandlers,
         events: notificationEvents,
@@ -5571,54 +2688,7 @@ export function registerServices(
     const listMetadata = createStudioCatalogMetadataReader(metadata);
     const collectionScopes = container.platform.experience
       ? combineRecordCollectionScopeResolvers(
-          createNeonRecordCollectionScopeResolver(
-            container.platform.experience.service,
-            async (context, coordinate) => {
-              const records = container.services.records,
-                eligibility = container.services.businessPartnerEligibility;
-              if (!records || !eligibility)
-                throw new Error("Eligibility directory adapter unavailable");
-              const { eligibleOperation, ...scopeCoordinate } = coordinate;
-              const ids: string[] = [];
-              const businessDate = new Date().toISOString().slice(0, 10);
-              let cursor: string | undefined,
-                examined = 0;
-              do {
-                const page = await records.queries.list({
-                  context,
-                  entityCode: "business_partner",
-                  scopeCoordinate,
-                  limit: 100,
-                  ...(cursor ? { cursor } : {}),
-                });
-                examined += page.data.length;
-                if (examined > 10000)
-                  throw new Error(
-                    "Narrow directory scope before checking transaction eligibility",
-                  );
-                // Bound independent eligibility checks without exhausting the DB pool.
-                for (let offset = 0; offset < page.data.length; offset += 8) {
-                  const eligibleIds = await Promise.all(page.data.slice(offset, offset + 8).map(async (row) => {
-                  const id = String(row["id"]);
-                  const decision = await eligibility.resolve({
-                    context,
-                    businessPartnerId: id,
-                    role: coordinate.partnerRole!,
-                    operatingOrganizationId:
-                      coordinate.operatingOrganizationId!,
-                    companyCodeId: coordinate.companyCodeId!,
-                    operationCode: eligibleOperation!,
-                    businessDate,
-                  });
-                  return decision.eligible ? id : undefined;
-                  }));
-                  ids.push(...eligibleIds.filter((id): id is string => id !== undefined));
-                }
-                cursor = page.pagination.nextCursor;
-              } while (cursor);
-              return ids;
-            },
-          ),
+          createNeonRecordCollectionScopeResolver(container.platform.experience.service),
           createMeshRecordCollectionScopeResolver(
             container.platform.experience.service,
           ),
@@ -5630,12 +2700,9 @@ export function registerServices(
       metadata: listMetadata,
       ...(collectionScopes ? { collectionScopes } : {}),
     };
-    const listExecutor = createRecordListExecutor(listExecutionOptions);
-    const queries = createRecordQueryService(
-      listExecutionOptions,
-      listExecutor,
-    );
-    const lists = createEntityListService({
+    const { listExecutor, queries, lists } = createEntityReadRuntime(listExecutionOptions, {
+      collaboration: input => entityCollaboration.describe(input),
+      summary: async input => publishedSummaries?.describe(input),
       formChoices: async (context, sourceKey) => {
         const database=metadataDatabases[context.planeKey];
         if(!database)throw Error("INTAKE_LOOKUP_DATABASE_UNAVAILABLE");
@@ -5685,43 +2752,32 @@ export function registerServices(
           countries.map((field) => [field.key, choices]),
         );
       },
-      metadata: listMetadata,
-      authorizer,
-      listExecutor,
-      queries,
-      ...(collectionScopes ? { collectionScopes } : {}),
     });
-    container.platform.httpRegistrars.push((application) =>
-      registerEntityViewRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        service: savedViews,
-        descriptor: (context, entity, query) =>
-          lists.descriptor(
-            context,
-            entity,
-            parseEntityListScopeCoordinate(query),
-          ),
-      }),
-    );
-    container.platform.httpRegistrars.push(application => registerReferenceChoiceRoutes(application, {
-      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext,
-      descriptor: (context, entity, query) => lists.applicationDescriptor(context, entity, parseEntityListScopeCoordinate(query)),
-      store: createReferenceHistoryStore(transactions),
-    }));
-    container.platform.httpRegistrars.push(application => registerSharedReferenceDirectoryRoutes(application, {
-      authenticate: createIamAuthenticationMiddleware(iam),
-      readContext: readVerifiedRequestContext,
-      directory: (context) => {
-        const database = metadataDatabases[context.planeKey];
-        if (!database) throw Error("REFERENCE_LOOKUP_DATABASE_UNAVAILABLE");
-        return createSharedReferenceDirectory(database);
-      },
-    }));
+    installedReadQueries = queries;
+    readPublishedParent = async (input, descriptor) => {
+      const pinned = createEntityReadRuntime({ ...listExecutionOptions, metadata: {
+        async getEntityDescriptor(context, entityCode) {
+          return context.tenantId === input.context.tenantId && context.principalId === input.context.principalId
+            && context.planeKey === descriptor.planeKey && entityCode === descriptor.entityCode ? descriptor : null;
+        },
+      } }).queries;
+      const found = await pinned.list({ context: input.context, entityCode: input.entityCode, recordIds: [input.recordId],
+        fields: [descriptor.storage.idField], limit: 1, countMode: "none", hydrateReferences: false });
+      return found.data.length === 1 && String(found.data[0]?.[descriptor.storage.idField]) === input.recordId;
+    };
+    readPublishedHeader = async (input, descriptor, fields) => {
+      const pinned = createEntityReadRuntime({ ...listExecutionOptions, metadata: {
+        async getEntityDescriptor(context, entityCode) {
+          return context.tenantId === input.context.tenantId && context.principalId === input.context.principalId
+            && context.planeKey === descriptor.planeKey && entityCode === descriptor.entityCode ? descriptor : null;
+        },
+      } }).queries;
+      const found = await pinned.list({ context: input.context, entityCode: descriptor.entityCode, recordIds: [input.recordId],
+        fields: [...fields], limit: 1, countMode: "none", hydrateReferences: false });
+      return found.data.length === 1 ? found.data[0]! : null;
+    };
     // Records can run without the optional BP composition (for example a
     // metadata-only host). BP intake checks availability at its request boundary.
-    intakeApplicationDescriptor=compiledBusinessPartnerApplicationDescriptor;
-    intakeReferenceRecord=lists.record.bind(lists);
     const bookmarks = createRecordBookmarkService({
       transactions,
       listExecutor,
@@ -5757,7 +2813,6 @@ export function registerServices(
           )
         : undefined;
     const importAdapters = new GovernedImportAdapterRegistry([
-      createNeonBusinessPartnerImportAdapter(),
       createMeshRelationshipRequestImportAdapter(),
       createStudioMetadataDraftImportAdapter(),
     ]);
@@ -5789,36 +2844,68 @@ export function registerServices(
       ...(snapshots ? { snapshots } : {}),
       ...(transfers ? { transfers } : {}),
     };
-    container.platform.httpRegistrars.push((application) =>
-      registerEntityListRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        lists,
-        applicationDescriptor: (context, entityCode, scopeCoordinate) => {
-          if (entityCode === "business_partner") {
-            if (!compiledBusinessPartnerApplicationDescriptor) throw Error("COMPILED_ENTITY_APPLICATION_DESCRIPTOR_UNAVAILABLE");
-            return compiledBusinessPartnerApplicationDescriptor(context, entityCode, scopeCoordinate);
-          }
-          return lists.applicationDescriptor(context, entityCode, scopeCoordinate);
-        },
-      }),
-    );
-    container.platform.httpRegistrars.push((application) =>
-      registerRecordBookmarkRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        bookmarks,
-      }),
-    );
-    if (snapshots)
-      container.platform.httpRegistrars.push((application) =>
-        registerRecordSnapshotRoutes(application, {
+    if (!config || config.mode === "api") container.platform.httpRegistrars.push((application) =>
+      registerEntityReadHttp(application, {
+        views: {
           authenticate: createIamAuthenticationMiddleware(iam),
           readContext: readVerifiedRequestContext,
-          authorizer,
-          snapshots,
-        }),
-      );
+          service: savedViews,
+          descriptor: (context, entity, query) =>
+            lists.descriptor(
+              context,
+              entity,
+              parseEntityListScopeCoordinate(query),
+            ),
+        },
+        references: {
+          authenticate: createIamAuthenticationMiddleware(iam),
+          readContext: readVerifiedRequestContext,
+          descriptor: (context, entity, query) =>
+            lists.applicationDescriptor(
+              context,
+              entity,
+              parseEntityListScopeCoordinate(query),
+            ),
+          store: createReferenceHistoryStore(transactions),
+        },
+        directory: {
+          authenticate: createIamAuthenticationMiddleware(iam),
+          readContext: readVerifiedRequestContext,
+          directory: (context) => {
+            const database = metadataDatabases[context.planeKey];
+            if (!database) throw Error("REFERENCE_LOOKUP_DATABASE_UNAVAILABLE");
+            return createSharedReferenceDirectory(database);
+          },
+        },
+        entity: {
+          authenticate: createIamAuthenticationMiddleware(iam),
+          readContext: readVerifiedRequestContext,
+          lists,
+          applicationDescriptor: (context, entityCode, scopeCoordinate) => {
+            return lists.applicationDescriptor(
+              context,
+              entityCode,
+              scopeCoordinate,
+            );
+          },
+        },
+        bookmarks: {
+          authenticate: createIamAuthenticationMiddleware(iam),
+          readContext: readVerifiedRequestContext,
+          bookmarks,
+        },
+        ...(snapshots
+          ? {
+              snapshots: {
+                authenticate: createIamAuthenticationMiddleware(iam),
+                readContext: readVerifiedRequestContext,
+                authorizer,
+                snapshots,
+              },
+            }
+          : {}),
+      }),
+    );
     if (
       transfers &&
       transferStore &&
@@ -5924,15 +3011,6 @@ export function registerServices(
       transactions,
       ...(policy ? { policy } : {}),
     });
-    const informationTransactions: PlaneTransactionCoordinator<RecordTransaction> = {run: (_plane,actor,work) => {
-      const db=container.adapters.jobNeonDatabase;
-      if(!db)throw Error("INFORMATION_SLA_WORKER_DATABASE_UNAVAILABLE");
-      return db.withSystemTransaction(async tx=>{
-        await stampTransactionActor(tx as unknown as RecordTransaction,actor);
-        await sql`SELECT set_config('app.database_plane','neon',true)`.execute(tx);
-        return work(tx as unknown as RecordTransaction);
-      });
-    }};
     const workflowSla = createWorkflowSlaAutomation({
       repository: createKyselySlaAutomationRepository(),
       transactions,
@@ -5951,12 +3029,11 @@ export function registerServices(
         WORKFLOW_MAINTENANCE_QUEUE,
         SWEEP_WORKFLOW_SLA_JOB,
         createWorkflowSlaSweepHandler({async sweep(scope) {
-          if(scope.principalId!==SYSTEM_PRINCIPAL_ID){await sweepSupplierInformation(informationTransactions,scope);return workflowSla.sweep(scope);}
+          if(scope.principalId!==SYSTEM_PRINCIPAL_ID)return workflowSla.sweep(scope);
           // Discovery uses the global scheduler identity; tenant writes require
           // the same tenant-local maintenance identity used by notifications.
           const principalId=await transactions.run(scope.planeKey,scope,async tx=>(await sql<{id:string}>`SELECT event.fn_notification_worker_principal(${scope.tenantId}::uuid) id`.execute(tx)).rows[0]?.id);
           if(!principalId)throw Error("WORKFLOW_MAINTENANCE_PRINCIPAL_UNAVAILABLE");
-          await sweepSupplierInformation(informationTransactions,{...scope,principalId});
           return workflowSla.sweep({...scope,principalId});
         }}),
       );
@@ -6011,6 +3088,13 @@ export function registerServices(
       container.runtimes.jobs,
       config?.contentExtraction.timeoutMs ?? 120_000,
     );
+    qualifyAttachmentExtraction = async () => {
+      // Alphanumeric sentinel survives parser text/markup normalization (some
+      // providers escape underscores even in their text response).
+      const marker = "ATHYPERCONTENTQUALIFICATION";
+      const result = await contentExtractor.extract({ content: new TextEncoder().encode(marker), contentType: "text/plain", fileName: "qualification.txt", signal: AbortSignal.timeout(30000) });
+      if (!result.text.includes(marker)) throw Error("PUBLICATION_CAPABILITY_EXTRACTION_PROBE_FAILED");
+    };
   }
   if (searchIndex) {
     const search = createDocumentSearchService({
@@ -6222,6 +3306,10 @@ export function registerServices(
       ...(derivativeScheduler ? {schedule:input => derivativeScheduler.schedule(input)} : {}),
       ...(extractionScheduler ? {extract:input => extractionScheduler.schedule(input)} : {}),
     });
+    if (derivativeScheduler && container.adapters.previewRenderer) {
+      const renderer = container.adapters.previewRenderer;
+      qualifyAttachmentPreview = () => qualifyPreviewRenderer(renderer);
+    }
     container.platform.httpRegistrars.push(application => registerAttachmentDiscoveryRoutes(application, {
       authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:attachmentDiscovery!,
     }));
@@ -6383,13 +3471,11 @@ export function registerServices(
     objectStorage &&
     objectStorageBucket
   ) {
-    let processDocuments: ReturnType<typeof createSupplierProcessDocuments>;
     const documents = createDocumentService<RecordTransaction>({
       metadata,
       authorizer,
       audit,
-      resolveTrustedSource: (command,tx) => processDocuments.project(command,tx),
-      authorizeArtifact: (context,id,tx)=>processDocuments.authorizeArtifact(context,id,tx),
+      ...dependencies.documentBindings,
       outbox: dependencies.outbox ?? createDatabaseOutboxWriter("documents"),
       templates:
         dependencies.documentTemplateRepository ??
@@ -6405,17 +3491,6 @@ export function registerServices(
       ...(extractionScheduler ? { extractionScheduler } : {}),
     });
     container.services.documents = documents;
-    processDocuments=createSupplierProcessDocuments({authorizer:processDocumentAuthority??authorizer,transactions,documents,reviewReady:(context,caseId,tx)=>{if(!processReviewGate)throw Error('PROCESS_TASK_GATE_UNAVAILABLE');return processReviewGate(context,caseId,tx);}});
-    communicationArtifactAuthority=async(context,id,tx)=>{await processDocuments.authorizeArtifact(context,id,tx);};
-    container.platform.httpRegistrars.push(application=>mountSupplierProcessDocuments(application,{authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:processDocuments}));
-    const processDb=metadataDatabases.neon;
-    if(processDb && (container.runtimes.jobs || container.runtimes.scheduler)){
-      const queue='process-documents',name='supplier.process-documents.poll';
-      const poll=createSupplierProcessDocumentPoll(processDb,processDocuments);
-      container.runtimes.jobs?.register(queue,name,{async handle(){return {status:'completed',output:await poll()};}});
-      container.runtimes.jobDefinitions.push({code:name,owner:'@athyper/server-service-documents',queue,name,scope:'plane',payloadSchema:{name,version:1},timeoutMs:600000,maxAttempts:3,executionRetentionDays:30});
-      if(container.runtimes.scheduler)container.runtimes.scheduledJobs.push({scheduleId:'supplier-process-documents-neon',queue,name,data:{planeKey:'neon'},pattern:{kind:'interval',everyMs:30000},options:{jobId:'supplier-process-documents-neon',maxAttempts:3,payloadSchema:{name,version:1},execution:{planeKey:'neon',scope:'plane',principalId:'00000000-0000-0000-0000-000000000000'}}});
-    }
 
     container.platform.httpRegistrars.push((application) =>
       registerDocumentRoutes(application, {
@@ -6507,19 +3582,6 @@ export function registerAtlas(
         : Promise.resolve(null);
     },
   };
-  const caseOwner = container.services.businessPartnerRequests?.explainCase
-    ? {
-        read: (
-          input: Parameters<
-            NonNullable<
-              NonNullable<
-                typeof container.services.businessPartnerRequests
-              >["explainCase"]
-            >
-          >[0],
-        ) => container.services.businessPartnerRequests!.explainCase!(input),
-      }
-    : undefined;
   configureSharedAtlasInferenceAdmission(
     new RedisInferenceAdmission(container.adapters.redisCache?.client),
   );
@@ -6591,25 +3653,14 @@ export function registerAtlas(
         : undefined;
     const localRegistry = new AtlasToolRegistry([
       createAtlasEntityRecordTool(atlasMetadata),
-      ...createBusinessPartnerAtlasTools(caseOwner),
-      ...(caseOwner ? createBusinessPartnerCaseTools(caseOwner) : []),
-      ...(container.services.businessPartnerAtlasInsights
-        ? createBusinessPartnerInsightTools(
-            container.services.businessPartnerAtlasInsights,
-            async (query) => {
-              const records = container.services.records;
-              if (!records)
-                throw new Error("Authorized Records runtime is unavailable.");
-              return records.lists.list(query);
-            },
-          )
-        : []),
     ]);
+    // Local registry contains only the generic read tool; mutations require an
+    // explicitly configured tool registry and authority.
     const localAvailable = (access: "read" | "mutation" = "read") =>
       Boolean(
         container.platform.metadata &&
         container.services.records &&
-        (access === "read" || container.services.businessPartnerRequests),
+        access === "read",
       );
     const localTools = toolsEnabled
       ? new AtlasToolService({
@@ -6722,21 +3773,7 @@ export function registerAtlas(
               );
             },
           },
-          commands: createBusinessPartnerAtlasCommandBus({
-            fallback: {
-              async execute() {
-                throw new Error("Unregistered local Atlas command.");
-              },
-            },
-            submit: async (command) => {
-              if (
-                !config?.atlas.mutationsEnabled ||
-                !container.services.businessPartnerRequests
-              )
-                throw new Error("Atlas mutations are disabled.");
-              return container.services.businessPartnerRequests.submit(command);
-            },
-          }),
+          commands: { async execute() { throw new Error("Unregistered local Atlas command."); } },
         })
       : undefined;
     const localCoordinator = localTools
@@ -6782,7 +3819,6 @@ export function registerAtlas(
                 throw new Error("Atlas business context unavailable");
               return createAtlasBusinessContextResolver({
                 metadata,
-                cases: caseOwner,
                 records: records.queries,
                 list: (query) => records.lists.list(query),
               }).resolve(context, value);
@@ -6946,19 +3982,6 @@ export function registerAtlas(
   const registry = new AtlasToolRegistry([
     createAtlasEntityRecordTool(atlasMetadata),
     ...dependencies.registeredTools,
-    ...createBusinessPartnerAtlasTools(caseOwner),
-    ...(caseOwner ? createBusinessPartnerCaseTools(caseOwner) : []),
-    ...(container.services.businessPartnerAtlasInsights
-      ? createBusinessPartnerInsightTools(
-          container.services.businessPartnerAtlasInsights,
-          async (query) => {
-            const records = container.services.records;
-            if (!records)
-              throw new Error("Authorized Records runtime is unavailable.");
-            return records.lists.list(query);
-          },
-        )
-      : []),
   ]);
   const tools = new AtlasToolService({
     registry,
@@ -6966,15 +3989,7 @@ export function registerAtlas(
     proposals: ledger,
     records: dependencies.recordGateway,
     confirmations: dependencies.confirmations,
-    commands: createBusinessPartnerAtlasCommandBus({
-      fallback: dependencies.commands,
-      submit: async (command) => {
-        const owner = container.services.businessPartnerRequests;
-        if (!owner)
-          throw new Error("Business Partner case owner is unavailable.");
-        return owner.submit(command);
-      },
-    }),
+    commands: dependencies.commands,
   });
   const coordinator = toolsEnabled
     ? new AtlasRegisteredToolCoordinator(registry, tools, atlasMetadata)
@@ -7000,7 +4015,6 @@ export function registerAtlas(
           throw new Error("Atlas business context unavailable");
         return createAtlasBusinessContextResolver({
           metadata,
-          cases: caseOwner,
           records: records.queries,
           list: (query) => records.lists.list(query),
         }).resolve(context, value);
@@ -7158,6 +4172,8 @@ const localGraphRuntimeQualifiers = new WeakMap<
   Container,
   { qualify(profile: unknown, bindings: unknown): void }
 >();
+const publicationTargetQualifications = new WeakMap<Container,
+  Parameters<typeof registerPublicationWorkloadRoutes>[1]["dependencies"]["targets"]>();
 const atlasLearningInboxes = new WeakMap<Container, AtlasLearningInbox>();
 
 function registerStudioAuthoring(
@@ -7167,10 +4183,17 @@ function registerStudioAuthoring(
   iam: NonNullable<Container["platform"]["iam"]>,
   authorizer: NonNullable<Container["platform"]["authorizer"]>,
   transactions: PlaneTransactionCoordinator<RecordTransaction>,
+  publicationTargets: Parameters<typeof registerPublicationWorkloadRoutes>[1]["dependencies"]["targets"],
 ): void {
+  publicationTargetQualifications.set(container, publicationTargets);
   const devPublication = config?.mode === "api"
     ? loadDevPublicationConfiguration(process.env, config.env)
     : undefined;
+  const publicationWorkload = config?.mode === "api"
+    ? loadPublicationWorkloadConfiguration(process.env, config.env)
+    : undefined;
+  if (publicationWorkload && (!config?.publication.authoringEnabled || !container.platform.audit || !container.adapters.publicationVerifier))
+    throw Error("PUBLICATION_WORKLOAD_AUTHORING_AND_TRUST_REQUIRED");
   if (devPublication && (!config?.publication.authoringEnabled || !container.platform.audit))
     throw Error("DEV_PUBLICATION_AUTHORING_AND_AUDIT_REQUIRED");
   if (
@@ -7206,6 +4229,7 @@ function registerStudioAuthoring(
       ),
     (db) =>
       new KyselyMetaEntityAuthoringRepository(db, async (tx, input) => {
+        if (await prepareSystemReferenceRelease(tx, input)) return;
         if (await prepareCollectionConfigurationRelease(tx, input)) return;
         if (await prepareNotificationConfigurationRelease(tx, input)) return;
         const restored = await prepareRuntimeRestorationRelease(
@@ -7438,6 +4462,16 @@ function registerStudioAuthoring(
     registerDevPublicationRoutes(application, {
       config: devPublication, database, service, audit: container.platform.audit!,
     }));
+  if (publicationWorkload && container.adapters.publicationVerifier) {
+    // Human policy enrollment belongs exclusively to the isolated control API.
+    // Workload execution remains separately authenticated and requires an enrolled pin.
+    container.platform.httpRegistrars.push(application => registerPublicationWorkloadRoutes(application, {
+      configuration: publicationWorkload,
+      dependencies: { database, service, audit: container.platform.audit!, authorizer, targets: publicationTargets, jobs: container.runtimes.jobs,
+        policyAuthority: { async assertAuthorized() { throw Error("MACHINE_PUBLICATION_ENROLLED_POLICY_REQUIRED"); } },
+      },
+    }));
+  }
   container.platform.httpRegistrars.push((application) =>
     registerAtlasLearningInboxRoutes(application, {
       authenticate: createIamAuthenticationMiddleware(iam),
@@ -7493,110 +4527,6 @@ function registerStudioAuthoring(
   );
 }
 
-function registerStudioOnboarding(
-  container: Container,
-  database: Kysely<Record<string, never>> | undefined,
-  transport: ProvisioningCommandTransport | undefined,
-  iam: NonNullable<Container["platform"]["iam"]>,
-  authorizer: NonNullable<Container["platform"]["authorizer"]>,
-): void {
-  container.runtimes.health.register(
-    "studio.onboarding-authority",
-    async () => {
-      if (!database)
-        return {
-          status: "unhealthy",
-          message: "Studio onboarding database is unavailable",
-        };
-      if (!transport)
-        return {
-          status: "healthy",
-          message: "Studio onboarding routes are disabled",
-        };
-      try {
-        await sql`SELECT 1 FROM onboarding.onboarding_case LIMIT 1`.execute(
-          database,
-        );
-        return { status: "healthy" };
-      } catch {
-        return {
-          status: "unhealthy",
-          message: "Studio onboarding schema is unavailable",
-        };
-      }
-    },
-  );
-  if (!database || !transport || !container.adapters.athyperDatabase) return;
-  const repository = new KyselyOnboardingSagaRepository(database);
-  const transactions = {
-    run: <Result>(
-      actor: { tenantId: string; principalId: string },
-      work: (
-        transaction: Transaction<Record<string, never>>,
-      ) => Promise<Result>,
-    ) =>
-      container.adapters.athyperDatabase!.withTenantTransaction((transaction) =>
-        work(transaction as unknown as Transaction<Record<string, never>>),
-      ),
-  };
-  const lifecycle = new OnboardingCaseLifecycleService(
-    repository,
-    transactions,
-  );
-  const maintenance = new OnboardingMaintenanceService(
-    repository,
-    transactions,
-    authorizer,
-  );
-  const saga = createOnboardingSaga({
-    repository,
-    transport,
-    envelopes: createCommandEnvelopeFactory({
-      serviceId: "studio-onboarding",
-      audienceFor: (plane) => `${plane}-provisioner`,
-      newCommandId: randomUUID,
-      fingerprint: (value) =>
-        createHash("sha256").update(JSON.stringify(value)).digest("hex"),
-      now: () => new Date().toISOString(),
-    }),
-  });
-  container.platform.httpRegistrars.push((application) =>
-    registerOnboardingRoutes(application, {
-      authenticate: createIamAuthenticationMiddleware(iam),
-      readContext: readVerifiedRequestContext,
-      authorize: async (context) =>
-        Boolean(
-          (
-            await authorizer.authorize({
-              context,
-              permissionCode: "studio.onboarding.manage",
-            })
-          ).allowed,
-        ),
-      saga,
-      lifecycle: lifecycle as OnboardingCaseLifecycleService<unknown>,
-      maintenance: maintenance as OnboardingMaintenanceService<unknown>,
-    }),
-  );
-  if (container.runtimes.jobs) {
-    container.runtimes.jobs.register(
-      ONBOARDING_MAINTENANCE_QUEUE,
-      EXPIRE_ONBOARDING_GUEST_ACCESS_JOB,
-      createGuestAccessExpiryHandler(maintenance),
-    );
-    container.runtimes.jobDefinitions.push({
-      code: EXPIRE_ONBOARDING_GUEST_ACCESS_JOB,
-      owner: "@athyper/server-plane-studio-onboarding",
-      queue: ONBOARDING_MAINTENANCE_QUEUE,
-      name: EXPIRE_ONBOARDING_GUEST_ACCESS_JOB,
-      scope: "tenant",
-      payloadSchema: { name: EXPIRE_ONBOARDING_GUEST_ACCESS_JOB, version: 1 },
-      timeoutMs: 60_000,
-      maxAttempts: 5,
-      executionRetentionDays: 90,
-    });
-  }
-}
 
 function registerPublication(
   container: Container,
@@ -7608,18 +4538,20 @@ function registerPublication(
   authorizationCompilation?: ConstructorParameters<
     typeof KyselyPublicationAuthorityWork
   >[0]["authorizationCompilation"],
+  taskPolicyPermissions?: RevisionPermissions,
+  compiledRuntimePublication?: ConstructorParameters<typeof KyselyPublicationAuthorityWork>[0]["compiledRuntimePublication"],
 ): void {
   const authorityDatabase = databases.studio;
   if (!authorityDatabase)
     throw new Error("Publication requires the Studio authority database");
   if (config.publication.apiEnabled && container.adapters.taskPolicyWriterDatabase) {
     const taskPolicyDatabase = container.adapters.taskPolicyWriterDatabase.database as unknown as Kysely<Record<string, never>>;
-    const taskPolicyAuthorizer = createBusinessPartnerDefinitionAuthorizer({ get: (tenantId, revisionId) => taskPolicyDatabase.transaction().execute(async tx => {
+    const taskPolicyAuthorizer = createRevisionAuthorizer({ permissions: taskPolicyPermissions, get: (tenantId, revisionId) => taskPolicyDatabase.transaction().execute(async tx => {
       await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(tx);
       const row = (await sql<{created_by:string}>`SELECT created_by FROM control.policy_definition WHERE tenant_id=${tenantId}::uuid AND id=${revisionId}::uuid AND entity_type='workflow.task_edit'`.execute(tx)).rows[0];
       return row ? {createdBy:row.created_by} : null;
     }) });
-    const taskEditAuthoring = createTaskEditPolicyAuthoring({ database: taskPolicyDatabase, authorizer: taskPolicyAuthorizer,
+    const taskEditAuthoring = createTaskEditPolicyAuthoring({ database: taskPolicyDatabase, authorizer: taskPolicyAuthorizer, permissions: taskPolicyPermissions,
       resolvePrincipal: async (context, tx) => {
         const identities = await authorityDatabase.transaction().execute(async source => {
           await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true),set_config('app.current_principal_id',${context.principalId},true)`.execute(source);
@@ -7816,6 +4748,7 @@ function registerPublication(
         return result.rows;
       },
       ...(authorizationCompilation ? { authorizationCompilation } : {}),
+      ...(compiledRuntimePublication ? { compiledRuntimePublication } : {}),
       ...(devRuntime ? { authorizeEntityActivation: async (releaseId: string) => { await devRuntime.authorizeActivation(releaseId); } } : {}),
       database: authorityDatabase,
       authority,
@@ -7898,135 +4831,6 @@ function registerPublication(
       jobs: container.runtimes.jobs,
       audit,
     });
-    const definitions = new BusinessPartnerDefinitionService({
-      database: authorityDatabase,
-      authority,
-      canonicalizer: { canonicalBytes, sha256 },
-      previewBaseline: async (tenantId, actorId) => {
-        if (!container.adapters.neonDatabase) return null;
-        return container.adapters.neonDatabase.database
-          .transaction()
-          .execute(async (database) => {
-            await sql`SELECT set_config('app.current_tenant_id',${tenantId},true),set_config('app.current_principal_id',${actorId},true)`.execute(
-              database,
-            );
-            return new KyselyLocalProjectionRepository(
-              database as unknown as Kysely<Record<string, never>>,
-              false,
-            ).findActiveBusinessPartnerDefinition(
-              "studio.business_partner.definition.business_partner.onboarding",
-            );
-          });
-      },
-    });
-    const caseContracts = container.adapters.neonDatabase
-      ? new BusinessPartnerCaseContractService({
-          database: authorityDatabase,
-          canonicalizer: { canonicalBytes, sha256 },
-          initial: async (tenantId) =>
-            authorityDatabase.transaction().execute(async (db) => {
-              await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(
-                db,
-              );
-              const rows = (
-                await sql<
-                  Record<string, unknown>
-                >`SELECT id FROM metadata.entity WHERE tenant_id=${tenantId}::uuid AND entity_code='business_partner' AND status='active'`.execute(
-                  db,
-                )
-              ).rows;
-              if (rows.length !== 1) return null;
-              return {
-                tenantId,
-                entityId: String(rows[0]!["id"]),
-                publicationKey: `metadata.entity.master_business_partner.${tenantId.replaceAll("-", "")}`,
-                contract: structuredClone(businessPartnerInitialCaseSchema),
-              };
-            }),
-          current: async (tenantId) =>
-            container.adapters
-              .neonDatabase!.database.transaction()
-              .execute(async (db) => {
-                await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(
-                  db,
-                );
-                const row = (
-                  await sql<
-                    Record<string, unknown>
-                  >`SELECT * FROM runtime_meta.entity_contract WHERE tenant_id=${tenantId}::uuid AND entity_code='master.business_partner' AND status='published' ORDER BY release_no DESC LIMIT 1`.execute(
-                    db,
-                  )
-                ).rows[0];
-                return row
-                  ? {
-                      id: String(row["id"]),
-                      tenantId,
-                      entityId: String(row["entity_id"]),
-                      publicationKey: String(row["publication_key"]),
-                      contractHash: String(row["entity_contract_hash"]),
-                      releaseNo: Number(row["release_no"]),
-                      contract: row["contract_json"] as Record<string, unknown>,
-                    }
-                  : null;
-              }),
-        })
-      : undefined;
-    const companyCaseContracts = container.adapters.neonDatabase
-      ? new BusinessPartnerCaseContractService({
-          database: authorityDatabase,
-          canonicalizer: { canonicalBytes, sha256 },
-          initial: async (tenantId) =>
-            authorityDatabase.transaction().execute(async (db) => {
-              await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(
-                db,
-              );
-              const rows = (
-                await sql<
-                  Record<string, unknown>
-                >`SELECT id FROM metadata.entity WHERE tenant_id=${tenantId}::uuid AND entity_code='business_partner_company_setup_request' AND status='active'`.execute(
-                  db,
-                )
-              ).rows;
-              if (rows.length !== 1) return null;
-              return {
-                tenantId,
-                entityId: String(rows[0]!["id"]),
-                publicationKey: `metadata.entity.master_business_partner_company_setup_request.${tenantId.replaceAll("-", "")}`,
-                contract: structuredClone(companySetupCaseInitialSchema),
-              };
-            }),
-          current: async (tenantId) =>
-            container.adapters
-              .neonDatabase!.database.transaction()
-              .execute(async (db) => {
-                await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(
-                  db,
-                );
-                const row = (
-                  await sql<
-                    Record<string, unknown>
-                  >`SELECT * FROM runtime_meta.entity_contract WHERE tenant_id=${tenantId}::uuid AND entity_code='master.business_partner_company_setup_request' AND status='published' ORDER BY release_no DESC LIMIT 1`.execute(
-                    db,
-                  )
-                ).rows[0];
-                return row
-                  ? {
-                      id: String(row["id"]),
-                      tenantId,
-                      entityId: String(row["entity_id"]),
-                      publicationKey: String(row["publication_key"]),
-                      contractHash: String(row["entity_contract_hash"]),
-                      releaseNo: Number(row["release_no"]),
-                      contract: row["contract_json"] as Record<string, unknown>,
-                    }
-                  : null;
-              }),
-        })
-      : undefined;
-    container.services.publication = {
-      ...container.services.publication,
-      definitions,
-    };
     container.platform.httpRegistrars.push((application) => {
       registerPublicationRoutes(application, {
         authenticate: createIamAuthenticationMiddleware(iam),
@@ -8038,116 +4842,11 @@ function registerPublication(
         apiEnabled: true,
         operations,
       });
-      if (caseContracts)
-        registerBusinessPartnerCaseContractRoutes(application, {
-          authenticate: createIamAuthenticationMiddleware(iam),
-          readContext: readVerifiedRequestContext,
-          authorizer: createBusinessPartnerDefinitionAuthorizer(caseContracts),
-          audit,
-          jobs: container.runtimes.jobs!,
-          service: caseContracts,
-        });
-      if (companyCaseContracts)
-        registerBusinessPartnerCaseContractRoutes(application, {
-          authenticate: createIamAuthenticationMiddleware(iam),
-          readContext: readVerifiedRequestContext,
-          authorizer:
-            createBusinessPartnerDefinitionAuthorizer(companyCaseContracts),
-          audit,
-          jobs: container.runtimes.jobs!,
-          service: companyCaseContracts,
-          companyPilot: true,
-        });
-      registerBusinessPartnerDefinitionRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        authorizer: createBusinessPartnerDefinitionAuthorizer(definitions),
-        audit,
-        jobs: container.runtimes.jobs!,
-        service: definitions,
-      });
     });
   }
 }
 
-function createPlaneTransactionCoordinator(
-  container: Container,
-): PlaneTransactionCoordinator<RecordTransaction> {
-  return {
-    run(planeKey, actor, work) {
-      if (planeKey === "neon" && container.adapters.neonDatabase) {
-        return container.adapters.neonDatabase.withSystemTransaction(
-          async (transaction) => {
-            await stampTransactionActor(
-              transaction as unknown as Transaction<Record<string, never>>,
-              actor,
-            );
-            return work(transaction as unknown as RecordTransaction);
-          },
-        );
-      }
-      if (planeKey === "mesh" && container.adapters.meshDatabase) {
-        return container.adapters.meshDatabase.withSystemTransaction(
-          async (transaction) => {
-            await stampTransactionActor(
-              transaction as unknown as Transaction<Record<string, never>>,
-              actor,
-            );
-            return work(transaction as unknown as RecordTransaction);
-          },
-        );
-      }
-      if (planeKey === "studio" && container.adapters.athyperDatabase) {
-        return container.adapters.athyperDatabase.withSystemTransaction(
-          async (transaction) => {
-            await stampTransactionActor(
-              transaction as unknown as Transaction<Record<string, never>>,
-              actor,
-            );
-            return work(transaction as unknown as RecordTransaction);
-          },
-        );
-      }
-      throw new Error(
-        `Tenant runtime database is not configured for ${planeKey}`,
-      );
-    },
-  };
-}
 
-function internalRecipientContext(
-  item: BusinessPartnerDeliveryItem,
-  principalId: string,
-): VerifiedRequestContext {
-  const profileHash = "business-partner-delivery-v1";
-  return {
-    planeKey: "neon",
-    realmKey: "athyper",
-    tenantId: item.recipientTenantId,
-    principalId,
-    authEpoch: 1,
-    assurance: "elevated",
-    authenticationMethods: ["service"],
-    profileHash,
-    requestId: item.eventId,
-    correlationId: item.eventId,
-    permissions: {
-      planeKey: "neon",
-      tenantId: item.recipientTenantId,
-      principalId,
-      principalFingerprint: profileHash,
-      profileHash,
-      schemaHash: profileHash,
-      resolvedAt: Date.now(),
-      allowed: [],
-      denied: [],
-      planLocked: [],
-      planeExcluded: [],
-      entries: [],
-      authorizationScopes: [],
-    },
-  };
-}
 
 function combineRecordCollectionScopeResolvers(
   neon: RecordCollectionScopeResolver,
@@ -8252,35 +4951,6 @@ const denyAllConsent = {
   history: async () => ({ items: [], hasMore: false }),
 } satisfies ChannelConsentService<RecordTransaction>;
 
-function businessPartnerNotificationLifecycle(eventCode: string): string {
-  const lifecycle = eventCode.split(".").at(-1) ?? "unknown";
-  return [
-    "submitted",
-    "returned",
-    "approved",
-    "rejected",
-    "materialized",
-  ].includes(lifecycle)
-    ? lifecycle
-    : "other";
-}
 
 
 /** BP domain mapping stays at composition; generic metadata never knows request kinds. */
-function businessPartnerFlowSelection(kind: string, requestedRole?: string): { readonly flowKey: string; readonly journey: string } {
-  const commercial = () => { if (requestedRole !== "supplier" && requestedRole !== "customer") throw new MasterDataError(422, "BUSINESS_PARTNER_REQUEST_ROLE_REQUIRED", "A supplier or customer role is required."); return requestedRole; };
-  switch (kind) {
-    case "new_partner": { if (!requestedRole) return {flowKey:"partner.new",journey:"governance"}; const role=commercial(); return {flowKey:`${role}.new`, journey:role}; }
-    case "add_supplier": return {flowKey:"supplier.add",journey:"supplier"};
-    case "add_customer": return {flowKey:"customer.add",journey:"customer"};
-    case "configure_company": { const role=commercial(); return {flowKey:`${role}.company`,journey:role}; }
-    case "change_bank": return {flowKey:"supplier.bank",journey:"supplier"};
-    case "activate_supplier": return {flowKey:"supplier.activate",journey:"supplier"};
-    case "amend_partner": return {flowKey:"partner.amend",journey:"governance"};
-    case "assign_organization": return {flowKey:"partner.assign",journey:"governance"};
-    case "deactivate": return {flowKey:"partner.deactivate",journey:"governance"};
-    case "reactivate": return {flowKey:"partner.reactivate",journey:"governance"};
-    case "archive": return {flowKey:"partner.archive",journey:"governance"};
-    default: throw new MasterDataError(422,"BUSINESS_PARTNER_REQUEST_KIND_UNDECLARED",`Request kind ${kind} is not declared.`);
-  }
-}

@@ -1,4 +1,5 @@
 import { PublicationContractError } from "./errors.js";
+import { parseCapabilityProfile } from "./capability-profile.js";
 import { parseCapabilityBinding, parseCapabilityDeclaration, validateEntityCapabilities } from "./entity-capabilities.js";
 import type { BusinessPartnerDefinitionProjection, CompiledEntityRuntimeProjectionV2, EntityRuntimeProjection, PublicationCompatibilityLevel, PublicationPlane } from "./projection.js";
 import {compiledPublicationTenant} from './compiled-publication-scope.js';
@@ -16,6 +17,7 @@ export type PublicationArtifactKind = "entity_runtime" | "compiled_entity_runtim
 export const COMPILED_ENTITY_ARTIFACT_SCHEMA_V2_DRAFT =
   "athyper.compiled-entity-artifact/2.0-draft" as const;
 export type CompiledEntityArtifactType =
+  | "capability_profile"
   | "core"
   | "runtime_contract"
   | "operation"
@@ -61,7 +63,9 @@ export interface CompiledEntityReleaseEnvelopeV2 {
     resolution: string;
   }>[];
   readonly releaseHash: string;
-  readonly signature: Readonly<{ algorithm: string; keyId: string; value: string }>;
+  /** @deprecated Legacy opaque inner metadata, never proof of publication.
+   * New compilers omit it. Preserve old wire values for outer-signature integrity. */
+  readonly signature?: Readonly<Partial<{ algorithm: string; keyId: string | null; value: string | null; status: string }>>;
 }
 
 export interface CompiledEntityRegistry {
@@ -127,6 +131,7 @@ const compiledKeyPattern = /^[a-z][a-z0-9_.-]{0,126}$/;
 const compiledArtifactKeyPattern = /^[A-Za-z][A-Za-z0-9_.-]{0,126}(?:\/[A-Za-z][A-Za-z0-9_.-]{0,126})+$/;
 const compiledHashPattern = /^sha256:[a-f0-9]{64}$/;
 const compiledArtifactKeys: Readonly<Record<CompiledEntityArtifactType, ReadonlySet<string>>> = {
+  capability_profile: new Set(["schema", "schemaVersion", "contractStatus", "artifactType", "artifactKey", "entityCode", "plane", "dependencies", "artifactHash", "profile"]),
   runtime_contract: new Set(["schema", "schemaVersion", "contractStatus", "artifactType", "artifactKey", "entityCode", "plane", "dependencies", "artifactHash", "descriptor"]),
   core: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","businessContext","capabilities","coreKind","defaultsProfile","defaultsProfileRef","deferredRelations","editRuntimeTier","fieldAccess","fieldDefaults","fields","operationDefaults","ownerBinding","profileKey","projectionPolicy","protections","query","querySafetyLimits","readinessFacts","referencePicker","relationDefaults","relations","serverDependencies","storage","validationAuthority"]),
   operation: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","commentBinding","attachmentBinding","browserProjection","concurrency","consumedBy","disclosureBinding","evaluationContract","handlerBindingStatus","lifecycleBinding","lifecycleOperationBindings","materialization","numberingBinding","operationDefaultsProfile","operationDefaultsProfileRef","operations","policyBindings","policyManifestProjection","printBinding","reasonCodeCatalog","snapshotBinding","transactionOrder","validationDeclarations"]),
@@ -177,9 +182,15 @@ export function parseCompiledEntityArtifact(value: unknown): CompiledEntityArtif
   if (value.schema !== COMPILED_ENTITY_ARTIFACT_SCHEMA_V2_DRAFT || value.schemaVersion !== 2)
     throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_SCHEMA_UNSUPPORTED", "Compiled entity artifact schema is unsupported");
   const artifactType = value.artifactType;
-  if (!(["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow"] as const).includes(artifactType as never))
+  if (!(["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow", "capability_profile"] as const).includes(artifactType as never))
     throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_TYPE_UNSUPPORTED", "Compiled entity artifact type is unsupported");
   const type = artifactType as CompiledEntityArtifactType;
+  if (type === "capability_profile") {
+    const profile = parseCapabilityProfile(value.profile);
+    if (value.artifactKey !== `${String(value.entityCode)}/capability-profile.${profile.capabilityKey}.${profile.profileVersion}`
+        || !Array.isArray(value.dependencies) || value.dependencies.length)
+      throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_INVALID", "Invalid capability profile artifact coordinates");
+  }
   if (type === "runtime_contract" && (
     value.artifactKey !== `${String(value.entityCode)}/runtime` ||
     !isRecord(value.descriptor) ||
@@ -226,8 +237,16 @@ export function parseCompiledEntityArtifact(value: unknown): CompiledEntityArtif
 }
 
 export function parseCompiledEntityReleaseEnvelope(value: unknown): CompiledEntityReleaseEnvelopeV2 {
-  if (!isRecord(value) || !isRecord(value.signature))
+  if (!isRecord(value))
     throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "Compiled entity release must be an object");
+  if (Object.hasOwn(value, "signature") && (!isRecord(value.signature) ||
+    Object.entries(value.signature).some(([key, entry]) => {
+      // Historical review-only fixtures explicitly declare their unsigned state.
+      if (value.contractStatus === "unsigned_review_only" &&
+        ((["keyId", "value"].includes(key) && entry === null) || (key === "status" && entry === "not_signed_do_not_activate"))) return false;
+      return !["algorithm", "keyId", "value"].includes(key) || typeof entry !== "string";
+    })))
+    throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "Legacy inner signature metadata is invalid");
   if (typeof value.schema !== "string" || typeof value.releaseId !== "string" || !Number.isInteger(value.releaseNo) || Number(value.releaseNo) < 1)
     throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "Compiled entity release coordinates are invalid");
   if (!(value.contractStatus === "unsigned_review_only" || value.contractStatus === "published"))
@@ -240,7 +259,7 @@ export function parseCompiledEntityReleaseEnvelope(value: unknown): CompiledEnti
   const artifacts = compiledArray(value.artifacts, "artifacts").map((entry) => {
     if (!isRecord(entry)) throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "Compiled entity release artifact is invalid");
     const type = entry.artifactType;
-    if (!(["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow"] as const).includes(type as never))
+    if (!(["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow", "capability_profile"] as const).includes(type as never))
       throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "Compiled entity release artifact type is invalid");
     return Object.freeze({ artifactKey: compiledArtifactKey(entry.artifactKey, "release artifact key"), artifactType: type as CompiledEntityArtifactType, entityCode: compiledKey(entry.entityCode, "release artifact entity"), ref: typeof entry.ref === "string" && entry.ref.endsWith(".json") ? entry.ref : (() => { throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "release artifact ref is invalid"); })(), hash: compiledHash(entry.hash, "release artifact hash") });
   });
@@ -251,7 +270,7 @@ export function parseCompiledEntityReleaseEnvelope(value: unknown): CompiledEnti
       throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "Compiled entity external dependency is invalid");
     return Object.freeze({ serviceKey: entry.serviceKey, required: entry.required, resolution: entry.resolution });
   });
-  return Object.freeze({ schema: value.schema, contractStatus: value.contractStatus, releaseId: value.releaseId, releaseNo: Number(value.releaseNo), targetPlanes: Object.freeze(targetPlanes), artifacts: Object.freeze(artifacts), externalDependencies: Object.freeze(externalDependencies), releaseHash: compiledHash(value.releaseHash, "releaseHash"), signature: Object.freeze({ algorithm: String(value.signature.algorithm), keyId: String(value.signature.keyId), value: String(value.signature.value) }) });
+  return Object.freeze({ schema: value.schema, contractStatus: value.contractStatus, releaseId: value.releaseId, releaseNo: Number(value.releaseNo), targetPlanes: Object.freeze(targetPlanes), artifacts: Object.freeze(artifacts), externalDependencies: Object.freeze(externalDependencies), releaseHash: compiledHash(value.releaseHash, "releaseHash"), ...(Object.hasOwn(value, "signature") ? { signature: Object.freeze({ ...value.signature as Record<string, string> }) } : {}) });
 }
 
 /** Validates the cross-artifact graph and required registered implementation references. */
@@ -322,14 +341,16 @@ export function validateCompiledEntityRelease(
 
 /**
  * Activation boundary for the generic split runtime. Parsing accepts review
- * artifacts so Studio can inspect them; publication accepts only signed/published
- * content. This prevents a review package from becoming a live runtime payload.
+ * artifacts so Studio can inspect them; this guard checks published status and
+ * structural consistency only. The publication loader separately verifies the
+ * outer signed { envelope, manifest }, which includes this entire projection.
+ * Neither contractStatus nor legacy inner signature metadata proves authenticity.
  */
 export function assertCompiledEntityRuntimePublication(
   projection: CompiledEntityRuntimeProjectionV2,
 ): void {
-  // The projection type already carries the parsed immutable release. Do not
-  // parse it again: the parser intentionally consumes the signature envelope.
+  // The projection already carries the parsed immutable release. Signature
+  // verification belongs to the enclosing publication admission boundary.
   const release = projection.release;
   const artifacts = projection.artifacts.map((artifact) =>
     parseCompiledEntityArtifact(artifact.content),

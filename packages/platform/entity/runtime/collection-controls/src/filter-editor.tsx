@@ -1,4 +1,5 @@
 "use client";
+import { readBrowserStorage, writeBrowserStorage, removeBrowserStorage } from "@athyper/platform-ui";
 import React, {
   createContext,
   useContext,
@@ -49,7 +50,7 @@ function readRecent(
   if (!key) return [];
   try {
     const values: unknown = JSON.parse(
-      window.sessionStorage.getItem(`${key}.${field.key}`) ?? "[]",
+      readBrowserStorage(`${key}.${field.key}`, "session") ?? "[]",
     );
     return Array.isArray(values)
       ? values
@@ -91,7 +92,7 @@ export function rememberFilters(
     )
       continue;
     try {
-      window.sessionStorage.setItem(
+      writeBrowserStorage(
         `${key}.${field.key}`,
         JSON.stringify(
           [
@@ -101,7 +102,7 @@ export function rememberFilters(
                 item.operator !== entry.operator || item.value !== entry.value,
             ),
           ].slice(0, 5),
-        ),
+        ), "session",
       );
     } catch {
       /* Storage is optional. */
@@ -517,7 +518,7 @@ export function FilterValueEditor({
     }) === "searchable";
   const clearRecent = () => {
     try {
-      window.sessionStorage.removeItem(`${historyKey}.${field.key}`);
+      removeBrowserStorage(`${historyKey}.${field.key}`, "session");
     } catch {}
     setHistoryVersion((version) => version + 1);
   };
@@ -674,7 +675,7 @@ export function FilterValueEditor({
             size="small"
             onClick={() => {
               try {
-                window.sessionStorage.removeItem(`${historyKey}.${field.key}`);
+                removeBrowserStorage(`${historyKey}.${field.key}`, "session");
               } catch {}
               setHistoryVersion((version) => version + 1);
             }}

@@ -28,7 +28,7 @@ export { EntityPageLayout, useRecordPage } from "./entity-page-layout";
 
 export { useRecordBreadcrumb } from "./route-state";
 
-export { useRecordFooterSources } from "./record-footer";
+export { useRecordFooterSources, useRecordFooterInformation } from "./record-footer";
 
 export { useAtlasBusinessContextPublisher, type AtlasBusinessContextInput } from "@athyper/platform-ai-agent-ui";
 

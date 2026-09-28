@@ -10,6 +10,7 @@ export * from "./entity-ai.js";
 export * from "./entity-authorization.js";
 
 export * from "./entity-authorization-runtime.js";
+export * from "./common-reference-permission.js";
 
 export * from "./entity-authorization-registry.js";
 export * from "./atlas-learning.js";
@@ -19,3 +20,5 @@ export type { EntityWorkContextRequirementV1 } from "@athyper/contract-platform-
 export * from "./entity-canonical-read-admission.js";
 
 export {validateDataInput,dataFieldVisible} from "@athyper/contract-platform-entity-runtime";
+export * from "./collection-compilation.js";
+export { compileFieldPattern, FIELD_PATTERN_INPUT_LIMIT } from "./field-pattern.js";

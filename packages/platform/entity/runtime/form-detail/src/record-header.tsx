@@ -14,8 +14,10 @@ export function EntityRecordHeader({
   technicalDetails,
   breadcrumbLabel,
   actionHandlers,
+  showNavigation = true,
 }: {
   readonly header: EntityRecordHeaderV1;
+  readonly showNavigation?: boolean;
   readonly actionHandlers?: EntityActionHandlers;
   readonly activeSection?: string;
   readonly onSelectSection?: (key: string) => void;
@@ -146,7 +148,7 @@ export function EntityRecordHeader({
           ) : null}
         </div>
       ) : null}
-      {header.sections.length > 1 ? (
+      {showNavigation && header.sections.length > 1 ? (
         <nav
           className="athyper-section-nav a-record-header__nav"
           aria-label="Record sections"

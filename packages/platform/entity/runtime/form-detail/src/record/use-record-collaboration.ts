@@ -16,7 +16,7 @@ export function useRecordCollaboration() {
   const [collaborationSection, setCollaborationSection] = useState(
     readCollaborationSection,
   );
-  // The shared panel restores pin/width preferences and owns presentation modes.
+  // Side view is always docked; the surface restores only its width.
   const [collaborationPinned, setCollaborationPinned] = useState(true);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function useRecordCollaboration() {
       collaborationSection ?? "comments",
     );
     if (full) next.searchParams.set("collaborationMode", "content");
-    else next.searchParams.delete("collaborationMode");
+    else next.searchParams.set("collaborationMode", "side");
     writeRecordLocation(next, "push");
     setCollaborationFull(full);
     setCollaborationOpen(true);
@@ -44,10 +44,12 @@ export function useRecordCollaboration() {
   const setCollaborationPanel = (
     open: boolean,
     sectionKey = collaborationSection,
+    updateLocation?: (url: URL) => void,
   ) => {
     const next = new URL(window.location.href);
     if (open) {
       next.searchParams.set("panel", "collaboration");
+      if (!collaborationOpen) { next.searchParams.set("collaborationMode", "content"); setCollaborationFull(true); }
       if (sectionKey) next.searchParams.set("collaborationSection", sectionKey);
     } else {
       next.searchParams.set("panel", "closed");
@@ -57,12 +59,14 @@ export function useRecordCollaboration() {
       // File/thread identifiers remain valid record navigation state for the
       // forthcoming rich collaboration actions, but are never loaded on close.
     }
+    updateLocation?.(next);
     writeRecordLocation(next, "push");
     setCollaborationOpen(open);
     if (sectionKey) setCollaborationSection(sectionKey);
   };
   const setCollaborationTab = (sectionKey: string) => {
     const next = new URL(window.location.href);
+    if (!collaborationOpen) { next.searchParams.set("collaborationMode", "content"); setCollaborationFull(true); }
     next.searchParams.set("collaborationSection", sectionKey);
     next.searchParams.set("panel", "collaboration");
     writeRecordLocation(next, "push");

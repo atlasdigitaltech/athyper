@@ -126,7 +126,8 @@ jobs:
         run: pnpm qualify:business-partner-r9
 
       - name: Root tests and reachability
-        run: pnpm run test:root
+        # test:root includes the required Country browser qualification gate.
+        run: pnpm exec playwright install --with-deps chromium && pnpm run test:root
         env:
           CI: "true"
           FORCE_COLOR: "1"

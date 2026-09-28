@@ -784,6 +784,8 @@ describe("loadConfig", () => {
   });
 
   it("reads fail-closed Publication rollout configuration", () => {
+    // Exercise the explicit transitional local profile, never implicit DEV trust.
+    process.env["ATHYPER_ENV"] = "local";
     process.env["PUBLICATION_APPLY_ENABLED"] = "true";
     process.env["PUBLICATION_TARGET_PLANES"] = "studio,neon,mesh";
     process.env["PUBLICATION_SIGNING_KEY_ID"] = "key-v1";
@@ -810,6 +812,7 @@ describe("loadConfig", () => {
   });
 
   it("requires explicit API enablement and both key references for authoring", () => {
+    process.env["ATHYPER_ENV"] = "local";
     process.env["PUBLICATION_TARGET_PLANES"] = "studio,neon,mesh";
     process.env["PUBLICATION_AUTHORING_ENABLED"] = "true";
     expect(() => loadConfig()).toThrow("Publication authoring requires");

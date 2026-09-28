@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type { Application, RequestHandler, Response } from "express";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type { RevisionPermissions } from "./shared/entity-runtime/revision-authorizer.js";
 import type { PolicyDefinition, PolicyTestCase } from "@athyper/server-contract-policy";
 import { createKyselyPolicyAuthoringRepository, createPolicyAuthoringService, createJsonRuleEvaluator } from "@athyper/server-platform-policy";
 import { defineRouteContract, registerContractRoute, HttpError } from "@athyper/server-runtime-http";
@@ -12,10 +13,12 @@ const uuid = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f]{8}
 const object = (v: unknown): v is Row => !!v && typeof v === "object" && !Array.isArray(v);
 function bad(code: string, status = 400): never { throw new HttpError(status, code, code.replaceAll("_", " ")); }
 /** Studio authoring of the supplier edit-policy purpose in its owning NEON catalog. */
-export function createTaskEditPolicyAuthoring(options: { database: Kysely<DB>; authorizer: Authorizer; resolvePrincipal?: (context: VerifiedRequestContext, tx: Tx) => Promise<string> }) {
+export function createTaskEditPolicyAuthoring(options: { database: Kysely<DB>; authorizer: Authorizer; permissions?: RevisionPermissions; resolvePrincipal?: (context: VerifiedRequestContext, tx: Tx) => Promise<string> }) {
   async function run(context: VerifiedRequestContext, action: "read" | "author" | "publish", work: (tx: Tx, context: VerifiedRequestContext) => Promise<unknown>, revisionId?: string) {
     if (context.planeKey !== "studio") bad("TASK_POLICY_STUDIO_REQUIRED", 403);
-    const access = await options.authorizer.authorize({ context, permissionCode: `studio.business_partner_definition.${action}`, resource: { tenantId: context.tenantId, purpose: "workflow.task_edit", ...(revisionId ? { revisionId } : {}) } });
+    const permissionCode = options.permissions?.[action];
+    if (!permissionCode) bad("TASK_POLICY_PERMISSION_BINDING_UNAVAILABLE", 503);
+    const access = await options.authorizer.authorize({ context, permissionCode, resource: { tenantId: context.tenantId, purpose: "workflow.task_edit", ...(revisionId ? { revisionId } : {}) } });
     if (!access.allowed) throw new HttpError(403,"TASK_POLICY_FORBIDDEN",access.reason);
     return options.database.transaction().execute(async tx => {
       await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true),set_config('app.current_principal_id',${context.principalId},true),set_config('app.database_plane','neon',true)`.execute(tx);

@@ -18,12 +18,14 @@ import {
   HistoryIcon,
   LockIcon,
   Maximize2Icon,
-  Minimize2Icon,
+  InfoIcon,
+  PinIcon,
+  PinOffIcon,
   MessageSquareIcon,
   PanelRightIcon,
   AtlasBrandIcon,
 } from "@athyper/platform-icons";
-import { Tooltip, useModalIsolation } from "@athyper/platform-ui";
+import { PanelHeader, Tooltip, useModalIsolation } from "@athyper/platform-ui";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -286,20 +288,15 @@ export function AtlasWorkspace({
       {mode === "dock" && onWidthChange ? (
         <AtlasPanelResize width={width} onWidthChange={onWidthChange} />
       ) : null}
-      <header className="athyper-atlas-workspace__header">
-        <span className="athyper-atlas-workspace__mark">
-          <AtlasBrandIcon size={20} />
-        </span>
-        <div>
-          <strong ref={conversationHeading} tabIndex={-1}>
-            Atlas AI
-          </strong>
-          <small>
-            {planeName} · {entityLabel}
-          </small>
-        </div>
-        <nav aria-label="Atlas workspace controls">
-          <Tooltip label="New conversation">
+      <PanelHeader
+        className="athyper-atlas-workspace__header"
+        icon={<AtlasBrandIcon size={20} />}
+        title="Atlas AI"
+        titleRef={conversationHeading}
+        subtitle={`${planeName} · ${entityLabel}`}
+        actionsLabel="Atlas workspace controls"
+        actions={<>
+          <Tooltip portal side="bottom" label="New conversation">
             <button
               type="button"
               aria-label="New Atlas conversation"
@@ -319,7 +316,7 @@ export function AtlasWorkspace({
               +
             </button>
           </Tooltip>
-          <Tooltip label="Conversation history">
+          <Tooltip portal side="bottom" label="Conversation history">
             <button
               ref={historyTrigger}
               type="button"
@@ -333,6 +330,7 @@ export function AtlasWorkspace({
           </Tooltip>
           {mode === "fullscreen" ? (
             <Tooltip
+              portal side="bottom"
               label={
                 inspectorOpen ? "Hide context panel" : "Show context panel"
               }
@@ -347,13 +345,14 @@ export function AtlasWorkspace({
                 aria-controls={inspectorId}
                 onClick={() => setInspectorOpen((open) => !open)}
               >
-                <PanelRightIcon size={17} />
+                <InfoIcon size={17} />
               </button>
             </Tooltip>
           ) : null}
           {mode === "dock" ? (
             <>
               <Tooltip
+                portal side="bottom"
                 label={
                   pinned
                     ? "Unpin Atlas from the right side"
@@ -370,10 +369,10 @@ export function AtlasWorkspace({
                   aria-pressed={pinned}
                   onClick={() => onPinnedChange?.(!pinned)}
                 >
-                  <PanelRightIcon size={17} />
+                  {pinned ? <PinOffIcon size={17} /> : <PinIcon size={17} />}
                 </button>
               </Tooltip>
-              <Tooltip label="Open Atlas in full screen">
+              <Tooltip portal side="bottom" label="Open Atlas in full view">
                 <a
                   href={`/atlas?from=${encodeURIComponent(currentPath)}`}
                   onClick={(event) => {
@@ -382,7 +381,7 @@ export function AtlasWorkspace({
                     else
                       window.location.assign(atlas.fullscreenHref(currentPath));
                   }}
-                  aria-label="Open Atlas in full screen"
+                  aria-label="Open Atlas in full view"
                 >
                   <Maximize2Icon size={17} />
                 </a>
@@ -390,32 +389,35 @@ export function AtlasWorkspace({
             </>
           ) : null}
           {mode === "fullscreen" && surface && onClose ? (
-            <Tooltip label="Return to side panel">
+            <Tooltip portal side="bottom" label="Return to side panel">
               <button
                 type="button"
                 aria-label="Return to side panel"
+                className="athyper-atlas-workspace__labeled-control"
+                data-panel-action-label
                 onClick={surface.minimize}
               >
-                <Minimize2Icon size={17} />
+                <PanelRightIcon size={17} />
+                <span>Side view</span>
               </button>
             </Tooltip>
           ) : null}
           {onClose ? (
-            <Tooltip label="Close Atlas">
+            <Tooltip portal side="bottom" label="Close Atlas">
               <button type="button" aria-label="Close Atlas" onClick={onClose}>
                 <CloseIcon size={16} />
               </button>
             </Tooltip>
           ) : null}
           {mode === "fullscreen" && !onClose ? (
-            <Tooltip label="Close full-screen Atlas">
+            <Tooltip portal side="bottom" label="Close full-screen Atlas">
               <a href="/home" aria-label="Close full-screen Atlas">
                 <CloseIcon size={16} />
               </a>
             </Tooltip>
           ) : null}
-        </nav>
-      </header>
+        </>}
+      />
       <div
         className="athyper-atlas-workspace__body"
         data-history={historyOpen}

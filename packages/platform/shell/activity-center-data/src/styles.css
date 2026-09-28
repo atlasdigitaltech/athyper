@@ -16,3 +16,6 @@
 .athyper-notification-controls__actions{flex-wrap:wrap;justify-content:space-between}
 .athyper-notification-controls ul{list-style:none;padding:0}.athyper-notification-controls li{display:grid;gap:var(--a-space-2);padding:var(--a-space-3);border-bottom:var(--a-border-width) solid var(--a-border);overflow-wrap:anywhere}
 .athyper-notification-controls p,.athyper-notification-controls li>span{color:var(--a-muted-foreground)}
+
+.athyper-activity-page__title { display:inline-flex; align-items:center; gap:var(--a-space-2); }
+.athyper-activity-page__title > svg { flex-shrink:0; }

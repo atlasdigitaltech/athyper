@@ -31,13 +31,12 @@ test("P0 security runner executes tenant, scope, collision, rollback and leakage
 });
 
 test("P0 restricted reveal is one-time, purpose-expiring and permission-epoch bound", async () => {
-  const [service, repository, routes, taxClient, bankClient] =
+  const [service, repository, taxClient, bankClient] =
     await Promise.all([
       read("packages/services/master-data/src/business-partner/record/service.ts"),
       read(
         "packages/services/master-data/src/business-partner/record/repository.ts",
       ),
-      read("packages/services/master-data/src/business-partner/legacy-360/routes.ts"),
       read(
         "../packages/planes/neon/entity-extensions/src/business-partner/clients/business-partner-360-section-client.ts",
       ),
@@ -53,14 +52,13 @@ test("P0 restricted reveal is one-time, purpose-expiring and permission-epoch bo
   ])
     assert.match(service, new RegExp(value));
   assert.match(repository, /event\.command_execution/);
-  for (const source of [routes, taxClient, bankClient])
+  for (const source of [taxClient, bankClient])
     for (const value of ["revealId", "purposeExpiresAt"])
       assert.match(source, new RegExp(value));
 });
 
 test("P0 public and browser-adjacent surfaces remain restricted-value negative", async () => {
   const [
-    routes,
     shell,
     common,
     commercial,
@@ -68,7 +66,6 @@ test("P0 public and browser-adjacent surfaces remain restricted-value negative",
     exportPrivacy,
     meshDefinition,
   ] = await Promise.all([
-    read("packages/services/master-data/src/business-partner/legacy-360/routes.ts"),
     read(
       "../packages/platform/entity/runtime/form-detail/src/record/entity-record-page.tsx",
     ),
@@ -83,13 +80,9 @@ test("P0 public and browser-adjacent surfaces remain restricted-value negative",
     ),
     read("packages/services/records/src/transfer/transfer-service.ts"),
     read(
-      "packages/services/publication/src/business-partner-foundation-definition.ts",
+      "packages/services/publication/src/entity-foundation-definition.ts",
     ),
   ]);
-  assert.doesNotMatch(
-    routes,
-    /attributes\.(?:businessPartnerId|principalId|purpose)|localStorage|sessionStorage/,
-  );
   for (const source of [shell, common, commercial, workforceRequests])
     assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
   // Compatibility sections are retained until browser coverage migrates.

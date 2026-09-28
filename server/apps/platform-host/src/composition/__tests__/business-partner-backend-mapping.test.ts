@@ -24,7 +24,8 @@ const selectedProfile = parseEntityAuthorizationProfile({
       : o,
   ),
 });
-const mapping = createBusinessPartnerBackendMapping(selectedProfile);
+// This release uses exact permissions; no permission aliases are configured.
+const mapping = createBusinessPartnerBackendMapping(selectedProfile, []);
 const request = (
   permissionCode: string,
   resource: Record<string, unknown> = {},
@@ -119,7 +120,7 @@ it("owns dedicated capabilities and preserves deferred operations before field r
   const selected = createBusinessPartnerBackendMapping({
     ...profile,
     deferredOperations: ["deferred_action"],
-  });
+  }, []);
   expect(selected.owns(request("neon.relationship.bp_target.read"))).toBe(true);
   expect(
     selected.target(
@@ -141,7 +142,24 @@ it("maps dedicated provider transitions without changing scopes or accepting arb
         : o,
     ),
   };
-  const selected = createBusinessPartnerBackendMapping(selectedProfile);
+  const transitions = [
+    {
+      operationKey: "identity_read",
+      sourcePermissionCode: "neon.relationship.business_partner_identity.read",
+      targetPermissionCode: "neon.relationship.bp_target.identity_read",
+    },
+    {
+      operationKey: "contacts_read",
+      sourcePermissionCode: "neon.relationship.business_partner_contact.read",
+      targetPermissionCode: "neon.relationship.bp_target.contacts_read",
+    },
+    {
+      operationKey: "bank_read",
+      sourcePermissionCode: "neon.relationship.business_partner_bank.read_masked",
+      targetPermissionCode: "neon.relationship.bp_target.bank_read",
+    },
+  ];
+  const selected = createBusinessPartnerBackendMapping(selectedProfile, transitions);
   for (const [key, permission] of [
     ["identity_read", "neon.relationship.business_partner_identity.read"],
     ["contacts_read", "neon.relationship.business_partner_contact.read"],
@@ -151,15 +169,18 @@ it("maps dedicated provider transitions without changing scopes or accepting arb
       selected.target(request(permission!, { businessPartnerId: "bp" })),
     ).toMatchObject({ operationKey: key, recordId: "bp" });
   }
-  expect(selected.permissionTransitions).toHaveLength(3);
-  const unreviewed = createBusinessPartnerBackendMapping({
+  expect(selected.permissionTransitions).toEqual(transitions);
+  const unreviewedProfile = {
     ...selectedProfile,
     operations: selectedProfile.operations.map((o) =>
       o.key === "identity_read"
         ? { ...o, permissionCode: "arbitrary.permission" }
         : o,
     ),
-  });
+  };
+  expect(() => createBusinessPartnerBackendMapping(unreviewedProfile, transitions))
+    .toThrow("ENTITY_PERMISSION_TRANSITION_MISMATCH");
+  const unreviewed = createBusinessPartnerBackendMapping(unreviewedProfile, []);
   expect(
     unreviewed.target(
       request("neon.relationship.business_partner_identity.read", {

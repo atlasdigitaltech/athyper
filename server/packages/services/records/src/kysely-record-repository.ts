@@ -1,4 +1,5 @@
 import { compileStandardViewRelationship } from "./standard-view-relationship-sql.js";
+import { validateFilterValue } from "./filter-value-validation.js";
 import { documentCollectionRegistry, parseCollectionRelationship, DOCUMENT_RELATIONSHIP_RESOLVER } from "@athyper/server-contract-metadata";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
@@ -28,7 +29,10 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       if (input.recordIds?.length) conditions.push(sql`${sql.ref(input.descriptor.storage.idField)} IN (${sql.join(input.recordIds.map((id) => sql`${id}::uuid`))})`);
       for (const constraint of input.collectionScope) conditions.push(compileRecordCollectionScopeCondition(input.descriptor, input.tenantId, constraint));
       for (const relationship of input.viewRelationships ?? []) conditions.push(compileStandardViewRelationship(input.descriptor, input.tenantId, relationship));
-      for (const filter of input.filters ?? []) conditions.push(filterCondition(input.descriptor, filter));
+      for (const filter of input.filters ?? []) {
+        validateFilterValue(filter);
+        conditions.push(filterCondition(input.descriptor, filter));
+      }
       if (input.search) conditions.push(searchCondition(input.descriptor, input.search));
       const order = orderBy(input);
       const cursor = decodeRecordCursor(input);
@@ -174,5 +178,12 @@ function after(ref: RawBuilder<unknown>, value: string | number | boolean | null
   const comparison = direction === "asc" ? sql`${ref} > ${value}` : sql`${ref} < ${value}`;
   return nulls === "last" ? sql`(${comparison} OR ${ref} IS NULL)` : comparison;
 }
-function toStorage(descriptor: EntityRuntimeDescriptor, input: Readonly<Record<string, unknown>>): Record<string, unknown> { const fields = new Map(descriptor.fields.map((field) => [field.key, field.storagePath])); return Object.fromEntries(Object.entries(input).map(([key, value]) => [fields.get(key) ?? key, value])); }
+function toStorage(descriptor: EntityRuntimeDescriptor, input: Readonly<Record<string, unknown>>): Record<string, unknown> {
+  const fields = new Map(descriptor.fields.map((field) => [field.key, field.storagePath]));
+  return Object.fromEntries(Object.entries(input).map(([key, value]) => {
+    const column = fields.get(key);
+    if (!column) throw Object.assign(new Error("Unknown record input field"), { code: "RECORD_INPUT_FIELD_UNKNOWN", statusCode: 400 });
+    return [column, value];
+  }));
+}
 async function conflictOrMissing(descriptor: EntityRuntimeDescriptor, tenantId: string, recordId: string, expectedVersion: number | undefined, transaction: RecordTransaction): Promise<{ record: null; versionConflict?: number }> { if (!descriptor.storage.versionField || expectedVersion === undefined) return { record: null }; const result = await sql<Record<string, unknown>>`SELECT ${sql.ref(descriptor.storage.versionField)} FROM ${table(descriptor)} WHERE ${sql.join([...baseConditions(descriptor, tenantId), sql`${sql.ref(descriptor.storage.idField)} = ${recordId}`], sql` AND `)} LIMIT 1`.execute(transaction); const value = result.rows[0]?.[descriptor.storage.versionField]; return typeof value === "number" ? { record: null, versionConflict: value } : { record: null }; }

@@ -174,10 +174,17 @@ export function PanelRightIcon(props: IconProps) {
     </IconFrame>
   );
 }
+/** A pushpin controls docking; the split-panel glyph controls presentation. */
+export function PinIcon(props: IconProps) {
+  return <IconFrame {...props}><path d="M16 3H8l1 7-3 3v3h12v-3l-3-3 1-7ZM12 16v5" /></IconFrame>;
+}
+export function PinOffIcon(props: IconProps) {
+  return <IconFrame {...props}><path d="M16 3h-5M15 6l-.5 3.5M9 10l-3 3v3h10M12 16v5M3 3l18 18" /></IconFrame>;
+}
 export function Maximize2Icon(props: IconProps) {
   return (
     <IconFrame {...props}>
-      <path d="m15 3 6 6M21 3l-6 6M9 21l-6-6M3 21l6-6" />
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
     </IconFrame>
   );
 }

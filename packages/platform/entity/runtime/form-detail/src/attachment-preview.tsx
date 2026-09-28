@@ -1,4 +1,5 @@
 "use client";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { FileTextIcon } from "@athyper/platform-icons";
 import { CollaborationVisibilityContext } from "./collaboration-visibility";
 import { useContext } from "react";
@@ -19,8 +20,9 @@ export function AttachmentPreview({
   thumbnail?: boolean;
   document?: boolean;
 }) {
+  const intl = useEntityI18n();
   const client = useApiClient(),
-    [value, setValue] = useState<Preview>(),
+    [value, setValue] = useState<Preview & {messageKey?: string}>(),
     [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
@@ -43,16 +45,16 @@ export function AttachmentPreview({
           },
         );
         if (controller.signal.aborted) return;
-        if (result.url)
-          attachmentCapabilityUrl(result.url, {
+        const url = result.url ? attachmentCapabilityUrl(result.url, {
             isolatedFromOrigin: window.location.origin,
-          });
-        setValue(result);
+          }).href : undefined;
+        setValue({ ...result, ...(url ? { url } : {}) });
         if (result.state === "processing" && ++polls < 12)
           timer = setTimeout(() => void read(), Math.min(1000 * polls, 10000));
         else if (result.state === "processing")
           setValue({
             ...result,
+            messageKey: "files.previewProcessing",
             detail:
               "Preview is still processing. Open or refresh the preview to check again.",
           });
@@ -68,6 +70,7 @@ export function AttachmentPreview({
         if (!controller.signal.aborted)
           setValue({
             state: "unavailable",
+            messageKey: "files.previewUnavailable",
             detail: "Preview is unavailable. You can still download the file.",
           });
       }
@@ -78,6 +81,7 @@ export function AttachmentPreview({
       if (timer) clearTimeout(timer);
     };
   }, [attachmentId, client, thumbnail, fullDocument, attempt]);
+  const detail = value?.messageKey ? intl.message(value.messageKey) : value?.detail;
   return (
     <div
       className={
@@ -90,12 +94,12 @@ export function AttachmentPreview({
         fullDocument ? (
           <>
             <iframe
-              title="Document preview"
+              title={intl.message("files.documentPreview")}
               src={value.url}
               referrerPolicy="no-referrer"
             />
             <a href={value.url} target="_blank" rel="noopener noreferrer">
-              Open preview in PDF viewer
+              {intl.message("files.openPdf")}
             </a>
           </>
         ) : (
@@ -103,13 +107,14 @@ export function AttachmentPreview({
             src={value.url}
             alt={
               thumbnail
-                ? "First-page thumbnail"
-                : "Document preview — first page"
+                ? intl.message("files.firstThumbnail")
+                : intl.message("files.firstPreview")
             }
             referrerPolicy="no-referrer"
             onError={() =>
               setValue({
                 state: "unavailable",
+                messageKey: "files.previewExpired",
                 detail: "Preview expired or could not be loaded.",
               })
             }
@@ -118,25 +123,24 @@ export function AttachmentPreview({
       ) : thumbnail ? (
         <span
           role="status"
-          aria-label={value?.detail ?? "Loading thumbnail"}
-          title={value?.detail ?? "Loading thumbnail"}
+          aria-label={detail ?? intl.message("files.loadingThumbnail")}
+          title={detail ?? intl.message("files.loadingThumbnail")}
         >
           <FileTextIcon aria-hidden="true" />
         </span>
       ) : (
-        <p role="status">{value?.detail ?? "Loading preview…"}</p>
+        <p role="status">{detail ?? intl.message("files.loadingPreview")}</p>
       )}
       {!thumbnail ? (
         <>
           <small>
-            {fullDocument ? "Document preview" : "First page"} · Office and
-            encrypted previews are unsupported.
+            {intl.message("files.previewHelp", {name: intl.message(fullDocument ? "files.documentPreview" : "files.firstPage")})}
           </small>
           <button
             type="button"
             onClick={() => setAttempt((value) => value + 1)}
           >
-            Refresh preview
+            {intl.message("files.refreshPreview")}
           </button>
         </>
       ) : null}
@@ -150,6 +154,7 @@ export function AttachmentPreviewControl({
 }: {
   attachmentId: string;
 }) {
+  const intl = useEntityI18n();
   const [open, setOpen] = useState(false);
   const visible = useContext(CollaborationVisibilityContext);
   useEffect(() => {
@@ -162,7 +167,7 @@ export function AttachmentPreviewControl({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        {open ? "Close preview" : "Preview file"}
+        {open ? intl.message("action.closePreview") : intl.message("files.previewFile")}
       </button>
       {visible ? (
         open ? (

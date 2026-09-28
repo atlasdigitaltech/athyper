@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { COMMON_REFERENCE_VIEW_PERMISSION } from "@athyper/server-contract-metadata";
 
 export type CatalogPlane = "studio" | "neon" | "mesh";
 
@@ -13,7 +14,7 @@ export interface CatalogPermissionInput {
 export interface CanonicalPermissionV2 {
   permissionId: string;
   canonicalCode: string;
-  product: CatalogPlane;
+  product: CatalogPlane | "common";
   domain: string;
   entity: string;
   operation: string;
@@ -41,6 +42,7 @@ export function buildCanonicalCatalogV2(input: {
 }): { catalog: CanonicalCatalogV2 } {
   const permissions = input.permissions
     .map((permission) => {
+      if (permission.canonicalCode === COMMON_REFERENCE_VIEW_PERMISSION && (permission.permissionKind !== "capability" || permission.riskTier !== "low" || permission.requiresMfa || permission.requiresSod)) throw new Error("Invalid common reference capability definition");
       const coordinate = canonicalCoordinate(input.plane, permission.canonicalCode);
       const canonicalCode = `${coordinate.product}.${coordinate.domain}.${coordinate.entity}.${coordinate.operation}`;
       const definition = {
@@ -83,7 +85,8 @@ function uuidV5(name: string, namespace: string): string {
   return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
 }
 
-function canonicalCoordinate(plane: CatalogPlane, sourceCode: string): { product: CatalogPlane; domain: string; entity: string; operation: string } {
+function canonicalCoordinate(plane: CatalogPlane, sourceCode: string): { product: CatalogPlane | "common"; domain: string; entity: string; operation: string } {
+  if (sourceCode === COMMON_REFERENCE_VIEW_PERMISSION) return { product: "common", domain: "platform", entity: "reference", operation: "view" };
   const raw = sourceCode.toLowerCase().split(".").filter(Boolean);
   if (raw.length !== 4 || raw[0] !== plane) throw new Error(`permission must be exact plane.domain.entity.operation: ${sourceCode}`);
   const domain = token(raw[1]!);

@@ -1,0 +1,22 @@
+# Opt-in DEV platform publication identity. Does not replace tenant request IAM
+# or the separate legacy publication configuration. Contains credential hashes,
+# never raw workload tokens; enrolled policy selects source and destinations.
+services:
+  api:
+    environment:
+      PLATFORM_AUTHORITY_TENANT_ID: ${PLATFORM_AUTHORITY_TENANT_ID:?Set the reviewed platform authority tenant}
+      PUBLICATION_WORKLOAD_CONFIG: /run/publication-workload/server.json
+    volumes:
+      - type: bind
+        source: ${PUBLICATION_WORKLOAD_CONFIG_FILE:?Set the reviewed DEV workload configuration}
+        target: /run/publication-workload/server.json
+        read_only: true
+  worker:
+    environment:
+      PLATFORM_AUTHORITY_TENANT_ID: ${PLATFORM_AUTHORITY_TENANT_ID:?Set the reviewed platform authority tenant}
+      PUBLICATION_WORKLOAD_CONFIG: /run/publication-workload/server.json
+    volumes:
+      - type: bind
+        source: ${PUBLICATION_WORKLOAD_CONFIG_FILE:?Set the reviewed DEV workload configuration}
+        target: /run/publication-workload/server.json
+        read_only: true

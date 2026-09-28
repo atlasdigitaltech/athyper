@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { sql, type Transaction } from "kysely";
-import type { BusinessPartnerRequest, BusinessPartnerRequestRepository, PatchBusinessPartnerRequestCommand } from "@athyper/server-contract-master-data";
+import type { BusinessPartnerRequest, BusinessPartnerRequestRepository, PatchBusinessPartnerRequestCommand } from "@athyper/server-contract-entity-governance";
 import type { ProcessExecutionManifest } from "@athyper/server-contract-control-admin";
 import type { Authorizer } from "@athyper/server-contract-auth";
 import type { AuditRecorder } from "@athyper/server-contract-audit";

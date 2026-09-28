@@ -9,6 +9,18 @@ const overview = artifact("presentation_section", "business_partner/presentation
 const context = { tenantId: "tenant", principalId: "principal", planeKey: "neon", permissions: { allowed: ["bp.read"] } } as any;
 
 describe("entity runtime resource service", () => {
+  it("routes normalized Summary to the pinned provider service without requiring a legacy surface", async () => {
+    const release = { artifactIndex: new Map([["business_partner/runtime", {}]]), release: { releaseId: "release-1", releaseHash: `sha256:${"a".repeat(64)}` } };
+    const reader = { resolve: vi.fn(async () => release), surfaceModel: vi.fn() };
+    const publishedSummary = vi.fn(async () => ({ cards: [] }));
+    const service = createEntityRuntimeResourceService({ reader: reader as any, publishedSummary, headers: { readHeader: vi.fn() }, sections: { get: vi.fn() } });
+    const input = { context, entityCode: "business_partner", recordId: "record", surfaceKey: "detail" };
+    await service.summary(input);
+    expect(publishedSummary).toHaveBeenCalledWith(input, release);
+    expect(reader.surfaceModel).not.toHaveBeenCalled();
+    expect(await service.summary({ ...input, surfaceKey: "undeclared" })).toBeNull();
+    expect(publishedSummary).toHaveBeenCalledOnce();
+  });
   it("projects header tone from the pinned entity surface", async () => {
     const publishedSurface = artifact("presentation_surface", surface.artifactKey, {...surface.content, header: {titleField: "name", statusField: "status", statusTones: {published: "success"}}});
     const reader = {surfaceModel: async () => ({release: {release: {releaseId: "release", releaseHash: `sha256:${"a".repeat(64)}`}}, core, surface: publishedSurface}), operation: async () => operation};
@@ -124,6 +136,7 @@ describe("entity runtime resource service", () => {
     });
     const handler = { read: vi.fn(async () => ({ name: "Nurul Aziz" })) };
     const reader = { surfaceModel: vi.fn(async () => ({ release: { release: { releaseId: "release-1", releaseHash: `sha256:${"a".repeat(64)}` } }, core, surface: summarySurface })), operation: vi.fn(async () => operation), section: vi.fn() };
+    Object.assign(reader, { resolve: async () => ({ artifactIndex: new Map([["business_partner/runtime", {}], ["business_partner/presentation.detail", {}]]), release: { releaseId: "release-1", releaseHash: `sha256:${"a".repeat(64)}` } }) });
     const service = createEntityRuntimeResourceService({ reader: reader as any, headers: { readHeader: vi.fn(async () => ({ revision: "record-1", values: {} })) }, sections: { get: vi.fn() }, summaries: { get: vi.fn((provider) => provider === "primary-contact" ? handler : undefined) } });
     await expect(service.summary({ context, entityCode: "business_partner", recordId: "00000000-0000-4000-8000-000000000001", surfaceKey: "detail" })).resolves.toMatchObject({ revision: "record-1", cards: [ { key: "primary-contact", state: "ready", data: { name: "Nurul Aziz" } }, { key: "governance", state: "unavailable" } ] });
     expect(handler.read).toHaveBeenCalledOnce();

@@ -1046,6 +1046,20 @@ export const ENTITY_RUNTIME_SECTION_OPERATION: RelayOperation = Object.freeze({
   requestClass: "json",
   requiresTenant: true,
 });
+export const ENTITY_RUNTIME_COMMENTS_READ_OPERATION: RelayOperation = Object.freeze({
+  id: "entity-runtime.collaboration.comments.read",
+  method: "GET",
+  path: "/api/entity-runtime/:entityCode/records/:recordId/collaboration/comments",
+  requestClass: "json",
+  requiresTenant: true,
+});
+export const ENTITY_RUNTIME_ATTACHMENTS_READ_OPERATION: RelayOperation = Object.freeze({
+  id: "entity-runtime.collaboration.attachments.read",
+  method: "GET",
+  path: "/api/entity-runtime/:entityCode/records/:recordId/collaboration/attachments",
+  requestClass: "json",
+  requiresTenant: true,
+});
 export const ENTITY_RUNTIME_OPERATION: RelayOperation = Object.freeze({
   id: "entity-runtime.operation",
   method: "POST",
@@ -1066,6 +1080,8 @@ export const ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS: readonly RelayOperation[] =
     ENTITY_RUNTIME_BOOTSTRAP_OPERATION,
     ENTITY_RUNTIME_SUMMARY_OPERATION,
     ENTITY_RUNTIME_SECTION_OPERATION,
+    ENTITY_RUNTIME_COMMENTS_READ_OPERATION,
+    ENTITY_RUNTIME_ATTACHMENTS_READ_OPERATION,
     ENTITY_RUNTIME_OPERATION,
   ]);
 export const EXPERIENCE_SURFACE_READ_OPERATION: RelayOperation = Object.freeze({

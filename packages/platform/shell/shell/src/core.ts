@@ -37,6 +37,7 @@ export interface ShellCatalogWorkspace {
   readonly modules: readonly ShellCatalogModule[];
 }
 export interface ShellExperienceInput {
+  readonly entityRoutes?: readonly PublishedEntityRoute[];
   readonly workspaces: readonly ShellCatalogWorkspace[];
   readonly permissions: readonly string[];
   readonly features: Readonly<Record<string, Readonly<{ enabled: boolean }>>>;
@@ -58,10 +59,16 @@ export interface DerivedShellWorkspace {
   readonly routes: readonly DerivedShellRoute[];
 }
 export interface DerivedShellNavigation {
+  readonly entityRoutes?: readonly PublishedEntityRoute[];
   readonly workspaces: readonly DerivedShellWorkspace[];
   readonly routes: readonly DerivedShellRoute[];
   readonly landingHref?: string;
   readonly unknownActiveModules: readonly string[];
+}
+export interface PublishedEntityRoute {
+  readonly sharedInfrastructure?: boolean;
+  readonly entityCode: string; readonly releaseId: string; readonly operation: "list" | "read";
+  readonly permissionCode: string; readonly workspaceCode: string; readonly moduleCode: string;
 }
 export interface NavigationDiagnostic {
   readonly kind: "unknown-active-module";
@@ -223,6 +230,17 @@ export function deriveShellNavigation(
   return Object.freeze({
     workspaces: Object.freeze(workspaces),
     routes: Object.freeze(routes),
+    entityRoutes: Object.freeze((experience.entityRoutes ?? []).filter(entry =>
+      /^[a-z][a-z0-9_]{1,62}$/.test(entry.entityCode) && !!entry.releaseId &&
+      experience.permissions.includes(entry.permissionCode) &&
+      (routes.some(route => route.workspaceCode === entry.workspaceCode && route.moduleCode === entry.moduleCode) ||
+        // Hidden infrastructure is entitled and permission-filtered by the server
+        // but intentionally absent from workspace navigation. Still require its
+        // known catalog binding and every client-side permission/feature gate.
+        (entry.sharedInfrastructure === true && registry.some(route => route.moduleCode === entry.moduleCode
+          && route.presentation?.workspaceCode === entry.workspaceCode
+          && route.requiredPermissions.every(p => experience.permissions.includes(p))
+          && route.requiredFeatures.every(f => experience.features[f]?.enabled === true)))))),
     ...(firstWorkspace
       ? { landingHref: firstWorkspace.href }
       : visible[0]
@@ -241,6 +259,9 @@ export function canAccessRoute(
   navigation: DerivedShellNavigation,
   pathname: string,
 ): boolean {
+  const entity = /^\/app\/entity\/([a-z][a-z0-9_]{1,62})(?:\/(manage|[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}))?$/i.exec(pathname);
+  if (entity) return (navigation.entityRoutes ?? []).some(route => route.entityCode === entity[1]
+    && route.operation === (!entity[2] || entity[2] === "manage" ? "list" : "read"));
   return (
     navigation.workspaces.some((workspace) => workspace.href === pathname) ||
     navigation.routes.some(

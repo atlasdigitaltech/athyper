@@ -5,6 +5,15 @@
   "defaultScopeBehavior": "deny_undeclared",
   "permissions": [
     {
+      "permissionCode": "common.platform.reference.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "neon.address_contact.company_code.manage",
       "scopes": [
         {
@@ -341,5 +350,5 @@
       ]
     }
   ],
-  "sha256": "dd6d5beff70972101abf790f928a2371ddeb3f4abbb50438b485d89577883a12"
+  "sha256": "3f3fd79705164f2ce4c12146cdc3bea229c5d0d60922676a576b51a57e485f6c"
 }

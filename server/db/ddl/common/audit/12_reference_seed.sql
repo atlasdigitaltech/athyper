@@ -551,7 +551,17 @@ INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed
 VALUES('metadata_development_publication','^metadata\.development_publication\.(started|submitted|approved|dispatched)$',22,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['service_account']::audit.actor_type_d[],'tenant',false,'metadata',65536,1,'{"owner":"publication","purpose":"development_workload_maker_checker_publication"}'::jsonb,'active')
 ON CONFLICT(code) DO NOTHING;
 
+-- Reference publication evidence is attributed to the authenticated workload.
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('metadata_reference_publication','^metadata\.reference\.publication\.(qualified|review_authorized|dispatched)$',22,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['service_account']::audit.actor_type_d[],'tenant',false,'metadata',65536,1,'{"owner":"publication","purpose":"reference_workload_publication_evidence"}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;
+
 -- Separate workload runtime authority; human review contracts are unchanged.
+-- Machine-policy enrollment is a distinct, human-attributed authority action.
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('metadata_publication_policy','^metadata\.publication\.policy\.(proposed|activated)$',24,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['user']::audit.actor_type_d[],'tenant',false,'metadata',16384,1,'{"owner":"publication","purpose":"independent_machine_policy_enrollment"}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;
+
 INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
 VALUES('metadata_development_runtime','^metadata\.development_runtime\.(qualified|activation_authorized)$',23,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['service_account']::audit.actor_type_d[],'tenant',false,'metadata',65536,1,'{"owner":"publication","purpose":"devfull_workload_runtime_approval"}'::jsonb,'active')
 ON CONFLICT(code) DO NOTHING;

@@ -1,5 +1,6 @@
 "use client";
 import { useMemo } from "react";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { asComment, asAttachment } from "./collaboration-read-models";
 import type { EntityRuntimeSectionResource } from "@athyper/platform-entity-descriptor-client";
 import { FileTextIcon } from "@athyper/platform-icons";
@@ -47,22 +48,30 @@ export function CompiledEntitySectionContent({
     cursor?: string,
   ) => Promise<EntityRuntimeSectionResource>;
 }) {
+  const intl = useEntityI18n();
   const values = valueRecord(resource.data);
   const fieldValues = valueRecord(values?.values) ?? values;
-  const items = useMemo(() => { try {
-    const items = collectionItems(resource.data);
-    if (resource.presentation.rendererKey === "platform.comments.v1")
-      return items.map(asComment);
-    if (resource.presentation.rendererKey === "platform.attachments.v1")
-      return items.map(asAttachment);
-    return items;
-  } catch { return undefined; } }, [resource.data, resource.presentation.rendererKey]);
+  const parsed = useMemo(() => {
+    const parser = resource.presentation.rendererKey === "platform.comments.v1" ? asComment
+      : resource.presentation.rendererKey === "platform.attachments.v1" ? asAttachment : undefined;
+    if (!parser) return { items: collectionItems(resource.data), rejected: 0 };
+    const root = valueRecord(resource.data);
+    const envelope = root && Object.hasOwn(root, "data") ? valueRecord(root.data) : root;
+    if (!envelope || !Array.isArray(envelope.items)) return undefined;
+    let rejected = 0;
+    const items = envelope.items.flatMap(item => {
+      try { return [parser(item)]; } catch { rejected++; return []; }
+    });
+    return { items, rejected };
+  }, [resource.data, resource.presentation.rendererKey]);
+  const items = parsed?.items;
+  const warning = parsed?.rejected ? <p role="status">{intl.message("collaboration.partialResponse")}</p> : null;
   if (!items) {
     return (
       <PanelEmptyState
         icon={<FileTextIcon />}
-        title="Content could not be displayed"
-        description="The server returned an unexpected collaboration response. Refresh to try again."
+        title={intl.message("collaboration.invalidResponseTitle")}
+        description={intl.message("collaboration.invalidResponse")}
       />
     );
   }
@@ -97,7 +106,7 @@ export function CompiledEntitySectionContent({
   if (resource.presentation.rendererKey === "platform.comments.v1") {
     if (entityCode && recordId && onChanged)
       return (
-        <CommentsWorkspace
+        <>{warning}<CommentsWorkspace
           key={`${entityCode}:${recordId}`}
           resource={resource}
           entityCode={entityCode}
@@ -108,14 +117,14 @@ export function CompiledEntitySectionContent({
           loadMoreError={loadMoreError}
           onLoadThreadPage={onLoadThreadPage}
           onLoadMentionsPage={onLoadMentionsPage}
-        />
+        /></>
       );
     return (
-      <Collection
+      <>{warning}<Collection
         fields={commentFields}
         items={items}
-        sectionLabel="Comments"
-      />
+        sectionLabel={intl.message("collaboration.comments")}
+      /></>
     );
   }
   if (resource.presentation.rendererKey === "platform.attachments.v1") {
@@ -129,6 +138,7 @@ export function CompiledEntitySectionContent({
       : [];
     return (
       <div className="a-collaboration-files">
+        {warning}
         {entityCode && recordId && onChanged ? (
           <AttachmentCollection
             uploadPolicy={resource.capability}

@@ -1,4 +1,5 @@
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
+import { compileFieldPattern, FIELD_PATTERN_INPUT_LIMIT } from "@athyper/server-contract-metadata";
 import type { MutationFieldViolations } from "@athyper/server-contract-records";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 
@@ -20,8 +21,12 @@ export function validateRecordInput(descriptor: EntityRuntimeDescriptor, action:
     if (typeof value === "string") {
       const min = number(config?.["minLength"]); const max = number(config?.["maxLength"]); const pattern = typeof config?.["pattern"] === "string" ? config["pattern"] : undefined;
       if (min !== undefined && value.length < min) add(violations, key, "FIELD_TOO_SHORT", `Minimum length is ${min}`);
-      if (max !== undefined && value.length > max) add(violations, key, "FIELD_TOO_LONG", `Maximum length is ${max}`);
-      if (pattern && !new RegExp(pattern, "u").test(value)) add(violations, key, "FIELD_PATTERN_INVALID", "Field does not match its required pattern");
+      const effectiveMax = pattern ? Math.min(max ?? FIELD_PATTERN_INPUT_LIMIT, FIELD_PATTERN_INPUT_LIMIT) : max;
+      if (effectiveMax !== undefined && value.length > effectiveMax) {
+        add(violations, key, "FIELD_TOO_LONG", `Maximum length is ${effectiveMax}`);
+        continue;
+      }
+      if (pattern && !compileFieldPattern(pattern).test(value)) add(violations, key, "FIELD_PATTERN_INVALID", "Field does not match its required pattern");
     }
   }
   return violations;

@@ -12,7 +12,21 @@ The compiler emits:
 
 Scope children must exactly cover the permission's declared compatible scope kinds. Every coordinate is fail-closed with `missingValueBehavior=deny`. Duplicate scope kinds, mixed decision modes, missing coordinates, tenant-owned releases, and cross-plane catalogs are rejected.
 
-Legacy codes, contextual alias names, codes outside `{plane}.{domain}.{entity}.{operation}`, and generic `action` coordinates are rejected before catalog lookup. The database staging function independently checks the canonical code, compiler-supplied permission UUID, binding UUID, and scope-child UUID.
+Legacy codes, contextual alias names, codes outside `{plane}.{domain}.{entity}.{operation}`, and generic `action` coordinates are rejected before catalog lookup, except for the exact shared capability below. The database staging function independently checks the canonical code, compiler-supplied permission UUID, binding UUID, and scope-child UUID.
+
+`common.platform.reference.view` is the only shared exception. Entity/operation
+coordinate matching is replaced only for this capability by enrollment validation
+against the immutable compiled native descriptor (whose hash must match the source
+release). The source graph must be a system reference with public stored read-only
+fields, generic shared-table reads and write mode `none`, explicitly enrolled through
+`surface.layoutConfig.referenceCapability`. Only list/read/view operations and exact
+tenant-context scope are admitted. Catalog kind must be `capability`.
+
+Native runtime lowering carries `referenceCapability` into the signed descriptor.
+Database staging independently rejects mutation operations, writable fields,
+non-shared storage, mixed permissions and non-tenant bindings for this capability.
+The binding retains its actual target plane and source entity identity. An existing
+role grant is still required in that plane. Ordinary entity bindings remain unchanged.
 
 Compile a published Metadata release export with:
 

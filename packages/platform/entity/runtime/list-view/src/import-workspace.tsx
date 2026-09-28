@@ -5,6 +5,7 @@ import { entityListDescriptorOperation, type HttpClient } from "@athyper/platfor
 import { Button } from "@athyper/platform-ui";
 import React, { useEffect, useMemo, useState } from "react";
 import { ImportWizard } from "./data-operations";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 
 export interface RecordImportWorkspaceProps {
   readonly client: HttpClient;
@@ -13,6 +14,7 @@ export interface RecordImportWorkspaceProps {
 }
 
 export function RecordImportWorkspace({ client, entityCode, scopeCoordinate }: RecordImportWorkspaceProps) {
+  const intl = useEntityI18n();
   const [descriptor, setDescriptor] = useState<EntityListDescriptorV1>();
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
@@ -25,23 +27,24 @@ export function RecordImportWorkspace({ client, entityCode, scopeCoordinate }: R
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
     setDescriptor(undefined);
     setError("");
     if (!/^[a-z][a-z0-9_.-]{0,126}$/.test(entityCode)) {
-      setError("Choose an entity from its list view before starting an import.");
+      setError("transfer.chooseEntity");
       return () => { active = false; };
     }
-    void client.request(entityListDescriptorOperation, { params: { entityCode }, query })
+    void client.request(entityListDescriptorOperation, { params: { entityCode }, query, signal: controller.signal })
       .then((value) => { if (active) setDescriptor(value); })
-      .catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : "The import definition could not be loaded."); });
-    return () => { active = false; };
+      .catch(() => { if (active) setError("error.unavailable"); });
+    return () => { active = false; controller.abort(); };
   }, [client, entityCode, query]);
 
   return <main className="a-entity-list__import-workspace" aria-busy={!descriptor && !error}>
-    <header><div><p>Data transfers</p><h1>Guided import</h1><span>Prepare, validate, review, and commit through the same governed pipeline.</span></div><Button variant="secondary" size="small" onClick={() => window.location.assign("/operations/data-transfers")}>Import and export activity</Button></header>
+    <header><div><p>{intl.message("transfer.title")}</p><h1>{intl.message("transfer.importTitle")}</h1><span>{intl.message("transfer.importDescription")}</span></div><Button variant="secondary" size="small" onClick={() => window.location.assign("/operations/data-transfers")}>{intl.message("transfer.activity")}</Button></header>
     {status ? <p role="status" className="a-entity-list__transfer-status">{status}</p> : null}
-    {error ? <section className="a-entity-list__transfer-empty" role="alert"><h2>Import unavailable</h2><p>{error}</p><Button variant="secondary" size="small" onClick={() => window.history.back()}>Go back</Button></section> : null}
-    {!descriptor && !error ? <section className="a-entity-list__transfer-empty"><p>Loading the authorized import definition…</p></section> : null}
+    {error ? <section className="a-entity-list__transfer-empty" role="alert"><h2>{intl.message("transfer.importUnavailable")}</h2><p>{intl.message(error)}</p><Button variant="secondary" size="small" onClick={() => window.history.back()}>{intl.message("transfer.back")}</Button></section> : null}
+    {!descriptor && !error ? <section className="a-entity-list__transfer-empty"><p>{intl.message("transfer.loading")}</p></section> : null}
     {descriptor?.dataOperations ? <ImportWizard client={client} descriptor={descriptor} scopeCoordinate={scopeCoordinate} open onOpenChange={(open) => { if (!open) window.location.assign("/operations/data-transfers"); }} onStatus={setStatus}/> : null}
   </main>;
 }

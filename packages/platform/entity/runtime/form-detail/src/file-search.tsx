@@ -1,4 +1,5 @@
 "use client";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { fileFilterBody } from "./file-filter-body";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -138,6 +139,7 @@ export function FileSearchInput({
   canSearch,
   onClear,
   actions,
+  creationAction,
 }: {
   search: FileSearchState;
   nameQuery: string;
@@ -145,33 +147,34 @@ export function FileSearchInput({
   canSearch: boolean;
   onClear: () => void;
   actions?: ReactNode;
+  creationAction?: ReactNode;
 }) {
+  const intl = useEntityI18n();
   const contents = search.scope === "contents";
   const query = contents ? search.query : nameQuery;
   return (
     <div className="a-file-search">
+      <div className="a-file-search__control">
       <form
         role="search"
-        aria-label="Search record files"
+        aria-label={intl.message("files.searchRecord")}
         onSubmit={(event) => {
           event.preventDefault();
           if (contents) void search.search();
         }}
       >
-        <SearchField className="a-file-search__input" label={contents ? "Search file contents" : "Search file names"} enterKeyHint="search" value={query} maxLength={256} placeholder={contents ? "Find words inside this record’s files" : "Search by file name or type"} onValueChange={contents ? search.setQuery : onNameQuery} onClear={onClear}/>
+        <SearchField className="a-file-search__input" label={contents ? intl.message("files.searchContents") : intl.message("files.searchNames")} enterKeyHint="search" value={query} maxLength={256} placeholder={contents ? intl.message("files.findWords") : intl.message("files.searchPlaceholder")} onValueChange={contents ? search.setQuery : onNameQuery} onClear={onClear}/>
         {contents ? (
-          <button type="submit" disabled={search.busy || !query.trim()}>
-            Search
-          </button>
+          <button type="submit" disabled={search.busy || !query.trim()}>{intl.message("files.search")}</button>
         ) : null}
       </form>
       {canSearch ? (
         <fieldset className="a-file-search__scope">
-          <legend className="a-file-search__label">Search in</legend>
+          <legend className="a-file-search__label">{intl.message("files.searchIn")}</legend>
           {(
             [
-              ["names", "File names"],
-              ["contents", "File contents"],
+              ["names", intl.message("files.names")],
+              ["contents", intl.message("files.contents")],
             ] as const
           ).map(([value, label]) => (
             <label key={value}>
@@ -182,11 +185,13 @@ export function FileSearchInput({
                 checked={search.scope === value}
                 onChange={() => search.setScope(value)}
               />
-              {label}
+              <span>{label}</span>
             </label>
           ))}
         </fieldset>
       ) : null}
+      </div>
+      {creationAction ? <div className="a-file-search__create">{creationAction}</div> : null}
       {actions}
     </div>
   );
@@ -271,42 +276,38 @@ export function FileSearchResults({
   selected?: string;
   downloading?: ReadonlySet<string>;
 }) {
+  const intl = useEntityI18n();
   return (
     <section
       className="a-file-search-results"
-      aria-label="Content search results"
+      aria-label={intl.message("files.contentResults")}
       aria-busy={search.busy}
     >
-      {!search.submitted && !search.busy && !search.error ? <PanelEmptyState className="a-files-empty-state" role="status" icon={<FileTextIcon size={28}/>} title="Search inside files" description="Enter a word or phrase to search inside files, or show the file list." action={<Button variant="secondary" type="button" onClick={()=>search.setScope("names")}>Show files</Button>}/> : search.busy || search.error || search.hits.length > 0 ? <p role="status">
-        {search.error
-          ? "Search unavailable"
-          : search.busy
-            ? "Searching file contents…"
+      {!search.submitted && !search.busy && !search.error ? <PanelEmptyState className="a-files-empty-state" role="status" icon={<FileTextIcon size={28}/>} title={intl.message("files.searchInside")} description={intl.message("files.searchHelp")} action={<Button variant="secondary" type="button" onClick={()=>search.setScope("names")}>{intl.message("files.show")}</Button>}/> : !search.error && (search.busy || search.hits.length > 0) ? <p role="status">
+        {search.busy
+            ? intl.message("files.searching")
             : search.submitted
-              ? `${search.hits.length} matching ${search.hits.length === 1 ? "file" : "files"}${search.cursor ? " loaded" : ""} for “${search.submitted}”`
-              : "Search for a word or phrase inside this record’s files."}
+              ? intl.message("files.queryCount", {count: search.hits.length, loaded: String(Boolean(search.cursor)), query: search.submitted})
+              : intl.message("files.searchPrompt")}
       </p> : null}
       {search.error ? (
-        <div role="alert">
-          <p>{search.error}</p>
-          <button
-            type="button"
-            disabled={search.busy}
-            onClick={() => void search.search()}
-          >
-            Retry search
-          </button>
-        </div>
+        <PanelEmptyState className="a-files-empty-state" role="alert"
+          icon={<FileTextIcon size={28}/>}
+          title={intl.message("files.contentUnavailable")}
+          description={intl.message("files.searchError")}
+          action={<><Button variant="secondary" type="button" disabled={search.busy}
+            onClick={() => void search.search()}>{intl.message("files.retrySearch")}</Button>
+            <Button variant="secondary" type="button" onClick={() => search.setScope("names")}>{intl.message("files.searchNames")}</Button></>}/>
       ) : null}
       {search.submitted &&
       !search.busy &&
       !search.error &&
       !search.cursor &&
       !search.hits.length ? (
-        <PanelEmptyState className="a-files-empty-state" role="status" icon={<FileTextIcon size={22}/>} title="No matching file contents" description="Try different words or search file names." action={<Button variant="secondary" type="button" onClick={()=>search.setScope("names")}>Search file names</Button>}/>
+        <PanelEmptyState className="a-files-empty-state" role="status" icon={<FileTextIcon size={22}/>} title={intl.message("files.noContents")} description={intl.message("files.tryWords")} action={<Button variant="secondary" type="button" onClick={()=>search.setScope("names")}>{intl.message("files.searchNames")}</Button>}/>
       ) : null}
       {search.submitted && !search.busy && !search.error && !search.hits.length && search.cursor
-        ? <p role="status">No accessible matches on this page. More results are available.</p> : null}
+        ? <p role="status">{intl.message("files.noAccessibleMatches")}</p> : null}
       <ul>
         {search.hits.map((hit) => (
           <li
@@ -335,15 +336,13 @@ export function FileSearchResults({
               <SearchExcerpt text={hit.snippet} query={search.submitted} />
               <div className="a-file-search-result__actions">
                 {canPreview ? (
-                  <FileAction label="Preview file" icon={<EyeIcon size={18} aria-hidden="true"/>} onClick={()=>onPreview(hit)}>Preview</FileAction>
+                  <FileAction label={intl.message("files.previewFile")} icon={<EyeIcon size={18} aria-hidden="true"/>} onClick={()=>onPreview(hit)}>{intl.message("action.preview")}</FileAction>
                 ) : null}
                 {canDownload ? (
-                  <FileAction label="Download" icon={<DownloadIcon size={18} aria-hidden="true"/>}
+                  <FileAction label={intl.message("action.download")} icon={<DownloadIcon size={18} aria-hidden="true"/>}
                     disabled={downloading?.has(hit.attachmentId)}
                     onClick={() => onDownload(hit.attachmentId)}
-                  >
-                    Download
-                  </FileAction>
+                  >{intl.message("action.download")}</FileAction>
                 ) : null}
               </div>
             </div>
@@ -355,9 +354,7 @@ export function FileSearchResults({
           type="button"
           disabled={search.busy}
           onClick={() => void search.search(search.cursor)}
-        >
-          More results
-        </button>
+        >{intl.message("files.moreResults")}</button>
       ) : null}
     </section>
   );

@@ -2,6 +2,8 @@ import { isEntityRuntimeKey, isEntityRuntimeUuid } from "@athyper/contract-platf
 import { EntityCapabilityPolicyError } from "./entity-capability-policy.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { registerContractRoute } from "@athyper/server-runtime-http";
+import { defineRouteContract } from "@athyper/server-runtime-http";
+import type { createEntityCollaborationService } from "./entity-collaboration-service.js";
 import type { Application, NextFunction, Request, RequestHandler, Response } from "express";
 import { entityRuntimeBootstrapContract, entityRuntimeSummaryContract, entityRuntimeSectionContract, entityRuntimeOperationContract } from "./entity-runtime-contracts.js";
 import { EntityRuntimeResourceError, type EntityRuntimeResourceContext, type createEntityRuntimeResourceService } from "./entity-section-service.js";
@@ -9,7 +11,7 @@ import { EntityRuntimeOperationError, type createEntityOperationDispatcher } fro
 
 type Service = ReturnType<typeof createEntityRuntimeResourceService>;
 type Operations = ReturnType<typeof createEntityOperationDispatcher>;
-export function registerEntityRuntimeRoutes(app: Application, options: { readonly authenticate: RequestHandler; readonly readContext: (response: Response) => VerifiedRequestContext; readonly service: Service; readonly operations?: Operations }) {
+export function registerEntityRuntimeRoutes(app: Application, options: { readonly authenticate: RequestHandler; readonly readContext: (response: Response) => VerifiedRequestContext; readonly service: Service; readonly operations?: Operations; readonly collaboration?: ReturnType<typeof createEntityCollaborationService> }) {
   const run = (work: (request: Request, context: VerifiedRequestContext) => Promise<unknown>) => async (request: Request, response: Response, next: NextFunction) => {
     try {
       const value = await work(request, options.readContext(response));
@@ -22,6 +24,18 @@ export function registerEntityRuntimeRoutes(app: Application, options: { readonl
     }
   };
   registerContractRoute(app, entityRuntimeBootstrapContract, options.authenticate, run((request, context) => options.service.bootstrap({ context, entityCode: code(request.params.entityCode), recordId: uuid(request.params.recordId), surfaceKey: surface(request) })));
+  if (options.collaboration) registerContractRoute(app, defineRouteContract({ method: "get",
+    path: "/api/entity-runtime/:entityCode/records/:recordId/collaboration/:kind",
+    operationId: "entityRuntime.collaboration", summary: "Read an authorized published record capability", authenticated: true,
+    request: { query: { type: "object", additionalProperties: false, properties: { cursor: { type: "string", format: "uuid" }, threadRootId: { type: "string", format: "uuid" }, commentFilter: { type: "string", enum: ["mentions"] }, limit: { type: "string", pattern: "^(?:[1-9][0-9]?|100)$" } } } },
+    responses: { 200: { description: "Authorized collaboration resource" }, 403: { description: "Capability denied" }, 503: { description: "Provider unavailable" } },
+  }), options.authenticate, run((request, context) => {
+    const kind = request.params.kind;
+    if (kind !== "comments" && kind !== "attachments") throw new EntityCapabilityPolicyError();
+    return options.collaboration!.read({ context, entityCode: code(request.params.entityCode), recordId: uuid(request.params.recordId), kind,
+      ...(request.query.cursor ? { cursor: uuid(request.query.cursor) } : {}), ...(request.query.limit ? { limit: integerLimit(request.query.limit) } : {}),
+      ...(request.query.threadRootId ? { threadRootId: uuid(request.query.threadRootId) } : {}), ...(request.query.commentFilter === "mentions" ? { commentFilter: "mentions" as const } : {}) });
+  }));
   registerContractRoute(app, entityRuntimeSummaryContract, options.authenticate, run((request, context) => { const selectedContext = resourceContext(request); return options.service.summary({ context, entityCode: code(request.params.entityCode), recordId: uuid(request.params.recordId), surfaceKey: surface(request), ...(selectedContext ? { resourceContext: selectedContext } : {}) }); }));
   registerContractRoute(app, entityRuntimeSectionContract, options.authenticate, run((request, context) => {
     const selectedContext = resourceContext(request);

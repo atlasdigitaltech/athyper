@@ -1,0 +1,62 @@
+{
+  "capturedAt": "2026-09-27T07:29:12.508Z",
+  "targets": [
+    {
+      "plane": "studio",
+      "operations": [
+        {
+          "mode": "entity_resource",
+          "operation": "read",
+          "permission": "common.platform.reference.view",
+          "sourceRelease": "56a40636-4d27-411f-be7f-3263994e8c70"
+        },
+        {
+          "mode": "collection",
+          "operation": "list",
+          "permission": "common.platform.reference.view",
+          "sourceRelease": "56a40636-4d27-411f-be7f-3263994e8c70"
+        }
+      ],
+      "countryRows": 247,
+      "unauthenticatedListDescriptorStatus": 401
+    },
+    {
+      "plane": "neon",
+      "operations": [
+        {
+          "mode": "collection",
+          "operation": "list",
+          "permission": "common.platform.reference.view",
+          "sourceRelease": "56a40636-4d27-411f-be7f-3263994e8c70"
+        },
+        {
+          "mode": "entity_resource",
+          "operation": "read",
+          "permission": "common.platform.reference.view",
+          "sourceRelease": "56a40636-4d27-411f-be7f-3263994e8c70"
+        }
+      ],
+      "countryRows": 247,
+      "unauthenticatedListDescriptorStatus": 401
+    },
+    {
+      "plane": "mesh",
+      "operations": [
+        {
+          "mode": "entity_resource",
+          "operation": "read",
+          "permission": "common.platform.reference.view",
+          "sourceRelease": "56a40636-4d27-411f-be7f-3263994e8c70"
+        },
+        {
+          "mode": "collection",
+          "operation": "list",
+          "permission": "common.platform.reference.view",
+          "sourceRelease": "56a40636-4d27-411f-be7f-3263994e8c70"
+        }
+      ],
+      "countryRows": 247,
+      "unauthenticatedListDescriptorStatus": 401
+    }
+  ]
+}

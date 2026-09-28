@@ -185,6 +185,7 @@ export interface EntityListLimitsDescriptor {
 }
 
 export interface EntityListPresentationDescriptor {
+  readonly localizedLabels?: import("@athyper/contract-platform-entity-runtime").EntityPresentationLocalizationV1;
   readonly experience?: import("@athyper/contract-platform-entity-list").PublishedListExperienceV1;
   readonly schemaVersion?: 1;
   readonly title?: string;
@@ -294,6 +295,8 @@ export interface EntityPolicyBindingDescriptor {
 }
 
 export interface EntityRuntimeDescriptor {
+  /** Validated cross-plane read-only capability; never an authorization grant. */
+  readonly referenceCapability?: "common.platform.reference.view";
   readonly intakeSurfaces?: readonly import("@athyper/contract-platform-entity-runtime").EntityIntakeSurfaceV1[];
   readonly intakeFlows?: readonly import("@athyper/contract-platform-entity-runtime").EntityIntakeFlowV1[];
   readonly ai?: import("./entity-ai.js").EntityAiDescriptorV1;

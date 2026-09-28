@@ -3,6 +3,46 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20260926_compiled_runtime_publication_source.sql",
+      "path": "migrations/20260926_compiled_runtime_publication_source.sql",
+      "sha256": "d91d893e215fc4c530c20fdb4ea5a5f506d0b4baf1212f632c07193bce5e7ec7",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Scoped immutable split-runtime compilation source and workload audit contract; no approvals or activation. Not deployed by this checkpoint.",
+      "canonicalPaths": ["ddl/planes/studio/publication/14_compiled_entity_runtime.sql", "ddl/common/audit/12_reference_seed.sql"]
+    },
+    {
+      "originalPath": "migrations/20260926_entity_execution_binding_storage.sql",
+      "path": "migrations/20260926_entity_execution_binding_storage.sql",
+      "sha256": "3ef87b26ad0f35e8b2483fee8edb8bf41f7adc2a70cf9ba7605e0433f63d9ea1",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": ["server/db/scripts/operations/publication/import-dev-reference-product.ts"],
+      "reason": "Install normalized execution-binding storage for graph reads; force RLS and withhold application writes pending governed-command policy. No approval or activation.",
+      "canonicalPaths": ["ddl/planes/studio/metadata/03_tables.sql", "ddl/planes/studio/metadata/05_constraints.sql", "ddl/planes/studio/metadata/10_rls.sql", "ddl/planes/studio/metadata/11_grants.sql"]
+    },
+    {
+      "originalPath": "migrations/20260926_common_reference_permission.sql",
+      "path": "migrations/20260926_common_reference_permission.sql",
+      "sha256": "69a5a8a474b4fe7475640349937b72cf92163fc9870810b2aec705f2ab13fdf9",
+      "planes": ["studio", "neon", "mesh"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Admit the exact common reference capability for qualified read-only descriptors and seed its plane-local catalog definition; no grants or activation.",
+      "canonicalPaths": ["ddl/common/authz/07_functions.sql", "ddl/common/authz/17_common_reference_permission.sql"]
+    },
+    {
+      "originalPath": "migrations/20260926_studio_entity_operation_bindings.sql",
+      "path": "migrations/20260926_studio_entity_operation_bindings.sql",
+      "sha256": "76144a44d3ac0c80944a75a6366719c857ef150765be8c53955a2c5295044945",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Allow Studio-plane metadata operation permission and scope bindings; no grants or releases.",
+      "canonicalPaths": ["ddl/planes/studio/metadata/03_tables.sql"]
+    },
+    {
       "originalPath": "migrations/20260924_publication_recovery_audit.sql",
       "path": "migrations/20260924_publication_recovery_audit.sql",
       "sha256": "af7265650c08eaf3d4fff9d2ab40457ab7954b98425c7264ce9511cdd32d8eaf",

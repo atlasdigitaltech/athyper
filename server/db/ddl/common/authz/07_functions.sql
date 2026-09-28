@@ -1719,13 +1719,44 @@ BEGIN
     IF EXISTS(SELECT 1 FROM jsonb_array_elements(v_bindings) item
       WHERE item->>'permissionCode' LIKE 'legacy.%'
          OR array_length(string_to_array(item->>'permissionCode','.'),1)<>4
-         OR split_part(item->>'permissionCode','.',1)<>lower(p_plane_code)
+         OR (split_part(item->>'permissionCode','.',1)<>lower(p_plane_code)
+             AND item->>'permissionCode'<>'common.platform.reference.view')
          OR split_part(item->>'permissionCode','.',2)='action'
          OR split_part(item->>'permissionCode','.',3)='action'
          OR COALESCE(item->>'permissionId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
          OR COALESCE(item->>'bindingId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
          OR COALESCE(item->>'scopeBindingId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') THEN
       RAISE EXCEPTION 'OPERATION_BINDING_CANONICAL_PERMISSION_REQUIRED' USING ERRCODE='check_violation';
+    END IF;
+    -- Exact shared capability exception, never a common.* wildcard. The signed
+    -- descriptor must enroll a read-only shared entity; grants stay plane-local.
+    IF EXISTS (SELECT 1 FROM jsonb_array_elements(v_bindings) item
+      WHERE item->>'permissionCode'='common.platform.reference.view') THEN
+      IF p_compiled_json->>'referenceCapability' IS DISTINCT FROM 'common.platform.reference.view'
+         OR p_compiled_json->>'planeKey' IS DISTINCT FROM lower(p_plane_code)
+         OR p_compiled_json#>>'{storage,schema}' IS DISTINCT FROM 'shared'
+         OR p_compiled_json#>>'{storage,tenantField}' IS NOT NULL
+         OR jsonb_typeof(p_compiled_json->'operations') IS DISTINCT FROM 'object'
+         OR jsonb_typeof(p_compiled_json->'fields') IS DISTINCT FROM 'array' THEN
+        RAISE EXCEPTION 'COMMON_REFERENCE_DESCRIPTOR_REQUIRED' USING ERRCODE='check_violation';
+      END IF;
+      IF jsonb_array_length(p_compiled_json->'fields')=0
+         OR p_compiled_json->'operations'='{}'::jsonb
+         OR EXISTS (SELECT 1 FROM jsonb_array_elements(p_compiled_json->'fields') field
+           WHERE field->'writableOn' IS DISTINCT FROM '[]'::jsonb)
+         OR EXISTS (SELECT 1 FROM jsonb_each(p_compiled_json->'operations') operation
+           WHERE operation.key NOT IN ('list','read','view')
+             OR operation.value->>'permissionCode' IS DISTINCT FROM 'common.platform.reference.view')
+         OR EXISTS (SELECT 1 FROM jsonb_array_elements(v_bindings) item
+           WHERE item->>'permissionCode' IS DISTINCT FROM 'common.platform.reference.view'
+             OR item->>'permissionKind' IS DISTINCT FROM 'capability'
+             OR COALESCE(item->>'operationKey','') NOT IN ('list','read','view')
+             OR item->>'entityCode' IS DISTINCT FROM p_compiled_json->>'entityCode'
+             OR item->>'scopeKind' IS DISTINCT FROM 'tenant'
+             OR item->>'coordinateSource' IS DISTINCT FROM 'tenant_context'
+             OR item->>'coordinateKey' IS NOT NULL OR item->>'resolverKey' IS NOT NULL) THEN
+        RAISE EXCEPTION 'COMMON_REFERENCE_READ_ONLY_BINDING_REQUIRED' USING ERRCODE='check_violation';
+      END IF;
     END IF;
     IF EXISTS(SELECT 1 FROM jsonb_array_elements(v_bindings) item
       GROUP BY item->>'sourceEntityOperationId'

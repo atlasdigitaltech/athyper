@@ -5,6 +5,8 @@ import { beginRecordImportOperation, commitRecordImportOperation, completeRecord
 import { DownloadIcon } from "@athyper/platform-icons";
 import { Button, Checkbox, Dialog, DialogClose, DialogContent, Input, Label, Select } from "@athyper/platform-ui";
 import React, { useState, type ChangeEvent } from "react";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { localizedEntityError } from "@athyper/platform-i18n/entity-errors";
 
 export type DataOperationLaunch = "picker" | "selected" | "filtered" | "page" | "all";
 type Scope = Exclude<DataOperationLaunch, "picker">;
@@ -40,6 +42,7 @@ function OperationButton({ label, count, operation, disabled, onClick }: { reado
 }
 
 function ExportDialog(props: DataOperationsControlProps & { readonly initialScope: Scope }) {
+  const intl = useEntityI18n();
   const policy = props.descriptor.dataOperations!.export;
   const [scope, setScope] = useState<Scope>(props.initialScope), [format, setFormat] = useState<RecordExportFormat>(policy.defaultFormat), [fields, setFields] = useState<readonly string[]>(props.state.columns.filter((key) => policy.exportableFields.includes(key)));
   const [fieldMode, setFieldMode] = useState<"visible" | "all" | "custom">("visible"), [headings, setHeadings] = useState(true), [rawCodes, setRawCodes] = useState(false), [isoDates, setIsoDates] = useState(true), [informationSheet, setInformationSheet] = useState(true), [fileName, setFileName] = useState(safeFileName(props.descriptor.surface.title)), [busy, setBusy] = useState(false), [error, setError] = useState("");
@@ -47,16 +50,16 @@ function ExportDialog(props: DataOperationsControlProps & { readonly initialScop
   const selectedFields = fieldMode === "visible" ? props.state.columns.filter((key) => policy.exportableFields.includes(key)) : fieldMode === "all" ? policy.exportableFields : fields;
   const count = scope === "selected" ? props.selectedRows.length : scope === "page" ? props.page?.rows.length ?? 0 : props.page?.pagination.total;
   const start = async () => {
-    setError(""); if (!selectedFields.length) { setError("Choose at least one field."); return; }
+    setError(""); if (!selectedFields.length) { setError(intl.message("transfer.chooseField")); return; }
     setBusy(true);
     try {
       const requestId = crypto.randomUUID();
       const scopedRows=scope==="selected"?props.selectedRows:scope==="page"?props.page?.rows??[]:[];
       const filter = { filters: scope === "filtered" ? props.state.filters : [], sort: props.state.sort, ...(scope === "filtered" && props.state.query ? { search: props.state.query } : {}), ...(scopedRows.length ? { recordIds: scopedRows.map(row=>row.id) } : {}), ...(props.scopeCoordinate ? { scopeCoordinate: props.scopeCoordinate } : {}), _transfer: { scope, format, fields: selectedFields, headings, rawCodes, isoDates, informationSheet:format!=="csv"&&informationSheet, fileName, activeViewName:props.activeViewName, descriptorHash: props.descriptor.revision.descriptorHash, scopeFingerprint: props.descriptor.scope.fingerprint, queryHash: props.page?.queryHash } };
       const receipt = await props.client.request(requestRecordExportOperation, { params: { entityCode: props.descriptor.entity.code }, body: { requestId, filter }, idempotencyKey: `export:${requestId}` });
-      props.onStatus(`Export queued. Job ${receipt.jobId} will notify you when it is ready.`);
+      props.onStatus(intl.message("transfer.exportQueued", {jobId: receipt.jobId}));
       props.onOpenChange(false);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "The export could not be started."); } finally { setBusy(false); }
+    } catch (cause) { setError(localizedEntityError(cause, intl)); } finally { setBusy(false); }
   };
   return <Dialog open={props.open} onOpenChange={props.onOpenChange}><DialogContent title={`Export ${props.descriptor.surface.title}`} description="The server re-checks authorization and freezes the requested scope when the job starts." className="a-entity-list__transfer-dialog">
     <div className="a-entity-list__dialog-body a-entity-list__export-grid">

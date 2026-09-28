@@ -80,6 +80,23 @@ export function compileCompiledEntityArtifacts(
         source={...source,content:{...source.content,...mapped.operationBindings}};
       }
     }
+    if (source.content.artifactType === "operation") {
+      let content = { ...source.content };
+      for (const profile of sources.filter(item => item.content.artifactType === "capability_profile"
+          && item.content.entityCode === source.content.entityCode)) {
+        const definition = profile.content.profile as { capabilityKey?: string } | undefined;
+        const key = definition?.capabilityKey === "comments" ? "commentBinding" : definition?.capabilityKey === "attachments" ? "attachmentBinding" : undefined;
+        if (!key || !content[key]) throw new TypeError("CAPABILITY_PROFILE_BINDING_REQUIRED");
+        const binding = content[key] as Record<string, unknown>;
+        if (binding.profilePolicy !== undefined) throw new TypeError("CAPABILITY_PROFILE_PIN_AUTHORING_FORBIDDEN");
+        content = { ...content,
+          [key]: { ...binding, profilePolicy: { artifactKey: profile.content.artifactKey,
+            hash: hash(input.canonicalizer, profile.content), plane: profile.content.plane } },
+          dependencies: [...new Set([...(content.dependencies as string[]), String(profile.content.artifactKey)])],
+        };
+      }
+      source = { ...source, content };
+    }
     if (!source.ref.endsWith(".json") || seenRefs.has(source.ref))
       throw new TypeError("COMPILED_ENTITY_AUTHORING_REF_INVALID");
     seenRefs.add(source.ref);
@@ -102,15 +119,16 @@ export function compileCompiledEntityArtifacts(
     .sort((left, right) => left.artifactKey.localeCompare(right.artifactKey));
   if (Object.hasOwn(input.release.content, "artifacts") || Object.hasOwn(input.release.content, "releaseHash"))
     throw new TypeError("COMPILED_ENTITY_RELEASE_AUTHORING_HASH_FORBIDDEN");
+  // Content identity is independent of publication authentication. Only the
+  // outer publication document is signed; never emit a synthetic inner signature.
+  const { signature: _legacySignature, ...releaseContent } = input.release.content;
   const unsignedRelease = {
-    ...input.release.content,
+    ...releaseContent,
     artifacts: artifactEntries,
-    signature: input.release.content.signature ?? {},
   };
-  const { signature: _signature, ...releaseHashContent } = unsignedRelease;
   const releaseDocument = Object.freeze({
     ...unsignedRelease,
-    releaseHash: hash(input.canonicalizer, releaseHashContent),
+    releaseHash: hash(input.canonicalizer, unsignedRelease),
   });
   const release = parseCompiledEntityReleaseEnvelope(releaseDocument);
   validateCompiledEntityRelease(

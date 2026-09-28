@@ -1,6 +1,7 @@
 import { parseEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
 import { parseEntityIntakeFlows } from "@athyper/contract-platform-entity-runtime";
 import { parseEntityScopeFilters } from "./scope-filters";
+import { parsePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
 import {
   parseEffectiveEntitySections,
   parseEntityApplication,
@@ -248,6 +249,7 @@ export function parseEntityListDescriptor(
       : {}),
     schemaVersion: 1,
     plane: oneOf(record.plane, ["neon", "mesh", "studio"] as const, "plane"),
+    ...(record.localizedLabels === undefined ? {} : { localizedLabels: parsePresentationLocalization(record.localizedLabels) }),
     entity,
     revision: Object.freeze({
       release: integer(revisionRecord.release, "revision.release", 1),
@@ -1330,6 +1332,7 @@ export function parseEntityApplicationDescriptor(
   const intakeFlows=parseEntityIntakeFlows(value.intakeFlows ?? []);
   return Object.freeze({
     schemaVersion: 1,
+    ...(value.localizedLabels === undefined ? {} : { localizedLabels: parsePresentationLocalization(value.localizedLabels) }),
     ...(intakeFlows.length ? {intakeFlows} : {}),
     ...(intakeSurfaces.length ? {intakeSurfaces} : {}),
     plane: oneOf(value.plane, ["neon", "mesh", "studio"] as const, "plane"),

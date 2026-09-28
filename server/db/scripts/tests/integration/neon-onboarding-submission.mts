@@ -6,7 +6,7 @@ import {Kysely, PostgresDialect, sql} from 'kysely';
 import pg from 'pg';
 import {KyselyBusinessPartnerCaseRepository} from '../../../../packages/services/master-data/src/kysely-business-partner-case-repository.js';
 import {KyselyBusinessPartnerOnboardingCycleCoordinator} from '../../../../packages/services/master-data/src/business-partner-onboarding-cycle.js';
-import {LocalBusinessPartnerDefinitionConsumer} from '../../../../packages/services/publication/src/business-partner-definition-consumer.js';
+import {LocalBusinessPartnerDefinitionConsumer} from '../../../../packages/services/publication/src/entity-definition-consumer.js';
 import {KyselyLocalProjectionRepository} from '../../../../packages/services/publication/src/kysely-local-projection-repository.js';
 import {canonicalBytes,sha256} from '../../../../packages/adapters/publication-signing/src/index.js';
 const caseId=process.env.PROBE_CASE_ID;

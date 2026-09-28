@@ -1,11 +1,41 @@
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 import { describe, expect, it, vi } from "vitest";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { loadConfig, type HostConfig } from "../../config/index.js";
 import { createContainer } from "../create-container.js";
 import { registerAdapters } from "../register-adapters.js";
 
 describe("registerAdapters", () => {
+  it("keeps dedicated publication credentials separate and closes both stores", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "publication-store-"));
+    const tokenFile = join(directory, "token");
+    writeFileSync(tokenFile, "publication-fixture-token", { mode: 0o600 });
+    const ordinary = { resolve: vi.fn(), close: vi.fn() };
+    const publication = { resolve: vi.fn(), close: vi.fn() };
+    const createSecretStore = vi.fn().mockReturnValueOnce(ordinary).mockReturnValueOnce(publication);
+    const container = createContainer(), lifecycle = createLifecycle(), hostConfig = config();
+    hostConfig.infisical = { endpoint: "https://ordinary.test", token: "ordinary-fixture-token", workspaceId: "ordinary", environment: "dev" };
+    hostConfig.publication = { ...loadConfig().publication, authoringEnabled: true,
+      signingKeyId: "dev-fixture", privateKeyReference: "PRIVATE", publicKeyReference: "PUBLIC",
+      trust: { domain: "dev", manifest: { schema: "athyper.dev-publication-trust/1", keys: [
+        { domain: "dev", keyId: "dev-fixture", publicKeyFingerprint: `sha256:${"a".repeat(64)}` },
+      ] } }, secretStore: { endpoint: "https://publication.test", workspaceId: "publication", environment: "dev", tokenFile } };
+    container.adapters.objectStorageArtifacts = { putIfAbsent: vi.fn() } as never;
+    container.adapters.objectStorageArtifactsBucket = "artifacts";
+    try {
+      registerAdapters(container, hostConfig, lifecycle, { createSecretStore });
+      expect(container.adapters.secretStore).toBe(ordinary);
+      expect(createSecretStore).toHaveBeenNthCalledWith(2, { endpoint: "https://publication.test", workspaceId: "publication", environment: "dev", token: "publication-fixture-token" });
+      expect(container.adapters.publicationSigner).toBeDefined();
+      expect(publication.resolve).not.toHaveBeenCalled();
+      await lifecycle.shutdown("test");
+      expect(ordinary.close).toHaveBeenCalledOnce();
+      expect(publication.close).toHaveBeenCalledOnce();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
   it("configures protected-value storage without enabling publication", async () => {
     const hostConfig = config();
     hostConfig.publication = {

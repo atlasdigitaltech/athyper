@@ -1,62 +1,14 @@
-import { loadBusinessPartnerAuthorizationDeployment } from "../../composition/business-partner-authorization-deployment.js";
-import { loadDeploymentEntityReleaseReview } from "../../composition/entity-release-review-deployment.js";
-import type { Kysely } from "kysely";
-import { loadConfig } from "../../config/index.js";
-import { createLifecycle } from "@athyper/server-foundation/lifecycle";
-import { createContainer } from "../../composition/create-container.js";
-import { registerAdapters } from "../../composition/register-adapters.js";
-import { registerPlatform } from "../../composition/register-platform.js";
-import {
-  registerRuntimes,
-  startRuntimes,
-} from "../../composition/register-runtimes.js";
-import { registerServices } from "../../composition/register-services.js";
+import { bootstrap } from "../../kernel/bootstrap.js";
 import { startProcessHeartbeat } from "../process-heartbeat.js";
-import { registerInvalidationWorkers } from "../../composition/register-invalidation-workers.js";
 import { startProcessMetricsEndpoint } from "../process-metrics-endpoint.js";
 
 // Capability-owned BullMQ handlers are registered through the shared
 // composition root before the worker runtime starts consuming queues.
 
 export async function start(): Promise<void> {
-  const config = loadConfig();
-  const lifecycle = createLifecycle();
-  const container = createContainer();
-  registerAdapters(container, config, lifecycle);
-  registerRuntimes(container, config, lifecycle);
-  registerPlatform(container, config);
-  const reviewConfigPath = process.env.ENTITY_RELEASE_REVIEW_CONFIG_PATH;
-  if (
-    reviewConfigPath &&
-    (!container.adapters.neonDatabase || !container.adapters.athyperDatabase)
-  )
-    throw Error("RELEASE_REVIEW_DATABASES_REQUIRED");
-  const releaseReview = reviewConfigPath
-    ? loadDeploymentEntityReleaseReview(reviewConfigPath, {
-        neon: container.adapters.neonDatabase!.database as unknown as Kysely<
-          Record<string, never>
-        >,
-        studio: container.adapters.athyperDatabase!
-          .database as unknown as Kysely<Record<string, never>>,
-      })
-    : undefined;
-  const authorizationDeployment = loadBusinessPartnerAuthorizationDeployment(
-    process.env.BP_AUTHORIZATION_DEPLOYMENT_CONFIG_PATH,
-    container,
-    config,
-  );
-  registerServices(
-    container,
-    {
-      ...authorizationDeployment?.dependencies,
-      ...(releaseReview
-        ? { entityAuthorizationReleaseReview: releaseReview }
-        : {}),
-    },
-    config,
-    lifecycle,
-  );
-  await authorizationDeployment?.verifyStartup();
+  const { config, lifecycle, container } = await bootstrap("worker");
+  const { startRuntimes } = await import("../../composition/register-runtimes.js");
+  const { registerInvalidationWorkers } = await import("../../composition/register-invalidation-workers.js");
   registerInvalidationWorkers(container, config, lifecycle);
   await startRuntimes(container, config.mode);
   const metrics = container.adapters.processMetrics

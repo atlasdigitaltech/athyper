@@ -6,6 +6,19 @@
   "idStrategy": "uuidv5:namespace=uuidv5(dns,athyper.authorization.catalog.v2);name={canonicalCode}",
   "permissions": [
     {
+      "permissionId": "51f45819-773a-566d-a4bc-69784c28afb2",
+      "canonicalCode": "common.platform.reference.view",
+      "product": "common",
+      "domain": "platform",
+      "entity": "reference",
+      "operation": "view",
+      "permissionKind": "capability",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "lifecycle": "proposed",
+      "definitionSha256": "62eeccb95220b38bf2bc138394ec753a6e9bc59be6a1a3d43a9a43c373bdb608"
+    },
+    {
       "permissionId": "62980311-c596-5942-a5cf-69a97b2ac50a",
       "canonicalCode": "studio.ai.agent.use",
       "product": "studio",
@@ -188,6 +201,20 @@
       "definitionSha256": "73f4effb7091d944c6dc898096db792ba46c96f5f6b25353e101346a4cffe83a"
     },
     {
+      "permissionId": "c32e3f0b-aaf0-50a2-bdf5-602e9406c9cf",
+      "canonicalCode": "studio.metadata.contract.publish_automated",
+      "product": "studio",
+      "domain": "metadata",
+      "entity": "contract",
+      "operation": "publish_automated",
+      "permissionKind": "system_action",
+      "riskTier": "critical",
+      "requiresMfa": false,
+      "requiresSod": true,
+      "lifecycle": "proposed",
+      "definitionSha256": "1aefcd3a2d5a96973cc612efd161221f13bd0b8fe82a92311b8de66bf07b2cfe"
+    },
+    {
       "permissionId": "508a16bb-e32c-552e-afd3-086d2789018d",
       "canonicalCode": "studio.metadata.contract.review",
       "product": "studio",
@@ -251,6 +278,34 @@
       "requiresMfa": true,
       "lifecycle": "proposed",
       "definitionSha256": "896506bf3a5cfab8450980d5b18908721c9fac9b9128c222c00c84661066c1ed"
+    },
+    {
+      "permissionId": "5068e865-a499-5d06-8704-de3e16bc4e90",
+      "canonicalCode": "studio.metadata.publication_policy.activate",
+      "product": "studio",
+      "domain": "metadata",
+      "entity": "publication_policy",
+      "operation": "activate",
+      "permissionKind": "system_action",
+      "riskTier": "critical",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "lifecycle": "proposed",
+      "definitionSha256": "46bf67cb39294b5af51704a352dd163d6b25ec15dc1fded606447c2e88b5ce03"
+    },
+    {
+      "permissionId": "676e3fdb-526e-5b3a-b06c-724d168fb57c",
+      "canonicalCode": "studio.metadata.publication_policy.create",
+      "product": "studio",
+      "domain": "metadata",
+      "entity": "publication_policy",
+      "operation": "create",
+      "permissionKind": "system_action",
+      "riskTier": "critical",
+      "requiresMfa": true,
+      "requiresSod": false,
+      "lifecycle": "proposed",
+      "definitionSha256": "6265d3ce214027ef992a70bf64a37ea584b955a968b45992bdff8b997b3d5f2b"
     },
     {
       "permissionId": "8f6534c0-7654-5885-aa01-3b6d63c5e6ed",
@@ -357,5 +412,5 @@
       "definitionSha256": "da9a566fb1bc0f2e09bc9e4380123ea4a4fa38384de217bcacf5de3964043b69"
     }
   ],
-  "sha256": "de9fc66787e6cfc926c2b5b5fa912dd2589e441697d856fbf91b3f1e22a1eced"
+  "sha256": "7c45b8e6651737d47481716dffd5ae8c88e958d931a9db5c8dd41935c4203c03"
 }

@@ -19,7 +19,6 @@ test("generic edit Collaboration forwards entity context and preserves unsaved f
   await expect(page.getByRole("region")).toHaveCount(0);
   await page.getByLabel("Order description").fill("Unsaved change");
   await page.getByRole("button", { name: "Discussion", exact: true }).click();
-  await page.getByRole("button", { name: "Toggle full view" }).click();
   await expect(page.getByLabel("Order description")).toBeHidden();
   await page.getByRole("button", { name: "Close collaboration" }).click();
   await expect(page.getByLabel("Order description")).toHaveValue("Unsaved change");

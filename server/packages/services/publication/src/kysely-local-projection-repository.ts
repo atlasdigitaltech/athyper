@@ -1,7 +1,7 @@
 import {
   businessPartnerCasePublicationIdentity,
   assertCompanyCaseOperationBindings,
-} from "./business-partner-company-case-contract.js";
+} from "./entity-operation-binding-compiler.js";
 import {
   overlayLocalDefinitionPreview,
   localDefinitionPreviewBaseline,
@@ -19,6 +19,7 @@ import {
   type PublicationVerificationEvidence,
 } from "@athyper/server-contract-publication";
 import { sql, type Kysely } from "kysely";
+import { assertOperationProjection } from "./shared/authorization/operation-projection.js";
 
 type Database = Record<string, never>;
 type Row = Record<string, unknown>;
@@ -135,6 +136,15 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
     readonly appliedReleaseId: string;
     readonly evidence?: Readonly<Record<string, unknown>>;
   }): Promise<ActiveReleaseProjection> {
+    // Resumed, previously verified deployments must pass the same admission
+    // gate. Do not rely exclusively on today's staging path having run.
+    const stored = await sql<Row>`SELECT payload_json FROM runtime_meta.applied_release_payload
+      WHERE applied_release_id=${input.appliedReleaseId}::uuid AND artifact_kind='compiled_entity_runtime'`.execute(this.database);
+    for (const payload of stored.rows) {
+      const artifacts = (payload["payload_json"] as { artifacts?: { artifactType: string; content: { descriptor: Record<string, unknown> } }[] }).artifacts;
+      if (!Array.isArray(artifacts)) throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Runtime artifacts required");
+      for (const artifact of artifacts) if (artifact.artifactType === "runtime_contract") assertOperationProjection(artifact.content.descriptor);
+    }
     await sql`SELECT runtime_meta.fn_activate_release(${input.appliedReleaseId}::uuid,${JSON.stringify(input.evidence ?? {})}::jsonb)`.execute(
       this.database,
     );
@@ -160,6 +170,8 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
       if (artifact.artifactType !== "runtime_contract") continue;
       const descriptor = artifact.content.descriptor as
         Record<string, unknown> | undefined;
+      if (!descriptor) throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Runtime descriptor required");
+      assertOperationProjection(descriptor);
       const bindings = descriptor?.["operation_scope_bindings"];
       if (!Array.isArray(bindings) || bindings.length === 0) continue;
       const source = descriptor?.["source"] as
@@ -174,7 +186,7 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
         );
       await sql`SELECT authz.fn_stage_entity_operation_projection(
         ${appliedReleaseId}::uuid,${payload.tenantId ?? null}::uuid,${artifact.plane},${payload.release.releaseId},
-        ${artifact.artifactHash.replace(/^sha256:/, "")},${JSON.stringify({ source, operation_scope_bindings: bindings })}::jsonb
+        ${artifact.artifactHash.replace(/^sha256:/, "")},${JSON.stringify(descriptor)}::jsonb
       )`.execute(this.database);
     }
   }

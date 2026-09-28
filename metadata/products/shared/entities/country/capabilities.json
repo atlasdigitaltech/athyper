@@ -1,0 +1,246 @@
+[
+  {
+    "capabilityKey": "comments",
+    "declaration": {
+      "enabled": true,
+      "serviceKey": "platform.comments.v1",
+      "ownerEntityCode": "country",
+      "load": "lazy",
+      "includeInAggregateData": false
+    },
+    "binding": {
+      "schemaVersion": 1,
+      "serviceKey": "platform.comments.v1",
+      "ownerEntityCode": "country",
+      "admissionResolverKey": "platform.records.admission.v1",
+      "layouts": ["drawer", "content"],
+      "actions": [
+        {
+          "key": "read",
+          "permissionCode": "common.collaboration.comment.read",
+          "handlerKey": "platform.comments.read.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "create",
+          "permissionCode": "common.collaboration.comment.create",
+          "handlerKey": "platform.comments.create.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "update_own",
+          "permissionCode": "common.collaboration.comment.update_own",
+          "handlerKey": "platform.comments.update_own.v1",
+          "concurrency": "revision",
+          "idempotency": "none"
+        },
+        {
+          "key": "archive_own",
+          "permissionCode": "common.collaboration.comment.archive_own",
+          "handlerKey": "platform.comments.archive_own.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "reply",
+          "permissionCode": "common.collaboration.comment.create",
+          "handlerKey": "platform.comments.reply.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "react",
+          "permissionCode": "common.collaboration.comment.create",
+          "handlerKey": "platform.comments.react.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "draft",
+          "permissionCode": "common.collaboration.comment.create",
+          "handlerKey": "platform.comments.draft.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "flag",
+          "permissionCode": "common.collaboration.comment.read",
+          "handlerKey": "platform.comments.flag.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "mention",
+          "permissionCode": "common.collaboration.comment.read",
+          "handlerKey": "platform.comments.mention.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "history",
+          "permissionCode": "common.collaboration.comment.read",
+          "handlerKey": "platform.comments.history.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        }
+      ],
+      "richTextSchema": "athyper.rich-text/1.0",
+      "maxTextLength": 5000,
+      "maxDepth": 5,
+      "allowedAudiences": ["public", "private"],
+      "defaultAudience": "private",
+      "features": {
+        "replies": true,
+        "edits": true,
+        "reactions": true,
+        "mentions": true,
+        "drafts": true,
+        "reporting": true,
+        "history": true
+      },
+      "reactionCodes": ["thumbs_up", "heart", "celebrate"],
+      "draftRetentionDays": 30,
+      "attachments": {
+        "allowed": true,
+        "maxCount": 3,
+        "pinVersion": true,
+        "bindingRef": "country/operation#attachmentBinding"
+      }
+    }
+  },
+  {
+    "capabilityKey": "attachments",
+    "declaration": {
+      "enabled": true,
+      "serviceKey": "platform.attachments.v1",
+      "ownerEntityCode": "country",
+      "load": "lazy",
+      "includeInAggregateData": false
+    },
+    "binding": {
+      "schemaVersion": 1,
+      "serviceKey": "platform.attachments.v1",
+      "ownerEntityCode": "country",
+      "admissionResolverKey": "platform.records.admission.v1",
+      "layouts": ["drawer", "content"],
+      "actions": [
+        {
+          "key": "read",
+          "permissionCode": "common.collaboration.attachment.read",
+          "handlerKey": "platform.attachments.read.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "create",
+          "permissionCode": "common.collaboration.attachment.create",
+          "handlerKey": "platform.attachments.create.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "finalize",
+          "permissionCode": "common.collaboration.attachment.finalize",
+          "handlerKey": "platform.attachments.finalize.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "download",
+          "permissionCode": "common.collaboration.attachment.download",
+          "handlerKey": "platform.attachments.download.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "archive",
+          "permissionCode": "common.collaboration.attachment.archive",
+          "handlerKey": "platform.attachments.archive.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "status",
+          "permissionCode": "common.collaboration.attachment.read",
+          "handlerKey": "platform.attachments.status.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "version",
+          "permissionCode": "common.collaboration.attachment.create",
+          "handlerKey": "platform.attachments.version.v1",
+          "concurrency": "revision",
+          "idempotency": "required"
+        },
+        {
+          "key": "rename",
+          "permissionCode": "common.collaboration.attachment.create",
+          "handlerKey": "platform.attachments.rename.v1",
+          "concurrency": "revision",
+          "idempotency": "required"
+        },
+        {
+          "key": "folder",
+          "permissionCode": "common.collaboration.attachment.create",
+          "handlerKey": "platform.attachments.folder.v1",
+          "concurrency": "revision",
+          "idempotency": "required"
+        },
+        {
+          "key": "unlink",
+          "permissionCode": "common.collaboration.attachment.archive",
+          "handlerKey": "platform.attachments.unlink.v1",
+          "concurrency": "none",
+          "idempotency": "required"
+        },
+        {
+          "key": "preview",
+          "permissionCode": "common.collaboration.attachment.download",
+          "handlerKey": "platform.attachments.preview.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "extract",
+          "permissionCode": "common.collaboration.attachment.read",
+          "handlerKey": "platform.attachments.extract.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        },
+        {
+          "key": "search",
+          "permissionCode": "common.collaboration.attachment.read",
+          "handlerKey": "platform.attachments.search.v1",
+          "concurrency": "none",
+          "idempotency": "none"
+        }
+      ],
+      "maxFileBytes": 5242880,
+      "maxBatchCount": 3,
+      "allowedContentTypes": [
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "text/plain"
+      ],
+      "scanRequired": true,
+      "linkKinds": ["context", "comment"],
+      "categories": [],
+      "folders": true,
+      "versioning": true,
+      "rename": true,
+      "duplicateBehavior": "reject",
+      "unlink": "association_only",
+      "download": "short_lived_authorized_url",
+      "processing": {
+        "preview": true,
+        "extraction": true,
+        "search": true,
+        "renditions": ["thumbnail", "pdf", "image"]
+      }
+    }
+  }
+]

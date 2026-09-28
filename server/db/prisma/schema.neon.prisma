@@ -20912,6 +20912,25 @@ model principal_profile {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model principal_surface_arrangement {
+  tenant_id     String    @db.Uuid
+  principal_id  String    @db.Uuid
+  plane_code    String
+  surface_key   String
+  base_revision Int
+  arrangement   Json
+  created_at    DateTime  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by    String    @db.Uuid
+  updated_at    DateTime? @db.Timestamptz(6)
+  updated_by    String?   @db.Uuid
+
+  @@id([tenant_id, principal_id, plane_code, surface_key])
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_ui_preference {
   id               String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id        String    @db.Uuid

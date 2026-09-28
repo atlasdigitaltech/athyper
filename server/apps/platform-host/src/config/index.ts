@@ -1,33 +1,16 @@
-import {
-  readBusinessPartnerShadowConfig,
-  type BusinessPartnerShadowConfig,
-} from "../composition/business-partner-authorization-shadow.js";
-import {
-  parseProviderVerificationKeys,
-  type ProviderVerificationKey,
-} from "@athyper/server-service-master-data";
-import {
-  parseBusinessPartnerMetricsTargets,
-  type BusinessPartnerMetricsTarget,
-} from "../monitoring/business-partner-metrics.js";
+import { loadContactVerificationConfiguration, type ContactVerificationConfiguration } from "./contact-verification.js";
+import { loadPublicationTrustConfiguration, loadPublicationSecretStore, type PublicationTrustConfiguration, type PublicationSecretStoreConfiguration } from "./publication-policy.js";
 
-function requiredEnvironment(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is required`);
-  return value;
-}
 
 export interface HostConfig {
   /** Plane-wide cutover, never a per-page or per-entity fallback. Enable only
    * after executable compiled baselines have been activated for that plane. */
   compiledMetadataPlanes?: readonly ("studio" | "neon" | "mesh")[];
+  metadataFormatRouting?: boolean;
   protectedValuesStore?: {
     endpoint: string; token: string; workspaceId: string; environment: string; secretPath: string;
   };
-  businessPartnerAuthorizationShadow?: BusinessPartnerShadowConfig;
-  localContactDeliveryKey?: string;
-  localContactChallenge?: import("@athyper/server-service-master-data").LocalChallengeConfiguration;
-  masterDataVerificationKeys?: readonly ProviderVerificationKey[];
+  contactVerification?: ContactVerificationConfiguration;
   port: number;
   logLevel: string;
   shutdownTimeoutMs: number;
@@ -47,7 +30,6 @@ export interface HostConfig {
     connectionString: string | undefined;
     poolMax: number;
   };
-  businessPartnerMetricsTargets?: readonly BusinessPartnerMetricsTarget[];
   businessPartner360: {
     meshLiveBaseUrl: string | undefined;
     meshLiveCredentialReference: string | undefined;
@@ -208,6 +190,8 @@ export interface HostConfig {
     grafanaUrl: string | undefined;
   };
   publication: {
+    secretStore?: PublicationSecretStoreConfiguration;
+    trust?: PublicationTrustConfiguration;
     apiEnabled: boolean;
     authoringEnabled?: boolean;
     compileEnabled: boolean;
@@ -268,26 +252,67 @@ export interface HostConfig {
   };
 }
 
-export function loadConfig(): HostConfig {
-  const verificationKeyJson = process.env["MASTER_DATA_VERIFICATION_KEYS_JSON"];
-  let masterDataVerificationKeys: readonly ProviderVerificationKey[] = [];
-  if (verificationKeyJson !== undefined) {
-    try {
-      masterDataVerificationKeys = parseProviderVerificationKeys(
-        JSON.parse(verificationKeyJson),
-      );
-    } catch {
+export function loadConfig(environment: NodeJS.ProcessEnv = process.env): HostConfig {
+  function requiredEnvironment(name: string): string {
+    const value = environment[name]?.trim();
+    if (!value) throw new Error(`${name} is required`);
+    return value;
+  }
+
+  function readStudioEnvironment(
+    suffix: "DATABASE_URL" | "WORKER_DATABASE_URL",
+  ): string | undefined {
+    return (
+      environment[`STUDIO_${suffix}`]?.trim() ??
+      environment[`ATHYPER_PLATFORM_${suffix}`]?.trim()
+    );
+  }
+
+  function readPositiveInteger(name: string, fallback: number): number {
+    const value = Number(environment[name] ?? fallback);
+    if (!Number.isInteger(value) || value <= 0) {
       throw new Error(
-        "Invalid MASTER_DATA_VERIFICATION_KEYS_JSON: configure scoped Ed25519 public keys with valid UTC key windows",
+        `${name} must be a positive integer, got: ${environment[name]}`,
       );
     }
+    return value;
   }
-  const rawEnv = process.env["ATHYPER_ENV"] ?? process.env["ENVIRONMENT"];
+
+  function readNonNegativeInteger(name: string, fallback: number): number {
+    const value = Number(environment[name] ?? fallback);
+    if (!Number.isInteger(value) || value < 0) {
+      throw new Error(
+        `${name} must be a non-negative integer, got: ${environment[name]}`,
+      );
+    }
+    return value;
+  }
+
+  function readBoolean(name: string, fallback: boolean): boolean {
+    const raw = environment[name]?.trim().toLowerCase();
+    if (raw === undefined || raw === "") return fallback;
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+    throw new Error(`${name} must be true or false, got: ${environment[name]}`);
+  }
+
+  function readChoice<const Values extends readonly string[]>(
+    name: string,
+    fallback: Values[number],
+    values: Values,
+  ): Values[number] {
+    const raw = environment[name]?.trim();
+    if (!raw) return fallback;
+    if (values.includes(raw)) return raw as Values[number];
+    throw new Error(`${name} must be one of ${values.join(", ")}, got: ${raw}`);
+  }
+
+  const rawEnv = environment["ATHYPER_ENV"] ?? environment["ENVIRONMENT"];
   const env = (["local", "staging", "production"] as const).includes(
     rawEnv as "local" | "staging" | "production",
   )
     ? (rawEnv as "local" | "staging" | "production")
-    : process.env["NODE_ENV"] === "production"
+    : environment["NODE_ENV"] === "production"
       ? "production"
       : "local";
   const notificationCapture = readBoolean("NOTIFICATION_CAPTURE", false);
@@ -296,76 +321,39 @@ export function loadConfig(): HostConfig {
       "NOTIFICATION_CAPTURE requires explicit ATHYPER_ENV=local (including isolated QA)",
     );
   }
-  const localContactDeliveryKey =
-    process.env["LOCAL_CONTACT_CHALLENGE_DELIVERY_KEY"]?.trim();
-  if (
-    localContactDeliveryKey &&
-    (env !== "local" ||
-      !notificationCapture ||
-      Buffer.from(localContactDeliveryKey, "base64").length !== 32)
-  )
-    throw new Error("Local delivery key requires local capture and 32 bytes");
-  const localChallengeEnabled = readBoolean(
-    "LOCAL_CONTACT_CHALLENGE_ENABLED",
-    false,
-  );
-  const localContactChallenge = localChallengeEnabled
-    ? {
-        environment: env,
-        capture: notificationCapture,
-        tenantId: "44444444-4444-4444-8444-444444444444",
-        privateKeyPem: process.env["LOCAL_CONTACT_CHALLENGE_PRIVATE_KEY"] ?? "",
-        keyId:
-          process.env["LOCAL_CONTACT_CHALLENGE_KEY_ID"] ??
-          "local-contact-challenge-v1",
-        pageUrl: "https://neon.dev.athyper.test/contact-verification.html",
-      }
-    : undefined;
-  if (
-    localContactChallenge &&
-    (env !== "local" ||
-      !notificationCapture ||
-      !localContactChallenge.privateKeyPem ||
-      !masterDataVerificationKeys.length ||
-      !localContactDeliveryKey)
-  ) {
-    throw new Error(
-      "Local contact challenges require local capture, private key and verifier trust",
-    );
-  }
-  const mode = process.env["MODE"] ?? "api";
+  const mode = environment["MODE"] ?? "api";
 
-  const port = Number(process.env["PORT"] ?? 4000);
+  const port = Number(environment["PORT"] ?? 4000);
   if (!Number.isFinite(port) || port <= 0) {
     throw new Error(
-      `PORT must be a positive integer, got: ${process.env["PORT"]}`,
+      `PORT must be a positive integer, got: ${environment["PORT"]}`,
     );
   }
 
   const shutdownTimeoutMs = Number(
-    process.env["SHUTDOWN_TIMEOUT_MS"] ?? 15_000,
+    environment["SHUTDOWN_TIMEOUT_MS"] ?? 15_000,
   );
   if (!Number.isFinite(shutdownTimeoutMs) || shutdownTimeoutMs <= 0) {
     throw new Error(
-      `SHUTDOWN_TIMEOUT_MS must be a positive integer, got: ${process.env["SHUTDOWN_TIMEOUT_MS"]}`,
+      `SHUTDOWN_TIMEOUT_MS must be a positive integer, got: ${environment["SHUTDOWN_TIMEOUT_MS"]}`,
     );
   }
 
-  const poolMax = Number(process.env["DATABASE_POOL_MAX"] ?? 10);
+  const poolMax = Number(environment["DATABASE_POOL_MAX"] ?? 10);
   if (!Number.isInteger(poolMax) || poolMax <= 0) {
     throw new Error(
-      `DATABASE_POOL_MAX must be a positive integer, got: ${process.env["DATABASE_POOL_MAX"]}`,
+      `DATABASE_POOL_MAX must be a positive integer, got: ${environment["DATABASE_POOL_MAX"]}`,
     );
   }
 
-  const rawDatabaseUrl = process.env["DATABASE_URL"]?.trim();
+  const rawDatabaseUrl = environment["DATABASE_URL"]?.trim();
   const studioPoolMax = readPositiveInteger("STUDIO_DATABASE_POOL_MAX", 5);
   const meshPoolMax = readPositiveInteger("MESH_DATABASE_POOL_MAX", 10);
   const rawStudioDatabaseUrl = readStudioEnvironment("DATABASE_URL");
-  const rawMeshDatabaseUrl = process.env["MESH_DATABASE_URL"]?.trim();
-  const bp360MeshLiveBaseUrl = process.env["BP360_MESH_LIVE_BASE_URL"]?.trim(),
+  const rawMeshDatabaseUrl = environment["MESH_DATABASE_URL"]?.trim();
+  const bp360MeshLiveBaseUrl = environment["BP360_MESH_LIVE_BASE_URL"]?.trim(),
     bp360MeshLiveCredentialReference =
-      process.env["BP360_MESH_LIVE_CREDENTIAL_REFERENCE"]?.trim(),
+      environment["BP360_MESH_LIVE_CREDENTIAL_REFERENCE"]?.trim(),
     bp360MeshTimeoutMs = readPositiveInteger("BP360_MESH_TIMEOUT_MS", 1_500);
   if (
     Boolean(bp360MeshLiveBaseUrl) !== Boolean(bp360MeshLiveCredentialReference)
@@ -376,13 +364,13 @@ export function loadConfig(): HostConfig {
   if (bp360MeshTimeoutMs > 3_000)
     throw new Error("BP360_MESH_TIMEOUT_MS must not exceed 3000");
   const explicitIssuer =
-    process.env["KEYCLOAK_ISSUER_URL"]?.trim() ??
-    process.env["IAM_ISSUER_URL"]?.trim();
-  const keycloakBaseUrl = process.env["KEYCLOAK_BASE_URL"]?.trim();
-  const keycloakRealm = process.env["KEYCLOAK_REALM"]?.trim();
+    environment["KEYCLOAK_ISSUER_URL"]?.trim() ??
+    environment["IAM_ISSUER_URL"]?.trim();
+  const keycloakBaseUrl = environment["KEYCLOAK_BASE_URL"]?.trim();
+  const keycloakRealm = environment["KEYCLOAK_REALM"]?.trim();
   const keycloakAudience =
-    process.env["KEYCLOAK_CLIENT_ID"]?.trim() ??
-    process.env["IAM_CLIENT_ID"]?.trim();
+    environment["KEYCLOAK_CLIENT_ID"]?.trim() ??
+    environment["IAM_CLIENT_ID"]?.trim();
   const keycloakIssuer =
     explicitIssuer ||
     (keycloakBaseUrl && keycloakRealm
@@ -400,7 +388,7 @@ export function loadConfig(): HostConfig {
     "KEYCLOAK_JWKS_CACHE_TTL_MS",
     600_000,
   );
-  const keycloakJwksUrl = process.env["KEYCLOAK_JWKS_URL"]?.trim();
+  const keycloakJwksUrl = environment["KEYCLOAK_JWKS_URL"]?.trim();
   const claimContextMode = readChoice(
     "AUTH_CLAIM_FIRST_CONTEXT",
     env === "production" ? "enforce" : "shadow",
@@ -415,13 +403,13 @@ export function loadConfig(): HostConfig {
     true,
   );
   const requiredActionsMatrixJson =
-    process.env["AUTH_REQUIRED_ACTIONS_MATRIX"]?.trim();
-  const keycloakAdminBaseUrl = process.env["KEYCLOAK_ADMIN_BASE_URL"]?.trim();
-  const keycloakAdminClientId = process.env["KEYCLOAK_ADMIN_CLIENT_ID"]?.trim();
+    environment["AUTH_REQUIRED_ACTIONS_MATRIX"]?.trim();
+  const keycloakAdminBaseUrl = environment["KEYCLOAK_ADMIN_BASE_URL"]?.trim();
+  const keycloakAdminClientId = environment["KEYCLOAK_ADMIN_CLIENT_ID"]?.trim();
   const keycloakAdminCredentialReference =
-    process.env["KEYCLOAK_ADMIN_CREDENTIAL_REFERENCE"]?.trim();
+    environment["KEYCLOAK_ADMIN_CREDENTIAL_REFERENCE"]?.trim();
   const keycloakAdminRealm =
-    process.env["KEYCLOAK_ADMIN_REALM"]?.trim() || "master";
+    environment["KEYCLOAK_ADMIN_REALM"]?.trim() || "master";
   const hasPartialIdentityProvider = Boolean(
     keycloakAdminBaseUrl ||
     keycloakAdminClientId ||
@@ -438,8 +426,8 @@ export function loadConfig(): HostConfig {
     throw new Error(
       "Keycloak identity provider requires KEYCLOAK_ADMIN_BASE_URL, KEYCLOAK_ADMIN_CLIENT_ID and KEYCLOAK_ADMIN_CREDENTIAL_REFERENCE",
     );
-  const redisUrl = process.env["REDIS_URL"]?.trim();
-  const redisKeyPrefix = process.env["REDIS_KEY_PREFIX"]?.trim();
+  const redisUrl = environment["REDIS_URL"]?.trim();
+  const redisKeyPrefix = environment["REDIS_KEY_PREFIX"]?.trim();
   const redisConnectTimeoutMs = readPositiveInteger(
     "REDIS_CONNECT_TIMEOUT_MS",
     10_000,
@@ -448,7 +436,7 @@ export function loadConfig(): HostConfig {
     "REDIS_MAX_RETRIES_PER_REQUEST",
     2,
   );
-  const explicitBullMqUrl = process.env["REDIS_BULLMQ_URL"]?.trim();
+  const explicitBullMqUrl = environment["REDIS_BULLMQ_URL"]?.trim();
   const allowSharedBullMqRedis = readBoolean(
     "ALLOW_SHARED_BULLMQ_REDIS",
     env === "local",
@@ -460,19 +448,19 @@ export function loadConfig(): HostConfig {
     "JOB_SCHEDULE_RECONCILE_MS",
     60_000,
   );
-  const cronwatchBaseUrl = process.env["CRONWATCH_BASE_URL"]?.trim();
-  const cronwatchPingKey = process.env["CRONWATCH_PING_KEY"]?.trim();
+  const cronwatchBaseUrl = environment["CRONWATCH_BASE_URL"]?.trim();
+  const cronwatchPingKey = environment["CRONWATCH_PING_KEY"]?.trim();
   const studioWorkerDatabaseUrl = readStudioEnvironment("WORKER_DATABASE_URL");
   const neonWorkerDatabaseUrl =
-    process.env["NEON_WORKER_DATABASE_URL"]?.trim() ??
-    process.env["DATABASE_ADMIN_URL"]?.trim();
-  const meshWorkerDatabaseUrl = process.env["MESH_WORKER_DATABASE_URL"]?.trim();
+    environment["NEON_WORKER_DATABASE_URL"]?.trim() ??
+    environment["DATABASE_ADMIN_URL"]?.trim();
+  const meshWorkerDatabaseUrl = environment["MESH_WORKER_DATABASE_URL"]?.trim();
   const studioInvalidationListenerUrl =
-    process.env["STUDIO_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
+    environment["STUDIO_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
   const neonInvalidationListenerUrl =
-    process.env["NEON_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
+    environment["NEON_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
   const meshInvalidationListenerUrl =
-    process.env["MESH_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
+    environment["MESH_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
   if (env === "production" && mode === "worker") {
     const missing = [
       rawStudioDatabaseUrl && !studioWorkerDatabaseUrl
@@ -491,17 +479,17 @@ export function loadConfig(): HostConfig {
       );
     }
   }
-  const s3Endpoint = process.env["S3_ENDPOINT"]?.trim();
-  const s3PublicEndpoint = process.env["S3_PUBLIC_ENDPOINT"]?.trim();
-  const s3BucketDocuments = process.env["S3_BUCKET_DOCUMENTS"]?.trim();
-  const s3BucketArtifacts = process.env["S3_BUCKET_ARTIFACTS"]?.trim();
-  const s3BucketTransfers = process.env["S3_BUCKET_TRANSFERS"]?.trim();
+  const s3Endpoint = environment["S3_ENDPOINT"]?.trim();
+  const s3PublicEndpoint = environment["S3_PUBLIC_ENDPOINT"]?.trim();
+  const s3BucketDocuments = environment["S3_BUCKET_DOCUMENTS"]?.trim();
+  const s3BucketArtifacts = environment["S3_BUCKET_ARTIFACTS"]?.trim();
+  const s3BucketTransfers = environment["S3_BUCKET_TRANSFERS"]?.trim();
   const s3BucketsPresent = [
     s3BucketDocuments,
     s3BucketArtifacts,
     s3BucketTransfers,
   ].filter(Boolean).length;
-  if (process.env["S3_BUCKET"]?.trim() && s3BucketsPresent === 0)
+  if (environment["S3_BUCKET"]?.trim() && s3BucketsPresent === 0)
     throw new Error(
       "S3_BUCKET is retired; configure S3_BUCKET_DOCUMENTS, S3_BUCKET_ARTIFACTS, and S3_BUCKET_TRANSFERS",
     );
@@ -517,23 +505,23 @@ export function loadConfig(): HostConfig {
           transfers: s3BucketTransfers,
         }
       : undefined;
-  const s3CredentialProfile = process.env["APP_S3_PROFILE"]?.trim();
+  const s3CredentialProfile = environment["APP_S3_PROFILE"]?.trim();
   const s3WriterCredentialProfile =
-    process.env["ARTIFACTS_WRITER_S3_PROFILE"]?.trim();
+    environment["ARTIFACTS_WRITER_S3_PROFILE"]?.trim();
   const s3AccessKeyId =
-    process.env["APP_S3_ACCESS_KEY"]?.trim() ??
-    (env === "local" ? process.env["S3_ACCESS_KEY"]?.trim() : undefined);
+    environment["APP_S3_ACCESS_KEY"]?.trim() ??
+    (env === "local" ? environment["S3_ACCESS_KEY"]?.trim() : undefined);
   const s3SecretAccessKey =
-    process.env["APP_S3_SECRET_KEY"]?.trim() ??
-    (env === "local" ? process.env["S3_SECRET_KEY"]?.trim() : undefined);
+    environment["APP_S3_SECRET_KEY"]?.trim() ??
+    (env === "local" ? environment["S3_SECRET_KEY"]?.trim() : undefined);
   if (Boolean(s3AccessKeyId) !== Boolean(s3SecretAccessKey))
     throw new Error(
       "Object storage requires both APP_S3_ACCESS_KEY and APP_S3_SECRET_KEY",
     );
   const s3ArtifactsWriterAccessKeyId =
-    process.env["ARTIFACTS_WRITER_S3_ACCESS_KEY"]?.trim();
+    environment["ARTIFACTS_WRITER_S3_ACCESS_KEY"]?.trim();
   const s3ArtifactsWriterSecretAccessKey =
-    process.env["ARTIFACTS_WRITER_S3_SECRET_KEY"]?.trim();
+    environment["ARTIFACTS_WRITER_S3_SECRET_KEY"]?.trim();
   if (
     (s3Buckets !== undefined &&
       !s3WriterCredentialProfile &&
@@ -544,7 +532,7 @@ export function loadConfig(): HostConfig {
     throw new Error(
       "Object storage requires both ARTIFACTS_WRITER_S3_ACCESS_KEY and ARTIFACTS_WRITER_S3_SECRET_KEY",
     );
-  const s3Region = process.env["S3_REGION"]?.trim() || "us-east-1";
+  const s3Region = environment["S3_REGION"]?.trim() || "us-east-1";
   if (
     (s3CredentialProfile && s3AccessKeyId) ||
     (s3WriterCredentialProfile && s3ArtifactsWriterAccessKeyId)
@@ -553,7 +541,7 @@ export function loadConfig(): HostConfig {
       "S3 profiles and static credentials are mutually exclusive",
     );
   if (env !== "local") {
-    if (!s3Buckets || !process.env["S3_REGION"]?.trim())
+    if (!s3Buckets || !environment["S3_REGION"]?.trim())
       throw new Error(
         "STG/PROD storage is pending provisioning: configure all three S3 buckets and S3_REGION",
       );
@@ -608,7 +596,7 @@ export function loadConfig(): HostConfig {
     "ATTACHMENT_SCAN_TIMEOUT_MS",
     5 * 60 * 1_000,
   );
-  const clamdHost = process.env["CLAMD_HOST"]?.trim();
+  const clamdHost = environment["CLAMD_HOST"]?.trim();
   const clamdPort = readPositiveInteger("CLAMD_PORT", 3310);
   if (clamdPort > 65_535) throw new Error("CLAMD_PORT must not exceed 65535");
   const clamdTimeoutMs = readPositiveInteger("CLAMD_TIMEOUT_MS", 30_000);
@@ -628,26 +616,26 @@ export function loadConfig(): HostConfig {
     "CLAMD_SIGNATURE_CHECK_INTERVAL_MS",
     5 * 60 * 1_000,
   );
-  const otlpEndpoint = process.env["OTEL_EXPORTER_OTLP_ENDPOINT"]?.trim();
+  const otlpEndpoint = environment["OTEL_EXPORTER_OTLP_ENDPOINT"]?.trim();
   const otelServiceName =
-    process.env["OTEL_SERVICE_NAME"]?.trim() ||
-    process.env["SERVICE_NAME"]?.trim() ||
+    environment["OTEL_SERVICE_NAME"]?.trim() ||
+    environment["SERVICE_NAME"]?.trim() ||
     "athyper-platform-host";
-  const otelServiceVersion = process.env["SERVICE_VERSION"]?.trim() || "0.0.0";
+  const otelServiceVersion = environment["SERVICE_VERSION"]?.trim() || "0.0.0";
   const otelAutoInstrumentations = readBoolean(
     "OTEL_AUTO_INSTRUMENTATIONS_ENABLED",
     false,
   );
-  const smtpHost = process.env["SMTP_HOST"]?.trim();
-  const smtpUser = process.env["SMTP_USER"]?.trim();
-  const smtpPassword = process.env["SMTP_PASS"]?.trim();
-  const smtpFromAddress = process.env["SMTP_FROM"]?.trim();
+  const smtpHost = environment["SMTP_HOST"]?.trim();
+  const smtpUser = environment["SMTP_USER"]?.trim();
+  const smtpPassword = environment["SMTP_PASS"]?.trim();
+  const smtpFromAddress = environment["SMTP_FROM"]?.trim();
   const smtpPort = readPositiveInteger("SMTP_PORT", 587);
   const smtpSecure = readBoolean("SMTP_SECURE", false);
-  const sesRegion = process.env["SES_REGION"]?.trim();
-  const sesConfigurationSetName = process.env["SES_CONFIGURATION_SET"]?.trim();
-  const sesFromAddress = process.env["SES_FROM"]?.trim();
-  const sesReplyToAddress = process.env["SES_REPLY_TO"]?.trim();
+  const sesRegion = environment["SES_REGION"]?.trim();
+  const sesConfigurationSetName = environment["SES_CONFIGURATION_SET"]?.trim();
+  const sesFromAddress = environment["SES_FROM"]?.trim();
+  const sesReplyToAddress = environment["SES_REPLY_TO"]?.trim();
   const hasSesConfig = Boolean(
     sesRegion || sesConfigurationSetName || sesFromAddress || sesReplyToAddress,
   );
@@ -692,8 +680,8 @@ export function loadConfig(): HostConfig {
       "EMAIL_PROVIDER=ses requires SES_REGION, SES_CONFIGURATION_SET, and SES_FROM",
     );
   }
-  const sesEventQueueUrl = process.env["SES_EVENT_QUEUE_URL"]?.trim();
-  const sesEventRegion = process.env["SES_EVENT_REGION"]?.trim() || sesRegion;
+  const sesEventQueueUrl = environment["SES_EVENT_QUEUE_URL"]?.trim();
+  const sesEventRegion = environment["SES_EVENT_REGION"]?.trim() || sesRegion;
   const sesEventWaitTimeSeconds = readNonNegativeInteger(
     "SES_EVENT_WAIT_SECONDS",
     20,
@@ -741,13 +729,13 @@ export function loadConfig(): HostConfig {
     );
   }
   const metaWhatsAppApiVersion =
-    process.env["META_WHATSAPP_API_VERSION"]?.trim();
+    environment["META_WHATSAPP_API_VERSION"]?.trim();
   const metaWhatsAppPhoneNumberId =
-    process.env["META_WHATSAPP_PHONE_NUMBER_ID"]?.trim();
+    environment["META_WHATSAPP_PHONE_NUMBER_ID"]?.trim();
   const metaWhatsAppAccessToken =
-    process.env["META_WHATSAPP_ACCESS_TOKEN"]?.trim();
+    environment["META_WHATSAPP_ACCESS_TOKEN"]?.trim();
   const metaWhatsAppGraphBaseUrl =
-    process.env["META_WHATSAPP_GRAPH_BASE_URL"]?.trim();
+    environment["META_WHATSAPP_GRAPH_BASE_URL"]?.trim();
   const hasMetaWhatsAppConfig = Boolean(
     metaWhatsAppApiVersion ||
     metaWhatsAppPhoneNumberId ||
@@ -764,9 +752,9 @@ export function loadConfig(): HostConfig {
       "Meta WhatsApp configuration requires META_WHATSAPP_API_VERSION, META_WHATSAPP_PHONE_NUMBER_ID, and META_WHATSAPP_ACCESS_TOKEN",
     );
   }
-  const fcmProjectId = process.env["PUSH_FCM_PROJECT_ID"]?.trim();
-  const fcmClientEmail = process.env["PUSH_FCM_CLIENT_EMAIL"]?.trim();
-  const fcmPrivateKey = process.env["PUSH_FCM_PRIVATE_KEY"]?.trim();
+  const fcmProjectId = environment["PUSH_FCM_PROJECT_ID"]?.trim();
+  const fcmClientEmail = environment["PUSH_FCM_CLIENT_EMAIL"]?.trim();
+  const fcmPrivateKey = environment["PUSH_FCM_PRIVATE_KEY"]?.trim();
   if (
     Boolean(fcmProjectId || fcmClientEmail || fcmPrivateKey) &&
     !(fcmProjectId && fcmClientEmail && fcmPrivateKey)
@@ -775,9 +763,9 @@ export function loadConfig(): HostConfig {
       "FCM configuration requires PUSH_FCM_PROJECT_ID, PUSH_FCM_CLIENT_EMAIL, and PUSH_FCM_PRIVATE_KEY",
     );
   }
-  const vapidSubject = process.env["VAPID_SUBJECT"]?.trim();
-  const vapidPublicKey = process.env["VAPID_PUBLIC_KEY"]?.trim();
-  const vapidPrivateKey = process.env["VAPID_PRIVATE_KEY"]?.trim();
+  const vapidSubject = environment["VAPID_SUBJECT"]?.trim();
+  const vapidPublicKey = environment["VAPID_PUBLIC_KEY"]?.trim();
+  const vapidPrivateKey = environment["VAPID_PRIVATE_KEY"]?.trim();
   if (
     Boolean(vapidSubject || vapidPublicKey || vapidPrivateKey) &&
     !(vapidSubject && vapidPublicKey && vapidPrivateKey)
@@ -786,7 +774,7 @@ export function loadConfig(): HostConfig {
       "Web Push configuration requires VAPID_SUBJECT, VAPID_PUBLIC_KEY, and VAPID_PRIVATE_KEY",
     );
   }
-  const docRenderBaseUrl = process.env["DOCRENDER_BASE_URL"]?.trim();
+  const docRenderBaseUrl = environment["DOCRENDER_BASE_URL"]?.trim();
   const docRenderTimeoutMs = readPositiveInteger(
     "DOCRENDER_TIMEOUT_MS",
     120_000,
@@ -799,7 +787,7 @@ export function loadConfig(): HostConfig {
     "DOCRENDER_MAX_PDF_BYTES",
     50 * 1_024 * 1_024,
   );
-  const docParserBaseUrl = process.env["DOCPARSER_URL"]?.trim();
+  const docParserBaseUrl = environment["DOCPARSER_URL"]?.trim();
   const docParserTimeoutMs = readPositiveInteger(
     "DOCPARSER_TIMEOUT_MS",
     120_000,
@@ -812,14 +800,14 @@ export function loadConfig(): HostConfig {
     "DOCPARSER_MAX_TEXT_CHARS",
     5_000_000,
   );
-  const searchBaseUrl = process.env["SEARCHCORE_URL"]?.trim();
-  const searchApiKey = process.env["SEARCHCORE_API_KEY"]?.trim();
+  const searchBaseUrl = environment["SEARCHCORE_URL"]?.trim();
+  const searchApiKey = environment["SEARCHCORE_API_KEY"]?.trim();
   if (Boolean(searchBaseUrl) !== Boolean(searchApiKey))
     throw new Error(
       "Search requires both SEARCHCORE_URL and SEARCHCORE_API_KEY",
     );
   const searchIndexUid =
-    process.env["SEARCHCORE_DOCUMENT_INDEX"]?.trim() || "documents";
+    environment["SEARCHCORE_DOCUMENT_INDEX"]?.trim() || "documents";
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(searchIndexUid))
     throw new Error("SEARCHCORE_DOCUMENT_INDEX is invalid");
   const searchTimeoutMs = readPositiveInteger("SEARCHCORE_TIMEOUT_MS", 10_000);
@@ -845,7 +833,7 @@ export function loadConfig(): HostConfig {
     false,
   );
   const publicationTargetPlanes = readPublicationPlanes(
-    process.env["PUBLICATION_TARGET_PLANES"],
+    environment["PUBLICATION_TARGET_PLANES"],
   );
   if (
     (publicationApiEnabled ||
@@ -863,11 +851,11 @@ export function loadConfig(): HostConfig {
   if (!publicationRequireSignature)
     throw new Error("PUBLICATION_REQUIRE_SIGNATURE must remain true");
   const publicationSigningKeyId =
-    process.env["PUBLICATION_SIGNING_KEY_ID"]?.trim();
+    environment["PUBLICATION_SIGNING_KEY_ID"]?.trim();
   const publicationPrivateKeyReference =
-    process.env["PUBLICATION_PRIVATE_KEY_REFERENCE"]?.trim();
+    environment["PUBLICATION_PRIVATE_KEY_REFERENCE"]?.trim();
   const publicationPublicKeyReference =
-    process.env["PUBLICATION_PUBLIC_KEY_REFERENCE"]?.trim();
+    environment["PUBLICATION_PUBLIC_KEY_REFERENCE"]?.trim();
   if (
     publicationAuthoringEnabled &&
     (!publicationApiEnabled ||
@@ -879,21 +867,21 @@ export function loadConfig(): HostConfig {
       "Publication authoring requires API enablement and signing key references",
     );
   const publicationRuntimeVersion =
-    process.env["PUBLICATION_RUNTIME_VERSION"]?.trim() ||
-    process.env["SERVICE_VERSION"]?.trim() ||
+    environment["PUBLICATION_RUNTIME_VERSION"]?.trim() ||
+    environment["SERVICE_VERSION"]?.trim() ||
     "0.0.0";
   const publicationRecoveryIntervalMs = readPositiveInteger(
     "PUBLICATION_RECOVERY_INTERVAL_MS",
     60_000,
   );
-  const infisicalEndpoint = process.env["INFISICAL_URL"]?.trim();
-  const infisicalToken = process.env["INFISICAL_TOKEN"]?.trim();
-  const infisicalWorkspaceId = process.env["INFISICAL_WORKSPACE_ID"]?.trim();
-  const twilioAccountSid = process.env["TWILIO_ACCOUNT_SID"]?.trim();
-  const twilioAuthToken = process.env["TWILIO_AUTH_TOKEN"]?.trim();
-  const twilioFromNumber = process.env["TWILIO_FROM_NUMBER"]?.trim();
+  const infisicalEndpoint = environment["INFISICAL_URL"]?.trim();
+  const infisicalToken = environment["INFISICAL_TOKEN"]?.trim();
+  const infisicalWorkspaceId = environment["INFISICAL_WORKSPACE_ID"]?.trim();
+  const twilioAccountSid = environment["TWILIO_ACCOUNT_SID"]?.trim();
+  const twilioAuthToken = environment["TWILIO_AUTH_TOKEN"]?.trim();
+  const twilioFromNumber = environment["TWILIO_FROM_NUMBER"]?.trim();
   const twilioMessagingServiceSid =
-    process.env["TWILIO_MESSAGING_SERVICE_SID"]?.trim();
+    environment["TWILIO_MESSAGING_SERVICE_SID"]?.trim();
   const hasTwilioConfig = Boolean(
     twilioAccountSid ||
     twilioAuthToken ||
@@ -912,15 +900,11 @@ export function loadConfig(): HostConfig {
   }
 
   const config: HostConfig = {
-    compiledMetadataPlanes: readPublicationPlanes(process.env["METADATA_COMPILED_ONLY_PLANES"], "METADATA_COMPILED_ONLY_PLANES"),
-    masterDataVerificationKeys,
-    ...(localContactDeliveryKey ? { localContactDeliveryKey } : {}),
-    ...(localContactChallenge ? { localContactChallenge } : {}),
-    businessPartnerMetricsTargets: parseBusinessPartnerMetricsTargets(
-      process.env["BUSINESS_PARTNER_METRICS_TARGETS"],
-    ),
+    compiledMetadataPlanes: readPublicationPlanes(environment["METADATA_COMPILED_ONLY_PLANES"], "METADATA_COMPILED_ONLY_PLANES"),
+    metadataFormatRouting: readBoolean("METADATA_FORMAT_ROUTING", false),
+    contactVerification: loadContactVerificationConfiguration(environment, env, notificationCapture),
     port,
-    logLevel: process.env["LOG_LEVEL"] ?? "info",
+    logLevel: environment["LOG_LEVEL"] ?? "info",
     shutdownTimeoutMs,
     env,
     notificationCapture,
@@ -937,9 +921,6 @@ export function loadConfig(): HostConfig {
       connectionString: rawMeshDatabaseUrl || undefined,
       poolMax: meshPoolMax,
     },
-    businessPartnerAuthorizationShadow: readBusinessPartnerShadowConfig(
-      process.env,
-    ),
     businessPartner360: {
       meshLiveBaseUrl: bp360MeshLiveBaseUrl || undefined,
       meshLiveCredentialReference:
@@ -1078,7 +1059,7 @@ export function loadConfig(): HostConfig {
       privateKey: vapidPrivateKey || undefined,
     },
     rendering: {
-      previewBaseUrl: process.env["PREVIEW_RENDERER_BASE_URL"]?.trim() || undefined,
+      previewBaseUrl: environment["PREVIEW_RENDERER_BASE_URL"]?.trim() || undefined,
       baseUrl: docRenderBaseUrl || undefined,
       timeoutMs: docRenderTimeoutMs,
       maxHtmlBytes: docRenderMaxHtmlBytes,
@@ -1099,10 +1080,12 @@ export function loadConfig(): HostConfig {
     verification: {
       enabled: readBoolean("PLATFORM_VERIFICATION_ENABLED", env === "local"),
       grafanaUrl:
-        process.env["PLATFORM_VERIFICATION_GRAFANA_URL"]?.trim() ||
+        environment["PLATFORM_VERIFICATION_GRAFANA_URL"]?.trim() ||
         (env === "local" ? "http://127.0.0.1:53902" : undefined),
     },
     publication: {
+      secretStore: loadPublicationSecretStore(environment),
+      trust: loadPublicationTrustConfiguration(environment, publicationApiEnabled || publicationAuthoringEnabled || publicationCompileEnabled || publicationDispatchEnabled || publicationApplyEnabled || publicationRecoveryEnabled),
       apiEnabled: publicationApiEnabled,
       authoringEnabled: publicationAuthoringEnabled,
       compileEnabled: publicationCompileEnabled,
@@ -1121,11 +1104,11 @@ export function loadConfig(): HostConfig {
       endpoint: infisicalEndpoint || undefined,
       token: infisicalToken || undefined,
       workspaceId: infisicalWorkspaceId || undefined,
-      environment: process.env["INFISICAL_ENVIRONMENT"]?.trim() || env,
+      environment: environment["INFISICAL_ENVIRONMENT"]?.trim() || env,
       secretPath:
-        process.env["INFISICAL_SECRET_PATH"]?.trim() || "/publication",
+        environment["INFISICAL_SECRET_PATH"]?.trim() || "/publication",
     },
-    ...(Object.keys(process.env).some(key => key.startsWith("PROTECTED_VALUES_INFISICAL_")) ? {protectedValuesStore: {
+    ...(Object.keys(environment).some(key => key.startsWith("PROTECTED_VALUES_INFISICAL_")) ? {protectedValuesStore: {
       endpoint: requiredEnvironment("PROTECTED_VALUES_INFISICAL_URL"),
       token: requiredEnvironment("PROTECTED_VALUES_INFISICAL_TOKEN"),
       workspaceId: requiredEnvironment("PROTECTED_VALUES_INFISICAL_WORKSPACE_ID"),
@@ -1192,10 +1175,10 @@ export function loadConfig(): HostConfig {
         false,
       ),
       authorizationWriterConnectionsPath:
-        process.env["AUTHORIZATION_WRITER_CONNECTIONS_PATH"]?.trim() ||
+        environment["AUTHORIZATION_WRITER_CONNECTIONS_PATH"]?.trim() ||
         undefined,
       authorizationManagementPolicyPath:
-        process.env["AUTHORIZATION_MANAGEMENT_POLICY_PATH"]?.trim() ||
+        environment["AUTHORIZATION_MANAGEMENT_POLICY_PATH"]?.trim() ||
         undefined,
       authorizationManagementRoutesEnabled: readBoolean(
         "AUTHORIZATION_MANAGEMENT_ROUTES_ENABLED",
@@ -1225,7 +1208,7 @@ export function loadConfig(): HostConfig {
     },
     atlas: {
       localInferenceConfigPath:
-        process.env["ATLAS_LOCAL_INFERENCE_CONFIG_PATH"]?.trim() || undefined,
+        environment["ATLAS_LOCAL_INFERENCE_CONFIG_PATH"]?.trim() || undefined,
       enabled: readBoolean("ATLAS_AGENT_ENABLED", false),
       toolsEnabled: readBoolean("ATLAS_AGENT_TOOLS_ENABLED", false),
       mutationsEnabled: readBoolean("ATLAS_AGENT_MUTATIONS_ENABLED", false),
@@ -1280,53 +1263,4 @@ function readPublicationPlanes(
       );
   }
   return planes as ("studio" | "neon" | "mesh")[];
-}
-
-/** Studio is canonical; the legacy names are accepted only at environment ingress for one release. */
-function readStudioEnvironment(
-  suffix: "DATABASE_URL" | "WORKER_DATABASE_URL",
-): string | undefined {
-  return (
-    process.env[`STUDIO_${suffix}`]?.trim() ??
-    process.env[`ATHYPER_PLATFORM_${suffix}`]?.trim()
-  );
-}
-
-function readPositiveInteger(name: string, fallback: number): number {
-  const value = Number(process.env[name] ?? fallback);
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new Error(
-      `${name} must be a positive integer, got: ${process.env[name]}`,
-    );
-  }
-  return value;
-}
-
-function readNonNegativeInteger(name: string, fallback: number): number {
-  const value = Number(process.env[name] ?? fallback);
-  if (!Number.isInteger(value) || value < 0) {
-    throw new Error(
-      `${name} must be a non-negative integer, got: ${process.env[name]}`,
-    );
-  }
-  return value;
-}
-
-function readBoolean(name: string, fallback: boolean): boolean {
-  const raw = process.env[name]?.trim().toLowerCase();
-  if (raw === undefined || raw === "") return fallback;
-  if (raw === "true") return true;
-  if (raw === "false") return false;
-  throw new Error(`${name} must be true or false, got: ${process.env[name]}`);
-}
-
-function readChoice<const Values extends readonly string[]>(
-  name: string,
-  fallback: Values[number],
-  values: Values,
-): Values[number] {
-  const raw = process.env[name]?.trim();
-  if (!raw) return fallback;
-  if (values.includes(raw)) return raw as Values[number];
-  throw new Error(`${name} must be one of ${values.join(", ")}, got: ${raw}`);
 }

@@ -1,4 +1,6 @@
 import { executeAuthorizedAggregate } from "./authorized-aggregate.js";
+import { MAX_LIST_FILTERS } from "./list-limits.js";
+import { validateFilterValue } from "./filter-value-validation.js";
 import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
 import { createHash } from "node:crypto";
 import type {
@@ -175,11 +177,12 @@ export function createRecordListExecutor<Transaction = unknown>(
           "TOO_MANY_SORT_FIELDS",
           `Record lists support at most ${maxSortLevels} sort fields`,
         );
-      if ((query.filters?.length ?? 0) > 20)
+      if ((query.filters?.length ?? 0) > MAX_LIST_FILTERS)
         throw new RecordServiceError(
           400,
           "TOO_MANY_FILTERS",
-          "Record lists support at most twenty filters",
+          `Record lists support at most ${MAX_LIST_FILTERS} filters`,
+          { max: MAX_LIST_FILTERS },
         );
       if (
         (query.recordIds?.length ?? 0) > 100 ||
@@ -488,6 +491,7 @@ function validateQueryFields(
 ): void {
   const map = new Map(fields.map((field) => [field.key, field]));
   for (const filter of query.filters ?? []) {
+    validateFilterValue(filter);
     const field = map.get(filter.field);
     if (!field?.filterable || !readable.has(filter.field))
       throw new RecordServiceError(

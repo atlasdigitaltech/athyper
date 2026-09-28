@@ -3,3 +3,4 @@
 
 20260923_entity_notification_discovery.sql
 20260923_notification_operations_permissions.sql
+20260926_common_reference_permission.sql

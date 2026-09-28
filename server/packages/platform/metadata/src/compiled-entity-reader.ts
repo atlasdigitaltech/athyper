@@ -1,4 +1,5 @@
 import type { CompiledEntityArtifactV2 } from "@athyper/server-contract-publication";
+import { parseCapabilityBinding, validateEntityCapabilities } from "@athyper/server-contract-publication";
 import {
   artifactEntry,
   assertResolvedArtifact,
@@ -61,7 +62,21 @@ export class PinnedCompiledEntityReader {
   }
 
   async operation(release: CompiledEntityResolvedRelease): Promise<CompiledEntityArtifactV2> {
-    return this.artifact(release, `${release.coordinate.entityCode}/operation`, "operation");
+    const operation = await this.artifact(release, `${release.coordinate.entityCode}/operation`, "operation");
+    const bindings = (["comments", "attachments"] as const).flatMap(kind => {
+      const raw = operation.content[kind === "comments" ? "commentBinding" : "attachmentBinding"];
+      return raw === undefined ? [] : [parseCapabilityBinding(raw, kind, operation.entityCode)];
+    });
+    if (bindings.some(binding => binding.profilePolicy)) {
+      // Validate cached and cold reads alike against this exact release manifest.
+      // Reuse the compiler's policy validation instead of a weaker runtime rule.
+      const keys = new Set(bindings.flatMap(binding => [binding.profilePolicy,
+        binding.retentionPolicy, "audiencePolicy" in binding ? binding.audiencePolicy : undefined]
+        .filter(ref => ref !== undefined).map(ref => ref.artifactKey)));
+      const dependencies = await Promise.all([...keys].map(key => this.artifactByKey(release, key)));
+      validateEntityCapabilities([await this.core(release), operation, ...dependencies]);
+    }
+    return operation;
   }
 
   async surface(release: CompiledEntityResolvedRelease, surfaceKey: string): Promise<CompiledEntityArtifactV2> {

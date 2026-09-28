@@ -1,4 +1,4 @@
-import { LocalBusinessPartnerDefinitionConsumer } from "../business-partner-definition-consumer.js";
+import { LocalBusinessPartnerDefinitionConsumer } from "../entity-definition-consumer.js";
 import { afterEach, describe, it, expect } from "vitest";
 import {
   mkdtempSync,
@@ -10,13 +10,17 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash, generateKeyPairSync } from "node:crypto";
-import { createBusinessPartnerFoundationDefinition } from "../business-partner-foundation-definition.js";
+import { createBusinessPartnerFoundationDefinition } from "../entity-foundation-definition.js";
 import {
   assertCosmeticDefinitionChange,
-  localPreviewRoot,
+  localPreviewRoot as compatibilityPreviewRoot,
   saveLocalDefinitionPreview,
   overlayLocalDefinitionPreview,
 } from "../local-definition-preview.js";
+import { localPreviewRoot } from "../shared/preview/environment.js";
+it("preserves the legacy preview guard export without a second implementation", () => {
+  expect(compatibilityPreviewRoot).toBe(localPreviewRoot);
+});
 const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0))

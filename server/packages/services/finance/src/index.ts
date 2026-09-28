@@ -19,7 +19,6 @@ export * from "./ledger/kysely-gl-balance-repository.js";
 export * from "./ledger/cross-book-posting-service.js";
 export * from "./ledger/kysely-cross-book-repository.js";
 export * from "./ledger/commitment-service.js";
-export * from "./ledger/business-partner-journal-activity.js";
 export * from "./ledger/kysely-commitment-repository.js";
 export * from "./tax/tax-calculation-service.js";
 export * from "./tax/tax-credit-service.js";

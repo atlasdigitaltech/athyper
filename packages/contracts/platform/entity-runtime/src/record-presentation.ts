@@ -1,4 +1,8 @@
 import type { EntityAccessDecisionV1 } from "./access-decision";
+import { isObjectRecord, isBoundedNonBlankText } from "./validation/values";
+import { parsePresentationLocalization, type EntityPresentationLocalizationV1 } from "./presentation-localization";
+import { parseEntityRuntimeLocalizedText, type EntityRuntimeLocalizedTextV1 } from "./runtime-resource";
+import { parseEntityDetailNavigation, type EntityDetailNavigationV1 } from "./detail-navigation";
 import { parseRelatedPresentations, type RelatedPresentationV1 } from "./related-presentation";
 import {
   parseRecord360Panel,
@@ -7,7 +11,10 @@ import {
 /** Published record presentation contains field and operation references, never executable UI. */
 export type RecordBadgeTone = "neutral" | "success" | "warning" | "danger";
 export interface EntityRecordPresentationV1 {
+  readonly localizedLabels?: EntityPresentationLocalizationV1;
   readonly schemaVersion: 1;
+  /** Absent on older definitions: retain selected-section behavior. */
+  readonly navigation?: EntityDetailNavigationV1;
   readonly related?: readonly RelatedPresentationV1[];
   readonly panel?: EntityRecord360PanelV1;
   /** Optional, provider-backed decision support shown beside any record mode. */
@@ -25,6 +32,7 @@ export interface EntityRecordPresentationV1 {
   readonly sections: readonly {
     readonly key: string;
     readonly label: string;
+    readonly localizedLabel?: EntityRuntimeLocalizedTextV1;
     readonly fields: readonly string[];
     readonly placement: "direct" | "overflow";
     readonly scopePrompt?: string;
@@ -87,12 +95,12 @@ const key = (value: unknown): string => {
   return value;
 };
 const text = (value: unknown): string => {
-  if (typeof value !== "string" || !value.trim() || value.length > 200)
+  if (!isBoundedNonBlankText(value, 200))
     throw new TypeError("Invalid record presentation label");
   return value.trim();
 };
 const object = (value: unknown): Record<string, unknown> => {
-  if (!value || typeof value !== "object" || Array.isArray(value))
+  if (!isObjectRecord(value))
     throw new TypeError("Invalid record presentation object");
   return value as Record<string, unknown>;
 };
@@ -122,6 +130,7 @@ export function parseEntityRecordPresentation(
     : parseRecordSummaryView(raw.summaryView);
   const result: EntityRecordPresentationV1 = {
     schemaVersion: 1,
+    ...(raw.localizedLabels === undefined ? {} : { localizedLabels: parsePresentationLocalization(raw.localizedLabels) }),
     ...(raw.related === undefined ? {} : { related: parseRelatedPresentations(raw.related) }),
     ...(panel ? { panel } : {}),
     ...(summaryView ? { summaryView } : {}),
@@ -148,6 +157,7 @@ export function parseEntityRecordPresentation(
       return {
         key: key(item.key),
         label: text(item.label),
+        ...(item.localizedLabel === undefined ? {} : { localizedLabel: parseEntityRuntimeLocalizedText(item.localizedLabel) }),
         fields: list(item.fields ?? []).map(key),
         ...(item.scopePrompt === undefined ? {} : { scopePrompt: text(item.scopePrompt) }),
         placement: choice(item.placement ?? "direct", [
@@ -186,7 +196,9 @@ export function parseEntityRecordPresentation(
   unique(result.actions.map((item) => item.key));
   if (result.actions.filter((item) => item.placement === "primary").length > 1)
     throw new TypeError("Only one primary record action is allowed");
-  return Object.freeze(result);
+  return Object.freeze({ ...result, ...(raw.navigation === undefined ? {} : {
+    navigation: parseEntityDetailNavigation(raw.navigation, result.sections.map(section => section.key)),
+  }) });
 }
 
 /** Legacy 360 sidebars are projected as generic summary cards until republished. */
@@ -227,6 +239,7 @@ export function validateRecordPresentationReferences(
   operations: readonly string[],
 ) {
   const referenced = [
+    ...Object.keys(presentation.localizedLabels?.fields ?? {}),
     presentation.titleField,
     ...(presentation.codeField ? [presentation.codeField] : []),
     ...presentation.subtitleFields,
@@ -250,8 +263,18 @@ export function readableRecordPresentation(
   operations: readonly string[],
   fallbackTitle: string,
 ): EntityRecordPresentationV1 {
+  const visibleSections = presentation.sections.filter(section => section.fields.some(key => fields.includes(key))).map(section => section.key);
   return {
     ...presentation,
+    ...(presentation.localizedLabels ? { localizedLabels: { ...presentation.localizedLabels,
+      fields: Object.fromEntries(Object.entries(presentation.localizedLabels.fields).filter(([key]) => fields.includes(key))),
+    } } : {}),
+    ...(presentation.navigation ? { navigation: {
+      mode: presentation.navigation.mode,
+      ...(presentation.navigation.tabs ? { tabs: presentation.navigation.tabs.map(tab => ({
+        ...tab, sectionKeys: tab.sectionKeys.filter(key => visibleSections.includes(key)),
+      })).filter(tab => tab.sectionKeys.length) } : {}),
+    } } : {}),
     // Related projections have their own authorization boundary; flat entity fields cannot authorize them.
     related: undefined,
     titleField: fields.includes(presentation.titleField)

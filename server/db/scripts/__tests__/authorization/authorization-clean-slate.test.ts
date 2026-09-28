@@ -46,7 +46,7 @@ test("publishes only exact catalogs and zero-grant authority", async () => {
       catalog.permissions.every(
         (permission) =>
           permission.canonicalCode.split(".").length === 4 &&
-          permission.canonicalCode.startsWith(`${plane}.`),
+          (permission.canonicalCode.startsWith(`${plane}.`) || permission.canonicalCode === "common.platform.reference.view"),
       ),
       true,
     );

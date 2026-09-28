@@ -4,6 +4,26 @@
   "semanticPermissionContract": {
     "contractVersion": "athyper.authorization.semantic.v1",
     "permissionIdentity": "plane.domain.entity.operation",
+    "sharedCapabilities": {
+      "common.platform.reference.view": {
+        "namespace": "common",
+        "permissionKind": "capability",
+        "planes": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "scope": "tenant",
+        "propagation": "exact",
+        "enrollment": "published_public_read_only_shared_reference_graph",
+        "allowedOperations": [
+          "list",
+          "read",
+          "view"
+        ],
+        "grants": "plane_local_only"
+      }
+    },
     "defaultDecision": "deny",
     "rules": {
       "keycloak": "authentication_client_admission_and_assurance_only",
@@ -30,6 +50,22 @@
   "permissionCatalog": {
     "version": "2.0.0",
     "operations": [
+      {
+        "permissionId": "51f45819-773a-566d-a4bc-69784c28afb2",
+        "canonicalPermissionCode": "common.platform.reference.view",
+        "plane": "mesh",
+        "entityCode": "reference",
+        "operationCode": "view",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "62eeccb95220b38bf2bc138394ec753a6e9bc59be6a1a3d43a9a43c373bdb608",
+        "permissionKind": "capability",
+        "moduleCode": "fnd"
+      },
       {
         "permissionId": "350c8f62-aa90-5a2c-89bb-e7dcde74a8d7",
         "canonicalPermissionCode": "mesh.ai.agent.use",
@@ -582,6 +618,15 @@
     "plane": "mesh",
     "defaultScopeBehavior": "deny_undeclared",
     "permissions": [
+      {
+        "permissionCode": "common.platform.reference.view",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
       {
         "permissionCode": "mesh.ai.agent.use",
         "scopes": [
@@ -1149,7 +1194,7 @@
         ]
       }
     ],
-    "sha256": "78620352cbc1ae9a051cee435856331705e3a90406306a09eaa061d43c9eb397"
+    "sha256": "99769eb22aa1bf929629407795ac778ca64eda16233e7cee0408a018289e2869"
   },
   "authority": {
     "version": "authorization.clean-slate.v1",

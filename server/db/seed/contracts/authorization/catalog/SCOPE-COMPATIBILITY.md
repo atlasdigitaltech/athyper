@@ -4,6 +4,10 @@ Each plane owns one deny-by-default `scope-compatibility.v1.json`. Every
 catalog permission lists the only scope-kind and propagation coordinates at
 which it may be granted. A missing permission or missing coordinate denies.
 
+`common.platform.reference.view` is declared separately in each plane's contract
+with only `tenant/exact`. Its common name does not create a cross-plane grant.
+Additional scope kinds or propagation for this capability are rejected.
+
 - Studio: tenant, workspace, module, resource
 - Neon: tenant, company code, legal entity, operating organization, resource
 - Mesh: tenant, network account, network relationship, resource

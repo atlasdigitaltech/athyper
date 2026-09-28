@@ -7,6 +7,8 @@ import {
   RecordFooterProvider,
   RecordFooterSource,
   useRecordFooterSources,
+  useRecordFooterInformation,
+  useActiveRecordFooterInformation,
 } from "../../packages/platform/shell/shell/src/record-footer";
 
 test("footer ownership survives stale cleanup and clears on scope/access changes without remounting input", async () => {
@@ -27,12 +29,19 @@ test("footer ownership survives stale cleanup and clears on scope/access changes
     name: string;
     allowed?: boolean;
   }) {
+    useRecordFooterInformation(
+      allowed ? { recordId: name, metadataRelease: 3 } : undefined,
+    );
     useRecordFooterSources(
       allowed
         ? [{ sourceObject: name, observedAt: "2026-09-18T00:00:00Z" }]
         : [],
     );
     return null;
+  }
+  function InformationProbe() {
+    const info = useActiveRecordFooterInformation();
+    return info ? <output>{`Technical ${info.recordId}`}</output> : null;
   }
   function App({
     old,
@@ -51,6 +60,7 @@ test("footer ownership survives stale cleanup and clears on scope/access changes
         {old && <Owner key="old" name="old-source" />}
         {next && <Owner key="next" name="new-source" allowed={allowed} />}
         <RecordFooterSource />
+        <InformationProbe />
       </RecordFooterProvider>
     );
   }
@@ -61,12 +71,13 @@ test("footer ownership survives stale cleanup and clears on scope/access changes
     assert.match(dom.window.document.body.textContent!, /new-source/);
     await act(async () => root.render(<App old={false} next />));
     assert.match(dom.window.document.body.textContent!, /new-source/);
+    assert.match(dom.window.document.body.textContent!, /Technical new-source/);
     await act(async () =>
       root.render(<App old={false} next allowed={false} />),
     );
     assert.doesNotMatch(
       dom.window.document.body.textContent!,
-      /new-source|Observed/,
+      /new-source|Observed|Technical/,
     );
     await act(async () =>
       root.render(<App old={false} next={false} scope="record-b" />),

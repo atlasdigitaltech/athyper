@@ -1,6 +1,6 @@
 /* Content-only record view keeps the parent tab stable and names the selected child section. */
 .a-entity-record-record-content__context { margin-block-end: var(--a-space-3); }
-.a-entity-record-record-content__context h2 { margin: 0; font-size: var(--a-font-size-heading); }
+.a-entity-record-record-content__context h2 { margin: 0; font-size: var(--a-font-size-lg); }
 
 /* The page frame owns the outer gutter. In the three-pane workspace, panels use
    their full grid tracks; this avoids spending a second gutter inside both side
@@ -23,7 +23,7 @@
 /* Compact record tools: each only appears when its metadata section is admitted. */
 .a-entity-record__collaboration-control { display:grid; place-items:center; inline-size:2.75rem; min-inline-size:2.75rem; block-size:3rem; padding:0; border:0; border-radius:var(--a-radius-sm); background:transparent; color:var(--a-muted-foreground); cursor:pointer; }
 .a-entity-record__collaboration-control:hover { background:var(--a-selection-subtle); color:var(--a-primary); }
-.a-entity-record__collaboration-control:focus-visible { outline:var(--a-focus-ring-width,2px) solid var(--a-focus-ring-color,var(--a-primary)); outline-offset:-2px; }
+.a-entity-record__collaboration-control:focus-visible { outline:var(--a-focus-width,2px) solid var(--a-focus,var(--a-primary)); outline-offset:-2px; }
 .a-entity-record__collaboration-control svg { inline-size:1.1rem; block-size:1.1rem; }
 
 

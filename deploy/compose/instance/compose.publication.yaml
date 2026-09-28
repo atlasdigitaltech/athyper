@@ -8,6 +8,8 @@ services:
       PUBLICATION_DISPATCH_ENABLED: "true"
       PUBLICATION_APPLY_ENABLED: "true"
       PUBLICATION_REQUIRE_SIGNATURE: "true"
+      PUBLICATION_TRUST_DOMAIN: ${PUBLICATION_TRUST_DOMAIN:?Set dev or production trust domain}
+      PUBLICATION_TRUST_MANIFEST_JSON: ${PUBLICATION_TRUST_MANIFEST_JSON:?Set reviewed public fingerprint manifest}
       PUBLICATION_TARGET_PLANES: ${PUBLICATION_TARGET_PLANES:?Set intended consumer planes}
       PUBLICATION_RUNTIME_VERSION: ${PUBLICATION_RUNTIME_VERSION:?Set deployed runtime contract version}
       PUBLICATION_SIGNING_KEY_ID: ${PUBLICATION_SIGNING_KEY_ID:?Set an instance-specific key ID}

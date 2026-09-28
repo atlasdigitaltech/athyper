@@ -2,7 +2,7 @@ import type { Application, RequestHandler, Response } from "express";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
 import type { Transaction } from "kysely";
-import type { PatchBusinessPartnerRequestCommand } from "@athyper/server-contract-master-data";
+import type { PatchBusinessPartnerRequestCommand } from "@athyper/server-contract-entity-governance";
 import {
   HttpError,
   defineRouteContract,

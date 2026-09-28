@@ -9,6 +9,11 @@
 
 ## 1. Purpose and authority
 
+Reusable collaboration defaults and operational restrictions are specified in
+[Capability profiles and runtime controls](capability-profiles-and-runtime-controls-design.md).
+That design separates existing mechanisms from required compiler extensions and
+defines file-based profile scope, enforced dependency pins and multi-plane acceptance.
+
 Provide one reusable experience across three independently deployable applications. Business Partner is the first migration consumer, not the owner of generic layout behavior. Share pages and feature implementations as well as chrome; app route files remain thin framework adapters.
 
 This document defines the target, not a claim that every component exists. The detailed tree in Appendix A records the agreed component inventory. The rules in the main document resolve ambiguities in that tree and take precedence over its shorthand. This is a local development effort; release governance and multi-instance infrastructure are future concerns, not build prerequisites. Tree branches describing states are alternatives; configuration and behavior nodes are specifications, not literal DOM nodes.
@@ -117,7 +122,11 @@ An optional `PageContextSummary` consumes structured authorized information from
 
 Critical draft/revision context remains in the page header/version selector; save state remains in the action bar even if the footer repeats context.
 
+For generic record detail pages, the default footer shows only a subtle **Record information** control—not UUIDs, metadata versions, or repeated business identity. Remove the redundant technical disclosure from the header. Clicking or keyboard-activating the control opens a small non-modal popover above the footer; narrow layouts use the shared accessible dialog. Support Escape, outside-click/close dismissal and focus restoration. Present the authorized Record ID, Metadata release, and Record revision only when supplied, with individual copy controls and Copy details. Copy only these displayed identifiers, never record content, credentials or tokens; report clipboard failure without claiming success. Business timestamps remain in Audit and application build information remains in About Athyper. Registration is structured, scope-bound and cleared on access loss/navigation/unmount; stale owners must not clear newer registrations. Changing record/context closes old details. This is shared presentation across planes, not entity-specific metadata or new publication authority.
+
 About Athyper displays deployed frontend release, plane, appropriate environment, optional build/support details, matching release notes and approved copyable diagnostics. Populate from build/deployment metadata, not a manually copied package version. Do not expose credentials, personal data or record content.
+
+Record information surface anatomy: compact title/close header, one line per field (`Label: value` with an accessible copy icon immediately beside the value), and a compact separated footer containing Copy details and copy feedback. Avoid a wide multi-column panel or labels stacked above values. Allow long values to wrap on narrow screens without horizontal overflow. Use shared design tokens for separators, spacing, surfaces and icons.
 
 ### 5.4 Global action outcome toasts
 
@@ -163,7 +172,13 @@ Only one transient shell surface is active. Docked Atlas may coexist. Expanded A
 
 Escape dismisses the topmost dismissible surface. Ordinary dismissal returns focus to the opener; successful navigation transfers focus to the destination. Keep frame/title/Close outside the feature error boundary. Reset failed feature state when switching surface identity. Request errors have explicit local resource states. Page-owned dialogs reuse primitives/coordination but are not global feature registrations.
 
+Shared tooltips open after 600ms of pointer hover; leaving or activating the trigger cancels pending opening. Deliberate keyboard focus can reveal the description without the hover delay. Escape dismisses an open tooltip before its enclosing panel/dialog and does not activate a control. Tooltip content remains hoverable (including portals) and has no automatic expiry while hovered or focused; a short 150ms exit grace allows crossing the trigger/content gap. Cancel timers on unmount or label/suppression changes. Collaboration presentation/section/visibility changes reset control tooltips; full/side transitions focus the panel container, not another action button. Avoid duplicate tooltips for fully visible action labels. Responsive labels may mark their text with `data-tooltip-label` and use the shared truncation-aware tooltip so icon-only or truncated presentations still receive help.
+
 ## 7. Main and page composition
+
+The shared Comments/Files collaboration panel defaults to its supported maximum desktop width (560 CSS px) when no saved width exists. Users may reduce it within the supported 360–560 CSS px range; preserve that preference across closing, reopening and section changes. Compact layouts retain the overlay/full-width presentation without overwriting the saved desktop width. This policy is shared across all planes and entities, not declared separately by entity metadata.
+
+Full-view Comments and Files share one centered container capped at 1200 CSS px, with responsive design-token gutters. The container owns the width for toolbars, return/close controls, upload area, file cards, comment threads and composer; feature components must not introduce separate outer reading widths. Record navigation remains edge-to-edge. This full-view rule does not alter docked/overlay sizing or expanded file-preview presentation.
 
 `PlatformShell` owns `<main id="main-content" tabIndex={-1}>`. A page render boundary contains breadcrumbs and the entire workspace. The body render boundary isolates content failures while preserving safe header/navigation. `PageResourceBoundary` handles explicit loading/request/error/access states. Dependent mutations must become unavailable if required resources or the body render fail, even though the action bar is outside the body boundary.
 
@@ -195,6 +210,8 @@ Do not infer layout from fluctuating row counts or entity size. No section navig
 - Page dialogs stay page-owned. Footer provenance stays page-owned through a structured provider.
 
 ### 7.3 Scroll, focus and navigation
+
+Record-mode shell bands extend their background and bottom border across the available workspace, with modest token-based inner padding and View settings aligned at the trailing edge. Header and content cards retain their padded layout. A docked collaboration panel reduces the band’s available width; overlays do not. Keep responsive section containers inside the page body so they cannot capture the shell band’s container-relative sizing. Preserve sticky offsets, keyboard navigation and section landing alignment at desktop and mobile widths; do not calculate band width from a fixed sidebar size.
 
 Keep the existing primary page scroll root and a single primary scroll surface; verify its actual overflow behavior while implementing the workspace. Header scrolls away; breadcrumbs/tabs and side panels stick where usable space permits. Tokens/measurements determine offsets; no per-route hard-coded offsets. The center grid track uses `minmax(0, 1fr)`. Atlas docking reduces actual available width. Narrow/zoomed views reduce sticky chrome, use a section selector and accessible overview disclosure/drawer. Never mount duplicate forms for responsive layouts.
 
@@ -528,6 +545,98 @@ Use one bottom composer for new comments and replies in side and full views. Rep
 Display authorized descendants oldest first at one visual indentation level. Preserve the main comment surface. All ordinary replies share one softly tinted theme-derived surface, small rounded corners and modest padding without additional borders. Internal audience styling takes precedence; deleted replies remain compact and untinted. Parent references use two-line quoted strips with full text retained for accessibility. Left-aligned parent references show the author and a short excerpt and locate/highlight the loaded parent. Deleted parents show only “Replying to a deleted comment.” Parent navigation must not fetch an unbounded chain of pages. Reply pages are limited to 20; automatic refresh is limited to five pages, with remaining replies explicitly paginated. At depth five, explain the limit and offer an explicit reply to the main comment when it is available. This presentation does not change stored parent relationships or the existing maximum of five reply levels. Reply, Like/count, and Show/Hide reply count share the comment action row. Omit the reply-count control when the known count is zero. Composer actions run audience, Cancel reply, then Send reply. Comments filters share a responsive toolbar with sort order and Date/User grouping; group loaded roots without separating their replies. Full-view Return to side panel and Close controls join this toolbar; side-view navigation remains in its header. Refresh loaded thread pages after mutations while retaining expanded threads. Descendant traversal must enforce tenant, record, and audience restrictions at every ancestor.
 
 Pinned attachments use compact filename/metadata cards with preview and download actions. Suppress duplicate attachment placeholders only when the corresponding pinned card exists. Internal comments retain an explicit audience label as well as subtle theme styling. Reactions use a thumbs-up icon with a nonzero count, pressed state and Like/Remove like tooltips. Edit in place under the comment header with Cancel then Save changes, preserving the separate bottom draft. Revision review is available during an edit conflict; ordinary history remains a menu action. Use Report comment consistently, in a focused dialog with a required reason, optional additional context, neutral Cancel and primary Submit report. Successful submission closes the dialog and produces one global toast. Show a compact reporter-only pending/under-review/resolved status and View your report on the comment. The read-only report dialog contains the reporter’s reason, context, submission date and available outcome; internal moderation notes are not exposed. For existing reports, the menu offers View your report instead of another submission. Comment deletion requires a compact confirmation with neutral Cancel and destructive Delete comment. Keep a tombstone and existing replies after success. Authorized authors may view deletion metadata through View deletion details beside the deleted placeholder; deleted revision text remains inaccessible. Full view uses one bordered panel per root thread and a reading-width-aligned composer in normal document flow; side view keeps compact rows. Tooltips and long filenames must not cause horizontal scrolling. Completed mutations use the global toast contract; composer errors remain local.
+
+### Summary providers and advanced collaboration qualification
+
+Summary is supplementary decision support, never a replacement for Content or a
+synonym for the Overview navigation tab. Generic detail and compiled record pages
+share the lazy Summary panel and its settings. A normalized publication resolves
+`recordPresentation.summaryView` from its signed runtime contract, not a legacy
+presentation surface or an incidental reference artifact. Server discovery admits
+only registered providers that explicitly authorize the current record/principal;
+the Summary request rechecks that authorization and parent admission. Unknown or
+denied cards are omitted. Provider errors are isolated, with retry and
+context-required states. Switching principal, tenant, record or context clears old
+results and aborts outstanding requests. No request runs while Summary is disabled.
+Content remains mounted beside Summary; Section and Summary preferences are
+independent. Narrow workspaces place Summary above Content without duplicate controls.
+
+`platform.record.identity.v1` is a generic registered provider for explicitly
+declared identity summaries. It reads only published title/code/context fields
+through the authorized record reader. Domain summaries require their own registered
+and authorizing providers. Do not invent cards for entities that declare none.
+
+Advanced collaboration is opt-in signed capability metadata. Common permissions
+use an explicit action-to-permission-to-handler mapping, not a namespace wildcard:
+preview requires download permission; extraction/search require read permission;
+reply/reaction/draft and file organization/version actions use their established
+write permissions. Every action still requires the current capability and parent
+admission; file search additionally enforces per-result download admission. Keep
+audience restrictions, ownership, concurrency, idempotency, malware scanning and
+short-lived authorized delivery unchanged.
+
+For admitted comments and visible reply parents, resolve author display names
+through the existing tenant/membership-scoped collaboration directory using the
+exact author ID. Do not join self-only principal records directly or widen their
+read policy for display purposes. Keep the neutral Participant fallback when no
+eligible name is available; comment visibility and parent admission remain the
+authority for returning the comment itself.
+
+Shared collaboration UI and published capabilities do not imply shared runtime
+content. Comments, attachment associations and processing remain plane-local and
+tenant-scoped; publishing the same entity definition to Neon, Mesh and Studio
+does not replicate its conversations or files. Cross-tenant access remains denied.
+Any future cross-plane sharing requires an explicit authorized product contract,
+not removal of tenant/plane filters. See the collaboration design's no-automatic-
+cross-plane-sharing boundary.
+
+File-content search failures use the same shared bordered state-card composition
+as empty file results, with one accessible error announcement, an explanation,
+Retry search and Search file names actions. Failure is never presented as zero
+matches. Retain the query for retry and use shared design-system buttons and
+responsive spacing, including narrow side panels.
+
+Publication qualification checks actual callable providers, plane-local catalog
+entries, persistence/RLS prerequisites and processing columns. Preview requires a
+real conversion probe and a configured scheduler; extraction requires a real text
+probe and configured processing. A health response alone is insufficient. These
+checks do not constitute signed-in lifecycle acceptance or prove a worker processed
+a user's file. Source enablement requires a governed signed successor before live
+activation; existing signed releases must not be edited.
+
+Generic Summary and collaboration providers must not depend on a legacy
+entity-specific repository or require restoration of its metadata. A reference
+entity's collaboration successor can amend only its declared collaboration
+capabilities while preserving the predecessor's fields, navigation, Summary and
+record authorization. Draft preparation is not publication authority: source,
+compiler and per-plane predecessor pins still require governed approval, live
+qualification and signed activation. Historical entity-specific harnesses are
+read-only references, not acceptance evidence for this runtime.
+
+### Governed local compilation recovery
+
+A failed shared-reference successor may be retried with a corrected compiler only
+through a separate `athyper.dev-compilation-recovery-policy/1` enrollment. This is
+a generic local-development mechanism, not an entity-specific publication path.
+It pins the immutable source release and hash, terminal failed compilation job,
+original and replacement compiler hashes, workload actors and original target
+predecessors. Existing signed source, approvals and failed job history stay intact.
+
+Proposal and independent activation require fresh existing control-plane authority,
+an expiry of at most 24 hours and no runtime compilation or artifact for that
+release. A tenant-scoped read-only database guard verifies the published source,
+snapshot, actors, failure and absence of a newer source. Execution additionally
+checks actual workload IAM, all target heads and live capability qualification;
+enrollment alone does not prove target readiness. Audit authorization commits
+before enqueueing a deterministic recovery job.
+
+Compile, sign and dispatch revalidate the exact active recovery enrollment,
+expiry, actor status, compiler and source. Recovery evidence participates in the
+qualification receipt covered by runtime signing. Missing, ambiguous, expired or
+revoked authority fails closed. Once artifacts exist, this pre-artifact retry
+entry point cannot overwrite them. An older still-active recovery enrollment
+must be retired through its supported lifecycle before approving a replacement.
+No legacy entity definition or permission expansion is required.
 
 ## Appendix A. Detailed component and behavior inventory
 

@@ -21,6 +21,13 @@ import {
 } from "../../packages/platform/entity/runtime/list-view/src/state";
 
 const digest = "a".repeat(64);
+it("normalizes malformed URL state but never hides descriptor failures", () => {
+  const descriptor = parseEntityListDescriptor(descriptorPayload);
+  for (const query of ["density=bad", "page=-1", "page=NaN", "pageSize=Infinity", "group=%00", "standardView=%00", 'filter.name={"operator":"eq","value":{"bad":true}}'])
+    assert.doesNotThrow(() => decodeListLocationState(query, descriptor));
+  assert.throws(() => decodeListLocationState("density=bad", { ...descriptor, fields: null } as never));
+  assert.throws(() => decodeListLocationState("density=bad", descriptor, { baseState: { density: "bad" } as never }));
+});
 const descriptorPayload = {
   schemaVersion: 1,
   plane: "neon",

@@ -22,6 +22,18 @@ function fixture(rows: Record<string, unknown>[], allowed=true, commentId?:strin
   return {service,sign,schedule,queries,authorizeCapability};
 }
 describe("qualified attachment discovery",()=>{
+  it("deduplicates before cursor pagination and resolves attribution after the bounded page",async()=>{
+    const f=fixture([]);
+    await f.service.browse(context,{entityType:"business_partner",entityId:"record",after:id});
+    const query=f.queries[0]!.sql;
+    const page=query.indexOf("page AS MATERIALIZED");
+    expect(query.indexOf("SELECT DISTINCT ON")).toBeLessThan(page);
+    expect(query.indexOf("WHERE (created_at,id::uuid)")).toBeGreaterThan(page);
+    expect(query.indexOf("collaboration_principal_candidates")).toBeGreaterThan(query.indexOf("LIMIT 51"));
+    expect(query).toContain("v.tenant_id=");
+    expect(query).toContain("v.series_id=page.series_id::uuid");
+    expect(query).toContain("ORDER BY created_at DESC,id::uuid DESC");
+  });
   it("denies before querying or signing",async()=>{
     const f=fixture([],false);await expect(f.service.preview(context,{attachmentId:id})).rejects.toThrow("denied");expect(f.queries).toHaveLength(0);expect(f.sign).not.toHaveBeenCalled();
   });
@@ -68,6 +80,17 @@ describe("qualified attachment discovery",()=>{
 });
 
 describe("content search filters",()=>{
+  it("orders DISTINCT results by the selected UUID expression and keeps UUID cursor comparisons",async()=>{
+    const f=fixture([]);
+    await f.service.search(context,{entityType:"reference_record",entityId:"record",q:"marker",after:id});
+    const query=f.queries.find(query=>query.sql.includes("SELECT DISTINCT"))!;
+    expect(query.sql).toContain("SELECT DISTINCT a.id,a.file_name");
+    expect(query.sql).not.toContain("a.id::text");
+    expect(query.sql).toMatch(/AND a\.id>\$\d+::uuid/);
+    expect(query.sql).toContain("ORDER BY a.id LIMIT 26");
+    expect(query.sql).toContain("a.is_virus_scanned");
+    expect(query.parameters).toContain(context.tenantId);
+  });
   it("applies folder and category in SQL before pagination",async()=>{
     const f=fixture([]);
     await f.service.search(context,{entityType:"business_partner",entityId:"record",q:"invoice",folderId:id,category:"evidence",after:id});
@@ -89,10 +112,10 @@ describe("content search filters",()=>{
 
 describe("record attachment browsing",()=>{
   it("resolves a file outside the loaded page using record-bound preview admission",async()=>{
-    const f=fixture([{id,series_id:id,link_id:id,pinned_attachment_id:id,link_kind:"record",folder_id:null,folder_name:null,category:null,version_no:2,file_name:"proof.pdf",display_name:null,content_type:"application/pdf",size_bytes:10,status:"active",created_at:"2026-01-01T00:00:00.000Z",series_revision:"2",version_history:[{id,version:2,fileName:"proof.pdf",status:"active"}]}]);
+    const f=fixture([{id,series_id:id,link_id:id,pinned_attachment_id:id,link_kind:"record",folder_id:null,folder_name:null,category:null,version_no:2,file_name:"proof.pdf",added_by_display_name:"Record Contributor",added_at:"2026-01-01T00:00:00.000Z",display_name:null,content_type:"application/pdf",size_bytes:10,status:"active",created_at:"2026-01-01T00:00:00.000Z",series_revision:"2",version_history:[{id,version:2,fileName:"proof.pdf",status:"active"}]}]);
     const result=await f.service.browse(context,{entityType:"business_partner",entityId:"record",attachmentId:id});
     expect(f.authorizeCapability).toHaveBeenCalledExactlyOnceWith(context,"preview",{entityType:"business_partner",entityId:"record",attachmentId:id});
-    expect(result.items[0]).toMatchObject({pinnedAttachmentId:id});
+    expect(result.items[0]).toMatchObject({pinnedAttachmentId:id,addedByDisplayName:"Record Contributor",addedAt:"2026-01-01T00:00:00.000Z"});
     expect(result.items[0]).not.toHaveProperty("versionHistory");
     expect(f.queries[0]!.sql).toContain("AND a.id=");
     expect(f.queries[0]!.parameters).toContain("record");

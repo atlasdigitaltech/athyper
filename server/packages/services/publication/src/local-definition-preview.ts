@@ -1,4 +1,7 @@
 /** Local BP preview. Never creates a publication release or approval. */
+import { localPreviewRoot } from "./shared/preview/environment.js";
+// Transitional public path; new consumers should import the shared guard directly.
+export { localPreviewRoot } from "./shared/preview/environment.js";
 import { createHash, randomUUID, sign, verify } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { join } from "node:path";
@@ -13,7 +16,7 @@ import {
 import {
   compileBusinessPartnerDefinition,
   BUSINESS_PARTNER_DEFINITION_COMPILER_VERSION,
-} from "./business-partner-definition-compiler.js";
+} from "./entity-definition-compiler.js";
 import { VerifiedPublicationArtifactLoader } from "./publication-artifact-loader.js";
 import { assessLocalDefinitionChange } from "./local-definition-preview-policy.js";
 
@@ -35,18 +38,6 @@ const canonicalizer = {
 };
 const hash = (value: unknown) =>
   canonicalizer.sha256(canonicalizer.canonicalBytes(value));
-export function localPreviewRoot(
-  env: NodeJS.ProcessEnv = process.env,
-): string | undefined {
-  if (!env.ATHYPER_LOCAL_PREVIEW_ROOT) return;
-  if (
-    env.ATHYPER_DOMAIN_SUFFIX !== "dev.athyper.test" ||
-    env.ATHYPER_LOCAL_WORKSPACE !== "1" ||
-    env.ATHYPER_ENV !== "local"
-  )
-    throw new Error("LOCAL_PREVIEW_ENVIRONMENT_REJECTED");
-  return env.ATHYPER_LOCAL_PREVIEW_ROOT;
-}
 /** v1 intentionally permits text edits only; policy/layout/binding edits need the broader coordinator. */
 export function assertCosmeticDefinitionChange(
   before: unknown,

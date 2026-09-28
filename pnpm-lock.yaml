@@ -108,6 +108,9 @@ importers:
       '@athyper/platform-communications-notifications-client':
         specifier: workspace:*
         version: link:../../packages/platform/communications/notifications-client
+      '@athyper/platform-entity-form-detail':
+        specifier: workspace:*
+        version: link:../../packages/platform/entity/runtime/form-detail
       '@athyper/platform-entity-list-view':
         specifier: workspace:*
         version: link:../../packages/platform/entity/runtime/list-view
@@ -1158,6 +1161,9 @@ importers:
       '@athyper/contract-platform-rich-text':
         specifier: workspace:*
         version: link:../../../contracts/platform/rich-text
+      '@athyper/platform-i18n':
+        specifier: workspace:*
+        version: link:../../foundation/i18n
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../foundation/ui
@@ -2065,6 +2071,9 @@ importers:
       '@athyper/server-contract-documents':
         specifier: workspace:*
         version: link:../../packages/contracts/documents
+      '@athyper/server-contract-entity-governance':
+        specifier: workspace:*
+        version: link:../../packages/contracts/entity-governance
       '@athyper/server-contract-events':
         specifier: workspace:*
         version: link:../../packages/contracts/events
@@ -2173,6 +2182,9 @@ importers:
       '@athyper/server-platform-search':
         specifier: workspace:*
         version: link:../../packages/platform/search
+      '@athyper/server-platform-verification':
+        specifier: workspace:*
+        version: link:../../packages/platform/verification
       '@athyper/server-platform-workflow':
         specifier: workspace:*
         version: link:../../packages/platform/workflow
@@ -2998,6 +3010,25 @@ importers:
       '@athyper/server-contract-rendering':
         specifier: workspace:*
         version: link:../rendering
+      '@athyper/server-foundation':
+        specifier: workspace:*
+        version: link:../../foundation
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
+
+  server/packages/contracts/entity-governance:
+    dependencies:
+      '@athyper/server-contract-auth':
+        specifier: workspace:*
+        version: link:../auth
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
@@ -4208,6 +4239,15 @@ importers:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
 
+  server/packages/platform/verification:
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   server/packages/platform/workflow:
     dependencies:
       '@athyper/contract-platform-activity':
@@ -4522,6 +4562,28 @@ importers:
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
+
+  server/packages/services/entity-governance:
+    dependencies:
+      '@athyper/server-contract-auth':
+        specifier: workspace:*
+        version: link:../../contracts/auth
+      '@athyper/server-contract-entity-governance':
+        specifier: workspace:*
+        version: link:../../contracts/entity-governance
+      '@athyper/server-foundation':
+        specifier: workspace:*
+        version: link:../../foundation
+    devDependencies:
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0

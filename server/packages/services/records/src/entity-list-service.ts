@@ -1,5 +1,6 @@
 import { resolveIntakeFormChoices } from "./intake-form-choices.js";
 import { authorizeListContextDiscovery } from "./list-context-discovery.js";
+import { readablePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
 import {
   parseEntityDetailDescriptor,
   parseEntityFormDescriptor,
@@ -110,6 +111,8 @@ export function createEntityListService(options: {
     >
   >;
   readonly standardViewSources?: StandardViewSources;
+  readonly collaboration?: (input: { context: VerifiedRequestContext; entityCode: string; recordId: string }) => Promise<readonly ("comments" | "attachments")[]>;
+  readonly summary?: (input: { context: VerifiedRequestContext; entityCode: string; recordId: string; releaseId: string }) => Promise<import("@athyper/contract-platform-entity-runtime").EntityRecordSummaryViewV1 | undefined>;
   readonly metadata: MetadataReader;
   readonly authorizer: Authorizer;
   readonly listExecutor: RecordListExecutor;
@@ -181,6 +184,7 @@ export function createEntityListService(options: {
         : (descriptor.listPresentation?.title ?? humanize(entityCode));
       return Object.freeze({
         schemaVersion: 1 as const,
+        ...(descriptor.listPresentation?.localizedLabels ? { localizedLabels: readablePresentationLocalization(descriptor.listPresentation.localizedLabels, []) } : {}),
         plane: descriptor.planeKey,
         entity: Object.freeze({
           code: entityCode,
@@ -514,9 +518,17 @@ export function createEntityListService(options: {
         ),
         titleField,
       );
+      // Both read-only hooks are independent, but neither may run before record
+      // admission and readable-field projection have succeeded. No transaction
+      // is passed between these independently scoped read providers.
+      const [collaboration, summaryView] = await Promise.all([
+        recordId && options.collaboration ? options.collaboration({ context, entityCode, recordId }) : [],
+        recordId && options.summary ? options.summary({ context, entityCode, recordId, releaseId: descriptor.releaseId }) : undefined,
+      ]);
       return parseEntityDetailDescriptor({
         schema: "athyper.entity-detail-descriptor/1",
-        presentation,
+        collaboration,
+        presentation: { ...presentation, summaryView },
         plane: descriptor.planeKey,
         entity: {
           code: entityCode,
@@ -977,6 +989,7 @@ export function compileEntityListDescriptor(
   return Object.freeze({
     schemaVersion: 1,
     serverViews: true,
+    ...(descriptor.listPresentation?.localizedLabels ? { localizedLabels: readablePresentationLocalization(descriptor.listPresentation.localizedLabels, fields.map(field => field.key)) } : {}),
     plane: descriptor.planeKey,
     entity: Object.freeze({
       code: descriptor.entityCode,

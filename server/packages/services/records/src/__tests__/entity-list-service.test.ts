@@ -202,6 +202,48 @@ it("filters record header bindings and checks record identity before offering ed
   expect(detail.presentation?.actions[0]?.label).toBe("Edit partner");
 });
 
+it("projects collaboration only after the requested record is admitted", async () => {
+  const collaboration = vi.fn(async () => ["comments"] as const);
+  const get = vi.fn(async () => ({ data: { partner_uuid: "partner-1", name: "Acme" } as Record<string, unknown> | null }));
+  const lists = createEntityListService({ metadata: { getEntityDescriptor: async () => descriptor }, listExecutor: {} as never,
+    queries: { get } as never, authorizer: allowReadOnly(), collaboration });
+  expect((await lists.detailDescriptor(context, descriptor.entityCode, "partner-1")).collaboration).toEqual(["comments"]);
+  expect(collaboration).toHaveBeenCalledWith({ context, entityCode: descriptor.entityCode, recordId: "partner-1" });
+  collaboration.mockClear();
+  expect((await lists.detailDescriptor(context, descriptor.entityCode)).collaboration).toEqual([]);
+  expect(collaboration).not.toHaveBeenCalled();
+  get.mockResolvedValue({ data: null });
+  await expect(lists.detailDescriptor(context, descriptor.entityCode, "missing")).rejects.toMatchObject({statusCode:404});
+  expect(collaboration).not.toHaveBeenCalled();
+});
+
+it("starts independent detail hooks together and waits for both", async () => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const collaboration = vi.fn(async () => { await gate; return ["comments"] as const; });
+  const summary = vi.fn(async () => { release(); return undefined; });
+  const lists = createEntityListService({ metadata: { getEntityDescriptor: async () => descriptor }, listExecutor: {} as never,
+    queries: { get: async () => ({ data: { partner_uuid: "record", name: "Example" } }) } as never,
+    authorizer: allowReadOnly(), collaboration, summary });
+  expect((await lists.detailDescriptor(context, descriptor.entityCode, "record")).collaboration).toEqual(["comments"]);
+  expect(collaboration).toHaveBeenCalledOnce();
+  expect(summary).toHaveBeenCalledOnce();
+});
+
+it("does not invoke either detail hook before record admission and propagates hook failure", async () => {
+  const collaboration = vi.fn(async () => [] as const);
+  const summary = vi.fn(async () => { throw new Error("summary unavailable"); });
+  const get = vi.fn(async () => ({ data: null as Record<string, unknown> | null }));
+  const lists = createEntityListService({ metadata: { getEntityDescriptor: async () => descriptor }, listExecutor: {} as never,
+    queries: { get } as never, authorizer: allowReadOnly(), collaboration, summary });
+  await lists.detailDescriptor(context, descriptor.entityCode);
+  await expect(lists.detailDescriptor(context, descriptor.entityCode, "missing")).rejects.toMatchObject({ statusCode: 404 });
+  expect(collaboration).not.toHaveBeenCalled();
+  expect(summary).not.toHaveBeenCalled();
+  get.mockResolvedValue({ data: { partner_uuid: "record", name: "Example" } });
+  await expect(lists.detailDescriptor(context, descriptor.entityCode, "record")).rejects.toThrow("summary unavailable");
+});
+
 it("resolves country choices only for authorized fields and removes text operators", async () => {
   const country = { key: "country", storagePath: "country_code", type: "string" as const, required: false, writableOn: [] as const, filterable: true, list: { semanticRole: "country_code" } };
   const published = { ...descriptor, fields: [...descriptor.fields, country, { ...country, key: "private_country", readPermissionCode: "partner.tax.read" }], listPresentation: { filterPresentation: { quickFields: [{ field: "country", defaultOperator: "contains" as const }] } } };

@@ -12,6 +12,24 @@ export interface RecordSource {
   readonly sourceObject: string;
   readonly observedAt: string;
 }
+export interface RecordFooterInformation {
+  readonly recordId: string;
+  readonly metadataRelease: string | number;
+  readonly recordRevision?: string | number;
+}
+type InformationRegistration = {
+  owner: object;
+  scopeKey: string;
+  information?: RecordFooterInformation;
+};
+const InformationContext = createContext<
+  | {
+      information?: RecordFooterInformation;
+      scopeKey: string;
+      register: (value: InformationRegistration) => () => void;
+    }
+  | undefined
+>(undefined);
 type Registration = {
   readonly owner: object;
   readonly scopeKey: string;
@@ -33,6 +51,23 @@ export function RecordFooterProvider({
   readonly scopeKey?: string;
 }) {
   const [registration, setRegistration] = useState<Registration>();
+  const [informationRegistration, setInformationRegistration] =
+    useState<InformationRegistration>();
+  const registerInformation = useCallback((value: InformationRegistration) => {
+    setInformationRegistration(value);
+    return () =>
+      setInformationRegistration((current) =>
+        current?.owner === value.owner ? undefined : current,
+      );
+  }, []);
+  const information =
+    informationRegistration?.scopeKey === scopeKey
+      ? informationRegistration.information
+      : undefined;
+  const informationValue = useMemo(
+    () => ({ information, scopeKey, register: registerInformation }),
+    [information, scopeKey, registerInformation],
+  );
   const register = useCallback((value: Registration) => {
     setRegistration(value);
     return () =>
@@ -47,7 +82,33 @@ export function RecordFooterProvider({
     () => ({ sources, scopeKey, register }),
     [sources, scopeKey, register],
   );
-  return <Context.Provider value={value}>{children}</Context.Provider>;
+  return (
+    <Context.Provider value={value}>
+      <InformationContext.Provider value={informationValue}>
+        {children}
+      </InformationContext.Provider>
+    </Context.Provider>
+  );
+}
+/** Structured, already-authorized identifiers only; no record values or credentials. */
+export function useRecordFooterInformation(
+  information?: RecordFooterInformation,
+) {
+  const context = useContext(InformationContext);
+  const register = context?.register,
+    scopeKey = context?.scopeKey;
+  const serialized = JSON.stringify(information);
+  useEffect(() => {
+    if (!register || scopeKey === undefined) return;
+    return register({
+      owner: {},
+      scopeKey,
+      information: serialized ? JSON.parse(serialized) : undefined,
+    });
+  }, [register, scopeKey, serialized]);
+}
+export function useActiveRecordFooterInformation() {
+  return useContext(InformationContext)?.information;
 }
 /** Only the active, authorized record section owns the footer provenance. */
 export function useRecordFooterSources(sources: readonly RecordSource[]) {

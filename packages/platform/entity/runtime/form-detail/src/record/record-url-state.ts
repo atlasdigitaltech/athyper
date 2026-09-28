@@ -13,11 +13,9 @@ export function readSection(
   return tab ? sectionForTab?.(tab) : undefined;
 }
 export function readCollaborationFull(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("collaborationMode") ===
-      "content"
-  );
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(max-width:1100px)").matches ||
+    new URLSearchParams(window.location.search).get("collaborationMode") !== "side";
 }
 export function readCollaborationOpen(): boolean {
   if (typeof window === "undefined") return false;

@@ -1,0 +1,39 @@
+Command: pnpm --dir server/apps/platform-host test
+Exit: 1
+ Test Files  6 failed | 64 passed | 1 skipped (71)
+      Tests  16 failed | 474 passed | 1 skipped (491)
+   Duration  5.70s (transform 31.13s, setup 0ms, import 65.75s, tests 3.06s, environment 6ms)
+ FAIL  src/composition/__tests__/business-partner-backend-intents.test.ts [ src/composition/__tests__/business-partner-backend-intents.test.ts ]
+Error: ENTITY_PERMISSION_TRANSITIONS_REQUIRED
+ FAIL  src/composition/__tests__/business-partner-backend-mapping.test.ts [ src/composition/__tests__/business-partner-backend-mapping.test.ts ]
+Error: ENTITY_PERMISSION_TRANSITIONS_REQUIRED
+ FAIL  src/composition/__tests__/partner-section-contract.test.ts [ src/composition/__tests__/partner-section-contract.test.ts ]
+Error: Cannot find module '../entities/business-partner-record-providers.js' imported from /home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/partner-section-contract.test.ts
+⎯⎯⎯⎯⎯⎯ Failed Tests 16 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/composition/__tests__/master-data-authority.test.ts > master-data canonical authority with the real IAM evaluator > accepts root binding plus both exact organization capabilities
+TypeError: Cannot read properties of undefined (reading 'profile.read')
+ FAIL  src/composition/__tests__/master-data-authority.test.ts > master-data canonical authority with the real IAM evaluator > preserves foreign_scope denial
+ FAIL  src/composition/__tests__/master-data-authority.test.ts > master-data canonical authority with the real IAM evaluator > preserves explicit_deny denial
+ FAIL  src/composition/__tests__/master-data-authority.test.ts > master-data canonical authority with the real IAM evaluator > preserves missing_capability denial
+ FAIL  src/composition/__tests__/master-data-authority.test.ts > master-data canonical authority with the real IAM evaluator > preserves missing_binding denial
+ FAIL  src/composition/__tests__/master-data-authority.test.ts > master-data canonical authority with the real IAM evaluator > preserves mfa denial
+ FAIL  src/composition/__tests__/master-data-authority.test.ts > master-data canonical authority with the real IAM evaluator > preserves entitlement denial
+ FAIL  src/composition/__tests__/master-data-authority.test.ts > master-data canonical authority with the real IAM evaluator > preserves sod denial
+ FAIL  src/composition/__tests__/master-data-authority.test.ts > master-data canonical authority with the real IAM evaluator > preserves policy denial
+TypeError: Cannot read properties of undefined (reading 'profile.read')
+ FAIL  src/composition/__tests__/master-data-vertical.test.ts > master data host registration > mounts all six routes with the real service factory and verified IAM context
+AssertionError: expected undefined to be defined
+ FAIL  src/composition/__tests__/master-data-vertical.test.ts > master data host registration > authenticates every mounted route before calling dependencies
+AssertionError: expected 404 to be 401 // Object.is equality
+ FAIL  src/composition/__tests__/master-data-vertical.test.ts > master data host registration > keeps persistence operations available when the verification provider is absent
+AssertionError: expected 404 to be 204 // Object.is equality
+ FAIL  src/composition/__tests__/master-data-vertical.test.ts > master data host registration > uses the configured production verifier and rejects contact-value tampering
+TypeError: contactVerificationSigningBytes is not a function
+ FAIL  src/composition/__tests__/master-data-vertical.test.ts > master data host registration > preserves permission denial on every configured route
+AssertionError: expected 404 to be 403 // Object.is equality
+ FAIL  src/composition/__tests__/master-data-vertical.test.ts > master data host registration > returns authenticated 503 responses instead of 404 when adapters are absent
+AssertionError: expected 404 to be 401 // Object.is equality
+ FAIL  src/composition/__tests__/optional-capability-readiness.test.ts > optional capability readiness > does not fail readiness for routes that composition deliberately leaves disabled
+AssertionError: expected 'import { collaborationEntityCode, col…' to match /message:\s*"Studio onboarding routes …/
+
+Targeted publication-qualification and entity-runtime-handler-registry suites: 2 passed, 7 tests passed.

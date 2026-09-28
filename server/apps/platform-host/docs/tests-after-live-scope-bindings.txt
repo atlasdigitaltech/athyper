@@ -1,0 +1,29 @@
+Date: 2026-09-26
+
+Live PostgreSQL command:
+ENTITY_SCOPE_POSTGRES_TEST=1 pnpm --dir server/apps/platform-host test src/composition/__tests__/persisted-scopes.postgres.test.ts
+Exit: 0
+Test Files: 1 passed (1)
+Tests: 8 passed (8)
+Duration: 1.57s
+Database: new disposable container, athyper/postgres:16.15-hardened, tmpfs data, loopback ephemeral port.
+Runtime role: scope_reader, NOSUPERUSER NOBYPASSRLS, not table owner.
+Fixture table: ENABLE and FORCE ROW LEVEL SECURITY with tenant + principal policy.
+Cleanup: container stopped and automatically removed; no scope-test containers remained.
+
+Separate default full host run:
+pnpm --dir server/apps/platform-host test
+Exit: 0
+Test Files: 72 passed | 2 skipped (74)
+Tests: 531 passed | 9 skipped (540)
+Duration: 5.09s
+Eight new PostgreSQL tests skip by default; they were executed explicitly above.
+The previously existing MESH PostgreSQL test remains skipped.
+
+Separate source typecheck:
+pnpm --dir server/apps/platform-host typecheck
+Exit: 2
+src/composition/entity-case-preflight.ts(2,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartnerCaseRepository'.
+
+Limits: fixture RLS only, not production product policies/catalog constraints.
+No live product DDL, publication, API startup, login or isolated-profile verification.
