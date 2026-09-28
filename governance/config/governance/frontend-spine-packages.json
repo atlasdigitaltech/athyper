@@ -184,6 +184,8 @@
     {
       "path": "packages/platform/entity/runtime/workflow-ui",
       "name": "@athyper/platform-entity-workflow-ui",
+      "implementationStatus": "reserved-placeholder",
+      "implementationNote": "src/index.ts exports no implementation; inventory membership is not runtime activation.",
       "owner": "UI Platform",
       "classification": "Shared platform",
       "dependencyBudget": {
