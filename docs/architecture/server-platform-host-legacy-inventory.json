@@ -21,12 +21,12 @@
     "configuration:new": 225,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
-    "database-commands:new": 98,
+    "database-commands:new": 99,
     "jobs:deferred": 1,
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 336,
+    "operational-scripts:new": 360,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -10463,6 +10463,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "database-commands:db:verify:ddl-manifest-coverage",
+      "category": "database-commands",
+      "key": "db:verify:ddl-manifest-coverage",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/package.json"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "database-commands:db:verify:ddl-model",
       "category": "database-commands",
       "key": "db:verify:ddl-model",
@@ -12373,6 +12385,282 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260922_attachment_workspace.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260922_workforce_as_of_projection",
+      "category": "operational-scripts",
+      "key": "20260922_workforce_as_of_projection",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260922_workforce_as_of_projection.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260923_collection_configuration",
+      "category": "operational-scripts",
+      "key": "20260923_collection_configuration",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260923_collection_configuration.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260923_entity_notification_discovery",
+      "category": "operational-scripts",
+      "key": "20260923_entity_notification_discovery",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260923_entity_notification_discovery.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260923_notification_compilation_source",
+      "category": "operational-scripts",
+      "key": "20260923_notification_compilation_source",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260923_notification_compilation_source.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260923_notification_configuration",
+      "category": "operational-scripts",
+      "key": "20260923_notification_configuration",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260923_notification_configuration.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260923_notification_operations_permissions",
+      "category": "operational-scripts",
+      "key": "20260923_notification_operations_permissions",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260923_notification_operations_permissions.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260924_publication_provenance_recovery",
+      "category": "operational-scripts",
+      "key": "20260924_publication_provenance_recovery",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260924_publication_provenance_recovery.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260924_publication_recovery_audit",
+      "category": "operational-scripts",
+      "key": "20260924_publication_recovery_audit",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260924_publication_recovery_audit.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260924_publication_recovery_successor",
+      "category": "operational-scripts",
+      "key": "20260924_publication_recovery_successor",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260924_publication_recovery_successor.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260926_common_reference_permission",
+      "category": "operational-scripts",
+      "key": "20260926_common_reference_permission",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260926_common_reference_permission.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260926_compiled_runtime_publication_source",
+      "category": "operational-scripts",
+      "key": "20260926_compiled_runtime_publication_source",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260926_compiled_runtime_publication_source.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260926_entity_execution_binding_storage",
+      "category": "operational-scripts",
+      "key": "20260926_entity_execution_binding_storage",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260926_entity_execution_binding_storage.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260926_studio_entity_operation_bindings",
+      "category": "operational-scripts",
+      "key": "20260926_studio_entity_operation_bindings",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260926_studio_entity_operation_bindings.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260928_capability_profile_authoring",
+      "category": "operational-scripts",
+      "key": "20260928_capability_profile_authoring",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260928_capability_profile_authoring.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260928_comment_attachment_drafts",
+      "category": "operational-scripts",
+      "key": "20260928_comment_attachment_drafts",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260928_comment_attachment_drafts.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260928_comment_mention_directory",
+      "category": "operational-scripts",
+      "key": "20260928_comment_mention_directory",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260928_comment_mention_directory.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260928_entity_activity_authoring",
+      "category": "operational-scripts",
+      "key": "20260928_entity_activity_authoring",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260928_entity_activity_authoring.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260928_entity_activity_permissions",
+      "category": "operational-scripts",
+      "key": "20260928_entity_activity_permissions",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260928_entity_activity_permissions.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260928_record_history",
+      "category": "operational-scripts",
+      "key": "20260928_record_history",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260928_record_history.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260929_compiled_entity_verification",
+      "category": "operational-scripts",
+      "key": "20260929_compiled_entity_verification",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260929_compiled_entity_verification.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260929_entity_owner_access",
+      "category": "operational-scripts",
+      "key": "20260929_entity_owner_access",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260929_entity_owner_access.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260929_identity_operation_projection",
+      "category": "operational-scripts",
+      "key": "20260929_identity_operation_projection",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260929_identity_operation_projection.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260929_table_entity_publication",
+      "category": "operational-scripts",
+      "key": "20260929_table_entity_publication",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/post-baseline-20260929/20260929_table_entity_publication.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -15577,6 +15865,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/lib/main.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:manifest-coverage",
+      "category": "operational-scripts",
+      "key": "manifest-coverage",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/checks/ddl/manifest-coverage.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

@@ -67,7 +67,7 @@ pnpm urls:check
 pnpm urls:check --live
 ```
 
-The offline check cannot detect an independently changed deployment. Run the live check after deployments. The source scanners resolve literal routes, route contracts, local helper factories, finite string/tuple/object loops and path arrays. Unresolved recognized route declarations fail generation instead of being silently omitted. New registration conventions require extending the scanners. Raw Express routes are not automatically included by the Runtime OpenAPI generator; see the tracked OpenAPI migration debt.
+The offline check cannot detect an independently changed deployment. Run the live check after deployments. The source scanners resolve literal routes, route contracts, local helper factories, finite string/tuple/object loops and path arrays. Unresolved recognized route declarations fail generation instead of being silently omitted. New registration conventions require extending the scanners. Raw Express routes are not automatically included by the Runtime OpenAPI generator; see [the tracked OpenAPI migration debt](../../../tooling/tools/scripts/openapi-undocumented-baseline.json).
 
 ## Runtime discovery
 
@@ -1032,11 +1032,11 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **GET** [/api/platform/verification](https://api.dev.athyper.test/api/platform/verification)  
   platform.verification.snapshot — Run authenticated read-only platform verification  
-  Source match: source
+  Source match: [source](../../server/apps/platform-host/src/composition/shared/verification/routes.ts)
 
 - **POST** [/api/platform/verification/runs](https://api.dev.athyper.test/api/platform/verification/runs)  
   platform.verification.run — Run bounded synthetic platform verification  
-  Source match: source
+  Source match: [source](../../server/apps/platform-host/src/composition/shared/verification/routes.ts)
 
 ### Public Records Transfer V1
 
@@ -1419,10 +1419,10 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Route contract · [source](../../server/packages/platform/ai/src/atlas-routes.ts)
 
 - **POST** [/api/atlas/knowledge/attachments/reindex](https://api.dev.athyper.test/api/atlas/knowledge/attachments/reindex)  
-  Route contract · source
+  Route contract · [source](../../server/apps/platform-host/src/composition/shared/ai/atlas-attachment-knowledge.ts)
 
 - **POST** [/api/atlas/knowledge/search](https://api.dev.athyper.test/api/atlas/knowledge/search)  
-  Route contract · source
+  Route contract · [source](../../server/apps/platform-host/src/composition/shared/ai/atlas-attachment-knowledge.ts)
 
 - **POST** [/api/atlas/learning-candidates](https://api.dev.athyper.test/api/atlas/learning-candidates)  
   Route contract · [source](../../server/packages/platform/ai/src/atlas-routes.ts)
