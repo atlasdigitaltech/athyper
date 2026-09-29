@@ -13,9 +13,6 @@ importers:
 
   .:
     devDependencies:
-      '@athyper/platform-iam-governance-review':
-        specifier: workspace:*
-        version: link:packages/platform/iam/governance-review
       '@axe-core/playwright':
         specifier: ^4.12.1
         version: 4.12.1(playwright-core@1.60.0)
@@ -214,9 +211,6 @@ importers:
       '@athyper/platform-iam-auth-bff':
         specifier: workspace:*
         version: link:../../packages/platform/iam/auth-bff
-      '@athyper/platform-iam-governance-review':
-        specifier: workspace:*
-        version: link:../../packages/platform/iam/governance-review
       '@athyper/platform-iam-identity-gate':
         specifier: workspace:*
         version: link:../../packages/platform/iam/identity-gate
@@ -244,9 +238,6 @@ importers:
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/ui
-      '@athyper/product-neon-entity-extensions':
-        specifier: workspace:*
-        version: link:../../packages/planes/neon/entity-extensions
       '@athyper/product-neon-list-view':
         specifier: workspace:*
         version: link:../../packages/planes/neon/list-view
@@ -730,37 +721,6 @@ importers:
       react:
         specifier: ^19.2.5
         version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/neon/entity-extensions:
-    dependencies:
-      '@athyper/contract-platform-entity-runtime':
-        specifier: workspace:*
-        version: link:../../../contracts/platform/entity-runtime
-      '@athyper/platform-api-client':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/api-client
-      '@athyper/platform-entity-descriptor-client':
-        specifier: workspace:*
-        version: link:../../../platform/entity/runtime/descriptor-client
-      '@athyper/platform-entity-form-detail':
-        specifier: workspace:*
-        version: link:../../../platform/entity/runtime/form-detail
-      '@athyper/platform-icons':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/icons
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1420,12 +1380,6 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
-
-  packages/platform/iam/governance-review:
-    devDependencies:
-      '@athyper/platform-iam-auth-bff':
-        specifier: workspace:*
-        version: link:../auth-bff
 
   packages/platform/iam/identity-gate:
     dependencies:

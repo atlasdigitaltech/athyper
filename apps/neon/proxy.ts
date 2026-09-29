@@ -1,18 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { parseEntityApplicationPath } from "@athyper/contract-platform-entity-runtime";
 import { destinationRequestHeaders } from "@athyper/platform-shell-app-foundation/request-destination";
-import { entityRecordAuthorizationPath } from "@/lib/entity-route-context";
 import { resolveNeonEntityApplicationInternalRoute, resolveNeonEntityApplicationPublicRoute } from "@/lib/catalog-routes";
 
 export function proxy(request: NextRequest) {
-  const recordPath = entityRecordAuthorizationPath(request.nextUrl.pathname);
-  if (recordPath) {
-    const authorized = request.nextUrl.clone();
-    authorized.pathname = recordPath;
-    return NextResponse.next({
-      request: { headers: destinationRequestHeaders({ url: authorized.toString(), headers: request.headers }) },
-    });
-  }
   const publicRoute = resolveNeonEntityApplicationPublicRoute(request.nextUrl.pathname);
   if (publicRoute) {
     const internal = request.nextUrl.clone();

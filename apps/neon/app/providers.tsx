@@ -9,7 +9,6 @@ import {
 import { useMemo, type ReactNode } from "react";
 import { ShellRouteProvider } from "@athyper/platform-shell";
 import { useRouter, usePathname } from "next/navigation";
-import { entityRecordAuthorizationPath } from "@/lib/entity-route-context";
 
 export function AppProviders({ session, bootstrap, dehydratedState, children }: {
   readonly session: SanitizedSession;
@@ -33,7 +32,7 @@ export function AppProviders({ session, bootstrap, dehydratedState, children }: 
       onBootstrapRevalidation={() => router.refresh()}
       onAuthenticationFailure={() => window.location.assign("/api/auth/login")}
     >
-      <ShellRouteProvider pathname={entityRecordAuthorizationPath(pathname) ?? pathname}>{children}</ShellRouteProvider>
+      <ShellRouteProvider pathname={pathname}>{children}</ShellRouteProvider>
     </BrowserApplicationProviders>
   );
 }

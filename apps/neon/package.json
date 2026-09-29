@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@athyper/contract-platform-entity-runtime": "workspace:*",
-    "@athyper/product-neon-entity-extensions": "workspace:*",
     "@athyper/contract-platform-navigation": "workspace:*",
     "@athyper/contract-platform-dashboard": "workspace:*",
     "@athyper/platform-gateway-bff-relay": "workspace:*",
@@ -36,8 +35,7 @@
     "geist": "^1.3.1",
     "next": "16.3.3",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "@athyper/platform-iam-governance-review": "workspace:*"
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",

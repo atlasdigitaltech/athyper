@@ -279,7 +279,6 @@
     "tsx": "^4.21.0",
     "turbo": "^2.9.6",
     "typescript": "^6.0.3",
-    "yaml": "2.9.0",
-    "@athyper/platform-iam-governance-review": "workspace:*"
+    "yaml": "2.9.0"
   }
 }
