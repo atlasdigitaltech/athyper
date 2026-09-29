@@ -3,63 +3,77 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20260928_capability_profile_authoring.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260928_capability_profile_authoring.sql",
+      "sha256": "03c6119885a73d8e479bf383bc942a5c3ff9aaed68b862f3fa60a02e0a6774c6",
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Add profile, profile_definition and overrides authoring storage to metadata.entity_capability for databases built before the columns joined the baseline table.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/03_tables.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
+      ]
+    },
+    {
       "originalPath": "migrations/20260929_compiled_entity_verification.sql",
-      "path": "migrations/20260929_compiled_entity_verification.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260929_compiled_entity_verification.sql",
       "sha256": "164fa958bafc7a75e5791b950d63873ceaad685e04c697a150c060a85e00b0d5",
-      "planes": [
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Verify native compiled entity publications using their required immutable payload projection while retaining legacy descriptor verification.",
+      "canonicalPaths": [
+        "ddl/common/runtime_meta/07_functions.sql"
+      ],
+      "legacyPlanes": [
         "studio",
         "neon",
         "mesh"
-      ],
-      "disposition": "forward-upgrade",
-      "callers": [],
-      "reason": "Verify native compiled entity publications using their required immutable payload projection while retaining legacy descriptor verification.",
-      "canonicalPaths": [
-        "ddl/common/runtime_meta/07_functions.sql"
       ]
     },
     {
       "originalPath": "migrations/20260929_identity_operation_projection.sql",
-      "path": "migrations/20260929_identity_operation_projection.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260929_identity_operation_projection.sql",
       "sha256": "d45ed71dac79267bb53d7b9908946fbb769f781de10c3db7695c24620bdb576b",
-      "planes": [
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Admit published identity capabilities through the existing operation projection with exact owner/tenant/operation matching.",
+      "canonicalPaths": [
+        "ddl/common/authz/07_functions.sql"
+      ],
+      "legacyPlanes": [
         "studio",
         "neon",
         "mesh"
-      ],
-      "disposition": "forward-upgrade",
-      "callers": [],
-      "reason": "Admit published identity capabilities through the existing operation projection with exact owner/tenant/operation matching.",
-      "canonicalPaths": [
-        "ddl/common/authz/07_functions.sql"
       ]
     },
     {
       "originalPath": "migrations/20260929_table_entity_publication.sql",
-      "path": "migrations/20260929_table_entity_publication.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260929_table_entity_publication.sql",
       "sha256": "bf0f2eca4c0c7cc4f56d779a2afb651093bf664a6220d32556dd282bd57f6247",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Extend existing governed publication to business/configuration entities without bypassing enrollment, approval or activation.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Extend existing governed publication to business/configuration entities without bypassing enrollment, approval or activation.",
       "canonicalPaths": [
         "ddl/planes/studio/publication/15_system_entity_commands.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260929_entity_owner_access.sql",
-      "path": "migrations/20260929_entity_owner_access.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260929_entity_owner_access.sql",
       "sha256": "f2ec68d1801156d4ead6368cdcf998183f67f7f66d5d442beb6ec27ed6262731",
-      "planes": [
-        "studio",
-        "neon",
-        "mesh"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Shared Entity Framework owner/admin isolation, optimistic concurrency and default membership enrollment for Principal entity onboarding.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Shared Entity Framework owner/admin isolation, optimistic concurrency and default membership enrollment for Principal entity onboarding.",
       "canonicalPaths": [
         "ddl/common/master/03_platform_tables.sql",
         "ddl/common/authz/20_common_identity_permissions.sql",
@@ -67,148 +81,162 @@
         "ddl/planes/studio/master/26_entity_owner_access.sql",
         "ddl/planes/neon/master/26_entity_owner_access.sql",
         "ddl/planes/mesh/master/26_entity_owner_access.sql"
+      ],
+      "legacyPlanes": [
+        "studio",
+        "neon",
+        "mesh"
       ]
     },
     {
       "originalPath": "migrations/20260928_comment_mention_directory.sql",
-      "path": "migrations/20260928_comment_mention_directory.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260928_comment_mention_directory.sql",
       "sha256": "1f454de470ce144e6d8bc514fbc22fc3171ded8f595bfd6217626c9ebb822209",
-      "planes": [
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Expose eligible participant usernames for mention search without changing record admission.",
+      "canonicalPaths": [
+        "ddl/common/document/14_collaboration_participant_directory.sql"
+      ],
+      "legacyPlanes": [
         "studio",
         "neon",
         "mesh"
-      ],
-      "disposition": "forward-upgrade",
-      "callers": [],
-      "reason": "Expose eligible participant usernames for mention search without changing record admission.",
-      "canonicalPaths": [
-        "ddl/common/document/14_collaboration_participant_directory.sql"
       ]
     },
     {
       "originalPath": "migrations/20260928_comment_attachment_drafts.sql",
-      "path": "migrations/20260928_comment_attachment_drafts.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260928_comment_attachment_drafts.sql",
       "sha256": "afe4b9abd8a76b0d4cb5ed1dea219bbf1798a41c445bdbaad763d8f52c899209",
-      "planes": [
-        "studio",
-        "neon",
-        "mesh"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Allow empty owned drafts before uploading comment attachments; retain draft length limit and published-comment validation.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Allow empty owned drafts before uploading comment attachments; retain draft length limit and published-comment validation.",
       "canonicalPaths": [
         "ddl/common/document/03_foundation_tables.sql",
         "ddl/planes/neon/document/07_functions.sql",
         "ddl/planes/studio/document/07_functions.sql",
         "ddl/planes/mesh/document/07_functions.sql"
+      ],
+      "legacyPlanes": [
+        "studio",
+        "neon",
+        "mesh"
       ]
     },
     {
       "originalPath": "migrations/20260926_compiled_runtime_publication_source.sql",
-      "path": "migrations/20260926_compiled_runtime_publication_source.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260926_compiled_runtime_publication_source.sql",
       "sha256": "d91d893e215fc4c530c20fdb4ea5a5f506d0b4baf1212f632c07193bce5e7ec7",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Scoped immutable split-runtime compilation source and workload audit contract; no approvals or activation. Not deployed by this checkpoint.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Scoped immutable split-runtime compilation source and workload audit contract; no approvals or activation. Not deployed by this checkpoint.",
       "canonicalPaths": [
         "ddl/planes/studio/publication/14_compiled_entity_runtime.sql",
         "ddl/common/audit/12_reference_seed.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260926_entity_execution_binding_storage.sql",
-      "path": "migrations/20260926_entity_execution_binding_storage.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260926_entity_execution_binding_storage.sql",
       "sha256": "3ef87b26ad0f35e8b2483fee8edb8bf41f7adc2a70cf9ba7605e0433f63d9ea1",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [
         "server/db/scripts/operations/publication/import-dev-reference-product.ts"
       ],
-      "reason": "Install normalized execution-binding storage for graph reads; force RLS and withhold application writes pending governed-command policy. No approval or activation.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Install normalized execution-binding storage for graph reads; force RLS and withhold application writes pending governed-command policy. No approval or activation.",
       "canonicalPaths": [
         "ddl/planes/studio/metadata/03_tables.sql",
         "ddl/planes/studio/metadata/05_constraints.sql",
         "ddl/planes/studio/metadata/10_rls.sql",
         "ddl/planes/studio/metadata/11_grants.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260926_common_reference_permission.sql",
-      "path": "migrations/20260926_common_reference_permission.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260926_common_reference_permission.sql",
       "sha256": "69a5a8a474b4fe7475640349937b72cf92163fc9870810b2aec705f2ab13fdf9",
-      "planes": [
-        "studio",
-        "neon",
-        "mesh"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Admit the exact common reference capability for qualified read-only descriptors and seed its plane-local catalog definition; no grants or activation.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Admit the exact common reference capability for qualified read-only descriptors and seed its plane-local catalog definition; no grants or activation.",
       "canonicalPaths": [
         "ddl/common/authz/07_functions.sql",
         "ddl/common/authz/17_common_reference_permission.sql"
+      ],
+      "legacyPlanes": [
+        "studio",
+        "neon",
+        "mesh"
       ]
     },
     {
       "originalPath": "migrations/20260926_studio_entity_operation_bindings.sql",
-      "path": "migrations/20260926_studio_entity_operation_bindings.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260926_studio_entity_operation_bindings.sql",
       "sha256": "76144a44d3ac0c80944a75a6366719c857ef150765be8c53955a2c5295044945",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Allow Studio-plane metadata operation permission and scope bindings; no grants or releases.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Allow Studio-plane metadata operation permission and scope bindings; no grants or releases.",
       "canonicalPaths": [
         "ddl/planes/studio/metadata/03_tables.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260924_publication_recovery_audit.sql",
-      "path": "migrations/20260924_publication_recovery_audit.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260924_publication_recovery_audit.sql",
       "sha256": "af7265650c08eaf3d4fff9d2ab40457ab7954b98425c7264ce9511cdd32d8eaf",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Register exact recovery activation audit event; service-account-only, critical, tenant scoped.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Register exact recovery activation audit event; service-account-only, critical, tenant scoped.",
       "canonicalPaths": [
         "ddl/planes/studio/metadata/20_publication_recovery_audit.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260924_publication_recovery_successor.sql",
-      "path": "migrations/20260924_publication_recovery_successor.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260924_publication_recovery_successor.sql",
       "sha256": "de63f4c56ea6ec18214d670ce9cd950725ea444bd27d9d57d5d7ff926e3a124b",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Append-only reviewed successor permits preserve revoked evidence and permit catalog-only rebinding.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Append-only reviewed successor permits preserve revoked evidence and permit catalog-only rebinding.",
       "canonicalPaths": [
         "ddl/planes/studio/metadata/19_publication_recovery_successor.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260924_publication_provenance_recovery.sql",
-      "path": "migrations/20260924_publication_provenance_recovery.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260924_publication_provenance_recovery.sql",
       "sha256": "7a56639c3350798adb0328c2b972389f4cce34cee6ab41b239831755ccbea7e4",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Immutable operator-controlled provenance archive; no authoring guard bypass or permission grants.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Immutable operator-controlled provenance archive; no authoring guard bypass or permission grants.",
       "canonicalPaths": [
         "ddl/planes/studio/metadata/18_publication_recovery.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
@@ -499,10 +527,7 @@
       "planes": [],
       "disposition": "operational-upgrade",
       "path": "scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql",
-      "callers": [
-        "tooling/scripts/verification/qualify-business-partner-successor-sql.mjs",
-        "tooling/scripts/verification/deploy-business-partner-successor-materializer.mjs"
-      ],
+      "callers": [],
       "reason": "Explicit upgrade for existing or isolated target schemas; bytes preserved and excluded from automatic manifests."
     },
     {
@@ -971,9 +996,7 @@
       "planes": [],
       "disposition": "historical-fixture",
       "path": "scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql",
-      "callers": [
-        "tooling/scripts/verification/qualify-business-partner-v2-successor-sql.mjs"
-      ],
+      "callers": [],
       "reason": "Historical schema upgrade input retained beside integration fixtures; current foundation DDL is not a substitute for this legacy test setup."
     },
     {
@@ -1327,134 +1350,143 @@
     },
     {
       "originalPath": "migrations/20260923_collection_configuration.sql",
-      "path": "migrations/20260923_collection_configuration.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260923_collection_configuration.sql",
       "sha256": "e6a890614ef5a4af13bc6e47ea9f3367d60920c7cf73b89a5efed59146d75847",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Collection configuration publication functions; retain exact existing SQL bytes.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Collection configuration publication functions; retain exact existing SQL bytes.",
       "canonicalPaths": [
         "ddl/planes/studio/publication/13_collection_configuration.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260923_notification_configuration.sql",
-      "path": "migrations/20260923_notification_configuration.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260923_notification_configuration.sql",
       "sha256": "cb2ad1ca79bfd464df25424b1b953fe89e7543da00a00c9329fdbfea8d28dd5d",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Notification configuration publication; retain exact existing SQL bytes.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Notification configuration publication; retain exact existing SQL bytes.",
       "canonicalPaths": [
         "ddl/planes/studio/publication/12_notification_configuration.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260923_notification_compilation_source.sql",
-      "path": "migrations/20260923_notification_compilation_source.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260923_notification_compilation_source.sql",
       "sha256": "31d6f1e9a1652c4c81f812361029cb523597fc756ffb6b8c575e6bd4749c8818",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Reviewed notification compilation source; retain exact existing SQL bytes.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Reviewed notification compilation source; retain exact existing SQL bytes.",
       "canonicalPaths": [
         "ddl/planes/studio/publication/12_notification_configuration.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260923_entity_notification_discovery.sql",
-      "path": "migrations/20260923_entity_notification_discovery.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260923_entity_notification_discovery.sql",
       "sha256": "5c9a1acb51616024aaab96140a32e65c079ba4e5fea2ffeb416e19a288f01e90",
-      "planes": [
-        "neon"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Entity notification discovery and dedup index; retain exact existing SQL bytes.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Entity notification discovery and dedup index; retain exact existing SQL bytes.",
       "canonicalPaths": [
         "ddl/common/event/07_functions.sql",
         "ddl/common/event/06_indexes.sql"
+      ],
+      "legacyPlanes": [
+        "neon"
       ]
     },
     {
       "originalPath": "migrations/20260923_notification_operations_permissions.sql",
-      "path": "migrations/20260923_notification_operations_permissions.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260923_notification_operations_permissions.sql",
       "sha256": "53a64412ec4f729b252c6e61caaa58e0e1c1864793f84812429e02f8bdefa6b2",
-      "planes": [
-        "neon"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Notification operations capability catalog; no user grants. Retain exact existing SQL bytes.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Notification operations capability catalog; no user grants. Retain exact existing SQL bytes.",
       "canonicalPaths": [
         "ddl/planes/neon/authz/24_notification_operations_permissions.sql"
+      ],
+      "legacyPlanes": [
+        "neon"
       ]
     },
     {
       "originalPath": "migrations/20260922_workforce_as_of_projection.sql",
-      "path": "migrations/20260922_workforce_as_of_projection.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260922_workforce_as_of_projection.sql",
       "sha256": "e24f71fd2ea51bf00d8140f46d7e9d0759cc762dfe249241c35e656f70e632d6",
-      "planes": [
-        "neon"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Stage 0 data-preserving Employee 360 correction: allow unallocated person numbers and select only current effective employment and assignment rows.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Stage 0 data-preserving Employee 360 correction: allow unallocated person numbers and select only current effective employment and assignment rows.",
       "canonicalPaths": [
         "ddl/planes/neon/master/03_tables.sql",
         "ddl/planes/neon/master/09_views.sql"
+      ],
+      "legacyPlanes": [
+        "neon"
       ]
     },
     {
       "originalPath": "migrations/20260928_entity_activity_permissions.sql",
-      "path": "migrations/20260928_entity_activity_permissions.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260928_entity_activity_permissions.sql",
       "sha256": "c276a9f88d343cd2aa4395899c923c217132d7dac6ffb43c258da1131a424e68",
-      "planes": [
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Meta Entity Activity foundation; no role grants or runtime activation.",
+      "canonicalPaths": [
+        "ddl/common/authz/19_common_activity_permissions.sql"
+      ],
+      "legacyPlanes": [
         "studio",
         "neon",
         "mesh"
-      ],
-      "disposition": "forward-upgrade",
-      "callers": [],
-      "reason": "Meta Entity Activity foundation; no role grants or runtime activation.",
-      "canonicalPaths": [
-        "ddl/common/authz/19_common_activity_permissions.sql"
       ]
     },
     {
       "originalPath": "migrations/20260928_entity_activity_authoring.sql",
-      "path": "migrations/20260928_entity_activity_authoring.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260928_entity_activity_authoring.sql",
       "sha256": "f18793cdedaa493491785ab5f1285f4363684c471518c38e28eb107753ac49e7",
-      "planes": [
-        "studio"
-      ],
-      "disposition": "forward-upgrade",
+      "planes": [],
+      "disposition": "legacy-upgrade",
       "callers": [],
-      "reason": "Meta Entity Activity foundation; no role grants or runtime activation.",
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Meta Entity Activity foundation; no role grants or runtime activation.",
       "canonicalPaths": [
         "ddl/planes/studio/metadata/03_tables.sql"
+      ],
+      "legacyPlanes": [
+        "studio"
       ]
     },
     {
       "originalPath": "migrations/20260928_record_history.sql",
-      "path": "migrations/20260928_record_history.sql",
+      "path": "scripts/operations/upgrades/post-baseline-20260929/20260928_record_history.sql",
       "sha256": "c8c671d065dc538e5d17c3b054b9b99ee060eaf687e9da5229840a8b8a26a801",
-      "planes": [
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Authoritative root history and transactional automatic capture; no entity activation.",
+      "canonicalPaths": [
+        "ddl/common/snapshot/12_record_history.sql"
+      ],
+      "legacyPlanes": [
         "studio",
         "neon",
         "mesh"
-      ],
-      "disposition": "forward-upgrade",
-      "callers": [],
-      "reason": "Authoritative root history and transactional automatic capture; no entity activation.",
-      "canonicalPaths": [
-        "ddl/common/snapshot/12_record_history.sql"
       ]
     }
   ]

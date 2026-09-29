@@ -7,8 +7,8 @@ import test from "node:test";
 const image = process.env.ATHYPER_ACTIVITY_DDL_IMAGE;
 test("Activity catalog and authoring migrations execute idempotently and reject conflicts", { skip: !image, timeout: 60000 }, () => {
   const seed = readFileSync(new URL("../../../ddl/common/authz/19_common_activity_permissions.sql", import.meta.url), "utf8");
-  const migration = readFileSync(new URL("../../../migrations/20260928_entity_activity_permissions.sql", import.meta.url), "utf8");
-  const authoring = readFileSync(new URL("../../../migrations/20260928_entity_activity_authoring.sql", import.meta.url), "utf8");
+  const migration = readFileSync(new URL("../../operations/upgrades/post-baseline-20260929/20260928_entity_activity_permissions.sql", import.meta.url), "utf8");
+  const authoring = readFileSync(new URL("../../operations/upgrades/post-baseline-20260929/20260928_entity_activity_authoring.sql", import.meta.url), "utf8");
   const sql = [
     `CREATE SCHEMA control; CREATE SCHEMA authz; CREATE SCHEMA metadata;
      CREATE DOMAIN authz.risk_tier_d AS text CHECK(VALUE IN ('low','medium','high','critical'));
