@@ -194,7 +194,6 @@ planes/neon/control/12_platform_catalog_reference_seed.sql
 planes/neon/authz/14_permission_reference_seed.sql
 planes/neon/authz/15_currency_reference_permission.sql
 planes/neon/authz/16_compiled_entity_runtime_permission.sql
-planes/neon/authz/17_workforce_permission_contract.sql
 planes/neon/control/12_business_partner_360_feature_seed.sql
 common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
@@ -258,7 +257,6 @@ planes/neon/master/25_hr_stage2_user_rls.sql
 planes/neon/master/26_hr_setup_publication.sql
 planes/neon/authz/22_hr_setup_governance_permissions.sql
 planes/neon/authz/23_hr_policy_simulate_permission.sql
-planes/neon/authz/24_notification_operations_permissions.sql
 planes/neon/master/27_hr_setup_effective_refs.sql
 planes/neon/master/28_hr_setup_reference_guards.sql
 planes/neon/master/29_partner_commodity_classification.sql

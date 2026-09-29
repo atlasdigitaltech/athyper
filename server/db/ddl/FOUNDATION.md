@@ -51,6 +51,19 @@ rows. Studio then adds canonical-party authority tables, Neon adds ERP master
 data, and Mesh currently adds no master-table extension. Cross-plane visibility
 must use explicit identifiers, projections, or service contracts.
 
+## Manifest order is a dependency order
+
+Plane manifests are not sorted by filename. Each file is placed after the tables,
+functions and seeds it needs, so numbered slices in one directory are often
+interleaved with files from other directories (for example `neon/authz/18` sits
+between `neon/document/16` and `neon/master/23`). Do not fold such a slice into an
+earlier file of its directory: it would run before its dependencies exist. Merge
+only files that are adjacent in every manifest that lists them, and confirm with a
+fresh build that the permission catalog, functions and relations are unchanged.
+Files with a live reader that opens them by name (for example `neon/authz/26` and
+`27`) stay separate. `pnpm db:verify:ddl-manifest-coverage` fails on any file no
+manifest installs.
+
 ## Runner
 
 The runner validates every manifest path, refuses a live run when the
