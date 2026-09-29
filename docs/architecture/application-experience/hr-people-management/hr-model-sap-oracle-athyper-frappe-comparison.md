@@ -1,5 +1,7 @@
 # HR data model: SAP, Oracle, Athyper and Frappe
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Reviewed: 2026-09-21. Recommendation and design comparison, not an implemented migration or a certification of feature parity. SAP means SuccessFactors Employee Central; Oracle means Fusion Cloud HCM; Frappe means Frappe HR. Vendor public business objects, APIs and documented tables are compared with Athyper repository DDL. SAP API entities and Frappe DocTypes are not represented as equivalent physical SQL tables.
 
 ## Recommendation

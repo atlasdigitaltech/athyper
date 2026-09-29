@@ -1,5 +1,7 @@
 # Business Partner ownership/subtype command fix
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Manual intake previously defaulted omitted ownership to `internal` without
 recording a supplier subtype. SQL then defaulted the subtype to `general`, which
 the commercial-role invariant correctly rejects. Validation admitted that snapshot.

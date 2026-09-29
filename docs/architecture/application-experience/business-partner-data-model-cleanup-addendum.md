@@ -1,5 +1,7 @@
 # Business Partner data model — finalized table set and cleanup addendum
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: locked target logical design for source-cleanup planning. Physical field contracts, dependency replacement and the named ownership/privacy acceptance below remain implementation prerequisites; this is not a claim of deployed schema or completed stakeholder sign-off.
 
 Implementation checkpoint — 2026-09-24: canonical banking, decision-scope, alias/parent and contact-responsibility DDL cleanup has been applied by rebuilding the same main DEV databases without backup, as authorized. Three-tenant demo data is reseeded and signed metadata activated. Banking and decision readers/evaluators are aligned; broader governed decision commands and document adapters remain incomplete. Person-category enablement remains approval-gated. See the [implementation record](business-partner-coordinated-implementation.md) for receipts, exact live removals, tests and remaining signed-in acceptance. No new instance was provisioned.

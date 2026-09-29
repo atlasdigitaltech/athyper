@@ -5,7 +5,7 @@ Depends on [entity-record-authorization/v1](entity-record-authorization.md).
 
 This profile applies the generic contract to Business Partner without adding
 Business Partner branches to the generic evaluator. The existing
-[Business Partner architecture](../architecture/business-partner/README.md)
+Business Partner architecture
 and plane authority boundaries remain authoritative.
 
 ## 1. Ownership model

@@ -1,5 +1,7 @@
 # HR People Management
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Plans and DDL analysis for Internal and External Workforce delivery.
 
 Start with the [consolidated HR master plan](hr-module-delivery-plan.md), updated 2026-09-22 to include the complete discussion: delivery stages, employee information, vendor comparison, country localization, local/foreign employees and HR policies. Supporting documents below retain the detailed field analysis and implementation sequence.

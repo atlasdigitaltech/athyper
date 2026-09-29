@@ -1,5 +1,7 @@
 # Business Partner release-19 isolated execution
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 **Phase status: Closed for the agreed isolated qualification scope (2026-09-10).** See the [closure record](../reviews/business-partner-runtime-completion-status.md#2026-09-10--isolated-qualification-phase-closed). Full Atlas conversations, cross-instance revocation synchronization and shared activation remain separate. Existing receipts retain their recorded execution images.
 
 The isolated API and worker use the signed release `ba383d04-9a18-4e59-ab4e-3d9726e934c6`, artifact SHA-256 `a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa`. The native artifact loader verifies both signatures, payload integrity and the concrete registered BP runtime bindings in each process before admitting work.

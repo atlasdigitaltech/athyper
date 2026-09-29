@@ -1,5 +1,7 @@
 # Business Partner facts — DDL and MetaEntity implementation plan
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Date: 2026-09-24. Status: detailed target plan for review; not an implementation or DEV acceptance receipt.
 
 Audit clarification revision: existing deferred-trigger reuse, dated UI observations, mandatory P01 person-link cardinality decision and exact contact/person-link cardinality. These clarify implementation gates without changing storage or adding tables.

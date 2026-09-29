@@ -1,5 +1,7 @@
 # Business Partner named-role review
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: all 79 rows now have complete recommendations in the revision below. No approved responsibilities
 or grant changes are recorded. The user explicitly nominated `catl.owner` for both
 business and security review of this 79-combination packet. The nomination does

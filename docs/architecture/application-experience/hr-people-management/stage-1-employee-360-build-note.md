@@ -1,5 +1,7 @@
 # Stage 1 Employee directory and Employee 360 v1 — build note
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 **Status:** Employee 360 v1 is locally working on 2026-09-22. The Stage 1 contract and local completion checks are complete; the limitations below remain backlog hardening rather than demo blockers.
 
 This is the v1 baseline snapshot. See the [post-v1 hardening build note](stage-1-employee-360-hardening-build-note.md) for subsequent implementation and the current open work.

@@ -1,5 +1,7 @@
 # Business partner development seed
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 `server/db/scripts/provisioning/provision-development-business-partner-fixtures.ts`
 populates the development-owned business partners in the local `athyper_neon`
 database. It enriches existing deterministic IDs and adds `ATH-BP-SA` and

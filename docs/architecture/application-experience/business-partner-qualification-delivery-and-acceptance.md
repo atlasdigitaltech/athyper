@@ -1,5 +1,7 @@
 # Business Partner qualification — delivery and acceptance record
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: evolving delivery record, not business-design lock or implementation authorization. Extracted from business-design revision 11 on 2026-09-25; section numbers and A/LC/QP IDs are retained for existing references.
 
 Authority: [business design](business-partner-qualification-business-design-and-plan.md) and [decision sheet](business-partner-qualification-decision-sheet.md). Normative requirements remain in the design, especially §§6, 10, 13, 15–16 and 21. Changes to required business outcomes must follow its named-material-finding process. Record evidence/status updates here without incrementing the business baseline. No approval signatures are implied by a passing test or DEV release.

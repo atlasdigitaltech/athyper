@@ -1,5 +1,7 @@
 # Workforce implementation — Stage 1 Internal, Stage 2 External
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Review date: 2026-09-21. Status: proposed implementation sequence; no DDL or deployed configuration changed.
 
 This document supplies the detailed two-stage sequence for the [consolidated HR master plan](hr-module-delivery-plan.md), updated on 2026-09-22 with employee-profile, localization, local/foreign employee and HR-policy decisions. The master plan owns cross-cutting architecture and immediate priorities; this document owns the I0–I9 / E0–E7 breakdown. Internal recruitment belongs in Stage 1; supplier recruitment and external-worker conversion belong to Stage 2. Directly employed foreign nationals are part of Stage 1 regardless of nationality.

@@ -38,7 +38,7 @@ This affects ordinary saved-view collection reads, not just setting a default: [
 
 ## 4. P2 — Saved-view defaults grant privileges to the wrong role
 
-**Locations:** [canonical DDL, lines 25–27](../../server/db/ddl/common/master/19_entity_saved_views.sql#L25), mirrored in [the migration](../../server/db/migrations/20260908_entity_saved_views.sql#L25).
+**Locations:** [canonical DDL, lines 25–27](../../server/db/ddl/common/master/19_entity_saved_views.sql#L25), mirrored in the migration.
 
 The new table grants SELECT/INSERT/UPDATE only to `athyper_runtime`, conditional on that role existing. The foundation creates `athyperapp` as the application privilege role; it never creates `athyper_runtime`. Other saved-view tables grant access to `athyperapp`.
 

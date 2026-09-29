@@ -2,7 +2,7 @@
 
 **F6 is closed for the current DEV CirrusAtlantic BP/Mesh pilot deployment.**
 All ten gates passed against the same six healthy deployment image bindings.
-The current [closure record](../architecture/business-partner/evidence/atlas-f6-phase-closure-distributed-20260910.json)
+The current closure record
 binds the receipts by hash; the [archived status](../examples/atlas-f6/pilot-status-closed-distributed-20260910.json)
 records the qualifying gates. The earlier closure remains preserved separately.
 A changed deployment requires requalification.

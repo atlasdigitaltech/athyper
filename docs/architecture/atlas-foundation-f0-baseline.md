@@ -6,7 +6,7 @@ migration. The historical observations below remain unchanged.
 
 Reviewed on 2026-09-10, Asia/Kuala_Lumpur. Machine timestamps in receipts are UTC on 2026-09-09. Status: F0 inventory tooling implemented and DEV/QA observations captured. This is an engineering baseline with explicit gaps, not release qualification or approval of a new runtime deployment.
 
-Evidence: [DEV capture](business-partner/evidence/atlas-f0-baseline-dev-20260910.json), [QA capture](business-partner/evidence/atlas-f0-baseline-qa-20260910.json). Both report all probes captured, stable scoped source and API image/start coordinates during collection, and `releaseQualified: false`. Saved-session failures and absent features remain explicit observations.
+Evidence: DEV capture, QA capture. Both report all probes captured, stable scoped source and API image/start coordinates during collection, and `releaseQualified: false`. Saved-session failures and absent features remain explicit observations.
 
 ## Source, deployment and model
 

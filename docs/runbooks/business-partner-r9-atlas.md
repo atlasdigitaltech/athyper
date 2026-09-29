@@ -1,5 +1,7 @@
 # Business Partner R9 Atlas qualification
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 The local release contains two version-1 tools in the existing Atlas workspace:
 `bp_read_summary` and `bp_submit_case`. Run `pnpm qualify:business-partner-r9`
 before release; CI runs the same gate. Any failed test blocks the local gate.

@@ -1,5 +1,7 @@
 # DEVFULL BP publication preflight — 2026-09-21
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 **Current native publication result:** the scoped DEVFULL workload now reaches
 runtime signing, Neon activation and Studio acknowledgement without repeated human
 MFA approvals. [Exact evidence](../../reports/bp-integration-20260921/devfull-runtime-activation.json)

@@ -207,12 +207,12 @@ Foundation completion means a reviewed BP correction measurably improves unseen 
 - [AI RLS](../../server/db/ddl/common/ai/10_rls.sql)
 - [Current AI metadata schema](../../server/packages/contracts/metadata/src/entity-ai.ts)
 - [Shared entity section executor](../../server/packages/platform/ai/src/entity-section-tool.ts)
-- [Current BP routing](../../server/packages/platform/ai/src/business-partner-tool-selection.ts)
-- [Host capability assessment](../../server/apps/platform-host/src/kernel/capability-readiness.ts)
+- Current BP routing
+- Host capability assessment
 - [Knowledge service](../../server/packages/platform/ai/src/knowledge.ts)
 - [Monitoring and feedback persistence](../../server/packages/platform/ai/src/monitoring.ts)
 - [Evidence reuse policy](../../server/packages/platform/ai/src/insight-reuse-policy.ts)
-- [Existing BP implementation plan](business-partner/atlas-ai-agent-implementation-plan.md)
+- Existing BP implementation plan
 - [Shared sections and qualification notes](../contracts/atlas-entity-sections.md)
 - [Automatic brief prerequisites](../contracts/atlas-automatic-briefs.md)
 - [Database script guidance](../../server/db/scripts/README.md)

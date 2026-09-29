@@ -1,5 +1,7 @@
 # Stage 0 comprehensive foundation review
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Review date: 2026-09-22. Verdict: **in progress — useful schema baseline, incomplete application qualification**.
 
 This review supersedes the earlier Stage 0 completion claim. The migration and fixture work are real, but a database fixture read and an unauthenticated HTTP 401 do not establish that the selected authenticated application read/write path works. Stage 1 UI work can proceed alongside the small foundation corrections below. These are engineering tasks, not additional approval gates.

@@ -1,5 +1,7 @@
 # Stage 2 HR setup and User foundation — build status
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 **Status: in progress, 2026-09-22.** Setup, policy applicability, User profile commands and authority projection now have working vertical paths.
 
 The Neon application now has `/people/workforce/hr-setup`, `/people/workforce/users`, `/people/workforce/users/[principalId]`, and `/people/workforce/users/me/profile-change`. They use the platform relay and server-side authorization. The Employee directory links to each surface only when the browser permission snapshot permits it. The server independently checks each permission and never fetches denied setup or User data. Responses use `private, no-store`.

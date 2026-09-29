@@ -1,5 +1,7 @@
 # Business Partner backend enforcement integration
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: second backend enforcement slice implemented; qualification remains open on
 2026-09-10. **The complete backend workstream is not qualified or activated.**
 DEV remains on its previously deployed shadow runtime. This change performs no

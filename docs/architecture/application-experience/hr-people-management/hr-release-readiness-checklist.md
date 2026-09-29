@@ -1,5 +1,7 @@
 # HR People Management — later release readiness
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 These checks apply when preparing a wider tenant pilot or operational release. They do not block local feature development or showing completed increments in the Wednesday demo. The active local completion criteria are in the [HR build plan](hr-module-delivery-plan.md#working-mode--robust-local-build).
 
 ## Engineering checks retained during local development

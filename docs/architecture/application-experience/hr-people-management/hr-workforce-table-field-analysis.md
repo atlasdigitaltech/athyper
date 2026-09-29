@@ -1,5 +1,7 @@
 # Internal and External Workforce — SAP benchmark and table/field analysis
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Review date: 2026-09-21. Baseline: current working-tree DDL, not a live database. SAP comparison uses public SAP documentation retrieved for this review. Proposed Athyper tables/fields below are design recommendations, not implemented migrations or SAP's physical schema.
 
 Delivery sequence: [Stage 1 Internal / Stage 2 External](hr-internal-external-implementation-plan.md). Existing field evidence: [2,042 declared columns across 103 selected manifest-listed tables](hr-workforce-current-fields.csv). Proposed changes: [67-item field change register](hr-workforce-field-changes.csv). The catalog includes supporting IAM, contacts, banking and finance tables; it is not 103 HR-specific tables. It supplements the earlier [95-table inventory](hr-ddl-inventory.csv) with contact/address/external-reference and rate-policy definitions.

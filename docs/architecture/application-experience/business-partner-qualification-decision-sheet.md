@@ -1,5 +1,7 @@
 # Business Partner qualification — decision sheet
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: **Unsigned — NOT LOCKED**. Concise business review/signature artifact for [revision 11 business design, editorial control 11a](business-partner-qualification-business-design-and-plan.md#19-design-lock-decisions). Layout is print-friendly; physical page count depends on print settings. The full design controls if a summary is ambiguous; resolve ambiguity before signing.
 
 Baseline reference (commit plus artifact hash for uncommitted content): _______  Sheet version: _______  Review date: _______

@@ -1,5 +1,7 @@
 # Business Partner release operations
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: local R8 operations baseline; target-environment rehearsal required
 
 This runbook covers Business Partner definition simulation, qualification-proof

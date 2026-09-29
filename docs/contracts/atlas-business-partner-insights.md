@@ -28,7 +28,7 @@ The local prompt revision is `atlas-local-chat-v3`. Focused tests cover capabili
 
 Inspection of the running DEV API showed that the v3 prompt and insight code were already present, but `registerAtlas` ran before `businessPartnerAtlasInsights` was assigned. Its immutable registry consequently omitted all three owner tools. Atlas composition now runs after Records and master-data owners. Regression coverage checks initialization order and actual registration with/without an owner; 15 focused host checks and host build/typecheck pass.
 
-A targeted API-only image containing this initialization-order change was deployed over the existing DEV image and is healthy. Original image/environment and rollback arguments are retained privately under `~/.athyper/instances/dev/receipts/bp-ai-04-registration-fix`. [Sanitized deployment evidence](../architecture/business-partner/evidence/bp-ai-04-registration-fix-20260909.json) records the images and validation. Browser verification was attempted, but both saved sessions returned anonymous after normal refresh. This fixes the confirmed registration defect; fresh authenticated live-model verification remains outstanding.
+A targeted API-only image containing this initialization-order change was deployed over the existing DEV image and is healthy. Original image/environment and rollback arguments are retained privately under `~/.athyper/instances/dev/receipts/bp-ai-04-registration-fix`. Sanitized deployment evidence records the images and validation. Browser verification was attempted, but both saved sessions returned anonymous after normal refresh. This fixes the confirmed registration defect; fresh authenticated live-model verification remains outstanding.
 
 ## Missing transaction scope — 2026-09-09
 

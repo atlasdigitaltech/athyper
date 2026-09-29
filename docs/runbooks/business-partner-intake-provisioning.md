@@ -1,5 +1,7 @@
 # Business Partner intake provisioning
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 `foundation-runner.ts` loads the selected plane's SQL DDL manifest. It does not author or activate the full-profile intake graph. `provision-development-business-partner-fixtures.ts` is an executable fixture CLI, and the clean three-plane certification script calls it explicitly. Fixture rows and published intake configuration are separate setup steps.
 
 The ordered graph-authoring entry is `provisionBusinessPartnerIntakeGraph` in `server/db/scripts/provisioning/business-partner-intake-graph.ts`:

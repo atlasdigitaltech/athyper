@@ -1,5 +1,7 @@
 # BP cleanup C02 — legacy-shell reachability
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Inspected: 2026-09-25, current working tree. The initial analysis below is historical evidence; C02a/C02b receipts supersede its consumer counts and test status. C02b removed the unused shell only; metadata, permissions and releases remain unchanged.
 
 ## C02b — remaining coverage migrated; shell removed

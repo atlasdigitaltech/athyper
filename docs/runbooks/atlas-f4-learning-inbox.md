@@ -50,6 +50,6 @@ No live database migration, tenant publication or deployment was performed as pa
 
 ## Build verification
 
-611 package/vertical/client/UI tests passed, along with 11 typechecks and test-reachability verification. Disposable PostgreSQL qualification passed on all three planes; Studio additionally verified real Ed25519 delivery, activation, retry and rollback, including compatibility with legacy snapshot hashes. See [the recorded qualification evidence](../architecture/business-partner/evidence/atlas-f4-reviewed-learning-20260910.json).
+611 package/vertical/client/UI tests passed, along with 11 typechecks and test-reachability verification. Disposable PostgreSQL qualification passed on all three planes; Studio additionally verified real Ed25519 delivery, activation, retry and rollback, including compatibility with legacy snapshot hashes. See the recorded qualification evidence.
 
 Public authoring routes enforce Studio/tenant scope. Platform-scoped change sets additionally require platform catalogue management; browser-supplied break-glass evidence is not accepted as independent review authority.

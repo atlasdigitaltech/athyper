@@ -74,7 +74,7 @@ Review new candidates before adding a genuinely new post-baseline upgrade. Prese
 existing migration checksums. The integration test still exercises the frozen
 legacy upgrade against isolated older schemas.
 
-See the [PostgreSQL verification receipt](../architecture/business-partner/evidence/atlas-f1-experience-foundation-20260910.json).
+See the PostgreSQL verification receipt.
 QA rollout remains part of its normal reviewed deployment/migration sequence;
 this change does not bring its other F0 schema/build differences up to date.
 The entity-level semantic-definition work can now build on the restored

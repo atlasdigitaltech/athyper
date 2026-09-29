@@ -1,5 +1,7 @@
 # Business Partner capability replacement — implementation handover
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: BP/profile ownership, current capability readers, document-reference cutover, project ownership, capability command wiring and MetaEntity company display labels are **applied to existing DEV**. Signed metadata release **19** is active. The company views, draft fixtures and capability command API are ready for scoped QA. The full legacy control/workflow replacement is still **incomplete**: Supplier/Customer tables and several lifecycle commands remain. No DEV reset has occurred.
 
 ## Capability authorization and project ownership — 25 September 2026

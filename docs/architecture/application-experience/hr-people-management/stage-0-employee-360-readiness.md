@@ -1,5 +1,7 @@
 # Stage 0 — Employee 360 readiness baseline
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: **in progress**, reassessed 2026-09-22. The migration and initial fixtures are locally applied. The [comprehensive Stage 0 review](stage-0-comprehensive-review.md) supersedes the earlier completion claim: temporal correctness, company scope and authenticated read/write proof still need closure. Stage 1 UI work can proceed alongside these focused corrections.
 
 ## Delivered baseline

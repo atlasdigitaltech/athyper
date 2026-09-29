@@ -69,7 +69,7 @@ The file-to-case edge applies when the render command addresses that case entity
 
 For internal supplier onboarding, draft save and preflight validation do not create the cycle. Submission starts or finds a run from `BP_SUPPLIER_ONBOARDING`. The coordinator maps submission to registration/duplicate-review work, approval to qualification, and later bank/readiness/activation events to their corresponding tasks. This domain-specific adapter is the current cycle bridge.
 
-Sources: [case/work-item schema](../../../server/db/ddl/common/document/03_tables.sql), [cycle schema](../../../server/db/ddl/common/governance/03_tables.sql), [cycle template contracts](../../../server/packages/contracts/control-admin/src/cycle-config.ts), [Business Partner coordinator](../../../server/packages/services/master-data/src/business-partner-onboarding-cycle.ts), [case workflow repository](../../../server/packages/services/master-data/src/kysely-business-partner-case-repository.ts).
+Sources: [case/work-item schema](../../../server/db/ddl/common/document/03_tables.sql), [cycle schema](../../../server/db/ddl/common/governance/03_tables.sql), [cycle template contracts](../../../server/packages/contracts/control-admin/src/cycle-config.ts), Business Partner coordinator, case workflow repository.
 
 ### Communications
 
@@ -90,7 +90,7 @@ Workflow assignment/reminder/SLA notification infrastructure also exists. Cycle 
 
 An email or push message should direct a reviewer to the authenticated work item. Opening it does not cast a vote. An email reply or WhatsApp reply is not currently established here as an inbound case command. MESH structured exchange is a separate integration path. Provider delivery, recipient acknowledgement, contact ownership verification and electronic signature are different evidence types.
 
-Sources: [Business Partner projection](../../../server/packages/services/master-data/src/business-partner-notifications.ts), [outbox planning](../../../server/packages/platform/notifications/src/outbox-planning.ts), [planner](../../../server/packages/platform/notifications/src/notification-planner.ts), [delivery](../../../server/packages/platform/notifications/src/durable-delivery.ts), [common routing seeds](../../../server/db/ddl/common/control/12_notification_reference_seed.sql), [NEON routing seeds](../../../server/db/ddl/planes/neon/control/12_notification_reference_seed.sql), [channel setup](../../runbooks/communication-channel-setup.md).
+Sources: Business Partner projection, [outbox planning](../../../server/packages/platform/notifications/src/outbox-planning.ts), [planner](../../../server/packages/platform/notifications/src/notification-planner.ts), [delivery](../../../server/packages/platform/notifications/src/durable-delivery.ts), [common routing seeds](../../../server/db/ddl/common/control/12_notification_reference_seed.sql), [NEON routing seeds](../../../server/db/ddl/planes/neon/control/12_notification_reference_seed.sql), [channel setup](../../runbooks/communication-channel-setup.md).
 
 ### Document generation and delivery
 

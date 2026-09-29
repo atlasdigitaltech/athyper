@@ -1,5 +1,7 @@
 # Wednesday customer demo — live internal pay cycle
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Target: Wednesday, 23 September 2026; presentation time/timezone pending confirmation.
 
 This demo scope supersedes the earlier Employee 360/onboarding-only estimate. The customer prioritizes live payroll, attendance processing, leave calculations and benefits. The full Internal Workforce capability scope remains, with simplified local completion checks in the HR build plan.

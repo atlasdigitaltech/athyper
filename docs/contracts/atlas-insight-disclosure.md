@@ -69,7 +69,7 @@ The initial 2026-09-08 checks did not include authenticated browser/live-model e
 
 ## Durable replay closure — 2026-09-09
 
-[Sanitized DEV qualification evidence](../architecture/business-partner/evidence/bp-ai-03-replay-20260909.json) records successful deployment and qualification of the enabled BP summary replay path. Raw transcripts, session state, fixture coordinates, image/configuration snapshots and exact rollback arguments remain under the owner-only `~/.athyper/instances/dev/receipts/bp-ai-03-replay-20260909/` directory.
+Sanitized DEV qualification evidence records successful deployment and qualification of the enabled BP summary replay path. Raw transcripts, session state, fixture coordinates, image/configuration snapshots and exact rollback arguments remain under the owner-only `~/.athyper/instances/dev/receipts/bp-ai-03-replay-20260909/` directory.
 
 | Check | Result |
 | --- | --- |

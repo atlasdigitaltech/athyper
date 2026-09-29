@@ -33,7 +33,7 @@ The shell-wide Activity Center/notification inbox is a different capability and 
 - [server/packages/platform/experience/src/entity-activity-policy.ts](../../../server/packages/platform/experience/src/entity-activity-policy.ts)
 - [server/packages/platform/experience/src/entity-capability-policy.ts](../../../server/packages/platform/experience/src/entity-capability-policy.ts)
 - [server/apps/platform-host/src/composition/shared/entity-runtime/activity-provider.ts](../../../server/apps/platform-host/src/composition/shared/entity-runtime/activity-provider.ts)
-- [server/apps/platform-host/src/composition/activity-presentation.ts](../../../server/apps/platform-host/src/composition/activity-presentation.ts)
+- server/apps/platform-host/src/composition/activity-presentation.ts
 - [server/apps/platform-host/src/composition/register-services.ts](../../../server/apps/platform-host/src/composition/register-services.ts)
 - [server/apps/platform-host/src/composition/shared/publication/capability-qualification.ts](../../../server/apps/platform-host/src/composition/shared/publication/capability-qualification.ts)
 

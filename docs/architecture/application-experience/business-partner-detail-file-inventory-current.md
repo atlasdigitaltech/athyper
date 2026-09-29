@@ -1,5 +1,7 @@
 # Business Partner detail page — current source inventory
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Target: `/mdg/business-partner/b4137225-4534-5469-8138-09d15a970271`.
 
 Refreshed after the shared EntityRecordPage extraction.
@@ -30,8 +32,8 @@ The canonical route no longer imports the broad BP `src/index.tsx`. The older `3
 ## Essential files outside these roots
 
 - [Host composition](</home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-services.ts>) — runtime/service registration and remaining collaboration/operation wiring.
-- [BP record providers](</home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entities/business-partner-record-providers.ts>) — header, sections and summaries.
-- [Display choices](</home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entities/record-display-choices.ts>) — catalog lookup labels.
+- BP record providers — header, sections and summaries.
+- Display choices — catalog lookup labels.
 - `metadata/products/mdg/entities/business_partner/` and related entity metadata — fields, layouts, lookup and protection declarations.
 - `server/db/` — schema, constraints and row-level security.
 - Package manifests control the narrow `/record` exports; these configuration files are not counted as source dependencies.
@@ -46,11 +48,11 @@ The canonical route no longer imports the broad BP `src/index.tsx`. The older `3
 
 ### `apps/neon/app/(shell)/mdg/business-partner/[recordId]/`
 
-- [page.tsx](</home/chandravel_natarajan/src/athyper/apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx>) — selected entry/root.
+- page.tsx — selected entry/root.
 
 ### `apps/neon/app/(shell)/mdg/business-partner/`
 
-- [layout.tsx](</home/chandravel_natarajan/src/athyper/apps/neon/app/(shell)/mdg/business-partner/layout.tsx>) — selected entry/root.
+- layout.tsx — selected entry/root.
 
 ### `apps/neon/app/api/relay/[...path]/`
 
@@ -145,23 +147,23 @@ The canonical route no longer imports the broad BP `src/index.tsx`. The older `3
 
 ### `packages/planes/neon/business-partner/src/360/`
 
-- [business-partner-360-client.ts](</home/chandravel_natarajan/src/athyper/packages/planes/neon/business-partner/src/360/business-partner-360-client.ts>) — imported/re-exported by `packages/planes/neon/business-partner/src/360/business-partner-360-section-client.ts`.
-- [business-partner-360-commercial-client.ts](</home/chandravel_natarajan/src/athyper/packages/planes/neon/business-partner/src/360/business-partner-360-commercial-client.ts>) — imported/re-exported by `packages/planes/neon/business-partner/src/record/adapter.tsx`.
-- [business-partner-360-section-client.ts](</home/chandravel_natarajan/src/athyper/packages/planes/neon/business-partner/src/360/business-partner-360-section-client.ts>) — imported/re-exported by `packages/planes/neon/business-partner/src/record/adapter.tsx`.
-- [panel-definition.ts](</home/chandravel_natarajan/src/athyper/packages/planes/neon/business-partner/src/360/panel-definition.ts>) — imported/re-exported by `packages/planes/neon/business-partner/src/record/adapter.tsx`.
-- [section-providers.ts](</home/chandravel_natarajan/src/athyper/packages/planes/neon/business-partner/src/360/section-providers.ts>) — imported/re-exported by `packages/planes/neon/business-partner/src/360/panel-definition.ts`.
+- business-partner-360-client.ts — imported/re-exported by `packages/planes/neon/business-partner/src/360/business-partner-360-section-client.ts`.
+- business-partner-360-commercial-client.ts — imported/re-exported by `packages/planes/neon/business-partner/src/record/adapter.tsx`.
+- business-partner-360-section-client.ts — imported/re-exported by `packages/planes/neon/business-partner/src/record/adapter.tsx`.
+- panel-definition.ts — imported/re-exported by `packages/planes/neon/business-partner/src/record/adapter.tsx`.
+- section-providers.ts — imported/re-exported by `packages/planes/neon/business-partner/src/360/panel-definition.ts`.
 
 ### `packages/planes/neon/business-partner/src/`
 
-- [record-runtime.tsx](</home/chandravel_natarajan/src/athyper/packages/planes/neon/business-partner/src/record-runtime.tsx>) — imported/re-exported by `apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx`.
+- record-runtime.tsx — imported/re-exported by `apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx`.
 
 ### `packages/planes/neon/business-partner/src/record/`
 
-- [adapter.tsx](</home/chandravel_natarajan/src/athyper/packages/planes/neon/business-partner/src/record/adapter.tsx>) — imported/re-exported by `packages/planes/neon/business-partner/src/record-runtime.tsx`.
+- adapter.tsx — imported/re-exported by `packages/planes/neon/business-partner/src/record-runtime.tsx`.
 
 ### `packages/planes/neon/business-partner/src/`
 
-- [styles.css](</home/chandravel_natarajan/src/athyper/packages/planes/neon/business-partner/src/styles.css>) — selected entry/root.
+- styles.css — selected entry/root.
 
 ### `packages/planes/neon/list-view/src/`
 
@@ -184,7 +186,7 @@ The canonical route no longer imports the broad BP `src/index.tsx`. The older `3
 
 ### `packages/planes/neon/workforce/src/`
 
-- [styles.css](</home/chandravel_natarajan/src/athyper/packages/planes/neon/workforce/src/styles.css>) — selected entry/root.
+- styles.css — selected entry/root.
 
 ### `packages/platform/ai/agent-runtime/src/`
 
@@ -602,27 +604,27 @@ The canonical route no longer imports the broad BP `src/index.tsx`. The older `3
 ### `server/packages/contracts/master-data/src/`
 
 - [bank-account-identifiers.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/bank-account-identifiers.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-360-commercial-controls.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-360-commercial-controls.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/business-partner-360.ts`.
-- [business-partner-360-explainability.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-360-explainability.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-360-network.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-360-network.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-360-role-sections.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-360-role-sections.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-360-sections.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-360-sections.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/business-partner-360.ts`.
-- [business-partner-360.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-360.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-eligibility-ports.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-eligibility-ports.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-eligibility.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-eligibility.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-invitation-ports.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-invitation-ports.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-invitations.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-invitations.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-request-ports.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-request-ports.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [business-partner-requests.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/business-partner-requests.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [governed-internal-business-partner.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/governed-internal-business-partner.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-360-commercial-controls.ts — imported/re-exported by `server/packages/contracts/master-data/src/business-partner-360.ts`.
+- business-partner-360-explainability.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-360-network.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-360-role-sections.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-360-sections.ts — imported/re-exported by `server/packages/contracts/master-data/src/business-partner-360.ts`.
+- business-partner-360.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-eligibility-ports.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-eligibility.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-invitation-ports.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-invitations.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-request-ports.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- business-partner-requests.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- governed-internal-business-partner.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
 - [index.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/index.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-routes.ts`.
 - [models.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/models.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
 - [ports.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/ports.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
 - [shared-reference-directory.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/shared-reference-directory.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
 - [supplier-onboarding-requirement.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/supplier-onboarding-requirement.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [supplier-workforce.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/supplier-workforce.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [workforce-ports.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/workforce-ports.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
-- [workforce.ts](</home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/workforce.ts>) — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- supplier-workforce.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- workforce-ports.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
+- workforce.ts — imported/re-exported by `server/packages/contracts/master-data/src/index.ts`.
 
 ### `server/packages/contracts/metadata/src/`
 
@@ -779,41 +781,41 @@ The canonical route no longer imports the broad BP `src/index.tsx`. The older `3
 
 ### `server/packages/services/master-data/src/`
 
-- [business-partner-360-activity-mapper.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-activity-mapper.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts`.
-- [business-partner-360-business-activity-providers.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-business-activity-providers.ts>) — selected entry/root.
-- [business-partner-360-completeness.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-completeness.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
-- [business-partner-360-definition-resolver.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-definition-resolver.ts>) — selected entry/root.
-- [business-partner-360-mesh-http-transport.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-mesh-http-transport.ts>) — selected entry/root.
-- [business-partner-360-mesh-network-adapter.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
-- [business-partner-360-policy.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-policy.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
-- [business-partner-360-response-schemas.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-response-schemas.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-route-contracts.ts`.
-- [business-partner-360-route-contracts.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-route-contracts.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-routes.ts`.
-- [business-partner-360-routes.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-routes.ts>) — selected entry/root.
-- [business-partner-360-service.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-service.ts>) — selected entry/root.
-- [business-partner-bank-disclosure-card.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-bank-disclosure-card.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-banking-facts.ts`.
-- [business-partner-child-activation.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-child-activation.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-case-repository.ts`.
-- [business-partner-commodity-classification.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-commodity-classification.ts>) — imported/re-exported by `server/packages/services/master-data/src/partner-classification-service.ts`.
-- [business-partner-crosswalk-evidence.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-crosswalk-evidence.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-sections.ts`.
-- [business-partner-display-references.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-display-references.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts`.
-- [business-partner-identity-contract.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-identity-contract.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-registration-identity.ts`.
-- [business-partner-provider-projection.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-provider-projection.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
-- [business-partner-record-header.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-record-header.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
-- [business-partner-registration-identity.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-registration-identity.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-case-repository.ts`.
-- [business-partner-request-capture.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-request-capture.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-case-repository.ts`.
-- [errors.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/errors.ts>) — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-routes.ts`.
-- [kysely-business-partner-360-bank-reveal.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-bank-reveal.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
-- [kysely-business-partner-360-commercial-controls.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
-- [kysely-business-partner-360-explainability.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
-- [kysely-business-partner-360-network.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-network.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
-- [kysely-business-partner-360-repository.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-repository.ts>) — selected entry/root.
-- [kysely-business-partner-360-role-sections.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
-- [kysely-business-partner-360-sections.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-sections.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
-- [kysely-business-partner-banking-facts.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-banking-facts.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts`.
-- [kysely-business-partner-case-repository.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-case-repository.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
-- [kysely-business-partner-eligibility-repository.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts>) — imported/re-exported by `server/packages/services/master-data/src/supplier-activation-readiness.ts`.
-- [partner-classification-service.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/partner-classification-service.ts>) — selected entry/root.
-- [partner-decision-scope.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/partner-decision-scope.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts`.
-- [secret-store-protected-value-resolver.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/secret-store-protected-value-resolver.ts>) — selected entry/root.
-- [supplier-activation-readiness.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-activation-readiness.ts>) — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-case-repository.ts`.
-- [supplier-onboarding-completion.ts](</home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-onboarding-completion.ts>) — imported/re-exported by `server/packages/services/master-data/src/supplier-activation-readiness.ts`.
+- business-partner-360-activity-mapper.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts`.
+- business-partner-360-business-activity-providers.ts — selected entry/root.
+- business-partner-360-completeness.ts — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
+- business-partner-360-definition-resolver.ts — selected entry/root.
+- business-partner-360-mesh-http-transport.ts — selected entry/root.
+- business-partner-360-mesh-network-adapter.ts — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
+- business-partner-360-policy.ts — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
+- business-partner-360-response-schemas.ts — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-route-contracts.ts`.
+- business-partner-360-route-contracts.ts — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-routes.ts`.
+- business-partner-360-routes.ts — selected entry/root.
+- business-partner-360-service.ts — selected entry/root.
+- business-partner-bank-disclosure-card.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-banking-facts.ts`.
+- business-partner-child-activation.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-case-repository.ts`.
+- business-partner-commodity-classification.ts — imported/re-exported by `server/packages/services/master-data/src/partner-classification-service.ts`.
+- business-partner-crosswalk-evidence.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-sections.ts`.
+- business-partner-display-references.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts`.
+- business-partner-identity-contract.ts — imported/re-exported by `server/packages/services/master-data/src/business-partner-registration-identity.ts`.
+- business-partner-provider-projection.ts — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
+- business-partner-record-header.ts — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-service.ts`.
+- business-partner-registration-identity.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-case-repository.ts`.
+- business-partner-request-capture.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-case-repository.ts`.
+- errors.ts — imported/re-exported by `server/packages/services/master-data/src/business-partner-360-routes.ts`.
+- kysely-business-partner-360-bank-reveal.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
+- kysely-business-partner-360-commercial-controls.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
+- kysely-business-partner-360-explainability.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
+- kysely-business-partner-360-network.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
+- kysely-business-partner-360-repository.ts — selected entry/root.
+- kysely-business-partner-360-role-sections.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
+- kysely-business-partner-360-sections.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
+- kysely-business-partner-banking-facts.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts`.
+- kysely-business-partner-case-repository.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-360-repository.ts`.
+- kysely-business-partner-eligibility-repository.ts — imported/re-exported by `server/packages/services/master-data/src/supplier-activation-readiness.ts`.
+- partner-classification-service.ts — selected entry/root.
+- partner-decision-scope.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts`.
+- secret-store-protected-value-resolver.ts — selected entry/root.
+- supplier-activation-readiness.ts — imported/re-exported by `server/packages/services/master-data/src/kysely-business-partner-case-repository.ts`.
+- supplier-onboarding-completion.ts — imported/re-exported by `server/packages/services/master-data/src/supplier-activation-readiness.ts`.
 

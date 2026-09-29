@@ -1,5 +1,7 @@
 # Business Partner record: TypeScript source dependency inventory
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Inspected: 2026-09-21, current local working tree (including existing uncommitted changes).
 
 Route: `/mdg/business-partner/01a0a085-33d3-7859-b682-2ebdbab4bc49` on `neon.dev.athyper.test`. The same source files serve other record IDs.
@@ -32,14 +34,14 @@ Files: [plain path list](files.txt), [filterable inventory CSV](files.csv), [imp
 | File | Responsibility |
 |---|---|
 | [apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx](<../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx>) | Record route; validates the ID and renders BusinessPartnerRecord. |
-| [apps/neon/app/(shell)/mdg/business-partner/layout.tsx](<../../../apps/neon/app/(shell)/mdg/business-partner/layout.tsx>) | Business Partner application wrapper. |
+| apps/neon/app/(shell)/mdg/business-partner/layout.tsx | Business Partner application wrapper. |
 | [apps/neon/lib/entity-application-layout.tsx](<../../../apps/neon/lib/entity-application-layout.tsx>) | Entity application navigation and scope wrapper. |
 | [apps/neon/app/(shell)/layout.tsx](<../../../apps/neon/app/(shell)/layout.tsx>) | Protected bootstrap, providers and NeonShell. |
 | [apps/neon/app/layout.tsx](<../../../apps/neon/app/layout.tsx>) | Root document, theme, locale and style imports. |
 | [apps/neon/app/providers.tsx](<../../../apps/neon/app/providers.tsx>) | Application providers. |
-| [packages/planes/neon/business-partner/src/index.tsx](<../../../packages/planes/neon/business-partner/src/index.tsx>) | BusinessPartnerRecord delegates to BusinessPartnerRecordRuntime; this module also contains other screens. |
-| [packages/planes/neon/business-partner/src/record-runtime.tsx](<../../../packages/planes/neon/business-partner/src/record-runtime.tsx>) | Record header, tabs, section/summary/content views, URL state and panel layout. |
-| [packages/planes/neon/business-partner/src/360/panel-definition.ts](<../../../packages/planes/neon/business-partner/src/360/panel-definition.ts>) | Business Partner panel definition. |
+| packages/planes/neon/business-partner/src/index.tsx | BusinessPartnerRecord delegates to BusinessPartnerRecordRuntime; this module also contains other screens. |
+| packages/planes/neon/business-partner/src/record-runtime.tsx | Record header, tabs, section/summary/content views, URL state and panel layout. |
+| packages/planes/neon/business-partner/src/360/panel-definition.ts | Business Partner panel definition. |
 | [packages/platform/entity/runtime/form-detail/src/entity-runtime-workspace.tsx](<../../../packages/platform/entity/runtime/form-detail/src/entity-runtime-workspace.tsx>) | Shared workspace, section selection, scrolling and section availability states. |
 | [packages/platform/entity/runtime/form-detail/src/use-section-resource.ts](<../../../packages/platform/entity/runtime/form-detail/src/use-section-resource.ts>) | Bootstrap/section loading, cache, preloading and error classification. |
 | [packages/platform/entity/runtime/form-detail/src/compiled-section-content.tsx](<../../../packages/platform/entity/runtime/form-detail/src/compiled-section-content.tsx>) | Metadata-driven content and empty-state rendering. |
@@ -55,12 +57,12 @@ Files: [plain path list](files.txt), [filterable inventory CSV](files.csv), [imp
 | [server/packages/platform/experience/src/entity-operation-dispatcher.ts](<../../../server/packages/platform/experience/src/entity-operation-dispatcher.ts>) | Conditional record operation execution. |
 | [server/packages/platform/metadata/src/compiled-entity-reader.ts](<../../../server/packages/platform/metadata/src/compiled-entity-reader.ts>) | Reads pinned compiled entity artifacts. |
 | [server/packages/platform/metadata/src/runtime-descriptor-repository.ts](<../../../server/packages/platform/metadata/src/runtime-descriptor-repository.ts>) | Reads activated release payloads from runtime metadata storage. |
-| [server/packages/services/master-data/src/business-partner-360-service.ts](<../../../server/packages/services/master-data/src/business-partner-360-service.ts>) | Business Partner header, overview, sections and summaries. |
-| [server/packages/services/master-data/src/kysely-business-partner-360-repository.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-repository.ts>) | Business Partner 360 database repository. |
-| [server/packages/services/master-data/src/kysely-business-partner-360-sections.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-sections.ts>) | Section database reads. |
-| [server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts>) | Commercial-control and banking database reads. |
-| [server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts>) | Role and scope database reads. |
-| [server/packages/services/finance/src/ledger/business-partner-journal-activity.ts](<../../../server/packages/services/finance/src/ledger/business-partner-journal-activity.ts>) | Conditional finance contribution to Business Transactions. |
+| server/packages/services/master-data/src/business-partner-360-service.ts | Business Partner header, overview, sections and summaries. |
+| server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | Business Partner 360 database repository. |
+| server/packages/services/master-data/src/kysely-business-partner-360-sections.ts | Section database reads. |
+| server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts | Commercial-control and banking database reads. |
+| server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts | Role and scope database reads. |
+| server/packages/services/finance/src/ledger/business-partner-journal-activity.ts | Conditional finance contribution to Business Transactions. |
 
 ## Request and service wiring
 
@@ -79,7 +81,7 @@ The record runtime uses `/api/relay/entity-runtime/business_partner/records/{rec
 Important wiring outside the requested folders:
 
 - [server/apps/platform-host/src/composition/register-services.ts](<../../../server/apps/platform-host/src/composition/register-services.ts>) registers the compiled reader (around line 3009), Business Partner 360 service (3423), entity runtime providers (3535), and the section handler map (3558 onward). Overview is dispatched to `businessPartner360.overview`; other mapped sections use `businessPartner360.section`.
-- [server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts](<../../../server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts>) supplies Business Partner authorization. Its imports are traced; this file is not included in the three-folder totals.
+- server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts supplies Business Partner authorization. Its imports are traced; this file is not included in the three-folder totals.
 
 ## Complete list by requested folder
 
@@ -89,7 +91,7 @@ Important wiring outside the requested folders:
 - [apps/neon/app/(shell)/layout.tsx](<../../../apps/neon/app/(shell)/layout.tsx>)
 - [apps/neon/app/(shell)/loading.tsx](<../../../apps/neon/app/(shell)/loading.tsx>)
 - [apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx](<../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx>)
-- [apps/neon/app/(shell)/mdg/business-partner/layout.tsx](<../../../apps/neon/app/(shell)/mdg/business-partner/layout.tsx>)
+- apps/neon/app/(shell)/mdg/business-partner/layout.tsx
 - [apps/neon/app/(shell)/not-found.tsx](<../../../apps/neon/app/(shell)/not-found.tsx>)
 - [apps/neon/app/api/auth/contexts/route.ts](<../../../apps/neon/app/api/auth/contexts/route.ts>)
 - [apps/neon/app/api/auth/login/route.ts](<../../../apps/neon/app/api/auth/login/route.ts>)
@@ -150,50 +152,50 @@ Important wiring outside the requested folders:
 - [packages/contracts/platform/entity-runtime/src/validation-messages.ts](<../../../packages/contracts/platform/entity-runtime/src/validation-messages.ts>)
 - [packages/contracts/platform/navigation/src/generated-catalog.ts](<../../../packages/contracts/platform/navigation/src/generated-catalog.ts>)
 - [packages/contracts/platform/navigation/src/index.ts](<../../../packages/contracts/platform/navigation/src/index.ts>)
-- [packages/planes/neon/business-partner/src/360/business-partner-360-client.ts](<../../../packages/planes/neon/business-partner/src/360/business-partner-360-client.ts>)
-- [packages/planes/neon/business-partner/src/360/business-partner-360-commercial-client.ts](<../../../packages/planes/neon/business-partner/src/360/business-partner-360-commercial-client.ts>)
-- [packages/planes/neon/business-partner/src/360/business-partner-360-context.tsx](<../../../packages/planes/neon/business-partner/src/360/business-partner-360-context.tsx>)
-- [packages/planes/neon/business-partner/src/360/business-partner-360-role-client.ts](<../../../packages/planes/neon/business-partner/src/360/business-partner-360-role-client.ts>)
-- [packages/planes/neon/business-partner/src/360/business-partner-360-section-client.ts](<../../../packages/planes/neon/business-partner/src/360/business-partner-360-section-client.ts>)
-- [packages/planes/neon/business-partner/src/360/components/commercial-controls.tsx](<../../../packages/planes/neon/business-partner/src/360/components/commercial-controls.tsx>)
-- [packages/planes/neon/business-partner/src/360/display-values.ts](<../../../packages/planes/neon/business-partner/src/360/display-values.ts>)
-- [packages/planes/neon/business-partner/src/360/panel-definition.ts](<../../../packages/planes/neon/business-partner/src/360/panel-definition.ts>)
-- [packages/planes/neon/business-partner/src/360/section-providers.ts](<../../../packages/planes/neon/business-partner/src/360/section-providers.ts>)
-- [packages/planes/neon/business-partner/src/360/use-audited-reveal.ts](<../../../packages/planes/neon/business-partner/src/360/use-audited-reveal.ts>)
-- [packages/planes/neon/business-partner/src/applicant-client.ts](<../../../packages/planes/neon/business-partner/src/applicant-client.ts>)
-- [packages/planes/neon/business-partner/src/applicant-experience.tsx](<../../../packages/planes/neon/business-partner/src/applicant-experience.tsx>)
-- [packages/planes/neon/business-partner/src/bank-verification-controls.tsx](<../../../packages/planes/neon/business-partner/src/bank-verification-controls.tsx>)
-- [packages/planes/neon/business-partner/src/banking-workspace.tsx](<../../../packages/planes/neon/business-partner/src/banking-workspace.tsx>)
-- [packages/planes/neon/business-partner/src/case-experience.tsx](<../../../packages/planes/neon/business-partner/src/case-experience.tsx>)
-- [packages/planes/neon/business-partner/src/client.ts](<../../../packages/planes/neon/business-partner/src/client.ts>)
-- [packages/planes/neon/business-partner/src/command-feedback.ts](<../../../packages/planes/neon/business-partner/src/command-feedback.ts>)
-- [packages/planes/neon/business-partner/src/customer-controls.tsx](<../../../packages/planes/neon/business-partner/src/customer-controls.tsx>)
-- [packages/planes/neon/business-partner/src/customer-request.tsx](<../../../packages/planes/neon/business-partner/src/customer-request.tsx>)
-- [packages/planes/neon/business-partner/src/index.tsx](<../../../packages/planes/neon/business-partner/src/index.tsx>)
-- [packages/planes/neon/business-partner/src/intake-submit.ts](<../../../packages/planes/neon/business-partner/src/intake-submit.ts>)
-- [packages/planes/neon/business-partner/src/mesh-proposal-experience.tsx](<../../../packages/planes/neon/business-partner/src/mesh-proposal-experience.tsx>)
-- [packages/planes/neon/business-partner/src/meta-request-form.ts](<../../../packages/planes/neon/business-partner/src/meta-request-form.ts>)
-- [packages/planes/neon/business-partner/src/page-frame.tsx](<../../../packages/planes/neon/business-partner/src/page-frame.tsx>)
-- [packages/planes/neon/business-partner/src/partner-reference-field.tsx](<../../../packages/planes/neon/business-partner/src/partner-reference-field.tsx>)
-- [packages/planes/neon/business-partner/src/record-runtime.tsx](<../../../packages/planes/neon/business-partner/src/record-runtime.tsx>)
-- [packages/planes/neon/business-partner/src/request-attachment-field.tsx](<../../../packages/planes/neon/business-partner/src/request-attachment-field.tsx>)
-- [packages/planes/neon/business-partner/src/request-entry.tsx](<../../../packages/planes/neon/business-partner/src/request-entry.tsx>)
-- [packages/planes/neon/business-partner/src/request-form-descriptor.ts](<../../../packages/planes/neon/business-partner/src/request-form-descriptor.ts>)
-- [packages/planes/neon/business-partner/src/request-relationships.ts](<../../../packages/planes/neon/business-partner/src/request-relationships.ts>)
-- [packages/planes/neon/business-partner/src/request-workspace.tsx](<../../../packages/planes/neon/business-partner/src/request-workspace.tsx>)
-- [packages/planes/neon/business-partner/src/result-experience.tsx](<../../../packages/planes/neon/business-partner/src/result-experience.tsx>)
-- [packages/planes/neon/business-partner/src/role-extension-experience.tsx](<../../../packages/planes/neon/business-partner/src/role-extension-experience.tsx>)
-- [packages/planes/neon/business-partner/src/supplier-controls.tsx](<../../../packages/planes/neon/business-partner/src/supplier-controls.tsx>)
-- [packages/planes/neon/business-partner/src/supplier-process-correction.tsx](<../../../packages/planes/neon/business-partner/src/supplier-process-correction.tsx>)
-- [packages/planes/neon/business-partner/src/supplier-process-documents.tsx](<../../../packages/planes/neon/business-partner/src/supplier-process-documents.tsx>)
-- [packages/planes/neon/business-partner/src/supplier-process-preview.tsx](<../../../packages/planes/neon/business-partner/src/supplier-process-preview.tsx>)
-- [packages/planes/neon/business-partner/src/supplier-process-readiness.tsx](<../../../packages/planes/neon/business-partner/src/supplier-process-readiness.tsx>)
-- [packages/planes/neon/business-partner/src/task-information.tsx](<../../../packages/planes/neon/business-partner/src/task-information.tsx>)
-- [packages/planes/neon/business-partner/src/transaction-selector.tsx](<../../../packages/planes/neon/business-partner/src/transaction-selector.tsx>)
-- [packages/planes/neon/business-partner/src/use-organization-selection.ts](<../../../packages/planes/neon/business-partner/src/use-organization-selection.ts>)
-- [packages/planes/neon/business-partner/src/validation-experience.tsx](<../../../packages/planes/neon/business-partner/src/validation-experience.tsx>)
-- [packages/planes/neon/business-partner/src/validation-messages.ts](<../../../packages/planes/neon/business-partner/src/validation-messages.ts>)
-- [packages/planes/neon/business-partner/src/workflow.ts](<../../../packages/planes/neon/business-partner/src/workflow.ts>)
+- packages/planes/neon/business-partner/src/360/business-partner-360-client.ts
+- packages/planes/neon/business-partner/src/360/business-partner-360-commercial-client.ts
+- packages/planes/neon/business-partner/src/360/business-partner-360-context.tsx
+- packages/planes/neon/business-partner/src/360/business-partner-360-role-client.ts
+- packages/planes/neon/business-partner/src/360/business-partner-360-section-client.ts
+- packages/planes/neon/business-partner/src/360/components/commercial-controls.tsx
+- packages/planes/neon/business-partner/src/360/display-values.ts
+- packages/planes/neon/business-partner/src/360/panel-definition.ts
+- packages/planes/neon/business-partner/src/360/section-providers.ts
+- packages/planes/neon/business-partner/src/360/use-audited-reveal.ts
+- packages/planes/neon/business-partner/src/applicant-client.ts
+- packages/planes/neon/business-partner/src/applicant-experience.tsx
+- packages/planes/neon/business-partner/src/bank-verification-controls.tsx
+- packages/planes/neon/business-partner/src/banking-workspace.tsx
+- packages/planes/neon/business-partner/src/case-experience.tsx
+- packages/planes/neon/business-partner/src/client.ts
+- packages/planes/neon/business-partner/src/command-feedback.ts
+- packages/planes/neon/business-partner/src/customer-controls.tsx
+- packages/planes/neon/business-partner/src/customer-request.tsx
+- packages/planes/neon/business-partner/src/index.tsx
+- packages/planes/neon/business-partner/src/intake-submit.ts
+- packages/planes/neon/business-partner/src/mesh-proposal-experience.tsx
+- packages/planes/neon/business-partner/src/meta-request-form.ts
+- packages/planes/neon/business-partner/src/page-frame.tsx
+- packages/planes/neon/business-partner/src/partner-reference-field.tsx
+- packages/planes/neon/business-partner/src/record-runtime.tsx
+- packages/planes/neon/business-partner/src/request-attachment-field.tsx
+- packages/planes/neon/business-partner/src/request-entry.tsx
+- packages/planes/neon/business-partner/src/request-form-descriptor.ts
+- packages/planes/neon/business-partner/src/request-relationships.ts
+- packages/planes/neon/business-partner/src/request-workspace.tsx
+- packages/planes/neon/business-partner/src/result-experience.tsx
+- packages/planes/neon/business-partner/src/role-extension-experience.tsx
+- packages/planes/neon/business-partner/src/supplier-controls.tsx
+- packages/planes/neon/business-partner/src/supplier-process-correction.tsx
+- packages/planes/neon/business-partner/src/supplier-process-documents.tsx
+- packages/planes/neon/business-partner/src/supplier-process-preview.tsx
+- packages/planes/neon/business-partner/src/supplier-process-readiness.tsx
+- packages/planes/neon/business-partner/src/task-information.tsx
+- packages/planes/neon/business-partner/src/transaction-selector.tsx
+- packages/planes/neon/business-partner/src/use-organization-selection.ts
+- packages/planes/neon/business-partner/src/validation-experience.tsx
+- packages/planes/neon/business-partner/src/validation-messages.ts
+- packages/planes/neon/business-partner/src/workflow.ts
 - [packages/planes/neon/list-view/src/index.tsx](<../../../packages/planes/neon/list-view/src/index.tsx>)
 - [packages/planes/neon/list-view/src/scope-adapters.tsx](<../../../packages/planes/neon/list-view/src/scope-adapters.tsx>)
 - [packages/planes/neon/navigation/src/index.ts](<../../../packages/planes/neon/navigation/src/index.ts>)
@@ -413,26 +415,26 @@ Important wiring outside the requested folders:
 - [server/packages/contracts/jobs/src/ports.ts](<../../../server/packages/contracts/jobs/src/ports.ts>)
 - [server/packages/contracts/jobs/src/scheduling.ts](<../../../server/packages/contracts/jobs/src/scheduling.ts>)
 - [server/packages/contracts/master-data/src/bank-account-identifiers.ts](<../../../server/packages/contracts/master-data/src/bank-account-identifiers.ts>)
-- [server/packages/contracts/master-data/src/business-partner-360-commercial-controls.ts](<../../../server/packages/contracts/master-data/src/business-partner-360-commercial-controls.ts>)
-- [server/packages/contracts/master-data/src/business-partner-360-explainability.ts](<../../../server/packages/contracts/master-data/src/business-partner-360-explainability.ts>)
-- [server/packages/contracts/master-data/src/business-partner-360-network.ts](<../../../server/packages/contracts/master-data/src/business-partner-360-network.ts>)
-- [server/packages/contracts/master-data/src/business-partner-360-role-sections.ts](<../../../server/packages/contracts/master-data/src/business-partner-360-role-sections.ts>)
-- [server/packages/contracts/master-data/src/business-partner-360-sections.ts](<../../../server/packages/contracts/master-data/src/business-partner-360-sections.ts>)
-- [server/packages/contracts/master-data/src/business-partner-360.ts](<../../../server/packages/contracts/master-data/src/business-partner-360.ts>)
-- [server/packages/contracts/master-data/src/business-partner-eligibility-ports.ts](<../../../server/packages/contracts/master-data/src/business-partner-eligibility-ports.ts>)
-- [server/packages/contracts/master-data/src/business-partner-eligibility.ts](<../../../server/packages/contracts/master-data/src/business-partner-eligibility.ts>)
-- [server/packages/contracts/master-data/src/business-partner-invitation-ports.ts](<../../../server/packages/contracts/master-data/src/business-partner-invitation-ports.ts>)
-- [server/packages/contracts/master-data/src/business-partner-invitations.ts](<../../../server/packages/contracts/master-data/src/business-partner-invitations.ts>)
-- [server/packages/contracts/master-data/src/business-partner-request-ports.ts](<../../../server/packages/contracts/master-data/src/business-partner-request-ports.ts>)
-- [server/packages/contracts/master-data/src/business-partner-requests.ts](<../../../server/packages/contracts/master-data/src/business-partner-requests.ts>)
-- [server/packages/contracts/master-data/src/governed-internal-business-partner.ts](<../../../server/packages/contracts/master-data/src/governed-internal-business-partner.ts>)
+- server/packages/contracts/master-data/src/business-partner-360-commercial-controls.ts
+- server/packages/contracts/master-data/src/business-partner-360-explainability.ts
+- server/packages/contracts/master-data/src/business-partner-360-network.ts
+- server/packages/contracts/master-data/src/business-partner-360-role-sections.ts
+- server/packages/contracts/master-data/src/business-partner-360-sections.ts
+- server/packages/contracts/master-data/src/business-partner-360.ts
+- server/packages/contracts/master-data/src/business-partner-eligibility-ports.ts
+- server/packages/contracts/master-data/src/business-partner-eligibility.ts
+- server/packages/contracts/master-data/src/business-partner-invitation-ports.ts
+- server/packages/contracts/master-data/src/business-partner-invitations.ts
+- server/packages/contracts/master-data/src/business-partner-request-ports.ts
+- server/packages/contracts/master-data/src/business-partner-requests.ts
+- server/packages/contracts/master-data/src/governed-internal-business-partner.ts
 - [server/packages/contracts/master-data/src/index.ts](<../../../server/packages/contracts/master-data/src/index.ts>)
 - [server/packages/contracts/master-data/src/models.ts](<../../../server/packages/contracts/master-data/src/models.ts>)
 - [server/packages/contracts/master-data/src/ports.ts](<../../../server/packages/contracts/master-data/src/ports.ts>)
 - [server/packages/contracts/master-data/src/supplier-onboarding-requirement.ts](<../../../server/packages/contracts/master-data/src/supplier-onboarding-requirement.ts>)
-- [server/packages/contracts/master-data/src/supplier-workforce.ts](<../../../server/packages/contracts/master-data/src/supplier-workforce.ts>)
-- [server/packages/contracts/master-data/src/workforce-ports.ts](<../../../server/packages/contracts/master-data/src/workforce-ports.ts>)
-- [server/packages/contracts/master-data/src/workforce.ts](<../../../server/packages/contracts/master-data/src/workforce.ts>)
+- server/packages/contracts/master-data/src/supplier-workforce.ts
+- server/packages/contracts/master-data/src/workforce-ports.ts
+- server/packages/contracts/master-data/src/workforce.ts
 - [server/packages/contracts/metadata/src/atlas-learning.ts](<../../../server/packages/contracts/metadata/src/atlas-learning.ts>)
 - [server/packages/contracts/metadata/src/collection-relationship.ts](<../../../server/packages/contracts/metadata/src/collection-relationship.ts>)
 - [server/packages/contracts/metadata/src/descriptors.ts](<../../../server/packages/contracts/metadata/src/descriptors.ts>)
@@ -578,39 +580,39 @@ Important wiring outside the requested folders:
 - [server/packages/runtime/http/src/index.ts](<../../../server/packages/runtime/http/src/index.ts>)
 - [server/packages/runtime/http/src/problem-details.ts](<../../../server/packages/runtime/http/src/problem-details.ts>)
 - [server/packages/runtime/http/src/route-contract.ts](<../../../server/packages/runtime/http/src/route-contract.ts>)
-- [server/packages/services/finance/src/ledger/business-partner-journal-activity.ts](<../../../server/packages/services/finance/src/ledger/business-partner-journal-activity.ts>)
+- server/packages/services/finance/src/ledger/business-partner-journal-activity.ts
 - [server/packages/services/finance/src/shared/kysely-finance-foundation.ts](<../../../server/packages/services/finance/src/shared/kysely-finance-foundation.ts>)
-- [server/packages/services/master-data/src/business-partner-360-activity-mapper.ts](<../../../server/packages/services/master-data/src/business-partner-360-activity-mapper.ts>)
-- [server/packages/services/master-data/src/business-partner-360-completeness.ts](<../../../server/packages/services/master-data/src/business-partner-360-completeness.ts>)
-- [server/packages/services/master-data/src/business-partner-360-definition-resolver.ts](<../../../server/packages/services/master-data/src/business-partner-360-definition-resolver.ts>)
-- [server/packages/services/master-data/src/business-partner-360-mesh-http-transport.ts](<../../../server/packages/services/master-data/src/business-partner-360-mesh-http-transport.ts>)
-- [server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts](<../../../server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts>)
-- [server/packages/services/master-data/src/business-partner-360-policy.ts](<../../../server/packages/services/master-data/src/business-partner-360-policy.ts>)
-- [server/packages/services/master-data/src/business-partner-360-service.ts](<../../../server/packages/services/master-data/src/business-partner-360-service.ts>)
-- [server/packages/services/master-data/src/business-partner-bank-disclosure-card.ts](<../../../server/packages/services/master-data/src/business-partner-bank-disclosure-card.ts>)
-- [server/packages/services/master-data/src/business-partner-case-explanation.ts](<../../../server/packages/services/master-data/src/business-partner-case-explanation.ts>)
-- [server/packages/services/master-data/src/business-partner-display-references.ts](<../../../server/packages/services/master-data/src/business-partner-display-references.ts>)
-- [server/packages/services/master-data/src/business-partner-notifications.ts](<../../../server/packages/services/master-data/src/business-partner-notifications.ts>)
-- [server/packages/services/master-data/src/business-partner-onboarding-cycle.ts](<../../../server/packages/services/master-data/src/business-partner-onboarding-cycle.ts>)
-- [server/packages/services/master-data/src/business-partner-profile-validation.ts](<../../../server/packages/services/master-data/src/business-partner-profile-validation.ts>)
-- [server/packages/services/master-data/src/business-partner-provider-projection.ts](<../../../server/packages/services/master-data/src/business-partner-provider-projection.ts>)
-- [server/packages/services/master-data/src/business-partner-record-header.ts](<../../../server/packages/services/master-data/src/business-partner-record-header.ts>)
-- [server/packages/services/master-data/src/business-partner-request-capture.ts](<../../../server/packages/services/master-data/src/business-partner-request-capture.ts>)
-- [server/packages/services/master-data/src/business-partner-request-service.ts](<../../../server/packages/services/master-data/src/business-partner-request-service.ts>)
-- [server/packages/services/master-data/src/errors.ts](<../../../server/packages/services/master-data/src/errors.ts>)
-- [server/packages/services/master-data/src/kysely-business-partner-360-bank-reveal.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-bank-reveal.ts>)
-- [server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts>)
-- [server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts>)
-- [server/packages/services/master-data/src/kysely-business-partner-360-network.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-network.ts>)
-- [server/packages/services/master-data/src/kysely-business-partner-360-repository.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-repository.ts>)
-- [server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts>)
-- [server/packages/services/master-data/src/kysely-business-partner-360-sections.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-360-sections.ts>)
-- [server/packages/services/master-data/src/kysely-business-partner-case-repository.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-case-repository.ts>)
-- [server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts](<../../../server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts>)
-- [server/packages/services/master-data/src/secret-store-protected-value-resolver.ts](<../../../server/packages/services/master-data/src/secret-store-protected-value-resolver.ts>)
-- [server/packages/services/master-data/src/supplier-activation-readiness.ts](<../../../server/packages/services/master-data/src/supplier-activation-readiness.ts>)
-- [server/packages/services/master-data/src/supplier-onboarding-completion.ts](<../../../server/packages/services/master-data/src/supplier-onboarding-completion.ts>)
-- [server/packages/services/master-data/src/supplier-onboarding-requirement.ts](<../../../server/packages/services/master-data/src/supplier-onboarding-requirement.ts>)
+- server/packages/services/master-data/src/business-partner-360-activity-mapper.ts
+- server/packages/services/master-data/src/business-partner-360-completeness.ts
+- server/packages/services/master-data/src/business-partner-360-definition-resolver.ts
+- server/packages/services/master-data/src/business-partner-360-mesh-http-transport.ts
+- server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts
+- server/packages/services/master-data/src/business-partner-360-policy.ts
+- server/packages/services/master-data/src/business-partner-360-service.ts
+- server/packages/services/master-data/src/business-partner-bank-disclosure-card.ts
+- server/packages/services/master-data/src/business-partner-case-explanation.ts
+- server/packages/services/master-data/src/business-partner-display-references.ts
+- server/packages/services/master-data/src/business-partner-notifications.ts
+- server/packages/services/master-data/src/business-partner-onboarding-cycle.ts
+- server/packages/services/master-data/src/business-partner-profile-validation.ts
+- server/packages/services/master-data/src/business-partner-provider-projection.ts
+- server/packages/services/master-data/src/business-partner-record-header.ts
+- server/packages/services/master-data/src/business-partner-request-capture.ts
+- server/packages/services/master-data/src/business-partner-request-service.ts
+- server/packages/services/master-data/src/errors.ts
+- server/packages/services/master-data/src/kysely-business-partner-360-bank-reveal.ts
+- server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts
+- server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts
+- server/packages/services/master-data/src/kysely-business-partner-360-network.ts
+- server/packages/services/master-data/src/kysely-business-partner-360-repository.ts
+- server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts
+- server/packages/services/master-data/src/kysely-business-partner-360-sections.ts
+- server/packages/services/master-data/src/kysely-business-partner-case-repository.ts
+- server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts
+- server/packages/services/master-data/src/secret-store-protected-value-resolver.ts
+- server/packages/services/master-data/src/supplier-activation-readiness.ts
+- server/packages/services/master-data/src/supplier-onboarding-completion.ts
+- server/packages/services/master-data/src/supplier-onboarding-requirement.ts
 - [server/packages/services/records/src/authorized-aggregate.ts](<../../../server/packages/services/records/src/authorized-aggregate.ts>)
 - [server/packages/services/records/src/entity-authorization-rollout.ts](<../../../server/packages/services/records/src/entity-authorization-rollout.ts>)
 - [server/packages/services/records/src/entity-authorization.ts](<../../../server/packages/services/records/src/entity-authorization.ts>)

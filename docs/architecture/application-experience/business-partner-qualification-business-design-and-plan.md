@@ -1,5 +1,7 @@
 # Business Partner qualification and operational eligibility
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: lock candidate. The lock scope, preconditions and approval record are in section 19.1. This document becomes **Locked as business design** when that approval record is complete; until then it remains NOT LOCKED.
 
 Review date: 2026-09-25. Scope of this revision: documentation only. No DDL, permissions, runtime behavior, metadata publication or DEV data changes are executed by this revision. The separately authorized initial read build is recorded in the linked delivery record; broader workflow/enforcement implementation remains subject to section 19.
@@ -118,11 +120,11 @@ Evidence locations, relative to this document:
 
 - [Qualification and block tables](../../../server/db/ddl/planes/neon/control/03_tables.sql): qualification near line 208, blocks near 413, decision scopes near 2505.
 - [Decision command](../../../server/db/ddl/planes/neon/control/07_functions.sql): `control.command_business_partner_decision` near line 4206.
-- [Eligibility contracts](../../../server/packages/contracts/master-data/src/business-partner-eligibility.ts): reasons near 83 and query near 311.
-- [Eligibility repository](../../../server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts): projected scope near 152 and evaluator near 654.
-- [Current scope matcher](../../../server/packages/services/master-data/src/partner-decision-scope.ts).
-- [Registered record providers](../../../server/apps/platform-host/src/composition/entities/business-partner-record-providers.ts).
-- [Eligibility service](../../../server/packages/services/master-data/src/business-partner-eligibility-service.ts): ordinary evaluation near 50.
+- Eligibility contracts: reasons near 83 and query near 311.
+- Eligibility repository: projected scope near 152 and evaluator near 654.
+- Current scope matcher.
+- Registered record providers.
+- Eligibility service: ordinary evaluation near 50.
 - [Classification evidence link](../../../server/db/ddl/planes/neon/master/29_partner_commodity_classification.sql).
 - [Current qualification presentation](../../../metadata/products/mdg/entities/business_partner/presentation.section.qualifications-certificates.json).
 - [Role-free registration evidence](partner-core-registration-and-unspsc.md) and [role-free section audit](partner-role-free-section-audit.md).

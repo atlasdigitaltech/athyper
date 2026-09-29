@@ -1,5 +1,7 @@
 # Employee 360 post-v1 hardening — local build note
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 **Status (2026-09-22):** An additive post-v1 increment is locally working. It extends the read experience and the schema foundation; the remaining actions below are still backlog work, not implied by the new sections.
 
 This is the first hardening snapshot. See the [transaction follow-up](stage-1-employee-360-transaction-follow-up.md) for education/prior-employment editing and approved-request offboarding work completed afterward.

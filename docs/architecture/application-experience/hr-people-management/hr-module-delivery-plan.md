@@ -1,5 +1,7 @@
 # HR module delivery plan — Employee 360 through full People delivery
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Review date: 2026-09-22. Status: consolidated master plan for a robust local development build, grounded in the current working-tree DDL. No schema changes, migrations, runtime qualification, or production-readiness claims are made by this document.
 
 **Master-plan authority:** this document consolidates the agreed scope, architecture, cross-cutting requirements and immediate priorities. The [Stage 1 Internal Workforce / Stage 2 External Workforce plan](hr-internal-external-implementation-plan.md) supplies the detailed I0–I9 / E0–E7 implementation sequence. The numbered stages 0–13 below are capability work packages, not additional top-level delivery stages or serial gates. Internal recruitment is in Internal Workforce; supplier procurement/engagement delivery is in External Workforce.
@@ -55,7 +57,7 @@ Primary source files:
 - [Master constraints](../../../../server/db/ddl/planes/neon/master/05_constraints.sql), [functions](../../../../server/db/ddl/planes/neon/master/07_functions.sql), [views](../../../../server/db/ddl/planes/neon/master/09_views.sql), [RLS](../../../../server/db/ddl/planes/neon/master/10_rls.sql), [grants](../../../../server/db/ddl/planes/neon/master/11_grants.sql).
 - [Document functions](../../../../server/db/ddl/planes/neon/document/07_functions.sql): HR approval/operational state guards, leave/attendance validation, payroll guards and total refresh already exist.
 - [Principal foundation](../../../../server/db/ddl/common/master/03_platform_tables.sql), [authorization](../../../../server/db/ddl/common/authz/03_tables.sql).
-- [Workforce routes](../../../../server/packages/services/master-data/src/workforce-routes.ts), [service](../../../../server/packages/services/master-data/src/workforce-service.ts), [request UI](../../../../packages/planes/neon/workforce/src/index.tsx), [workforce metadata](../../../../metadata/products/mdg/entities/workforce/core.json).
+- Workforce routes, service, request UI, [workforce metadata](../../../../metadata/products/mdg/entities/workforce/core.json).
 
 Companion [DDL inventory](hr-ddl-inventory.csv) lists selected existing tables with source locations. It is an inventory of foundations and dependencies, not a claim that those features are delivered.
 

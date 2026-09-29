@@ -55,24 +55,24 @@ Only .ts and .tsx are listed. Country authoring JSON, profile JSON, CSS, SQL, .m
 | [record-footer.tsx](/home/chandravel_natarajan/src/athyper/packages/platform/shell/shell/src/record-footer.tsx) — `packages/platform/shell/shell/src/record-footer.tsx` | source | M |
 | [record-information.tsx](/home/chandravel_natarajan/src/athyper/packages/platform/shell/shell/src/record-information.tsx) — `packages/platform/shell/shell/src/record-information.tsx` | source | ?? |
 | [workspace-side-panel.tsx](/home/chandravel_natarajan/src/athyper/packages/platform/shell/shell/src/workspace-side-panel.tsx) — `packages/platform/shell/shell/src/workspace-side-panel.tsx` | source | tracked unchanged |
-| [dev-publication.test.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/dev-publication.test.ts) — `server/apps/platform-host/src/composition/dev-publication.test.ts` | test | tracked unchanged |
-| [dev-publication.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/dev-publication.ts) — `server/apps/platform-host/src/composition/dev-publication.ts` | source | tracked unchanged |
-| [entity-attachment-admission.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entity-attachment-admission.ts) — `server/apps/platform-host/src/composition/entity-attachment-admission.ts` | source | tracked unchanged |
-| [entity-authorization-registration.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entity-authorization-registration.ts) — `server/apps/platform-host/src/composition/entity-authorization-registration.ts` | source | ?? |
-| [entity-case-backend-mapping.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entity-case-backend-mapping.ts) — `server/apps/platform-host/src/composition/entity-case-backend-mapping.ts` | source | tracked unchanged |
-| [entity-metadata-hooks.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entity-metadata-hooks.ts) — `server/apps/platform-host/src/composition/entity-metadata-hooks.ts` | source | ?? |
-| [entity-release-review-deployment.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entity-release-review-deployment.ts) — `server/apps/platform-host/src/composition/entity-release-review-deployment.ts` | source | tracked unchanged |
-| [entity-runtime-handler-registry.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entity-runtime-handler-registry.ts) — `server/apps/platform-host/src/composition/entity-runtime-handler-registry.ts` | source | ?? |
-| [publication-plane.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/publication-plane.ts) — `server/apps/platform-host/src/composition/publication-plane.ts` | source | tracked unchanged |
-| [publication-provenance-recovery.test.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/publication-provenance-recovery.test.ts) — `server/apps/platform-host/src/composition/publication-provenance-recovery.test.ts` | test | tracked unchanged |
-| [publication-provenance-recovery.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/publication-provenance-recovery.ts) — `server/apps/platform-host/src/composition/publication-provenance-recovery.ts` | source | tracked unchanged |
+| dev-publication.test.ts — `server/apps/platform-host/src/composition/dev-publication.test.ts` | test | tracked unchanged |
+| dev-publication.ts — `server/apps/platform-host/src/composition/dev-publication.ts` | source | tracked unchanged |
+| entity-attachment-admission.ts — `server/apps/platform-host/src/composition/entity-attachment-admission.ts` | source | tracked unchanged |
+| entity-authorization-registration.ts — `server/apps/platform-host/src/composition/entity-authorization-registration.ts` | source | ?? |
+| entity-case-backend-mapping.ts — `server/apps/platform-host/src/composition/entity-case-backend-mapping.ts` | source | tracked unchanged |
+| entity-metadata-hooks.ts — `server/apps/platform-host/src/composition/entity-metadata-hooks.ts` | source | ?? |
+| entity-release-review-deployment.ts — `server/apps/platform-host/src/composition/entity-release-review-deployment.ts` | source | tracked unchanged |
+| entity-runtime-handler-registry.ts — `server/apps/platform-host/src/composition/entity-runtime-handler-registry.ts` | source | ?? |
+| publication-plane.ts — `server/apps/platform-host/src/composition/publication-plane.ts` | source | tracked unchanged |
+| publication-provenance-recovery.test.ts — `server/apps/platform-host/src/composition/publication-provenance-recovery.test.ts` | test | tracked unchanged |
+| publication-provenance-recovery.ts — `server/apps/platform-host/src/composition/publication-provenance-recovery.ts` | source | tracked unchanged |
 | [register-services.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-services.ts) — `server/apps/platform-host/src/composition/register-services.ts` | source | M |
 
 ## apps/mesh/
 
 | File | Kind | Git status |
 | --- | --- | --- |
-| [page.tsx](/home/chandravel_natarajan/src/athyper/apps/mesh/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx) — `apps/mesh/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx` | source | ?? |
+| page.tsx/app/entity/[entityCode]/[[...segments]]/page.tsx) — `apps/mesh/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx` | source | ?? |
 | [route.ts](/home/chandravel_natarajan/src/athyper/apps/mesh/app/api/relay/[...path]/route.ts) — `apps/mesh/app/api/relay/[...path]/route.ts` | source | tracked unchanged |
 | [catalog-routes.ts](/home/chandravel_natarajan/src/athyper/apps/mesh/lib/catalog-routes.ts) — `apps/mesh/lib/catalog-routes.ts` | source | tracked unchanged |
 | [experience-runtime.tsx](/home/chandravel_natarajan/src/athyper/apps/mesh/lib/experience-runtime.tsx) — `apps/mesh/lib/experience-runtime.tsx` | source | tracked unchanged |
@@ -81,14 +81,14 @@ Only .ts and .tsx are listed. Country authoring JSON, profile JSON, CSS, SQL, .m
 
 | File | Kind | Git status |
 | --- | --- | --- |
-| [page.tsx](/home/chandravel_natarajan/src/athyper/apps/neon/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx) — `apps/neon/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx` | source | M |
+| page.tsx/app/entity/[entityCode]/[[...segments]]/page.tsx) — `apps/neon/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx` | source | M |
 | [route.ts](/home/chandravel_natarajan/src/athyper/apps/neon/app/api/relay/[...path]/route.ts) — `apps/neon/app/api/relay/[...path]/route.ts` | source | tracked unchanged |
 | [catalog-routes.ts](/home/chandravel_natarajan/src/athyper/apps/neon/lib/catalog-routes.ts) — `apps/neon/lib/catalog-routes.ts` | source | tracked unchanged |
 | [entity-application-layout.tsx](/home/chandravel_natarajan/src/athyper/apps/neon/lib/entity-application-layout.tsx) — `apps/neon/lib/entity-application-layout.tsx` | source | tracked unchanged |
 | [entity-application-route.tsx](/home/chandravel_natarajan/src/athyper/apps/neon/lib/entity-application-route.tsx) — `apps/neon/lib/entity-application-route.tsx` | source | tracked unchanged |
-| [entity-record-adapters.tsx](/home/chandravel_natarajan/src/athyper/apps/neon/lib/entity-record-adapters.tsx) — `apps/neon/lib/entity-record-adapters.tsx` | source | tracked unchanged |
+| entity-record-adapters.tsx — `apps/neon/lib/entity-record-adapters.tsx` | source | tracked unchanged |
 | [entity-route-alias.ts](/home/chandravel_natarajan/src/athyper/apps/neon/lib/entity-route-alias.ts) — `apps/neon/lib/entity-route-alias.ts` | source | tracked unchanged |
-| [entity-route-context.ts](/home/chandravel_natarajan/src/athyper/apps/neon/lib/entity-route-context.ts) — `apps/neon/lib/entity-route-context.ts` | source | tracked unchanged |
+| entity-route-context.ts — `apps/neon/lib/entity-route-context.ts` | source | tracked unchanged |
 | [entity-work-context.ts](/home/chandravel_natarajan/src/athyper/apps/neon/lib/entity-work-context.ts) — `apps/neon/lib/entity-work-context.ts` | source | tracked unchanged |
 | [experience-runtime.tsx](/home/chandravel_natarajan/src/athyper/apps/neon/lib/experience-runtime.tsx) — `apps/neon/lib/experience-runtime.tsx` | source | tracked unchanged |
 | [list-density.ts](/home/chandravel_natarajan/src/athyper/apps/neon/lib/list-density.ts) — `apps/neon/lib/list-density.ts` | source | tracked unchanged |
@@ -98,7 +98,7 @@ Only .ts and .tsx are listed. Country authoring JSON, profile JSON, CSS, SQL, .m
 
 | File | Kind | Git status |
 | --- | --- | --- |
-| [page.tsx](/home/chandravel_natarajan/src/athyper/apps/studio/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx) — `apps/studio/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx` | source | ?? |
+| page.tsx/app/entity/[entityCode]/[[...segments]]/page.tsx) — `apps/studio/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx` | source | ?? |
 | [route.ts](/home/chandravel_natarajan/src/athyper/apps/studio/app/api/relay/[...path]/route.ts) — `apps/studio/app/api/relay/[...path]/route.ts` | source | tracked unchanged |
 | [catalog-routes.ts](/home/chandravel_natarajan/src/athyper/apps/studio/lib/catalog-routes.ts) — `apps/studio/lib/catalog-routes.ts` | source | tracked unchanged |
 | [experience-runtime.tsx](/home/chandravel_natarajan/src/athyper/apps/studio/lib/experience-runtime.tsx) — `apps/studio/lib/experience-runtime.tsx` | source | tracked unchanged |
@@ -188,7 +188,7 @@ Only .ts and .tsx are listed. Country authoring JSON, profile JSON, CSS, SQL, .m
 | [detail-workspace.tsx](/home/chandravel_natarajan/src/athyper/packages/platform/entity/runtime/form-detail/src/detail-workspace.tsx) — `packages/platform/entity/runtime/form-detail/src/detail-workspace.tsx` | source | ?? |
 | [entity-edit-collaboration.tsx](/home/chandravel_natarajan/src/athyper/packages/platform/entity/runtime/form-detail/src/entity-edit-collaboration.tsx) — `packages/platform/entity/runtime/form-detail/src/entity-edit-collaboration.tsx` | source | tracked unchanged |
 | [entity-lookup.tsx](/home/chandravel_natarajan/src/athyper/packages/platform/entity/runtime/form-detail/src/entity-lookup.tsx) — `packages/platform/entity/runtime/form-detail/src/entity-lookup.tsx` | source | tracked unchanged |
-| [entity-read-runtime.tsx](/home/chandravel_natarajan/src/athyper/packages/platform/entity/runtime/form-detail/src/entity-read-runtime.tsx) — `packages/platform/entity/runtime/form-detail/src/entity-read-runtime.tsx` | source | ?? |
+| entity-read-runtime.tsx — `packages/platform/entity/runtime/form-detail/src/entity-read-runtime.tsx` | source | ?? |
 | [entity-runtime-workspace.tsx](/home/chandravel_natarajan/src/athyper/packages/platform/entity/runtime/form-detail/src/entity-runtime-workspace.tsx) — `packages/platform/entity/runtime/form-detail/src/entity-runtime-workspace.tsx` | source | tracked unchanged |
 | [file-action.tsx](/home/chandravel_natarajan/src/athyper/packages/platform/entity/runtime/form-detail/src/file-action.tsx) — `packages/platform/entity/runtime/form-detail/src/file-action.tsx` | source | M |
 | [file-filter-body.ts](/home/chandravel_natarajan/src/athyper/packages/platform/entity/runtime/form-detail/src/file-filter-body.ts) — `packages/platform/entity/runtime/form-detail/src/file-filter-body.ts` | source | tracked unchanged |
@@ -274,14 +274,14 @@ Only .ts and .tsx are listed. Country authoring JSON, profile JSON, CSS, SQL, .m
 | [parent-admission.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/parent-admission.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/parent-admission.ts` | source | ?? |
 | [permission-transitions.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/permission-transitions.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/permission-transitions.ts` | source | ?? |
 | [persisted-scopes.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/persisted-scopes.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/persisted-scopes.ts` | source | ?? |
-| [publication-qualification.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/publication-qualification.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/publication-qualification.ts` | source | ?? |
+| publication-qualification.ts — `server/apps/platform-host/src/composition/shared/entity-runtime/publication-qualification.ts` | source | ?? |
 | [published-parent-admission.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/published-parent-admission.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/published-parent-admission.ts` | source | ?? |
 | [published-record-header.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/published-record-header.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/published-record-header.ts` | source | ?? |
 | [read-registrations.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/read-registrations.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/read-registrations.ts` | source | ?? |
 | [read-runtime.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/read-runtime.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/read-runtime.ts` | source | ?? |
 | [revision-authorizer.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/revision-authorizer.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/revision-authorizer.ts` | source | ?? |
 | [route-admission.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/route-admission.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/route-admission.ts` | source | ?? |
-| [routes.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/routes.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/routes.ts` | source | ?? |
+| routes.ts — `server/apps/platform-host/src/composition/shared/entity-runtime/routes.ts` | source | ?? |
 | [scope-registry.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/entity-runtime/scope-registry.ts) — `server/apps/platform-host/src/composition/shared/entity-runtime/scope-registry.ts` | source | ?? |
 
 ## server/apps/platform-host/src/composition/shared/publication/
@@ -302,7 +302,7 @@ Only .ts and .tsx are listed. Country authoring JSON, profile JSON, CSS, SQL, .m
 | [target-qualification.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/publication/target-qualification.ts) — `server/apps/platform-host/src/composition/shared/publication/target-qualification.ts` | source | ?? |
 | [workload-configuration.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/publication/workload-configuration.ts) — `server/apps/platform-host/src/composition/shared/publication/workload-configuration.ts` | source | ?? |
 | [workload-routes.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/publication/workload-routes.ts) — `server/apps/platform-host/src/composition/shared/publication/workload-routes.ts` | source | ?? |
-| [workload.ts](/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/publication/workload.ts) — `server/apps/platform-host/src/composition/shared/publication/workload.ts` | source | ?? |
+| workload.ts — `server/apps/platform-host/src/composition/shared/publication/workload.ts` | source | ?? |
 
 ## server/db/scripts/
 
@@ -475,7 +475,7 @@ Only .ts and .tsx are listed. Country authoring JSON, profile JSON, CSS, SQL, .m
 | [graph-preview.ts](/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/graph-preview.ts) — `server/packages/planes/studio/meta-entity-authoring/src/graph-preview.ts` | source | tracked unchanged |
 | [graph-storage-order.ts](/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/graph-storage-order.ts) — `server/packages/planes/studio/meta-entity-authoring/src/graph-storage-order.ts` | source | tracked unchanged |
 | [index.ts](/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/index.ts) — `server/packages/planes/studio/meta-entity-authoring/src/index.ts` | source | M |
-| [intake-presentation.ts](/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/intake-presentation.ts) — `server/packages/planes/studio/meta-entity-authoring/src/intake-presentation.ts` | source | ?? |
+| intake-presentation.ts — `server/packages/planes/studio/meta-entity-authoring/src/intake-presentation.ts` | source | ?? |
 | [kysely-authoring-repository.ts](/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts) — `server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts` | source | M |
 | [learning-inbox.ts](/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/learning-inbox.ts) — `server/packages/planes/studio/meta-entity-authoring/src/learning-inbox.ts` | source | tracked unchanged |
 | [learning-publication.ts](/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/learning-publication.ts) — `server/packages/planes/studio/meta-entity-authoring/src/learning-publication.ts` | source | tracked unchanged |
@@ -571,7 +571,7 @@ Only .ts and .tsx are listed. Country authoring JSON, profile JSON, CSS, SQL, .m
 | [entity-ai.test.ts](/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/entity-ai.test.ts) — `server/packages/platform/metadata/src/__tests__/entity-ai.test.ts` | test | tracked unchanged |
 | [entity-authorization.test.ts](/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/entity-authorization.test.ts) — `server/packages/platform/metadata/src/__tests__/entity-authorization.test.ts` | test | tracked unchanged |
 | [intake-projection.test.ts](/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/intake-projection.test.ts) — `server/packages/platform/metadata/src/__tests__/intake-projection.test.ts` | test | tracked unchanged |
-| [intake-surface-projection.test.ts](/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/intake-surface-projection.test.ts) — `server/packages/platform/metadata/src/__tests__/intake-surface-projection.test.ts` | test | tracked unchanged |
+| intake-surface-projection.test.ts — `server/packages/platform/metadata/src/__tests__/intake-surface-projection.test.ts` | test | tracked unchanged |
 | [invalidation.test.ts](/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/invalidation.test.ts) — `server/packages/platform/metadata/src/__tests__/invalidation.test.ts` | test | tracked unchanged |
 | [metadata-service.test.ts](/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/metadata-service.test.ts) — `server/packages/platform/metadata/src/__tests__/metadata-service.test.ts` | test | tracked unchanged |
 | [native-list-application.test.ts](/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/native-list-application.test.ts) — `server/packages/platform/metadata/src/__tests__/native-list-application.test.ts` | test | tracked unchanged |

@@ -1,5 +1,7 @@
 # Employee personal information — screenshot-to-DDL review
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Reviewed: 2026-09-21. Scope: visible fields in the supplied employee screens, checked against current repository DDL. This is an assessment and proposed extension design; no database migration was applied. Names, identifiers, account numbers and other sample personal values from the screenshots are intentionally not reproduced in this document.
 
 Spreadsheet version: [screen-field coverage map](employee-personal-information-field-map.csv).

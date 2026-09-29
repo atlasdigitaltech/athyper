@@ -1,5 +1,7 @@
 # Business Partner overview and Roles & scope workspace
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 The 360 View retains shared partner information and banking facts. Role/company configuration is now a top-level Roles & scope tab. Older published panel layouts are upgraded by the BP adapter while retaining their other tabs and sidebar providers; the publication source and compatibility definitions match the new layout.
 
 Roles & scope shows partner roles and an authorized company matrix. Company counts deduplicate operating organizations, and role/organization existence does not imply an active company profile. Each company/organization/role row is authorized before its name or status is returned. A missing row is labelled “Not enabled or not visible” to avoid presenting inaccessible data as absent.

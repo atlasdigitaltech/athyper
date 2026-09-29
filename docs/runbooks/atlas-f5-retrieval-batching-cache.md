@@ -2,7 +2,7 @@
 
 **Status: closed — DEV CirrusAtlantic BP prototype (2026-09-10).**
 The current phase includes the deployed hybrid retrieval and document-grounded chat
-follow-ups. [Closure record](../architecture/business-partner/evidence/atlas-f5-phase-closure-20260910.json)
+follow-ups. Closure record
 links the qualification evidence and preserves the remaining production, broader-corpus
 and additional-owner work as follow-up qualification. Earlier evidence files remain
 historical snapshots; their original pending-deployment status is not current.
@@ -61,7 +61,7 @@ The opt-in benchmark writes `/tmp/atlas-f5-benchmark.json`. It executes the same
 
 No live migrations, publication or deployment are part of this change. Deployed owner-adapter qualification, realistic multi-user load, database pool sizing and p95/p99 latency remain rollout exit gates.
 
-Qualification: **362 AI tests, 8 host tests, three package typechecks, and PostgreSQL checks on all three planes passed**. See [recorded evidence](../architecture/business-partner/evidence/atlas-f5-retrieval-batching-20260910.json).
+Qualification: **362 AI tests, 8 host tests, three package typechecks, and PostgreSQL checks on all three planes passed**. See recorded evidence.
 
 ## Enabling the built-in attachment owner
 
@@ -77,7 +77,7 @@ The adapter loads no text until parent and attachment authorization succeed. It 
 
 For `record` or `content` knowledge sources, provide a separate registered owner adapter through `atlas.knowledgeAdmission`; the built-in attachment adapter returns false for those kinds. Do not substitute an unconditional allow callback. Custom ingestion and passage loading still need the corresponding owner authority.
 
-Attachment-adapter follow-up: **40 attachment tests, 10 host tests, two package typechecks, and disposable PostgreSQL checks on Neon, Mesh and Studio passed**. [Owner-admission evidence](../architecture/business-partner/evidence/atlas-f5-attachment-admission-20260910.json). DEV CirrusAtlantic owner admission and reingestion are now qualified. Production persona and additional-owner qualification remain follow-up work.
+Attachment-adapter follow-up: **40 attachment tests, 10 host tests, two package typechecks, and disposable PostgreSQL checks on Neon, Mesh and Studio passed**. Owner-admission evidence. DEV CirrusAtlantic owner admission and reingestion are now qualified. Production persona and additional-owner qualification remain follow-up work.
 
 ## DEV deployment follow-up
 

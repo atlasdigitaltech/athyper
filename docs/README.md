@@ -10,7 +10,7 @@
   infrastructure, previews and recovery.
 - [Deployment](../deploy/README.md) and [container wiring](../deploy/docs/operations/container-wiring.md).
 - [Architecture index](architecture/README.md) and
-  [Business Partner architecture](architecture/business-partner/README.md).
+  Business Partner architecture.
 - [Business capabilities and workflow design](business-workflows/README.md): seven
   NEON workspace documents covering 32 modules, with an internal evidence matrix.
 
@@ -19,8 +19,10 @@
 | Directory | Purpose |
 | --- | --- |
 | [architecture/](architecture/) | Architecture decisions and design guidance; follow document status labels. |
-| [contracts/](contracts/) | API, behavior and integration contracts, including explicitly proposed contracts. |
-| [runbooks/](runbooks/) | Operator procedures and named historical execution records. |
+| [contracts/](contracts/) | API, behavior and integration contracts, including explicitly proposed contracts; see [index](contracts/README.md). |
+| [runbooks/](runbooks/) | Operator procedures and named historical execution records; see [index](runbooks/README.md). |
+| [reports/](reports/) | Dated evidence and review reports; see [index](reports/README.md). Not current guidance. |
+| [prototypes/](prototypes/) | Static HTML/PNG design prototypes; not shipped UI. |
 | [operations/](operations/) | Operational guidance and its supporting evidence. |
 | [reviews/](reviews/) | Dated findings, implementation reviews and cleanup records. |
 | [examples/](examples/) | Examples and retained qualification evidence, including historical snapshots. |

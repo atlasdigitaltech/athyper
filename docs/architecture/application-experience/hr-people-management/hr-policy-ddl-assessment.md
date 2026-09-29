@@ -1,5 +1,7 @@
 # HR policy DDL assessment
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Reviewed 2026-09-22. Source-level assessment; no migration, runtime qualification or country-law validation performed.
 
 ## Verdict

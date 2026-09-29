@@ -1,5 +1,7 @@
 # HR localization and local / foreign employees
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Reviewed: 2026-09-21. Repository DDL assessment and proposed design; no migration applied. This document describes data responsibilities, not country-specific legal or tax rules. Country payroll qualification remains separate from the existence of country fields.
 
 ## Verdict

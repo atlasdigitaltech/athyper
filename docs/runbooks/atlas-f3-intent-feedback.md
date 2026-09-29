@@ -44,7 +44,7 @@ Identical retries with the same feedback ID return the existing receipt; changed
 
 ## Deployment and verification
 
-Apply [20260910_atlas_intent_feedback.sql](../../server/db/migrations/20260910_atlas_intent_feedback.sql) through the existing forward-migration runner before deploying this host version. It is registered in all three plane manifests. Fresh installations receive the same columns and constraints from common AI DDL. Then deploy the matching host, contract and UI changes. Keep the F2 entity descriptors and scope owner configuration.
+Apply 20260910_atlas_intent_feedback.sql through the existing forward-migration runner before deploying this host version. It is registered in all three plane manifests. Fresh installations receive the same columns and constraints from common AI DDL. Then deploy the matching host, contract and UI changes. Keep the F2 entity descriptors and scope owner configuration.
 
 The migration is additive. Prior code can continue writing legacy feedback and metering rows; rollback of application code does not require dropping the new columns or deleting feedback. This implementation did not apply migrations or publish changes to DEV/QA.
 

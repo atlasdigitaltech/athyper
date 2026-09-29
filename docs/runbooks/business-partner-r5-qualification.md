@@ -1,5 +1,7 @@
 # R5 Customer qualification
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 R5 has six evidence gates. `pnpm qualify:business-partner-r5` validates the
 manifest and reports pending gates. Release automation must use
 `pnpm qualify:business-partner-r5 --require-qualified`; it exits 2 while any gate

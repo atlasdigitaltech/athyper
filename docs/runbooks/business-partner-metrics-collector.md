@@ -1,5 +1,7 @@
 # Business Partner case and notification metrics
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 The API process collects metrics in the background, independently of `/readyz`, `/healthz`, and `/health`. The former `business-partner-case-age.neon` readiness contribution has been removed. Existing dependency readiness checks are unchanged.
 
 ## Configuration

@@ -152,6 +152,6 @@ Set `atlasDeploymentDirectory` to the receipt's exact directory and verify the
 current deployment binding before rollback. Never print or commit that private
 configuration. After either rollout or rollback, wait for healthy status and
 collect evidence against the resulting image; an old pass does not qualify a new
-image. The historical [F6 closure](../architecture/business-partner/evidence/atlas-f6-phase-closure-20260910.json)
+image. The historical F6 closure
 remains intact. [Current F6 status](../examples/atlas-f6/pilot-status.json) separately
 reports any image-binding requalification required by this reliability deployment.

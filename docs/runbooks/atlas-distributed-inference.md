@@ -156,6 +156,6 @@ an expendable performance cache. Initialization must not be put into ordinary
 application startup, because doing so would defeat fail-closed state-loss handling.
 
 F6 was subsequently requalified on this deployment: all ten gates passed. See
-[the current F6 closure](../architecture/business-partner/evidence/atlas-f6-phase-closure-distributed-20260910.json).
+the current F6 closure.
 The prior closure remains preserved against its historical image; the new record
 binds refreshed pilot evidence and retains the documented failure receipts.

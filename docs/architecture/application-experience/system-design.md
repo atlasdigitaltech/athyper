@@ -25,7 +25,7 @@ Existing domain, security, and lifecycle authorities remain in force:
 - [Entity form framework](../entity-form-framework.md).
 - [Shared contract ownership](../../../packages/contracts/README.md).
 - [Server contract ownership](../../../server/packages/contracts/README.md).
-- [Business Partner authority](../business-partner/README.md).
+- Business Partner authority.
 
 Do not use this cleanup to change domain authorization, publication authority, or production data. Runtime configuration and metadata never replace backend authorization.
 

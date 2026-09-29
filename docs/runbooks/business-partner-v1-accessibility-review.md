@@ -1,5 +1,7 @@
 # V1 manual assistive-technology review
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Use this checklist to complete the remaining local V1 accessibility item. The
 review must be performed by a named human using a real screen reader. Automated
 axe, keyboard, zoom, and viewport results supplement this review and cannot sign

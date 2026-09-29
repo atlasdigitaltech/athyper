@@ -1,5 +1,7 @@
 # Business Partner Phase 2 — Neon relationship and reference expansion
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 **2026-09-24 role-free section audit:** legacy Network role applicability and compiled 403/404 error translation are corrected. Ten screenshot sections read successfully for role-free CATL Aster; Governance & ownership now correctly reports 403 because its existing grant/binding is organization/company scoped. Tenant-level authorization configuration awaits approval. See [audit and remaining blocker](./partner-role-free-section-audit.md).
 
 **2026-09-24 classification UI update:** signed DEV release **25** is active. Industries and Commodities are separate partner collections; crosswalks are collapsed under “Related classification mappings,” and category matches are optional. CATL populated API/browser and cross-tenant-denial checks pass. Capture/setup forms remain pending. See [collection acceptance](./partner-classification-collections.md). Older release references below are historical checkpoints.

@@ -1,5 +1,7 @@
 # BP code cleanup — work package and file ledger
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Date: 2026-09-25. Status: boundary inventory and C01–C06 bounded local batches complete; C06 removed four proven obsolete shell files. C02b/C05 wider-suite findings resolved. Signed-in DEV smoke includes passing CATL owner reveal lifecycle; remaining activation and download-fixture blockers are recorded below.
 
 ## Verification follow-up — C02b and C05 findings

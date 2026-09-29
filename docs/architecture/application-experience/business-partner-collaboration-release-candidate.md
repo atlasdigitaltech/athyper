@@ -1,5 +1,7 @@
 # Business Partner collaboration release candidate
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 Status: proposed source boundary, pending implementation completion and immutable freeze.
 
 This candidate is the agreed dependency-complete DEV release boundary. It does

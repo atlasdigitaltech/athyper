@@ -53,7 +53,7 @@ Canonical-party IDs, IAM organization IDs, plane tenant IDs, principal IDs, MESH
 
 The current host can hold adapters for several databases and coordinate plane-specific work. The architectural boundary is explicit ownership, target selection, and scoped transactions. It would be inaccurate to describe the implementation as a process that can never open connections to more than one plane.
 
-Sources: [Business Partner authority](business-partner/README.md), [adapter registration](../../server/apps/platform-host/src/composition/register-adapters.ts), [service composition](../../server/apps/platform-host/src/composition/register-services.ts).
+Sources: Business Partner authority, [adapter registration](../../server/apps/platform-host/src/composition/register-adapters.ts), [service composition](../../server/apps/platform-host/src/composition/register-services.ts).
 
 ### 1.3 System context diagram
 
@@ -437,7 +437,7 @@ Governed commands validate the relevant tenant, actor, scope, expected version, 
 
 Current source connects cases, snapshots, workflow stages, work items, and domain-specific cycle coordination. The broader lifecycle ADR is explicitly a target architecture and migration contract. It must not be treated as proof that every proposed field or generic orchestration binding exists. The companion current-source review documents differences, including task-to-workflow and communications bindings.
 
-Sources: [Business Partner architecture](business-partner/README.md), [target lifecycle ADR](decisions/governed-entity-lifecycle.md), [current governed case flow](decisions/governed-case-communications-and-documents.md).
+Sources: Business Partner architecture, [target lifecycle ADR](decisions/governed-entity-lifecycle.md), [current governed case flow](decisions/governed-case-communications-and-documents.md).
 
 ### 9.3 Publication and cross-plane coordination
 
@@ -749,7 +749,7 @@ An open item is not necessarily absent code. It can be an unresolved operational
 
 | Question                                       | Start here                                                                                                                            |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Who owns a business record or decision?        | [Business Partner authority](business-partner/README.md) and the applicable domain contract                                           |
+| Who owns a business record or decision?        | Business Partner authority and the applicable domain contract                                           |
 | How are browser requests admitted and relayed? | [Auth BFF](../../packages/platform/iam/auth-bff/src/index.ts) and [BFF relay](../../packages/platform/gateway/bff-relay/src/index.ts) |
 | Which implementations run in the host?         | [Composition directory](../../server/apps/platform-host/src/composition/)                                                             |
 | How is identity mapped into a plane?           | [IAM resolver](../../server/packages/platform/iam/src/kysely-identity-context-resolver.ts)                                            |

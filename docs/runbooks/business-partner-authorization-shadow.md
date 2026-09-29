@@ -1,5 +1,7 @@
 # Business Partner shadow rollout
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](meta-entity-onboarding.md)); do not treat this as current instruction.
+
 This milestone selects `neon / business_partner / shadow`. Existing authorization,
 UI projections, commands, scope retries and grants remain authoritative. This is
 not enforcement activation or a completed migration.

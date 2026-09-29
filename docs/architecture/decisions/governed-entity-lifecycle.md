@@ -1,5 +1,7 @@
 # MESH–NEON governed entity lifecycle architecture
 
+> **Note (2026-09-30):** the bespoke Business Partner and workforce applications this ADR targets were removed in commit `870f08f52`. Treat the lifecycle and schema sketches as a design target to re-express through the shared Entity Framework, not as a description of shipped code.
+
 **Status:** Canonical target architecture and migration contract
 
 **Date:** 2026-09-03

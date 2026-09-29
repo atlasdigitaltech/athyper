@@ -1,5 +1,7 @@
 # Business Partner integrated release readiness
 
+> **Historical.** Written before commit `870f08f52` removed the bespoke Business Partner and workforce applications. Routes, packages and files named here may no longer exist, and de-linked paths were dead when this was cleaned up. New entity work goes through the shared Entity Framework ([onboarding guide](../../runbooks/meta-entity-onboarding.md)); do not treat this as current instruction.
+
 2026-09-21 checkpoint: the scoped Studio capability and Neon collaboration DDL
 upgrades are applied and verified in DEV, and the workspace build passes. Native
 intake/provider/envelope publication remains incomplete. See the

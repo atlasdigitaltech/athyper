@@ -35,7 +35,7 @@ For Mesh, send `businessContext.workContext.networkAccountId` from the user's ap
 
 Automated coverage lives in:
 
-- [Generic capability tests](../../server/packages/platform/ai/src/__tests__/entity-record-tool.test.ts): discovery, disabled/missing declarations, permissions, profile/admission filters, target/hash substitution, field projection, stale/revoked replay, BP section precedence, and both entities completing through AtlasAgentRuntime with citations and zero provider calls.
+- Generic capability tests: discovery, disabled/missing declarations, permissions, profile/admission filters, target/hash substitution, field projection, stale/revoked replay, BP section precedence, and both entities completing through AtlasAgentRuntime with citations and zero provider calls.
 - [Records vertical tests](../../server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts): actual Records query/list services, in-memory persistence and native Mesh account resolver; tenant isolation, field denial, missing/foreign account and membership revocation.
 - Existing BP owner, local generation, metadata compiler/parser and host composition suites remain regression gates.
 
