@@ -13,3 +13,14 @@ export function localizedEntityError(cause: unknown, intl: IntlRuntime, fallback
   }
   return fallback ?? intl.message("error.unavailable");
 }
+
+/** Localize safe presentation categories; never render server error details as UI copy. */
+export function localizeEntityErrorModel<T extends { readonly kind: string; readonly title: string; readonly description: string }>(model: T, intl: IntlRuntime): T {
+  const key = model.kind === "permission-denied" ? "denied"
+    : model.kind === "not-found" ? "notFound"
+    : model.kind === "service-unavailable" ? "serviceUnavailable"
+    : model.kind === "network" || model.kind === "offline" ? "network"
+    : model.kind === "unexpected" ? "unavailable"
+    : undefined;
+  return key ? { ...model, title: intl.message(`error.surface.${key}.title`), description: intl.message(`error.surface.${key}.description`) } : model;
+}

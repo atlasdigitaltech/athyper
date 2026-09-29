@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   sourceCompose,
+  resumeContainerCompose,
   resumeSourceCompose,
   APPLICATIONS,
 } from "./dev-workspace.mjs";
@@ -205,5 +206,46 @@ test("resume refuses foreign, incomplete, and non-source saved configurations", 
     const invalid = structuredClone(saved);
     change(invalid);
     assert.throws(() => resume(invalid), /saved DEV|another checkout/);
+  }
+});
+
+test("resumes a saved source definition as immutable container services", () => {
+  const saved = sourceCompose(
+    originals(),
+    "/checkout",
+    "sha256:" + "a".repeat(64),
+    1000,
+    1000,
+  );
+  const runtime = "sha256:" + "b".repeat(64);
+  const web = "sha256:" + "c".repeat(64);
+  const resumed = resumeContainerCompose(
+    saved,
+    { checkout: "/checkout" },
+    "/checkout",
+    {
+      "runtime-server": runtime,
+      "neon-web": web,
+      "mesh-web": web,
+      "studio-web": web,
+    },
+    Object.fromEntries(
+      APPLICATIONS.map((name) => [
+        name,
+        name.endsWith("-web") ? "/app" : "/app/server",
+      ]),
+    ),
+  );
+  for (const name of APPLICATIONS) {
+    const definition = resumed.services[name];
+    assert.equal(definition.image, name.endsWith("-web") ? web : runtime);
+    assert.equal(
+      definition.working_dir,
+      name.endsWith("-web") ? "/app" : "/app/server",
+    );
+    assert.equal(definition.environment.ATHYPER_LOCAL_SOURCE, "0");
+    assert.equal(definition.environment.NODE_ENV, "production");
+    assert.equal(definition.environment.REDIS_BULLMQ_HOST, "jobqueue");
+    assert.ok(!definition.volumes.some((mount) => mount.target === "/checkout"));
   }
 });

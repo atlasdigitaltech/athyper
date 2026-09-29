@@ -167,6 +167,7 @@ export interface ListFieldDescriptorV1 {
   readonly columnGroup?: string;
   readonly valueKind: ListValueKind;
   readonly semanticRole?: string;
+  readonly statusTones?: Readonly<Record<string, "neutral" | "success" | "warning" | "danger">>;
   readonly rendererKey?: string;
   readonly formatting?: Readonly<Record<string, JsonValue>>;
   /** Authorized, bounded choices suitable for enum or reference filter editors. */

@@ -44,7 +44,9 @@ async function mutateAggregate<Transaction>(options: RecordMutationServiceOption
     const used = ([changes.create?.length && "create", changes.update?.length && "update", changes.delete?.length && "delete", changes.replace?.length && "replace"] as const).filter(Boolean) as ("create" | "update" | "delete" | "replace")[];
     if (used.some((operation) => !definition.allowedOperations.includes(operation))) return { kind: "IncompatibleAction", action: "aggregate", reason: `Aggregate operation is not published for ${code}` };
   }
-  return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, (transaction) => executeRecordCommand(options, command, transaction, "aggregate", async () => {
+  return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
+    if (usesEntityBackendAuthorization(options.authorizer, command.context, descriptor) && !await allowed(options.authorizer, command, permission, "aggregate")) return { kind: "Forbidden" as const };
+    return executeRecordCommand(options, command, transaction, "aggregate", async () => {
     const current = await options.repository.get(descriptor,command.context.tenantId,command.recordId,[],transaction);
     if (!current) return {kind:"NotFound",entityCode:command.entityCode,recordId:command.recordId};
     const currentVersion = versionOf(descriptor,current);
@@ -55,7 +57,8 @@ async function mutateAggregate<Transaction>(options: RecordMutationServiceOption
     await appendRecordSideEffects(options, command, transaction, "aggregate", command.recordId);
     const version = versionOf(descriptor, record);
     return { kind: "Committed", action: "aggregate", entityCode: command.entityCode, recordId: command.recordId, record, ...(typeof version === "number" ? { version } : {}), replayed: false };
-  }, descriptor));
+    }, descriptor);
+  });
 }
 
 async function create<Transaction>(options: RecordMutationServiceOptions<Transaction>, command: CreateRecordCommand): Promise<RecordMutationResult> {
@@ -75,10 +78,11 @@ async function create<Transaction>(options: RecordMutationServiceOptions<Transac
   const ownerPrincipalId = descriptor.ownerAccess ? parentValues[descriptor.ownerAccess.ownerField] : undefined;
   if (ownerPrincipalId !== undefined && typeof ownerPrincipalId !== "string") return {kind:"Forbidden"};
   const effectiveCommand = ownerPrincipalId ? {...command,ownerPrincipalId:ownerPrincipalId as string} : command;
-  const fields = mergeFieldViolations(validateRecordInput(descriptor, "create", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input));
+  const fields = mergeFieldViolations(validateRecordInput(descriptor, "create", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input, "create"));
   if (Object.keys(fields).length) return { kind: "FieldsNotWritable", fields };
   return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
     if (usesEntityBackendAuthorization(options.authorizer,command.context,descriptor) && !await allowed(options.authorizer, command, descriptor.operations["create"]?.permissionCode, "create")) return {kind:"Forbidden" as const};
+    if (Object.keys(await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input, "create")).length) return { kind: "Forbidden" as const };
     return executeRecordCommand(options, effectiveCommand, transaction, "create", async () => {
       const ownerValues = await prepareRecordOwnerAccess(options.ownerAccess,{context:command.context,descriptor,operation:"create",ownerPrincipalId:effectiveCommand.ownerPrincipalId},transaction);
       const policy=resolveRecordMutationPolicy(descriptor,options.mutationPolicies);
@@ -102,10 +106,12 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
   const permission = descriptor.operations["patch"]?.permissionCode ?? descriptor.operations["update"]?.permissionCode;
   if (!await allowed(options.authorizer, command, permission, descriptor.operations["patch"] ? "patch" : "update")) return { kind: "Forbidden", ...(permission ? { permissionCode: permission } : {}) };
   if (descriptor.storage.versionField && command.expectedVersion === undefined) return { kind: "VersionRequired" };
-  const fields = mergeFieldViolations(validateRecordInput(descriptor, "patch", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input));
+  if (!Object.keys(command.input).length) return { kind: "FieldsNotWritable", fields: { _record: [{ code: "EMPTY_PATCH", message: "At least one field is required" }] } };
+  const fields = mergeFieldViolations(validateRecordInput(descriptor, "patch", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input, "patch"));
   if (Object.keys(fields).length) return { kind: "FieldsNotWritable", fields };
   return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
     if (usesEntityBackendAuthorization(options.authorizer,command.context,descriptor) && !await allowed(options.authorizer, command, permission, descriptor.operations["patch"] ? "patch" : "update")) return {kind:"Forbidden" as const};
+    if (Object.keys(await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input, "patch")).length) return { kind: "Forbidden" as const };
     return executeRecordCommand(options, command, transaction, "patch", async () => {
       const actorValues = await prepareRecordOwnerAccess(options.ownerAccess,{context:command.context,descriptor,operation:"patch"},transaction);
       const policy=resolveRecordMutationPolicy(descriptor,options.mutationPolicies);
@@ -132,6 +138,7 @@ async function remove<Transaction>(options: RecordMutationServiceOptions<Transac
   if (!await allowed(options.authorizer, command, permission, "delete")) return { kind: "Forbidden", ...(permission ? { permissionCode: permission } : {}) };
   if (descriptor.storage.versionField && command.expectedVersion === undefined) return { kind: "VersionRequired" };
   return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
+    if (usesEntityBackendAuthorization(options.authorizer, command.context, descriptor) && !await allowed(options.authorizer, command, permission, "delete")) return { kind: "Forbidden" as const };
     return executeRecordCommand(options, command, transaction, "delete", async () => {
       const result = await options.repository.delete(descriptor, command.context.tenantId, command.recordId, command.expectedVersion, transaction);
       if (result.versionConflict !== undefined) return { kind: "VersionConflict", expectedVersion: command.expectedVersion!, currentVersion: result.versionConflict };
@@ -142,7 +149,13 @@ async function remove<Transaction>(options: RecordMutationServiceOptions<Transac
   });
 }
 
-async function safeDescriptor(metadata: MetadataReader, command: { context: CreateRecordCommand["context"]; entityCode: string }) { try { return await descriptorFor(metadata, command.context, command.entityCode); } catch { return null; } }
+async function safeDescriptor(metadata: MetadataReader, command: { context: CreateRecordCommand["context"]; entityCode: string }) {
+  try { return await descriptorFor(metadata, command.context, command.entityCode); }
+  catch (error) {
+    if (error instanceof RecordServiceError && error.code === "ENTITY_DESCRIPTOR_NOT_FOUND") return null;
+    throw error;
+  }
+}
 async function allowed(
   authorizer: Authorizer,
   command: { context: CreateRecordCommand["context"]; entityCode: string; recordId?: string; input?: Readonly<Record<string,unknown>> },

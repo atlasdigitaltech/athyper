@@ -1,6 +1,7 @@
 import { resolveIntakeFormChoices } from "./intake-form-choices.js";
 import { authorizeListContextDiscovery } from "./list-context-discovery.js";
 import { readablePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
+import { fieldWriteAuthorizationResource } from "./field-validation.js";
 import {
   humanizeIdentifier,
   parseEntityDetailDescriptor,
@@ -361,12 +362,7 @@ export function createEntityListService(options: {
                 await options.authorizer.authorize({
                   context,
                   permissionCode: field.writePermissionCode,
-                  resource: {
-                    tenantId: context.tenantId,
-                    entityCode,
-                    operationKey: operation,
-                    field: field.key,
-                  },
+                  resource: fieldWriteAuthorizationResource(context, entityCode, operation, field.key),
                 })
               ).allowed);
           if (!readable.has(field.key) && !writable) return undefined;
@@ -382,15 +378,17 @@ export function createEntityListService(options: {
           "ENTITY_FORM_FIELDS_FORBIDDEN",
           "No fields are writable for this entity form",
         );
-      const label = humanizeIdentifier(entityCode),
+      const labels = entityLabels(descriptor),
+        label = labels.singular,
         projection = { entityCode, mode, fields: visible, operation };
       return parseEntityFormDescriptor({
         schema: "athyper.entity-form-descriptor/1",
+        ...(labels.localization ? { localizedLabels: readablePresentationLocalization(labels.localization, visible.map(field => field.key)) } : {}),
         plane: descriptor.planeKey,
         entity: {
           code: entityCode,
           label,
-          pluralLabel: pluralize(label),
+          pluralLabel: labels.plural,
         },
         revision: surfaceRevision(descriptor, projection),
         mode,
@@ -538,14 +536,15 @@ export function createEntityListService(options: {
       ]);
       return parseEntityDetailDescriptor({
         schema: "athyper.entity-detail-descriptor/1",
+        ...(entityLabels(descriptor).localization ? { localizedLabels: readablePresentationLocalization(entityLabels(descriptor).localization, fields.map(field => field.key)) } : {}),
         collaboration,
         activity,
         presentation: { ...presentation, summaryView },
         plane: descriptor.planeKey,
         entity: {
           code: entityCode,
-          label: humanizeIdentifier(entityCode),
-          pluralLabel: pluralize(humanizeIdentifier(entityCode)),
+          label: entityLabels(descriptor).singular,
+          pluralLabel: entityLabels(descriptor).plural,
         },
         revision: surfaceRevision(descriptor, {
           entityCode,
@@ -860,6 +859,7 @@ export function compileEntityListDescriptor(
   const hasConfiguredColumns = configuredColumns.size > 0;
   const fields: ListFieldDescriptorV1[] = readableFields.map((field, index) => {
     const options = filterOptions(field);
+    const statusTones = field.list?.statusTones ?? descriptor.recordPresentation?.badges.find(badge => badge.field === field.key)?.tones;
     return Object.freeze({
       key: field.key,
     label: field.list?.label ?? humanizeIdentifier(field.key),
@@ -871,6 +871,7 @@ export function compileEntityListDescriptor(
       ...(field.list?.semanticRole
         ? { semanticRole: field.list.semanticRole }
         : {}),
+      ...(statusTones ? { statusTones } : {}),
       ...(field.list?.rendererKey
         ? { rendererKey: field.list.rendererKey }
         : {}),
@@ -1447,7 +1448,7 @@ function normalizeDefaultFilters(
 }
 
 function formatGroupLabel(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "Not set";
+  if (value === null || value === undefined || value === "") return "—";
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
@@ -1473,6 +1474,13 @@ function jsonValue(value: unknown): JsonValue | undefined {
       ),
     );
   return String(value);
+}
+
+function entityLabels(descriptor: EntityRuntimeDescriptor) {
+  const localization = descriptor.listPresentation?.localizedLabels ?? descriptor.recordPresentation?.localizedLabels;
+  const singular = localization?.entity?.defaultText ?? humanizeIdentifier(descriptor.entityCode);
+  const plural = localization?.title?.defaultText ?? descriptor.listPresentation?.title ?? pluralize(singular);
+  return { singular, plural, localization };
 }
 
 function pluralize(value: string): string {

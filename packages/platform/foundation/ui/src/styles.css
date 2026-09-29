@@ -174,9 +174,9 @@
 .a-related-record address { font-style:normal; line-height:var(--a-line-height-relaxed); }
 .a-related-record__scope { color:var(--a-muted-foreground); font-size:.8125rem; }
 .a-related-record__badge { display:inline-flex; border:1px solid var(--a-border); border-radius:1rem; padding:.125rem .5rem; font-size:.8125rem; }
-.a-related-record__badge[data-tone=success] { color:#166534; background:#f0fdf4; }
-.a-related-record__badge[data-tone=warning] { color:#854d0e; background:#fefce8; }
-.a-related-record__badge[data-tone=danger] { color:#991b1b; background:#fef2f2; }
+.a-related-record__badge[data-tone=success] { color:var(--a-success-subtle-foreground); background:var(--a-success-subtle); }
+.a-related-record__badge[data-tone=warning] { color:var(--a-warning-subtle-foreground); background:var(--a-warning-subtle); }
+.a-related-record__badge[data-tone=danger] { color:var(--a-danger-subtle-foreground); background:var(--a-danger-subtle); }
 .a-related-record__rows { padding:0; margin:0; display:grid; gap:.75rem; list-style:none; }
 .a-related-record__rows>li { padding:.75rem 0; border-top:1px solid var(--a-border); }
 .a-related-record__channel-value { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }

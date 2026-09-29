@@ -7,6 +7,7 @@ import { humanizeIdentifier } from "@athyper/contract-platform-entity-runtime";
 import { entityDescriptorClient } from "@athyper/platform-entity-descriptor-client";
 import { localizedEntityError } from "@athyper/platform-i18n/entity-errors";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { localizeEntityLabels } from "@athyper/platform-i18n/entity-labels";
 import {
   PageFrame,
   PageHeader,
@@ -15,7 +16,7 @@ import {
 } from "@athyper/platform-shell";
 import { useApiClient } from "@athyper/platform-shell-app-foundation";
 import { Button, Card, InlineStatus } from "@athyper/platform-ui";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { FormFields } from "./field-input";
 import { isFormDirty } from "./form-dirty";
 import { isUntouchedOptionalCreateField, normalizeFieldValue } from "./form-values";
@@ -61,7 +62,7 @@ export function EntityFormRuntime({
     },
     [client, entityCode, mode, recordId],
   );
-  const descriptor = loaded.data?.descriptor;
+  const descriptor = useMemo(() => loaded.data?.descriptor ? localizeEntityLabels(loaded.data.descriptor, intl) : undefined, [loaded.data?.descriptor, intl]);
   const record = loaded.data?.record;
 
   const [values, setValues] = useState<FormValues>({});
@@ -178,7 +179,7 @@ export function EntityFormRuntime({
   );
   const submitButton = (
     <Button type="submit" loading={saving}>
-      {descriptor.submit.label}
+      {intl.message(descriptor.mode === "create" ? "form.submitCreate" : "form.submitEdit", { entity: descriptor.entity.label })}
     </Button>
   );
   if (contentOnly)
@@ -199,8 +200,8 @@ export function EntityFormRuntime({
             : "form.contextEdit",
           { entity: descriptor.entity.label },
         )}
-        title={descriptor.title}
-        description={descriptor.description}
+        title={intl.message(descriptor.mode === "create" ? "form.titleCreate" : "form.titleEdit", { entity: descriptor.entity.label })}
+        description={intl.message(descriptor.mode === "create" ? "form.descriptionCreate" : "form.descriptionEdit", { entity: descriptor.entity.label })}
         metadata={
           <span>
             {intl.message("form.release", {

@@ -839,6 +839,15 @@ function parseState(
   });
 }
 
+function parseStatusTones(value: unknown, name: string): Readonly<Record<string, "neutral" | "success" | "warning" | "danger">> {
+  const tones = object(value, name);
+  if (Object.keys(tones).length > 100) throw new TypeError(`${name} exceeds 100 statuses`);
+  return Object.freeze(Object.fromEntries(Object.entries(tones).map(([status, tone]) => {
+    if (!/^[a-z][a-z0-9_.-]{0,62}$/.test(status) || !["neutral", "success", "warning", "danger"].includes(String(tone))) throw new TypeError(`${name} is invalid`);
+    return [status, tone as "neutral" | "success" | "warning" | "danger"];
+  })));
+}
+
 function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
   const field = object(candidate, `fields[${index}]`);
   const defaultWidth = optionalInteger(
@@ -917,6 +926,7 @@ function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
           ),
         }
       : {}),
+    ...(field.statusTones === undefined ? {} : { statusTones: parseStatusTones(field.statusTones, `fields[${index}].statusTones`) }),
     ...(filterOptions ? { filterOptions } : {}),
     defaultVisible: boolean(
       field.defaultVisible,

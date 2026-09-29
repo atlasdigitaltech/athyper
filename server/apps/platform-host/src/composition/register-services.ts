@@ -42,7 +42,9 @@ import { expireCommentDrafts } from "@athyper/server-platform-collaboration";
 import { createEntityCapabilityPolicy, EntityCapabilityPolicyError, canReplyAtDepth } from "@athyper/server-platform-experience";
 import { createMetaEntityActivationInspector } from "./shared/entity-governance/meta-entity-activation-inspection.js";
 import { HttpError } from "@athyper/server-runtime-http";
-import { addressFormChoices, bankFormChoices, bankFormSources, createSharedReferenceDirectory, isSharedReferenceSourceKey, requiresSharedReferenceDependency } from "@athyper/server-service-records";
+import { addressFormChoices, createSharedReferenceDirectory } from "@athyper/server-service-records";
+import { createEntityPresentationChoiceResolvers } from "./shared/entity-runtime/presentation-choice-resolvers.js";
+import { registeredRecordScopeSqlCompilers } from "./shared/entity-runtime/record-scope-sql.js";
 import { readPublishedNotificationConfiguration, readPublishedCollectionConfiguration } from "@athyper/server-service-publication";
 import { localGraphPreview } from "../development/graph-preview.js";
 import { prepareDocumentCollectionRelease } from "@athyper/server-plane-studio";
@@ -584,7 +586,7 @@ export function registerServices(
     metadata: { getEntityDescriptor: (context, entityCode) => metadata.getEntityDescriptor(context, entityCode) },
     refreshContext: refreshEntityContext,
     exists: (context, descriptor, recordId) => transactions.run(context.planeKey, context, async tx => {
-      const repository = dependencies.repository ?? createKyselyRecordRepository({ databases: recordDatabases });
+      const repository = dependencies.repository ?? createKyselyRecordRepository({ databases: recordDatabases, scopeCompilers: registeredRecordScopeSqlCompilers });
       return Boolean(await repository.get(descriptor, context.tenantId, recordId, [descriptor.storage.idField], tx));
     }),
   });
@@ -2836,7 +2838,7 @@ export function registerServices(
   if (dependencies.repository || Object.keys(recordDatabases).length > 0) {
     const repository =
       dependencies.repository ??
-      createKyselyRecordRepository({ databases: recordDatabases });
+      createKyselyRecordRepository({ databases: recordDatabases, scopeCompilers: registeredRecordScopeSqlCompilers });
     const outbox = dependencies.outbox ?? createDatabaseOutboxWriter("records");
     const commandExecutions =
       dependencies.commandExecutions ?? createKyselyCommandExecutionStore();
@@ -2871,74 +2873,7 @@ export function registerServices(
         collaboration: (input) => entityCollaboration.describe(input),
         activity: async (input) => Boolean(await entityActivity.describe(input)),
         summary: async (input) => publishedSummaries?.describe(input),
-        formChoices: async (context, sourceKey) => {
-          const database = metadataDatabases[context.planeKey];
-          if (!database) throw Error("INTAKE_LOOKUP_DATABASE_UNAVAILABLE");
-          // Banking has its own capture projection until BP2-09. Other dependent
-          // shared references start empty and are loaded only after their parent
-          // field supplies an admitted scope.
-          if ((bankFormSources as readonly string[]).includes(sourceKey))
-            return bankFormChoices(database, sourceKey);
-          if (isSharedReferenceSourceKey(sourceKey)) {
-            if (requiresSharedReferenceDependency(sourceKey)) return [];
-            const page = await createSharedReferenceDirectory(database).lookup({
-              sourceKey,
-              limit: 25,
-            });
-            return page.items.map(({ value, label, data }) => ({
-              value,
-              label,
-              ...(data ? { data } : {}),
-            }));
-          }
-          if (context.planeKey !== "neon")
-            throw Error("INTAKE_LOOKUP_SOURCE_UNREGISTERED");
-          const tables: Record<string, string> = {
-            "neon.commodity_category": "master.commodity_category",
-            "neon.tax_jurisdiction": "master.tax_jurisdiction",
-            "neon.tax_type": "master.tax_type",
-            "neon.certification_type": "master.certification_type",
-          };
-          const table = tables[sourceKey];
-          const result = table
-            ? await sql<{
-                id: string;
-                code: string;
-                name: string;
-              }>`SELECT id::text,code,name FROM ${sql.table(table)} WHERE tenant_id=${context.tenantId}::uuid AND status='active' ORDER BY name,id LIMIT 2001`.execute(
-                database,
-              )
-            : undefined;
-          if (!result) throw Error("INTAKE_LOOKUP_SOURCE_UNREGISTERED");
-          if (result.rows.length > 2000)
-            throw Error("INTAKE_LOOKUP_REQUIRES_PAGED_SOURCE");
-          return result.rows.map((row) => ({
-            value: row.id,
-            label: row.code + " · " + row.name,
-          }));
-        },
-        filterChoices: async (context, fields) => {
-          const countries = fields.filter(
-            (field) => field.list?.semanticRole === "country_code",
-          );
-          if (!countries.length) return {};
-          const database = metadataDatabases[context.planeKey];
-          if (!database) return {};
-          // Shared reference data is global; only already-authorized fields reach this resolver.
-          const result = await sql<{
-            code: string;
-            name: string;
-          }>`SELECT code, name FROM shared.country ORDER BY name LIMIT 500`.execute(
-            database,
-          );
-          const choices = result.rows.map((row) => ({
-            value: row.code.trim(),
-            label: row.name,
-          }));
-          return Object.fromEntries(
-            countries.map((field) => [field.key, choices]),
-          );
-        },
+        ...createEntityPresentationChoiceResolvers(metadataDatabases),
       },
       bookmarkCache: container.adapters.redisCache,
       activityRegistrations,

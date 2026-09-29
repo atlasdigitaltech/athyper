@@ -253,6 +253,8 @@ export function AttachmentUploader({
     try {
       for (const attempt of attempts)
         if (await upload(attempt)) succeeded.push(attempt);
+    } catch (cause) {
+      setError(message(cause));
     } finally {
       activeBatches.current--;
       setBusy(activeBatches.current > 0);
@@ -374,6 +376,8 @@ export function AttachmentUploader({
       if (separate.length) enqueue(separate);
       if (pending.length) setDuplicates((current) => [...current, ...pending]);
       setValidationErrors(rejected);
+    } catch (cause) {
+      setError(message(cause));
     } finally {
       admittingFiles.current = false;
     }

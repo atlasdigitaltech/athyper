@@ -1,4 +1,4 @@
-export { entityFieldFilterOperators } from "./descriptors.js";
+export { ENTITY_FIELD_TYPES, entityFieldFilterOperators } from "./descriptors.js";
 export type * from "./descriptors.js";
 export type * from "./ports.js";
 

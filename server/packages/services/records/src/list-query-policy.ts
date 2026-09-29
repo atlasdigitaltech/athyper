@@ -1,10 +1,9 @@
-import { entityFieldFilterOperators, type EntityFieldDescriptor } from "@athyper/server-contract-metadata";
+import { ENTITY_FIELD_TYPES, entityFieldFilterOperators, type EntityFieldDescriptor } from "@athyper/server-contract-metadata";
 import type { RecordFilterOperator } from "@athyper/server-contract-records";
 
 /** One canonical operator policy shared by browser descriptors and query admission. */
 export function recordFilterOperators(type: EntityFieldDescriptor["type"] | string | undefined): readonly RecordFilterOperator[] {
-  const supported = ["string", "text", "integer", "decimal", "money", "boolean", "date", "datetime", "uuid", "enum", "reference", "json"] as const;
-  const normalized = supported.find((candidate) => candidate === type) ?? "string";
+  const normalized = ENTITY_FIELD_TYPES.find((candidate) => candidate === type) ?? "string";
   return entityFieldFilterOperators(normalized) as readonly RecordFilterOperator[];
 }
 

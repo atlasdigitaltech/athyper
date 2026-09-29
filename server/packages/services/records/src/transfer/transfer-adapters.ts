@@ -93,6 +93,7 @@ export function createMetadataImportRowValidator(
           context,
           descriptor,
           mutationRow,
+          governed || operation !== "create" ? "patch" : "create",
         ),
         missingIdentity,
       );

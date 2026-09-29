@@ -39,7 +39,7 @@ export default tseslint.config(
     },
     linterOptions: { reportUnusedDisableDirectives: "warn" },
     rules: {
-      "react-hooks/rules-of-hooks": "warn",
+      "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
       "@typescript-eslint/no-floating-promises": "warn",
       "@typescript-eslint/no-misused-promises": "warn",
@@ -50,6 +50,19 @@ export default tseslint.config(
           .map((rule) => [rule, "warn"]),
       ),
     },
+  },
+  {
+    files: [
+      "server/packages/contracts/metadata/src/**/*.{ts,tsx}",
+      "server/packages/services/records/src/**/*.{ts,tsx}",
+    ],
+    ignores: ["**/*.d.ts", "**/__tests__/**", "**/*.test.{ts,tsx}"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: { projectService: true },
+    },
+    plugins: { "@typescript-eslint": tseslint.plugin },
+    rules: { "@typescript-eslint/no-floating-promises": "error" },
   },
   {
     // Keep explicit `any` visible in the shared Entity Framework while its

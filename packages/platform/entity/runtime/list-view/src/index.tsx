@@ -56,8 +56,8 @@ import {
   listNotice,
   type ListNotice,
 } from "./list-notice";
-import { localizedEntityError } from "@athyper/platform-i18n/entity-errors";
-import { formatEntityValue } from "@athyper/platform-i18n/entity-value";
+import { localizeEntityErrorModel, localizedEntityError } from "@athyper/platform-i18n/entity-errors";
+import { formatFieldValue } from "./field-format";
 import {
   fallbackQuickFields,
   resolveEntityText,
@@ -1757,11 +1757,11 @@ function ListChrome({
   const countLabel =
     count === undefined
       ? undefined
-      : `${page?.pagination.countMode === "approximate" ? "≈" : ""}${new Intl.NumberFormat().format(count)}`;
+      : `${page?.pagination.countMode === "approximate" ? "≈" : ""}${entityIntl.number(count)}`;
   const resultCountLabel =
     countLabel ??
     (page
-      ? `${new Intl.NumberFormat().format(page.rows.length)}${page.pagination.hasNext ? "+" : ""}`
+      ? `${entityIntl.number(page.rows.length)}${page.pagination.hasNext ? "+" : ""}`
       : undefined);
   const groupLabel = state.group
     ? (descriptor.fields.find((field) => field.key === state.group)?.label ??
@@ -1893,24 +1893,24 @@ function ListChrome({
           <ObjectSearch
             ref={searchRef}
             id={searchId}
-            label={`Search ${descriptor.entity.pluralLabel}`}
+            label={entityIntl.message("list.searchLabel", { entity: descriptor.entity.pluralLabel })}
             value={query}
             onValueChange={setQuery}
-            placeholder={`Search by ${searchHint(descriptor)}…`}
+            placeholder={entityIntl.message("list.searchPlaceholder", { field: searchHint(descriptor) })}
             maxLength={ENTITY_LIST_MAX_SEARCH_LENGTH}
           />
         </form>
         <ViewSelector
           className="a-entity-list__view-trigger"
           disabled={embedding?.options.views.allowSwitching === false}
-          name={activeView?.name ?? "System default"}
+          name={activeView?.name ?? entityIntl.message("list.systemDefault")}
           modified={dirty}
         >
           {isListViewAllowed(
             { savedViewId: "system" },
             embedding?.options.views.allowedViewKeys,
           ) ? (
-            <MenuItem onClick={reset}>System default</MenuItem>
+            <MenuItem onClick={reset}>{entityIntl.message("list.systemDefault")}</MenuItem>
           ) : null}
           {eligibleViews.map((view) => (
             <MenuItem
@@ -1934,7 +1934,7 @@ function ListChrome({
           ))}
           {!embedding || embedding.options.views.allowSwitching ? (
             <MenuItem onClick={() => setActiveDrawer("views")}>
-              Manage views…
+              {entityIntl.message("list.manageViews")}
             </MenuItem>
           ) : null}
         </ViewSelector>
@@ -1945,9 +1945,9 @@ function ListChrome({
               variant={filterCount ? "primary" : "secondary"}
               size="small"
               aria-label={
-                filterCount ? `Filters, ${filterCount} active` : "Filters"
+                filterCount ? entityIntl.message("list.activeFilters", { count: filterCount }) : entityIntl.message("list.filters")
               }
-              title={filterCount ? `${filterCount} active filters` : "Filters"}
+              title={filterCount ? entityIntl.message("list.activeFilters", { count: filterCount }) : entityIntl.message("list.filters")}
               onClick={() => setActiveDrawer("filters")}
             >
               <FilterIcon size={16} />
@@ -1971,13 +1971,13 @@ function ListChrome({
               size="small"
               aria-label={
                 state.sort.length > 1
-                  ? `Sort, ${state.sort.length} rules`
-                  : "Sort"
+                  ? entityIntl.message("list.sortRules", { count: state.sort.length })
+                  : entityIntl.message("list.sort")
               }
               title={
                 state.sort.length > 1
-                  ? `${state.sort.length} sort levels`
-                  : "Sort"
+                  ? entityIntl.message("list.sortRules", { count: state.sort.length })
+                  : entityIntl.message("list.sort")
               }
               onClick={() => setActiveDrawer("sort")}
             >
@@ -2000,8 +2000,8 @@ function ListChrome({
               className="a-entity-list__toolbar-action a-entity-list__columns-action"
               variant="secondary"
               size="small"
-              aria-label={`${state.columns.length} visible columns`}
-              title={`${state.columns.length} visible columns`}
+              aria-label={entityIntl.message("list.visibleColumns", { count: state.columns.length })}
+              title={entityIntl.message("list.visibleColumns", { count: state.columns.length })}
               onClick={() => setActiveDrawer("columns")}
             >
               <ColumnsIcon size={16} />
@@ -2052,7 +2052,7 @@ function ListChrome({
                   value={
                     {
                       filters: `${filterCount} active`,
-                      views: activeView?.name ?? "System default",
+                      views: activeView?.name ?? entityIntl.message("list.systemDefault"),
                       sort: `${state.sort.length} ${state.sort.length === 1 ? "level" : "levels"}`,
                       columns: `${state.columns.length} visible`,
                       group: groupLabel,
@@ -2084,11 +2084,11 @@ function ListChrome({
                   />
                   <ListMenuItem
                     icon={<DownloadIcon size={16} />}
-                    label="Data operations…"
+                    label={entityIntl.message("list.dataOperations")}
                     disabled={Boolean(state.standardViewKey)}
                     value={
                       state.standardViewKey
-                        ? "Use System default for data operations; standard-view export is not supported yet."
+                        ? entityIntl.message("list.standardViewExportUnavailable")
                         : undefined
                     }
                     onClick={onOpenDataOperations}
@@ -2102,7 +2102,7 @@ function ListChrome({
               <ListMenuItem
                 className="a-entity-list__mobile-only"
                 icon={<RefreshCwIcon size={16} />}
-                label={refreshRequested ? "Refreshing…" : "Refresh"}
+                label={entityIntl.message(refreshRequested ? "list.refreshing" : "list.refresh")}
                 onClick={() => {
                   setRefreshRequested(true);
                   onActionNotice(listNotice("list.notice.refreshing"));
@@ -2111,14 +2111,14 @@ function ListChrome({
               />
               <ListMenuItem
                 icon={<LinkIcon size={16} />}
-                label="Copy link to this view"
+                label={entityIntl.message("list.copyViewLink")}
                 onClick={copyViewLink}
               />
               <div className="a-entity-list__menu-separator" role="separator" />
               <ListMenuItem
                 className="a-entity-list__reset-item"
                 icon={<ResetIcon size={16} />}
-                label="Reset list settings"
+                label={entityIntl.message("list.resetSettings")}
                 onClick={() => (customized ? setResetOpen(true) : reset())}
               />
             </MenuContent>
@@ -4197,19 +4197,19 @@ function EntityRows({
             ? emptyContent?.noMatchesTitle
             : emptyContent?.emptyTitle) ??
             (query?.trim()
-              ? `No results for “${query.trim()}”`
+              ? intl.message("list.empty.query", { query: query.trim() })
               : constrained
-                ? "No matching records"
-                : `No ${descriptor.surface.title.toLocaleLowerCase()} to display`)}
+                ? intl.message("list.empty.matching")
+                : intl.message("list.empty.entity", { entity: descriptor.surface.title.toLocaleLowerCase() }))}
         </h2>
         <p>
           {constrained
             ? (emptyContent?.noMatchesDescription ??
-              "Try another search term or adjust your filters.")
+              intl.message("list.empty.adjust"))
             : emptyAction
               ? (emptyContent?.emptyDescription ??
-                "You can request a new record below.")
-              : "There are no records to display."}
+                intl.message("list.empty.request"))
+              : intl.message("list.empty.none")}
         </p>
         {emptyAction}
       </Card>
@@ -4990,7 +4990,7 @@ function renderFieldValue(
     const normalized = String(value ?? "").toLowerCase();
     return (
       <span
-        className={`a-entity-list__status a-entity-list__status--${normalized === "active" ? "success" : normalized === "draft" ? "warning" : "neutral"}`}
+        className={`a-entity-list__status a-entity-list__status--${field.statusTones?.[normalized] ?? "neutral"}`}
       >
         <span aria-hidden="true" />
         {highlighted}
@@ -4998,42 +4998,6 @@ function renderFieldValue(
     );
   }
   return highlighted;
-}
-function formatFieldValue(
-  value: JsonValue | undefined,
-  field?: ListFieldDescriptorV1,
-  intl?: ReturnType<typeof useEntityI18n>,
-): string {
-  if (intl) return formatEntityValue(value, field, intl);
-  if (value === undefined || value === null || value === "") return "—";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (typeof value === "object") return JSON.stringify(value);
-  if (field?.valueKind === "datetime" || field?.valueKind === "date") {
-    const date = new Date(String(value));
-    if (!Number.isNaN(date.getTime()))
-      return new Intl.DateTimeFormat(
-        undefined,
-        field.valueKind === "date"
-          ? { dateStyle: "medium" }
-          : { dateStyle: "medium", timeStyle: "short" },
-      ).format(date);
-  }
-  if (
-    field?.semanticRole === "country_code" &&
-    typeof Intl.DisplayNames === "function"
-  ) {
-    try {
-      return (
-        new Intl.DisplayNames(undefined, { type: "region" }).of(
-          String(value).toUpperCase(),
-        ) ?? String(value)
-      );
-    } catch {
-      return String(value);
-    }
-  }
-  if (field?.valueKind === "enum") return humanizeIdentifier(String(value));
-  return String(value);
 }
 async function copyText(value: string): Promise<boolean> {
   try {
@@ -5123,7 +5087,7 @@ function groupedRows(
   readonly rows: readonly EntityListRowV1[];
 }[] {
   if (!group)
-    return [{ label: "All records", count: page.rows.length, rows: page.rows }];
+    return [{ label: intl.message("list.group.allRecords"), count: page.rows.length, rows: page.rows }];
   const field = descriptor.fields.find((candidate) => candidate.key === group),
     authoritativeCounts = new Map(
       (page.groups ?? []).map((bucket) => [
@@ -5350,10 +5314,10 @@ function ErrorState({
   readonly entityName?: string;
 }) {
   const intl = useEntityI18n();
-  const classification = classifyAppError({
+  const classification = localizeEntityErrorModel(classifyAppError({
     error,
     applicationName: entityName,
-  });
+  }), intl);
   const model = {
     ...classification,
     description: localizedEntityError(error, intl, classification.description),
@@ -5385,19 +5349,20 @@ function ErrorState({
       </div>
       {model.canRetry ? (
         <Button size="small" variant="secondary" onClick={retry}>
-          Try again
+          {intl.message("entity.retry")}
         </Button>
       ) : null}
-      {error.requestId ? <small>Request ID: {error.requestId}</small> : null}
+      {error.requestId ? <small>{intl.message("entity.requestId", { id: error.requestId })}</small> : null}
     </Card>
   );
 }
 function LoadingTable({ columns }: { readonly columns: number }) {
+  const intl = useEntityI18n();
   const count = Math.max(1, Math.min(columns, 12));
   return (
     <StickyListTable
       role="status"
-      aria-label="Loading records"
+      aria-label={intl.message("list.loadingRecords")}
       aria-busy="true"
     >
       <table

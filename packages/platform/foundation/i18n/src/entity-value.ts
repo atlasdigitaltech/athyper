@@ -29,6 +29,8 @@ export function formatEntityValue(
   if (typeof value !== "string") return String(value);
 
   const kind = field?.valueKind ?? field?.kind;
+  if ((kind === "integer" || kind === "decimal" || kind === "money") && /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value))
+    return formatExactDecimal(value, intl);
   if (kind === "date" || kind === "datetime") {
     const date = new Date(value);
     if (!Number.isNaN(date.getTime()))
@@ -52,6 +54,21 @@ export function formatEntityValue(
       humanizeIdentifier(value)
     );
   return value;
+}
+
+/** PostgreSQL numeric values are strings. Format their digits without a floating-point conversion. */
+export function formatExactDecimal(value: string, intl: IntlRuntime): string {
+  const negative = value.startsWith("-");
+  const [whole, fraction] = (negative ? value.slice(1) : value).split(".");
+  const formatter = new Intl.NumberFormat(intl.localization.formatLocale, {
+    numberingSystem: intl.localization.numberingSystem,
+    maximumFractionDigits: 0,
+  });
+  const integer = formatter.format(BigInt(`${negative ? "-" : ""}${whole}`));
+  if (fraction === undefined) return integer;
+  const decimal = new Intl.NumberFormat(intl.localization.formatLocale, { numberingSystem: intl.localization.numberingSystem }).formatToParts(1.1).find(part => part.type === "decimal")?.value ?? ".";
+  const digits = Array.from({ length: 10 }, (_, digit) => new Intl.NumberFormat(intl.localization.formatLocale, { numberingSystem: intl.localization.numberingSystem, useGrouping: false }).format(digit));
+  return integer + decimal + [...fraction].map(digit => digits[Number(digit)]).join("");
 }
 
 function humanizeIdentifier(value: string): string {

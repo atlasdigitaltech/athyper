@@ -288,6 +288,35 @@ export function resumeSourceCompose(saved, baseline, checkout, image) {
   return config;
 }
 
+export function resumeContainerCompose(
+  saved,
+  baseline,
+  checkout,
+  images,
+  workingDirectories,
+) {
+  const config = resumeSourceCompose(
+    saved,
+    baseline,
+    checkout,
+    images["runtime-server"],
+  );
+  for (const name of APPLICATIONS) {
+    const definition = config.services[name];
+    definition.image = images[name.endsWith("-web") ? name : "runtime-server"];
+    definition.working_dir = workingDirectories[name];
+    definition.environment.ATHYPER_LOCAL_SOURCE = "0";
+    definition.environment.NODE_ENV = "production";
+    // DEV already provides an isolated jobqueue service. Declare it explicitly
+    // because production images otherwise retain their legacy cache fallback.
+    definition.environment.REDIS_BULLMQ_HOST = "jobqueue";
+    definition.volumes = definition.volumes.filter(
+      (mount) => mount.target !== checkout,
+    );
+  }
+  return config;
+}
+
 function schemaSnapshot(db) {
   return Object.fromEntries(
     ["studio", "neon", "mesh"].map((plane) => [
@@ -448,7 +477,7 @@ export async function main(args = process.argv.slice(2)) {
     const missing = APPLICATIONS.filter(
       (name) => !selected.some((c) => service(c) === name),
     );
-    if (missing.length && mode !== "source")
+    if (missing.length && !["source", "build", "container"].includes(mode))
       throw new Error(
         `Missing legacy DEV applications: ${missing.join(", ")}. Source mode can resume from its saved configuration.`,
       );
@@ -702,16 +731,42 @@ export async function main(args = process.argv.slice(2)) {
         const built = jsonRead(join(root, "development-images.json"));
         if (built.checkout !== checkout)
           throw new Error("Development images belong to another checkout");
-        const config = sourceCompose(
-          originals,
-          checkout,
-          built.images["runtime-server"],
-          process.getuid(),
-          process.getgid(),
-          join(root, "preview"),
-        );
+        const imageDefinitions = {};
+        for (const name of APPLICATIONS) {
+          const image = built.images[name.endsWith("-web") ? name : "runtime-server"];
+          imageDefinitions[name] = JSON.parse(docker("image", "inspect", image))[0];
+          if (
+            imageDefinitions[name].Config.Labels?.["org.opencontainers.image.revision"] !==
+              `working-tree-${built.sourceTreeSha256}` ||
+            imageDefinitions[name].Config.Labels?.["io.athyper.local-preview.protocol"] !== "1"
+          )
+            throw new Error(
+              "Development image provenance or preview support mismatch",
+            );
+        }
+        const config = missing.length
+          ? resumeContainerCompose(
+              jsonRead(join(root, "source.full.compose.json")),
+              baseline,
+              checkout,
+              built.images,
+              Object.fromEntries(
+                APPLICATIONS.map((name) => [
+                  name,
+                  imageDefinitions[name].Config.WorkingDir,
+                ]),
+              ),
+            )
+          : sourceCompose(
+              originals,
+              checkout,
+              built.images["runtime-server"],
+              process.getuid(),
+              process.getgid(),
+              join(root, "preview"),
+            );
         for (const [name, definition] of Object.entries(config.services)) {
-          const original = selected.find((c) => service(c) === name);
+          if (missing.length) continue;
           definition.image =
             built.images[name.endsWith("-web") ? name : "runtime-server"];
           const image = JSON.parse(
@@ -727,7 +782,8 @@ export async function main(args = process.argv.slice(2)) {
             );
           definition.environment.ATHYPER_LOCAL_SOURCE = "0";
           definition.environment.NODE_ENV = "production";
-          definition.working_dir = original.Config.WorkingDir;
+          definition.environment.REDIS_BULLMQ_HOST = "jobqueue";
+          definition.working_dir = image.Config.WorkingDir;
           definition.volumes = definition.volumes.filter(
             (mount) => mount.target !== checkout,
           );

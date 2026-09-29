@@ -8,6 +8,7 @@ import {
 } from "@athyper/contract-platform-entity-runtime";
 import { entityDescriptorClient } from "@athyper/platform-entity-descriptor-client";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { localizeEntityErrorModel, localizedEntityError } from "@athyper/platform-i18n/entity-errors";
 import { PageWorkspace, useRecordPage } from "@athyper/platform-shell";
 import {
   ErrorSurface,
@@ -52,6 +53,9 @@ export function EntityDetailRuntime({
     },
     [client, entityCode, recordId],
   );
+  const errorModel = loaded.error
+    ? localizeEntityErrorModel(classifyAppError({ error: loaded.error, applicationName: humanizeIdentifier(entityCode) }), intl)
+    : undefined;
   if (!loaded.data)
     return (
       <PageWorkspace
@@ -59,7 +63,7 @@ export function EntityDetailRuntime({
       >
         {loaded.error ? (
           <ErrorSurface
-            model={classifyAppError({ error: loaded.error, applicationName: humanizeIdentifier(entityCode) })}
+            model={{ ...errorModel!, description: localizedEntityError(loaded.error, intl, errorModel?.description) }}
             reset={loaded.reload}
             applicationName={humanizeIdentifier(entityCode)}
             surface="content"

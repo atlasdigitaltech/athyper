@@ -44,6 +44,7 @@ export {
   isSharedReferenceSourceKey,
   requiresSharedReferenceDependency,
   sharedReferenceDefinitions,
+  sharedReferenceFilterChoices,
 } from "./shared-reference-directory.js";
 export { registerSharedReferenceDirectoryRoutes } from "./shared-reference-directory-routes.js";
 

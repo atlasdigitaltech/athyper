@@ -14,9 +14,18 @@ export type RecordTransaction = Transaction<Schema>;
 
 export interface KyselyRecordRepositoryOptions {
   readonly databases: Partial<Readonly<Record<PlaneKey, RecordDatabase>>>;
+  /** Trusted server registrations for scope kinds owned outside the shared repository. */
+  readonly scopeCompilers?: readonly RecordCollectionScopeSqlCompiler[];
+}
+
+export interface RecordCollectionScopeSqlCompiler {
+  readonly kind: RecordRepositoryListInput["collectionScope"][number]["kind"];
+  compile(descriptor: EntityRuntimeDescriptor, tenantId: string, constraint: RecordRepositoryListInput["collectionScope"][number]): RawBuilder<unknown>;
 }
 
 export function createKyselyRecordRepository(options: KyselyRecordRepositoryOptions): RecordRepository<RecordTransaction> {
+  const scopeCompilers = new Map(options.scopeCompilers?.map(compiler => [compiler.kind, compiler]));
+  if (scopeCompilers.size !== (options.scopeCompilers?.length ?? 0)) throw new Error("Duplicate record scope SQL compiler");
   const databaseFor = (descriptor: EntityRuntimeDescriptor): RecordDatabase => {
     const database = options.databases[descriptor.planeKey];
     if (!database) throw new Error(`No record database registered for ${descriptor.planeKey}`);
@@ -28,7 +37,7 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       const conditions = baseConditions(input.descriptor, input.tenantId);
       if (input.recordIds !== undefined && !input.recordIds.length) conditions.push(sql`FALSE`);
       if (input.recordIds?.length) conditions.push(sql`${sql.ref(input.descriptor.storage.idField)} IN (${sql.join(input.recordIds.map((id) => sql`${id}::uuid`))})`);
-      for (const constraint of input.collectionScope) conditions.push(compileRecordCollectionScopeCondition(input.descriptor, input.tenantId, constraint));
+      for (const constraint of input.collectionScope) conditions.push(compileRecordCollectionScopeCondition(input.descriptor, input.tenantId, constraint, scopeCompilers));
       for (const relationship of input.viewRelationships ?? []) conditions.push(compileStandardViewRelationship(input.descriptor, input.tenantId, relationship));
       for (const filter of input.filters ?? []) {
         validateFilterValue(filter);
@@ -98,25 +107,10 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
 function table(descriptor: EntityRuntimeDescriptor) { return sql.table(`${descriptor.storage.schema}.${descriptor.storage.object}`); }
 function projection(descriptor: EntityRuntimeDescriptor, keys: readonly string[]): RawBuilder<unknown> { const selected = keys.map((key) => { const field = descriptor.fields.find((item) => item.key === key); if (!field) throw new Error(`Unknown projection field: ${key}`); return sql`${sql.ref(field.storagePath)} AS ${sql.ref(key)}`; }); const outputKeys = new Set(keys); for (const key of [descriptor.storage.idField, descriptor.storage.versionField, descriptor.storage.statusField].filter((item): item is string => Boolean(item))) if (!outputKeys.has(key)) selected.push(sql.ref(key)); return sql.join(selected); }
 function baseConditions(descriptor: EntityRuntimeDescriptor, tenantId: string): RawBuilder<unknown>[] { const conditions: RawBuilder<unknown>[] = (descriptor.recordPredicates??[]).map(predicate=>filterCondition(descriptor,predicate)); if (descriptor.storage.tenantField) conditions.push(sql`${sql.ref(descriptor.storage.tenantField)} = ${tenantId}::uuid`); if (descriptor.storage.softDeleteField) conditions.push(sql`${sql.ref(descriptor.storage.softDeleteField)} IS NULL`); return conditions.length ? conditions : [sql`TRUE`]; }
-/** Storage guard shared by plane-issued scope kinds: a constraint only applies to the storage it was issued for. */
-function assertScopeStorage(descriptor: EntityRuntimeDescriptor, planeKey: string, schema: string, object: string, message: string) {
-  if (descriptor.planeKey !== planeKey || descriptor.storage.schema !== schema || descriptor.storage.object !== object) throw new Error(message);
-}
-/** Effective-dated operating-organization assignment membership for a partner row; one definition for every scope kind that needs it. */
-function activeOrganizationAssignmentExists(tenantId: string, partnerId: RawBuilder<unknown>, organizationMatch: RawBuilder<unknown>): RawBuilder<unknown> {
-  return sql`EXISTS (
-      SELECT 1
-        FROM master.business_partner_operating_organization_assignment AS list_scope_assignment
-       WHERE list_scope_assignment.tenant_id = ${tenantId}::uuid
-         AND list_scope_assignment.business_partner_id = ${partnerId}
-         AND ${organizationMatch}
-         AND list_scope_assignment.status = 'active'
-         AND list_scope_assignment.effective_from <= CURRENT_DATE
-         AND (list_scope_assignment.effective_until IS NULL OR list_scope_assignment.effective_until > CURRENT_DATE)
-    )`;
-}
 /** @internal Exported for SQL contract verification; callers must use resolver-issued constraints. */
-export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeDescriptor, tenantId: string, constraint: RecordRepositoryListInput["collectionScope"][number]): RawBuilder<unknown> {
+export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeDescriptor, tenantId: string, constraint: RecordRepositoryListInput["collectionScope"][number], compilers?: ReadonlyMap<string, RecordCollectionScopeSqlCompiler>): RawBuilder<unknown> {
+  const registered = compilers?.get(constraint.kind);
+  if (registered) return registered.compile(descriptor, tenantId, constraint);
   if (constraint.kind === "entity.parent.v1") {
     if (descriptor.entityCode !== constraint.entityCode || descriptor.storage.schema !== constraint.storageSchema || descriptor.storage.object !== constraint.storageObject || !constraint.predicates.length)
       throw new Error("Parent scope storage mismatch");
@@ -125,22 +119,6 @@ export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeD
       if (!field) throw new Error("Parent scope field unavailable");
       return sql`${sql.ref(field.storagePath)} = ${predicate.value}`;
     }), sql` AND `)})`;
-  }
-  if (constraint.kind === "neon.business_partner.directory.v1") {
-    assertScopeStorage(descriptor, "neon", "master", "business_partner", "Directory scope storage mismatch");
-    const root=sql.ref(`business_partner.${descriptor.storage.idField}`), conditions:RawBuilder<unknown>[]=[];
-    if(constraint.partnerRole) {
-      // Capability filtering is not eligibility: keep the independent eligibility
-      // intersection below and never infer permission from a retained role row.
-      const column = constraint.partnerRole === "supplier" ? "supplier_enabled"
-        : constraint.partnerRole === "customer" ? "customer_enabled" : undefined;
-      if (!column) throw new Error("Unsupported partner capability");
-      conditions.push(sql`${sql.ref(`business_partner.${column}`)} = TRUE`);
-    }
-    if(constraint.eligibleIds) conditions.push(constraint.eligibleIds.length ? sql`${root} IN (${sql.join(constraint.eligibleIds.map(id=>sql`${id}::uuid`))})` : sql`FALSE`);
-    if(constraint.organizationIds) conditions.push(constraint.organizationIds.length ? activeOrganizationAssignmentExists(tenantId, root, sql`list_scope_assignment.operating_organization_id IN (${sql.join(constraint.organizationIds.map(id=>sql`${id}::uuid`))})`) : sql`FALSE`);
-    if(constraint.companyIds) conditions.push(constraint.companyIds.length ? sql`(EXISTS(SELECT 1 FROM master.company_code_supplier_profile p WHERE p.tenant_id=${tenantId}::uuid AND p.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})) OR EXISTS(SELECT 1 FROM master.company_code_customer_profile p WHERE p.tenant_id=${tenantId}::uuid AND p.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})))` : sql`FALSE`);
-    return conditions.length ? sql`(${sql.join(conditions,sql` AND `)})` : sql`TRUE`;
   }
   if (constraint.kind === DOCUMENT_RELATIONSHIP_RESOLVER) {
     const binding = parseCollectionRelationship(descriptor.collectionRelationship, descriptor.storage);
@@ -153,22 +131,6 @@ export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeD
         AND ${related(scope.targetField)} = ${root(scope.sourceField)}
         AND NULLIF(${related(scope.column)}->>${scope.jsonKey},'')::uuid = ${constraint.operatingOrganizationId}::uuid
     ))`;
-  }
-  if (constraint.kind === "neon.business_partner.operating_organization.v1") {
-    assertScopeStorage(descriptor, "neon", "master", "business_partner", "Business-partner collection scope cannot be applied to this descriptor");
-    return activeOrganizationAssignmentExists(tenantId, sql.ref(`business_partner.${descriptor.storage.idField}`), sql`list_scope_assignment.operating_organization_id = ${constraint.operatingOrganizationId}::uuid`);
-  }
-  if (constraint.kind === "mesh.network_relationship.actor_account.v1") {
-    assertScopeStorage(descriptor, "mesh", "mesh", "network_relationship", "Network-relationship collection scope cannot be applied to this descriptor");
-    return sql`(
-      (${sql.ref("network_relationship.buyer_tenant_id")} = ${tenantId}::uuid AND ${sql.ref("network_relationship.buyer_account_id")} = ${constraint.networkAccountId}::uuid)
-      OR
-      (${sql.ref("network_relationship.supplier_tenant_id")} = ${tenantId}::uuid AND ${sql.ref("network_relationship.supplier_account_id")} = ${constraint.networkAccountId}::uuid)
-    )`;
-  }
-  if (constraint.kind === "studio.metadata_entity.catalog.v1") {
-    assertScopeStorage(descriptor, "studio", "metadata", "entity", "Metadata-entity catalog scope cannot be applied to this descriptor");
-    return sql`(${sql.ref("entity.tenant_id")} IS NULL OR ${sql.ref("entity.tenant_id")} = ${constraint.tenantId}::uuid)`;
   }
   throw new Error("Unsupported record collection scope kind");
 }

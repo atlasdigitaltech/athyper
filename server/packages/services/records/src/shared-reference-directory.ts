@@ -19,6 +19,19 @@ export type {
   SharedReferenceSourceKey,
 } from "@athyper/server-contract-master-data";
 
+/** Collect a bounded set for metadata-backed select filters. Large directories must use search. */
+export async function sharedReferenceFilterChoices(directory: SharedReferenceDirectory, sourceKey: SharedReferenceSourceKey, maximum = 500): Promise<readonly { value: string; label: string }[]> {
+  const choices: { value: string; label: string }[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await directory.lookup({ sourceKey, limit: 100, ...(cursor ? { cursor } : {}) });
+    choices.push(...page.items.map(({ value, label }) => ({ value, label })));
+    if (choices.length > maximum) throw new Error("ENTITY_FILTER_CHOICES_REQUIRES_SEARCH");
+    cursor = page.nextCursor;
+  } while (cursor);
+  return choices;
+}
+
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 25;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

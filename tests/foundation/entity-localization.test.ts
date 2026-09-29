@@ -3,10 +3,12 @@ import { describe, it } from "node:test";
 import { createEffectiveLocalization, createIntlRuntime } from "../../packages/platform/foundation/i18n/src/index";
 import { entityMessages, entityFallbackMessages } from "../../packages/platform/foundation/i18n/src/entity-catalogs";
 import { localizeEntityLabels } from "../../packages/platform/foundation/i18n/src/entity-labels";
-import { localizedEntityError } from "../../packages/platform/foundation/i18n/src/entity-errors";
+import { localizeEntityErrorModel, localizedEntityError } from "../../packages/platform/foundation/i18n/src/entity-errors";
+import { formatEntityValue } from "../../packages/platform/foundation/i18n/src/entity-value";
 import { collaborationMessages } from "../../packages/platform/foundation/i18n/src/catalogs/collaboration";
 import { parsePresentationLocalization, readablePresentationLocalization } from "../../packages/contracts/platform/entity-runtime/src/presentation-localization";
 import { readableRecordPresentation } from "../../packages/contracts/platform/entity-runtime/src/record-presentation";
+import { parseEntityListDescriptor } from "../../packages/contracts/platform/entity-list/src/parsers";
 import { compiledReference, referenceSource, referenceDetail, referenceList } from "../../tooling/scripts/verification/localized-reference-fixture";
 
 const intl = (locale: string) => createIntlRuntime({localization:createEffectiveLocalization({uiLocale:locale,formatLocale:locale,timeZone:"Asia/Kuala_Lumpur"}),messages:entityMessages(locale),fallbackMessages:entityFallbackMessages});
@@ -73,6 +75,25 @@ describe("localized entity vertical slice",()=>{
     assert.equal(intl("ar").number(1234),new Intl.NumberFormat("ar").format(1234));
     assert.equal(intl("ms").date("2026-09-28T20:00:00Z",{dateStyle:"short"}),new Intl.DateTimeFormat("ms",{dateStyle:"short",timeZone:"Asia/Kuala_Lumpur"}).format(new Date("2026-09-28T20:00:00Z")));
   });
+  it("formats PostgreSQL decimals without losing digits and localizes form actions",()=>{
+    assert.equal(formatEntityValue("12345678901234567890.1250",{valueKind:"money"},intl("en")),"12,345,678,901,234,567,890.1250");
+    const arabicDigits = createIntlRuntime({localization:createEffectiveLocalization({uiLocale:"ar",formatLocale:"ar",numberingSystem:"arab"}),messages:entityMessages("ar"),fallbackMessages:entityFallbackMessages});
+    assert.equal(formatEntityValue("1234.50",{valueKind:"decimal"},arabicDigits),"١٬٢٣٤٫٥٠");
+    assert.equal(formatEntityValue("2026-09-30",{valueKind:"date"},createIntlRuntime({localization:createEffectiveLocalization({uiLocale:"en",formatLocale:"en-US",timeZone:"America/Los_Angeles"}),messages:entityMessages("en"),fallbackMessages:entityFallbackMessages})),"Sep 30, 2026");
+    assert.equal(intl("ms").message("form.submitCreate",{entity:"Negara"}),"Cipta Negara");
+    assert.equal(intl("ar").message("form.titleEdit",{entity:"البلد"}),"تحرير البلد");
+    assert.equal(intl("ms").message("list.searchLabel",{entity:"Negara"}),"Cari Negara");
+    assert.equal(intl("ar").message("list.activeFilters",{count:2}),"2 عوامل تصفية نشطة");
+  });
+  it("preserves only validated metadata status tones in list descriptors",async()=>{
+    const descriptor=await referenceList();
+    const key=descriptor.fields[0]!.key;
+    const withTones={...descriptor,fields:descriptor.fields.map(field=>field.key===key?{...field,statusTones:{draft:"warning",active:"success"}}:field)};
+    const parsed=parseEntityListDescriptor(withTones);
+    assert.deepEqual(parsed.fields.find(field=>field.key===key)?.statusTones,{draft:"warning",active:"success"});
+    const invalid={...descriptor,fields:descriptor.fields.map(field=>field.key===key?{...field,statusTones:{draft:"purple"}}:field)};
+    assert.throws(()=>parseEntityListDescriptor(invalid));
+  });
   it("all shared catalog templates format in all three locales, including Arabic plural categories",()=>{
     for(const locale of ["en","ms","ar"]) for(const key of Object.keys(collaborationMessages)) for(const count of [0,1,2,3,11,100]) {
       const values = Object.fromEntries([...collaborationMessages[key]![0].matchAll(/\{([A-Za-z][A-Za-z0-9_]*)/g)].map(([, name]) => [name, name === "count" ? count : 1]));
@@ -84,5 +105,11 @@ describe("localized entity vertical slice",()=>{
     assert.equal(localizedEntityError({problem:{code:"TOO_MANY_FILTERS",errors:{params:{max:20}}}},intl("ms")),intl("ms").message("error.TOO_MANY_FILTERS",{max:20}));
     assert.equal(localizedEntityError({problem:{code:"UNKNOWN",detail:"{malicious}"}},intl("ar"),"Fallback"),"Fallback");
     assert.equal(localizedEntityError({problem:{code:"TOO_MANY_FILTERS",params:{max:"injected"}}},intl("en"),"Fallback"),"Fallback");
+  });
+  it("keeps denied and missing states distinct in Malay and Arabic",()=>{
+    const denied=localizeEntityErrorModel({kind:"permission-denied",title:"Access denied",description:"English"},intl("ms"));
+    const missing=localizeEntityErrorModel({kind:"not-found",title:"Not found",description:"English"},intl("ar"));
+    assert.equal(denied.title,"Akses ditolak");
+    assert.equal(missing.title,"السجل غير موجود");
   });
 });
