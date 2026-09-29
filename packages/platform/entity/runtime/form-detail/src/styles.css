@@ -574,7 +574,7 @@
 .a-attachment-thumbnail { position:relative; display:grid; place-items:center; inline-size:48px; block-size:48px; flex:0 0 48px; overflow:hidden; border-radius:var(--a-radius-sm); background:var(--a-selection-subtle); color:var(--a-primary); }
 .a-collaboration-panel .a-attachment-thumbnail > button { position:relative; display:grid; place-items:center; inline-size:100%; block-size:100%; padding:0; }
 .a-attachment-thumbnail img { display:block; inline-size:100%; block-size:100%; object-fit:contain; }
-.a-attachment-thumbnail__badge { position:absolute; bottom:0; right:0; padding:1px 3px; border-radius:var(--a-radius-sm) 0 0 0; background:var(--a-surface); color:var(--a-foreground); font-size:var(--a-font-size-xs); line-height:var(--a-line-height-tight); }
+.a-attachment-thumbnail__badge { position:absolute; inset-block-end:0; inset-inline-end:0; padding:1px 3px; border-start-start-radius:var(--a-radius-sm); background:var(--a-surface); color:var(--a-foreground); font-size:var(--a-font-size-xs); line-height:var(--a-line-height-tight); }
 .a-collaboration-panel[data-mode=content] .a-attachment-thumbnail { inline-size:56px; block-size:56px; flex-basis:56px; }
 .a-attachment-thumbnail:focus-within { outline:var(--a-focus-width) solid var(--a-focus); outline-offset:2px; }
 
