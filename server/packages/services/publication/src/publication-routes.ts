@@ -16,6 +16,7 @@ export interface PublicationRouteOptions {
   readonly jobs: JobPublisher;
   readonly apiEnabled: boolean;
   readonly operations?: PublicationOperationsService;
+  readonly authorizeRollbackTarget: (input: { readonly tenantId: string; readonly publicationKey: string; readonly targetAppliedReleaseId: string; readonly targetPlane: "studio" | "neon" | "mesh" }) => Promise<boolean>;
 }
 
 const objectSchema = { type: "object", additionalProperties: true } as const;
@@ -28,7 +29,7 @@ const contracts = {
   deployment: defineRouteContract({ method: "get", path: "/api/publication/deployments/:deploymentId", operationId: "publication.getDeployment", summary: "Get a publication deployment", tags: ["Publication"], authenticated: true, permission: "publication.deployment.view", responses: { 200: { description: "Publication deployment", body: objectSchema }, 400: { description: "Invalid deployment identifier" }, 403: { description: "Forbidden" }, 404: { description: "Deployment not found", body: objectSchema } } }),
   publish: defineRouteContract({ method: "post", path: "/api/publication/releases/:releaseId/publish", operationId: "publication.publishRelease", summary: "Publish a release", tags: ["Publication"], authenticated: true, permission: "publication.release.publish", responses: { 202: { description: "Publication queued", body: objectSchema }, 400: { description: "Invalid release identifier" }, 403: { description: "Forbidden" }, 404: { description: "Release not found", body: objectSchema }, 503: { description: "Publication API disabled", body: objectSchema } } }),
   retry: defineRouteContract({ method: "post", path: "/api/publication/deployments/:deploymentId/retry", operationId: "publication.retryDeployment", summary: "Retry a publication deployment", tags: ["Publication"], authenticated: true, permission: "publication.deployment.retry", responses: { 202: { description: "Retry queued", body: objectSchema }, 400: { description: "Invalid deployment identifier" }, 403: { description: "Forbidden" }, 404: { description: "Deployment not found", body: objectSchema }, 503: { description: "Publication API disabled", body: objectSchema } } }),
-  rollback: defineRouteContract({ method: "post", path: "/api/publication/publication-keys/:key/rollback", operationId: "publication.rollbackRelease", summary: "Roll back a publication key", tags: ["Publication"], authenticated: true, permission: "publication.release.rollback", request: { body: { type: "object", required: ["plane", "targetAppliedReleaseId", "reason"], properties: { plane: { type: "string", enum: ["studio", "neon", "mesh"] }, targetAppliedReleaseId: { type: "string" }, reason: { type: "string" } } } }, responses: { 202: { description: "Rollback queued", body: objectSchema }, 400: { description: "Invalid rollback request" }, 403: { description: "Forbidden" }, 503: { description: "Publication API disabled", body: objectSchema } } }),
+  rollback: defineRouteContract({ method: "post", path: "/api/publication/publication-keys/:key/rollback", operationId: "publication.rollbackRelease", summary: "Roll back a publication key", tags: ["Publication"], authenticated: true, permission: "publication.release.rollback", request: { body: { type: "object", required: ["plane", "targetAppliedReleaseId", "reason"], properties: { plane: { type: "string", enum: ["studio", "neon", "mesh"] }, targetAppliedReleaseId: { type: "string" }, reason: { type: "string" } } } }, responses: { 202: { description: "Rollback queued", body: objectSchema }, 400: { description: "Invalid rollback request" }, 403: { description: "Forbidden" }, 404: { description: "Rollback target not found", body: objectSchema }, 503: { description: "Publication API disabled", body: objectSchema } } }),
 } as const;
 
 export function registerPublicationRoutes(application: Application, options: PublicationRouteOptions): void {
@@ -126,7 +127,11 @@ export function registerPublicationRoutes(application: Application, options: Pub
       const targetAppliedReleaseId = uuid(requiredString(request.body, "targetAppliedReleaseId"));
       if (!options.apiEnabled) { response.status(503).json({ error: "PUBLICATION_API_DISABLED" }); return; }
       const publicationKey=String(request.params["key"]),reason=requiredString(request.body,"reason");
-      const jobId=await options.jobs.enqueue(PUBLICATION_APPLY_QUEUE,ROLLBACK_PUBLICATION_RELEASE_JOB,{publicationKey,targetAppliedReleaseId,targetPlane:plane,reason,actorId:context.principalId},{enqueueKey:`publication:${plane}:${publicationKey}:rollback:${targetAppliedReleaseId}`,maxAttempts:3,execution:coordinate(context),payloadSchema:{name:ROLLBACK_PUBLICATION_RELEASE_JOB,version:1}});
+      if (!(await options.authorizeRollbackTarget({tenantId:context.tenantId,publicationKey,targetAppliedReleaseId,targetPlane:plane}))) {
+        response.status(404).json({error:"PUBLICATION_ROLLBACK_TARGET_NOT_FOUND"});
+        return;
+      }
+      const jobId=await options.jobs.enqueue(PUBLICATION_APPLY_QUEUE,ROLLBACK_PUBLICATION_RELEASE_JOB,{tenantId:context.tenantId,publicationKey,targetAppliedReleaseId,targetPlane:plane,reason,actorId:context.principalId},{enqueueKey:`publication:${context.tenantId}:${plane}:${publicationKey}:rollback:${targetAppliedReleaseId}`,maxAttempts:3,execution:{...coordinate(context),planeKey:plane},payloadSchema:{name:ROLLBACK_PUBLICATION_RELEASE_JOB,version:1}});
       await audit(options, context, "publication.release.rollback", targetAppliedReleaseId, "success", { plane,publicationKey,jobId });
       response.status(202).json({publicationKey,plane,targetAppliedReleaseId,jobId});
     } catch (error) { next(asHttpError(error)); }

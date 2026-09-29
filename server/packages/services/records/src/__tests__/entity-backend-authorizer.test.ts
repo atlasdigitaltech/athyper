@@ -440,8 +440,8 @@ it("fails closed when a published protected profile has no enforcing backend", a
   ).toThrow("PROFILE_MISMATCH");
 });
 
-it("keeps a shared public read-only reference available and rejects masking", async () => {
-  const { isLegacySafeEntityAuthorization, usesEntityBackendAuthorization } =
+it("requires an installed backend even for a public read-only reference", async () => {
+  const { usesEntityBackendAuthorization } =
     await import("../entity-backend-authorizer.js");
   const operations = (["list", "read"] as const).map(key => ({ key,
     permissionCode: "common.platform.reference.view", scope: "tenant.record.v1" as const,
@@ -464,9 +464,8 @@ it("keeps a shared public read-only reference available and rejects masking", as
       bindings: operations.map(operation => ({ operation: operation.key,
         handler: `entity.record.${operation.key}.v1`, resolver: "tenant.record.v1" })) },
   } as unknown as import("@athyper/server-contract-metadata").EntityRuntimeDescriptor;
-  expect(isLegacySafeEntityAuthorization(descriptor)).toBe(true);
-  expect(usesEntityBackendAuthorization({ authorize: async () => ({ allowed: true }) }, context,
-    descriptor)).toBe(false);
+  expect(() => usesEntityBackendAuthorization({ authorize: async () => ({ allowed: true }) }, context,
+    descriptor)).toThrow("ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE");
   const masked = { ...descriptor, authorization: { ...descriptor.authorization!,
     fieldPolicies: [{ ...descriptor.authorization!.fieldPolicies[0]!, representation: "masked" as const }] } };
   expect(() => usesEntityBackendAuthorization({ authorize: async () => ({ allowed: true }) }, context,

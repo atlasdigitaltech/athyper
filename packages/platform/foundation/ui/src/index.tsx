@@ -8,6 +8,7 @@ import * as React from "react";
 import { Tooltip } from "./tooltip";
 import { PanelHeader } from "./panel";
 import { DatePicker } from "./date-picker";
+import { useUiMessages } from "./ui-messages";
 export { DatePicker, type DatePickerProps } from "./date-picker";
 import { CloseIcon, SearchIcon } from "@athyper/platform-icons";
 import { createPortal } from "react-dom";
@@ -34,8 +35,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> { r
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ className, variant = "primary", size = "medium", loading = false, disabled, type = "button", children, ...props }, ref) => <button ref={ref} type={type} className={cx("a-button", `a-button--${variant}`, `a-button--${size}`, className)} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>{loading ? <span className="a-spinner" aria-hidden="true" /> : null}{children}</button>);
 Button.displayName = "Button";
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> { readonly error?: boolean; }
-export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, error, ...props }, ref) => props.type === "date" ? <DatePicker {...props} ref={ref} className={className} error={error} /> : <input ref={ref} className={cx("a-input", className)} aria-invalid={error || undefined} {...props} />);
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> { readonly error?: boolean; /** Calendar locale for `type="date"`; ignored otherwise. */ readonly locale?: string; /** Calendar first weekday (0 = Sunday) for `type="date"`; ignored otherwise. */ readonly weekStart?: number; }
+export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, error, locale, weekStart, ...props }, ref) => props.type === "date" ? <DatePicker {...props} ref={ref} className={className} error={error} locale={locale} weekStart={weekStart} /> : <input ref={ref} className={cx("a-input", className)} aria-invalid={error || undefined} {...props} />);
 Input.displayName = "Input";
 
 export const Label = forwardRef<HTMLLabelElement, LabelHTMLAttributes<HTMLLabelElement>>(({ className, ...props }, ref) => <label ref={ref} className={cx("a-label", className)} {...props} />);
@@ -150,11 +151,11 @@ const DialogContext = createContext<OpenContext | null>(null);
 export function Dialog({ open, defaultOpen = false, onOpenChange, children }: { readonly open?: boolean; readonly defaultOpen?: boolean; readonly onOpenChange?: (open: boolean) => void; readonly children: ReactNode }) { const [shown, setShown] = useControllableState(open, defaultOpen, onOpenChange); return <DialogContext.Provider value={{ open: shown, setOpen: setShown }}>{children}</DialogContext.Provider>; }
 export function DialogTrigger(props: ButtonHTMLAttributes<HTMLButtonElement>) { const c = useContext(DialogContext); if (!c) throw new Error("DialogTrigger must be inside Dialog"); return <button type="button" aria-haspopup="dialog" aria-expanded={c.open} onClick={(e) => { props.onClick?.(e); if (!e.defaultPrevented) c.setOpen(true); }} {...props} />; }
 export function DialogClose(props: ButtonHTMLAttributes<HTMLButtonElement>) { const c = useContext(DialogContext); if (!c) throw new Error("DialogClose must be inside Dialog"); return <button type="button" onClick={(e) => { props.onClick?.(e); if (!e.defaultPrevented) c.setOpen(false); }} {...props} />; }
-export function DialogContent({ title, description, children, className, portal=false }: { readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly portal?: boolean }) {
-  return <ModalContent title={title} description={description} className={className} variant="dialog" portal={portal}>{children}</ModalContent>;
+export function DialogContent({ title, description, children, className, portal=false, closeLabel }: { readonly closeLabel?: string; readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly portal?: boolean }) {
+  return <ModalContent title={title} description={description} className={className} variant="dialog" portal={portal} closeLabel={closeLabel}>{children}</ModalContent>;
 }
-export function DrawerContent({ title, description, children, className }: { readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string }) {
-  return <ModalContent title={title} description={description} className={className} variant="drawer">{children}</ModalContent>;
+export function DrawerContent({ title, description, children, className, closeLabel }: { readonly closeLabel?: string; readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string }) {
+  return <ModalContent title={title} description={description} className={className} variant="drawer" closeLabel={closeLabel}>{children}</ModalContent>;
 }
 
 export type DrawerSize = "compact" | "standard" | "wide" | "full";
@@ -167,7 +168,8 @@ export const DrawerRoot = Dialog;
 export const DrawerTrigger = DialogTrigger;
 export const DrawerClose = DialogClose;
 
-export function DrawerPanel({ pinned = false, interactionRoots, size = "standard", variant = "task", mobilePresentation = "fullscreen", className, children, id, ...props }: HTMLAttributes<HTMLDivElement> & { readonly pinned?: boolean; readonly interactionRoots?: () => readonly HTMLElement[]; readonly size?: DrawerSize; readonly variant?: DrawerVariant; readonly mobilePresentation?: DrawerMobilePresentation }) {
+export function DrawerPanel({ pinned = false, interactionRoots, size = "standard", variant = "task", mobilePresentation = "fullscreen", closeLabel, className, children, id, ...props }: HTMLAttributes<HTMLDivElement> & { readonly closeLabel?: string; readonly pinned?: boolean; readonly interactionRoots?: () => readonly HTMLElement[]; readonly size?: DrawerSize; readonly variant?: DrawerVariant; readonly mobilePresentation?: DrawerMobilePresentation }) {
+  const messages = useUiMessages();
   const dialog = useContext(DialogContext); if (!dialog) throw new Error("DrawerPanel must be inside DrawerRoot");
   const titleId = useId(), descriptionId = useId(), panel = useRef<HTMLDivElement>(null), closeButton = useRef<HTMLButtonElement>(null), [portalReady, setPortalReady] = useState(false);
   useEffect(() => setPortalReady(true), []);
@@ -180,16 +182,17 @@ export function DrawerPanel({ pinned = false, interactionRoots, size = "standard
   if (!dialog.open || !portalReady) return null;
   const context = { titleId, descriptionId, closeButton };
   return createPortal(<div className="a-drawer-layer" data-pinned={pinned || undefined} data-variant={variant} data-mobile-presentation={mobilePresentation}>
-    {!pinned ? <button type="button" className="a-dialog-scrim" aria-label="Close panel" onClick={() => dialog.setOpen(false)}/> : null}
+    {!pinned ? <button type="button" className="a-dialog-scrim" aria-label={closeLabel ?? messages.closePanel} onClick={() => dialog.setOpen(false)}/> : null}
     <DrawerAnatomyContext.Provider value={context}><div {...props} ref={panel} id={id} onKeyDown={event=>{props.onKeyDown?.(event);if(pinned && event.key === "Escape" && !event.defaultPrevented){event.preventDefault();dialog.setOpen(false);}}} role="dialog" aria-modal={interactionRoots || pinned ? undefined : true} aria-labelledby={titleId} aria-describedby={descriptionId} className={cx("a-drawer", "a-drawer--framework", className)} data-size={size} data-variant={variant} data-mobile-presentation={mobilePresentation}>{children}</div></DrawerAnatomyContext.Provider>
   </div>, document.body);
 }
 
-export function DrawerHeader({ appearance = "default", icon, title, description, actions, capabilities, closeLabel = "Close panel", className, ...props }: Omit<HTMLAttributes<HTMLElement>, "title"> & { readonly icon?: ReactNode; readonly title: ReactNode; readonly description?: ReactNode; readonly actions?: ReactNode; readonly capabilities?: import("./panel").PanelHeaderCapabilities; readonly closeLabel?: string; readonly appearance?: "default" | "panel" }) {
+export function DrawerHeader({ appearance = "default", icon, title, description, actions, capabilities, closeLabel, className, ...props }: Omit<HTMLAttributes<HTMLElement>, "title"> & { readonly icon?: ReactNode; readonly title: ReactNode; readonly description?: ReactNode; readonly actions?: ReactNode; readonly capabilities?: import("./panel").PanelHeaderCapabilities; readonly closeLabel?: string; readonly appearance?: "default" | "panel" }) {
+  const messages = useUiMessages(), effectiveCloseLabel = closeLabel ?? messages.closePanel;
   const drawer = useContext(DrawerAnatomyContext); if (!drawer) throw new Error("DrawerHeader must be inside DrawerPanel");
   const dialog = useDrawerDialog();
-  if(appearance === "panel")return <><PanelHeader {...props} className={className} icon={icon} title={title} titleId={drawer.titleId} subtitle={description} subtitleId={drawer.descriptionId} capabilities={capabilities ? {...capabilities, close:{label:closeLabel,icon:<CloseIcon size={18}/>,buttonRef:drawer.closeButton,onClick:()=>dialog.setOpen(false)}} : undefined} actions={<>{actions}{!capabilities ? <Tooltip portal side="bottom" label={closeLabel}><button ref={drawer.closeButton} type="button" aria-label={closeLabel} onClick={()=>dialog.setOpen(false)}><CloseIcon size={18}/></button></Tooltip> : null}</>}/>{!description ? <span id={drawer.descriptionId} className="a-visually-hidden">{title}</span> : null}</>;
-  return <header {...props} className={cx("a-drawer__header", className)}>{icon ? <span className="a-drawer__header-icon" aria-hidden="true">{icon}</span> : null}<span className="a-drawer__heading"><h2 id={drawer.titleId}>{title}</h2>{description ? <p id={drawer.descriptionId}>{description}</p> : <span id={drawer.descriptionId} className="a-visually-hidden">{typeof title === "string" ? `${title} panel` : "Drawer panel"}</span>}</span>{actions ? <span className="a-drawer__header-actions">{actions}</span> : null}<button ref={drawer.closeButton} type="button" className="a-drawer__close" aria-label={closeLabel} onClick={() => dialog.setOpen(false)}><CloseIcon/></button></header>;
+  if(appearance === "panel")return <><PanelHeader {...props} className={className} icon={icon} title={title} titleId={drawer.titleId} subtitle={description} subtitleId={drawer.descriptionId} capabilities={capabilities ? {...capabilities, close:{label:effectiveCloseLabel,icon:<CloseIcon size={18}/>,buttonRef:drawer.closeButton,onClick:()=>dialog.setOpen(false)}} : undefined} actions={<>{actions}{!capabilities ? <Tooltip portal side="bottom" label={effectiveCloseLabel}><button ref={drawer.closeButton} type="button" aria-label={effectiveCloseLabel} onClick={()=>dialog.setOpen(false)}><CloseIcon size={18}/></button></Tooltip> : null}</>}/>{!description ? <span id={drawer.descriptionId} className="a-visually-hidden">{title}</span> : null}</>;
+  return <header {...props} className={cx("a-drawer__header", className)}>{icon ? <span className="a-drawer__header-icon" aria-hidden="true">{icon}</span> : null}<span className="a-drawer__heading"><h2 id={drawer.titleId}>{title}</h2>{description ? <p id={drawer.descriptionId}>{description}</p> : <span id={drawer.descriptionId} className="a-visually-hidden">{typeof title === "string" ? `${title} ${messages.closePanel}` : messages.drawerPanel}</span>}</span>{actions ? <span className="a-drawer__header-actions">{actions}</span> : null}<button ref={drawer.closeButton} type="button" className="a-drawer__close" aria-label={effectiveCloseLabel} onClick={() => dialog.setOpen(false)}><CloseIcon/></button></header>;
 }
 
 function useDrawerDialog(): OpenContext { const dialog = useContext(DialogContext); if (!dialog) throw new Error("Drawer component must be inside DrawerRoot"); return dialog; }
@@ -208,7 +211,8 @@ export function DrawerTabPanel(props: Parameters<typeof TabsContent>[0]) { retur
 
 export const Drawer = Object.freeze({ Root: DrawerRoot, Trigger: DrawerTrigger, Close: DrawerClose, Panel: DrawerPanel, Header: DrawerHeader, Navigation: DrawerNavigation, Toolbar: DrawerToolbar, Context: DrawerContext, Metric: DrawerMetric, Body: DrawerBody, Footer: DrawerFooter, FooterSummary: DrawerFooterSummary, FooterActions: DrawerFooterActions, Tabs: DrawerTabs, TabList: DrawerTabList, Tab: DrawerTab, TabPanel: DrawerTabPanel });
 
-function ModalContent({ title, description, children, className, variant, portal=false }: { readonly portal?: boolean; readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly variant: "dialog" | "drawer" }) {
+function ModalContent({ title, description, children, className, variant, portal=false, closeLabel }: { readonly closeLabel?: string; readonly portal?: boolean; readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly variant: "dialog" | "drawer" }) {
+  const messages = useUiMessages();
   const c = useContext(DialogContext); if (!c) throw new Error("DialogContent must be inside Dialog"); const titleId = useId(); const descriptionId = useId(); const panel = useRef<HTMLDivElement>(null); const [portalReady, setPortalReady] = useState(false);
   useEffect(() => setPortalReady(true), []);
   useModalIsolation(panel, c.open && (!(variant === "drawer" || portal) || portalReady), {
@@ -218,18 +222,20 @@ function ModalContent({ title, description, children, className, variant, portal
   if (!c.open) return null;
   const drawer = variant === "drawer";
   if ((drawer || portal) && !portalReady) return null;
-  const layer = <div className={drawer ? "a-drawer-layer" : "a-dialog-layer"}><button type="button" className="a-dialog-scrim" aria-label={`Close ${drawer ? "panel" : "dialog"}`} onClick={() => c.setOpen(false)} /><div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} className={cx(drawer ? "a-drawer" : "a-dialog", className)}>{drawer ? <button type="button" className="a-drawer__close" aria-label="Close panel" onClick={() => c.setOpen(false)}><CloseIcon/></button> : null}<h2 id={titleId} className="a-dialog__title">{title}</h2>{description ? <p id={descriptionId} className="a-dialog__description">{description}</p> : null}{children}</div></div>;
+  const effectiveCloseLabel = closeLabel ?? (drawer ? messages.closePanel : messages.closeDialog);
+  const layer = <div className={drawer ? "a-drawer-layer" : "a-dialog-layer"}><button type="button" className="a-dialog-scrim" aria-label={effectiveCloseLabel} onClick={() => c.setOpen(false)} /><div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} className={cx(drawer ? "a-drawer" : "a-dialog", className)}>{drawer ? <button type="button" className="a-drawer__close" aria-label={effectiveCloseLabel} onClick={() => c.setOpen(false)}><CloseIcon/></button> : null}<h2 id={titleId} className="a-dialog__title">{title}</h2>{description ? <p id={descriptionId} className="a-dialog__description">{description}</p> : null}{children}</div></div>;
   return drawer || portal ? createPortal(layer, document.body) : layer;
 }
 
-export function ToastRegion(props: HTMLAttributes<HTMLDivElement>) { return <div role="region" aria-label="Notifications" aria-live="polite" className={cx("a-toast-region", props.className)} {...props} />; }
+export function ToastRegion(props: HTMLAttributes<HTMLDivElement>) { const messages = useUiMessages(); return <div role="region" aria-label={messages.notifications} aria-live="polite" className={cx("a-toast-region", props.className)} {...props} />; }
 export function Toast({ tone = "info", title, children, className, ...props }: HTMLAttributes<HTMLDivElement> & { readonly tone?: "info" | "success" | "warning" | "danger"; readonly title: string }) { return <div role={tone === "danger" ? "alert" : "status"} className={cx("a-toast", `a-toast--${tone}`, className)} {...props}><strong>{title}</strong>{children ? <div>{children}</div> : null}</div>; }
 export function Card(props: HTMLAttributes<HTMLDivElement>) { return <div {...props} className={cx("a-card", props.className)} />; }
 export function Badge({ tone = "neutral", ...props }: HTMLAttributes<HTMLSpanElement> & { readonly tone?: "neutral" | "success" | "warning" | "danger" }) { return <span {...props} className={cx("a-badge", `a-badge--${tone}`, props.className)} />; }
 export function Separator({ orientation = "horizontal", ...props }: HTMLAttributes<HTMLDivElement> & { readonly orientation?: "horizontal" | "vertical" }) { return <div role="separator" aria-orientation={orientation} {...props} className={cx("a-separator", `a-separator--${orientation}`, props.className)} />; }
-export function Skeleton({ label = "Loading", ...props }: HTMLAttributes<HTMLDivElement> & { readonly label?: string }) { return <div aria-busy="true" aria-label={label} {...props} className={cx("a-skeleton", props.className)} />; }
-export function LoadingDots({ label = "Loading", size = "small" }: { readonly label?: string; readonly size?: "small" | "large" }) {
-  return <span className={`a-loading-dots a-loading-dots--${size}`} role="status"><span className="a-visually-hidden">{label}</span><span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" /></span>;
+export function Skeleton({ label, ...props }: HTMLAttributes<HTMLDivElement> & { readonly label?: string }) { const messages = useUiMessages(); return <div aria-busy="true" aria-label={label ?? messages.loading} {...props} className={cx("a-skeleton", props.className)} />; }
+export function LoadingDots({ label, size = "small" }: { readonly label?: string; readonly size?: "small" | "large" }) {
+  const messages = useUiMessages();
+  return <span className={`a-loading-dots a-loading-dots--${size}`} role="status"><span className="a-visually-hidden">{label ?? messages.loading}</span><span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" /></span>;
 }
 export function VisuallyHidden(props: HTMLAttributes<HTMLSpanElement>) { return <span {...props} className={cx("a-visually-hidden", props.className)} />; }
 export function FocusGuard({ onFocus }: { readonly onFocus?: () => void }) { return <span tabIndex={0} aria-hidden="true" className="a-focus-guard" onFocus={onFocus} />; }
@@ -240,15 +246,16 @@ export { SearchableSelect, searchReferenceOptions, type ReferenceOption, type Se
 
 /** Controlled object search; filtering and keyboard shortcut ownership stay with the host workspace. */
 export const ObjectSearch = forwardRef<HTMLInputElement, { id: string; value: string; onValueChange: (value: string) => void; placeholder?: string; label: string; maxLength?: number }>(function ObjectSearch({id,value,onValueChange,placeholder,label,maxLength},ref) {
- return <div className="a-object-search"><SearchIcon size={18} aria-hidden="true" /><Input ref={ref} id={id} type="search" autoComplete="off" enterKeyHint="search" aria-label={label} value={value} placeholder={placeholder} maxLength={maxLength} onChange={e=>onValueChange(e.target.value)} />{value ? <Button variant="ghost" size="small" aria-label="Clear search" onClick={()=>onValueChange("")}>Clear</Button> : <kbd aria-hidden="true">/</kbd>}</div>;
+ const messages = useUiMessages();
+ return <div className="a-object-search"><SearchIcon size={18} aria-hidden="true" /><Input ref={ref} id={id} type="search" autoComplete="off" enterKeyHint="search" aria-label={label} value={value} placeholder={placeholder} maxLength={maxLength} onChange={e=>onValueChange(e.target.value)} />{value ? <Button variant="ghost" size="small" aria-label={messages.clearSearch} onClick={()=>onValueChange("")}>{messages.clearSearch}</Button> : <kbd aria-hidden="true">/</kbd>}</div>;
 });
 
 export { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
 export { FormField, InlineStatus } from "./form-field";
 export { PreviewFrame } from "./preview-frame";
-export { ContextSelectionDrawer, type ContextChoice } from "./context-selection-drawer";
 
 export { registerModalBranch } from "./modal-isolation";
+export { UiMessagesProvider, englishUiMessages, useUiMessages, type UiMessages } from "./ui-messages";
 
 export { ComposerFrame, ComposerHeader, ComposerFooter, type ComposerFrameProps } from "./composer-frame";
 

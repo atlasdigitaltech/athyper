@@ -33,7 +33,7 @@ const run = (root) =>
   analyzeThemeTokenIntegrity({
     root,
     themeAuthority: THEME,
-    targetRoots: ["packages/platform", "packages/planes"],
+    targetRoots: ["packages/platform", "packages/planes", "apps/studio"],
   });
 
 test("resolves references from the global theme vocabulary", () => {
@@ -182,4 +182,22 @@ test("throws when the theme authority is missing", () => {
     "packages/platform/x/src/styles.css": ".x{color:var(--a-foreground)}",
   });
   assert.throws(() => run(root), /theme authority not found/);
+});
+
+test("ignores generated alternate Next.js distDir output", () => {
+  const root = fixture({
+    [THEME]: ":root { --a-surface: #fff; }",
+    "apps/studio/.next-bp-consolidated/static/chunks/a.css":
+      ".x { color: var(--a-phantom); }",
+    "apps/studio/src/app.css": ".y { color: var(--a-surface); }",
+  });
+  const { findings } = run(root);
+  assert.equal(
+    findings.some((f) => JSON.stringify(f).includes(".next-")),
+    false,
+  );
+  assert.equal(
+    findings.some((f) => JSON.stringify(f).includes("--a-phantom")),
+    false,
+  );
 });

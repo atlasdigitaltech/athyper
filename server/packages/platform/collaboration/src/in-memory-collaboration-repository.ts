@@ -80,7 +80,7 @@ export function createInMemoryCollaborationPersistence(
           ? { parentCommentId: command.parentCommentId }
           : {}),
         threadDepth: depth,
-        visibility: command.visibility ?? "public",
+        visibility: command.visibility ?? "private",
         intent: command.intent ?? "general",
         status: "open",
         createdAt: timestamp,

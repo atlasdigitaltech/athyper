@@ -6,6 +6,7 @@ import {
 } from "@athyper/server-platform-iam";
 import {
   defineRouteContract,
+  HttpError,
   registerContractRoute,
   type Application,
 } from "@athyper/server-runtime-http";
@@ -17,6 +18,8 @@ const VERIFICATION_QUEUE = "system-verification";
 const VERIFICATION_JOB = "verification.probe";
 const RUN_COOLDOWN_MS = 15_000;
 const TEST_TEXT = "Athyper verification document pipeline";
+const VERIFICATION_READ_PERMISSION = "platform.verification.read";
+const VERIFICATION_RUN_PERMISSION = "platform.verification.run";
 
 type CheckStatus = "passed" | "failed" | "skipped";
 type CheckCategory =
@@ -69,12 +72,14 @@ const snapshotContract = defineRouteContract({
   summary: "Run authenticated read-only platform verification",
   tags: ["Platform verification"],
   authenticated: true,
+  permission: VERIFICATION_READ_PERMISSION,
   responses: {
     200: {
       description: "Sanitized verification snapshot",
       body: responseSchema,
     },
     404: { description: "Verification is disabled" },
+    403: { description: "Platform verification permission required" },
   },
 });
 const runContract = defineRouteContract({
@@ -84,6 +89,7 @@ const runContract = defineRouteContract({
   summary: "Run bounded synthetic platform verification",
   tags: ["Platform verification"],
   authenticated: true,
+  permission: VERIFICATION_RUN_PERMISSION,
   request: {
     body: {
       type: "object",
@@ -96,6 +102,7 @@ const runContract = defineRouteContract({
     200: { description: "Completed verification run", body: responseSchema },
     409: { description: "A verification run is already active" },
     429: { description: "Verification was run too recently" },
+    403: { description: "Platform verification permission required" },
   },
 });
 
@@ -118,6 +125,7 @@ export function registerVerification(
       async (_request, response, next) => {
         try {
           const context = readVerifiedRequestContext(response);
+          requireVerificationPermission(context, VERIFICATION_READ_PERMISSION);
           response.setHeader("Cache-Control", "private, no-store");
           response
             .status(200)
@@ -134,7 +142,14 @@ export function registerVerification(
       runContract,
       authenticate,
       async (_request, response, next) => {
-        const context = readVerifiedRequestContext(response);
+        let context: VerifiedRequestContext;
+        try {
+          context = readVerifiedRequestContext(response);
+          requireVerificationPermission(context, VERIFICATION_RUN_PERMISSION);
+        } catch (error) {
+          next(error);
+          return;
+        }
         const key = `${context.planeKey}:${context.tenantId}:${context.principalId}`;
         if (active.has(key)) {
           response
@@ -189,6 +204,18 @@ export function registerVerification(
       },
     );
   });
+}
+
+export function requireVerificationPermission(
+  context: VerifiedRequestContext,
+  permission: string,
+): void {
+  if (!context.permissions.allowed.includes(permission))
+    throw new HttpError(
+      403,
+      "PLATFORM_VERIFICATION_DENIED",
+      "Platform verification permission required",
+    );
 }
 
 export async function executeVerification(

@@ -392,3 +392,30 @@ it("registers attachment read operations for every plane as tenant-scoped, bound
     if (operation.method === "POST") assert.ok(operation.maxBodyBytes && operation.maxBodyBytes <= 4096, id);
   }
 });
+
+it("forwards a Country attachment read through Studio and Mesh relays", async () => {
+  for (const plane of ["studio", "mesh"] as const) {
+    let forwarded = "";
+    const handler = createRelayHandler({
+      plane,
+      runtimeApiUrl: "http://platform-host:4000/api",
+      appOrigin: `https://${plane}.example`,
+      operations: COMMON_PLANE_RELAY_OPERATIONS,
+      session: authority(session(plane)),
+      fetch: async (url) => {
+        forwarded = String(url);
+        return new Response("attachment", { status: 200 });
+      },
+    });
+    const response = await handler(
+      new Request(`https://${plane}.example/api/relay/attachments/10000000-0000-4000-8000-000000000001/download`, {
+        method: "POST",
+        headers: { origin: `https://${plane}.example`, "sec-fetch-site": "same-origin", "x-csrf-token": "csrf-proof", "content-type": "application/json" },
+        body: "{}",
+      }),
+      context("attachments", "10000000-0000-4000-8000-000000000001", "download"),
+    );
+    assert.equal(response.status, 200, plane);
+    assert.ok(forwarded.includes("/api/attachments/10000000-0000-4000-8000-000000000001/download"), plane);
+  }
+});

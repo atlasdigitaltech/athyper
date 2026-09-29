@@ -2,6 +2,7 @@ import { entityEnglishMessages } from "@athyper/platform-i18n/entity-messages";
 import type { MessageCatalog } from "@athyper/platform-i18n";
 
 export const shellEnglishMessages: MessageCatalog = Object.freeze({
+  "ui.closePanel": "Close panel", "ui.closeDialog": "Close dialog", "ui.drawerPanel": "Drawer panel", "ui.notifications": "Notifications", "ui.loading": "Loading", "ui.chooseDate": "Choose date", "ui.loadingCalendar": "Loading calendar…", "ui.clearSearch": "Clear search", "ui.selectedAndAvailable": "{selected} selected · {available} available", "ui.companyAndLegalEntityCount": "{companies, plural, one {# company} other {# companies}} · {legalEntities, plural, one {# legal entity} other {# legal entities}}", "ui.legalEntity": "Legal entity · {code}", "ui.companyDetails": "{code} · {country} · {currency}", "ui.noMatchingCompanies": "No permitted companies match your search.",
   "panel.notificationsScope": "Your notifications", "panel.inboxScope": "Your work", "panel.currentTenant": "Current tenant",
   "panel.pin": "Pin panel to the side",
   "panel.unpin": "Unpin panel",
@@ -16,6 +17,7 @@ export const shellEnglishMessages: MessageCatalog = Object.freeze({
 });
 
 export const shellArabicMessages: MessageCatalog = Object.freeze({
+  "ui.closePanel": "إغلاق اللوحة", "ui.closeDialog": "إغلاق مربع الحوار", "ui.drawerPanel": "لوحة جانبية", "ui.notifications": "الإشعارات", "ui.loading": "جارٍ التحميل", "ui.chooseDate": "اختر التاريخ", "ui.loadingCalendar": "جارٍ تحميل التقويم…", "ui.clearSearch": "مسح البحث", "ui.selectedAndAvailable": "{selected} محدد · {available} متاح", "ui.companyAndLegalEntityCount": "{companies} شركة · {legalEntities} كيان قانوني", "ui.legalEntity": "الكيان القانوني · {code}", "ui.companyDetails": "{code} · {country} · {currency}", "ui.noMatchingCompanies": "لا توجد شركات مسموح بها تطابق بحثك.",
   "panel.notificationsScope": "إشعاراتك", "panel.inboxScope": "عملك", "panel.currentTenant": "المستأجر الحالي",
   "panel.pin": "تثبيت اللوحة على الجانب",
   "panel.unpin": "إلغاء تثبيت اللوحة",

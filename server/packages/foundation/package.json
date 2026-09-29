@@ -15,6 +15,7 @@
     "./tenancy": "./src/tenancy/index.ts",
     "./transaction": "./src/transaction/index.ts",
     "./validation": "./src/validation/index.ts"
+    ,"./humanize": "./src/humanize.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

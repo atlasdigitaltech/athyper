@@ -89,7 +89,7 @@ export function Fields({
       <dl className="a-record-detail-fields">
       {visible.map((field) => (
           <div key={field.key}>
-            <dt>{intl.text(field.label ?? humanize(field.key))}</dt>
+            <dt>{intl.text(field.label ?? humanizeIdentifier(field.key))}</dt>
             <dd><MetadataValue field={field} value={values[field.key]} /></dd>
           </div>
         ))}
@@ -134,7 +134,7 @@ export function Collection({
           <dl className="a-record-detail-fields">
             {(rowFields ? rowFields[index] ?? [] : visible).map((field) => (
               <div key={field.key}>
-                <dt>{intl.text(field.label ?? humanize(field.key))}</dt>
+                <dt>{intl.text(field.label ?? humanizeIdentifier(field.key))}</dt>
                 <dd>{field.revealOperation && typeof item[field.revealTargetField ?? "id"] === "string" ? <ProtectedValue operation={field.revealOperation} id={item[field.revealTargetField ?? "id"] as string} label={field.label ? intl.text(field.label) : undefined} purposes={field.revealPurposes} allowed={item.revealable === true} verificationRequired={item.revealVerificationRequired === true} masked={<>{item[field.key] != null && field.maskedPrefix}<MetadataValue field={field} value={item[field.key]} /></>} /> : <>{item[field.key] != null && field.maskedPrefix}<MetadataValue field={field} value={item[field.key]} /></>}</dd>
               </div>
             ))}
@@ -223,10 +223,9 @@ function MetadataValue({field,value}:{field:EntityRuntimeSectionResource["presen
   }
   if(field.options && Array.isArray(value)) return value.length ? value.map((entry,index)=><span key={index}>{index>0?', ':''}<MetadataValue field={field} value={entry}/></span>) : "—";
   if(field.options) { const label=field.options.find(option=>option.value===value)?.label; return label ? intl.text(label) : <span role="alert">Enumeration label unavailable</span>; }
-  if(field.itemFields && Array.isArray(value)) return value.length ? <ul>{value.filter(valueRecord).map((row,index)=><li key={index}>{field.itemFields!.filter(child=>row[child.key]!=null).map(child=><span key={child.key}>{child.label ? intl.text(child.label) : humanize(child.key)}: <MetadataValue field={child} value={row[child.key]} />; </span>)}</li>)}</ul> : "—";
+  if(field.itemFields && Array.isArray(value)) return value.length ? <ul>{value.filter(valueRecord).map((row,index)=><li key={index}>{field.itemFields!.filter(child=>row[child.key]!=null).map(child=><span key={child.key}>{child.label ? intl.text(child.label) : humanizeIdentifier(child.key)}: <MetadataValue field={child} value={row[child.key]} />; </span>)}</li>)}</ul> : "—";
   return typeof value === "number" && Number.isFinite(value) ? intl.number(value, {maximumFractionDigits:20}) : display(value);
 }
-export const humanize = humanizeIdentifier;
 export function message(cause: unknown): string {
   return cause instanceof Error && cause.message
     ? cause.message

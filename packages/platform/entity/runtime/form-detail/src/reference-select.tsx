@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SearchableSelect, type ReferenceOption } from "@athyper/platform-ui";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
+import { createEntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
 import { entityEnglishMessages } from "@athyper/platform-i18n/entity-messages";
 import type { RecentChoicePolicy } from "@athyper/contract-platform-entity-runtime";
 import {
@@ -220,17 +221,7 @@ function ScopedReferenceSelect({
             }
           : undefined
       }
-      messages={{
-        search: message("entity.reference.search"),
-        recent: message("entity.reference.recent"),
-        all: message("entity.reference.all"),
-        results: message("entity.reference.results"),
-        empty: message("entity.reference.empty"),
-        unavailable: message("entity.reference.unavailable"),
-        required: message("entity.reference.required"),
-        clear: message("entity.reference.clear"),
-        clearRecent: message("entity.reference.clearRecent"),
-      }}
+      messages={createEntityReferenceMessages(message)}
       onChange={(value, option) => {
         props.onChange(value, option);
         if (

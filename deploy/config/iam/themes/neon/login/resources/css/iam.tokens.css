@@ -63,6 +63,15 @@
   --a-story-surface-hover: color-mix(in srgb, var(--a-story-foreground) 10%, transparent);
   --a-story-surface-active: color-mix(in srgb, var(--a-story-wave) 22%, transparent);
   --a-story-selection-border: color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent);
+  --a-story-focus: #2e90fa;
+  --a-story-danger: #b42318;
+  --a-story-danger-foreground: #ffffff;
+  --a-story-warning: #b54708;
+  --a-story-warning-foreground: #ffffff;
+  --a-story-success: #067647;
+  --a-story-success-foreground: #ffffff;
+  --a-story-contrast: #151515;
+  --a-story-contrast-foreground: #ffffff;
   --a-theme-family:atlas-modern;
   --a-font-sans:Geist, Inter, ui-sans-serif, system-ui, sans-serif;
   --a-font-mono:ui-monospace, SFMono-Regular, monospace;
@@ -245,6 +254,15 @@
   --a-story-surface-hover: color-mix(in srgb, var(--a-story-foreground) 10%, transparent);
   --a-story-surface-active: color-mix(in srgb, var(--a-story-wave) 22%, transparent);
   --a-story-selection-border: color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent);
+  --a-story-focus: #84caff;
+  --a-story-danger: #f97066;
+  --a-story-danger-foreground: #230402;
+  --a-story-warning: #fec84b;
+  --a-story-warning-foreground: #241400;
+  --a-story-success: #47cd89;
+  --a-story-success-foreground: #031b12;
+  --a-story-contrast: #f4f6f8;
+  --a-story-contrast-foreground: #11151c;
   color-scheme: dark;
 }
 
@@ -301,6 +319,15 @@
   --a-story-surface-hover: #171717;
   --a-story-surface-active: #000000;
   --a-story-selection-border: #ffff00;
+  --a-story-focus: #00ffff;
+  --a-story-danger: #ff6b6b;
+  --a-story-danger-foreground: #000000;
+  --a-story-warning: #ffff00;
+  --a-story-warning-foreground: #000000;
+  --a-story-success: #66ff99;
+  --a-story-success-foreground: #000000;
+  --a-story-contrast: #ffff00;
+  --a-story-contrast-foreground: #000000;
   color-scheme: dark;
 }
 
@@ -359,6 +386,15 @@
   --a-story-surface-hover: color-mix(in srgb, var(--a-story-foreground) 10%, transparent);
   --a-story-surface-active: color-mix(in srgb, var(--a-story-wave) 22%, transparent);
   --a-story-selection-border: color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent);
+  --a-story-focus: #2e90fa;
+  --a-story-danger: #b42318;
+  --a-story-danger-foreground: #ffffff;
+  --a-story-warning: #b54708;
+  --a-story-warning-foreground: #ffffff;
+  --a-story-success: #067647;
+  --a-story-success-foreground: #ffffff;
+  --a-story-contrast: #151515;
+  --a-story-contrast-foreground: #ffffff;
 }
 
 :root[data-theme-family="atlas-mono"][data-theme="dark"] {
@@ -414,6 +450,15 @@
   --a-story-surface-hover: color-mix(in srgb, var(--a-story-foreground) 10%, transparent);
   --a-story-surface-active: color-mix(in srgb, var(--a-story-wave) 22%, transparent);
   --a-story-selection-border: color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent);
+  --a-story-focus: #84caff;
+  --a-story-danger: #f97066;
+  --a-story-danger-foreground: #230402;
+  --a-story-warning: #fec84b;
+  --a-story-warning-foreground: #241400;
+  --a-story-success: #47cd89;
+  --a-story-success-foreground: #031b12;
+  --a-story-contrast: #f4f6f8;
+  --a-story-contrast-foreground: #11151c;
 }
 
 :root[data-theme-family="atlas-mono"][data-theme="high-contrast"] { --a-focus:#00ffff; }

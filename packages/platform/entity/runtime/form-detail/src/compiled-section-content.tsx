@@ -5,6 +5,7 @@ import { asComment, asAttachment } from "./collaboration-read-models";
 import type { EntityRuntimeSectionResource } from "@athyper/platform-entity-descriptor-client";
 import { FileTextIcon } from "@athyper/platform-icons";
 import { PanelEmptyState } from "@athyper/platform-ui";
+import { humanizeIdentifier } from "@athyper/contract-platform-entity-runtime";
 
 import { CommentsWorkspace } from "./comments-workspace";
 import { CollectionContinuation } from "./collection-continuation";
@@ -20,7 +21,6 @@ import {
   collectionItems,
   valueRecord,
   hasMore,
-  humanize,
 } from "./section-primitives";
 
 
@@ -83,7 +83,7 @@ export function CompiledEntitySectionContent({
   const more = hasMore(resource.data) && onLoadMore
     ? <CollectionContinuation key={`${entityCode}:${recordId}:${resource.sectionKey}`} cursor={String(values?.nextCursor)} loading={loadingMore} failed={!!loadMoreError} onLoadMore={onLoadMore} /> : null;
   const groupedContent = groups.length ? <div>{groups.map(group => {
-    const label = group.label?.defaultText ?? humanize(group.key);
+    const label = group.label?.defaultText ?? humanizeIdentifier(group.key);
     const content = <>{group.description && <p>{group.description}</p>}<Collection fields={group.fields} rowFields={group.rowFields} items={(collections![group.key] as unknown[]).filter(valueRecord) as Readonly<Record<string, unknown>>[]}
       sectionLabel={label} emptyState={group.display === "disclosure" ? undefined : resource.presentation.emptyState} /></>;
     return group.display === "disclosure" ? <details key={group.key}><summary>{label}</summary>{content}</details>

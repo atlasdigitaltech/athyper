@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { HostConfig } from "../../../../config/environment.js";
 import { createContainer } from "../../../../kernel/container.js";
-import { executeVerification } from "../../verification.js";
+import { executeVerification, requireVerificationPermission } from "../../verification.js";
 
 const context = {
   planeKey: "studio",
@@ -21,6 +21,16 @@ const config = {
 } as HostConfig;
 
 describe("platform verification runner", () => {
+  it("denies both HTTP surfaces without their distinct verification permissions", () => {
+    expect(() => requireVerificationPermission(context, "platform.verification.read"))
+      .toThrowError(expect.objectContaining({ statusCode: 403 }));
+    expect(() => requireVerificationPermission(context, "platform.verification.run"))
+      .toThrowError(expect.objectContaining({ statusCode: 403 }));
+    const readable = { ...context, permissions: { allowed: ["platform.verification.read"] } } as VerifiedRequestContext;
+    expect(() => requireVerificationPermission(readable, "platform.verification.read")).not.toThrow();
+    expect(() => requireVerificationPermission(readable, "platform.verification.run"))
+      .toThrowError(expect.objectContaining({ statusCode: 403 }));
+  });
   it("returns a sanitized all-plane quick snapshot for Studio", async () => {
     const container = createContainer();
     for (const key of [

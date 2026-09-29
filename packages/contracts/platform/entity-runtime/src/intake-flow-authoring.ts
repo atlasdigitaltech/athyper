@@ -1,5 +1,5 @@
 import { parseEntityIntakeFlows } from "./intake";
-type Row = Record<string, any>;
+type Row = Record<string, unknown>;
 /** Lower existing metadata.entity_flow/step rows. Never infer executable URLs or grant authority. */
 export function compileEntityIntakeFlows(
   native: Readonly<Record<string, unknown>>,
@@ -30,10 +30,16 @@ export function compileEntityIntakeFlows(
   return parseEntityIntakeFlows(
     flows.map((f) => {
       const members = steps.filter((s) => s.entityFlowId === f.id);
-      if (
-        members.some((s) => !Number.isInteger(s.position) || s.position < 0) ||
-        new Set(members.map((s) => s.position)).size !== members.length
-      )
+      const ordered = members.map((s) => {
+        if (
+          typeof s.position !== "number" ||
+          !Number.isInteger(s.position) ||
+          s.position < 0
+        )
+          throw Error("INTAKE_STEP_ORDER_INVALID");
+        return { step: s, position: s.position };
+      });
+      if (new Set(ordered.map((o) => o.position)).size !== ordered.length)
         throw Error("INTAKE_STEP_ORDER_INVALID");
       return {
         schemaVersion: 1,
@@ -45,9 +51,9 @@ export function compileEntityIntakeFlows(
         allowDraftResume: f.allowDraftResume ?? true,
         entryOperation: operation(f.entryOperationId),
         completionOperation: operation(f.completionOperationId),
-        steps: members
+        steps: ordered
           .sort((a, b) => a.position - b.position)
-          .map((s) => {
+          .map(({ step: s }) => {
             const surface = surfaces.find((v) => v.id === s.entitySurfaceId);
             if (!surface) throw Error("INTAKE_SURFACE_REQUIRED");
             return {

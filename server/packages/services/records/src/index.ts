@@ -23,6 +23,7 @@ export * from "./transfer/transfer-routes.js";
 export * from "./transfer/transfer-jobs.js";
 export * from "./transfer/transfer-maintenance.js";
 export * from "./transfer/transfer-adapters.js";
+export * from "./transfer/export-admission.js";
 export * from "./transfer/import-adapter-registry.js";
 export * from "./transfer/xlsx-workbook-codec.js";
 export * from "./snapshots/snapshot-service.js";
@@ -35,6 +36,7 @@ export * from "./entity-authorization-rollout.js";
 export * from "./entity-scope-adapter.js";
 
 export * from "./entity-backend-authorizer.js";
+export * from "./published-tenant-authorizer.js";
 export { addressFormChoices } from "./address-form-choices.js";
 export { bankFormChoices, bankFormSources } from "./bank-form-choices.js";
 export {
@@ -47,8 +49,16 @@ export { registerSharedReferenceDirectoryRoutes } from "./shared-reference-direc
 
 export * from "./snapshots/activity-snapshot-repository.js";
 export { readableRecordFields } from "./record-read-access.js";
-export { createRecordHistoryHook, qualifyRecordHistoryDescriptor, type RecordHistoryBinding, type RecordHistoryAdapter } from "./record-history.js";
-export type { RecordHistoryHook, IdempotentRecordCommand } from "./record-execution.js";
+export {
+  createRecordHistoryHook,
+  qualifyRecordHistoryDescriptor,
+  type RecordHistoryBinding,
+  type RecordHistoryAdapter,
+} from "./record-history.js";
+export type {
+  RecordHistoryHook,
+  IdempotentRecordCommand,
+} from "./record-execution.js";
 
 export * from "./actions/transactional-action-service.js";
 

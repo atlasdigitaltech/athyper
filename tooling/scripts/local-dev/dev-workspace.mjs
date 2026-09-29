@@ -14,6 +14,7 @@ import {
   openSync,
   closeSync,
   rmdirSync,
+  statSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import { resolve, join } from "node:path";
@@ -31,8 +32,19 @@ export const APPLICATIONS = [
 const project = "athyper-dev-source";
 const jsonRead = (path) => JSON.parse(readFileSync(path, "utf8"));
 const digest = (value) => createHash("sha256").update(value).digest("hex");
-export function configureDevPublication(config, preset, path = join(homedir(), ".athyper/instances/dev/secrets/dev-publication/server.json")) {
+export function configureDevPublication(config, preset, path = join(homedir(), ".athyper/instances/dev/secrets/dev-publication/server.json"), recoveryPath = join(homedir(), ".athyper/instances/dev/secrets/publication-recovery.json")) {
   configureDevProtectedValues(config);
+  if (config.services.worker && existsSync(recoveryPath)) {
+    const stat = statSync(recoveryPath);
+    if (!stat.isFile() || stat.uid !== process.getuid() || (stat.mode & 0o077))
+      throw new Error("Private DEV recovery configuration required");
+    const recovery = jsonRead(recoveryPath);
+    const url = new URL(recovery.databaseUrl);
+    if (url.hostname !== "db" || url.port !== "5432" || url.pathname !== "/athyper_studio" || url.username !== "athyper_dev_publication_recovery")
+      throw new Error("Invalid DEV recovery database coordinate");
+    config.services.worker.environment ??= {};
+    config.services.worker.environment.PUBLICATION_RECOVERY_DATABASE_URL = recovery.databaseUrl;
+  }
   for (const name of ["api", "worker", "scheduler"]) {
     const service = config.services[name];
     if (!service) continue;

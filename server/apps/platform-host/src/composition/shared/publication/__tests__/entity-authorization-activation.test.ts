@@ -42,8 +42,8 @@ describe("entity authorization activation", () => {
     const descriptor = { ...protectedDescriptor, authorization: masked };
     expect(() => assertEntityAuthorizationEnforceable([descriptor], "neon", { enforcedEntityProfile: () => entityAuthorizationProfileHash(masked) })).toThrow("ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE");
   });
-  it.each(["studio", "neon", "mesh"] as const)("keeps Country activatable on %s without an installed backend", (plane) => {
-    expect(() => assertEntityAuthorizationEnforceable([country(plane)], plane, {})).not.toThrow();
+  it.each(["studio", "neon", "mesh"] as const)("requires an installed backend for Country on %s", (plane) => {
+    expect(() => assertEntityAuthorizationEnforceable([country(plane)], plane, {})).toThrow("ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE");
   });
   it("rejects a Country-shaped entity once a field is no longer public", () => {
     const widened = country("neon");

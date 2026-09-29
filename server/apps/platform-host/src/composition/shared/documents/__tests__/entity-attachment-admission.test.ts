@@ -24,14 +24,23 @@ function fixture() {
     releaseHash: "release",
     policyHash: "policy",
   }));
+  const authorizeOwner = vi.fn(async () => true);
   return {
     load,
     ownsDraft,
     resolve,
-    admit: createEntityAttachmentAdmission({ load, ownsDraft, resolve }),
+    authorizeOwner,
+    admit: createEntityAttachmentAdmission({ load, ownsDraft, resolve, authorizeOwner }),
   };
 }
 describe("entity attachment admission", () => {
+  it("checks the stored content owner before a download", async () => {
+    const f = fixture();
+    f.load.mockResolvedValue({ ...(await f.load()), entity_type: "content.item", entity_id: "stored-owner" });
+    f.authorizeOwner.mockResolvedValue(false);
+    await expect(f.admit(context, "download", { attachmentId: "file" })).rejects.toMatchObject({ statusCode: 403 });
+    expect(f.authorizeOwner).toHaveBeenCalledWith(expect.objectContaining({ entityId: "stored-owner", action: "download" }));
+  });
   it("returns only the stored, policy-authorized comment for preview delivery",async()=>{
     const f=fixture();const row=await f.load();f.load.mockResolvedValue({...row,has_record_link:false,comment_id:"stored-comment"});
     const result=await f.admit(context,"preview",{attachmentId:"file",commentId:"forged-comment"});

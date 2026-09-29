@@ -4,9 +4,10 @@ import {
   parseCollectionRelationship,
 } from "@athyper/server-contract-metadata";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type {
-  RecordCollectionScopeResolution,
-  RecordCollectionScopeResolver,
+import {
+  tenantRecordCollectionScope,
+  type RecordCollectionScopeResolution,
+  type RecordCollectionScopeResolver,
 } from "@athyper/server-contract-records";
 
 interface NeonWorkContextCatalog {
@@ -298,7 +299,7 @@ export function createNeonRecordCollectionScopeResolver(
         );
       if (relationship)
         parseCollectionRelationship(relationship, input.descriptor.storage);
-      if (!isBusinessPartner(input) && !relationship) return tenantScope();
+      if (!isBusinessPartner(input) && !relationship) return tenantRecordCollectionScope();
       const resolver = relationship
         ? DOCUMENT_RELATIONSHIP_RESOLVER
         : ("neon.business_partner.operating_organization.v1" as const);
@@ -433,18 +434,6 @@ function isBusinessPartner(
   );
 }
 
-function tenantScope(): Extract<
-  RecordCollectionScopeResolution,
-  { readonly status: "ready" }
-> {
-  return Object.freeze({
-    status: "ready",
-    authorizationResource: Object.freeze({}),
-    constraints: Object.freeze([]),
-    labels: Object.freeze([]),
-    fingerprintMaterial: Object.freeze({ mode: "tenant" }),
-  });
-}
 function forbidden(
   code: string,
   message: string,

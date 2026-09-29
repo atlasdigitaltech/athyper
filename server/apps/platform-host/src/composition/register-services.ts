@@ -9,9 +9,11 @@ import { createEntityExperienceRuntime } from "./shared/entity-runtime/experienc
 import { createEntityResourceServices } from "./shared/entity-runtime/resources.js";
 import { createEntityTransferRuntime } from "./shared/entity-runtime/transfers.js";
 import { createEntityServices, type EntityServices } from "./shared/entity-runtime/services.js";
+import { createPublishedTenantRecordAuthorizer } from "@athyper/server-service-records";
 import { createEntityExperienceHttpRegistrar, createEntityHttpRegistrars, createEntityResourceHttpRegistrar } from "./shared/entity-runtime/http-registrars.js";
 
 import { assertEntityAuthorizationEnforceable } from "./shared/publication/entity-authorization-activation.js";
+import { createTenantRollbackExecutor, hasTenantRollbackTarget } from "./shared/publication/tenant-rollback.js";
 import { readCompiledRuntimeContract, parseCompiledRuntimeContract } from "@athyper/server-platform-metadata";
 import { parseActivityBinding } from "@athyper/server-contract-publication";
 import { qualifyActivityRecordingGraph, resolveRecordHistoryBinding } from "./shared/entity-runtime/activity-recording.js";
@@ -27,7 +29,7 @@ import { registerStudioOnboarding } from "./spaces/studio/onboarding/register-st
 import { registerEntityMetadata } from "./shared/entity-runtime/metadata.js";
 
 import { createEntityCollaborationService } from "@athyper/server-platform-experience";
-import { createEntityReadRegistrations } from "./shared/entity-runtime/read-registrations.js";
+import { createEntityAuthorizationRegistrations } from "./shared/entity-runtime/read-registrations.js";
 import { createPublishedParentAdmission } from "./shared/entity-runtime/published-parent-admission.js";
 import { createPublishedRecordHeader } from "./shared/entity-runtime/published-record-header.js";
 
@@ -49,7 +51,7 @@ import { parseAtlasSemanticConfig } from "./spaces/neon/ai/atlas-semantic-index.
 import { createAtlasDocumentGrounding } from "./spaces/neon/ai/atlas-document-grounding.js";
 import { registerAtlasAttachmentKnowledge } from "./spaces/neon/ai/atlas-attachment-knowledge.js";
 import { createAuthenticatedEntityReleaseReview } from "@athyper/server-service-publication";
-import { getRequestContext as authoringRequestContext } from "@athyper/server-foundation/context";
+import { getRequestContext as authoringRequestContext, tryGetRequestContext } from "@athyper/server-foundation/context";
 import { createMetaEntityAuthoringAuthorizer, createMetaEntityInspectionAuthorizer } from "./shared/entity-governance/meta-entity-authoring-authorizer.js";
 import { createScopedMetaEntityAuthoringRepository } from "./shared/entity-governance/scoped-meta-entity-authoring.js";
 import { createDevRuntimePublication } from "../development/runtime-publication.js";
@@ -358,7 +360,7 @@ import {
   MetaEntityArtifactSigner,
   sha256,
 } from "@athyper/server-adapter-publication-signing";
-import { APPLY_PUBLICATION_RELEASE_JOB, COMPILE_PUBLICATION_ARTIFACT_JOB, SIGN_PUBLICATION_ARTIFACT_JOB, DISPATCH_PUBLICATION_JOB, createPublicationAuthorityHandlers, createPublicationApplyHandler, createPublicationRecoveryHandler, createPublicationRollbackHandler, KyselyPublicationAuthorityRepository, KyselyPublicationAuthorityWork, KyselyPublicationOperationsRepository, PublicationOperationsService, PUBLICATION_APPLY_QUEUE, PUBLICATION_AUTHORITY_QUEUE, PUBLICATION_MAINTENANCE_QUEUE, RECOVER_STALLED_PUBLICATIONS_JOB, ROLLBACK_PUBLICATION_RELEASE_JOB, registerPublicationRoutes } from "@athyper/server-service-publication";
+import { APPLY_PUBLICATION_RELEASE_JOB, COMPILE_PUBLICATION_ARTIFACT_JOB, SIGN_PUBLICATION_ARTIFACT_JOB, DISPATCH_PUBLICATION_JOB, createPublicationAuthorityHandlers, createPublicationApplyHandler, createPublicationRecoveryHandler, createPublicationRollbackHandler, KyselyPublicationAuthorityRepository, KyselyPublicationRecoveryDiscovery, KyselyPublicationAuthorityWork, KyselyPublicationOperationsRepository, PublicationOperationsService, PUBLICATION_APPLY_QUEUE, PUBLICATION_AUTHORITY_QUEUE, PUBLICATION_MAINTENANCE_QUEUE, RECOVER_STALLED_PUBLICATIONS_JOB, ROLLBACK_PUBLICATION_RELEASE_JOB, registerPublicationRoutes } from "@athyper/server-service-publication";
 
 import type { HostConfig } from "../config/environment.js";
 import type { Container } from "../kernel/container.js";
@@ -577,7 +579,15 @@ export function registerServices(
         })
       : selected;
   };
-  const authorizer = observeAuthority(baseAuthorizer);
+  const authorizer = createPublishedTenantRecordAuthorizer({
+    authority: observeAuthority(baseAuthorizer),
+    metadata: { getEntityDescriptor: (context, entityCode) => metadata.getEntityDescriptor(context, entityCode) },
+    refreshContext: refreshEntityContext,
+    exists: (context, descriptor, recordId) => transactions.run(context.planeKey, context, async tx => {
+      const repository = dependencies.repository ?? createKyselyRecordRepository({ databases: recordDatabases });
+      return Boolean(await repository.get(descriptor, context.tenantId, recordId, [descriptor.storage.idField], tx));
+    }),
+  });
   // Filled with the very same service instance mounted by the generic record routes.
   // The publication callback resolves it when a job runs, not during bootstrap.
   let installedRecordMutations: EntityServices["mutations"] | undefined;
@@ -704,7 +714,7 @@ export function registerServices(
               createPublicationRuntimeQualification({
                 registrations: [
                   ...(dependencies.entityAuthorizationRuntimeRegistrations ?? []),
-                  ...(installedReadQueries ? createEntityReadRegistrations(installedReadQueries, profile, installedRecordMutations) : []),
+                  ...(installedReadQueries ? createEntityAuthorizationRegistrations(installedReadQueries, profile, installedRecordMutations) : []),
                 ],
                 sourceConstraints: baseAuthorizer.checkSourceConstraints,
               }).qualify(profile, bindings);
@@ -1715,6 +1725,30 @@ export function registerServices(
     ownsDraft: (context, draftId, entityCode, recordId) => transactions.run(context.planeKey, context, async tx =>
       Boolean((await sql`SELECT id FROM document.comment_draft WHERE tenant_id=${context.tenantId}::uuid AND id=${draftId}::uuid AND principal_id=${context.principalId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} AND expires_at>clock_timestamp()`.execute(tx)).rows[0])),
     resolve: input => capabilityPolicy.resolve(input),
+    authorizeOwner: async ({context, entityType, entityId, action, uploadedBy, attachmentId}) => {
+      if (entityType === "atlas.prompt") {
+        if (!attachmentId) return action === "create" && /^[0-9a-f-]{36}$/i.test(entityId);
+        if (uploadedBy !== context.principalId) return false;
+        // Match the Atlas context resolver's uploader and prompt-link ownership.
+        return transactions.run(context.planeKey, context, async tx => Boolean((await sql`
+          SELECT a.id FROM document.attachment a
+          WHERE a.tenant_id=${context.tenantId}::uuid AND a.id=${attachmentId}::uuid
+            AND a.uploaded_by=${context.principalId}::uuid
+            AND a.metadata->>'entity_type'='atlas.prompt' AND a.metadata->>'entity_id'=${entityId}
+            AND (EXISTS (SELECT 1 FROM document.attachment_link l
+              WHERE l.tenant_id=a.tenant_id AND l.attachment_series_id=a.series_id
+                AND l.entity_type='atlas.prompt' AND l.entity_id=${entityId}
+                AND l.created_by=${context.principalId}::uuid
+                AND (l.pinned_attachment_id IS NULL OR l.pinned_attachment_id=a.id))
+              OR (a.status IN ('pending','uploading','uploaded','processing','quarantined','rejected','failed')
+                AND ${["finalize", "status", "archive"].includes(action)}))
+        `.execute(tx)).rows.length));
+      }
+      const acl = container.services.content?.acl;
+      if (!acl) return false;
+      return acl.authorize({ context, contentItemId: entityId,
+        required: ["download", "preview", "extract", "search", "status"].includes(action) ? "read" : "write" });
+    },
   });
 
   if (container.platform.compiledEntityReader) {
@@ -4568,6 +4602,14 @@ function registerPublication(
       ...(authorizationCompilation ? { authorizationRuntime: authorizationCompilation.runtime } : {}),
     },
     activationGuard: async (deployment, loaded) => {
+      const tenantContext = tryGetRequestContext();
+      if (!tenantContext?.tenantId) throw new Error("PUBLICATION_APPLIER_TENANT_REQUIRED");
+      const approved = await authorityDatabase.transaction().execute(async tx => {
+        await sql`SELECT set_config('app.current_tenant_id',${tenantContext.tenantId},true)`.execute(tx);
+        return (await sql`SELECT id FROM publication.release WHERE id=${deployment.sourceReleaseId}::uuid
+          AND tenant_id=${tenantContext.tenantId}::uuid AND status IN ('approved','published')`.execute(tx)).rows.length === 1;
+      });
+      if (!approved) throw new Error("PUBLICATION_ACTIVATION_APPROVAL_REQUIRED");
       const envelope = loaded.document.envelope;
       const descriptors = envelope.artifactKind === "entity_runtime" &&
         envelope.payload.entityDescriptor.descriptorKind === "entity_runtime"
@@ -4612,25 +4654,67 @@ function registerPublication(
       PUBLICATION_APPLY_QUEUE,
       ROLLBACK_PUBLICATION_RELEASE_JOB,
       createPublicationRollbackHandler(
-        projections,
+        Object.fromEntries((config.publication.targetPlanes as readonly ("studio" | "neon" | "mesh")[])
+          .filter(plane => Boolean(databases[plane]))
+          .map(plane => [plane, createTenantRollbackExecutor(databases[plane]!, authorityDatabase, plane)])),
         container.adapters.openTelemetry?.metrics,
       ),
     );
+    if (config.publication.recoveryEnabled) {
+      const recoveryDatabase = container.adapters.publicationRecoveryDatabase?.database;
+      if (!recoveryDatabase) throw new Error("PUBLICATION_RECOVERY_DATABASE_REQUIRED");
     container.runtimes.jobs.register(
       PUBLICATION_MAINTENANCE_QUEUE,
       RECOVER_STALLED_PUBLICATIONS_JOB,
       createPublicationRecoveryHandler(
-        authority,
+        new KyselyPublicationRecoveryDiscovery(recoveryDatabase as unknown as Kysely<Record<string, never>>),
         container.runtimes.jobs,
+        async (coordinate) => {
+          // The definer function reveals only coordinates. Recheck the exact
+          // deployment under tenant RLS before selecting a target worker.
+          const visible = await authorityDatabase.transaction().execute(async tx => {
+            await sql`SELECT set_config('app.current_tenant_id',${coordinate.tenantId},true)`.execute(tx);
+            const deployment = await new KyselyPublicationAuthorityRepository(tx).getDeployment(coordinate.deploymentId);
+            if (!deployment) return null;
+            const approved = (await sql`SELECT id FROM publication.release WHERE id=${deployment.sourceReleaseId}::uuid
+              AND tenant_id=${coordinate.tenantId}::uuid AND status IN ('approved','published')`.execute(tx)).rows.length === 1;
+            return approved ? deployment : null;
+          });
+          if (!visible || visible.targetPlane !== coordinate.targetPlane ||
+            !["pending", "dispatched", "received", "staged", "verified"].includes(visible.deploymentStatus))
+            return null;
+          const database = databases[coordinate.targetPlane];
+          if (!database) throw new Error("PUBLICATION_APPLIER_DATABASE_UNAVAILABLE");
+          const principalId = await database.transaction().execute(async tx => {
+            await sql`SELECT set_config('app.current_tenant_id',${coordinate.tenantId},true)`.execute(tx);
+            const rows = (await sql<{ id: string }>`SELECT id FROM master.principal
+              WHERE tenant_id=${coordinate.tenantId}::uuid
+                AND code=${process.env["PUBLICATION_APPLIER_PRINCIPAL_CODE"] ?? "publication.worker"}
+                AND principal_type='service_account' AND status='active'`.execute(tx)).rows;
+            if (rows.length !== 1) throw new Error("PUBLICATION_APPLIER_SERVICE_PRINCIPAL_REQUIRED");
+            return rows[0]!.id;
+          });
+          return { planeKey: coordinate.targetPlane, tenantId: coordinate.tenantId,
+            principalId, scope: "tenant" as const };
+        },
         container.adapters.openTelemetry?.metrics,
+        async (coordinate, outcome) => {
+          await audit.record({ eventCode: `publication.recovery.${outcome}`, action: "publication_recovery",
+            outcome: outcome === "enqueue_failed" ? "failure" : "success", severity: "info",
+            tenantId: coordinate.tenantId, actor: { kind: "service", principalId: SYSTEM_PRINCIPAL_ID },
+            entityType: "publication.deployment", entityId: coordinate.deploymentId,
+            metadata: { targetPlane: coordinate.targetPlane },
+          });
+        },
       ),
     );
+    }
     container.runtimes.jobDefinitions.push({
       code: APPLY_PUBLICATION_RELEASE_JOB,
       owner: "@athyper/server-service-publication",
       queue: PUBLICATION_APPLY_QUEUE,
       name: APPLY_PUBLICATION_RELEASE_JOB,
-      scope: "plane",
+      scope: "tenant",
       payloadSchema: { name: APPLY_PUBLICATION_RELEASE_JOB, version: 1 },
       timeoutMs: 120_000,
       maxAttempts: 5,
@@ -4652,7 +4736,7 @@ function registerPublication(
       owner: "@athyper/server-service-publication",
       queue: PUBLICATION_APPLY_QUEUE,
       name: ROLLBACK_PUBLICATION_RELEASE_JOB,
-      scope: "plane",
+      scope: "tenant",
       payloadSchema: { name: ROLLBACK_PUBLICATION_RELEASE_JOB, version: 1 },
       timeoutMs: 120_000,
       maxAttempts: 3,
@@ -4801,6 +4885,7 @@ function registerPublication(
         jobs: container.runtimes.jobs!,
         apiEnabled: true,
         operations,
+        authorizeRollbackTarget: input => hasTenantRollbackTarget(authorityDatabase, input),
       });
     });
   }

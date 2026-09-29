@@ -38,7 +38,9 @@ function stylesheetsBelow(root, relativeDirectory) {
   const out = [];
   for (const entry of readdirSync(absolute, { withFileTypes: true })) {
     if (entry.isDirectory()) {
-      if (!IGNORE_DIRS.has(entry.name)) {
+      // Alternate Next.js distDirs (.next-*) are generated like .next/ and
+      // gitignored; only the exact-name set above cannot express that.
+      if (!IGNORE_DIRS.has(entry.name) && !entry.name.startsWith(".next-")) {
         out.push(
           ...stylesheetsBelow(
             root,

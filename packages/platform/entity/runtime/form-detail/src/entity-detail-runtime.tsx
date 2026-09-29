@@ -7,6 +7,7 @@ import {
   type EntityRecordV1,
 } from "@athyper/contract-platform-entity-runtime";
 import { entityDescriptorClient } from "@athyper/platform-entity-descriptor-client";
+import { ApiTransportError } from "@athyper/platform-api-client";
 import { localizedEntityError } from "@athyper/platform-i18n/entity-errors";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { PageWorkspace, useRecordPage } from "@athyper/platform-shell";
@@ -49,18 +50,21 @@ export function EntityDetailRuntime({
     },
     [client, entityCode, recordId],
   );
+  const notFound = loaded.error instanceof ApiTransportError && loaded.error.status === 404;
   if (!loaded.data)
     return (
       <PageWorkspace
         header={{ level: "collection", title: humanizeIdentifier(entityCode) }}
       >
         <Card>
-          <InlineStatus tone={loaded.error ? "danger" : "neutral"}>
-            {loaded.error
+          <InlineStatus tone={loaded.error && !notFound ? "danger" : "neutral"}>
+            {notFound
+              ? intl.message("detail.recordNotFound")
+              : loaded.error
               ? localizedEntityError(loaded.error, intl)
               : intl.message("detail.loadingRecord")}
           </InlineStatus>
-          {loaded.error ? <Button variant="secondary" onClick={loaded.reload}>{intl.message("entity.retry")}</Button> : null}
+          {loaded.error && !notFound ? <Button variant="secondary" onClick={loaded.reload}>{intl.message("entity.retry")}</Button> : null}
         </Card>
       </PageWorkspace>
     );

@@ -5,6 +5,7 @@ import {
   isObjectRecord,
   isBoundedNonBlankText,
 } from "../../packages/contracts/platform/entity-runtime/src/validation/values";
+import { entityRecordHref, parseEntityApplicationPath } from "../../packages/contracts/platform/entity-runtime/src/entity-record-href";
 import { resolveEntityReadRoute } from "../../packages/contracts/platform/entity-runtime/src/routes/entity-read-route";
 import { parseEntityRuntimeLocalizedText } from "../../packages/contracts/platform/entity-runtime/src/runtime-resource";
 
@@ -86,4 +87,24 @@ test("shared primitives preserve shape semantics and purpose-specific label leng
       }),
     /localized text is invalid/,
   );
+});
+
+test("the application path parser accepts exactly the entity codes the canonical route accepts", () => {
+  for (const code of ["Country", "country.v2", "country-x", "a", "a".repeat(64)])
+    assert.equal(parseEntityApplicationPath(`/app/entity/${code}`), undefined, code);
+  assert.deepEqual(parseEntityApplicationPath("/app/entity/country/manage"), {
+    entityCode: "country",
+    segments: ["manage"],
+  });
+});
+
+test("canonical Entity record links and read routes use one strict grammar", () => {
+  const id = "01a0d433-806b-7874-862d-49a9b955f6a1";
+  assert.equal(entityRecordHref("country", id), `/app/entity/country/${id}`);
+  for (const [entityCode, recordId] of [["Country", id], ["country", "not-a-uuid"], ["country", `${id}/edit`]])
+    assert.throws(() => entityRecordHref(entityCode, recordId), /route is invalid/);
+  for (const pathname of ["/app/entity/country/%2F", "/app/entity/country/%25", "/app/entity/country/../x"])
+    assert.equal(parseEntityApplicationPath(pathname), undefined);
+  assert.deepEqual(parseEntityApplicationPath(`/app/entity/country/${id}/history`), { entityCode: "country", segments: [id, "history"] });
+  assert.equal(resolveEntityReadRoute("country", [id, "history"]), undefined);
 });

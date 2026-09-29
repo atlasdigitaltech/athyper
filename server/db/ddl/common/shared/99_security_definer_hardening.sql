@@ -24,6 +24,11 @@ BEGIN
                 'fn_retire_entity_operation_projection',
                 'fn_restore_entity_operation_projection'
              ) THEN 'athyper_projection_owner'
+            -- The discovery owner has only column SELECT grants and a dedicated
+            -- release SELECT policy, with no publication mutation authority.
+            WHEN routine.schema_name = 'publication'
+             AND routine.routine_name = 'fn_recoverable_deployment_coordinates'
+             THEN 'athyper_publication_recovery_owner'
             ELSE current_user
         END;
 

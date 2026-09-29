@@ -1,5 +1,9 @@
 "use client";
-import { ComposerFrame, ComposerHeader, ComposerFooter } from "@athyper/platform-ui";
+import {
+  ComposerFrame,
+  ComposerHeader,
+  ComposerFooter,
+} from "@athyper/platform-ui";
 
 import { useAtlasSurface } from "./atlas-surface";
 import { parseInstant } from "@athyper/platform-temporal";
@@ -56,6 +60,7 @@ import {
   type HomeWidgetId,
 } from "./home-personalization";
 import { useShellPersonalizationScope } from "./personalization-scope";
+import { dayPeriodGreeting } from "./home-greeting";
 
 export interface PlatformHomeSearchItem {
   readonly title: string;
@@ -110,21 +115,6 @@ export function ShellHomeIdentityProvider({
       {children}
     </ShellHomeIdentityContext.Provider>
   );
-}
-
-function dayPeriodGreeting(date: Date, timeZone: string): string {
-  const hour = Number(
-    new Intl.DateTimeFormat("en-US", {
-      hour: "2-digit",
-      hourCycle: "h23",
-      timeZone,
-    }).format(date),
-  );
-  return hour >= 5 && hour < 12
-    ? "Good morning"
-    : hour >= 12 && hour < 18
-      ? "Good afternoon"
-      : "Good evening";
 }
 
 export function PlatformHome({

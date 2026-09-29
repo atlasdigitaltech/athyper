@@ -51,6 +51,10 @@ function ExportDialog(props: DataOperationsControlProps & { readonly initialScop
   const count = scope === "selected" ? props.selectedRows.length : scope === "page" ? props.page?.rows.length ?? 0 : props.page?.pagination.total;
   const start = async () => {
     setError(""); if (!selectedFields.length) { setError(intl.message("transfer.chooseField")); return; }
+    if (scope === "selected" && !props.selectedRows.length) {
+      setError("Select at least one record on this page.");
+      return;
+    }
     setBusy(true);
     try {
       const requestId = crypto.randomUUID();

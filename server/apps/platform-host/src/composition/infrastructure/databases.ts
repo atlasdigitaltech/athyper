@@ -10,6 +10,7 @@ import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
 import type { HostConfig } from "../../config/environment.js";
 import type { Container } from "../../kernel/container.js";
 import type { AdapterRegistrationDependencies } from "./adapter-contract.js";
+import { sql } from "kysely";
 
 export type DatabasesRegistrationDependencies = Pick<
   AdapterRegistrationDependencies,
@@ -111,6 +112,28 @@ export function registerWorkerDatabases(
 ) {
   config = selectDatabaseConfiguration(config, plan);
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...overrides };
+  if (config.mode === "worker" && config.publication?.recoveryEnabled) {
+    if (!config.publication.recoveryDatabaseUrl)
+      throw new Error("PUBLICATION_RECOVERY_DATABASE_URL_REQUIRED");
+    const recovery = dependencies.createAthyperDatabase({
+      connectionString: config.publication.recoveryDatabaseUrl,
+      max: 1,
+      observer: poolObserver("studio", container),
+    });
+    container.adapters.publicationRecoveryDatabase = recovery;
+    lifecycle.onReady(async () => {
+      const result = await sql<{ authorized: boolean }>`SELECT
+        pg_has_role(current_user, 'athyper_publication_recovery', 'member')
+        AND NOT pg_has_role(current_user, 'athyper_publication_service', 'member')
+        AND NOT r.rolsuper AND NOT r.rolbypassrls
+        AND has_function_privilege(current_user,
+          'publication.fn_recoverable_deployment_coordinates(timestamptz,uuid,integer)', 'EXECUTE') AS authorized
+        FROM pg_roles r WHERE r.rolname=current_user`.execute(recovery.database);
+      if (result.rows[0]?.authorized !== true)
+        throw new Error("PUBLICATION_RECOVERY_ROLE_REQUIRED");
+    });
+    lifecycle.onShutdown(() => recovery.close());
+  }
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.neon) {
     const database = dependencies.createNeonDatabase({
       connectionString: config.jobs.workerDatabaseUrls.neon,

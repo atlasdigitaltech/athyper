@@ -29,20 +29,16 @@ export async function prepareDocumentCollectionRelease(
     )
   ).rows;
   const r = rows[0];
-  if (
-    rows.length !== 1 ||
-    !r ||
-    r.entity_code !== "business_partner_request" ||
-    r.release_kind !== "publish" ||
-    input.targetPlanes.join(",") !== "neon"
-  )
+  if (rows.length !== 1 || !r || r.release_kind !== "publish")
     throw Error("DOCUMENT_COLLECTION_REVIEW_REQUIRED");
   const compiled = compileGraph(r.contract_json as MetaEntityGraph);
   if (
     r.contract_hash !== compiled.contractHash ||
     r.signature_algorithm !== "Ed25519" ||
-    typeof r.contract_signature !== "string" || !r.contract_signature ||
-    typeof r.signing_key_id !== "string" || !r.signing_key_id ||
+    typeof r.contract_signature !== "string" ||
+    !r.contract_signature ||
+    typeof r.signing_key_id !== "string" ||
+    !r.signing_key_id ||
     compiled.contractHash !== input.artifact.contractHash ||
     compiled.descriptorHash !== input.artifact.descriptorHash ||
     sha256(compiled.descriptor) !== sha256(input.artifact.descriptor) ||

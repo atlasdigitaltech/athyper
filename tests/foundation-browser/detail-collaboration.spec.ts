@@ -32,6 +32,7 @@ const bundle = build({
       export const useToasts=()=>({push:()=>{}});
       export const useOptionalAppearanceProfile=()=>undefined;
       export const readBrowserCsrfToken=()=>undefined;
+      export const ErrorSurface=()=>null;
     `, loader: "js" }));
   } }],
 }).then(r => r.outputFiles[0]!.text);

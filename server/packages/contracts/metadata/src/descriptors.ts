@@ -101,6 +101,11 @@ export interface EntityFieldDescriptor {
   readonly writePermissionCode?: string;
   readonly classification?:
     "public" | "internal" | "confidential" | "pii" | "sensitive_pii";
+  /**
+   * Export admission is derived from an explicit field classification.  An
+   * unclassified field is deliberately not exportable: publishing a new field
+   * must include its data handling decision before it can leave the product.
+   */
   readonly retentionPolicyCode?: string;
   readonly validation?: Readonly<Record<string, unknown>>;
   readonly list?: {

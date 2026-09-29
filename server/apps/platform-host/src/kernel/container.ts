@@ -134,6 +134,7 @@ export interface Container {
     meshDatabase?: MeshDatabaseAdapter;
     jobNeonDatabase?: NeonDatabaseAdapter;
     jobAthyperDatabase?: AthyperDatabaseAdapter;
+    publicationRecoveryDatabase?: AthyperDatabaseAdapter;
     jobMeshDatabase?: MeshDatabaseAdapter;
     objectStorageDocuments?: S3ObjectStorageAdapter;
     objectStorageDocumentsBucket?: string;

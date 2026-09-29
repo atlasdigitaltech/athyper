@@ -1,13 +1,20 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, type DayPickerLocale } from "react-day-picker";
+import { ar, de, enUS, fr, hi, ms, ta, zhCN } from "react-day-picker/locale";
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@athyper/platform-icons";
 import "react-day-picker/style.css";
+
+const dayPickerLocales: Readonly<Record<string, Partial<DayPickerLocale>>> = Object.freeze({ ar, de, en: enUS, fr, hi, ms, ta, zh: zhCN });
+function dayPickerLocale(locale: string): Partial<DayPickerLocale> {
+  try { return dayPickerLocales[new Intl.Locale(locale).language] ?? enUS; }
+  catch { return enUS; }
+}
 
 function date(value?: string): Date | undefined {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
@@ -22,12 +29,18 @@ export default function DatePickerCalendar({
   min,
   max,
   required,
+  locale = "en",
+  weekStart,
   onSelect,
 }: {
   value: string;
   min?: string;
   max?: string;
   required?: boolean;
+  /** Governed format locale; month and weekday names follow it. */
+  locale?: string;
+  /** 0 = Sunday … 6 = Saturday, from the governed localization. */
+  weekStart?: number;
   onSelect(value: string): void;
 }) {
   const today = new Date(),
@@ -61,7 +74,7 @@ export default function DatePickerCalendar({
   const yearTrigger = useRef<HTMLButtonElement>(null);
   const returnTo = useRef<"months" | "years">("months");
   const restoreCaptionFocus = useRef(false);
-  const monthName = new Intl.DateTimeFormat("en", { month: "long" }).format(
+  const monthName = new Intl.DateTimeFormat(locale, { month: "long" }).format(
     month,
   );
   const show = (next: "months" | "years") => {
@@ -186,6 +199,8 @@ export default function DatePickerCalendar({
           >
             <DayPicker
               mode="single"
+              locale={dayPickerLocale(locale)}
+              lang={locale}
               required
               autoFocus
               selected={selected}
@@ -194,6 +209,15 @@ export default function DatePickerCalendar({
               hideNavigation
               styles={{ month_caption: { display: "none" } }}
               fixedWeeks
+              weekStartsOn={
+                weekStart !== undefined && Number.isInteger(weekStart) && weekStart >= 0 && weekStart <= 6
+                  ? (weekStart as 0 | 1 | 2 | 3 | 4 | 5 | 6)
+                  : undefined
+              }
+              formatters={{
+                formatWeekdayName: (day) =>
+                  new Intl.DateTimeFormat(locale, { weekday: "short" }).format(day),
+              }}
               showOutsideDays
               startMonth={first}
               endMonth={last}
@@ -279,7 +303,7 @@ export default function DatePickerCalendar({
                   const label =
                     view === "years"
                       ? String(year)
-                      : new Intl.DateTimeFormat("en", { month: "long" }).format(
+                      : new Intl.DateTimeFormat(locale, { month: "long" }).format(
                           candidate,
                         );
                   return (
@@ -298,7 +322,7 @@ export default function DatePickerCalendar({
                     >
                       {view === "years"
                         ? label
-                        : new Intl.DateTimeFormat("en", {
+                        : new Intl.DateTimeFormat(locale, {
                             month: "short",
                           }).format(candidate)}
                     </button>

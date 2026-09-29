@@ -192,7 +192,7 @@ export function parseCollectionPresentation(
           "removalConfirmation",
         ].includes(k),
     ) ||
-    ![
+    !isOneOf(p.renderer, [
       "generic",
       "addresses",
       "contacts",
@@ -200,7 +200,7 @@ export function parseCollectionPresentation(
       "certifications",
       "documents",
       "channels",
-    ].includes(p.renderer) ||
+    ]) ||
     !Array.isArray(p.summary) ||
     p.summary.length < 1 ||
     p.summary.length > 12
@@ -228,7 +228,7 @@ export function parseCollectionPresentation(
       )
     )
       throw Error("INTAKE_COLLECTION_PRESENTATION");
-    if (r.mode !== undefined && !["inline", "dialog"].includes(r.mode))
+    if (r.mode !== undefined && !isOneOf(r.mode, ["inline", "dialog"]))
       throw Error("INTAKE_COLLECTION_PRESENTATION");
     if (
       r.titleFields !== undefined &&
@@ -258,7 +258,7 @@ export function parseCollectionPresentation(
     if (
       Object.keys(f).some((k) => !["field", "format"].includes(k)) ||
       (f.format !== undefined &&
-        !["text", "masked", "count", "primary"].includes(f.format))
+        !isOneOf(f.format, ["text", "masked", "count", "primary"]))
     )
       throw Error("INTAKE_COLLECTION_SUMMARY");
     return { field: key(f.field), ...(f.format ? { format: f.format } : {}) };
@@ -302,8 +302,10 @@ export function parseCollectionPresentation(
     editLabel: text(p.editLabel),
     doneLabel: text(p.doneLabel),
     issuesLabel: text(p.issuesLabel),
-    ...(p.headingCount !== undefined ? { headingCount: p.headingCount } : {}),
-    ...(p.validateOnDone !== undefined
+    ...(typeof p.headingCount === "boolean"
+      ? { headingCount: p.headingCount }
+      : {}),
+    ...(typeof p.validateOnDone === "boolean"
       ? { validateOnDone: p.validateOnDone }
       : {}),
     ...(removalConfirmation ? { removalConfirmation } : {}),
@@ -340,11 +342,15 @@ export interface IntakeRepeatableField {
   readonly visibleWhen?: IntakeCondition;
 }
 export type IntakeDataField = IntakeInputField | IntakeRepeatableField;
-const object = (x: unknown): Record<string, any> => {
+const object = (x: unknown): Record<string, unknown> => {
   if (!x || typeof x !== "object" || Array.isArray(x))
     throw Error("INTAKE_DATA_OBJECT");
-  return x as Record<string, any>;
+  return x as Record<string, unknown>;
 };
+const isOneOf = <T extends string>(
+  x: unknown,
+  allowed: readonly T[],
+): x is T => typeof x === "string" && (allowed as readonly string[]).includes(x);
 const text = (x: unknown) => {
   if (typeof x !== "string" || !x.trim() || x.length > 4000)
     throw Error("INTAKE_DATA_TEXT");
@@ -435,7 +441,7 @@ export function parseIntakeDataField(raw: unknown): IntakeDataField {
   }
   if (
     f.control !== "input" ||
-    ![
+    !isOneOf(f.widget, [
       "hidden",
       "text",
       "textarea",
@@ -447,25 +453,28 @@ export function parseIntakeDataField(raw: unknown): IntakeDataField {
       "checkbox",
       "select",
       "registered",
-    ].includes(f.widget) ||
+    ]) ||
     typeof f.required !== "boolean"
   )
     throw Error("INTAKE_INPUT_WIDGET");
   if (
     f.normalize !== undefined &&
-    !["uppercase", "lowercase"].includes(f.normalize)
+    !isOneOf(f.normalize, ["uppercase", "lowercase"])
   )
     throw Error("INTAKE_NORMALIZE");
   if (
     f.defaultValue !== undefined &&
-    (!["string", "number", "boolean"].includes(typeof f.defaultValue) ||
-      (typeof f.defaultValue === "number" && !Number.isFinite(f.defaultValue)))
+    !(
+      typeof f.defaultValue === "string" ||
+      typeof f.defaultValue === "boolean" ||
+      (typeof f.defaultValue === "number" && Number.isFinite(f.defaultValue))
+    )
   )
     throw Error("INTAKE_DEFAULT");
   const lookup = f.lookup === undefined ? undefined : object(f.lookup);
   if (
     lookup?.sourceKey !== undefined &&
-    !(intakeReferenceSources as readonly unknown[]).includes(lookup.sourceKey)
+    !isOneOf(lookup.sourceKey, intakeReferenceSources)
   )
     throw Error("INTAKE_LOOKUP_SOURCE_UNREGISTERED");
   if (lookup?.options !== undefined && !Array.isArray(lookup.options))
@@ -503,11 +512,14 @@ export function parseIntakeDataField(raw: unknown): IntakeDataField {
   if (f.widget === "select" && !lookup?.sourceKey && !options?.length)
     throw Error("INTAKE_OPTIONS_REQUIRED");
   const payload = f.payload === undefined ? undefined : object(f.payload);
-  if (
-    payload &&
-    !["context", "canonical", "request_only"].includes(payload.target)
-  )
-    throw Error("INTAKE_PAYLOAD_TARGET");
+  const payloadTarget = isOneOf(payload?.target, [
+    "context",
+    "canonical",
+    "request_only",
+  ])
+    ? payload?.target
+    : undefined;
+  if (payload && !payloadTarget) throw Error("INTAKE_PAYLOAD_TARGET");
   return {
     ...common,
     control: "input",
@@ -620,7 +632,7 @@ export function parseIntakeDataField(raw: unknown): IntakeDataField {
                     ].includes(k),
                 ) ||
                 (v.widget !== undefined &&
-                  !["text", "hidden"].includes(v.widget)) ||
+                  !isOneOf(v.widget, ["text", "hidden"])) ||
                 (v.required !== undefined && typeof v.required !== "boolean")
               )
                 throw Error("INTAKE_VARIANT");
@@ -668,7 +680,9 @@ export function parseIntakeDataField(raw: unknown): IntakeDataField {
     ...(lookup
       ? {
           lookup: {
-            ...(lookup.sourceKey ? { sourceKey: lookup.sourceKey } : {}),
+            ...(typeof lookup.sourceKey === "string"
+              ? { sourceKey: lookup.sourceKey }
+              : {}),
             ...(lookup.recent === undefined
               ? {}
               : { recent: parseRecentChoicePolicy(lookup.recent) }),
@@ -692,8 +706,8 @@ export function parseIntakeDataField(raw: unknown): IntakeDataField {
           },
         }
       : {}),
-    ...(payload
-      ? { payload: { target: payload.target, path: key(payload.path) } }
+    ...(payload && payloadTarget
+      ? { payload: { target: payloadTarget, path: key(payload.path) } }
       : {}),
   };
 }

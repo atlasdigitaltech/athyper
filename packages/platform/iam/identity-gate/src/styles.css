@@ -14,10 +14,10 @@
    color in this subtree still derives from the design system, not from an
    invented one-off hex. */
 .a-public-identity__story{
-  --a-focus:#84caff;--a-danger:#f97066;--a-danger-foreground:#230402;
-  --a-warning:#fec84b;--a-warning-foreground:#241400;
-  --a-success:#47cd89;--a-success-foreground:#031b12;
-  --a-contrast:#f4f6f8;--a-contrast-foreground:#11151c;
+  --a-focus:var(--a-story-focus);--a-danger:var(--a-story-danger);--a-danger-foreground:var(--a-story-danger-foreground);
+  --a-warning:var(--a-story-warning);--a-warning-foreground:var(--a-story-warning-foreground);
+  --a-success:var(--a-story-success);--a-success-foreground:var(--a-story-success-foreground);
+  --a-contrast:var(--a-story-contrast);--a-contrast-foreground:var(--a-story-contrast-foreground);
   color-scheme:dark;
 }
 
@@ -64,8 +64,8 @@
   font-size:var(--a-font-size-2xs);letter-spacing:var(--a-tracking-wider);text-transform:uppercase;color:var(--ws-label);border-bottom:1px solid var(--ws-line)}
 .a-ws-cols i{font-style:normal;text-align:right}
 .a-ws-viewport{position:relative;height:calc(100% - 32px);overflow:hidden;
-  mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 84%,transparent 100%);
-  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 84%,transparent 100%)}
+  mask-image:linear-gradient(to bottom,transparent 0,var(--a-story-foreground) 12%,var(--a-story-foreground) 84%,transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,var(--a-story-foreground) 12%,var(--a-story-foreground) 84%,transparent 100%)}
 .a-ws-tape{animation:a-ws-roll 46s linear infinite}
 .a-ws-panel:hover .a-ws-tape{animation-play-state:paused}
 @keyframes a-ws-roll{from{transform:translateY(0)}to{transform:translateY(-50%)}}
@@ -125,7 +125,7 @@
 .a-ws-legend-lnk{border:1.4px solid color-mix(in srgb,var(--ws-fg) 80%,transparent)}
 .a-ws-legend-arc{width:14px;height:1.5px;border-radius:0;background:linear-gradient(90deg,color-mix(in srgb,var(--ws-accent) 20%,transparent),color-mix(in srgb,var(--ws-accent) 95%,transparent))}
 .a-ws-tip{position:absolute;z-index:3;pointer-events:none;transform:translate(-50%,-136%);padding:7px 10px;
-  border:1px solid var(--ws-line);border-radius:9px;background:rgba(8,22,42,.92);white-space:nowrap;opacity:0;transition:opacity .14s ease}
+  border:1px solid var(--ws-line);border-radius:9px;background:color-mix(in srgb,var(--a-story-end) 92%,transparent);white-space:nowrap;opacity:0;transition:opacity .14s ease}
 .a-ws-tip.on{opacity:1}
 .a-ws-tip b{display:block;font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-medium)}
 .a-ws-tip em{display:block;margin-top:2px;font-style:normal;font-size:var(--a-font-size-xs);color:var(--ws-meta)}

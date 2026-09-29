@@ -18,6 +18,7 @@ import React, {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
+import { createEntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
 import { entityEnglishMessages } from "@athyper/platform-i18n/entity-messages";
 import { fieldTypeLabel, matchesColumnSearch } from "./columns";
 
@@ -215,16 +216,7 @@ export function SearchableFieldSelect({
       onChange={select}
       required
       locale={i18n?.localization.uiLocale}
-      messages={{
-        search: message("entity.reference.search"),
-        recent: message("entity.reference.recent"),
-        all: message("entity.reference.all"),
-        results: message("entity.reference.results"),
-        empty: message("entity.reference.empty"),
-        unavailable: message("entity.reference.unavailable"),
-        required: message("entity.reference.required"),
-        clear: message("entity.reference.clear"),
-      }}
+      messages={createEntityReferenceMessages(message)}
     />
   );
 }

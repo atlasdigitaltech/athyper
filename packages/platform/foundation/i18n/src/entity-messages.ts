@@ -1,5 +1,6 @@
 /** Shared entity UI copy. Entity-specific labels remain in published metadata. */
 export const entityEnglishMessages = Object.freeze({
+  "detail.recordNotFound": "This record is unavailable or does not exist.",
   "entity.related.unavailable": "This section could not be loaded.",
   "entity.related.loading": "Loading…",
   "entity.related.empty": "No record has been added.",
@@ -59,5 +60,6 @@ export const entityEnglishMessages = Object.freeze({
   "entity.reference.required": "Select an available option.",
   "entity.reference.clear": "Clear selection",
   "entity.reference.clearRecent": "Clear recent choices",
+  "entity.reference.loadMore": "Load more",
   "entity.reference.browse": "Browse all…",
 } as const);

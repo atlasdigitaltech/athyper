@@ -198,6 +198,8 @@ export interface HostConfig {
     dispatchEnabled: boolean;
     applyEnabled: boolean;
     recoveryEnabled: boolean;
+    /** Dedicated least-privilege discovery connection, never the publication writer. */
+    recoveryDatabaseUrl?: string;
     targetPlanes: readonly ("studio" | "neon" | "mesh")[];
     requireSignature: true;
     signingKeyId: string | undefined;
@@ -1092,6 +1094,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): HostCo
       dispatchEnabled: publicationDispatchEnabled,
       applyEnabled: publicationApplyEnabled,
       recoveryEnabled: publicationRecoveryEnabled,
+      recoveryDatabaseUrl: environment["PUBLICATION_RECOVERY_DATABASE_URL"]?.trim() || undefined,
       targetPlanes: publicationTargetPlanes,
       requireSignature: true,
       signingKeyId: publicationSigningKeyId || undefined,

@@ -36,6 +36,8 @@ const PERMANENT_CODES = new Set([
   "PROJECTION_HASH_MISMATCH",
   "PROJECTION_SCHEMA_VERSION_MISMATCH",
   "ENTITY_PROJECTION_REQUIRED",
+  "ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE",
+  "PUBLICATION_ACTIVATION_APPROVAL_REQUIRED",
 ]);
 
 const CONFLICT_CODES = new Set([
@@ -44,6 +46,17 @@ const CONFLICT_CODES = new Set([
   "LOCAL_ACTIVATION_HEAD_MISMATCH",
   "ACKNOWLEDGEMENT_CONFLICT",
   "DEPLOYMENT_TERMINAL",
+]);
+
+// PostgreSQL reports constraint, syntax, privilege, and transaction-state
+// failures as SQLSTATE values. Retrying those deterministic rejections leaves
+// a deployment permanently invisible to the failure/DLQ flow.
+const PERMANENT_SQLSTATES = new Set([
+  "22000", "22001", "22003", "22007", "22008", "22023",
+  "23502", "23503", "23505", "23514", "23P01",
+  "25000", "25001", "25006", "2D000", "2F000",
+  "3D000", "3F000", "42000", "42501", "42601", "42703", "42804",
+  "42P01", "42P07", "55000",
 ]);
 
 export class PublicationOrchestrationError extends Error {
@@ -80,6 +93,7 @@ export class PublicationOrchestrator {
       deployment: PublicationDeploymentBundle,
       artifact: Awaited<ReturnType<PublicationArtifactLoader["load"]>>,
     ) => Promise<void>,
+    private readonly failurePersistence: "immediate" | "after_rollback" = "immediate",
   ) {}
 
   activeRelease(
@@ -194,7 +208,8 @@ export class PublicationOrchestrator {
       return active;
     } catch (error) {
       const failure = classifyPublicationFailure(error, currentStep);
-      if (failure.category === "permanent" && authorityStatus !== "activated") {
+      if (failure.category === "permanent" && authorityStatus !== "activated" &&
+          this.failurePersistence === "immediate") {
         await this.authority.transitionDeployment({
           deploymentId,
           status: "failed",
@@ -227,6 +242,7 @@ export function classifyPublicationFailure(
   if (CONFLICT_CODES.has(code)) return conflict(code, step, error);
   if (
     PERMANENT_CODES.has(code) ||
+    PERMANENT_SQLSTATES.has(code) ||
     Reflect.get(asObject(error), "retryable") === false
   ) {
     return permanent(code, step, error);
@@ -305,6 +321,8 @@ function errorCode(error: unknown): string {
   const candidate = Reflect.get(asObject(error), "code");
   if (typeof candidate === "string" && candidate.length > 0)
     return safeCode(candidate);
+  if (error instanceof Error && PERMANENT_CODES.has(error.message))
+    return error.message;
   return error instanceof TypeError
     ? "INVALID_PUBLICATION_INPUT"
     : "PUBLICATION_DEPENDENCY_UNAVAILABLE";

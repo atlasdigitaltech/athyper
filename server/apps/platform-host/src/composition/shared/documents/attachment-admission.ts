@@ -34,6 +34,14 @@ export function createEntityAttachmentAdmission(options: {
     input: Readonly<Record<string, unknown>>;
     preflight?: boolean;
   }): Promise<{ releaseHash: string; policyHash: string }>;
+  authorizeOwner(input: {
+    context: VerifiedRequestContext;
+    entityType: "content.item" | "atlas.prompt";
+    entityId: string;
+    action: string;
+    uploadedBy?: string;
+    attachmentId?: string;
+  }): Promise<boolean>;
 }) {
   return async (
     context: VerifiedRequestContext,
@@ -46,6 +54,7 @@ export function createEntityAttachmentAdmission(options: {
     let recordId =
       typeof input.entityId === "string" ? input.entityId : undefined;
     let admittedPolicyHash: string | undefined;
+    let storedUploader: string | undefined;
     // Association evidence is always loaded from storage. Never forward a caller's commentId.
     const { commentId: _ignored, ...supplied } = input;
     let currentInput: Readonly<Record<string, unknown>> = supplied;
@@ -74,6 +83,7 @@ export function createEntityAttachmentAdmission(options: {
         throw new EntityCapabilityPolicyError();
       entityCode = row.entity_type;
       recordId = row.entity_id;
+      storedUploader = row.uploaded_by;
       admittedPolicyHash = row.admitted_policy_hash;
       currentInput = {
         ...supplied,
@@ -85,8 +95,17 @@ export function createEntityAttachmentAdmission(options: {
         ...(row.comment_id ? { commentId: row.comment_id } : {}),
       };
     }
-    if (entityCode === "content.item" || entityCode === "atlas.prompt")
+    if (entityCode === "content.item" || entityCode === "atlas.prompt") {
+      if (!recordId || !(await options.authorizeOwner({
+        context,
+        entityType: entityCode,
+        entityId: recordId,
+        action,
+        ...(storedUploader ? { uploadedBy: storedUploader } : {}),
+        ...(typeof targetId === "string" ? { attachmentId: targetId } : {}),
+      }))) throw new EntityCapabilityPolicyError();
       return undefined;
+    }
     if (!entityCode || !recordId) throw new EntityCapabilityPolicyError();
     if (
       (action === "create" || versionUpload) &&

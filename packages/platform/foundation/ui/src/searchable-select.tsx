@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { CheckIcon, ChevronDownIcon } from "@athyper/platform-icons";
 import { createPortal } from "react-dom";
+import type { EntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
 
 export interface ReferenceOption {
   readonly value: string;
@@ -16,17 +17,7 @@ export interface ReferenceOption {
   readonly group?: string;
   readonly data?: Readonly<Record<string, string | boolean | readonly string[]>>;
 }
-export interface SearchableSelectMessages {
-  readonly search: string;
-  readonly recent: string;
-  readonly all: string;
-  readonly results: string;
-  readonly empty: string;
-  readonly unavailable: string;
-  readonly required: string;
-  readonly clear: string;
-  readonly clearRecent?: string;
-}
+export type SearchableSelectMessages = EntityReferenceMessages;
 const normalize = (value: string) =>
   value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase().trim();
 const referenceIndexes = new WeakMap<
@@ -166,7 +157,7 @@ export function SearchableSelect({
     readonly options: readonly ReferenceOption[];
     readonly nextCursor?: string;
     readonly loading: boolean;
-    readonly error?: string;
+    readonly error?: true;
   }>({ query: "", options: [], loading: false });
   const [position, setPosition] = useState({
     left: 0,
@@ -218,7 +209,7 @@ export function SearchableSelect({
   const loadDirectory = useCallback(async (nextQuery: string, cursor?: string, exactValue?: string) => {
     if (!loadPage) return;
     const controller = new AbortController();
-    setDirectory((current) => ({ ...current, loading: true, error: undefined }));
+    setDirectory((current) => ({ ...current, loading: true }));
     try {
       const page = await loadPage({ query: nextQuery, ...(cursor ? { cursor } : {}), ...(exactValue ? { value: exactValue } : {}), signal: controller.signal });
       setDirectory((current) => ({
@@ -230,7 +221,10 @@ export function SearchableSelect({
         loading: false,
       }));
     } catch (cause) {
-      setDirectory((current) => ({ ...current, loading: false, error: cause instanceof Error ? cause.message : "Lookup unavailable" }));
+      // The cause can carry server or transport detail; show only the localized
+      // message and keep the specifics in the console for diagnosis.
+      console.error("[athyper/reference-select] lookup failed", cause);
+      setDirectory((current) => ({ ...current, loading: false, error: true }));
     }
   }, [loadPage]);
   // An older saved reference can be retired and absent from the first page.
@@ -609,7 +603,7 @@ export function SearchableSelect({
               ) : null}
               {directory.nextCursor && !directory.loading ? (
                 <button type="button" className="a-reference-select__clear-recent" onClick={() => void loadDirectory(query, directory.nextCursor)}>
-                  Load more
+                  {messages.loadMore}
                 </button>
               ) : null}
               {!rows.length && !status && !directory.loading && !directory.error ? (
@@ -618,7 +612,7 @@ export function SearchableSelect({
                 </p>
               ) : null}
               {directory.loading || directory.error ? (
-                <p className="a-reference-select__empty" role="status">{directory.loading ? "Loading…" : directory.error}</p>
+                <p className="a-reference-select__empty" role="status">{directory.loading ? messages.loading : messages.unavailable}</p>
               ) : null}
               {onClearRecent && recent.length ? (
                 <button

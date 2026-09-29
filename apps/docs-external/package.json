@@ -18,6 +18,7 @@
     "astro": "^7.3.2"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.6",
     "@athyper/config": "workspace:*",
     "typescript": "^6.0.3"
   }

@@ -11,7 +11,9 @@ describe("foundation component render contracts", () => {
     assert.match(html, /<button type="button"/);
     assert.match(html, /<label[^>]+for="email"/);
     assert.match(html, /type="checkbox"/);
-    assert.match(html, /role="tooltip"/);
+    // Tooltips are interaction-only. SSR must not expose hidden help as
+    // announced content before the trigger is focused or hovered.
+    assert.doesNotMatch(html, /role="tooltip"/);
   });
 
   it("renders controlled tabs and dialog semantics", () => {

@@ -25,6 +25,8 @@ import { RecordServiceError } from "../errors.js";
 import { descriptorFor } from "../query-service.js";
 import type { GovernedImportAdapterRegistry } from "./import-adapter-registry.js";
 import { structuredImportFormat } from "./structured-import-file-codec.js";
+import { assertSelectedExportScope } from "./export-scope.js";
+import { assertExportFieldAdmission } from "./export-admission.js";
 
 type Row = Readonly<Record<string, unknown>>;
 export interface StoredImport {
@@ -241,8 +243,8 @@ export function createRecordTransferService<Transaction>(options: {
     entityCode: string,
     filter: Readonly<Record<string, unknown>>,
   ) => {
-    assertBusinessPartnerExportPrivacy(entityCode, filter);
     const exactFilter = structuredClone(filter);
+    assertSelectedExportScope(exactFilter);
     const descriptor = await descriptorFor(
       options.metadata,
       context,
@@ -256,7 +258,6 @@ export function createRecordTransferService<Transaction>(options: {
       );
     const requestedTransfer = exactFilter["_transfer"];
     if (
-      usesEntityBackendAuthorization(options.authorizer, context, descriptor) &&
       exactFilter["fields"] === undefined &&
       requestedTransfer &&
       typeof requestedTransfer === "object" &&
@@ -266,18 +267,21 @@ export function createRecordTransferService<Transaction>(options: {
       (exactFilter as Record<string, unknown>)["fields"] = (
         requestedTransfer as Record<string, unknown>
       )["fields"];
-    if (
-      usesEntityBackendAuthorization(options.authorizer, context, descriptor) &&
-      exactFilter["fields"] === undefined
-    )
+    if (exactFilter["fields"] === undefined)
       (exactFilter as Record<string, unknown>)["fields"] = descriptor.fields
-        .filter((field) =>
-          descriptor.authorization!.fieldPolicies.some(
-            (policy) =>
-              policy.fields.includes(field.key) &&
-              policy.queryUses.includes("export") &&
-              policy.representation === "plain",
-          ),
+        .filter(
+          (field) =>
+            !usesEntityBackendAuthorization(
+              options.authorizer,
+              context,
+              descriptor,
+            ) ||
+            descriptor.authorization!.fieldPolicies.some(
+              (policy) =>
+                policy.fields.includes(field.key) &&
+                policy.queryUses.includes("export") &&
+                policy.representation === "plain",
+            ),
         )
         .map((field) => field.key);
     if (
@@ -303,6 +307,18 @@ export function createRecordTransferService<Transaction>(options: {
         fields: exactFilter["fields"],
       };
     }
+    const exportFields = exactFilter["fields"];
+    if (
+      !Array.isArray(exportFields) ||
+      !exportFields.length ||
+      exportFields.some((field) => typeof field !== "string")
+    )
+      throw new RecordServiceError(
+        403,
+        "EXPORT_AUTHORIZATION_FIELDS_MISSING",
+        "Export fields are unavailable",
+      );
+    assertExportFieldAdmission(descriptor, exportFields);
     const scope = await resolveTransferScope(
       options.collectionScopes,
       context,
@@ -310,18 +326,6 @@ export function createRecordTransferService<Transaction>(options: {
       "export",
       scopeCoordinate(exactFilter),
     );
-    const exportFields = exactFilter["fields"];
-    if (
-      usesEntityBackendAuthorization(options.authorizer, context, descriptor) &&
-      (!Array.isArray(exportFields) ||
-        !exportFields.length ||
-        exportFields.some((field) => typeof field !== "string"))
-    )
-      throw new RecordServiceError(
-        403,
-        "EXPORT_AUTHORIZATION_FIELDS_MISSING",
-        "Export fields are unavailable",
-      );
     return { descriptor, exactFilter, scope, exportFields };
   };
   return {
@@ -1565,22 +1569,30 @@ export function createRecordTransferService<Transaction>(options: {
               "EXPORT_RESTART_INVALID_STATE",
               "Only failed exports can be restarted",
             );
-          assertBusinessPartnerExportPrivacy(
-            current.entityCode,
-            current.exactFilter,
-          );
           const descriptor = await descriptorFor(
               options.metadata,
               context,
               current.entityCode,
             ),
-            scope = await resolveTransferScope(
-              options.collectionScopes,
-              context,
-              descriptor,
-              "export",
-              scopeCoordinate(current.exactFilter),
+            exportFields = current.exactFilter["fields"];
+          if (
+            !Array.isArray(exportFields) ||
+            !exportFields.length ||
+            exportFields.some((field) => typeof field !== "string")
+          )
+            throw new RecordServiceError(
+              403,
+              "EXPORT_AUTHORIZATION_FIELDS_MISSING",
+              "Export fields are unavailable",
             );
+          assertExportFieldAdmission(descriptor, exportFields);
+          const scope = await resolveTransferScope(
+            options.collectionScopes,
+            context,
+            descriptor,
+            "export",
+            scopeCoordinate(current.exactFilter),
+          );
           await authorizeDescriptorOperation(
             options.authorizer,
             context,
@@ -1836,31 +1848,6 @@ export function createRecordTransferService<Transaction>(options: {
       throw new RecordServiceError(503, errorCode, errorDetail);
     }
   }
-}
-
-export function assertBusinessPartnerExportPrivacy(
-  entityCode: string,
-  filter: Readonly<Record<string, unknown>>,
-): void {
-  if (entityCode !== "business_partner") return;
-  const transfer = filter["_transfer"];
-  if (!transfer || typeof transfer !== "object" || Array.isArray(transfer))
-    return;
-  const fields = (transfer as Readonly<Record<string, unknown>>)["fields"];
-  if (!Array.isArray(fields)) return;
-  const forbidden = fields.find(
-    (field) =>
-      typeof field === "string" &&
-      /^(?:person|personal|employee|employment|work_assignment|workforce|external_worker|worker_engagement|engagement|placement|onboarding|offboarding|date_of_birth|national_id|compensation)(?:[._]|$)/i.test(
-        field,
-      ),
-  );
-  if (forbidden)
-    throw new RecordServiceError(
-      403,
-      "BUSINESS_PARTNER_EXPORT_WORKFORCE_FORBIDDEN",
-      "Generic Business Partner exports cannot contain person or workforce fields",
-    );
 }
 
 function requireChunkStore<T>(

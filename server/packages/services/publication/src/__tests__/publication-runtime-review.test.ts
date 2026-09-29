@@ -18,12 +18,13 @@ async function setup(tenantId = "own") {
     provenance: vi.fn(async () => { throw new PublicationOperationsError("PUBLICATION_PROVENANCE_NOT_FOUND"); }),
     replay: vi.fn(async () => { throw new PublicationOperationsError("PUBLICATION_DELIVERY_NOT_REPLAYABLE"); }),
   };
-  const options = { authenticate: (_req: unknown, _res: unknown, next: () => void) => next(), readContext: () => ({ tenantId: "own", planeKey: "studio", principalId: id, requestId: id }), authorizer: { authorize: async () => ({ allowed: true }) }, audit: { record: vi.fn() }, authority, jobs, operations, apiEnabled: true } as unknown as PublicationRouteOptions;
+  const authorizeRollbackTarget = vi.fn(async () => tenantId === "own");
+  const options = { authenticate: (_req: unknown, _res: unknown, next: () => void) => next(), readContext: () => ({ tenantId: "own", planeKey: "studio", principalId: id, requestId: id }), authorizer: { authorize: async () => ({ allowed: true }) }, audit: { record: vi.fn() }, authority, jobs, operations, apiEnabled: true, authorizeRollbackTarget } as unknown as PublicationRouteOptions;
   const app = createHttpApplication({ openApi: { title: "Review", version: "1", enforceResponses: true }, configure(app) { registerPublicationRoutes(app, options); } });
   const server = createServer(app); servers.push(server);
   await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
   const address = server.address(); if (!address || typeof address === "string") throw new Error("Missing listener");
-  return { url: `http://127.0.0.1:${address.port}`, jobs, authority, operations };
+  return { url: `http://127.0.0.1:${address.port}`, jobs, authority, operations, authorizeRollbackTarget };
 }
 describe("publication runtime review", () => {
   it("hides another tenant's releases and deployments and does not enqueue work", async () => {
@@ -61,5 +62,26 @@ describe("publication runtime review", () => {
     const conflict = await fetch(`${url}/api/publication/operations/deliveries/${id}/replay`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason: "retry" }) });
     expect(conflict.status).toBe(409);
     expect(await conflict.json()).toMatchObject({ code: "PUBLICATION_DELIVERY_NOT_REPLAYABLE" });
+  });
+  it("rejects a rollback target outside the caller tenant before enqueue", async () => {
+    const { url, jobs, authorizeRollbackTarget } = await setup("other");
+    const response = await fetch(`${url}/api/publication/publication-keys/metadata.entity.invoice/rollback`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ plane: "neon", targetAppliedReleaseId: id, reason: "restore" }),
+    });
+    expect(response.status).toBe(404);
+    expect(authorizeRollbackTarget).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "own", targetAppliedReleaseId: id }));
+    expect(jobs.enqueue).not.toHaveBeenCalled();
+  });
+  it("queues an authorized rollback with explicit tenant execution coordinates", async () => {
+    const { url, jobs } = await setup();
+    const response = await fetch(`${url}/api/publication/publication-keys/metadata.entity.invoice/rollback`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ plane: "neon", targetAppliedReleaseId: id, reason: "restore" }),
+    });
+    expect(response.status).toBe(202);
+    expect(jobs.enqueue).toHaveBeenCalledWith(expect.anything(), expect.anything(),
+      expect.objectContaining({ tenantId: "own", targetPlane: "neon" }),
+      expect.objectContaining({ execution: expect.objectContaining({ scope: "tenant", tenantId: "own", planeKey: "neon" }) }));
   });
 });

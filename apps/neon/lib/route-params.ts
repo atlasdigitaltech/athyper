@@ -1,7 +1,6 @@
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isEntityRecordId } from "@athyper/contract-platform-entity-runtime";
 
-/** True when `value` is a canonical UUID, the shape every governed record and request id takes. */
+/** True when `value` is a canonical record id; one shared rule for route, redirect and API. */
 export function isEntityId(value: string): boolean {
-  return UUID_PATTERN.test(value);
+  return isEntityRecordId(value);
 }

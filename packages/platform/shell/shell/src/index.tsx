@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createEffectiveLocalization, type EffectiveLocalization, type SupportedLocale } from "@athyper/platform-i18n";
-import { IntlProvider } from "@athyper/platform-i18n/react";
+import { IntlProvider, useI18n } from "@athyper/platform-i18n/react";
+import { UiMessagesProvider, type UiMessages } from "@athyper/platform-ui";
 import { HeaderContextIdentity, ShellChrome, ShellContextPickerPanel, ShellContextSelector } from "./client";
 import type { DerivedShellNavigation } from "./core";
 import { shellEnglishMessages, shellMessages } from "./messages";
@@ -21,7 +22,20 @@ export type { ShellQuickAccessDataSource, ShellQuickAccessItem, ShellQuickAccess
 export interface ShellLocalePolicy {readonly enabledLocales:readonly SupportedLocale[];readonly defaultLocale:SupportedLocale;}
 export interface PlatformShellProps { readonly atlasProactiveBriefsEnabled?: boolean; readonly localization?: EffectiveLocalization;readonly localePolicy?:ShellLocalePolicy;readonly onLocaleChange?:(localeCode:SupportedLocale)=>Promise<void>; readonly applicationName: string; readonly planeDescriptor?: string; readonly planeIconSrc?: string; readonly planeWordmarkSrc?: string; readonly persistentDesktopBrand?: boolean; readonly homeHref?: string; readonly initialCollapsed?: boolean; readonly tenantId: string; readonly principalId: string; readonly tenantLabel: string; readonly tenantSecondaryLabel?: string; readonly tenantCountryCode?: string; readonly tenantLogoAssetRef?: string; readonly contextLabel?: string; readonly showOrganizationContext?: boolean; readonly accountLabel: string; readonly accountInitials?: string; readonly accountLoginId?: string; readonly accountEmail?: string; readonly accountSecondaryLabel?: string; readonly transactionContext?: import("./client").ShellTransactionContext; readonly workContextControl?: ReactNode; readonly navigation: DerivedShellNavigation; readonly experienceState?: "ready" | "context_not_ready"; readonly contexts?: readonly import("./client").ShellContextOption[]; readonly quickAccess?: import("./quick-access").ShellQuickAccessDataSource; readonly activity?: import("./activity-center").ShellActivityDataSource; readonly children: ReactNode; }
 const DEFAULT_LOCALIZATION = createEffectiveLocalization({ uiLocale: "en", formatLocale: "en-US" });
-export function PlatformShell({localization=DEFAULT_LOCALIZATION,applicationName,tenantId,principalId,accountLabel,atlasProactiveBriefsEnabled=false,...props}: PlatformShellProps) { return <IntlProvider localization={localization} messages={shellMessages(localization.catalogLocale)} fallbackMessages={shellEnglishMessages}><AtlasAnswerProvider key={`${applicationName}:${tenantId}:${principalId}`} options={{proactiveBriefsEnabled:applicationName.toLowerCase()==="neon" && atlasProactiveBriefsEnabled,locale:localization.uiLocale,scopeKey:`${applicationName}:${tenantId}:${principalId}`}}><ShellPersonalizationScopeProvider plane={applicationName} tenantId={tenantId} principalId={principalId}><ShellHomeIdentityProvider displayName={accountLabel} timeZone={localization.timeZone}><ShellChrome principalId={principalId} currentLocale={localization.catalogLocale} applicationName={applicationName} tenantId={tenantId} accountLabel={accountLabel} {...props} /></ShellHomeIdentityProvider></ShellPersonalizationScopeProvider></AtlasAnswerProvider></IntlProvider>; }
+export function PlatformShell({localization=DEFAULT_LOCALIZATION,applicationName,tenantId,principalId,accountLabel,atlasProactiveBriefsEnabled=false,...props}: PlatformShellProps) { return <IntlProvider localization={localization} messages={shellMessages(localization.catalogLocale)} fallbackMessages={shellEnglishMessages}><LocalizedFoundationUi><AtlasAnswerProvider key={`${applicationName}:${tenantId}:${principalId}`} options={{proactiveBriefsEnabled:applicationName.toLowerCase()==="neon" && atlasProactiveBriefsEnabled,locale:localization.uiLocale,scopeKey:`${applicationName}:${tenantId}:${principalId}`}}><ShellPersonalizationScopeProvider plane={applicationName} tenantId={tenantId} principalId={principalId}><ShellHomeIdentityProvider displayName={accountLabel} timeZone={localization.timeZone}><ShellChrome principalId={principalId} currentLocale={localization.catalogLocale} applicationName={applicationName} tenantId={tenantId} accountLabel={accountLabel} {...props} /></ShellHomeIdentityProvider></ShellPersonalizationScopeProvider></AtlasAnswerProvider></LocalizedFoundationUi></IntlProvider>; }
+
+function LocalizedFoundationUi({ children }: { readonly children: ReactNode }) {
+  const intl = useI18n();
+  const messages: UiMessages = {
+    closePanel: intl.message("ui.closePanel"), closeDialog: intl.message("ui.closeDialog"), drawerPanel: intl.message("ui.drawerPanel"), notifications: intl.message("ui.notifications"), loading: intl.message("ui.loading"), chooseDate: intl.message("ui.chooseDate"), loadingCalendar: intl.message("ui.loadingCalendar"), clearSearch: intl.message("ui.clearSearch"),
+    selectedAndAvailable: (selected, available) => intl.message("ui.selectedAndAvailable", { selected, available }),
+    companyAndLegalEntityCount: (companies, legalEntities) => intl.message("ui.companyAndLegalEntityCount", { companies, legalEntities }),
+    legalEntity: (code) => intl.message("ui.legalEntity", { code }),
+    companyDetails: (code, country, currency) => intl.message("ui.companyDetails", { code, country, currency }),
+    noMatchingCompanies: intl.message("ui.noMatchingCompanies"),
+  };
+  return <UiMessagesProvider messages={messages}>{children}</UiMessagesProvider>;
+}
 
 export {ShellRouteProvider,useEntityBreadcrumbBinding} from "./route-state";
 export { EntityPageLayout, useRecordPage } from "./entity-page-layout";

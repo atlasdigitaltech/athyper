@@ -59,7 +59,7 @@ export * from "./text/humanize";
 export * from "./validation/values";
 export * from "./routes/entity-read-route";
 
-export type * from "./activity.js";
+export type * from "./activity";
 
 function bool(value:unknown):boolean { if(typeof value!=="boolean") throw new TypeError("Invalid Activity declaration");return value; }
 

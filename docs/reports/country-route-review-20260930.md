@@ -441,29 +441,16 @@ I verified these closures myself; recording them prevents wasted work:
 
 ## 3. Dimension 2 — Improvements
 
-**Correctness improvements with the best value/effort ratio** (all one-liners or
-one-place changes): escape the search term with the existing `escapeLike`; add a
-permission code to both verification contracts; move the attachment operations into
-`COMMON_PLANE_RELAY_OPERATIONS`; make `encodeListLocationState` degrade instead of throwing
-on an oversized query; cap the list search input with `maxLength`.
+Most previously identified low-effort correctness gaps have been remediated and have
+regression coverage. Remaining improvement work is structural: remove or integrate unused
+framework surfaces, consolidate duplicate authorization-registration paths, and decompose the
+shared list runtime into query-state and leaf UI modules.
 
-**Structural improvements:**
-
-1. **Make the profile enforcement decision explicit.** Today the framework publishes an
-   authorization profile it never reads. Either enforce it or refuse to publish — a control
-   that cannot be observed failing is worse than no control.
-2. **Consolidate the two authorization registration builders** (`entity-governance/` vs
-   `entity-runtime/`); one of them has zero importers.
-3. **Introduce a single relative-date source of truth** (§2.12).
-4. **Delete or wire the dead surfaces** catalogued per area: `createEntityMetadataHooks`,
-   `entityIntakeOperationClient`, `ContextSelectionDrawer` (exported, never imported),
-   `EntityRuntimeBootstrapV1`/`parseEntityRuntimeBootstrap` (zero callers),
-   `RelatedRecord` (no runtime caller), the post-rename CSS families (50 verified classes).
-5. **Give the list runtime its state from one place.** The list-view monolith
-   (`list-view/src/index.tsx`, 5,589 lines) owns URL codec, filters, saved views,
-   bookmarks, pagination, selection, columns, spreadsheet, import/transfer and rendering.
-   Extract the leaf widgets and the query-state machine; the earlier report said the file
-   was rewritten under concurrency, so coordinate before touching it.
+The authorization-registration path and unreferenced metadata/intake/context/bootstrap
+surfaces have since been consolidated or removed. `RelatedRecord` remains exported for its
+tested presentation contract, although it is not currently rendered by production runtime.
+List query-input state is now isolated from the list chrome; further leaf-widget extraction
+should be scheduled independently because the list runtime remains a high-conflict shared file.
 
 ---
 

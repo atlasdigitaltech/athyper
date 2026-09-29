@@ -518,7 +518,7 @@ export function CommentComposer({
   };
   const saveDraft = (
     document: RichTextDocument,
-    visibility = capability?.defaultAudience ?? "public",
+    visibility = capability?.defaultAudience ?? "private",
   ) => {
     if (justPosted.current) {
       justPosted.current = false;

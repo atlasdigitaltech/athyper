@@ -3,6 +3,16 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20260930_publication_recovery_discovery.sql",
+      "path": "migrations/20260930_publication_recovery_discovery.sql",
+      "sha256": "6cdbb21e9743f3be422b9c3ba8df57a4a81f7483369dc5653bedda10d1a223ce",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Bounded coordinate-only recovery discovery under a deliberately privileged forced-RLS owner; tenant-scoped application remains mandatory.",
+      "canonicalPaths": ["ddl/planes/studio/publication/19_recovery_discovery.sql", "ddl/common/shared/99_security_definer_hardening.sql"]
+    },
+    {
       "originalPath": "migrations/20260929_compiled_entity_verification.sql",
       "path": "migrations/20260929_compiled_entity_verification.sql",
       "sha256": "164fa958bafc7a75e5791b950d63873ceaad685e04c697a150c060a85e00b0d5",

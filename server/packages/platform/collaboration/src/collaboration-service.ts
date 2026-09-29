@@ -78,7 +78,7 @@ export function createCollaborationService<Transaction>(
         command.context,
         PERMISSION.create,
       );
-      const prepared = {...initial, visibility: command.visibility ?? capability?.defaultAudience ?? "public" as const};
+      const prepared = {...initial, visibility: command.visibility ?? capability?.defaultAudience ?? "private" as const};
       validateCoordinate(prepared);
       if (prepared.intent !== undefined) validateCode(prepared.intent);
       validateBody(prepared.text);
@@ -301,7 +301,7 @@ export function createCollaborationService<Transaction>(
         input.context,
         PERMISSION.draft,
       );
-      const prepared = {...initial, visibility: input.visibility ?? capability?.defaultAudience ?? "public" as const};
+      const prepared = {...initial, visibility: input.visibility ?? capability?.defaultAudience ?? "private" as const};
       validateCoordinate(prepared);
       if (prepared.intent !== undefined) validateCode(prepared.intent);
       validateBody(prepared.text, true);

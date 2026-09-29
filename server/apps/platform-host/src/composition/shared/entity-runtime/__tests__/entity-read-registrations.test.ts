@@ -3,7 +3,7 @@ import ts from "typescript";
 import { expect, it, vi } from "vitest";
 import { createEntityAuthorizationRuntimeRegistry } from "@athyper/server-contract-metadata";
 import { buildSharedReferenceGraph, compileGraph } from "@athyper/server-plane-studio-meta-entity-authoring";
-import { createEntityReadRegistrations } from "../read-registrations.js";
+import { createEntityAuthorizationRegistrations } from "../read-registrations.js";
 import type { EntityScopeAdapter } from "@athyper/server-service-records";
 
 function fixture() {
@@ -13,7 +13,7 @@ function fixture() {
   }, "mesh");
   const descriptor = compileGraph(graph).descriptor;
   const queries = { list: vi.fn(async () => ({ data: [], pagination: { pageSize: 1, hasMore: false, countMode: "none" as const } })), get: vi.fn(async () => ({ data: { id: "record" } })) };
-  const entries = createEntityReadRegistrations(queries, descriptor.authorization);
+  const entries = createEntityAuthorizationRegistrations(queries, descriptor.authorization);
   return { descriptor, queries, entries };
 }
 it("qualifies only host-owned operation semantics and actual query callables", async () => {

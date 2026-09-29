@@ -71,6 +71,16 @@ const ROOT_RUNNERS = [
     runner: "test:operations",
     commandFragment: "deploy/compose/tests/",
   },
+  {
+    directory: "tooling/scripts/local-dev",
+    runner: "test:local-runner",
+    commandFragment: "tooling/scripts/local-dev/",
+  },
+  {
+    directory: "tooling/scripts/metadata",
+    runner: "test:metadata-layout",
+    commandFragment: "tooling/scripts/metadata/",
+  },
 ];
 
 const normalize = (value) => value.replaceAll("\\", "/");
@@ -173,7 +183,7 @@ for (const file of discoverTestFiles(root).sort((left, right) =>
     const runner = rootRunnerFor(path);
     if (!runner) {
       errors.push(
-        `${path}: root-owned tests must live under tests/contracts, tooling/scripts/policy, or tooling/scripts/performance`,
+        `${path}: root-owned tests must be covered by a declared root test runner`,
       );
       continue;
     }

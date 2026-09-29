@@ -5,6 +5,7 @@ export {
   type PublicationArtifactStoreOptions,
 } from "./publication-artifact-store.js";
 export { KyselyPublicationAuthorityRepository } from "./kysely-authority-repository.js";
+export { KyselyPublicationRecoveryDiscovery } from "./kysely-recovery-discovery.js";
 export { classifyDevPublicationChange, type ClassifyDevPublicationChangeInput } from "./shared/policy/classify-change.js";
 export {
   KyselyPublicationAuthorityWork,

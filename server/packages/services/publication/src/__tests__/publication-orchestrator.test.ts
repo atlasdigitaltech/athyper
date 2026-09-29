@@ -11,7 +11,10 @@ import type {
 } from "@athyper/server-contract-publication";
 import { describe, expect, it } from "vitest";
 
-import { PublicationOrchestrator } from "../publication-orchestrator.js";
+import {
+  classifyPublicationFailure,
+  PublicationOrchestrator,
+} from "../publication-orchestrator.js";
 
 const HASH = "a".repeat(64);
 const CONTRACT_HASH = "b".repeat(64);
@@ -175,6 +178,33 @@ describe("Publication orchestrator", () => {
     });
     expect(durable.status()).toBe("dispatched");
     expect(durable.failureEvidence()).toBeUndefined();
+  });
+
+  it("preserves the original SQL rejection when failure persistence belongs after rollback", async () => {
+    const durable = fixture();
+    durable.local.stage = async () => { throw Object.assign(new Error("constraint rejected"), { code: "23514" }); };
+    const orchestrator = new PublicationOrchestrator(durable.authority, durable.local, durable.loader, undefined, "after_rollback");
+    await expect(orchestrator.deploy(bundle.deploymentId)).rejects.toMatchObject({ category: "permanent", code: "23514" });
+    expect(durable.status()).not.toBe("failed");
+    expect(durable.failureEvidence()).toBeUndefined();
+  });
+
+  it("classifies deterministic PostgreSQL errors as permanent", () => {
+    const failure = classifyPublicationFailure(
+      Object.assign(new Error("check constraint rejected publication"), {
+        code: "23514",
+      }),
+      "stage",
+    );
+    expect(failure).toMatchObject({
+      category: "permanent",
+      code: "23514",
+      retryable: false,
+      step: "stage",
+    });
+    expect(classifyPublicationFailure(
+      new Error("ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE"), "activate",
+    )).toMatchObject({ category: "permanent", retryable: false });
   });
 
   it("classifies a local database outage as transient before any mutation", async () => {

@@ -20,6 +20,8 @@ export interface PermissionResolver {
 }
 
 export interface Authorizer {
+  /** Trusted installed backend qualification of a descriptor; never a grant. */
+  entityDescriptorSupported?(descriptor: unknown): boolean;
   /** Server-selected enforcement profile hash. Metadata alone never activates a policy. */
   enforcedEntityProfile?(
     planeKey: PlaneKey,

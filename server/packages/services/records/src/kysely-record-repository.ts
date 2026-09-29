@@ -98,6 +98,23 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
 function table(descriptor: EntityRuntimeDescriptor) { return sql.table(`${descriptor.storage.schema}.${descriptor.storage.object}`); }
 function projection(descriptor: EntityRuntimeDescriptor, keys: readonly string[]): RawBuilder<unknown> { const selected = keys.map((key) => { const field = descriptor.fields.find((item) => item.key === key); if (!field) throw new Error(`Unknown projection field: ${key}`); return sql`${sql.ref(field.storagePath)} AS ${sql.ref(key)}`; }); const outputKeys = new Set(keys); for (const key of [descriptor.storage.idField, descriptor.storage.versionField, descriptor.storage.statusField].filter((item): item is string => Boolean(item))) if (!outputKeys.has(key)) selected.push(sql.ref(key)); return sql.join(selected); }
 function baseConditions(descriptor: EntityRuntimeDescriptor, tenantId: string): RawBuilder<unknown>[] { const conditions: RawBuilder<unknown>[] = (descriptor.recordPredicates??[]).map(predicate=>filterCondition(descriptor,predicate)); if (descriptor.storage.tenantField) conditions.push(sql`${sql.ref(descriptor.storage.tenantField)} = ${tenantId}::uuid`); if (descriptor.storage.softDeleteField) conditions.push(sql`${sql.ref(descriptor.storage.softDeleteField)} IS NULL`); return conditions.length ? conditions : [sql`TRUE`]; }
+/** Storage guard shared by plane-issued scope kinds: a constraint only applies to the storage it was issued for. */
+function assertScopeStorage(descriptor: EntityRuntimeDescriptor, planeKey: string, schema: string, object: string, message: string) {
+  if (descriptor.planeKey !== planeKey || descriptor.storage.schema !== schema || descriptor.storage.object !== object) throw new Error(message);
+}
+/** Effective-dated operating-organization assignment membership for a partner row; one definition for every scope kind that needs it. */
+function activeOrganizationAssignmentExists(tenantId: string, partnerId: RawBuilder<unknown>, organizationMatch: RawBuilder<unknown>): RawBuilder<unknown> {
+  return sql`EXISTS (
+      SELECT 1
+        FROM master.business_partner_operating_organization_assignment AS list_scope_assignment
+       WHERE list_scope_assignment.tenant_id = ${tenantId}::uuid
+         AND list_scope_assignment.business_partner_id = ${partnerId}
+         AND ${organizationMatch}
+         AND list_scope_assignment.status = 'active'
+         AND list_scope_assignment.effective_from <= CURRENT_DATE
+         AND (list_scope_assignment.effective_until IS NULL OR list_scope_assignment.effective_until > CURRENT_DATE)
+    )`;
+}
 /** @internal Exported for SQL contract verification; callers must use resolver-issued constraints. */
 export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeDescriptor, tenantId: string, constraint: RecordRepositoryListInput["collectionScope"][number]): RawBuilder<unknown> {
   if (constraint.kind === "entity.parent.v1") {
@@ -110,7 +127,7 @@ export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeD
     }), sql` AND `)})`;
   }
   if (constraint.kind === "neon.business_partner.directory.v1") {
-    if(descriptor.planeKey!=="neon" || descriptor.storage.schema!=="master" || descriptor.storage.object!=="business_partner") throw new Error("Directory scope storage mismatch");
+    assertScopeStorage(descriptor, "neon", "master", "business_partner", "Directory scope storage mismatch");
     const root=sql.ref(`business_partner.${descriptor.storage.idField}`), conditions:RawBuilder<unknown>[]=[];
     if(constraint.partnerRole) {
       // Capability filtering is not eligibility: keep the independent eligibility
@@ -121,7 +138,7 @@ export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeD
       conditions.push(sql`${sql.ref(`business_partner.${column}`)} = TRUE`);
     }
     if(constraint.eligibleIds) conditions.push(constraint.eligibleIds.length ? sql`${root} IN (${sql.join(constraint.eligibleIds.map(id=>sql`${id}::uuid`))})` : sql`FALSE`);
-    if(constraint.organizationIds) conditions.push(constraint.organizationIds.length ? sql`EXISTS(SELECT 1 FROM master.business_partner_operating_organization_assignment a WHERE a.tenant_id=${tenantId}::uuid AND a.business_partner_id=${root} AND a.operating_organization_id IN (${sql.join(constraint.organizationIds.map(id=>sql`${id}::uuid`))}) AND a.status='active' AND a.effective_from<=CURRENT_DATE AND(a.effective_until IS NULL OR a.effective_until>CURRENT_DATE))` : sql`FALSE`);
+    if(constraint.organizationIds) conditions.push(constraint.organizationIds.length ? activeOrganizationAssignmentExists(tenantId, root, sql`list_scope_assignment.operating_organization_id IN (${sql.join(constraint.organizationIds.map(id=>sql`${id}::uuid`))})`) : sql`FALSE`);
     if(constraint.companyIds) conditions.push(constraint.companyIds.length ? sql`(EXISTS(SELECT 1 FROM master.company_code_supplier_profile p WHERE p.tenant_id=${tenantId}::uuid AND p.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})) OR EXISTS(SELECT 1 FROM master.company_code_customer_profile p WHERE p.tenant_id=${tenantId}::uuid AND p.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})))` : sql`FALSE`);
     return conditions.length ? sql`(${sql.join(conditions,sql` AND `)})` : sql`TRUE`;
   }
@@ -138,20 +155,11 @@ export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeD
     ))`;
   }
   if (constraint.kind === "neon.business_partner.operating_organization.v1") {
-    if (descriptor.planeKey !== "neon" || descriptor.storage.schema !== "master" || descriptor.storage.object !== "business_partner") throw new Error("Business-partner collection scope cannot be applied to this descriptor");
-    return sql`EXISTS (
-      SELECT 1
-        FROM master.business_partner_operating_organization_assignment AS list_scope_assignment
-       WHERE list_scope_assignment.tenant_id = ${tenantId}::uuid
-         AND list_scope_assignment.business_partner_id = ${sql.ref(`business_partner.${descriptor.storage.idField}`)}
-         AND list_scope_assignment.operating_organization_id = ${constraint.operatingOrganizationId}::uuid
-         AND list_scope_assignment.status = 'active'
-         AND list_scope_assignment.effective_from <= CURRENT_DATE
-         AND (list_scope_assignment.effective_until IS NULL OR list_scope_assignment.effective_until > CURRENT_DATE)
-    )`;
+    assertScopeStorage(descriptor, "neon", "master", "business_partner", "Business-partner collection scope cannot be applied to this descriptor");
+    return activeOrganizationAssignmentExists(tenantId, sql.ref(`business_partner.${descriptor.storage.idField}`), sql`list_scope_assignment.operating_organization_id = ${constraint.operatingOrganizationId}::uuid`);
   }
   if (constraint.kind === "mesh.network_relationship.actor_account.v1") {
-    if (descriptor.planeKey !== "mesh" || descriptor.storage.schema !== "mesh" || descriptor.storage.object !== "network_relationship") throw new Error("Network-relationship collection scope cannot be applied to this descriptor");
+    assertScopeStorage(descriptor, "mesh", "mesh", "network_relationship", "Network-relationship collection scope cannot be applied to this descriptor");
     return sql`(
       (${sql.ref("network_relationship.buyer_tenant_id")} = ${tenantId}::uuid AND ${sql.ref("network_relationship.buyer_account_id")} = ${constraint.networkAccountId}::uuid)
       OR
@@ -159,7 +167,7 @@ export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeD
     )`;
   }
   if (constraint.kind === "studio.metadata_entity.catalog.v1") {
-    if (descriptor.planeKey !== "studio" || descriptor.storage.schema !== "metadata" || descriptor.storage.object !== "entity") throw new Error("Metadata-entity catalog scope cannot be applied to this descriptor");
+    assertScopeStorage(descriptor, "studio", "metadata", "entity", "Metadata-entity catalog scope cannot be applied to this descriptor");
     return sql`(${sql.ref("entity.tenant_id")} IS NULL OR ${sql.ref("entity.tenant_id")} = ${constraint.tenantId}::uuid)`;
   }
   throw new Error("Unsupported record collection scope kind");

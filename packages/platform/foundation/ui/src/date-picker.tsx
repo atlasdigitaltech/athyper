@@ -10,6 +10,7 @@ import {
   useState,
   type InputHTMLAttributes,
 } from "react";
+import { useUiMessages } from "./ui-messages";
 
 const Calendar = lazy(() => import("./date-picker-calendar"));
 export interface DatePickerProps extends Omit<
@@ -18,6 +19,10 @@ export interface DatePickerProps extends Omit<
 > {
   error?: boolean;
   calendarLabel?: string;
+  /** Governed format locale for calendar month and weekday names. */
+  locale?: string;
+  /** 0 = Sunday … 6 = Saturday, from the governed localization. */
+  weekStart?: number;
 }
 
 /** Keeps native date editing, constraint validation, refs and ISO form values. */
@@ -26,13 +31,16 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
     {
       className,
       error,
-      calendarLabel = "Choose date",
+      calendarLabel,
+      locale,
+      weekStart,
       onChange,
       onKeyDown,
       ...props
     },
     forwardedRef,
   ) {
+    const messages = useUiMessages();
     const input = useRef<HTMLInputElement>(null);
     const trigger = useRef<HTMLButtonElement>(null);
     const panel = useRef<HTMLDivElement>(null);
@@ -119,7 +127,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
           ref={trigger}
           type="button"
           className="a-date-picker__trigger"
-          aria-label={calendarLabel}
+          aria-label={calendarLabel ?? messages.chooseDate}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={id}
@@ -166,12 +174,14 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
           }}
         >
           {open ? (
-            <Suspense fallback={<span role="status">Loading calendar…</span>}>
+            <Suspense fallback={<span role="status">{messages.loadingCalendar}</span>}>
               <Calendar
                 value={selected}
                 min={typeof props.min === "string" ? props.min : undefined}
                 max={typeof props.max === "string" ? props.max : undefined}
                 required={props.required}
+                locale={locale}
+                weekStart={weekStart}
                 onSelect={choose}
               />
             </Suspense>

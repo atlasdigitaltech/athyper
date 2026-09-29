@@ -17,3 +17,4 @@
 20260929_table_entity_publication.sql
 20260929_identity_operation_projection.sql
 20260929_compiled_entity_verification.sql
+20260930_publication_recovery_discovery.sql

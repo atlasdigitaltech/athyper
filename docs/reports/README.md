@@ -47,6 +47,7 @@ Dated evidence and review reports. Each records what was observed for one source
 - [DEV platform publication workload checkpoint](country-publication-workload-20260927.md)
 - [Country route denial after DEV restart](country-restart-routing-fix-20260928.md)
 - [Comprehensive review — `/app/entity/country` on the shared Entity Framework](country-route-comprehensive-review-20260929.md)
+- [Country route review, round 2: eight dimensions, with localization](country-route-review-round2-20260930.md)
 - [Country entity route TypeScript file inventory](country-route-typescript-inventory-20260928.md)
 - [Country runtime release: integration boundary review](country-runtime-release-scope-review-20260928.md)
 - [Disposable DDL execution and local DEV audit — 24 September 2026](ddl-disposable-dev-audit-20260924.md)

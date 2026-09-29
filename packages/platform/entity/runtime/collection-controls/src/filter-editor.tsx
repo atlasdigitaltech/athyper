@@ -27,7 +27,12 @@ import type {
   ListFilterOperator,
   ListFilterV1,
 } from "@athyper/contract-platform-entity-list";
+import {
+  ENTITY_LIST_RELATIVE_DATE_VALUES,
+  entityListRelativeDateRange,
+} from "@athyper/contract-platform-entity-list";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
+import { createEntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
 import { entityEnglishMessages } from "@athyper/platform-i18n/entity-messages";
 import { filterInputValue } from "./filter-state";
 
@@ -125,9 +130,7 @@ export function filterValidationError(
   if (operator === "is_null" || operator === "is_not_null") return undefined;
   if (!raw.trim()) return "Select or enter a value.";
   if (operator === "relative")
-    return RELATIVE_DATE_GROUPS.some((group) =>
-      group.options.some((option) => option.value === raw),
-    )
+    return entityListRelativeDateRange(raw)
       ? undefined
       : "Select a relative period.";
   const parts =
@@ -196,43 +199,23 @@ export function filterValidationError(
     return "The end must be on or after the start.";
   return undefined;
 }
-const RELATIVE_DATE_GROUPS = Object.freeze([
-  Object.freeze({
-    label: "Days",
-    options: Object.freeze([
-      { value: "today", label: "Today" },
-      { value: "yesterday", label: "Yesterday" },
-      { value: "tomorrow", label: "Tomorrow" },
-      { value: "last_7_days", label: "Last 7 days" },
-      { value: "last_30_days", label: "Last 30 days" },
-      { value: "last_90_days", label: "Last 90 days" },
-      { value: "next_7_days", label: "Next 7 days" },
-      { value: "next_30_days", label: "Next 30 days" },
-      { value: "next_90_days", label: "Next 90 days" },
-    ]),
-  }),
-  Object.freeze({
-    label: "Weeks",
-    options: Object.freeze([{ value: "this_week", label: "This week" }]),
-  }),
-  Object.freeze({
-    label: "Months",
-    options: Object.freeze([
-      { value: "this_month", label: "This month" },
-      { value: "this_quarter", label: "This quarter" },
-    ]),
-  }),
-  Object.freeze({
-    label: "Years",
-    options: Object.freeze([
-      { value: "last_365_days", label: "Last 365 days" },
-      { value: "next_365_days", label: "Next 365 days" },
-      { value: "last_year", label: "Last calendar year" },
-      { value: "this_year", label: "This year" },
-      { value: "next_year", label: "Next calendar year" },
-    ]),
-  }),
-] as const);
+const RELATIVE_DATE_GROUPS = Object.freeze(
+  (["Days", "Weeks", "Months", "Years"] as const).map((label) => ({
+    label,
+    options: ENTITY_LIST_RELATIVE_DATE_VALUES.filter((value) => {
+      const range = entityListRelativeDateRange(value)!;
+      const group = range.kind === "days"
+        ? Math.max(Math.abs(range.from), Math.abs(range.to)) >= 365 ? "Years" : "Days"
+        : range.unit === "week" ? "Weeks" : range.unit === "year" ? "Years" : "Months";
+      return group === label;
+    }).map((value) => ({
+      value,
+      label: value === "last_year" ? "Last calendar year"
+        : value === "next_year" ? "Next calendar year"
+        : value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase()),
+    })),
+  })),
+);
 
 /** Describe the existing server calendar semantics without assuming browser timezone. */
 export function relativePeriodDescription(value: string): string | undefined {
@@ -392,17 +375,7 @@ function ChoicePicker({
       }
       onRetry={loadError ? openChoices : undefined}
       retryLabel={message("entity.reference.retry")}
-      messages={{
-        search: message("entity.reference.search"),
-        recent: message("entity.reference.recent"),
-        all: message("entity.reference.all"),
-        results: message("entity.reference.results"),
-        empty: message("entity.reference.empty"),
-        unavailable: message("entity.reference.unavailable"),
-        required: message("entity.reference.required"),
-        clear: message("entity.reference.clear"),
-        clearRecent: message("entity.reference.clearRecent"),
-      }}
+      messages={createEntityReferenceMessages(message)}
     />
   );
 }
@@ -418,6 +391,7 @@ function DateSetPicker({
   label: string;
   onChange: (value: string) => void;
 }) {
+  const localization = useOptionalI18n()?.localization;
   const [pending, setPending] = useState("");
   const dates = value
     .split(",")
@@ -449,6 +423,8 @@ function DateSetPicker({
       <Input
         type={field.valueKind === "date" ? "date" : "datetime-local"}
         step="any"
+        locale={localization?.formatLocale}
+        weekStart={localization?.weekStart}
         value={pending}
         aria-label={label}
         onChange={(event) => setPending(event.currentTarget.value)}

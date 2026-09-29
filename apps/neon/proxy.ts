@@ -1,10 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { parseEntityApplicationPath } from "@athyper/contract-platform-entity-runtime";
 import { destinationRequestHeaders } from "@athyper/platform-shell-app-foundation/request-destination";
-import { resolveNeonEntityApplicationInternalRoute, resolveNeonEntityApplicationPublicRoute } from "@/lib/catalog-routes";
+import {
+  resolveNeonEntityApplicationInternalRoute,
+  resolveNeonEntityApplicationPublicRoute,
+} from "./lib/catalog-routes";
 
 export function proxy(request: NextRequest) {
-  const publicRoute = resolveNeonEntityApplicationPublicRoute(request.nextUrl.pathname);
+  const publicRoute = resolveNeonEntityApplicationPublicRoute(
+    request.nextUrl.pathname,
+  );
   if (publicRoute) {
     const internal = request.nextUrl.clone();
     internal.pathname = publicRoute.internalPath;
@@ -18,17 +23,31 @@ export function proxy(request: NextRequest) {
     canonical.pathname = internalRoute.publicPath;
     return NextResponse.next({
       request: {
-        headers: destinationRequestHeaders({ url: canonical.toString(), headers: request.headers }),
+        headers: destinationRequestHeaders({
+          url: canonical.toString(),
+          headers: request.headers,
+        }),
       },
     });
   }
-  return NextResponse.next({ request: { headers: destinationRequestHeaders(request) } });
+  return NextResponse.next({
+    request: { headers: destinationRequestHeaders(request) },
+  });
 }
 
 function internalEntityRoute(pathname: string) {
   const route = parseEntityApplicationPath(pathname);
-  return route ? resolveNeonEntityApplicationInternalRoute(route.entityCode, route.segments) : undefined;
+  return route
+    ? resolveNeonEntityApplicationInternalRoute(
+        route.entityCode,
+        route.segments,
+      )
+    : undefined;
 }
 
 // Include all page requests and RSC/prefetch requests; never infer auth from cookies here.
-export const config = { matcher: ["/((?!api(?:/|$)|_next(?:/|$)|favicon.ico$|robots.txt$|sitemap.xml$).*)"] };
+export const config = {
+  matcher: [
+    "/((?!api(?:/|$)|_next(?:/|$)|favicon.ico$|robots.txt$|sitemap.xml$).*)",
+  ],
+};

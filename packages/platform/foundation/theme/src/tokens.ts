@@ -72,6 +72,15 @@ export const REQUIRED_COLOR_TOKENS = [
   "storySurfaceHover",
   "storySurfaceActive",
   "storySelectionBorder",
+  "storyFocus",
+  "storyDanger",
+  "storyDangerForeground",
+  "storyWarning",
+  "storyWarningForeground",
+  "storySuccess",
+  "storySuccessForeground",
+  "storyContrast",
+  "storyContrastForeground",
 ] as const;
 
 export type ColorToken = (typeof REQUIRED_COLOR_TOKENS)[number];
@@ -137,6 +146,15 @@ export const COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
         "color-mix(in srgb, var(--a-story-wave) 22%, transparent)",
       storySelectionBorder:
         "color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent)",
+      storyFocus: "#2e90fa",
+      storyDanger: "#b42318",
+      storyDangerForeground: "#ffffff",
+      storyWarning: "#b54708",
+      storyWarningForeground: "#ffffff",
+      storySuccess: "#067647",
+      storySuccessForeground: "#ffffff",
+      storyContrast: "#151515",
+      storyContrastForeground: "#ffffff",
     }),
     dark: Object.freeze({
       background: "#0b1220",
@@ -196,6 +214,15 @@ export const COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
         "color-mix(in srgb, var(--a-story-wave) 22%, transparent)",
       storySelectionBorder:
         "color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent)",
+      storyFocus: "#84caff",
+      storyDanger: "#f97066",
+      storyDangerForeground: "#230402",
+      storyWarning: "#fec84b",
+      storyWarningForeground: "#241400",
+      storySuccess: "#47cd89",
+      storySuccessForeground: "#031b12",
+      storyContrast: "#f4f6f8",
+      storyContrastForeground: "#11151c",
     }),
     "high-contrast": Object.freeze({
       background: "#000000",
@@ -250,6 +277,15 @@ export const COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
       storySurfaceHover: "#171717",
       storySurfaceActive: "#000000",
       storySelectionBorder: "#ffff00",
+      storyFocus: "#00ffff",
+      storyDanger: "#ff6b6b",
+      storyDangerForeground: "#000000",
+      storyWarning: "#ffff00",
+      storyWarningForeground: "#000000",
+      storySuccess: "#66ff99",
+      storySuccessForeground: "#000000",
+      storyContrast: "#ffff00",
+      storyContrastForeground: "#000000",
     }),
   });
 

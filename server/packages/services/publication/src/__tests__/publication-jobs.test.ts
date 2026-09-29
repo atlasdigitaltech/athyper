@@ -9,6 +9,7 @@ import {
   SIGN_PUBLICATION_ARTIFACT_JOB,
   createPublicationAuthorityHandlers,
   createPublicationRollbackHandler,
+  createPublicationRecoveryHandler,
   type PublicationAuthorityWork,
 } from "../publication-jobs.js";
 
@@ -31,6 +32,50 @@ const envelope = <Name extends string, Payload extends object>(
 });
 
 describe("Publication authority jobs", () => {
+  it("enqueues recovered deployments with the discovered tenant and target principal", async () => {
+    const tenantId = "11111111-1111-4111-8111-111111111111";
+    const deploymentId = "22222222-2222-4222-8222-222222222222";
+    const enqueue = vi.fn(async () => "queued");
+    const handler = createPublicationRecoveryHandler(
+      { page: vi.fn(async after => after ? [] : [{ tenantId, deploymentId, targetPlane: "neon" as const, createdAt: new Date("2026-08-10") }]) },
+      { enqueue },
+      async coordinate => ({ planeKey: coordinate.targetPlane, tenantId: coordinate.tenantId,
+        principalId: "33333333-3333-4333-8333-333333333333", scope: "tenant" }),
+    );
+    await handler.handle(envelope("publication.recover-stalled", {}), context);
+    expect(enqueue).toHaveBeenCalledWith(PUBLICATION_APPLY_QUEUE, "publication.apply-release",
+      { deploymentId, targetPlane: "neon" },
+      expect.objectContaining({ execution: expect.objectContaining({ tenantId, scope: "tenant", planeKey: "neon" }) }));
+  });
+  it("retries an interrupted batch with the same deduplicated tenant coordinates", async () => {
+    const tenantId = "11111111-1111-4111-8111-111111111111";
+    const deployments = ["22222222-2222-4222-8222-222222222221", "22222222-2222-4222-8222-222222222222"]
+      .map((deploymentId, index) => ({ tenantId, deploymentId, targetPlane: "neon" as const,
+        createdAt: new Date(`2026-08-10T00:0${index}:00Z`) }));
+    let failSecond = true;
+    const enqueue = vi.fn(async (...args: unknown[]) => {
+      const payload = args[2] as { deploymentId: string };
+      if (failSecond && payload.deploymentId === deployments[1]!.deploymentId) {
+        failSecond = false;
+        throw new Error("queue unavailable");
+      }
+      return "queued";
+    });
+    const handler = createPublicationRecoveryHandler(
+      { page: async after => after ? [] : deployments },
+      { enqueue },
+      async coordinate => ({ planeKey: coordinate.targetPlane, tenantId: coordinate.tenantId,
+        principalId: "33333333-3333-4333-8333-333333333333", scope: "tenant" }),
+    );
+    await expect(handler.handle(envelope("publication.recover-stalled", {}), context)).rejects.toThrow("queue unavailable");
+    await expect(handler.handle(envelope("publication.recover-stalled", {}), context))
+      .resolves.toMatchObject({ output: { recovered: 2 } });
+    expect(enqueue).toHaveBeenCalledTimes(4);
+    const calls = enqueue.mock.calls as unknown as Array<[unknown, unknown, unknown, { enqueueKey: string; execution: { tenantId: string } }]>;
+    expect(calls[0]![3].enqueueKey).toBe(calls[2]![3].enqueueKey);
+    expect(calls[1]![3].enqueueKey).toBe(calls[3]![3].enqueueKey);
+    expect(calls.every(call => call[3].execution.tenantId === tenantId)).toBe(true);
+  });
   it("persists each step before deterministically enqueueing the next", async () => {
     const enqueued: unknown[][] = [];
     const jobs: JobPublisher = {
@@ -150,13 +195,14 @@ describe("Publication authority jobs", () => {
       neon: { rollback } as never,
     });
     const result = await handler.handle(
-      envelope(ROLLBACK_PUBLICATION_RELEASE_JOB, {
+      { ...envelope(ROLLBACK_PUBLICATION_RELEASE_JOB, {
+        tenantId: "tenant",
         publicationKey: "metadata.entity.invoice",
         targetAppliedReleaseId: "applied-1",
         targetPlane: "neon",
         reason: "canary",
         actorId: "operator",
-      }),
+      }), execution: { scope: "tenant" as const, tenantId: "tenant", planeKey: "neon" as const, principalId: "operator" } },
       context,
     );
     expect(rollback).toHaveBeenCalledWith(

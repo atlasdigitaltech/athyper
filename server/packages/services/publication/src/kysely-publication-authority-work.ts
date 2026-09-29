@@ -697,6 +697,10 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     /* Activation acknowledges in the target orchestrator transaction flow. */
   }
   async recoverStalled(): Promise<readonly PublicationCoordinatePayload[]> {
+    if (!tryGetRequestContext()?.tenantId) throw permanent("PUBLICATION_RECOVERY_TENANT_REQUIRED");
+    return this.scoped(worker => worker.recoverStalledScoped());
+  }
+  private async recoverStalledScoped(): Promise<readonly PublicationCoordinatePayload[]> {
     const eligible: PublicationCoordinatePayload[] = [];
     for (const item of await this.options.authority.listRecoverableDeployments(
       200,

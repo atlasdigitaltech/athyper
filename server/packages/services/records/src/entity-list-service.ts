@@ -2,7 +2,7 @@ import { resolveIntakeFormChoices } from "./intake-form-choices.js";
 import { authorizeListContextDiscovery } from "./list-context-discovery.js";
 import { readablePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
 import {
-  humanizeIdentifier as humanize,
+  humanizeIdentifier,
   parseEntityDetailDescriptor,
   parseEntityFormDescriptor,
   parseEntityRecordPresentation,
@@ -185,7 +185,7 @@ export function createEntityListService(options: {
         );
       const title = experience
         ? resolveEntityText(experience.header.title)
-        : (descriptor.listPresentation?.title ?? humanize(entityCode));
+        : (descriptor.listPresentation?.title ?? humanizeIdentifier(entityCode));
       return Object.freeze({
         schemaVersion: 1 as const,
         ...(descriptor.listPresentation?.localizedLabels ? { localizedLabels: readablePresentationLocalization(descriptor.listPresentation.localizedLabels, []) } : {}),
@@ -382,7 +382,7 @@ export function createEntityListService(options: {
           "ENTITY_FORM_FIELDS_FORBIDDEN",
           "No fields are writable for this entity form",
         );
-      const label = humanize(entityCode),
+      const label = humanizeIdentifier(entityCode),
         projection = { entityCode, mode, fields: visible, operation };
       return parseEntityFormDescriptor({
         schema: "athyper.entity-form-descriptor/1",
@@ -483,7 +483,7 @@ export function createEntityListService(options: {
         )
           actions.push({
             code: transition.code,
-            label: humanize(transition.code),
+            label: humanizeIdentifier(transition.code),
             kind: "transition",
           });
       const fields = readable.map((field) => surfaceField(field, true));
@@ -544,8 +544,8 @@ export function createEntityListService(options: {
         plane: descriptor.planeKey,
         entity: {
           code: entityCode,
-          label: humanize(entityCode),
-          pluralLabel: pluralize(humanize(entityCode)),
+          label: humanizeIdentifier(entityCode),
+          pluralLabel: pluralize(humanizeIdentifier(entityCode)),
         },
         revision: surfaceRevision(descriptor, {
           entityCode,
@@ -791,7 +791,7 @@ function surfaceField(
     : [];
   const options = raw.flatMap((candidate) =>
     typeof candidate === "string"
-      ? [{ value: candidate, label: humanize(candidate) }]
+      ? [{ value: candidate, label: humanizeIdentifier(candidate) }]
       : candidate &&
           typeof candidate === "object" &&
           !Array.isArray(candidate) &&
@@ -802,14 +802,14 @@ function surfaceField(
               label:
                 typeof Reflect.get(candidate, "label") === "string"
                   ? String(Reflect.get(candidate, "label"))
-                  : humanize(String(Reflect.get(candidate, "value"))),
+                  : humanizeIdentifier(String(Reflect.get(candidate, "value"))),
             },
           ]
         : [],
   );
   return Object.freeze({
     key: field.key,
-    label: field.list?.label ?? humanize(field.key),
+    label: field.list?.label ?? humanizeIdentifier(field.key),
     kind: field.type,
     required: field.required,
     readOnly,
@@ -860,7 +860,7 @@ export function compileEntityListDescriptor(
     const options = filterOptions(field);
     return Object.freeze({
       key: field.key,
-      label: field.list?.label ?? humanize(field.key),
+    label: field.list?.label ?? humanizeIdentifier(field.key),
       ...(field.list?.columnGroup
         ? { columnGroup: field.list.columnGroup }
         : {}),
@@ -925,7 +925,7 @@ export function compileEntityListDescriptor(
   const columns = Object.freeze(
     ordered.filter((field) => field.defaultVisible).map((field) => field.key),
   );
-  const label = humanize(descriptor.entityCode);
+  const label = humanizeIdentifier(descriptor.entityCode);
   const contextRequired =
     collectionScope?.status === "context_required" ||
     Boolean(
@@ -1303,7 +1303,7 @@ function filterOptions(
       return [
         {
           value: candidate as string | number | boolean,
-          label: humanize(String(candidate)),
+          label: humanizeIdentifier(String(candidate)),
         },
       ];
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))

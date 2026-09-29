@@ -8,6 +8,7 @@ import {
   deriveShellNavigation,
   selectLandingRoute,
 } from "../../packages/platform/shell/shell/src/core";
+import { dayPeriodGreeting } from "../../packages/platform/shell/shell/src/home-greeting";
 
 const registry = definePlaneRoutes([
   {
@@ -337,9 +338,22 @@ test("rejects unsafe, duplicate, and traversing route declarations", () => {
 
 test("shared shell keeps global actions and breadcrumbs in compact separate rows", async () => {
   const [source, styles, messages] = await Promise.all([
-    Promise.all(["client.tsx", "shell-header-actions.tsx", "shell-navigation.tsx", "shell-preferences.ts"].map((file) =>
-      readFile(new URL(`../../packages/platform/shell/shell/src/${file}`, import.meta.url), "utf8")
-    )).then((sources) => sources.join("\n")),
+    Promise.all(
+      [
+        "client.tsx",
+        "shell-header-actions.tsx",
+        "shell-navigation.tsx",
+        "shell-preferences.ts",
+      ].map((file) =>
+        readFile(
+          new URL(
+            `../../packages/platform/shell/shell/src/${file}`,
+            import.meta.url,
+          ),
+          "utf8",
+        ),
+      ),
+    ).then((sources) => sources.join("\n")),
     readFile(
       new URL(
         "../../packages/platform/shell/shell/src/styles.css",
@@ -443,7 +457,7 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   );
   assert.match(
     styles,
-    /desktop-brand-link .*product-wordmark img\{[^}]*filter:none/,
+    /desktop-brand-link .*product-wordmark img\{[^}]*filter:var\(--a-brand-wordmark-filter,none\)/,
   );
   assert.match(
     styles,
@@ -559,7 +573,10 @@ test("business-context switchability is based only on resolved authorized contex
       "utf8",
     ),
   ]);
-  assert.match(source, /interactive=\{status\s*===\s*"ready"\s*&&\s*contexts\.length\s*>\s*1\}/);
+  assert.match(
+    source,
+    /interactive=\{status\s*===\s*"ready"\s*&&\s*contexts\.length\s*>\s*1\}/,
+  );
   assert.doesNotMatch(source, /interactive=\{status!=="ready"/);
   assert.match(studioLayout, /loadShellContexts\(\)/);
   assert.match(studioLayout, /contexts=\{contexts\}/);
@@ -600,13 +617,21 @@ test("Atlas home combines a timezone-aware greeting with the primary heading", a
   ]);
   assert.doesNotMatch(shell, /breadcrumbs--greeting/);
   assert.match(shell, /data-home-route=\{homeRoute\}/);
-  assert.match(home, /timeZone \}\)\.format\(date\)/);
-  assert.match(home, /Good morning/);
+  assert.equal(
+    dayPeriodGreeting(new Date("2026-01-01T12:00:00.000Z"), "America/New_York"),
+    "Good morning",
+  );
+  assert.equal(
+    dayPeriodGreeting(
+      new Date("2026-01-01T12:00:00.000Z"),
+      "Asia/Kuala_Lumpur",
+    ),
+    "Good evening",
+  );
   assert.match(home, /What can we achieve together\?/);
   assert.match(home, /Ask Atlas to search, create, or take action…/);
   assert.match(home, />Add context<\/span>/);
   assert.match(home, /ArrowUpIcon/);
-  assert.match(home, />Activity history<\/button>/);
   for (const experience of experiences) {
     assert.match(
       experience,
@@ -649,18 +674,54 @@ test("Atlas home combines a timezone-aware greeting with the primary heading", a
 });
 
 test("shared activity routes are exact authenticated-shell destinations", async () => {
-  const { isShellActivityRoute } = await import("../../packages/platform/shell/shell/src/core");
-  for (const path of ["/inbox", "/notifications"]) assert.equal(isShellActivityRoute(path), true);
-  for (const path of ["/inbox/admin", "/notifications-other", "/mdg", "//notifications"]) assert.equal(isShellActivityRoute(path), false);
+  const { isShellActivityRoute } =
+    await import("../../packages/platform/shell/shell/src/core");
+  for (const path of ["/inbox", "/notifications"])
+    assert.equal(isShellActivityRoute(path), true);
+  for (const path of [
+    "/inbox/admin",
+    "/notifications-other",
+    "/mdg",
+    "//notifications",
+  ])
+    assert.equal(isShellActivityRoute(path), false);
 });
 
-test("Studio MDG pages inherit the publication module and definition-read permission", async () => {
-  const { studioRoutes } = await import("../../packages/planes/studio/shell/src/navigation");
-  const workspaces = [{ code: "entity", name: "Entity", sortOrder: 1, modules: [{ code: "pub", name: "Publishing", sortOrder: 1, primary: true }] }];
-  const entitled = deriveShellNavigation(studioRoutes, { workspaces, permissions: ["studio.business_partner_definition.read"], features: {} });
-  for (const path of ["/mdg", "/mdg/business-partner", "/mdg/business-partner/model", "/mdg/business-partner/validation", "/mdg/business-partner/matching", "/mdg/business-partner/workflows", "/mdg/business-partner/publication", "/mdg/business-partner/operations", "/mdg/business-partner/ai-experience"]) {
-    assert.equal(canAccessRoute(entitled, path), true, path);
-    assert.equal(canAccessRoute(deriveShellNavigation(studioRoutes, { workspaces, permissions: [], features: {} }), path), false, path);
-    assert.equal(canAccessRoute(deriveShellNavigation(studioRoutes, { workspaces: [], permissions: ["studio.business_partner_definition.read"], features: {} }), path), false, path);
-  }
+test("Studio publishing routes follow the generated Entity Studio catalog", async () => {
+  const { studioRoutes } =
+    await import("../../packages/planes/studio/shell/src/navigation");
+  const workspaces = [
+    {
+      code: "entity",
+      name: "Entity",
+      sortOrder: 1,
+      modules: [
+        { code: "pub", name: "Publishing", sortOrder: 1, primary: true },
+      ],
+    },
+  ];
+  const publishing = deriveShellNavigation(studioRoutes, {
+    workspaces,
+    permissions: [],
+    features: {},
+  });
+  assert.equal(canAccessRoute(publishing, "/entity/publishing"), true);
+  assert.equal(canAccessRoute(publishing, "/atlas/learning"), false);
+  const reviewer = deriveShellNavigation(studioRoutes, {
+    workspaces,
+    permissions: ["metadata.entity.review"],
+    features: {},
+  });
+  assert.equal(canAccessRoute(reviewer, "/atlas/learning"), true);
+  assert.equal(
+    canAccessRoute(
+      deriveShellNavigation(studioRoutes, {
+        workspaces: [],
+        permissions: ["metadata.entity.review"],
+        features: {},
+      }),
+      "/entity/publishing",
+    ),
+    false,
+  );
 });

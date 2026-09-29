@@ -1,4 +1,5 @@
 import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
+import { entityAuthorizationProfileHash } from "./entity-authorization-rollout.js";
 import type { AuthorizationDecision, Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { EntityFieldDescriptor, EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
 import { RecordServiceError } from "./errors.js";
@@ -27,17 +28,18 @@ export async function authorizeRecordListRead(
       entityCode: descriptor.entityCode,
       operationKey,
       resourceCode: descriptor.entityCode,
+      ...(profile ? { authorizationProfileHash: entityAuthorizationProfileHash(profile), authorizationDescriptorHash: descriptor.compiledHash } : {}),
       ...scopeResource,
     },
   });
   if (effective.allowed) return effective;
   // Published directory contracts own row scope; coarse permission admission
   // still enforces denials, entitlements, and policy gates. Never retry a deny.
-  if (descriptor.directoryScope && effective.reason === "scope_not_contained") {
+  if (!profile && descriptor.directoryScope && effective.reason === "scope_not_contained") {
     const base = await authorizer.authorize({ context, permissionCode, observation });
     if (base.allowed) return base;
   }
-  if (!permissionOnly && effective.reason === "scope_coordinate_missing") {
+  if (!profile && !permissionOnly && effective.reason === "scope_coordinate_missing") {
     const base = await authorizer.authorize({ context, permissionCode, observation });
     if (base.allowed && base.scope && !base.scope.tenantWide) return base;
   }
@@ -70,9 +72,26 @@ export async function readableRecordFields(
         operationKey,
         resourceCode: descriptor.entityCode,
         field: field.key,
+        ...(profile ? { authorizationProfileHash: entityAuthorizationProfileHash(profile), authorizationDescriptorHash: descriptor.compiledHash } : {}),
       },
     });
     return decision.allowed;
   }));
   return Object.freeze(descriptor.fields.filter((_field, index) => decisions[index]));
+}
+
+/** Final DTO boundary shared by list, detail, and list-backed export. Reveal
+ * operations require a separate explicit provider; a generic read never emits
+ * the raw value of a masked field, even when field admission succeeded. */
+export function projectAuthorizedRecordFields(
+  descriptor: EntityRuntimeDescriptor,
+  row: Readonly<Record<string, unknown>>,
+  enforced: boolean,
+): Readonly<Record<string, unknown>> {
+  if (!enforced || !descriptor.authorization) return row;
+  const masked = new Set(descriptor.authorization.fieldPolicies
+    .filter(policy => policy.representation === "masked")
+    .flatMap(policy => policy.fields));
+  return Object.freeze(Object.fromEntries(Object.entries(row).map(([key, value]) =>
+    [key, masked.has(key) && value !== null && value !== undefined ? "••••" : value])));
 }

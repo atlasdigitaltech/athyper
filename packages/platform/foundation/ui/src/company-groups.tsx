@@ -1,6 +1,7 @@
 "use client";
 import { ChevronDownIcon, ChevronRightIcon } from "@athyper/platform-icons";
 import React, { useId, useState } from "react";
+import { useUiMessages } from "./ui-messages";
 export interface CompanyChoice {
   readonly companyCodeId: string;
   readonly code: string;
@@ -35,6 +36,7 @@ export function ScopePickerToolbar({
   availableCount: number;
   closeOnSelect?: boolean;
 }) {
+  const messages = useUiMessages();
   return (
     <div className="a-scope-picker-toolbar">
       <input
@@ -55,14 +57,14 @@ export function ScopePickerToolbar({
             data-context-picker-select={closeOnSelect || undefined}
             onClick={onAll}
           >
-            All
+            {allLabel}
           </button>
           <small
             role="status"
-            aria-label={`${selectedCount} selected · ${availableCount} available`}
-            title={`${selectedCount} selected · ${availableCount} available`}
+            aria-label={messages.selectedAndAvailable(selectedCount, availableCount)}
+            title={messages.selectedAndAvailable(selectedCount, availableCount)}
           >
-            <b>{selectedCount}</b> selected · {availableCount}
+            {messages.selectedAndAvailable(selectedCount, availableCount)}
           </small>
         </>
       ) : null}
@@ -95,6 +97,7 @@ export function CompanyGroups({
   readonly closeOnSelect?: boolean;
   readonly showAll?: boolean;
 }) {
+  const messages = useUiMessages();
   const multiple = Boolean(onSelectionChange),
     selected = selectedIds ?? (selectedId ? [selectedId] : []);
   const toggle = (key: string) =>
@@ -151,7 +154,7 @@ export function CompanyGroups({
             </button>
           ) : null}
           <small role="status">
-            {matches.length} companies · {groups.size} legal entities
+            {messages.companyAndLegalEntityCount(matches.length, groups.size)}
           </small>
         </>
       )}
@@ -197,7 +200,7 @@ export function CompanyGroups({
                 <span>
                   <strong>{legal.legalEntityName}</strong>
                   <small>
-                    Legal entity · {legal.legalEntityCode.toUpperCase()}
+                    {messages.legalEntity(legal.legalEntityCode.toUpperCase())}
                   </small>
                 </span>
               </button>
@@ -226,9 +229,7 @@ export function CompanyGroups({
                       <span>
                         <strong>{company.displayName}</strong>
                         <small>
-                          {company.code.toUpperCase()} ·{" "}
-                          {company.countryCode ?? "—"} ·{" "}
-                          {company.functionalCurrency}
+                          {messages.companyDetails(company.code.toUpperCase(), company.countryCode ?? "—", company.functionalCurrency)}
                         </small>
                       </span>
                     </label>
@@ -239,7 +240,7 @@ export function CompanyGroups({
           );
         })}
       {!matches.length ? (
-        <p role="status">No permitted companies match your search.</p>
+        <p role="status">{messages.noMatchingCompanies}</p>
       ) : null}
     </div>
   );

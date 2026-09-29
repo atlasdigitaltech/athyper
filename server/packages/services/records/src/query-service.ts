@@ -3,6 +3,7 @@ import { executeAuthorizedAggregate } from "./authorized-aggregate.js";
 import { MAX_LIST_FILTERS } from "./list-limits.js";
 import { validateFilterValue } from "./filter-value-validation.js";
 import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
+import { entityAuthorizationProfileHash } from "./entity-authorization-rollout.js";
 import { createHash } from "node:crypto";
 import type {
   AuthorizationDecision,
@@ -27,6 +28,7 @@ import { recordFieldFilterOperators } from "./list-query-policy.js";
 import {
   authorizeRecordListRead,
   readableRecordFields,
+  projectAuthorizedRecordFields,
 } from "./record-read-access.js";
 
 export interface RecordQueryServiceOptions<Transaction = unknown> {
@@ -149,6 +151,8 @@ export function createRecordListExecutor<Transaction = unknown>(
             entityCode: descriptor.entityCode,
             operationKey: directory.key,
             authorizationFieldUses,
+            authorizationProfileHash: entityAuthorizationProfileHash(descriptor.authorization!),
+            authorizationDescriptorHash: descriptor.compiledHash,
           },
         });
         if (!permitted.allowed)
@@ -269,7 +273,9 @@ export function createRecordListExecutor<Transaction = unknown>(
                     tenantId: query.context.tenantId,
                     entityCode: descriptor.entityCode,
                     resourceCode: descriptor.entityCode,
-                    operationKey: "read",
+                  operationKey: "read",
+                  authorizationProfileHash: entityAuthorizationProfileHash(descriptor.authorization!),
+                  authorizationDescriptorHash: descriptor.compiledHash,
                     recordId,
                   },
                 });
@@ -352,9 +358,9 @@ function restrictResponseProjection(
     data: Object.freeze(
       result.data.map((row) =>
         Object.freeze(
-          Object.fromEntries(
+          projectAuthorizedRecordFields(descriptor, Object.fromEntries(
             Object.entries(row).filter(([key]) => visible.has(key)),
-          ),
+          ), enforced),
         ),
       ),
     ),
@@ -405,6 +411,7 @@ export function createRecordQueryService<Transaction = unknown>(
           operationKey: "read",
           resourceCode: query.entityCode,
           recordId: query.recordId,
+          ...(descriptor.authorization ? { authorizationProfileHash: entityAuthorizationProfileHash(descriptor.authorization), authorizationDescriptorHash: descriptor.compiledHash } : {}),
         },
       );
       const projection = (
@@ -432,7 +439,7 @@ export function createRecordQueryService<Transaction = unknown>(
         },
       );
       if (data && enforced) assertProfiledScalarProjection(data, projection);
-      return { data };
+      return { data: data ? projectAuthorizedRecordFields(descriptor, data, enforced) : null };
     },
   };
 }

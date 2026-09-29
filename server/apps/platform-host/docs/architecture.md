@@ -45,7 +45,7 @@ new runtime paths without executing the entrypoints.
    authorization dependencies. Authorization registration and parent admission
    remain server-owned; moving files does not change scope enforcement.
 5. `apps/neon/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx`
-   delegates to `createEntityReadPage` from the shared detail package.
+   delegates to `createEntityReadRoute` from the shared detail package.
    Country continues through that generic entity route and shared list/detail UI.
 
 This is a source trace. No new Country publication or live browser verification

@@ -45,6 +45,7 @@ import {
 import { StickyListTable } from "./sticky-table";
 import { EntityNavigation, EntityNavigationSkeleton } from "./navigation";
 import { EntityOverviewRuntime } from "./overview";
+import { GroupDialog } from "./dialogs/group-dialog";
 export { EntityOverview, type EntityOverviewProps } from "./overview";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
@@ -157,7 +158,6 @@ import React, {
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
-  type FormEvent,
   type ReactNode,
 } from "react";
 import {
@@ -202,6 +202,7 @@ import {
   readListLocation,
   writeListLocation,
 } from "./location";
+import { useListQueryState } from "./query-state";
 
 interface EntityListPageAction {
   readonly key: string;
@@ -818,7 +819,9 @@ function EntityCollectionRuntime({
           )
             nextState = initial;
           else
-            setActionNotice(listNotice("list.notice.viewUnavailableConfigured"));
+            setActionNotice(
+              listNotice("list.notice.viewUnavailableConfigured"),
+            );
         }
         const requestedView =
           (embedding
@@ -1240,6 +1243,8 @@ function EntityCollectionRuntime({
     history: "replace" | "push" = "replace",
   ) => {
     setCursorHistory([]);
+    setSelectedIds(new Set());
+    setAllMatchingSelected(false);
     update(withoutNavigation({ ...state, ...patch }), history);
   };
   const selectionEnabled = embedding
@@ -1440,7 +1445,9 @@ function EntityCollectionRuntime({
                 ).find((view) => view.id === state.savedViewId)?.name ??
                 "Default view"
               }
-              onStatus={(text) => setActionNotice(listNotice("list.notice.text", { text }))}
+              onStatus={(text) =>
+                setActionNotice(listNotice("list.notice.text", { text }))
+              }
               open
               launch={dataOperationsLaunch}
               onOpenChange={(open) => {
@@ -1530,6 +1537,8 @@ function EntityCollectionRuntime({
               onPrevious={() => {
                 const cursor = cursorHistory.at(-1);
                 setCursorHistory(cursorHistory.slice(0, -1));
+                setSelectedIds(new Set());
+                setAllMatchingSelected(false);
                 update(
                   {
                     ...state,
@@ -1544,6 +1553,8 @@ function EntityCollectionRuntime({
               }}
               onNext={() => {
                 setCursorHistory([...cursorHistory, state.cursor]);
+                setSelectedIds(new Set());
+                setAllMatchingSelected(false);
                 update(
                   {
                     ...state,
@@ -1648,8 +1659,7 @@ function ListChrome({
     (directoryKinds.includes("company")
       ? (directory?.value.companyCodeIds?.length ?? 0)
       : 0);
-  const [query, setQuery] = useState(state.query ?? ""),
-    [activeDrawer, setActiveDrawer] = useState<ListDrawerKey | undefined>(
+  const [activeDrawer, setActiveDrawer] = useState<ListDrawerKey | undefined>(
       embedding?.initialControl,
     ),
     [scopeOpen, setScopeOpen] = useState(false),
@@ -1661,7 +1671,6 @@ function ListChrome({
     if (!open) setActiveDrawer(undefined);
   }, []);
   const [refreshRequested, setRefreshRequested] = useState(false);
-  const search = useRef<HTMLInputElement>(null);
   const refreshStarted = useRef(false);
   const eligibleViews = views.filter((view) =>
     isListViewAllowed(
@@ -1704,7 +1713,6 @@ function ListChrome({
             ?.searchBehavior) ??
       embedding?.options.display.defaults.searchBehavior ??
       "instant";
-  useEffect(() => setQuery(state.query ?? ""), [state.query]);
   useEffect(
     () =>
       setViews(
@@ -1732,60 +1740,18 @@ function ListChrome({
       onActionNotice(listNotice("list.notice.refreshed"));
     }
   }, [loading, refreshRequested, onActionNotice]);
-  useEffect(() => {
-    const normalized = query.trim();
-    if (
-      searchBehavior !== "instant" ||
-      normalized === (state.query ?? "") ||
-      (normalized.length > 0 &&
-        normalized.length < descriptor.surface.search.minimumQueryLength)
-    )
-      return;
-    const timer = window.setTimeout(
-      () => onChange({ query: normalized || undefined }),
-      350,
-    );
-    return () => window.clearTimeout(timer);
-  }, [
-    query,
-    state.query,
-    searchBehavior,
-    descriptor.surface.search.minimumQueryLength,
+  const { query, setQuery, searchRef, submit } = useListQueryState({
+    query: state.query,
+    minimumQueryLength: descriptor.surface.search.minimumQueryLength,
+    behavior: searchBehavior,
     onChange,
-  ]);
-  useEffect(() => {
-    const focusSearch = (event: KeyboardEvent) => {
-      const target = event.target,
-        editing =
-          target instanceof HTMLElement &&
-          target.matches("input, textarea, select, [contenteditable=true]");
-      if (
-        (event.key === "/" && !editing) ||
-        ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")
-      ) {
-        event.preventDefault();
-        search.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", focusSearch);
-    return () => window.removeEventListener("keydown", focusSearch);
-  }, []);
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const normalized = query.trim();
-    if (
-      normalized &&
-      normalized.length < descriptor.surface.search.minimumQueryLength
-    ) {
+    onTooShort: () =>
       onActionNotice(
         listNotice("list.notice.searchTooShort", {
           min: descriptor.surface.search.minimumQueryLength,
         }),
-      );
-      return;
-    }
-    onChange({ query: normalized || undefined }, "push");
-  };
+      ),
+  });
   const count = page?.pagination.total;
   const countLabel =
     count === undefined
@@ -1918,12 +1884,13 @@ function ListChrome({
         role="status"
         aria-live="polite"
       >
-        {actionNotice && entityIntl.message(actionNotice.key, actionNotice.values)}
+        {actionNotice &&
+          entityIntl.message(actionNotice.key, actionNotice.values)}
       </span>
       <ManagementToolbar className="a-entity-list__query-row">
         <form className="a-entity-list__search" role="search" onSubmit={submit}>
           <ObjectSearch
-            ref={search}
+            ref={searchRef}
             id={searchId}
             label={`Search ${descriptor.entity.pluralLabel}`}
             value={query}
@@ -4136,109 +4103,6 @@ function DisplaySettingsDialog({
             }}
           >
             Save settings
-          </Button>
-        </Drawer.FooterActions>
-      </Drawer.Footer>
-    </>
-  );
-}
-
-function GroupDialog({
-  open,
-  onOpenChange,
-  descriptor,
-  group,
-  onApply,
-}: {
-  readonly open: boolean;
-  readonly onOpenChange: (open: boolean) => void;
-  readonly descriptor: EntityListDescriptorV1;
-  readonly group?: string;
-  readonly onApply: (group?: string) => void;
-}) {
-  const [draft, setDraft] = useState(group ?? ""),
-    fields = descriptor.fields.filter((field) => field.groupable);
-  useEffect(() => {
-    if (open) setDraft(group ?? "");
-  }, [open, group]);
-  const selected = fields.find((field) => field.key === draft),
-    dirty = draft !== (group ?? "");
-  return (
-    <>
-      <Drawer.Toolbar>
-        <Drawer.Context aria-label="Grouping context">
-          <Drawer.Metric label="Groupable fields" value={fields.length} />
-          <Drawer.Metric
-            label="Current grouping"
-            value={
-              group
-                ? (fields.find((field) => field.key === group)?.label ?? group)
-                : "None"
-            }
-          />
-          <Drawer.Metric label="Selected" value={selected?.label ?? "None"} />
-        </Drawer.Context>
-      </Drawer.Toolbar>
-      <Drawer.Body>
-        {fields.length ? (
-          <div className="a-entity-list__group-settings">
-            <Label>
-              <span>Grouping field</span>
-              <Select
-                value={draft}
-                onChange={(event) => setDraft(event.currentTarget.value)}
-              >
-                <option value="">No grouping</option>
-                {fields.map((field) => (
-                  <option value={field.key} key={field.key}>
-                    {field.label}
-                  </option>
-                ))}
-              </Select>
-            </Label>
-            <p>
-              Grouping changes presentation only; it does not change the
-              authorized result set.
-            </p>
-          </div>
-        ) : (
-          <div className="a-entity-list__dialog-empty">
-            This entity does not publish any groupable fields.
-          </div>
-        )}
-      </Drawer.Body>
-      <Drawer.Footer>
-        <Drawer.FooterSummary>
-          <strong>
-            {dirty
-              ? "Changes ready to apply"
-              : selected
-                ? `Grouped by ${selected.label}`
-                : "No grouping applied"}
-          </strong>
-          <span>Records will remain in the current authorized list.</span>
-        </Drawer.FooterSummary>
-        <Drawer.FooterActions>
-          <Button
-            variant="ghost"
-            size="small"
-            disabled={!draft}
-            onClick={() => setDraft("")}
-          >
-            Reset grouping
-          </Button>
-          <Drawer.Close className="a-button a-button--secondary a-button--small">
-            Cancel
-          </Drawer.Close>
-          <Button
-            size="small"
-            disabled={!dirty}
-            onClick={() => {
-              onApply(draft || undefined);
-              onOpenChange(false);
-            }}
-          >
-            Apply grouping
           </Button>
         </Drawer.FooterActions>
       </Drawer.Footer>

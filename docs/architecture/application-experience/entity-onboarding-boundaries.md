@@ -47,7 +47,7 @@ packages/contracts/platform/entity-runtime/src/
 
 packages/platform/entity/runtime/form-detail/src/
   routes/
-    entity-read-page.tsx         Framework-injected server route adapter
+    entity-read-route.tsx        Framework-injected server route adapter
   attachments/
     uploader.tsx                Upload queue, validation and retry lifecycle
     collection.tsx              Browse, actions, search and preview composition

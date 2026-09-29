@@ -74,6 +74,7 @@ export const RELATED_RECORD_MODELS = {
   "external-reference.v1": {
     sectionKey: "identity",
     entityCode: "external_reference",
+    ownerEntityCode: "business_partner",
     relationship: "business_partner.external_reference",
     fields: {
       sourceSystemCode: "string",
@@ -85,6 +86,7 @@ export const RELATED_RECORD_MODELS = {
   "contact-person.v1": {
     sectionKey: "contacts",
     entityCode: "contact_person",
+    ownerEntityCode: "business_partner",
     relationship: "business_partner.contact_person",
     fields: {
       displayName: "string",
@@ -106,6 +108,7 @@ export const RELATED_RECORD_MODELS = {
   "address-link.v1": {
     sectionKey: "addresses",
     entityCode: "address",
+    ownerEntityCode: "business_partner",
     relationship: "business_partner.address_link",
     fields: {
       formattedAddress: "string",
@@ -535,13 +538,18 @@ export function parseRelatedPresentations(
   return Object.freeze(result);
 }
 
-/** Related adapters are registered for an owner entity; metadata cannot invent joins. */
+/**
+ * Related adapters are registered for an owner entity; metadata cannot invent joins.
+ * The owner is declared by each entry in RELATED_RECORD_MODELS, so onboarding another
+ * owner means registering its models, not editing this check.
+ */
 export function validateRelatedPresentationOwner(
   profiles: readonly RelatedPresentationV1[],
   entityCode: string,
 ) {
-  if (profiles.length && entityCode !== "business_partner")
-    throw new TypeError(
-      `No related record providers registered for ${entityCode}`,
-    );
+  for (const profile of profiles)
+    if (RELATED_RECORD_MODELS[profile.source].ownerEntityCode !== entityCode)
+      throw new TypeError(
+        `No related record providers registered for ${entityCode}`,
+      );
 }

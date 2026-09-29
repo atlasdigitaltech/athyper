@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./client": "./src/client.tsx",
     "./module-relevance": "./src/module-relevance.ts",
-    "./workspace-navigation": "./src/workspace-navigation.tsx"
+    "./workspace-navigation": "./src/workspace-navigation.tsx",
+    "./plane-experience-runtime": "./src/plane-experience-runtime.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -22,6 +23,8 @@
     "@athyper/contract-platform-navigation": "workspace:*",
     "@athyper/platform-api-client": "workspace:*",
     "@athyper/platform-icons": "workspace:*"
+    ,"@athyper/platform-shell-app-foundation": "workspace:*"
+    ,"@athyper/platform-shell-activity-center-data": "workspace:*"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",

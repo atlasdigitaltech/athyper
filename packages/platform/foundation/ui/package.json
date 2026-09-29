@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@athyper/platform-icons": "workspace:*",
+    "@athyper/platform-i18n": "workspace:*",
     "@athyper/platform-theme": "workspace:*",
     "react-day-picker": "9.14.0"
   },

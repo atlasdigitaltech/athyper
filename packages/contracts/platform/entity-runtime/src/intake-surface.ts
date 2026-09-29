@@ -86,9 +86,9 @@ export interface EntityIntakeSurfaceV1 {
     readonly fields: readonly IntakeSurfaceField[];
   }[];
 }
-const fail = (message: string): never => {
+function fail(message: string): never {
   throw new TypeError(`Invalid intake surface: ${message}`);
-};
+}
 const object = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" && !Array.isArray(v)
     ? (v as Record<string, unknown>)
@@ -273,8 +273,8 @@ export function parseEntityIntakeSurfaces(
               ? f.lookup.actions.map((a) => a.visibleWhen)
               : []),
         ]
-          .filter(Boolean)
-          .map((c) => c!.field),
+          .filter((c): c is IntakeCondition => c !== undefined)
+          .map((c) => c.field),
       ]),
     );
     for (const field of fields)
@@ -410,11 +410,11 @@ export function parseEntityIntakeSurfaces(
         if (!item) fail("missing item surface");
         for (const rule of field.itemFieldRules ?? [])
           for (const key of rule.fields)
-            if (!item!.sections.flatMap(s => s.fields).some(f => f.control === "input" && f.valueKey === key))
+            if (!item.sections.flatMap(s => s.fields).some(f => f.control === "input" && f.valueKey === key))
               fail("item field rule must reference an input");
         if (
           field.primaryField &&
-          !item!.sections
+          !item.sections
             .flatMap((s) => s.fields)
             .some(
               (f) =>
@@ -425,7 +425,7 @@ export function parseEntityIntakeSurfaces(
         )
           fail("primary field must be a checkbox");
         for (const binding of field.presentation?.summary ?? []) {
-          const target = item!.sections
+          const target = item.sections
             .flatMap((s) => s.fields)
             .find(
               (f) =>

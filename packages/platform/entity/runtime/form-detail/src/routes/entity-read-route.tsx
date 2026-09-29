@@ -12,7 +12,7 @@ export function renderEntityReadRoute(params: Params, notFound: () => never) {
   if (!route) return notFound();
   return <EntityReadSurface {...route} />;
 }
-export function createEntityReadPage(notFound: () => never) {
+export function createEntityReadRoute(notFound: () => never) {
   return async function EntityReadPage({
     params,
   }: {

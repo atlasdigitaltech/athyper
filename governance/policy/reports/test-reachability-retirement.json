@@ -1,10 +1,118 @@
 {
   "schemaVersion": 1,
   "purpose": "Excluded workspace packages with test files must be retired or reactivated through package consolidation; they are not run by test:repo.",
-  "activeWorkspacePackageCount": 177,
+  "activeWorkspacePackageCount": 184,
   "rootTests": [
     {
+      "path": "deploy/compose/tests/account-console-scope.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/application-alerts.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/cloud-storage.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/control-client.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/credentials.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/document-services.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/forward-migrations.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/iam-forwarded-origin.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/infrastructure-images.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/ingress.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/keycloak.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/metabase.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/observability-tmp.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/pgbouncer.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/postgres.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/provider-merge.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/publication-tls.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/redis-isolation.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/redis.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/review-port-contract.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/searchcore.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/seaweedfs.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/shared-logging.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/storage-console.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "deploy/compose/tests/structure.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/tracing.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/valkey-migration.integration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "deploy/compose/tests/virusscan-readonly.integration.test.mjs",
       "runner": "test:operations"
     },
     {
@@ -21,6 +129,10 @@
     },
     {
       "path": "tests/contracts/app-composition-phase10.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/app-relay-composition.test.ts",
       "runner": "test:plane-contracts"
     },
     {
@@ -48,39 +160,15 @@
       "runner": "test:plane-contracts"
     },
     {
-      "path": "tests/contracts/business-partner-phase0-contracts.test.ts",
+      "path": "tests/contracts/bff-runtime-configuration.test.ts",
       "runner": "test:plane-contracts"
     },
     {
-      "path": "tests/contracts/business-partner-r2-contracts.test.ts",
+      "path": "tests/contracts/bp-intake-protection-relay.test.ts",
       "runner": "test:plane-contracts"
     },
     {
-      "path": "tests/contracts/business-partner-r2-r3-environment.test.ts",
-      "runner": "test:plane-contracts"
-    },
-    {
-      "path": "tests/contracts/business-partner-r3-contracts.test.ts",
-      "runner": "test:plane-contracts"
-    },
-    {
-      "path": "tests/contracts/business-partner-r4-contracts.test.ts",
-      "runner": "test:plane-contracts"
-    },
-    {
-      "path": "tests/contracts/business-partner-r5-contracts.test.ts",
-      "runner": "test:plane-contracts"
-    },
-    {
-      "path": "tests/contracts/business-partner-r6-contracts.test.ts",
-      "runner": "test:plane-contracts"
-    },
-    {
-      "path": "tests/contracts/business-partner-r7-contracts.test.ts",
-      "runner": "test:plane-contracts"
-    },
-    {
-      "path": "tests/contracts/business-partner-r8-contracts.test.ts",
+      "path": "tests/contracts/browser-csrf.test.ts",
       "runner": "test:plane-contracts"
     },
     {
@@ -88,11 +176,23 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/detail-navigation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/e2e-auth-state.test.ts",
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/entity-identity.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/entity-list-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/entity-runtime-descriptor-validation.test.ts",
       "runner": "test:plane-contracts"
     },
     {
@@ -132,6 +232,10 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/notification-authoring-relay.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/platform-catalog-experience.test.ts",
       "runner": "test:plane-contracts"
     },
@@ -141,6 +245,10 @@
     },
     {
       "path": "tests/contracts/refresh-touch-race.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/relay-common-plane-operations.test.ts",
       "runner": "test:plane-contracts"
     },
     {
@@ -160,7 +268,15 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/studio-activation-inspection.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/studio-authoring-relay.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/studio-inspection-scoped-repository.test.ts",
       "runner": "test:plane-contracts"
     },
     {
@@ -188,6 +304,18 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/activity-comparison-model.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/activity-date-range.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/application-fallbacks.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/atlas-answer.test.tsx",
       "runner": "test:foundation"
     },
@@ -212,7 +340,19 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/attachment-browse-lifecycle.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/attachment-client-coordinate.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/bank-country-rules.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/bank-editor.test.ts",
       "runner": "test:foundation"
     },
     {
@@ -220,7 +360,23 @@
       "runner": "test:foundation"
     },
     {
-      "path": "tests/foundation/business-partner-case-experience.test.tsx",
+      "path": "tests/foundation/collaboration-content-safety.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/collaboration-route.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/collaboration-theme.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/collaboration-upload-reliability.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/collection-presentation.test.ts",
       "runner": "test:foundation"
     },
     {
@@ -228,7 +384,31 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/directory-filter-dependencies.test.ts",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/entity-breadcrumbs.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-decision-presentation.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-descriptor-error.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-form-values.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-intake-state.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-list-audit.test.tsx",
       "runner": "test:foundation"
     },
     {
@@ -244,6 +424,10 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/entity-localization.test.ts",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/entity-overview-favourites.test.tsx",
       "runner": "test:foundation"
     },
@@ -252,11 +436,23 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/entity-record-audit.test.ts",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/entity-record-header.test.tsx",
       "runner": "test:foundation"
     },
     {
       "path": "tests/foundation/entity-related-presentation.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-relationships.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-work-context.test.ts",
       "runner": "test:foundation"
     },
     {
@@ -280,6 +476,18 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/intake-validation.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/neon-scope-adapters.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/neon-work-context-state.test.ts",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/page-foundation.test.tsx",
       "runner": "test:foundation"
     },
@@ -296,6 +504,34 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/record-footer-registration.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/reference-choice-policy.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/reference-history-store.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/second-entity-reuse-currency.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/shell-overlay-state.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/shell-surface-boundary.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/shell-surfaces.test.ts",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/surface-stack.test.ts",
       "runner": "test:foundation"
     },
@@ -306,6 +542,70 @@
     {
       "path": "tooling/scripts/acceptance/controlled-transfer-disruption.test.mjs",
       "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/local-dev/candidate-snapshot.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/candidate.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/dev-publish.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/dev-workspace.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/lifecycle.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/metadata-set.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/network-read-grant.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/publication-recovery-preflight.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/qa-runtime.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/qa-session.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/reconcile-bp-operation-catalog.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/runner.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/runtime-qualification-checks.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/separate-checkout.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/watch-runtime.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/metadata/check-layout.test.mjs",
+      "runner": "test:metadata-layout"
     },
     {
       "path": "tooling/scripts/performance/qualify-meta-entity.test.mjs",
@@ -336,6 +636,10 @@
       "runner": "test:policy"
     },
     {
+      "path": "tooling/scripts/policy/extract-static-url-routes.test.mjs",
+      "runner": "test:policy"
+    },
+    {
       "path": "tooling/scripts/policy/format-changed.test.mjs",
       "runner": "test:policy"
     },
@@ -345,6 +649,10 @@
     },
     {
       "path": "tooling/scripts/policy/generate-development-url-catalogue.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/generate-server-rebuild-inventory.test.mjs",
       "runner": "test:policy"
     },
     {
@@ -364,7 +672,15 @@
       "runner": "test:policy"
     },
     {
+      "path": "tooling/scripts/policy/report-tracking.test.mjs",
+      "runner": "test:policy"
+    },
+    {
       "path": "tooling/scripts/policy/run-static-policies.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/server-route-dispositions.test.mjs",
       "runner": "test:policy"
     },
     {
@@ -400,6 +716,10 @@
       "runner": "test:policy"
     },
     {
+      "path": "tooling/scripts/policy/verify-server-test-placement.test.mjs",
+      "runner": "test:policy"
+    },
+    {
       "path": "tooling/scripts/policy/verify-theme-token-integrity.test.mjs",
       "runner": "test:policy"
     },
@@ -432,39 +752,27 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/auth-capture-step-up.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/auth-capture-target.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/bp-ai-authenticated-evidence.test.mjs",
       "runner": "test:operations"
     },
     {
-      "path": "tooling/scripts/verification/business-partner-ai-qualification.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/verification/business-partner-r2-qualification.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/verification/business-partner-r3-qualification.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/verification/business-partner-r5-qualification.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/verification/business-partner-r8-intake.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/verification/business-partner-r8-qualification.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/verification/business-partner-v1-qualification.test.mjs",
+      "path": "tooling/scripts/verification/ci-build-artifacts.test.mjs",
       "runner": "test:operations"
     },
     {
       "path": "tooling/scripts/verification/ci-integrity-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/date-picker.test.mjs",
       "runner": "test:operations"
     },
     {
@@ -481,6 +789,10 @@
     },
     {
       "path": "tooling/scripts/verification/entity-authorization/authenticated-role-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/canonical-execution-evidence.test.mjs",
       "runner": "test:operations"
     },
     {
@@ -520,6 +832,10 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/entity-authorization/studio-authoring-grants.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/entity-authorization/successor-difference-review.test.mjs",
       "runner": "test:operations"
     },
@@ -528,7 +844,19 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/entity-placeholder-packages.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-route-admission.test.ts",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/inspect-master-data-environment.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/inventory-entity-ui.test.mjs",
       "runner": "test:operations"
     },
     {
@@ -544,6 +872,14 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/isolated-release20/binding-recovery-probe.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-release20/qualification-lock.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/local-master-data-operations.test.mjs",
       "runner": "test:operations"
     },
@@ -552,11 +888,27 @@
       "runner": "test:operations"
     },
     {
-      "path": "tooling/scripts/verification/plan-entity-authorization-migration.test.mjs",
+      "path": "tooling/scripts/verification/partner-capability-dependencies.test.mjs",
       "runner": "test:operations"
     },
     {
-      "path": "tooling/scripts/verification/preflight-business-partner-environment.test.mjs",
+      "path": "tooling/scripts/verification/partner-company-profile.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/partner-document-reference.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/partner-registration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/partner-sales-reference.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/plan-entity-authorization-migration.test.mjs",
       "runner": "test:operations"
     },
     {

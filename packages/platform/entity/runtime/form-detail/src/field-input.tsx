@@ -1,5 +1,6 @@
 "use client";
 import type { EntitySurfaceFieldV1 } from "@athyper/contract-platform-entity-runtime";
+import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { Checkbox, FormField, Input, Label, Select } from "@athyper/platform-ui";
 
@@ -15,6 +16,7 @@ export function FieldInput({
   readonly onChange: (value: unknown) => void;
 }) {
   const intl = useEntityI18n();
+  const localization = useOptionalI18n()?.localization;
   if (field.kind === "boolean" && field.required)
     return (
       <Label>
@@ -72,6 +74,8 @@ export function FieldInput({
             required={field.required}
             readOnly={field.readOnly}
             {...inputAttributes(field.kind)}
+            locale={localization?.formatLocale}
+            weekStart={localization?.weekStart}
             onChange={(event) => onChange(event.currentTarget.value)}
           />
         );

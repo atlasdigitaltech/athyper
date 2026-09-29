@@ -532,7 +532,7 @@
 .a-management-navigation a:focus-visible,.a-management-navigation summary:focus-visible,.a-management-navigation__step:focus-visible{outline:2px solid var(--a-brand);outline-offset:2px}
 .a-management-navigation__more{position:relative}.a-management-navigation summary{list-style:none}.a-management-navigation summary::-webkit-details-marker{display:none}
 .a-management-navigation__overflow{position:absolute;z-index:20;right:0;min-width:12rem;padding:var(--a-space-1);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);box-shadow:var(--a-shadow-raised)}
-.a-management-navigation__count{padding:.1rem .4rem;border-radius:999px;background:var(--a-brand);color:var(--a-on-brand,#fff);font-size:var(--a-font-size-xs)}
+.a-management-navigation__count{padding:.1rem .4rem;border-radius:999px;background:var(--a-brand);color:var(--a-brand-foreground);font-size:var(--a-font-size-xs)}
 .a-management-workspace{min-width:0}.a-management-toolbar{display:flex;align-items:center;gap:var(--a-space-2);padding:var(--a-space-2);min-width:0;flex-wrap:wrap}.a-management-toolbar>[data-slot=search]{flex:1;min-width:12rem}.a-management-toolbar>[data-slot=actions]{display:flex;gap:var(--a-space-2);margin-inline-start:auto}
 .a-management-navigation{box-sizing:border-box;max-width:100%}
 
@@ -620,7 +620,7 @@
 .a-management-navigation__step{min-height:2.35rem;border:0;background:transparent;font-family:inherit;line-height:inherit;text-align:start}
 .a-management-navigation__step:disabled{color:var(--a-muted-foreground);cursor:default}
 .a-intake-progress__number{box-sizing:border-box;display:inline-grid;place-items:center;flex-shrink:0;width:1.125rem;height:1.125rem;border:var(--a-border-width) solid var(--a-border);border-radius:50%;background:var(--a-surface);font-size:var(--a-font-size-2xs);line-height:1}
-.a-management-navigation__step[aria-current=step] .a-intake-progress__number{background:var(--a-brand);border-color:var(--a-brand);color:var(--a-on-brand,#fff)}
+.a-management-navigation__step[aria-current=step] .a-intake-progress__number{background:var(--a-brand);border-color:var(--a-brand);color:var(--a-brand-foreground)}
 .a-intake-progress__sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .a-intake-review{padding:var(--a-space-6);border:1px solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface);box-shadow:var(--a-shadow-sm)}
 .a-intake-review h2{margin-block-start:0}

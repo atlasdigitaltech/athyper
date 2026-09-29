@@ -91,17 +91,23 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     ) => Promise<void>,
   ) {}
   async listInspectionReleases(tenantId: string) {
-    const result = await sql<import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease>`
+    const result = await sql<
+      import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease
+    >`
       SELECT r.id::text, e.entity_code AS "entityCode", r.change_set_id::text AS "changeSetId",
         r.release_no::integer AS "releaseNo", r.contract_hash AS "contractHash",
         r.target_planes AS "targetPlanes", r.published_at::text AS "publishedAt"
       FROM metadata.entity_release r JOIN metadata.entity e ON e.id=r.entity_id
-      WHERE r.tenant_id=${tenantId}::uuid AND e.entity_code='business_partner'
+      WHERE r.tenant_id=${tenantId}::uuid
       ORDER BY r.release_no DESC LIMIT 100`.execute(this.database);
     return result.rows;
   }
   async readInspectionRelease(tenantId: string, releaseId: string) {
-    const result = await sql<{release: import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease; graph: MetaEntityGraph; legacyHashMatches: boolean}>`
+    const result = await sql<{
+      release: import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease;
+      graph: MetaEntityGraph;
+      legacyHashMatches: boolean;
+    }>`
       SELECT jsonb_build_object('id',r.id,'entityCode',e.entity_code,'changeSetId',r.change_set_id,
         'releaseNo',r.release_no,'contractHash',r.contract_hash,'targetPlanes',r.target_planes,
         'publishedAt',r.published_at) AS release, snapshot.contract_json AS graph,
@@ -111,14 +117,20 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       FROM metadata.entity_release r JOIN metadata.entity e ON e.id=r.entity_id
       JOIN snapshot.entity_contract_revision snapshot ON snapshot.id=r.revision_id
         AND snapshot.tenant_id=r.tenant_id AND snapshot.entity_id=r.entity_id
-      WHERE r.tenant_id=${tenantId}::uuid AND r.id=${releaseId}::uuid
-        AND e.entity_code='business_partner'`.execute(this.database);
+      WHERE r.tenant_id=${tenantId}::uuid AND r.id=${releaseId}::uuid`.execute(
+      this.database,
+    );
     const row = result.rows[0];
     if (!row) return null;
     // Early SQL-authored releases hashed PostgreSQL jsonb text. Verify that
     // representation against both stored hashes; never trust a stored hash alone.
-    if (sha256(row.graph) !== row.release.contractHash && row.legacyHashMatches !== true)
-      throw new AuthoringConflictError("Stored release graph does not match its contract hash");
+    if (
+      sha256(row.graph) !== row.release.contractHash &&
+      row.legacyHashMatches !== true
+    )
+      throw new AuthoringConflictError(
+        "Stored release graph does not match its contract hash",
+      );
     return { release: row.release, graph: row.graph };
   }
   async list(tenantId: string) {
@@ -129,14 +141,29 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     return rows.rows.map((row) => this.map(row));
   }
   async listDraftSaves(id: string) {
-    const result = await sql<{revision: number; capturedAt: string; kind: string}>`SELECT lock_version AS revision, captured_at::text AS "capturedAt", capture_kind AS kind FROM snapshot.entity_draft_save WHERE change_set_id=${id}::uuid ORDER BY lock_version DESC`.execute(this.database);
-    return result.rows.map(row => ({...row, revision: Number(row.revision)}));
+    const result = await sql<{
+      revision: number;
+      capturedAt: string;
+      kind: string;
+    }>`SELECT lock_version AS revision, captured_at::text AS "capturedAt", capture_kind AS kind FROM snapshot.entity_draft_save WHERE change_set_id=${id}::uuid ORDER BY lock_version DESC`.execute(
+      this.database,
+    );
+    return result.rows.map((row) => ({
+      ...row,
+      revision: Number(row.revision),
+    }));
   }
   async readDraftSave(id: string, revision: number) {
-    const result = await sql<{graph: MetaEntityGraph; graph_hash: string}>`SELECT graph, graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${id}::uuid AND lock_version=${revision}`.execute(this.database);
+    const result = await sql<{
+      graph: MetaEntityGraph;
+      graph_hash: string;
+    }>`SELECT graph, graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${id}::uuid AND lock_version=${revision}`.execute(
+      this.database,
+    );
     const row = result.rows[0];
     if (!row) return null;
-    if (sha256(row.graph) !== row.graph_hash) throw new AuthoringConflictError("Saved history integrity check failed");
+    if (sha256(row.graph) !== row.graph_hash)
+      throw new AuthoringConflictError("Saved history integrity check failed");
     return row.graph;
   }
   async forkDraft(input: { sourceChangeSetId: string; actorId: string }) {
@@ -225,13 +252,20 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
           "A matching draft or active entity identity is required",
         );
       if (input.baseRelease) {
-        const base = (await sql`SELECT r.id FROM metadata.entity_release r JOIN metadata.entity_change_set c ON c.id=r.change_set_id
+        const base = (
+          await sql`SELECT r.id FROM metadata.entity_release r JOIN metadata.entity_change_set c ON c.id=r.change_set_id
           WHERE r.id=${input.baseRelease.releaseId}::uuid AND r.release_hash=${input.baseRelease.releaseHash}
             AND r.entity_id=${input.entityId}::uuid AND r.tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid
             AND c.status='published' AND r.release_kind='publish'
             AND NOT EXISTS(SELECT 1 FROM metadata.entity_release newer WHERE newer.entity_id=r.entity_id
-              AND newer.tenant_id IS NOT DISTINCT FROM r.tenant_id AND newer.release_no>r.release_no) FOR SHARE OF r`.execute(tx)).rows;
-        if (base.length !== 1) throw new AuthoringConflictError("Draft predecessor is not the current published release for this entity and tenant");
+              AND newer.tenant_id IS NOT DISTINCT FROM r.tenant_id AND newer.release_no>r.release_no) FOR SHARE OF r`.execute(
+            tx,
+          )
+        ).rows;
+        if (base.length !== 1)
+          throw new AuthoringConflictError(
+            "Draft predecessor is not the current published release for this entity and tenant",
+          );
       }
       const result =
         await sql<ChangeSetRow>`INSERT INTO metadata.entity_change_set(id,tenant_id,entity_id,change_set_code,branch_code,title,created_by,base_release_id)
@@ -266,13 +300,15 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
               this.database,
             )
           : table === "entity_materialization_field_mapping"
-          ? await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM metadata.entity_materialization_field_mapping t
+            ? await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM metadata.entity_materialization_field_mapping t
               JOIN metadata.entity_materialization_binding b ON b.id=t.entity_materialization_binding_id
                 AND b.tenant_id IS NOT DISTINCT FROM t.tenant_id
-              WHERE b.change_set_id=${id}::uuid ORDER BY t.id`.execute(this.database)
-          : await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM ${sql.table(`metadata.${table}`)} t WHERE change_set_id=${id}::uuid ORDER BY id`.execute(
-              this.database,
-            );
+              WHERE b.change_set_id=${id}::uuid ORDER BY t.id`.execute(
+                this.database,
+              )
+            : await sql<JsonRow>`SELECT to_jsonb(t) AS value FROM ${sql.table(`metadata.${table}`)} t WHERE change_set_id=${id}::uuid ORDER BY id`.execute(
+                this.database,
+              );
       return result.rows.map((row) => object(row.value));
     };
     const branch = async <T extends object>(table: GraphTable): Promise<T[]> =>
@@ -301,10 +337,14 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       operationRules: await branch("entity_operation_rule"),
       operationScopeBindings: await branch("entity_operation_scope_binding"),
       changeCaseBindings: await branch("entity_change_case_binding"),
-      operationContextRequirements: await branch("entity_operation_context_requirement"),
+      operationContextRequirements: await branch(
+        "entity_operation_context_requirement",
+      ),
       fieldReferenceBindings: await branch("entity_field_reference_binding"),
       materializationBindings: await branch("entity_materialization_binding"),
-      materializationFieldMappings: await branch("entity_materialization_field_mapping"),
+      materializationFieldMappings: await branch(
+        "entity_materialization_field_mapping",
+      ),
       surfaces: await branch("entity_surface"),
       surfaceSections: await branch("entity_surface_section"),
       surfaceFieldBindings: await branch("entity_surface_field_binding"),
@@ -382,7 +422,9 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       );
     if (current.tenantId === null) {
       await sql`SELECT publication.fn_record_system_entity_validation(${id}::uuid,${revision}::bigint,
-        ${canonicalJson(graph)}::jsonb,${JSON.stringify(report)}::jsonb,${actorId}::uuid)`.execute(this.database);
+        ${canonicalJson(graph)}::jsonb,${JSON.stringify(report)}::jsonb,${actorId}::uuid)`.execute(
+        this.database,
+      );
       return;
     }
     await atomic(this.database, async (tx) => {
@@ -445,9 +487,13 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   ) {
     const current = required(await this.get(input.changeSetId));
     if (current.tenantId === null) {
-      const result = await sql<ChangeSetRow>`SELECT * FROM publication.fn_transition_system_entity_change_set(
-        ${input.changeSetId}::uuid,${input.expectedRevision}::bigint,${input.from},${input.to},${input.actorId}::uuid)`.execute(this.database);
-      if (!result.rows[0]) throw new AuthoringConflictError("Stale authoring revision or state");
+      const result =
+        await sql<ChangeSetRow>`SELECT * FROM publication.fn_transition_system_entity_change_set(
+        ${input.changeSetId}::uuid,${input.expectedRevision}::bigint,${input.from},${input.to},${input.actorId}::uuid)`.execute(
+          this.database,
+        );
+      if (!result.rows[0])
+        throw new AuthoringConflictError("Stale authoring revision or state");
       return this.map({ ...result.rows[0], entity_code: current.entityCode });
     }
     const result =
@@ -461,21 +507,52 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   async createRelease(
     input: Parameters<MetaEntityAuthoringRepository["createRelease"]>[0],
   ) {
-    if (input.expectedSourceReleaseId === null && (!input.expectedContractHash || !this.prepareRelease))
-      throw new AuthoringConflictError("First publication requires a reviewed source pin and publication preparation");
+    if (
+      input.expectedSourceReleaseId === null &&
+      (!input.expectedContractHash || !this.prepareRelease)
+    )
+      throw new AuthoringConflictError(
+        "First publication requires a reviewed source pin and publication preparation",
+      );
     return atomic(this.database, async (tx) => {
-      const current = required((await sql<{ tenant_id: string | null }>`SELECT tenant_id FROM metadata.entity_change_set WHERE id=${input.changeSetId}::uuid`.execute(tx)).rows[0]);
+      const current = required(
+        (
+          await sql<{
+            tenant_id: string | null;
+          }>`SELECT tenant_id FROM metadata.entity_change_set WHERE id=${input.changeSetId}::uuid`.execute(
+            tx,
+          )
+        ).rows[0],
+      );
       if (current.tenant_id === null) {
-        if (input.releaseKind !== "publish" || input.expectedSourceReleaseId === undefined || !this.prepareRelease
-          || input.expectedContractHash !== input.artifact.contractHash)
-          throw new AuthoringConflictError("System publication requires explicit enrolled release pins");
+        if (
+          input.releaseKind !== "publish" ||
+          input.expectedSourceReleaseId === undefined ||
+          !this.prepareRelease ||
+          input.expectedContractHash !== input.artifact.contractHash
+        )
+          throw new AuthoringConflictError(
+            "System publication requires explicit enrolled release pins",
+          );
         const releaseId = randomUUID();
-        const release = required((await (input.expectedSourceReleaseId === null ? sql<ReleaseRow>`SELECT * FROM publication.fn_create_system_entity_release(
+        const release = required(
+          (
+            await (
+              input.expectedSourceReleaseId === null
+                ? sql<ReleaseRow>`SELECT * FROM publication.fn_create_system_entity_release(
           ${releaseId}::uuid,${input.changeSetId}::uuid,${input.expectedRevision}::bigint,
-          ${JSON.stringify(input.artifact)}::jsonb,${input.targetPlanes}::text[],${input.actorId}::uuid)` : sql<ReleaseRow>`SELECT * FROM publication.fn_create_system_entity_successor(
+          ${JSON.stringify(input.artifact)}::jsonb,${input.targetPlanes}::text[],${input.actorId}::uuid)`
+                : sql<ReleaseRow>`SELECT * FROM publication.fn_create_system_entity_successor(
           ${releaseId}::uuid,${input.changeSetId}::uuid,${input.expectedRevision}::bigint,${input.expectedSourceReleaseId}::uuid,
-          ${JSON.stringify(input.artifact)}::jsonb,${input.targetPlanes}::text[],${input.actorId}::uuid)`).execute(tx)).rows[0]);
-        await this.prepareRelease(tx, { releaseId, artifact: input.artifact, targetPlanes: input.targetPlanes });
+          ${JSON.stringify(input.artifact)}::jsonb,${input.targetPlanes}::text[],${input.actorId}::uuid)`
+            ).execute(tx)
+          ).rows[0],
+        );
+        await this.prepareRelease(tx, {
+          releaseId,
+          artifact: input.artifact,
+          targetPlanes: input.targetPlanes,
+        });
         return { id: releaseId, releaseNo: Number(release.release_no) };
       }
       const cs = required(
@@ -517,9 +594,17 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
           tx,
         )
       ).rows[0];
-      if (input.expectedContractHash !== undefined && input.artifact.contractHash !== input.expectedContractHash)
-        throw new AuthoringConflictError("Signed artifact does not match the reviewed source pin");
-      if (input.expectedSourceReleaseId !== undefined && (previous?.id ?? null) !== input.expectedSourceReleaseId)
+      if (
+        input.expectedContractHash !== undefined &&
+        input.artifact.contractHash !== input.expectedContractHash
+      )
+        throw new AuthoringConflictError(
+          "Signed artifact does not match the reviewed source pin",
+        );
+      if (
+        input.expectedSourceReleaseId !== undefined &&
+        (previous?.id ?? null) !== input.expectedSourceReleaseId
+      )
         throw Error("DEV_PUBLICATION_SOURCE_CHANGED");
       const releaseId = randomUUID(),
         releaseNo = previous ? Number(previous["release_no"]) + 1 : 1;
@@ -640,7 +725,13 @@ async function replaceGraphInTransaction(
   if (Number(advanced.rows[0]?.["revision"]) !== input.expectedRevision + 1)
     throw new AuthoringConflictError("Stale authoring revision");
   // The successful revision advance holds the row lock. Capture before replacing rows.
-  await captureDraftSave(db, input.changeSetId, input.expectedRevision, input.actorId, "previous");
+  await captureDraftSave(
+    db,
+    input.changeSetId,
+    input.expectedRevision,
+    input.actorId,
+    "previous",
+  );
   // Mapping rows inherit their change-set/entity coordinates from the parent;
   // they deliberately do not duplicate those columns in normalized storage.
   await sql`DELETE FROM metadata.entity_materialization_field_mapping m
@@ -716,10 +807,22 @@ async function replaceGraphInTransaction(
       input.graph.operationScopeBindings ?? [],
     ],
     ["entity_change_case_binding", input.graph.changeCaseBindings ?? []],
-    ["entity_operation_context_requirement", input.graph.operationContextRequirements ?? []],
-    ["entity_field_reference_binding", input.graph.fieldReferenceBindings ?? []],
-    ["entity_materialization_binding", input.graph.materializationBindings ?? []],
-    ["entity_materialization_field_mapping", input.graph.materializationFieldMappings ?? []],
+    [
+      "entity_operation_context_requirement",
+      input.graph.operationContextRequirements ?? [],
+    ],
+    [
+      "entity_field_reference_binding",
+      input.graph.fieldReferenceBindings ?? [],
+    ],
+    [
+      "entity_materialization_binding",
+      input.graph.materializationBindings ?? [],
+    ],
+    [
+      "entity_materialization_field_mapping",
+      input.graph.materializationFieldMappings ?? [],
+    ],
     ["entity_surface_section", input.graph.surfaceSections ?? []],
     ["entity_surface_field_binding", input.graph.surfaceFieldBindings ?? []],
     ["entity_surface_operation", input.graph.surfaceOperations ?? []],
@@ -758,16 +861,33 @@ async function replaceGraphInTransaction(
   await sql`SELECT metadata.fn_validate_entity_graph(${input.changeSetId}::uuid)`.execute(
     db,
   );
-  await captureDraftSave(db, input.changeSetId, input.expectedRevision + 1, input.actorId, "saved");
+  await captureDraftSave(
+    db,
+    input.changeSetId,
+    input.expectedRevision + 1,
+    input.actorId,
+    "saved",
+  );
 }
-async function captureDraftSave(db: Kysely<Database>, id: string, revision: number, actor: string, kind: string) {
+async function captureDraftSave(
+  db: Kysely<Database>,
+  id: string,
+  revision: number,
+  actor: string,
+  kind: string,
+) {
   const repository = new KyselyMetaEntityAuthoringRepository(db);
   const current = required(await repository.get(id));
   const graph = await repository.loadGraph(id);
   await sql`INSERT INTO snapshot.entity_draft_save(change_set_id,lock_version,tenant_id,graph,graph_hash,captured_by,capture_kind)
-    VALUES(${id}::uuid,${revision},${current.tenantId}::uuid,${canonicalJson(graph)}::jsonb,${sha256(graph)},${actor}::uuid,${kind}) ON CONFLICT(change_set_id,lock_version) DO NOTHING`.execute(db);
+    VALUES(${id}::uuid,${revision},${current.tenantId}::uuid,${canonicalJson(graph)}::jsonb,${sha256(graph)},${actor}::uuid,${kind}) ON CONFLICT(change_set_id,lock_version) DO NOTHING`.execute(
+    db,
+  );
   const existing = await repository.readDraftSave(id, revision);
-  if (!existing || sha256(existing) !== sha256(graph)) throw new AuthoringConflictError("Saved revision already contains different content");
+  if (!existing || sha256(existing) !== sha256(graph))
+    throw new AuthoringConflictError(
+      "Saved revision already contains different content",
+    );
 }
 async function insertRows(
   db: Kysely<Database>,
@@ -850,7 +970,15 @@ const NUMERIC_PROPERTIES = new Set([
   "plannedRemovalReleaseNo",
 ]);
 const BRANCH_COLUMNS = {
-  entity_capability: ["id", "capabilityKey", "declaration", "binding", "profile", "profileDefinition", "overrides"],
+  entity_capability: [
+    "id",
+    "capabilityKey",
+    "declaration",
+    "binding",
+    "profile",
+    "profileDefinition",
+    "overrides",
+  ],
   entity_class_profile: [
     "entityClass",
     "profileVersion",
@@ -1177,11 +1305,53 @@ const BRANCH_COLUMNS = {
     "missingValueBehavior",
     "status",
   ],
-  entity_change_case_binding: ["id","entityOperationId","bindingKey","caseKind","caseEntityCode","workflowKey","materializationBindingKey","status"],
-  entity_operation_context_requirement: ["id","entityOperationId","coordinateKey","sourceKind","sourceFieldKey","required","status"],
-  entity_field_reference_binding: ["id","entityFieldId","bindingKey","referenceKind","targetEntityCode","lookupDomain","resolverKey","requireActive","status"],
-  entity_materialization_binding: ["id","bindingKey","targetEntityCode","materializerKey","targetCollectionKey","status"],
-  entity_materialization_field_mapping: ["id","entityMaterializationBindingId","sourceFieldKey","targetFieldKey","transformKey","required","position"],
+  entity_change_case_binding: [
+    "id",
+    "entityOperationId",
+    "bindingKey",
+    "caseKind",
+    "caseEntityCode",
+    "workflowKey",
+    "materializationBindingKey",
+    "status",
+  ],
+  entity_operation_context_requirement: [
+    "id",
+    "entityOperationId",
+    "coordinateKey",
+    "sourceKind",
+    "sourceFieldKey",
+    "required",
+    "status",
+  ],
+  entity_field_reference_binding: [
+    "id",
+    "entityFieldId",
+    "bindingKey",
+    "referenceKind",
+    "targetEntityCode",
+    "lookupDomain",
+    "resolverKey",
+    "requireActive",
+    "status",
+  ],
+  entity_materialization_binding: [
+    "id",
+    "bindingKey",
+    "targetEntityCode",
+    "materializerKey",
+    "targetCollectionKey",
+    "status",
+  ],
+  entity_materialization_field_mapping: [
+    "id",
+    "entityMaterializationBindingId",
+    "sourceFieldKey",
+    "targetFieldKey",
+    "transformKey",
+    "required",
+    "position",
+  ],
 } as const;
 
 function atomic<T>(

@@ -41,4 +41,14 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 - Preserve unrelated work and existing application behavior. This instruction
   does not authorize deleting or rewriting other existing applications.
 
+## Naming and test conventions
+
+- New server unit tests are colocated with the unit as `src/**/*.test.ts`.
+  Existing `__tests__/` directories are grandfathered; move them only when the
+  owning package is otherwise being changed.
+- New exported boolean predicates use a plain adjective (`primary`, `enabled`,
+  `loading`) unless an `is*` name is required to distinguish the predicate from
+  a noun or value in the same public contract. Do not rename existing public
+  contracts merely to conform.
+
 These instructions are persistent repository guidance for future sessions.

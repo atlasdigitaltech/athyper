@@ -2,12 +2,19 @@ import { compileEntityIntakeSurfaces } from "./intake-surface-projection.js";
 import { compileEntityIntakeFlows } from "./intake-projection.js";
 import { createHash } from "node:crypto";
 import { parseEntityRuntimeDescriptor } from "./descriptor-parser.js";
-import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceGraph, assertCommonReferenceDescriptor } from "@athyper/server-contract-metadata";
+import {
+  COMMON_REFERENCE_VIEW_PERMISSION,
+  assertCommonReferenceGraph,
+  assertCommonReferenceDescriptor,
+} from "@athyper/server-contract-metadata";
 
 type Row = Record<string, any>;
 
 /** Search and filter are independent authorizations; configuration cannot grant either. */
-export function projectFieldQueryAccess(queryUses: readonly string[], configuredSearch: boolean) {
+export function projectFieldQueryAccess(
+  queryUses: readonly string[],
+  configuredSearch: boolean,
+) {
   return {
     sortable: queryUses.includes("sort"),
     filterable: queryUses.includes("filter"),
@@ -17,22 +24,46 @@ export function projectFieldQueryAccess(queryUses: readonly string[], configured
 
 /** Stored field writes must agree with both the native operation and its field policy.
  * A writable field alone never grants an operation or makes it executable. */
-export function projectStoredFieldWrites(field: Row, policy: Row, operations: readonly Row[]) {
-  if (field.valueOrigin !== "stored" || !["read_only", "write_once", "mutable"].includes(field.writeMode))
+export function projectStoredFieldWrites(
+  field: Row,
+  policy: Row,
+  operations: readonly Row[],
+) {
+  if (
+    field.valueOrigin !== "stored" ||
+    !["read_only", "write_once", "mutable"].includes(field.writeMode)
+  )
     throw Error(`NATIVE_PROJECTION_FIELD_ADAPTER_REQUIRED:${field.fieldKey}`);
   const requested = policy.writeOperations ?? [];
-  if (!Array.isArray(requested)) throw Error("NATIVE_PROJECTION_FIELD_WRITES_INVALID");
+  if (!Array.isArray(requested))
+    throw Error("NATIVE_PROJECTION_FIELD_WRITES_INVALID");
   return requested.map((key: unknown) => {
-    if (key !== "create" && key !== "patch") throw Error("NATIVE_PROJECTION_FIELD_WRITE_OPERATION_UNSUPPORTED");
-    if (field.writeMode === "read_only" || (field.writeMode === "write_once" && key !== "create"))
-      throw Error(`NATIVE_PROJECTION_FIELD_WRITE_MODE_MISMATCH:${field.fieldKey}`);
-    const operation = operations.find(operation => operation.operationKey === key && operation.status !== "deprecated");
+    if (key !== "create" && key !== "patch")
+      throw Error("NATIVE_PROJECTION_FIELD_WRITE_OPERATION_UNSUPPORTED");
+    if (
+      field.writeMode === "read_only" ||
+      (field.writeMode === "write_once" && key !== "create")
+    )
+      throw Error(
+        `NATIVE_PROJECTION_FIELD_WRITE_MODE_MISMATCH:${field.fieldKey}`,
+      );
+    const operation = operations.find(
+      (operation) =>
+        operation.operationKey === key && operation.status !== "deprecated",
+    );
     // Persisted native operations do not carry the optional authoring fieldKeys
     // hint. The published field policy above is the write allowlist. When an
     // authoring hint is present, it must agree rather than widen that policy.
-    if (!operation || operation.operationKind !== (key === "patch" ? "update" : "create") ||
-        (operation.fieldKeys !== undefined && (!Array.isArray(operation.fieldKeys) || !operation.fieldKeys.includes(field.fieldKey))))
-      throw Error(`NATIVE_PROJECTION_FIELD_WRITE_BINDING_REQUIRED:${field.fieldKey}`);
+    if (
+      !operation ||
+      operation.operationKind !== (key === "patch" ? "update" : "create") ||
+      (operation.fieldKeys !== undefined &&
+        (!Array.isArray(operation.fieldKeys) ||
+          !operation.fieldKeys.includes(field.fieldKey)))
+    )
+      throw Error(
+        `NATIVE_PROJECTION_FIELD_WRITE_BINDING_REQUIRED:${field.fieldKey}`,
+      );
     return key;
   });
 }
@@ -70,10 +101,21 @@ export function projectListPresentation(native: Row, baseline?: Row): Row {
   };
 }
 /** Copy only presentation metadata; authorization and query policy stay separate. */
-export function projectNativeFieldChoices(display: Row = {}, dataType?: string): Row {
+export function projectNativeFieldChoices(
+  display: Row = {},
+  dataType?: string,
+): Row {
   const list = Object.fromEntries(
-    ["semanticRole", "filterOperators", "groupable", "defaultWidth", "rendererKey", "columnGroup"]
-      .filter(key => display[key] !== undefined).map(key => [key, display[key]]),
+    [
+      "semanticRole",
+      "filterOperators",
+      "groupable",
+      "defaultWidth",
+      "rendererKey",
+      "columnGroup",
+    ]
+      .filter((key) => display[key] !== undefined)
+      .map((key) => [key, display[key]]),
   );
   const options = display.lookup?.options;
   return {
@@ -118,8 +160,12 @@ export function compileNativeRuntimeProjection(input: {
   permissions: readonly { code: string; scopeKinds: readonly string[] }[];
 }) {
   const { native, registration } = input;
-  const commonReference = native.referenceCapability === COMMON_REFERENCE_VIEW_PERMISSION ||
-    (Array.isArray(native.operationPermissions) && native.operationPermissions.some(p => p.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION));
+  const commonReference =
+    native.referenceCapability === COMMON_REFERENCE_VIEW_PERMISSION ||
+    (Array.isArray(native.operationPermissions) &&
+      native.operationPermissions.some(
+        (p) => p.permissionCode === COMMON_REFERENCE_VIEW_PERMISSION,
+      ));
   if (commonReference) assertCommonReferenceGraph(native, registration.plane);
   const object = (value: unknown): Row => {
     if (!value || typeof value !== "object" || Array.isArray(value))
@@ -227,9 +273,15 @@ export function compileNativeRuntimeProjection(input: {
   );
   const intakeFlows = compileEntityIntakeFlows(native);
   const intakeSurfaces = compileEntityIntakeSurfaces(native);
-  const runtimeInputs = new Set(intakeSurfaces.flatMap(s => s.sections.flatMap(section => section.fields.map(f => f.key))));
+  const runtimeInputs = new Set(
+    intakeSurfaces.flatMap((s) =>
+      s.sections.flatMap((section) => section.fields.map((f) => f.key)),
+    ),
+  );
   const descriptor = {
-    ...(commonReference ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION } : {}),
+    ...(commonReference
+      ? { referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION }
+      : {}),
     schema: "athyper.entity-runtime-descriptor/1.0",
     entityCode: registration.entityCode,
     planeKey: registration.plane,
@@ -237,49 +289,81 @@ export function compileNativeRuntimeProjection(input: {
     ...(registration.detailRouteTemplate
       ? { detailRouteTemplate: registration.detailRouteTemplate }
       : {}),
-    fields: fields.filter(field => !(field.valueOrigin === "runtime" && runtimeInputs.has(field.fieldKey))).map((field) => {
-      if (!registration.columns.includes(field.storagePath))
-        throw Error(
-          `NATIVE_PROJECTION_STORAGE_COLUMN_MISSING:${field.fieldKey}`,
+    fields: fields
+      .filter(
+        (field) =>
+          !(
+            field.valueOrigin === "runtime" && runtimeInputs.has(field.fieldKey)
+          ),
+      )
+      .map((field) => {
+        if (!registration.columns.includes(field.storagePath))
+          throw Error(
+            `NATIVE_PROJECTION_STORAGE_COLUMN_MISSING:${field.fieldKey}`,
+          );
+        const policy = (authorization.fieldPolicies as Row[]).find((policy) =>
+          policy.fields.includes(field.fieldKey),
         );
-      const policy = (authorization.fieldPolicies as Row[]).find((policy) =>
-        policy.fields.includes(field.fieldKey),
-      );
-      if (!policy)
-        throw Error(
-          `NATIVE_PROJECTION_FIELD_POLICY_REQUIRED:${field.fieldKey}`,
+        if (!policy)
+          throw Error(
+            `NATIVE_PROJECTION_FIELD_POLICY_REQUIRED:${field.fieldKey}`,
+          );
+        const binding = presentationFields.find(
+          (binding) => fieldIds.get(binding.entityFieldId) === field.fieldKey,
         );
-      const binding = presentationFields.find(
-        (binding) => fieldIds.get(binding.entityFieldId) === field.fieldKey,
-      );
-      const display = registration.fieldPresentationDefaults?.[field.fieldKey];
-      const choices = projectNativeFieldChoices(binding?.displayConfig, field.dataType);
-      const constraints=Object.fromEntries(Object.entries({minLength:field.typeConfig?.min_length,maxLength:field.typeConfig?.max_length,pattern:field.typeConfig?.pattern,minimum:field.typeConfig?.minimum,maximum:field.typeConfig?.maximum}).filter(([,value])=>value!==undefined));
-      return {
-        ...choices,
-        ...(Object.keys(constraints).length ? {validation:{...choices.validation,...constraints}} : {}),
-        key: field.fieldKey,
-        storagePath: field.storagePath,
-        type: field.dataType,
-        required: field.writeMode !== "read_only" && field.cardinality === "one",
-        writableOn: projectStoredFieldWrites(field, policy, rows("operations")),
-        ...(field.dataClassification && field.dataClassification !== "public" ? { classification: field.dataClassification } : {}),
-        ...projectFieldQueryAccess(policy.queryUses, searchableFields.has(field.id)),
-        list: {
-          ...choices.list,
-          label: binding?.labelOverride ?? display?.label ?? field.fieldKey,
-          defaultOrder: binding?.position ?? display?.defaultOrder ?? 9999,
-          defaultVisible: binding
-            ? binding.displayConfig?.defaultVisible !== false
-            : defaultSurface
-              ? false
-              : (display?.defaultVisible ?? false),
-        },
-      };
-    }),
+        const display =
+          registration.fieldPresentationDefaults?.[field.fieldKey];
+        const choices = projectNativeFieldChoices(
+          binding?.displayConfig,
+          field.dataType,
+        );
+        const constraints = Object.fromEntries(
+          Object.entries({
+            minLength: field.typeConfig?.min_length,
+            maxLength: field.typeConfig?.max_length,
+            pattern: field.typeConfig?.pattern,
+            minimum: field.typeConfig?.minimum,
+            maximum: field.typeConfig?.maximum,
+          }).filter(([, value]) => value !== undefined),
+        );
+        return {
+          ...choices,
+          ...(Object.keys(constraints).length
+            ? { validation: { ...choices.validation, ...constraints } }
+            : {}),
+          key: field.fieldKey,
+          storagePath: field.storagePath,
+          type: field.dataType,
+          required:
+            field.writeMode !== "read_only" && field.cardinality === "one",
+          writableOn: projectStoredFieldWrites(
+            field,
+            policy,
+            rows("operations"),
+          ),
+          // Keep `public` too. Export admission is fail-closed and therefore
+          // cannot distinguish an explicitly public field from an omitted
+          // classification if the projection drops it.
+          classification: field.dataClassification,
+          ...projectFieldQueryAccess(
+            policy.queryUses,
+            searchableFields.has(field.id),
+          ),
+          list: {
+            ...choices.list,
+            label: binding?.labelOverride ?? display?.label ?? field.fieldKey,
+            defaultOrder: binding?.position ?? display?.defaultOrder ?? 9999,
+            defaultVisible: binding
+              ? binding.displayConfig?.defaultVisible !== false
+              : defaultSurface
+                ? false
+                : (display?.defaultVisible ?? false),
+          },
+        };
+      }),
     operations,
-    ...(intakeFlows.length ? {intakeFlows} : {}),
-    ...(intakeSurfaces.length ? {intakeSurfaces} : {}),
+    ...(intakeFlows.length ? { intakeFlows } : {}),
+    ...(intakeSurfaces.length ? { intakeSurfaces } : {}),
     authorization,
     ...Object.fromEntries(
       ["listPresentation", "recordPresentation", "directoryScope"]
@@ -311,7 +395,8 @@ export function compileNativeRuntimeProjection(input: {
     ),
   };
   // Invoke the real runtime parser before an artifact can be staged or signed.
-  if (commonReference) assertCommonReferenceDescriptor(descriptor, registration.plane);
+  if (commonReference)
+    assertCommonReferenceDescriptor(descriptor, registration.plane);
   const compiledHash = createHash("sha256")
     .update(JSON.stringify(descriptor))
     .digest("hex");

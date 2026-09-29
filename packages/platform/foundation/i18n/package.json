@@ -10,6 +10,7 @@
     "./react": "./src/react.tsx",
     "./server": "./src/server.ts",
     "./entity-messages": "./src/entity-messages.ts",
+    "./entity-reference-messages": "./src/entity-reference-messages.ts",
     "./entity-catalogs": "./src/entity-catalogs.ts",
     "./entity-labels": "./src/entity-labels.ts",
     "./entity-errors": "./src/entity-errors.ts",

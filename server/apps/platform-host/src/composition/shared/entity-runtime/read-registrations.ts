@@ -2,12 +2,13 @@ import { parseEntityAuthorizationProfile, type EntityAuthorizationRuntimeRegistr
 import type { RecordQueryService, RecordMutationService } from "@athyper/server-contract-records";
 import type { EntityScopeAdapter } from "@athyper/server-service-records";
 
-/** Publication callable inventory for the installed record-query service.
- * Operation semantics and keys are host-owned, never copied from requested bindings.
- * This admission reader is not installed as a backend scope adapter (which would
- * recursively authorize its own queries). Every read uses the existing service.
+/**
+ * The sole host builder for Entity Framework authorization registrations.
+ * Operation semantics, handler keys and scope resolution are host-owned; metadata
+ * selects only from this published callable inventory. This is deliberately not a
+ * backend scope adapter, which would recursively authorize its own queries.
  */
-export function createEntityReadRegistrations(queries: RecordQueryService, rawProfile: unknown, mutations?: RecordMutationService): readonly EntityAuthorizationRuntimeRegistration[] {
+export function createEntityAuthorizationRegistrations(queries: RecordQueryService, rawProfile: unknown, mutations?: RecordMutationService): readonly EntityAuthorizationRuntimeRegistration[] {
   const profile = parseEntityAuthorizationProfile(rawProfile);
   if (profile.ownership !== "tenant.record.v1" || profile.directory.population !== "tenant"
     || profile.directory.operation !== "list" || profile.recordReadOperation !== "read") return [];
