@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  BUSINESS_PARTNER_RELAY_OPERATIONS,
   COMMON_PLANE_RELAY_OPERATIONS,
   ENTITY_LIST_QUERY_OPERATION,
   ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS,
   MESH_NETWORK_ACCOUNTS_OPERATION,
   NEON_WORK_CONTEXTS_OPERATION,
   STUDIO_BP_LOCAL_PREVIEW_OPERATION,
-} from "@athyper/platform-gateway-bff-relay";
+} from "../../packages/platform/gateway/bff-relay/src/index";
 
 const routeKey = (operation: { method: string; path: string }) =>
   `${operation.method} ${operation.path}`;
@@ -40,4 +41,33 @@ test("plane-specific operations stay out of the common group", () => {
   ]) {
     assert.ok(!ids.has(operation.id), operation.id);
   }
+});
+
+test("common plane relay operations carry every attachment operation once", () => {
+  const ids = COMMON_PLANE_RELAY_OPERATIONS.map((operation) => operation.id);
+  for (const id of [
+    "attachments.stage",
+    "attachments.finalize",
+    "attachments.status",
+    "attachments.browse",
+    "attachments.remove",
+    "attachments.rename",
+    "attachments.folder",
+    "attachments.download",
+    "attachments.preview",
+    "attachments.extract",
+    "attachments.search",
+    "attachments.category",
+    "attachments.archive-outcome",
+    "attachments.archive",
+  ])
+    assert.equal(ids.filter((item) => item === id).length, 1, id);
+});
+
+test("plane-specific groups do not re-register attachment operations", () => {
+  assert.ok(
+    !BUSINESS_PARTNER_RELAY_OPERATIONS.some((operation) =>
+      operation.id.startsWith("attachments."),
+    ),
+  );
 });

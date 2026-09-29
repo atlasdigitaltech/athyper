@@ -504,6 +504,34 @@ export const ATTACHMENT_DOWNLOAD_OPERATION: RelayOperation = Object.freeze({
   requiresTenant: true,
   maxBodyBytes: 4096,
 });
+export const ATTACHMENT_READ_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    ATTACHMENT_DOWNLOAD_OPERATION,
+    {
+      id: "attachments.preview",
+      method: "POST",
+      path: "/api/attachments/:attachmentId/preview",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 4096,
+    },
+    {
+      id: "attachments.extract",
+      method: "POST",
+      path: "/api/attachments/:attachmentId/extract",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 4096,
+    },
+    {
+      id: "attachments.search",
+      method: "POST",
+      path: "/api/attachments/search",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 4096,
+    },
+  ]);
 export const ATLAS_KNOWLEDGE_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     {
@@ -2286,32 +2314,6 @@ export const BUSINESS_PARTNER_RELAY_OPERATIONS: readonly RelayOperation[] =
     BUSINESS_PARTNER_360_BANK_REVEAL_OPERATION,
     BUSINESS_PARTNER_360_GOVERNANCE_OPERATION,
     PERSON_RESTRICTED_EVIDENCE_REVEAL_OPERATION,
-    ATTACHMENT_DOWNLOAD_OPERATION,
-    {
-      id: "attachments.preview",
-      method: "POST",
-      path: "/api/attachments/:attachmentId/preview",
-      requestClass: "json",
-      requiresTenant: true,
-      maxBodyBytes: 4096,
-    },
-    {
-      id: "attachments.extract",
-      method: "POST",
-      path: "/api/attachments/:attachmentId/extract",
-      requestClass: "json",
-      requiresTenant: true,
-      maxBodyBytes: 4096,
-    },
-    {
-      id: "attachments.search",
-      method: "POST",
-      path: "/api/attachments/search",
-      requestClass: "json",
-      requiresTenant: true,
-      maxBodyBytes: 4096,
-    },
-    ATTACHMENT_BROWSE_OPERATION,
     ...BUSINESS_PARTNER_360_SECTION_OPERATIONS,
     BUSINESS_PARTNER_ELIGIBILITY_READ_OPERATION,
     BUSINESS_PARTNER_SUPPLIER_ACTIVATION_OPERATION,
@@ -3532,6 +3534,7 @@ export const COLLABORATION_RELAY_OPERATIONS: readonly RelayOperation[] =
 export const COMMON_PLANE_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     ...COLLABORATION_RELAY_OPERATIONS,
+    ...ATTACHMENT_READ_RELAY_OPERATIONS,
     IAM_ME_OPERATION,
     EXPERIENCE_BOOTSTRAP_OPERATION,
     PRINCIPAL_LOCALE_UPDATE_OPERATION,

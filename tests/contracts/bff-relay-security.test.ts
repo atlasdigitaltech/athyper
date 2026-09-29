@@ -5,7 +5,7 @@ import { gzipSync } from "node:zlib";
 import { clearedAuthSessionCookies } from "../../packages/platform/iam/auth-bff/src/index";
 import { describe, it } from "node:test";
 import ts from "typescript";
-import { REFERENCE_HISTORY_RELAY_OPERATIONS, ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_APPLICATION_DESCRIPTOR_OPERATION, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
+import { REFERENCE_HISTORY_RELAY_OPERATIONS, ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, COMMON_PLANE_RELAY_OPERATIONS, createRelayHandler, ENTITY_APPLICATION_DESCRIPTOR_OPERATION, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
 
 const context = (...path: string[]) => ({ params: Promise.resolve({ path }) });
 // Inspect the actual relay configuration. Conditional pilot arrays can contain
@@ -382,4 +382,13 @@ it("registers attachment lifecycle mutations with mandatory replay keys and read
     assert.equal(operation.idempotency, "required");
   }
   assert.ok(ATLAS_ANSWER_RELAY_OPERATIONS.some(item => item.method === "GET" && item.path === "/api/attachments/:attachmentId/archive"));
+});
+
+it("registers attachment read operations for every plane as tenant-scoped, bounded requests", () => {
+  for (const id of ["attachments.download", "attachments.preview", "attachments.extract", "attachments.search", "attachments.browse"]) {
+    const operation = COMMON_PLANE_RELAY_OPERATIONS.find(item => item.id === id);
+    assert.ok(operation, id);
+    assert.equal(operation.requiresTenant, true, id);
+    if (operation.method === "POST") assert.ok(operation.maxBodyBytes && operation.maxBodyBytes <= 4096, id);
+  }
 });
