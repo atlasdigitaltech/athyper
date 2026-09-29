@@ -25,7 +25,7 @@ import { RecordServiceError } from "../errors.js";
 import { descriptorFor } from "../query-service.js";
 import type { GovernedImportAdapterRegistry } from "./import-adapter-registry.js";
 import { structuredImportFormat } from "./structured-import-file-codec.js";
-import { assertSelectedExportScope } from "./export-scope.js";
+import { assertBoundedExportScope } from "./export-scope.js";
 import { assertExportFieldAdmission } from "./export-admission.js";
 
 type Row = Readonly<Record<string, unknown>>;
@@ -244,7 +244,7 @@ export function createRecordTransferService<Transaction>(options: {
     filter: Readonly<Record<string, unknown>>,
   ) => {
     const exactFilter = structuredClone(filter);
-    assertSelectedExportScope(exactFilter);
+    assertBoundedExportScope(exactFilter);
     const descriptor = await descriptorFor(
       options.metadata,
       context,

@@ -35,7 +35,7 @@ import type {
 } from "./kysely-transfer-store.js";
 import type { GovernedImportAdapterRegistry } from "./import-adapter-registry.js";
 import { createXlsxExport, xlsxArtifact } from "./xlsx-workbook-codec.js";
-import { assertSelectedExportScope } from "./export-scope.js";
+import { assertBoundedExportScope } from "./export-scope.js";
 
 export const RECORD_TRANSFER_QUEUE = "records.transfer";
 export const EXECUTE_RECORD_IMPORT_JOB = "records.import.execute";
@@ -454,7 +454,7 @@ export function createRecordExportHandler(options: {
           "export",
           scope.authorizationResource,
         );
-        assertSelectedExportScope(request.exactFilter);
+        assertBoundedExportScope(request.exactFilter);
         const transfer = exportSettings(request.exactFilter, descriptor);
         let rowCount = 0;
         if (
@@ -778,7 +778,8 @@ function filters(value: Readonly<Record<string, unknown>>) {
     rawSort = value["sort"],
     rawRecordIds = value["recordIds"],
     search = value["search"],
-    scopeCoordinate = value["scopeCoordinate"];
+    scopeCoordinate = value["scopeCoordinate"],
+    standardViewKey = value["standardViewKey"];
   return {
     ...(Array.isArray(rawFilters)
       ? { filters: rawFilters as readonly RecordFilter[] }
@@ -794,6 +795,9 @@ function filters(value: Readonly<Record<string, unknown>>) {
         }
       : {}),
     ...(typeof search === "string" && search ? { search } : {}),
+    ...(typeof standardViewKey === "string" && standardViewKey
+      ? { standardViewKey }
+      : {}),
     ...(scopeCoordinate &&
     typeof scopeCoordinate === "object" &&
     !Array.isArray(scopeCoordinate)

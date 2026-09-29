@@ -691,6 +691,8 @@ export function createEntityListService(options: {
           limit: query.limit ?? safeDescriptor.limits.defaultPageSize,
           cursor: query.cursor ?? null,
           fields: query.fields ?? [],
+          standardViewKey: query.standardViewKey ?? null,
+          recordIds: query.recordIds ? [...query.recordIds].sort() : [],
           filters: query.filters ?? [],
           sort: query.sort ?? [],
           group: query.group ?? null,
