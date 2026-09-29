@@ -1,6 +1,7 @@
 import {
   ENTITY_LIST_MAX_FILTERS,
   ENTITY_LIST_MAX_SORT_LEVELS,
+  entityListRelativeDateRange,
 } from "@athyper/contract-platform-entity-list";
 import type {
   EntityListDescriptorV1,
@@ -231,27 +232,7 @@ export function parseCollectionState(
           if (typeof x === "number" && !Number.isFinite(x))
             throw new TypeError("Filter number must be finite");
           if (op === "relative") {
-            if (
-              ![
-                "today",
-                "yesterday",
-                "last_7_days",
-                "last_30_days",
-                "last_90_days",
-                "last_365_days",
-                "tomorrow",
-                "next_7_days",
-                "next_30_days",
-                "next_90_days",
-                "next_365_days",
-                "this_week",
-                "this_quarter",
-                "last_year",
-                "this_year",
-                "next_year",
-                "this_month",
-              ].includes(String(x))
-            )
+            if (!entityListRelativeDateRange(x))
               throw new TypeError("Unsupported relative period");
           } else if (d.valueKind === "date" || d.valueKind === "datetime") {
             if (typeof x !== "string" || !Number.isFinite(Date.parse(x)))

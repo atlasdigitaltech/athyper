@@ -50,28 +50,46 @@ export const ENTITY_LIST_MAX_SORT_LEVELS = 10;
 export const ENTITY_LIST_MAX_URL_LENGTH = 8_192;
 /** Longest search term the records API accepts (route schema and query service). */
 export const ENTITY_LIST_MAX_SEARCH_LENGTH = 512;
-/** Values accepted by every Entity Framework relative-date filter endpoint. */
-export const ENTITY_LIST_RELATIVE_DATE_VALUES = [
-  "today",
-  "yesterday",
-  "tomorrow",
-  "last_7_days",
-  "last_30_days",
-  "last_90_days",
-  "last_365_days",
-  "next_7_days",
-  "next_30_days",
-  "next_90_days",
-  "next_365_days",
-  "this_week",
-  "this_month",
-  "this_quarter",
-  "last_year",
-  "this_year",
-  "next_year",
-] as const;
+/** How a relative-date value maps to a half-open range `[from, to)`.
+ * `days` offsets are counted from today; `calendar` offsets are whole units
+ * from the start of the current week (Monday), month, quarter or year. This
+ * table is the single definition every filter endpoint, repository and
+ * validator derives from; never restate a range elsewhere. */
+export type EntityListRelativeDateRange =
+  | { readonly kind: "days"; readonly from: number; readonly to: number }
+  | { readonly kind: "calendar"; readonly unit: "week" | "month" | "quarter" | "year"; readonly from: number; readonly to: number };
+const days = (from: number, to: number) => Object.freeze({ kind: "days" as const, from, to });
+const calendar = (unit: "week" | "month" | "quarter" | "year", from: number, to: number) => Object.freeze({ kind: "calendar" as const, unit, from, to });
+export const ENTITY_LIST_RELATIVE_DATE_RANGES = Object.freeze({
+  today: days(0, 1),
+  yesterday: days(-1, 0),
+  tomorrow: days(1, 2),
+  last_7_days: days(-7, 1),
+  last_30_days: days(-30, 1),
+  last_90_days: days(-90, 1),
+  last_365_days: days(-365, 1),
+  next_7_days: days(0, 8),
+  next_30_days: days(0, 31),
+  next_90_days: days(0, 91),
+  next_365_days: days(0, 366),
+  this_week: calendar("week", 0, 1),
+  this_month: calendar("month", 0, 1),
+  this_quarter: calendar("quarter", 0, 1),
+  last_year: calendar("year", -1, 0),
+  this_year: calendar("year", 0, 1),
+  next_year: calendar("year", 1, 2),
+}) satisfies Readonly<Record<string, EntityListRelativeDateRange>>;
 export type EntityListRelativeDateValue =
-  (typeof ENTITY_LIST_RELATIVE_DATE_VALUES)[number];
+  keyof typeof ENTITY_LIST_RELATIVE_DATE_RANGES;
+/** Values accepted by every Entity Framework relative-date filter endpoint. */
+export const ENTITY_LIST_RELATIVE_DATE_VALUES = Object.freeze(
+  Object.keys(ENTITY_LIST_RELATIVE_DATE_RANGES),
+) as readonly EntityListRelativeDateValue[];
+export function entityListRelativeDateRange(value: unknown): EntityListRelativeDateRange | undefined {
+  return typeof value === "string" && Object.hasOwn(ENTITY_LIST_RELATIVE_DATE_RANGES, value)
+    ? ENTITY_LIST_RELATIVE_DATE_RANGES[value as EntityListRelativeDateValue]
+    : undefined;
+}
 export type EntityListMaxVisibleColumns = 100;
 export type EntityListMaxFilters = 20;
 export type EntityListMaxSortLevels = 10;
