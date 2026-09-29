@@ -14,3 +14,7 @@ export * from "./entity-capability-policy.js";
 export * from "./record-participants.js";
 export * from "./entity-collaboration-service.js";
 export * from "./published-summary-service.js";
+
+export * from "./entity-activity-policy.js";
+export * from "./entity-activity-service.js";
+export * from "./entity-activity-routes.js";

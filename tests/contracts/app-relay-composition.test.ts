@@ -108,3 +108,26 @@ for (const [plane, factory] of Object.entries({ neon, mesh, studio })) {
     assert.equal(calls, 2);
   });
 }
+
+for (const [plane, factory] of Object.entries({neon,mesh,studio})) {
+  test(`${plane}: Activity routes retain tenant, CSRF and capture idempotency gates`, async () => {
+    const forwarded: Headers[] = [];
+    const handler = factory({appOrigin:"https://app.test",runtimeApiUrl:"http://runtime.test",session:{
+      resolve:async()=>({accessToken:"test",plane,realmKey:"athyper",tenantId:"tenant",principalId:"principal",authEpoch:1,csrfToken:"csrf"}),
+      refresh:async()=>undefined,invalidate:async()=>[],
+    },fetch:async(_url,init)=>{forwarded.push(new Headers(init?.headers));return Response.json({});}});
+    const base="entity-runtime/country/records/record/activity";
+    const call=(suffix:string,method="GET",headers:Record<string,string>={})=>handler(new Request(`https://app.test/api/relay/${base}${suffix}`,{
+      method,headers:{origin:"https://app.test","content-type":"application/json","x-csrf-token":"csrf","x-tenant-id":"forged",...headers},...(method==="POST"?{body:"{}"}:{}),
+    }),{params:Promise.resolve({path:(base+suffix).split("/")})});
+    for(const suffix of ["","/audit","/versions","/snapshots","/snapshots/snapshot"]) assert.equal((await call(suffix)).status,200);
+    assert.equal((await call("/snapshots","POST")).status,428);
+    assert.equal((await call("/snapshots","POST",{"idempotency-key":"capture-test","x-csrf-token":"wrong"})).status,403);
+    assert.equal((await call("/snapshots","POST",{"idempotency-key":"capture-test"})).status,200);
+    assert.equal((await call("/compare","POST")).status,200);
+    assert.equal((await call("/unregistered")).status,404);
+    assert.equal((await call("/snapshots","DELETE")).status,404);
+    assert.equal(forwarded.length,7);
+    for(const headers of forwarded){assert.equal(headers.get("x-tenant-id"),"tenant");assert.equal(headers.get("x-plane"),plane);}
+  });
+}

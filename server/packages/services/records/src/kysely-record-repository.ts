@@ -66,7 +66,7 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       if (descriptor.storage.tenantField) values[descriptor.storage.tenantField] = tenantId;
       const entries = Object.entries(values);
       if (!entries.length) throw new Error("Cannot create an empty record");
-      const result = await sql<Record<string, unknown>>`INSERT INTO ${table(descriptor)} (${sql.join(entries.map(([key]) => sql.ref(key)))}) VALUES (${sql.join(entries.map(([, value]) => sql`${value}`))}) RETURNING *`.execute(transaction);
+      const result = await sql<Record<string, unknown>>`INSERT INTO ${table(descriptor)} (${sql.join(entries.map(([key]) => sql.ref(key)))}) VALUES (${sql.join(entries.map(([, value]) => sql`${value}`))}) RETURNING ${projection(descriptor, descriptor.fields.map(field => field.key))}`.execute(transaction);
       const row = result.rows[0]; if (!row) throw new Error("Record insert returned no row"); return row;
     },
     async patch(descriptor, tenantId, recordId, input, expectedVersion, transaction) {
@@ -76,7 +76,7 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       if (!assignments.length) throw new Error("Cannot apply an empty record patch");
       const conditions = [...baseConditions(descriptor, tenantId), sql`${sql.ref(descriptor.storage.idField)} = ${recordId}`];
       if (descriptor.storage.versionField && expectedVersion !== undefined) conditions.push(sql`${sql.ref(descriptor.storage.versionField)} = ${expectedVersion}`);
-      const result = await sql<Record<string, unknown>>`UPDATE ${table(descriptor)} SET ${sql.join(assignments)} WHERE ${sql.join(conditions, sql` AND `)} RETURNING *`.execute(transaction);
+      const result = await sql<Record<string, unknown>>`UPDATE ${table(descriptor)} SET ${sql.join(assignments)} WHERE ${sql.join(conditions, sql` AND `)} RETURNING ${projection(descriptor, descriptor.fields.map(field => field.key))}`.execute(transaction);
       if (result.rows[0]) return { record: result.rows[0] };
       return conflictOrMissing(descriptor, tenantId, recordId, expectedVersion, transaction);
     },
@@ -84,8 +84,8 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
       const conditions = [...baseConditions(descriptor, tenantId), sql`${sql.ref(descriptor.storage.idField)} = ${recordId}`];
       if (descriptor.storage.versionField && expectedVersion !== undefined) conditions.push(sql`${sql.ref(descriptor.storage.versionField)} = ${expectedVersion}`);
       const statement = descriptor.storage.softDeleteField
-        ? sql<Record<string, unknown>>`UPDATE ${table(descriptor)} SET ${sql.ref(descriptor.storage.softDeleteField)} = clock_timestamp()${descriptor.storage.versionField ? sql`, ${sql.ref(descriptor.storage.versionField)} = ${sql.ref(descriptor.storage.versionField)} + 1` : sql``} WHERE ${sql.join(conditions, sql` AND `)} RETURNING *`
-        : sql<Record<string, unknown>>`DELETE FROM ${table(descriptor)} WHERE ${sql.join(conditions, sql` AND `)} RETURNING *`;
+        ? sql<Record<string, unknown>>`UPDATE ${table(descriptor)} SET ${sql.ref(descriptor.storage.softDeleteField)} = clock_timestamp()${descriptor.storage.versionField ? sql`, ${sql.ref(descriptor.storage.versionField)} = ${sql.ref(descriptor.storage.versionField)} + 1` : sql``} WHERE ${sql.join(conditions, sql` AND `)} RETURNING ${projection(descriptor, descriptor.fields.map(field => field.key))}`
+        : sql<Record<string, unknown>>`DELETE FROM ${table(descriptor)} WHERE ${sql.join(conditions, sql` AND `)} RETURNING ${projection(descriptor, descriptor.fields.map(field => field.key))}`;
       const result = await statement.execute(transaction);
       if (result.rows[0]) return { deleted: true };
       const conflict = await conflictOrMissing(descriptor, tenantId, recordId, expectedVersion, transaction);
@@ -96,9 +96,18 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
 
 function table(descriptor: EntityRuntimeDescriptor) { return sql.table(`${descriptor.storage.schema}.${descriptor.storage.object}`); }
 function projection(descriptor: EntityRuntimeDescriptor, keys: readonly string[]): RawBuilder<unknown> { const selected = keys.map((key) => { const field = descriptor.fields.find((item) => item.key === key); if (!field) throw new Error(`Unknown projection field: ${key}`); return sql`${sql.ref(field.storagePath)} AS ${sql.ref(key)}`; }); const outputKeys = new Set(keys); for (const key of [descriptor.storage.idField, descriptor.storage.versionField, descriptor.storage.statusField].filter((item): item is string => Boolean(item))) if (!outputKeys.has(key)) selected.push(sql.ref(key)); return sql.join(selected); }
-function baseConditions(descriptor: EntityRuntimeDescriptor, tenantId: string): RawBuilder<unknown>[] { const conditions: RawBuilder<unknown>[] = []; if (descriptor.storage.tenantField) conditions.push(sql`${sql.ref(descriptor.storage.tenantField)} = ${tenantId}::uuid`); if (descriptor.storage.softDeleteField) conditions.push(sql`${sql.ref(descriptor.storage.softDeleteField)} IS NULL`); return conditions.length ? conditions : [sql`TRUE`]; }
+function baseConditions(descriptor: EntityRuntimeDescriptor, tenantId: string): RawBuilder<unknown>[] { const conditions: RawBuilder<unknown>[] = (descriptor.recordPredicates??[]).map(predicate=>filterCondition(descriptor,predicate)); if (descriptor.storage.tenantField) conditions.push(sql`${sql.ref(descriptor.storage.tenantField)} = ${tenantId}::uuid`); if (descriptor.storage.softDeleteField) conditions.push(sql`${sql.ref(descriptor.storage.softDeleteField)} IS NULL`); return conditions.length ? conditions : [sql`TRUE`]; }
 /** @internal Exported for SQL contract verification; callers must use resolver-issued constraints. */
 export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeDescriptor, tenantId: string, constraint: RecordRepositoryListInput["collectionScope"][number]): RawBuilder<unknown> {
+  if (constraint.kind === "entity.parent.v1") {
+    if (descriptor.entityCode !== constraint.entityCode || descriptor.storage.schema !== constraint.storageSchema || descriptor.storage.object !== constraint.storageObject || !constraint.predicates.length)
+      throw new Error("Parent scope storage mismatch");
+    return sql`(${sql.join(constraint.predicates.map(predicate => {
+      const field = descriptor.fields.find(field => field.key === predicate.field);
+      if (!field) throw new Error("Parent scope field unavailable");
+      return sql`${sql.ref(field.storagePath)} = ${predicate.value}`;
+    }), sql` AND `)})`;
+  }
   if (constraint.kind === "neon.business_partner.directory.v1") {
     if(descriptor.planeKey!=="neon" || descriptor.storage.schema!=="master" || descriptor.storage.object!=="business_partner") throw new Error("Directory scope storage mismatch");
     const root=sql.ref(`business_partner.${descriptor.storage.idField}`), conditions:RawBuilder<unknown>[]=[];
@@ -186,4 +195,4 @@ function toStorage(descriptor: EntityRuntimeDescriptor, input: Readonly<Record<s
     return [column, value];
   }));
 }
-async function conflictOrMissing(descriptor: EntityRuntimeDescriptor, tenantId: string, recordId: string, expectedVersion: number | undefined, transaction: RecordTransaction): Promise<{ record: null; versionConflict?: number }> { if (!descriptor.storage.versionField || expectedVersion === undefined) return { record: null }; const result = await sql<Record<string, unknown>>`SELECT ${sql.ref(descriptor.storage.versionField)} FROM ${table(descriptor)} WHERE ${sql.join([...baseConditions(descriptor, tenantId), sql`${sql.ref(descriptor.storage.idField)} = ${recordId}`], sql` AND `)} LIMIT 1`.execute(transaction); const value = result.rows[0]?.[descriptor.storage.versionField]; return typeof value === "number" ? { record: null, versionConflict: value } : { record: null }; }
+async function conflictOrMissing(descriptor: EntityRuntimeDescriptor, tenantId: string, recordId: string, expectedVersion: number | undefined, transaction: RecordTransaction): Promise<{ record: null; versionConflict?: number }> { if (!descriptor.storage.versionField || expectedVersion === undefined) return { record: null }; const result = await sql<Record<string, unknown>>`SELECT ${sql.ref(descriptor.storage.versionField)} FROM ${table(descriptor)} WHERE ${sql.join([...baseConditions(descriptor, tenantId), sql`${sql.ref(descriptor.storage.idField)} = ${recordId}`], sql` AND `)} LIMIT 1`.execute(transaction); const value = result.rows[0]?.[descriptor.storage.versionField]; const numeric = typeof value === "number" || typeof value === "string" && /^[0-9]+$/.test(value) ? Number(value) : NaN; return Number.isSafeInteger(numeric) && numeric > 0 ? { record: null, versionConflict: numeric } : { record: null }; }

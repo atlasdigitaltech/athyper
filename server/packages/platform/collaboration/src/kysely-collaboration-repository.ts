@@ -132,7 +132,11 @@ export function createKyselyCollaborationRepository(): CollaborationRepository<C
         tx,
         command.context.tenantId,
         "document.comment_type",
-        command.contextType ?? "entity",
+        // Edit composers use a private draft namespace, not a new comment type.
+        // Keep the stored scope intact so cancelling an edit cannot clear a new-comment draft.
+        /^entity_edit_[0-9a-f]{32}$/.test(command.contextType ?? "")
+          ? "entity"
+          : command.contextType ?? "entity",
       );
       if (command.parentCommentId) {
         const parent =

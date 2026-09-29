@@ -1,0 +1,26 @@
+[
+  {
+    "container": "athyper-dev-source-api-1",
+    "compiler": {
+      "name": "athyper.compiled-entity-artifact",
+      "version": "1.1.0",
+      "buildHash": "35995c9e6a15a7e81cce4cd72b14e8c1ab284e6f600e76ff216cda4e997edd8e"
+    }
+  },
+  {
+    "container": "athyper-dev-source-worker-1",
+    "compiler": {
+      "name": "athyper.compiled-entity-artifact",
+      "version": "1.1.0",
+      "buildHash": "35995c9e6a15a7e81cce4cd72b14e8c1ab284e6f600e76ff216cda4e997edd8e"
+    }
+  },
+  {
+    "container": "athyper-dev-control-control-api-1",
+    "compiler": {
+      "name": "athyper.compiled-entity-artifact",
+      "version": "1.1.0",
+      "buildHash": "35995c9e6a15a7e81cce4cd72b14e8c1ab284e6f600e76ff216cda4e997edd8e"
+    }
+  }
+]

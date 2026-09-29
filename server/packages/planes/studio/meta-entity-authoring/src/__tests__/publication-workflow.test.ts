@@ -137,7 +137,7 @@ it("checks the reviewed hash before invoking the actual signer", async () => {
 it("enforces explicit import boundaries for generic reference orchestration", () => {
   const text = readFileSync(new URL("../publication/publication-workflow.ts", import.meta.url), "utf8");
   const ast = ts.createSourceFile("publication-workflow.ts", text, ts.ScriptTarget.Latest, true);
-  const allowed = new Set(["@athyper/server-contract-meta-entity-authoring", "@athyper/server-contract-publication", "../authoring-service.js", "../deterministic.js", "../compilation/target-compiler.js"]);
+  const allowed = new Set(["@athyper/server-contract-meta-entity-authoring", "@athyper/server-contract-publication", "../authoring-service.js", "../deterministic.js", "../compilation/target-compiler.js", "../compilation/entity-target-compiler.js"]);
   function visit(node: ts.Node) {
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) expect(allowed.has(node.moduleSpecifier.text)).toBe(true);
     if (ts.isCallExpression(node)) expect(node.expression.kind === ts.SyntaxKind.ImportKeyword || node.expression.getText(ast) === "require").toBe(false);

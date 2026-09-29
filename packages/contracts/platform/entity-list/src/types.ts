@@ -79,6 +79,10 @@ export interface EntityWorkContextRequirementV1 {
 }
 
 export interface EntityListScopeCoordinateV1 {
+  /** Untrusted parent reference; resolved and authorized by the server on every request. */
+  readonly parentEntityCode?: string;
+  readonly parentRecordId?: string;
+  readonly relationshipKey?: string;
   readonly companyCodeIds?: readonly string[];
   readonly operatingOrganizationIds?: readonly string[];
   readonly partnerRole?: "supplier" | "customer";

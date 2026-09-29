@@ -25,7 +25,7 @@ import {
   PanelRightIcon,
   AtlasBrandIcon,
 } from "@athyper/platform-icons";
-import { PanelHeader, Tooltip, useModalIsolation } from "@athyper/platform-ui";
+import { PanelHeader, PanelContextRow, PanelToolbar, PanelFooter, Tooltip, useModalIsolation } from "@athyper/platform-ui";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -282,7 +282,7 @@ export function AtlasWorkspace({
           onClose();
         }
       }}
-      className={`athyper-atlas-workspace athyper-atlas-workspace--${mode}`}
+      className={`athyper-atlas-workspace a-context-panel athyper-atlas-workspace--${mode}`}
       aria-label="Atlas AI workspace"
     >
       {mode === "dock" && onWidthChange ? (
@@ -293,152 +293,21 @@ export function AtlasWorkspace({
         icon={<AtlasBrandIcon size={20} />}
         title="Atlas AI"
         titleRef={conversationHeading}
-        subtitle={`${planeName} · ${entityLabel}`}
         actionsLabel="Atlas workspace controls"
-        actions={<>
-          <Tooltip portal side="bottom" label="New conversation">
-            <button
-              type="button"
-              aria-label="New Atlas conversation"
-              onClick={() => {
-                composer.current?.clear();
-                try {
-                  localStorage.removeItem(
-                    `${scope.storageKey}:atlas-draft:v2:new`,
-                  );
-                } catch {}
-                setPendingThread(undefined);
-                atlas.newConversation();
-                setDraft("");
-                composer.current?.focus();
-              }}
-            >
-              +
-            </button>
-          </Tooltip>
-          <Tooltip portal side="bottom" label="Conversation history">
-            <button
-              ref={historyTrigger}
-              type="button"
-              aria-label="Conversation history"
-              aria-pressed={historyOpen}
-              aria-expanded={historyOpen}
-              onClick={() => setHistoryOpen((value) => !value)}
-            >
-              <HistoryIcon size={16} />
-            </button>
-          </Tooltip>
-          {mode === "fullscreen" ? (
-            <Tooltip
-              portal side="bottom"
-              label={
-                inspectorOpen ? "Hide context panel" : "Show context panel"
-              }
-            >
-              <button
-                type="button"
-                className="athyper-atlas-workspace__context-toggle"
-                aria-label={
-                  inspectorOpen ? "Hide context panel" : "Show context panel"
-                }
-                aria-expanded={inspectorOpen}
-                aria-controls={inspectorId}
-                onClick={() => setInspectorOpen((open) => !open)}
-              >
-                <InfoIcon size={17} />
-              </button>
-            </Tooltip>
-          ) : null}
-          {mode === "dock" ? (
-            <>
-              <Tooltip
-                portal side="bottom"
-                label={
-                  pinned
-                    ? "Unpin Atlas from the right side"
-                    : "Pin Atlas to the right side"
-                }
-              >
-                <button
-                  type="button"
-                  aria-label={
-                    pinned
-                      ? "Unpin Atlas from the right side"
-                      : "Pin Atlas to the right side"
-                  }
-                  aria-pressed={pinned}
-                  onClick={() => onPinnedChange?.(!pinned)}
-                >
-                  {pinned ? <PinOffIcon size={17} /> : <PinIcon size={17} />}
-                </button>
-              </Tooltip>
-              <Tooltip portal side="bottom" label="Open Atlas in full view">
-                <a
-                  href={`/atlas?from=${encodeURIComponent(currentPath)}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    if (surface) surface.fullscreen();
-                    else
-                      window.location.assign(atlas.fullscreenHref(currentPath));
-                  }}
-                  aria-label="Open Atlas in full view"
-                >
-                  <Maximize2Icon size={17} />
-                </a>
-              </Tooltip>
-            </>
-          ) : null}
-          {mode === "fullscreen" && surface && onClose ? (
-            <Tooltip portal side="bottom" label="Return to side panel">
-              <button
-                type="button"
-                aria-label="Return to side panel"
-                className="athyper-atlas-workspace__labeled-control"
-                data-panel-action-label
-                onClick={surface.minimize}
-              >
-                <PanelRightIcon size={17} />
-                <span>Side view</span>
-              </button>
-            </Tooltip>
-          ) : null}
-          {onClose ? (
-            <Tooltip portal side="bottom" label="Close Atlas">
-              <button type="button" aria-label="Close Atlas" onClick={onClose}>
-                <CloseIcon size={16} />
-              </button>
-            </Tooltip>
-          ) : null}
-          {mode === "fullscreen" && !onClose ? (
-            <Tooltip portal side="bottom" label="Close full-screen Atlas">
-              <a href="/home" aria-label="Close full-screen Atlas">
-                <CloseIcon size={16} />
-              </a>
-            </Tooltip>
-          ) : null}
-        </>}
+        capabilities={{
+          new:{label:"New Atlas conversation",tooltip:"New conversation",icon:<span aria-hidden="true">+</span>,onClick:()=>{
+            composer.current?.clear();
+            try {localStorage.removeItem(`${scope.storageKey}:atlas-draft:v2:new`);} catch {}
+            setPendingThread(undefined); atlas.newConversation(); setDraft(""); composer.current?.focus();
+          }},
+          history:{label:"Conversation history",icon:<HistoryIcon size={17}/>,buttonRef:historyTrigger,pressed:historyOpen,expanded:historyOpen,onClick:()=>setHistoryOpen(value=>!value)},
+          ...(mode === "dock" && onPinnedChange ? {pin:{label:pinned ? "Unpin Atlas from the right side" : "Pin Atlas to the right side",icon:pinned ? <PinOffIcon size={17}/> : <PinIcon size={17}/>,pressed:pinned,onClick:()=>onPinnedChange(!pinned)}} : {}),
+          ...(mode === "dock" ? {fullView:{label:"Open Atlas in full view",icon:<Maximize2Icon size={17}/>,href:`/atlas?from=${encodeURIComponent(currentPath)}`,onClick:(event)=>{event.preventDefault();if(surface)surface.fullscreen();else window.location.assign(atlas.fullscreenHref(currentPath));}}}
+            : surface && onClose ? {fullView:{label:"Return to side panel",icon:<PanelRightIcon size={17}/>,onClick:surface.minimize}} : {}),
+          close:onClose ? {label:"Close Atlas",icon:<CloseIcon size={17}/>,onClick:onClose} : {label:"Close full-screen Atlas",icon:<CloseIcon size={17}/>,href:"/home"},
+        }}
       />
-      <div
-        className="athyper-atlas-workspace__body"
-        data-history={historyOpen}
-        data-inspector={inspectorOpen}
-      >
-        {historyOpen ? (
-          <ConversationHistory
-            fullView={mode === "fullscreen"}
-            atlas={atlas}
-            panelRef={historyPanel}
-            pendingThread={pendingThread}
-            onSelect={(id) => {
-              setPendingThread(id);
-              void atlas.selectThread(id);
-            }}
-          />
-        ) : null}
-        <div className="athyper-atlas-workspace__conversation">
-          <div className="athyper-atlas-workspace__context">
-            <LockIcon size={13} />
-            <nav
+      <PanelContextRow scope={{kind:atlas.businessContext?.kind === "record" ? "record" : "global", label:(<>            <nav
               className="athyper-atlas-workspace__breadcrumb"
               aria-label="Atlas record context"
             >
@@ -471,9 +340,28 @@ export function AtlasWorkspace({
                     : `As of ${atlas.businessContext.asOf}`}
                 </small>
               ) : null}
-            </nav>
-            <small>Permission-aware · {planeName}</small>
-          </div>
+            </nav></>), detail:entityLabel}} />
+      {mode === "fullscreen" ? <PanelToolbar className="athyper-atlas-workspace__tools">
+        <button type="button" aria-label={inspectorOpen ? "Hide context panel" : "Show context panel"} aria-expanded={inspectorOpen} aria-controls={inspectorId} onClick={()=>setInspectorOpen(open=>!open)}><InfoIcon size={17}/></button>
+      </PanelToolbar> : null}
+      <div
+        className="athyper-atlas-workspace__body"
+        data-history={historyOpen}
+        data-inspector={inspectorOpen}
+      >
+        {historyOpen ? (
+          <ConversationHistory
+            fullView={mode === "fullscreen"}
+            atlas={atlas}
+            panelRef={historyPanel}
+            pendingThread={pendingThread}
+            onSelect={(id) => {
+              setPendingThread(id);
+              void atlas.selectThread(id);
+            }}
+          />
+        ) : null}
+        <div className="athyper-atlas-workspace__conversation">
           {atlas.automaticBriefsAvailable &&
           atlas.businessContext?.entityCode === "business_partner" ? (
             <div aria-label="Brief controls">
@@ -580,7 +468,7 @@ export function AtlasWorkspace({
               ))}
             </div>
           ) : null}
-          <AtlasPromptComposer
+          <PanelFooter className="athyper-atlas-workspace__action-dock"><AtlasPromptComposer
             prompts={
               atlas.experience?.prompts?.length
                 ? atlas.experience.prompts
@@ -598,7 +486,7 @@ export function AtlasWorkspace({
             agents={atlas.experience?.agents}
             selectedAgent={selectedAgent}
             onAgentChange={setSelectedAgent}
-          />
+          /></PanelFooter>
         </div>
         {mode === "fullscreen" && inspectorOpen ? (
           <AtlasContextInspector

@@ -1,3 +1,4 @@
+import { parseCapabilityBinding } from "@athyper/server-contract-publication";
 import type { Application, RequestHandler, Response } from "express";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import {
@@ -127,7 +128,7 @@ export function registerNotificationAuthoringRoutes(
       ...loaded.state.graph,
       capabilities: loaded.state.graph.capabilities!.map((m) =>
         m.capabilityKey === loaded.kind
-          ? { ...m, binding: { ...m.binding!, notifications } }
+          ? { ...m, binding: { ...parseCapabilityBinding(m.binding, loaded.kind, loaded.state.graph.entity.entityCode), notifications } }
           : m,
       ),
     };
@@ -148,13 +149,13 @@ export function registerNotificationAuthoringRoutes(
       s.json({
         revision: loaded.state.changeSet.revision,
         policies: (loaded.state.graph.capabilities ?? [])
-          .filter((m) => m.declaration.enabled && m.binding)
+          .filter((m) => m.capabilityKey !== "activity" && m.declaration.enabled && m.binding)
           .map((m) => ({
             capability: m.capabilityKey,
             configuration: parseEntityNotificationConfiguration(
               m.binding!.notifications ??
-                defaultNotificationConfiguration(m.capabilityKey),
-              m.capabilityKey,
+                defaultNotificationConfiguration(m.capabilityKey as "comments" | "attachments"),
+              m.capabilityKey as "comments" | "attachments",
             ),
           })),
       });

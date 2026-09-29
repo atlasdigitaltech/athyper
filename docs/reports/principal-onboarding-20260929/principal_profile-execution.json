@@ -1,0 +1,16 @@
+{
+  "executedAt": "2026-09-29T06:04:37.902Z",
+  "status": 200,
+  "body": {
+    "status": "dispatched",
+    "release": {
+      "id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+      "releaseNo": 1
+    },
+    "targetPlanes": [
+      "studio",
+      "neon",
+      "mesh"
+    ]
+  }
+}

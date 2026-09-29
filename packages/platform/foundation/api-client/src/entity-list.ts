@@ -68,6 +68,7 @@ export function entityListQuery(state: Pick<ListLocationStateV1, "standardViewKe
 
 export function entityListScopeQuery(scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
   return Object.freeze({
+    ...(scope?.parentEntityCode ? {parentEntityCode: scope.parentEntityCode, parentRecordId: scope.parentRecordId, relationshipKey: scope.relationshipKey} : {}),
     ...(scope?.companyCodeIds?.length ? { companyCodeIds: [...new Set(scope.companyCodeIds)].sort().join(",") } : {}),
     ...(scope?.operatingOrganizationIds?.length ? { operatingOrganizationIds: [...new Set(scope.operatingOrganizationIds)].sort().join(",") } : {}),
     ...(scope?.partnerRole ? {partnerRole:scope.partnerRole} : {}),

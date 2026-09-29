@@ -195,7 +195,13 @@ test("PDF picker pins a draft-scoped file and preserves it while editing", async
 }) => {
   const id = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
   const stages: any[] = [];
+  const csrfHeaders: string[] = [];
+  await page.context().addCookies([
+    { name: 'athyper-csrf', value: 'current-session-token', url: 'https://comments.test/' },
+    { name: '__Host-athyper-csrf', value: 'stale-production-token', url: 'https://comments.test/', secure: true },
+  ]);
   await page.route("**/api/relay/attachments/**", async (route) => {
+    csrfHeaders.push(route.request().headers()["x-csrf-token"] ?? "");
     if (route.request().url().endsWith("/stage")) {
       stages.push(route.request().postDataJSON());
       await route.fulfill({
@@ -223,7 +229,14 @@ test("PDF picker pins a draft-scoped file and preserves it while editing", async
   await expect(
     composer.getByRole("list", { name: "Comment attachments" }),
   ).toContainText("proof.pdf");
+  await composer.getByRole('button', { name: 'Preview attachment proof.pdf', exact: true }).click();
+  await expect(composer.getByText('Fixture preview unavailable')).toBeVisible();
+  await composer.getByRole('button', { name: 'Close preview', exact: true }).click();
   expect(stages[0].draftId).toBe("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+  const capabilityCalls = await page.evaluate(() => (window as any).commentCalls.filter((call: any) => call.path.includes('/collaboration/attachments')));
+  expect(capabilityCalls).toHaveLength(1);
+  expect(capabilityCalls[0].query).not.toHaveProperty('surface');
+  expect(await page.evaluate(() => (window as any).commentCalls.some((call: any) => call.path.includes('/sections/attachments')))).toBe(false);
   const item = page.locator(".a-comment-item");
   await item.locator("summary").click();
   await item.getByRole("button", { name: "Edit", exact: true }).click();
@@ -244,10 +257,13 @@ test("PDF picker pins a draft-scoped file and preserves it while editing", async
       (window as any).commentCalls.find((call: any) => call.method === "PATCH")
         .body,
   );
+  expect(csrfHeaders).toEqual(Array(4).fill("current-session-token"));
   expect(edit.attachmentIds).toEqual([stages[1].attachmentId]);
+  expect(await page.evaluate(() => (window as any).commentCalls.filter((call: any) => call.path.includes('/collaboration/attachments')).length)).toBe(2);
   const drafts=await page.evaluate(()=>(window as any).commentCalls.filter((call:any)=>call.path.endsWith("/drafts")));
   expect(drafts.find((call:any)=>call.method==="POST" && call.body.contextType?.startsWith("entity_edit_"))).toBeTruthy();
   expect(drafts.find((call:any)=>call.method==="DELETE").query.contextType).toMatch(/^entity_edit_/);
+  await page.getByRole("button", {name:"Resume draft", exact:true}).click();
   await expect(composer.getByRole("list",{name:"Comment attachments"})).toContainText("proof.pdf");
   expect(
     edit.content.content.some((node: any) => node.type === "attachmentFile"),
@@ -510,17 +526,19 @@ test("edit supports audience-scoped mentions and explains locked visibility", as
   const close=edit.getByRole('button',{name:'Minimize composer',exact:true});
   for (const width of [1440,390]) {
     await page.setViewportSize({width,height:900});
-    const badgeBox=await audience.boundingBox(),closeBox=await close.boundingBox();
-    expect(badgeBox!.x+badgeBox!.width).toBeLessThan(closeBox!.x);
-    expect(Math.abs(badgeBox!.y+badgeBox!.height/2-closeBox!.y-closeBox!.height/2)).toBeLessThan(2);
+    await expect.poll(()=>edit.evaluate(el=>{
+      const badge=el.querySelector('.a-rich-comment-composer__locked-audience')!.getBoundingClientRect();
+      const close=el.querySelector('.a-comment-minimize')!.getBoundingClientRect();
+      return badge.right<close.left && Math.abs(badge.y+badge.height/2-close.y-close.height/2)<2;
+    })).toBe(true);
   }
   await audience.focus();
   await expect(edit.getByRole('tooltip',{name:'Visibility cannot be changed after posting.'})).toHaveCSS('opacity','1');
   await page.keyboard.press('Escape');
   await expect(edit.getByRole('tooltip')).toHaveCount(0);
   await edit.locator('summary[aria-label="Mention a participant"]').click();
-  await edit.getByRole('textbox',{name:'Mention a participant',exact:true}).fill('Alex');
-  await edit.getByRole('button',{name:'Alex Reviewer',exact:true}).click();
+  await edit.getByRole('combobox',{name:'Mention a participant',exact:true}).fill('Alex');
+  await edit.getByRole('option',{name:/Alex Reviewer/}).click();
   await expect(edit.getByRole('textbox',{name:'Comment',exact:true})).toContainText('@Alex Reviewer');
   await edit.getByRole('button',{name:'Save comment',exact:true}).click();
   const calls=await page.evaluate(()=>(window as any).commentCalls);
@@ -689,4 +707,87 @@ test("posting shows one actionable toast without an inline success row", async (
   await page.getByRole('button', { name: 'View comment', exact: true }).click();
   await expect(item).toBeFocused();
   await expect(page.locator('.a-global-toast')).toHaveCount(0);
+});
+
+test("comment attachment capability denial blocks staging through the shared endpoint", async ({ page }) => {
+  await page.evaluate(() => (window as any).denyCommentFiles = true);
+  let staged = 0;
+  await page.route('**/api/relay/attachments/**', route => { staged++; return route.fulfill({ status: 500 }); });
+  await page.getByLabel('Choose comment attachments').setInputFiles({ name: 'blocked.pdf', mimeType: 'application/pdf', buffer: Buffer.from('pdf') });
+  await expect(page.getByRole('alert')).toContainText('File uploads are not authorized for this record.');
+  expect(staged).toBe(0);
+  expect(await page.evaluate(() => (window as any).commentCalls.some((call: any) => call.path.includes('/sections/attachments')))).toBe(false);
+});
+
+test("mention picker explains private comments without querying the directory",async({page})=>{
+  await page.getByRole("button",{name:"Audience: Public",exact:true}).click();
+  await page.getByRole("menuitemradio",{name:/Private/}).click();
+  await page.getByRole("button",{name:"Mention a participant",exact:true}).click();
+  await expect(page.getByRole("dialog",{name:"Mention a participant"})).toContainText("Mentions aren’t available for private comments. Change visibility to mention someone.");
+  await expect(page.getByRole("combobox",{name:"Mention a participant",exact:true})).toHaveCount(0);
+  expect(await page.evaluate(()=>(window as any).commentCalls.filter((c:any)=>c.path.startsWith("/api/collab/participants?")).length)).toBe(0);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button",{name:"Mention a participant",exact:true})).toBeFocused();
+});
+test("mention search shows loading, empty, retry, identity and keyboard selection",async({page})=>{
+  await page.evaluate(()=>{Object.assign(window,{mentionMode:"empty",mentionDelay:500});});
+  await page.getByRole("button",{name:"Mention a participant",exact:true}).click();
+  const input=page.getByRole("combobox",{name:"Mention a participant",exact:true});
+  await expect(input).toBeFocused();await input.fill("ca");
+  await expect(page.getByRole("status").filter({hasText:"Searching…"})).toBeVisible();
+  await expect(page.getByText("No eligible people found",{exact:true})).toBeVisible();
+  await page.evaluate(()=>{(window as any).mentionMode="error";});await input.fill("cat");
+  await expect(page.getByRole("alert")).toContainText("Search failed.");
+  await page.evaluate(()=>{(window as any).mentionMode="self";});
+  await page.getByRole("button",{name:"Retry",exact:true}).click();
+  const option=page.getByRole("option",{name:/Catl Admin/});await expect(option).toContainText("@catl.admin");await expect(option).toContainText("You");
+  await page.screenshot({path:"/tmp/mention-picker-results.png"});
+  await input.focus();await page.keyboard.press("ArrowDown");await expect(option).toHaveAttribute("aria-selected","true");await page.keyboard.press("Enter");
+  await expect(page.getByRole("textbox",{name:"Comment",exact:true})).toContainText("@Catl Admin");
+  await expect(page.getByRole("dialog",{name:"Mention a participant"})).toBeHidden();
+});
+for(const width of [440,720,1440]) test(`composer popups escape clipping and stay inside viewport at ${width}px`,async({page})=>{
+  await page.setViewportSize({width,height:680});
+  if(width===1440)await page.evaluate(()=>(window as any).setFull(true));
+  await page.locator(".a-comment-composer-card").evaluate(el=>{el.style.overflow="hidden";el.style.maxHeight="260px";});
+  for(const label of ["Mention a participant","Audience: Public"]){
+    await page.getByRole("button",{name:label,exact:true}).click();
+    const popup=page.locator(".a-composer-popover:popover-open");await expect(popup).toBeVisible();
+    await expect.poll(async()=>{const box=await popup.boundingBox();return !!box&&box.x>=7&&box.y>=7&&box.x+box.width<=width-7&&box.y+box.height<=673;}).toBe(true);
+    const visible=await popup.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+Math.min(24,r.height/2)));});expect(visible).toBe(true);
+    if(width===440)await page.screenshot({path:label.startsWith("Mention")?"/tmp/mention-picker-mobile.png":"/tmp/audience-picker-mobile.png"});
+    await page.setViewportSize({width,height:480});
+    await expect.poll(async()=>{const box=await popup.boundingBox();return !!box&&box.y>=7&&box.y+box.height<=473;}).toBe(true);
+    await page.keyboard.press("Escape");await expect(popup).toHaveCount(0);
+    await page.setViewportSize({width,height:680});
+  }
+});
+
+test("composer menus close on outside interaction and switching popups",async({page})=>{
+  const mention=page.getByRole("button",{name:"Mention a participant",exact:true});
+  await mention.click();
+  await page.getByRole("textbox",{name:"Comment",exact:true}).click();
+  await expect(page.locator(".a-composer-popover:popover-open")).toHaveCount(0);
+  await mention.click();
+  await page.getByRole("button",{name:"Audience: Public",exact:true}).click();
+  await expect(page.getByRole("dialog",{name:"Mention a participant"})).toBeHidden();
+  await expect(page.getByRole("menu",{name:"Comment audience"})).toBeVisible();
+});
+
+test("Word paste stays compact in the composer and submitted document",async({page})=>{
+  const editor=page.getByRole("textbox",{name:"Comment",exact:true});
+  await editor.evaluate(el=>{
+    const data=new DataTransfer();
+    data.setData("text/html",'<div class="WordSection1">\n<p class="MsoNormal"><b>Integration Scope</b></p>\n<p>&nbsp;&nbsp;1. Outbound Payment/WPS<br>SAP → CPI → QNB</p>\n<table><tr><td>\n<p>Interface</p>\n</td><td>\n<p>Windows Job</p>\n</td></tr></table>\n</div>');
+    el.dispatchEvent(new ClipboardEvent("paste",{clipboardData:data,bubbles:true,cancelable:true}));
+  });
+  await expect(editor.locator(':scope > div > p')).toHaveCount(2);
+  await expect(editor.locator('td p')).toHaveCount(2);
+  expect(await editor.evaluate(el=>Array.from(el.querySelectorAll('p')).filter(p=>!p.textContent?.trim()).length)).toBe(0);
+  // Typing re-parses the DOM through the editor-input path without adding layout blocks.
+  await editor.evaluate(el=>el.dispatchEvent(new InputEvent("input",{bubbles:true})));
+  await page.getByRole("button",{name:"Send",exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>(window as any).commentCalls.find((c:any)=>c.method==='POST'&&c.path.endsWith('/comments'))?.body.content.content.length)).toBe(3);
+  const text=await page.evaluate(()=>(window as any).commentCalls.find((c:any)=>c.method==='POST'&&c.path.endsWith('/comments')).body.text);
+  expect(text).toContain('1. Outbound Payment/WPS\nSAP → CPI → QNB');expect(text).not.toMatch(/\n{3}|\u00a0/);
 });

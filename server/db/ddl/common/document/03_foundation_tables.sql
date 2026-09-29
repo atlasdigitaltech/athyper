@@ -272,7 +272,7 @@ CREATE TABLE document.comment_draft (
             AND length(entity_id) <= 512
         ),
     CONSTRAINT comment_draft_text_chk
-        CHECK (btrim(draft_text) <> '' AND length(draft_text) <= 50000),
+        CHECK (length(draft_text) <= 50000),
     CONSTRAINT comment_draft_content_json_chk
         CHECK (content_json IS NULL OR jsonb_typeof(content_json) = 'object'),
     CONSTRAINT comment_draft_content_schema_chk

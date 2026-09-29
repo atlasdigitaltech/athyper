@@ -1,0 +1,50 @@
+{
+  "schema": "athyper.dev-activity-install/1",
+  "at": "2026-09-28T06:34:31.724Z",
+  "receipts": [
+    {
+      "plane": "studio",
+      "file": "20260928_entity_activity_authoring.sql",
+      "status": "installed",
+      "sha256": "f18793cdedaa493491785ab5f1285f4363684c471518c38e28eb107753ac49e7"
+    },
+    {
+      "plane": "studio",
+      "file": "20260928_entity_activity_permissions.sql",
+      "status": "installed",
+      "sha256": "c276a9f88d343cd2aa4395899c923c217132d7dac6ffb43c258da1131a424e68"
+    },
+    {
+      "plane": "studio",
+      "file": "20260928_record_history.sql",
+      "status": "installed",
+      "sha256": "c8c671d065dc538e5d17c3b054b9b99ee060eaf687e9da5229840a8b8a26a801"
+    },
+    {
+      "plane": "neon",
+      "file": "20260928_entity_activity_permissions.sql",
+      "status": "installed",
+      "sha256": "c276a9f88d343cd2aa4395899c923c217132d7dac6ffb43c258da1131a424e68"
+    },
+    {
+      "plane": "neon",
+      "file": "20260928_record_history.sql",
+      "status": "installed",
+      "sha256": "c8c671d065dc538e5d17c3b054b9b99ee060eaf687e9da5229840a8b8a26a801"
+    },
+    {
+      "plane": "mesh",
+      "file": "20260928_entity_activity_permissions.sql",
+      "status": "installed",
+      "sha256": "c276a9f88d343cd2aa4395899c923c217132d7dac6ffb43c258da1131a424e68"
+    },
+    {
+      "plane": "mesh",
+      "file": "20260928_record_history.sql",
+      "status": "installed",
+      "sha256": "c8c671d065dc538e5d17c3b054b9b99ee060eaf687e9da5229840a8b8a26a801"
+    }
+  ],
+  "entityPublished": false,
+  "roleGrantsCreated": false
+}

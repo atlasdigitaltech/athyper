@@ -295,6 +295,9 @@ export interface EntityPolicyBindingDescriptor {
 }
 
 export interface EntityRuntimeDescriptor {
+  readonly recordPredicates?: readonly import("./record-predicates.js").RecordPredicate[];
+  readonly mutationPolicy?: import("./record-mutation-policy.js").RecordMutationPolicyV1;
+  readonly ownerAccess?: import("./record-owner-access.js").RecordOwnerAccessV1;
   /** Validated cross-plane read-only capability; never an authorization grant. */
   readonly referenceCapability?: "common.platform.reference.view";
   readonly intakeSurfaces?: readonly import("@athyper/contract-platform-entity-runtime").EntityIntakeSurfaceV1[];

@@ -1,4 +1,4 @@
-import type { MalwareScanResult } from "@athyper/server-contract-malware-scanning";
+import { MalwareDocumentUnsupportedError, type MalwareScanResult } from "@athyper/server-contract-malware-scanning";
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -55,6 +55,9 @@ function fixture(overrides: Partial<AttachmentRecord> = {}) {
           expiresAt: undefined,
         }),
     ),
+    failInspection: vi.fn(async () => {
+      record = { ...record!, status: "failed", isActive: false };
+    }),
     quarantine: vi.fn(async () => {
       record = { ...record!, status: "quarantined", isActive: false };
     }),
@@ -360,6 +363,28 @@ describe("attachment lifecycle security regressions", () => {
     expect(f.quota.release).toHaveBeenCalledOnce();
     expect(f.quota.commit).not.toHaveBeenCalled();
     expect([...f.objects.keys()]).toEqual(["quarantine/source"]);
+  });
+  it("persists terminal inspection failures and releases the reservation without promoting the file", async () => {
+    const f = fixture();
+    f.scanner.scan.mockRejectedValue(new MalwareDocumentUnsupportedError({ reason: "unsupported_filter" }));
+    await expect(f.lifecycle.finalize(identity, intent.contentType)).rejects.toMatchObject({ inspectionReason: "unsupported_filter" });
+    expect(f.getRecord()).toMatchObject({ status: "failed", isActive: false });
+    expect(f.repository.failInspection).toHaveBeenCalledWith(identity, "unsupported_filter", expect.anything());
+    expect(f.quota.release).toHaveBeenCalledOnce();
+    expect(f.quota.commit).not.toHaveBeenCalled();
+    expect(f.repository.finalizeClean).not.toHaveBeenCalled();
+    expect([...f.objects.keys()]).toEqual(["quarantine/source"]);
+    await expect(f.lifecycle.finalize(identity, intent.contentType)).rejects.toThrow();
+    expect(f.scanner.scan).toHaveBeenCalledOnce();
+  });
+  it("does not demote a competing successful finalization on inspection failure", async () => {
+    const f = fixture();
+    const staged = f.getRecord();
+    f.repository.load.mockResolvedValueOnce(staged).mockResolvedValueOnce({ ...staged, status: "active", isActive: true });
+    f.scanner.scan.mockRejectedValue(new MalwareDocumentUnsupportedError({ reason: "invalid_structure" }));
+    await expect(f.lifecycle.finalize(identity, intent.contentType)).rejects.toBeInstanceOf(MalwareDocumentUnsupportedError);
+    expect(f.repository.failInspection).not.toHaveBeenCalled();
+    expect(f.quota.release).not.toHaveBeenCalled();
   });
   it("fails closed when scanning fails and keeps the upload retryable", async () => {
     const f = fixture();

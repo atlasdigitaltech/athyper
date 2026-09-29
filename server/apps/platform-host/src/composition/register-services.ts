@@ -1,3 +1,10 @@
+import { createTransactionalRecordActionService } from "@athyper/server-service-records";
+import { readCompiledRuntimeContract } from "@athyper/server-platform-metadata";
+import { parseActivityBinding } from "@athyper/server-contract-publication";
+import { createActivityRecordingResolver, qualifyActivityRecordingGraph, resolveRecordHistoryBinding } from "./shared/entity-runtime/activity-recording.js";
+import { createRecordHistoryHook, qualifyRecordHistoryDescriptor } from "@athyper/server-service-records";
+import { createEntityActivityPolicy, createEntityActivityService, registerEntityActivityRoutes, type EntityActivityProvider } from "@athyper/server-platform-experience";
+import { createEntityActivityProvider } from "./shared/entity-runtime/activity-provider.js";
 import { collaborationEntityCode, collaborationEntityTypes } from "@athyper/server-platform-collaboration";
 import { parseCollectionState } from "@athyper/contract-platform-collection";
 import { activityCollectionState, collectionActivityQuery, type ActivityQuery } from "@athyper/contract-platform-activity";
@@ -272,6 +279,7 @@ import {
   createKyselyNotificationPreferenceStore,
   createKyselyNotificationOperationsRepository,
   createKyselyPreferenceCapabilities,
+  createNotificationPreferenceRecordPolicy,
   createPreferenceInvalidationPublisher,
   createNotificationRecipientResolver,
   createPushNotificationHandler,
@@ -377,7 +385,7 @@ import {
 } from "@athyper/server-service-numbering";
 import { BookPeriodService, CloseReadinessService, FinanceNumberingService, FinancePostingGuard, KyselyBookPeriodRepository, KyselyCloseReadinessRepository, KyselyFinanceFoundationReader, KyselyFinanceNumberingPolicyReader, KyselyFinanceNumberingRepository, KyselyRoundingPolicyReader, RoundingResolver, SnapshotFinanceSourceDocumentReader, financeFoundation, snapshotFinancePermissionChecker } from "@athyper/server-service-finance";
 import { registerFinanceRoutes } from "./finance-routes.js";
-import { createKyselyRecordRepository, createKyselyCommandExecutionStore, createEntityBackendAuthorizer, createRecordMutationService, createRecordBookmarkService, createRecordSnapshotService, KyselyRecordSnapshotRepository, registerRecordsRoutes, parseEntityListScopeCoordinate, KyselyRecordTransferStore, createMetadataImportRowValidator, createObjectStorageRecordTransferArtifactStore, createObjectStorageImportWorkbookIntake, createRecordTransferJobDispatcher, createRecordTransferService, createRecordImportHandler, GovernedImportAdapterRegistry, createRecordExportHandler, registerRecordTransferRoutes, registerPublicRecordTransferRoutes, RECORD_TRANSFER_QUEUE, EXECUTE_RECORD_IMPORT_JOB, EXECUTE_RECORD_EXPORT_JOB, MAINTAIN_RECORD_TRANSFERS_JOB, RECORD_TRANSFER_MAINTENANCE_QUEUE, createRecordTransferMaintenanceHandler } from "@athyper/server-service-records";
+import { createRecordOwnerAccessAdapter, createParentCollectionScopeResolver, createKyselyRecordRepository, createKyselyCommandExecutionStore, createEntityBackendAuthorizer, createRecordMutationService, createRecordBookmarkService, createRecordSnapshotService, KyselyRecordSnapshotRepository, registerRecordsRoutes, parseEntityListScopeCoordinate, KyselyRecordTransferStore, createMetadataImportRowValidator, createObjectStorageRecordTransferArtifactStore, createObjectStorageImportWorkbookIntake, createRecordTransferJobDispatcher, createRecordTransferService, createRecordImportHandler, GovernedImportAdapterRegistry, createRecordExportHandler, registerRecordTransferRoutes, registerPublicRecordTransferRoutes, RECORD_TRANSFER_QUEUE, EXECUTE_RECORD_IMPORT_JOB, EXECUTE_RECORD_EXPORT_JOB, MAINTAIN_RECORD_TRANSFERS_JOB, RECORD_TRANSFER_MAINTENANCE_QUEUE, createRecordTransferMaintenanceHandler } from "@athyper/server-service-records";
 import { sql, type Kysely, type Transaction } from "kysely";
 import { stampTransactionActor } from "@athyper/server-adapter-db-core";
 import {
@@ -395,6 +403,7 @@ import { randomUUID } from "node:crypto";
 type RecordTransaction = Transaction<Record<string, never>>;
 
 export interface ServiceRegistrationDependencies {
+  readonly activityAdapters?: readonly import("./shared/entity-runtime/activity-recording.js").ActivityAdapterRegistration[];
   readonly compiledRuntimePublication?: ConstructorParameters<typeof KyselyPublicationAuthorityWork>[0]["compiledRuntimePublication"];
   readonly entityParentScopeBindings?: readonly EntityParentScopeBinding[];
   readonly taskPolicyPermissions?: RevisionPermissions;
@@ -402,6 +411,8 @@ export interface ServiceRegistrationDependencies {
   readonly entityBackends?: readonly Omit<Parameters<typeof createEntityBackendAuthorizer>[0], "authority">[];
   readonly documentBindings?: Pick<Parameters<typeof createDocumentService<RecordTransaction>>[0], "resolveTrustedSource" | "authorizeArtifact">;
   readonly notificationPolicy?: Parameters<typeof createCollaborationNotificationPolicy>[0]["fallback"];
+  /** Shared signing material for cursor continuity across replicas; absent means process-local cursors. */
+  readonly entityActivityCursorKey?: Uint8Array;
   readonly entityResourceProviders?: Pick<Parameters<typeof createEntityRuntimeResourceService>[0], "headers" | "sections" | "summaries">;
   readonly entityIntakeProviders?: Parameters<typeof registerEntityIntakeOperationRoutes>[1]["providers"];
   /** Actual callable host bindings. Published metadata cannot populate this list. */
@@ -602,6 +613,7 @@ export function registerServices(
   const authorizer = observeAuthority(baseAuthorizer);
   // Filled with the very same service instance mounted by the generic record routes.
   // The publication callback resolves it when a job runs, not during bootstrap.
+  let installedRecordMutations: ReturnType<typeof createRecordMutationService> | undefined;
   let installedReadQueries: ReturnType<typeof createEntityReadRuntime>["queries"] | undefined;
 
   const recordDatabases = {
@@ -748,7 +760,7 @@ export function registerServices(
               createPublicationRuntimeQualification({
                 registrations: [
                   ...(dependencies.entityAuthorizationRuntimeRegistrations ?? []),
-                  ...(installedReadQueries ? createEntityReadRegistrations(installedReadQueries, profile) : []),
+                  ...(installedReadQueries ? createEntityReadRegistrations(installedReadQueries, profile, installedRecordMutations) : []),
                 ],
                 sourceConstraints: baseAuthorizer.checkSourceConstraints,
               }).qualify(profile, bindings);
@@ -1879,13 +1891,13 @@ export function registerServices(
       return found.data.length === 1 && String(found.data[0]?.[descriptor.storage.idField]) === recordId;
     },
   });
-  const authorizeCapabilityParent = (input: Parameters<typeof publishedParent>[0], release?: Parameters<typeof publishedParent>[1]) =>
+  const authorizeCapabilityParent = (input: Parameters<ReturnType<typeof createEntityCapabilityPolicy>["resolve"]>[0], release?: Parameters<typeof publishedParent>[1]) =>
     (dependencies.entityParentScopeBindings ?? []).some(binding => binding.entityCode === input.entityCode && binding.planeKey === input.context.planeKey)
       ? registeredParent(input) : publishedParent(input, release);
   const participantPermissions = createKyselyPermissionResolver({run:(identity,work)=>transactions.run(identity.planeKey,identity,work)});
   const recordParticipants = createRecordParticipantResolver({
     async candidates(input,query,limit) {
-      return transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{id:string;displayName:string}>`SELECT id::text,display_name AS "displayName" FROM document.collaboration_principal_candidates(${query},NULL) LIMIT ${limit}`.execute(tx)).rows);
+      return transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{id:string;displayName:string;username:string}>`SELECT id::text,display_name AS "displayName",username FROM document.collaboration_mention_candidates(${query}) LIMIT ${limit}`.execute(tx)).rows);
     },
     async admit(input,principalId) {
       const row=await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{auth_epoch:number}>`SELECT auth_epoch::int FROM document.collaboration_principal_candidates('',${principalId}::uuid)`.execute(tx)).rows[0]);
@@ -1919,6 +1931,29 @@ export function registerServices(
   let qualifyAttachmentPreview: (() => Promise<void>) | undefined;
   let qualifyAttachmentExtraction: (() => Promise<void>) | undefined;
   let publishedSummaries: ReturnType<typeof createPublishedSummaryService> | undefined;
+  let activityProvider: EntityActivityProvider | undefined;
+  let recordHistory: ReturnType<typeof createRecordHistoryHook> | undefined;
+  let activityDomainActions: ReturnType<typeof createTransactionalRecordActionService<RecordTransaction>> | undefined;
+  const activityRegistrations = new Map((dependencies.activityAdapters ?? []).map(r => [r.adapter.key,r]));
+  if (activityRegistrations.size !== (dependencies.activityAdapters ?? []).length) throw Error("ACTIVITY_ADAPTER_DUPLICATE");
+  const historyAdapters = new Map([...activityRegistrations].map(([key,r]) => [key,r.adapter]));
+  const activityDomainHandlers = new Map<string, import("@athyper/server-service-records").TransactionalRecordActionHandler<RecordTransaction>>();
+  for (const registration of activityRegistrations.values()) for (const [key,handler] of registration.domainHandlers ?? []) {
+    if (activityDomainHandlers.has(key)) throw Error("ACTIVITY_DOMAIN_HANDLER_DUPLICATE");
+    activityDomainHandlers.set(key,handler);
+  }
+  const activityPolicy = createEntityActivityPolicy({reader:container.platform.compiledEntityReader!,authorizer,
+    authorizeParent:async (input,release)=>{
+      if (await publishedParent(input,release)) return true;
+      if (!readPublishedParent) return false;
+      const descriptor = await readCompiledRuntimeContract(container.platform.compiledEntityReader!,release);
+      const operation = await container.platform.compiledEntityReader!.operation(release);
+      const binding = parseActivityBinding(operation.content.activityBinding,input.entityCode);
+      if (!binding.recording) return false;
+      try { qualifyRecordHistoryDescriptor(descriptor,resolveRecordHistoryBinding(descriptor,binding),binding.recording.adapterKey ? historyAdapters.get(binding.recording.adapterKey) : undefined); } catch { return false; }
+      return readPublishedParent(input,descriptor);
+    }});
+  const entityActivity = createEntityActivityService({policy:activityPolicy,provider:()=>activityProvider,cursorKey:dependencies.entityActivityCursorKey});
   const entityCollaboration = createEntityCollaborationService({ reader: container.platform.compiledEntityReader!, capabilities: capabilityPolicy,
     providers: createCollaborationSectionProviders(transactions) });
   const authorizeAttachmentCapability = createEntityAttachmentAdmission({
@@ -1955,6 +1990,10 @@ export function registerServices(
       reader: container.platform.compiledEntityReader!,
       handlers: createEntityRuntimeHandlerRegistry({
         fallback(handlerKey) {
+          if (activityDomainHandlers.has(handlerKey)) return {async execute(command) {
+            if (!activityDomainActions) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+            return {...await activityDomainActions.execute({...command,actionCode:command.operationKey,origin:"operation",validationMode:"strict"})};
+          }};
           const capabilityHandler=/^platform\.(comments|attachments)\.([a-z_]+)\.v1$/.exec(handlerKey);
           if(capabilityHandler) return {async execute(command) {
             const {context,entityCode,recordId,input,expectedVersion,idempotencyKey}=command;
@@ -2084,6 +2123,7 @@ export function registerServices(
     transactions,
     {
       databases: metadataDatabases,
+      mutationPolicies:new Set(["platform.notifications.preferences.v1"]),
       runtime: { qualify(profile, bindings) {
         const runtime = localGraphRuntimeQualifiers.get(container);
         if (!runtime) throw Error("PUBLICATION_RUNTIME_REGISTRY_UNAVAILABLE");
@@ -2092,7 +2132,9 @@ export function registerServices(
       qualifyCapabilities: createCapabilityQualification({ databases: metadataDatabases, providers: () => ({
         parentRead: Boolean(readPublishedParent),
         resourceHeader: Boolean(dependencies.entityResourceProviders?.headers || readPublishedHeader),
-        section: createCollaborationSectionProviders(transactions).getService,
+        section: key => key === "platform.activity.v1" ? (activityProvider ? {read:entityActivity.describe} : undefined) : createCollaborationSectionProviders(transactions).getService(key),
+        recordHistory: recordHistory ? {prepare:recordHistory.prepare,qualify:async target=>qualifyActivityRecordingGraph(target.graph,activityRegistrations)} : undefined,
+        activity: activityProvider ? {timeline_query:entityActivity.page,versions_read:entityActivity.page,audit_query:entityActivity.page,snapshots_read:entityActivity.snapshot,snapshots_compare:entityActivity.compare,snapshots_capture:entityActivity.capture} : undefined,
         comments: container.services.collaboration,
         attachments: container.services.attachments,
         discovery: attachmentDiscovery,
@@ -2677,6 +2719,7 @@ export function registerServices(
     const commandExecutions =
       dependencies.commandExecutions ?? createKyselyCommandExecutionStore();
     const common = {
+      ownerAccess: createRecordOwnerAccessAdapter(authorizer),
       metadata,
       authorizer,
       audit,
@@ -2686,7 +2729,7 @@ export function registerServices(
       transactions,
     };
     const listMetadata = createStudioCatalogMetadataReader(metadata);
-    const collectionScopes = container.platform.experience
+    const existingCollectionScopes = container.platform.experience
       ? combineRecordCollectionScopeResolvers(
           createNeonRecordCollectionScopeResolver(container.platform.experience.service),
           createMeshRecordCollectionScopeResolver(
@@ -2695,6 +2738,11 @@ export function registerServices(
           createStudioRecordCollectionScopeResolver(),
         )
       : undefined;
+    const collectionScopes = createParentCollectionScopeResolver({
+      metadata: listMetadata,
+      fallback: existingCollectionScopes,
+      readParent: input => queries.get(input),
+    });
     const listExecutionOptions = {
       ...common,
       metadata: listMetadata,
@@ -2702,6 +2750,7 @@ export function registerServices(
     };
     const { listExecutor, queries, lists } = createEntityReadRuntime(listExecutionOptions, {
       collaboration: input => entityCollaboration.describe(input),
+      activity: async input => Boolean(await entityActivity.describe(input)),
       summary: async input => publishedSummaries?.describe(input),
       formChoices: async (context, sourceKey) => {
         const database=metadataDatabases[context.planeKey];
@@ -2778,6 +2827,10 @@ export function registerServices(
     };
     // Records can run without the optional BP composition (for example a
     // metadata-only host). BP intake checks availability at its request boundary.
+    activityProvider = createEntityActivityProvider({collectionProviders:new Map([...activityRegistrations].flatMap(([key,r])=>r.collections ? [[key,r.collections] as const] : [])),reader:container.platform.compiledEntityReader!,authorizer,transactions,
+      read:async(input,descriptor,fields,admission)=>readPublishedHeader!({context:input.context,recordId:input.recordId,release:admission.release,core:await container.platform.compiledEntityReader!.core(admission.release),fieldKeys:fields},descriptor,fields)});
+    container.platform.httpRegistrars.push(application=>registerEntityActivityRoutes(application,{
+      authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:entityActivity}));
     const bookmarks = createRecordBookmarkService({
       transactions,
       listExecutor,
@@ -2785,7 +2838,16 @@ export function registerServices(
         ? { cache: container.adapters.redisCache }
         : {}),
     });
-    const mutations = createRecordMutationService(common);
+    const resolveHistory = createActivityRecordingResolver(container.platform.compiledEntityReader!,historyAdapters);
+    recordHistory = createRecordHistoryHook({resolve:resolveHistory,adapters:historyAdapters});
+    activityDomainActions = createTransactionalRecordActionService({...common,history:recordHistory,handlers:activityDomainHandlers});
+    const mutations = createRecordMutationService<RecordTransaction>({...common, collectionScopes, mutationPolicies:new Map([["platform.notifications.preferences.v1",createNotificationPreferenceRecordPolicy()]]), history:recordHistory, aggregateExecutor:{async execute(descriptor,command,tx) {
+      const binding = await resolveHistory(command,descriptor);
+      const executor = binding?.adapterKey ? activityRegistrations.get(binding.adapterKey)?.aggregateExecutor : undefined;
+      if (!executor) throw Error("RECORD_AGGREGATE_ADAPTER_UNAVAILABLE");
+      return executor.execute(descriptor,command,tx);
+    }}});
+    installedRecordMutations = mutations;
     const snapshots = config?.wave0.recordSnapshotRoutesEnabled
       ? createRecordSnapshotService({
           authorizer,

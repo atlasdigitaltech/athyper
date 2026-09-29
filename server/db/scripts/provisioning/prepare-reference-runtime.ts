@@ -3,24 +3,38 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { parseSharedReferenceProduct, compileSharedReferenceProduct, COMMON_REFERENCE_VIEW_PERMISSION, createCapabilityProfileFileResolver } from "@athyper/server-plane-studio-meta-entity-authoring";
-import { capabilityAuthoringMode } from "../../../packages/contracts/publication/src/capability-authoring-mode.js";
+import { capabilityAuthoringMode, capabilityArtifactMembers, prepareActivityCapabilityMember } from "@athyper/server-contract-publication";
 import { compileNativeRuntimeProjection } from "@athyper/server-platform-metadata";
 import type { AuthoringPlane } from "@athyper/server-contract-meta-entity-authoring";
 
 export function loadReferenceProduct(directory: string) {
   const root = resolve(directory);
   const capabilityPath = join(root, "capabilities.json");
-  const members = existsSync(capabilityPath) ? JSON.parse(readFileSync(capabilityPath, "utf8")) : undefined;
+  const members = existsSync(capabilityPath) ? JSON.parse(readFileSync(capabilityPath, "utf8")) : [];
+  const definition = JSON.parse(readFileSync(join(root, "definition.json"), "utf8"));
+  if (!Array.isArray(members)) throw Error("CAPABILITY_SOURCE_INVALID");
   if (Array.isArray(members)) {
-    let lookup: ReturnType<typeof createCapabilityProfileFileResolver> | undefined;
+    const lookups = new Map<string, ReturnType<typeof createCapabilityProfileFileResolver>>();
     for (const member of members) {
       if (capabilityAuthoringMode(member, "capabilities") !== "profile") continue;
       if (Object.hasOwn(member, "profileDefinition")) throw Error("CAPABILITY_PROFILE_SNAPSHOT_SOURCE_FORBIDDEN");
-      lookup ??= createCapabilityProfileFileResolver(fileURLToPath(new URL("../../../../metadata/profiles/collaboration/", import.meta.url)));
+      const directory = member.capabilityKey === "activity" ? "activity" : "collaboration";
+      let lookup = lookups.get(directory);
+      if (!lookup) {
+        lookup = createCapabilityProfileFileResolver(fileURLToPath(new URL(`../../../../metadata/profiles/${directory}/`, import.meta.url)));
+        lookups.set(directory, lookup);
+      }
       member.profileDefinition = lookup(member.profile?.code, member.profile?.version);
     }
   }
-  return parseSharedReferenceProduct(JSON.parse(readFileSync(join(root, "definition.json"), "utf8")),
+  const activityPath = join(root, "activity.json");
+  if (existsSync(activityPath)) {
+    if (members.some(member => member.capabilityKey === "activity")) throw Error("CAPABILITY_POLICY_DUPLICATE_SOURCE");
+    const lookup = createCapabilityProfileFileResolver(fileURLToPath(new URL("../../../../metadata/profiles/activity/", import.meta.url)));
+    members.push(prepareActivityCapabilityMember(definition.definition?.entityCode, JSON.parse(readFileSync(activityPath, "utf8")), lookup,
+      { versionHistoryAvailable: false, automaticCaptureAvailable: false, writableOperations: [] }));
+  }
+  return parseSharedReferenceProduct(definition,
     members);
 }
 
@@ -37,7 +51,7 @@ export function prepareReferenceRuntime(directory: string, plane: AuthoringPlane
     detailRouteTemplate: `/app/entity/${definition.entityCode}/:recordId`,
   }, permissions: requiredPermissions });
   return { status: "unsigned_candidate" as const, product, plane, graph, artifact, descriptor, requiredPermissions,
-    requiredCapabilityPermissions: [...new Set((graph.capabilities ?? []).flatMap(c => c.binding?.actions.map(a => a.permissionCode) ?? []))].sort(),
+    requiredCapabilityPermissions: [...new Set(Object.values(capabilityArtifactMembers(definition.entityCode, graph.capabilities ?? []).operationBindings).flatMap(binding => binding.actions.map(action => action.permissionCode)))].sort(),
     capabilityPublication: "requires_signed_split_artifacts" as const };
 }
 

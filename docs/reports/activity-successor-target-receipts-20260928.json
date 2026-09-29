@@ -1,0 +1,269 @@
+{
+  "verifiedAt": "2026-09-28T06:59:22.833553+00:00",
+  "receipts": [
+    {
+      "plane": "athyper_studio",
+      "releaseId": "39f1958f-facd-4d9d-b53b-989aaecc307d",
+      "releaseNo": 9,
+      "appliedReleaseId": "01a0e6cf-10df-72b6-9831-377b3b7f0863",
+      "status": "active",
+      "verification": {
+        "payload_hash": "031db76b28f20bda77434a6692d35f6f6d0931c24dbcae62d4f8727d64f46a77",
+        "target_plane": "studio",
+        "manifest_valid": true,
+        "signing_key_id": "athyper-publication-dev-signing-v1",
+        "runtime_compatible": true,
+        "signature_verified": true,
+        "signature_algorithm": "Ed25519",
+        "payload_schema_version": "2.0"
+      },
+      "activatedAt": "2026-09-28T06:58:45.114611+00:00",
+      "operationArtifacts": [
+        {
+          "key": "country/operation",
+          "activityBinding": {
+            "query": {
+              "pageSize": 50,
+              "maxRangeDays": 90,
+              "defaultRangeDays": 30
+            },
+            "views": [
+              "auditLog",
+              "snapshots"
+            ],
+            "actions": [
+              {
+                "key": "audit_query",
+                "handlerKey": "platform.activity.audit_query.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.audit.event.query",
+                "servicePermissionCode": "audit.event.query"
+              },
+              {
+                "key": "snapshots_read",
+                "handlerKey": "platform.activity.snapshots_read.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_compare",
+                "handlerKey": "platform.activity.snapshots_compare.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_capture",
+                "handlerKey": "platform.activity.snapshots_capture.v1",
+                "concurrency": "none",
+                "idempotency": "required",
+                "permissionCode": "common.records.snapshot.capture",
+                "servicePermissionCode": "records.snapshot.capture"
+              }
+            ],
+            "layouts": [
+              "drawer",
+              "content"
+            ],
+            "snapshots": {
+              "manualCapture": true,
+              "retentionClass": "standard",
+              "automaticCapture": "none",
+              "captureOperations": []
+            },
+            "serviceKey": "platform.activity.v1",
+            "defaultView": "auditLog",
+            "profilePolicy": {
+              "hash": "sha256:71ee6c1d53bce1212b78138a276dfaf2b7376b258e40e48a2d61beb3b7af80cf",
+              "plane": "studio",
+              "artifactKey": "country/capability-profile.activity.1"
+            },
+            "schemaVersion": 1,
+            "ownerEntityCode": "country",
+            "admissionResolverKey": "platform.records.admission.v1"
+          }
+        }
+      ]
+    },
+    {
+      "plane": "athyper_neon",
+      "releaseId": "39f1958f-facd-4d9d-b53b-989aaecc307d",
+      "releaseNo": 9,
+      "appliedReleaseId": "01a0e6cf-0ee7-730b-86ad-69bf9e882677",
+      "status": "active",
+      "verification": {
+        "payload_hash": "ed1621cb22bde7888a1318e1c7e8a56edb87ad1fc97734f5ba1bb20d4267017e",
+        "target_plane": "neon",
+        "manifest_valid": true,
+        "signing_key_id": "athyper-publication-dev-signing-v1",
+        "runtime_compatible": true,
+        "signature_verified": true,
+        "signature_algorithm": "Ed25519",
+        "payload_schema_version": "2.0"
+      },
+      "activatedAt": "2026-09-28T06:58:44.614354+00:00",
+      "operationArtifacts": [
+        {
+          "key": "country/operation",
+          "activityBinding": {
+            "query": {
+              "pageSize": 50,
+              "maxRangeDays": 90,
+              "defaultRangeDays": 30
+            },
+            "views": [
+              "auditLog",
+              "snapshots"
+            ],
+            "actions": [
+              {
+                "key": "audit_query",
+                "handlerKey": "platform.activity.audit_query.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.audit.event.query",
+                "servicePermissionCode": "audit.event.query"
+              },
+              {
+                "key": "snapshots_read",
+                "handlerKey": "platform.activity.snapshots_read.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_compare",
+                "handlerKey": "platform.activity.snapshots_compare.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_capture",
+                "handlerKey": "platform.activity.snapshots_capture.v1",
+                "concurrency": "none",
+                "idempotency": "required",
+                "permissionCode": "common.records.snapshot.capture",
+                "servicePermissionCode": "records.snapshot.capture"
+              }
+            ],
+            "layouts": [
+              "drawer",
+              "content"
+            ],
+            "snapshots": {
+              "manualCapture": true,
+              "retentionClass": "standard",
+              "automaticCapture": "none",
+              "captureOperations": []
+            },
+            "serviceKey": "platform.activity.v1",
+            "defaultView": "auditLog",
+            "profilePolicy": {
+              "hash": "sha256:899a77d2e7812bec0a990f7a406e51f05a4c7d976b8609c7b818296bac0aa07d",
+              "plane": "neon",
+              "artifactKey": "country/capability-profile.activity.1"
+            },
+            "schemaVersion": 1,
+            "ownerEntityCode": "country",
+            "admissionResolverKey": "platform.records.admission.v1"
+          }
+        }
+      ]
+    },
+    {
+      "plane": "athyper_mesh",
+      "releaseId": "39f1958f-facd-4d9d-b53b-989aaecc307d",
+      "releaseNo": 9,
+      "appliedReleaseId": "01a0e6cf-1117-7c52-b6c9-9b1e5d573a9b",
+      "status": "active",
+      "verification": {
+        "payload_hash": "4ac29939bbafd0f94861f886da62b030b18965a97a0827a8896e9aaf767d5b5f",
+        "target_plane": "mesh",
+        "manifest_valid": true,
+        "signing_key_id": "athyper-publication-dev-signing-v1",
+        "runtime_compatible": true,
+        "signature_verified": true,
+        "signature_algorithm": "Ed25519",
+        "payload_schema_version": "2.0"
+      },
+      "activatedAt": "2026-09-28T06:58:45.172778+00:00",
+      "operationArtifacts": [
+        {
+          "key": "country/operation",
+          "activityBinding": {
+            "query": {
+              "pageSize": 50,
+              "maxRangeDays": 90,
+              "defaultRangeDays": 30
+            },
+            "views": [
+              "auditLog",
+              "snapshots"
+            ],
+            "actions": [
+              {
+                "key": "audit_query",
+                "handlerKey": "platform.activity.audit_query.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.audit.event.query",
+                "servicePermissionCode": "audit.event.query"
+              },
+              {
+                "key": "snapshots_read",
+                "handlerKey": "platform.activity.snapshots_read.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_compare",
+                "handlerKey": "platform.activity.snapshots_compare.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_capture",
+                "handlerKey": "platform.activity.snapshots_capture.v1",
+                "concurrency": "none",
+                "idempotency": "required",
+                "permissionCode": "common.records.snapshot.capture",
+                "servicePermissionCode": "records.snapshot.capture"
+              }
+            ],
+            "layouts": [
+              "drawer",
+              "content"
+            ],
+            "snapshots": {
+              "manualCapture": true,
+              "retentionClass": "standard",
+              "automaticCapture": "none",
+              "captureOperations": []
+            },
+            "serviceKey": "platform.activity.v1",
+            "defaultView": "auditLog",
+            "profilePolicy": {
+              "hash": "sha256:2ba044c9fa2f7ecf6a0ca97a2cc292068b1284f5d40f75e57f0d91fe830ef53e",
+              "plane": "mesh",
+              "artifactKey": "country/capability-profile.activity.1"
+            },
+            "schemaVersion": 1,
+            "ownerEntityCode": "country",
+            "admissionResolverKey": "platform.records.admission.v1"
+          }
+        }
+      ]
+    }
+  ]
+}

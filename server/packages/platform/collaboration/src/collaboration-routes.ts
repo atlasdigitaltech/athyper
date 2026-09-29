@@ -134,7 +134,7 @@ export function registerCollaborationRoutes(
     "/api/collab/drafts",
     o.authenticate,
     route(async (r, c) => {
-      const id = await o.collaboration.putDraft(command(c, body(r)));
+      const id = await o.collaboration.putDraft(command(c, body(r), true));
       return { status: 200, body: { id } };
     }),
   );
@@ -186,11 +186,11 @@ export function registerCollaborationRoutes(
     }),
   );
 }
-function command(c: VerifiedRequestContext, b: Record<string, unknown>) {
+function command(c: VerifiedRequestContext, b: Record<string, unknown>, draft = false) {
   return {
     context: c,
     ...coordinate(b),
-    text: req(b, "text"),
+    text: draft && typeof b.text === "string" ? b.text : req(b, "text"),
     ...rich(b),
     parentCommentId: uuidOpt(b.parentCommentId),
     visibility: one(b.visibility, [

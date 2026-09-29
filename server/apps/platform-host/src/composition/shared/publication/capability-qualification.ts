@@ -1,12 +1,14 @@
 import { sql, type Kysely } from "kysely";
-import { capabilityArtifactMembers } from "@athyper/server-contract-publication";
+import { capabilityArtifactMembers, capabilityBindingKey, ACTIVITY_PERMISSION_CATALOG, isActivityPermissionCode, parseActivityBinding, type ACTIVITY_ACTIONS } from "@athyper/server-contract-publication";
 import type { ReferenceFirstPublicationPorts } from "@athyper/server-plane-studio-meta-entity-authoring";
 
 type Target = Parameters<ReferenceFirstPublicationPorts["qualify"]>[0];
-type Providers = {
+export type CapabilityQualificationProviders = {
   parentRead: boolean;
   resourceHeader: boolean;
   section(serviceKey: string): unknown;
+  recordHistory?: { prepare: unknown; qualify(target: Target): Promise<void> };
+  activity?: Partial<Record<keyof typeof ACTIVITY_ACTIONS, unknown>>;
   comments?: { create: unknown; edit: unknown; remove: unknown; putReaction?: unknown; deleteReaction?: unknown; putDraft?: unknown; getDraft?: unknown; deleteDraft?: unknown; flag?: unknown; participants?: unknown; history?: unknown };
   attachments?: { stage: unknown; finalize: unknown; createAuthorizedDownload: unknown; archive?: unknown; status?: unknown; rename?: unknown; setCategory?: unknown; manageFolder?: unknown; unlink?: unknown };
   discovery?: { preview: unknown; extract: unknown; search: unknown };
@@ -19,7 +21,7 @@ type Providers = {
  * No entity name is used to select providers or infer authority. */
 export function createCapabilityQualification(options: {
   databases: Readonly<Partial<Record<Target["targetPlane"], Kysely<Record<string, never>>>>>;
-  providers(): Providers;
+  providers(): CapabilityQualificationProviders;
 }): ReferenceFirstPublicationPorts["qualify"] {
   return async target => {
     const members = target.graph.capabilities ?? [];
@@ -30,13 +32,13 @@ export function createCapabilityQualification(options: {
     if (!db || !providers.parentRead || !providers.resourceHeader) throw Error("PUBLICATION_CAPABILITY_PARENT_UNAVAILABLE");
     const permissions = new Set<string>(), tables = new Map<string, { insert: boolean; update: boolean; delete?: boolean }>();
     for (const member of enabled) {
-      const binding = mapped.operationBindings[member.capabilityKey === "comments" ? "commentBinding" : "attachmentBinding"];
+      const binding = mapped.operationBindings[capabilityBindingKey(member.capabilityKey)];
       const section = binding ? providers.section(binding.serviceKey) : undefined;
       if (!binding || !section || typeof section !== "object" || typeof Reflect.get(section, "read") !== "function" || binding.admissionResolverKey !== "platform.records.admission.v1")
         throw Error("PUBLICATION_CAPABILITY_SECTION_UNAVAILABLE");
       if (binding.notifications || binding.retentionPolicy || ("audiencePolicy" in binding && binding.audiencePolicy))
         throw Error("PUBLICATION_CAPABILITY_POLICY_PROVIDER_REQUIRED");
-      const methods: Record<string, unknown> = member.capabilityKey === "comments"
+      const methods: Record<string, unknown> = member.capabilityKey === "activity" ? { ...providers.activity } : member.capabilityKey === "comments"
         ? { read: providers.section(binding.serviceKey), create: providers.comments?.create, update_own: providers.comments?.edit, archive_own: providers.comments?.remove,
             reply: providers.comments?.create, react: providers.comments?.putReaction, draft: providers.comments?.putDraft,
             flag: providers.comments?.flag, mention: providers.comments?.participants, history: providers.comments?.history }
@@ -72,6 +74,21 @@ export function createCapabilityQualification(options: {
             tables.set("comment_draft", { insert: true, update: true, delete: true });
           }
           if (binding.features.reporting) tables.set("event.comment_flag", { insert: true, update: true });
+        }
+      } else if (member.capabilityKey === "activity") {
+        const activity = parseActivityBinding(binding,target.graph.entity.entityCode);
+        if (activity.recording) {
+          if (typeof providers.recordHistory?.prepare !== "function") throw Error("PUBLICATION_ACTIVITY_WRITE_PROVIDER_REQUIRED");
+          await providers.recordHistory.qualify(target);
+          tables.set("snapshot.record_version",{insert:true,update:false});
+          tables.set("event.command_execution",{insert:true,update:true});
+        }
+
+        if (binding.actions.some(action => ["audit_query","timeline_query"].includes(action.key))) tables.set("audit.audit_log", { insert: false, update: false });
+        if (binding.actions.some(action => action.key === "snapshots_capture")) tables.set("event.command_execution", { insert: true, update: true });
+        if (activity.snapshots.automaticCapture !== "none" || binding.actions.some(action => action.key.startsWith("snapshots_"))) {
+          tables.set("snapshot.entity_snapshot_identity", { insert: false, update: false });
+          tables.set("snapshot.entity_snapshot", { insert: false, update: false });
         }
       } else {
         for (const name of ["attachment", "attachment_series", "attachment_link"])
@@ -129,9 +146,30 @@ export function createCapabilityQualification(options: {
         if (names.size !== 3 || !["comment_revision_capture", "comment_revision_number", "comment_revision_immutable"].every(name => names.has(name)))
           throw Error("PUBLICATION_CAPABILITY_REVISION_INTEGRITY_UNAVAILABLE");
       }
+      if (enabled.some(member => member.capabilityKey === "activity")) {
+        const binding = mapped.operationBindings.activityBinding!;
+        const activity = parseActivityBinding(binding,target.graph.entity.entityCode);
+        if (activity.recording) {
+          const triggers = (await sql`SELECT t.oid FROM pg_trigger t JOIN pg_proc p ON p.oid=t.tgfoid WHERE t.tgrelid='snapshot.record_version'::regclass AND t.tgname='record_version_immutable' AND t.tgenabled='O' AND t.tgtype=27 AND p.proname='trg_record_version_immutable'`.execute(tx)).rows;
+          if (triggers.length !== 1) throw Error("PUBLICATION_ACTIVITY_HISTORY_INTEGRITY_REQUIRED");
+        }
+        if (activity.snapshots.automaticCapture !== "none" || binding.actions.some(action => action.key === "snapshots_capture")) {
+          const rows = (await sql`SELECT p.oid FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+            WHERE n.nspname='snapshot' AND p.proname='fn_capture_entity' AND p.prosecdef
+              AND oidvectortypes(p.proargtypes)='text, uuid, text, integer, text, bigint, text, snapshot.capture_kind_d, jsonb, uuid, uuid, timestamp with time zone, timestamp with time zone, snapshot.retention_class_d, text'
+              AND has_function_privilege(p.oid,'EXECUTE')`.execute(tx)).rows;
+          if (rows.length !== 1) throw Error("PUBLICATION_CAPABILITY_CAPTURE_UNAVAILABLE");
+        }
+      }
       for (const permission of permissions) {
+        const activity = isActivityPermissionCode(permission) ? ACTIVITY_PERMISSION_CATALOG[permission] : undefined;
         const rows = (await sql`SELECT p.id FROM authz.permission p JOIN authz.permission_scope_kind s ON s.permission_id=p.id
-          WHERE p.canonical_code=${permission} AND p.status='published' AND s.status='active' AND s.scope_kind='tenant'`.execute(tx)).rows;
+          WHERE p.canonical_code=${permission} AND p.status='published' AND s.status='active' AND s.scope_kind='tenant'
+          ${activity ? sql`AND p.permission_kind='capability' AND p.risk_tier::text=${activity.riskTier}
+            AND NOT p.requires_mfa AND NOT p.requires_sod AND NOT p.is_shareable AND NOT p.is_delegable AND NOT p.is_overridable
+            AND s.propagation_mode='exact'
+            AND NOT EXISTS(SELECT 1 FROM authz.permission_scope_kind extra WHERE extra.permission_id=p.id AND extra.status='active'
+              AND (extra.scope_kind<>'tenant' OR extra.propagation_mode<>'exact'))` : sql``}`.execute(tx)).rows;
         if (rows.length !== 1) throw Error("PUBLICATION_CAPABILITY_PERMISSION_UNAVAILABLE");
       }
       for (const [table, privileges] of tables) {

@@ -1,5 +1,6 @@
+import { ACTIVITY_PERMISSION_CATALOG, isActivityPermissionCode } from "@athyper/server-contract-publication";
 import { createHash } from "node:crypto";
-import { COMMON_REFERENCE_VIEW_PERMISSION } from "@athyper/server-contract-metadata";
+import { COMMON_REFERENCE_VIEW_PERMISSION, IDENTITY_PERMISSION_CATALOG, isIdentityPermissionCode } from "@athyper/server-contract-metadata";
 
 export type CatalogPlane = "studio" | "neon" | "mesh";
 
@@ -43,6 +44,11 @@ export function buildCanonicalCatalogV2(input: {
   const permissions = input.permissions
     .map((permission) => {
       if (permission.canonicalCode === COMMON_REFERENCE_VIEW_PERMISSION && (permission.permissionKind !== "capability" || permission.riskTier !== "low" || permission.requiresMfa || permission.requiresSod)) throw new Error("Invalid common reference capability definition");
+      if (isActivityPermissionCode(permission.canonicalCode)) {
+        const expected = ACTIVITY_PERMISSION_CATALOG[permission.canonicalCode];
+        if (permission.permissionKind !== "capability" || permission.riskTier !== expected.riskTier || permission.requiresMfa || permission.requiresSod) throw new Error("Invalid common Activity capability definition");
+      }
+      if(isIdentityPermissionCode(permission.canonicalCode) && (permission.permissionKind !== "capability" || permission.riskTier !== IDENTITY_PERMISSION_CATALOG[permission.canonicalCode] || permission.requiresMfa || permission.requiresSod)) throw Error("Invalid common identity capability definition");
       const coordinate = canonicalCoordinate(input.plane, permission.canonicalCode);
       const canonicalCode = `${coordinate.product}.${coordinate.domain}.${coordinate.entity}.${coordinate.operation}`;
       const definition = {
@@ -87,6 +93,14 @@ function uuidV5(name: string, namespace: string): string {
 
 function canonicalCoordinate(plane: CatalogPlane, sourceCode: string): { product: CatalogPlane | "common"; domain: string; entity: string; operation: string } {
   if (sourceCode === COMMON_REFERENCE_VIEW_PERMISSION) return { product: "common", domain: "platform", entity: "reference", operation: "view" };
+  if (isActivityPermissionCode(sourceCode)) {
+    const { domain, entity, operation } = ACTIVITY_PERMISSION_CATALOG[sourceCode];
+    return { product: "common", domain, entity, operation };
+  }
+  if (isIdentityPermissionCode(sourceCode)) {
+    const [,domain,entity,operation] = sourceCode.split(".");
+    return {product:"common",domain:domain!,entity:entity!,operation:operation!};
+  }
   const raw = sourceCode.toLowerCase().split(".").filter(Boolean);
   if (raw.length !== 4 || raw[0] !== plane) throw new Error(`permission must be exact plane.domain.entity.operation: ${sourceCode}`);
   const domain = token(raw[1]!);

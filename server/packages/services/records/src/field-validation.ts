@@ -15,9 +15,15 @@ export function validateRecordInput(descriptor: EntityRuntimeDescriptor, action:
   }
   for (const [key, value] of Object.entries(input)) {
     const field = fields.get(key);
+    if(field?.required && value === null) add(violations,key,"FIELD_REQUIRED","Field is required");
     if (!field || value === null || value === undefined) continue;
     if (!matchesType(field.type, value)) add(violations, key, "FIELD_TYPE_INVALID", `Expected ${field.type}`);
     const config = field.validation;
+    if(Array.isArray(config?.["options"])&&!config["options"].includes(value))add(violations,key,"FIELD_OPTION_INVALID","Choose an available option");
+    if(typeof value==="number"){
+      if(typeof config?.["minimum"]==="number"&&value<config["minimum"])add(violations,key,"FIELD_MINIMUM","Value is below the minimum");
+      if(typeof config?.["maximum"]==="number"&&value>config["maximum"])add(violations,key,"FIELD_MAXIMUM","Value exceeds the maximum");
+    }
     if (typeof value === "string") {
       const min = number(config?.["minLength"]); const max = number(config?.["maxLength"]); const pattern = typeof config?.["pattern"] === "string" ? config["pattern"] : undefined;
       if (min !== undefined && value.length < min) add(violations, key, "FIELD_TOO_SHORT", `Minimum length is ${min}`);
@@ -28,6 +34,10 @@ export function validateRecordInput(descriptor: EntityRuntimeDescriptor, action:
       }
       if (pattern && !compileFieldPattern(pattern).test(value)) add(violations, key, "FIELD_PATTERN_INVALID", "Field does not match its required pattern");
     }
+  }
+  for(const predicate of descriptor.recordPredicates??[]){
+    const value=input[predicate.field];
+    if(value!==undefined && (predicate.operator==="eq" ? value!==predicate.value : value===predicate.value))add(violations,predicate.field,"RECORD_SCOPE_INVALID","Value is outside the published record scope");
   }
   return violations;
 }

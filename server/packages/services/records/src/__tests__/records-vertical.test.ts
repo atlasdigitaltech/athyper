@@ -194,3 +194,40 @@ it("accepted BP target selection blocks direct create and patch despite a permis
   expect(await mutations.patch({ ...command, recordId: "bp", expectedVersion: 1, idempotencyKey: "deferred-patch-operation" })).toMatchObject({ kind: "Forbidden" });
   expect(authorize).not.toHaveBeenCalled(); expect(record).not.toHaveBeenCalled(); expect(append).not.toHaveBeenCalled();
 });
+
+it("enforces a published owning-service policy in the same record transaction",async()=>{
+ const persistence=createInMemoryRecordPersistence();
+ const secured={...descriptor,mutationPolicy:{schemaVersion:1 as const,handlerKey:"test.preferences.v1"}};
+ const validate=vi.fn(async(_input:unknown,_tx:unknown)=>undefined),committed=vi.fn(async(_input:unknown,_tx:unknown)=>undefined);
+ const common={metadata:{getEntityDescriptor:async()=>secured},authorizer,repository:persistence.repository,transactions:persistence.transactions,commandExecutions:createInMemoryCommandExecutionStore(),audit:{record:async(input:AuditRecordInput)=>eventFrom(input,1)},outbox:{append:async()=>undefined}};
+ const command={context,entityCode:secured.entityCode,input:{code:"OWN",name:"Owned",status:"draft"},origin:"classic",validationMode:"strict",idempotencyKey:"owning-policy-create-1"} as const;
+ await expect(createRecordMutationService(common).create(command)).rejects.toThrow("validation service");
+ const service=createRecordMutationService({...common,mutationPolicies:new Map([["test.preferences.v1",{validate,committed}]])});
+ await expect(service.create(command)).resolves.toMatchObject({kind:"Committed"});
+ expect(validate).toHaveBeenCalledOnce();expect(committed).toHaveBeenCalledOnce();
+ expect(validate.mock.calls[0]?.[1]).toBe(committed.mock.calls[0]?.[1]);
+ await expect(service.create(command)).resolves.toMatchObject({kind:"Committed",replayed:true});
+ expect(committed).toHaveBeenCalledOnce();
+});
+
+it("derives child ownership from locked parent scope and rechecks authority on replay", async () => {
+  const owned: EntityRuntimeDescriptor = { ...descriptor, ownerAccess: {schemaVersion:1,ownerField:"owner_id",createdByField:"created_by",updatedByField:"updated_by",administerPermission:"common.test.administer"},
+    fields:[...descriptor.fields,{key:"owner_id",storagePath:"owner_id",type:"uuid",required:false,writableOn:[]}] };
+  const persistence=createInMemoryRecordPersistence();
+  let admin=true;
+  const service=createRecordMutationService({metadata:{getEntityDescriptor:async()=>owned},authorizer,repository:persistence.repository,transactions:persistence.transactions,
+    commandExecutions:createInMemoryCommandExecutionStore(),audit:{record:async input=>eventFrom(input,1)},outbox:{append:async()=>{}},
+    collectionScopes:{resolve:async()=>({status:"ready",authorizationResource:{},constraints:[{kind:"entity.parent.v1",entityCode:owned.entityCode,storageSchema:"master",storageObject:owned.storage.object,predicates:[{field:"owner_id",value:"principal-other"}]}],labels:[],fingerprintMaterial:{parent:"principal-other"}})},
+    ownerAccess:{prepare:async input=>{if(input.ownerPrincipalId!==undefined&&input.ownerPrincipalId!==context.principalId&&!admin)throw Error("owner denied");return input.operation==="create"?{owner_id:input.ownerPrincipalId??context.principalId}:{};}}
+  });
+  const command={context,entityCode:owned.entityCode,input:{code:"OWNED",name:"Owned",status:"draft"},origin:"classic",validationMode:"strict",idempotencyKey:"records-parent-create-01",scopeCoordinate:{parentEntityCode:"principal",parentRecordId:"principal-other",relationshipKey:"profile"}} as const;
+  await expect(service.create({...command,input:{...command.input,owner_id:context.principalId}})).resolves.toMatchObject({kind:"Forbidden"});
+  const result=await service.create(command);
+  expect(result).toMatchObject({kind:"Committed",record:{owner_id:"principal-other"}});
+  if(result.kind!=="Committed")throw Error("create failed");
+  const patch={context,entityCode:owned.entityCode,recordId:result.recordId,input:{name:"Changed"},expectedVersion:1,origin:"classic",validationMode:"strict",idempotencyKey:"records-owner-patch-01"} as const;
+  await expect(service.patch(patch)).resolves.toMatchObject({kind:"Committed"});
+  admin=false;
+  await expect(service.patch(patch)).rejects.toThrow("owner denied");
+  await expect(service.create(command)).rejects.toThrow("owner denied");
+});

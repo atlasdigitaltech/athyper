@@ -101,7 +101,10 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'APPLIED_RELEASE_NOT_FOUND' USING ERRCODE='no_data_found'; END IF;
     IF v_row.status='verified' THEN RETURN v_row; END IF;
     IF v_row.status<>'staged' THEN RAISE EXCEPTION 'RELEASE_NOT_STAGED' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
-    IF v_row.publication_key LIKE 'metadata.entity.%' THEN
+    -- Compiled native entities carry the immutable payload projection below.
+    -- Legacy entity_runtime publications still require contract/descriptor rows.
+    IF v_row.publication_key LIKE 'metadata.entity.%'
+       AND v_row.manifest->>'artifactKind' IS DISTINCT FROM 'compiled_entity_runtime' THEN
       SELECT * INTO v_descriptor FROM runtime_meta.entity_descriptor WHERE applied_release_id=v_row.id;
       IF NOT FOUND THEN v_failure_code:='ENTITY_PROJECTION_REQUIRED';
       ELSE

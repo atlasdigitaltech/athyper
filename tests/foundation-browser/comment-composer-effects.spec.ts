@@ -81,12 +81,12 @@ for (const activation of ['pointer','keyboard']) test(`mention selection closes 
   await page.goto('about:blank');await page.setContent('<div id="root"></div>');await page.evaluate(bundle);
   const opener=page.locator('summary[aria-label="Mention a participant"]');
   await opener.click();
-  const query=page.getByRole('textbox',{name:'Mention a participant',exact:true});
+  const query=page.getByRole('combobox',{name:'Mention a participant',exact:true});
   await query.fill('Ann');
   await expect.poll(()=>page.evaluate(()=>(window as any).pendingSearches.length)).toBe(1);
   await page.evaluate(()=>(window as any).pendingSearches[0]([{id:'ann',displayName:'Ann'}]));
-  const option=page.getByRole('button',{name:'Ann',exact:true});
-  if(activation==='keyboard'){await option.focus();await page.keyboard.press('Enter');}else await option.click();
+  const option=page.getByRole('option',{name:'Ann',exact:true});
+  if(activation==='keyboard'){await query.focus();await query.press('ArrowDown');await query.press('Enter');}else await option.click();
   await expect(page.locator('details.a-rich-comment-composer__mentions')).not.toHaveAttribute('open','');
   await expect(query).toBeHidden();
   const editor=page.locator('[contenteditable="true"]').first();
@@ -95,14 +95,14 @@ for (const activation of ['pointer','keyboard']) test(`mention selection closes 
   await page.keyboard.type(' check the document');
   await expect(editor).toContainText('@Ann check the document');
   await opener.click();await expect(query).toBeVisible();await expect(query).toHaveValue('');
-  await expect(page.getByRole('button',{name:'Ann',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('option',{name:'Ann',exact:true})).toHaveCount(0);
 });
 
 test("mention picker dismisses outside, on Escape and keyboard departure without stale results",async({page})=>{
   await page.goto('about:blank');await page.setContent('<div id="root"></div>');await page.evaluate(bundle);
   await page.addStyleTag({content:'[contenteditable="true"] { min-height: 50px; }'});
   const opener=page.locator('summary[aria-label="Mention a participant"]');
-  const query=page.getByRole('textbox',{name:'Mention a participant',exact:true});
+  const query=page.getByRole('combobox',{name:'Mention a participant',exact:true});
   const editor=page.locator('[contenteditable="true"]').first();
   await editor.fill('Keep this draft');
   await opener.click();await query.fill('Ann');
@@ -111,7 +111,7 @@ test("mention picker dismisses outside, on Escape and keyboard departure without
   await editor.click();await expect(query).toBeHidden();await expect(editor).toBeFocused();
   await page.evaluate(()=>(window as any).pendingSearches[0]([{id:'ann',displayName:'Stale Ann'}]));
   await opener.click();await expect(query).toHaveValue('');
-  await expect(page.getByRole('button',{name:'Stale Ann'})).toHaveCount(0);
+  await expect(page.getByRole('option',{name:'Stale Ann'})).toHaveCount(0);
   await query.focus();await page.keyboard.press('Escape');
   await expect(query).toBeHidden();await expect(opener).toBeFocused();
   await opener.click();await query.focus();await page.keyboard.press('Tab');
@@ -127,11 +127,11 @@ test("inline callback changes do not loop busy notifications or restart mention 
   await expect.poll(()=>page.evaluate(()=>(window as any).busyCalls)).toEqual([false]);
   for(let index=0;index<4;index++)await page.evaluate(()=>(window as any).rerender());
   await page.locator('summary[aria-label="Mention a participant"]').click();
-  const query=page.getByRole('textbox',{name:'Mention a participant',exact:true});
+  const query=page.getByRole('combobox',{name:'Mention a participant',exact:true});
   await query.fill('Ann');
   await expect.poll(()=>page.evaluate(()=>(window as any).searchCalls.length)).toBe(1);
   await page.evaluate(()=>{(window as any).rerender();(window as any).pendingSearches[0]([{id:'ann',displayName:'Ann'}]);});
-  await expect(page.getByRole('button',{name:'Ann',exact:true})).toBeVisible();
+  await expect(page.getByRole('option',{name:'Ann',exact:true})).toBeVisible();
   // Wait beyond debounce: an unrelated parent update must not cause a new request.
   await page.waitForTimeout(350);
   expect(await page.evaluate(()=>(window as any).searchCalls.length)).toBe(1);
@@ -141,10 +141,10 @@ test("inline callback changes do not loop busy notifications or restart mention 
   await query.fill('New');
   await expect.poll(()=>page.evaluate(()=>(window as any).searchCalls.length)).toBe(3);
   await page.evaluate(()=>{(window as any).pendingSearches[2]([{id:'new',displayName:'New result'}]);(window as any).pendingSearches[1]([{id:'old',displayName:'Stale result'}]);});
-  await expect(page.getByRole('button',{name:'New result',exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Stale result',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('option',{name:'New result',exact:true})).toBeVisible();
+  await expect(page.getByRole('option',{name:'Stale result',exact:true})).toHaveCount(0);
   await query.fill('');
-  await expect(page.getByRole('button',{name:'New result',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('option',{name:'New result',exact:true})).toHaveCount(0);
   await page.evaluate(()=>(window as any).setDisabled(true));
   await expect.poll(()=>page.evaluate(()=>(window as any).busyCalls)).toEqual([false,true]);
   await page.evaluate(()=>(window as any).setDisabled(false));

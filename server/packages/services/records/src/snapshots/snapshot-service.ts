@@ -9,6 +9,7 @@ export function createRecordSnapshotService(options: { readonly authorizer: Auth
   async function readableSnapshot(context: VerifiedRequestContext, snapshotId: string): Promise<RecordSnapshot> {
     const snapshot = await options.repository.get(scope(context), snapshotId);
     if (!snapshot) throw new RecordServiceError(404, "SNAPSHOT_NOT_FOUND", "Snapshot was not found");
+    if (snapshot.payloadSchemaVersion !== 1) throw new RecordServiceError(409, "SNAPSHOT_READ_UNAVAILABLE", "Use the record Activity API for this snapshot format");
     if (!snapshot.entityCode) throw new RecordServiceError(409, "SNAPSHOT_READ_UNAVAILABLE", "Snapshot has no published entity code");
     const descriptor = await options.metadata.getEntityDescriptor(context, snapshot.entityCode);
     if (!descriptor) throw new RecordServiceError(409, "ENTITY_OPERATION_UNAVAILABLE", "Entity descriptor is not published");

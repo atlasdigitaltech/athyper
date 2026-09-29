@@ -582,6 +582,7 @@ function problem(
   status: number,
   code: string,
   detail: string,
+  inspectionReason?: string,
 ): void {
   response
     .status(status)
@@ -592,6 +593,7 @@ function problem(
       status,
       detail,
       code,
+      ...(inspectionReason ? { inspectionReason } : {}),
     });
 }
 function handle(
@@ -602,7 +604,7 @@ function handle(
   if (error instanceof Error && "code" in error && error.code === "ENTITY_CAPABILITY_DENIED") {
     problem(response,403,"ENTITY_CAPABILITY_DENIED","Entity capability is unavailable or not authorized");
   } else if (error instanceof MalwareDocumentUnsupportedError) {
-    problem(response, 422, error.code, error.message);
+    problem(response, 422, error.code, error.message, error.inspectionReason);
   } else if (error instanceof QuotaExceededError) {
     response.setHeader("Retry-After", String(error.policy.retryAfterSeconds));
     response

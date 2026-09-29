@@ -11,7 +11,7 @@ import {
 import { UploadIcon } from "@athyper/platform-icons";
 import { validateUploadFile } from "@athyper/platform-communications-collaboration-ui";
 import { Card } from "@athyper/platform-ui";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 import { message } from "../section-primitives";
 import { attachmentBrowse } from "../collaboration-operations";
 import { UploadExpandedContext } from "./upload-context";
@@ -39,6 +39,11 @@ export function AttachmentUploader({
   const expanded = useContext(UploadExpandedContext);
   const queueElement = useRef<HTMLUListElement>(null);
   const uploadsAllowed = capability?.maxFileBytes !== 0;
+  const requirementsId = useId();
+  const [validationErrors, setValidationErrors] = useState<readonly string[]>([]);
+  const typeLabels: Record<string, string> = { "application/pdf": "PDF", "image/png": "PNG", "image/jpeg": "JPG/JPEG", "text/plain": "TXT" };
+  const allowedTypes = capability?.allowedContentTypes?.map(type => typeLabels[type] ?? type).join(", ");
+  const maximumSize = capability?.maxFileBytes === undefined ? undefined : collaborationFileSize(capability.maxFileBytes, intl);
   const [queue, setQueue] = useState<
     readonly {
       readonly attachmentId: string;
@@ -55,6 +60,7 @@ export function AttachmentUploader({
         | "failed";
       readonly progress?: number;
       readonly error?: string;
+      readonly failureKind?: "inspection" | "malware";
       readonly retryable?: boolean;
     }[]
   >([]);
@@ -94,7 +100,7 @@ export function AttachmentUploader({
     setQueue((items) =>
       items.map((item) =>
         item.attachmentId === attempt.attachmentId
-          ? { ...item, state: "uploading" }
+          ? { ...item, state: "uploading", error: undefined, failureKind: undefined }
           : item,
       ),
     );
@@ -159,16 +165,19 @@ export function AttachmentUploader({
         ),
         ...(retryable ? [attempt] : []),
       ];
+      const code = cause instanceof ApiTransportError ? cause.problem?.code : undefined;
+      const failureKind = code === "MALWARE_DOCUMENT_UNSUPPORTED" ? "inspection" as const
+        : code === "ATTACHMENT_QUARANTINED" ? "malware" as const : undefined;
       setQueue((items) =>
         items.map((item) =>
           item.attachmentId === attempt.attachmentId
-            ? { ...item, state: "failed", error: message(cause), retryable }
+            ? { ...item, state: "failed", error: message(cause), retryable, failureKind }
             : item,
         ),
       );
-      setError(
-        `${message(cause)}${retryable ? " Retry uses the same upload reservation." : ""}`,
-      );
+      // The queue item owns this error and its retry/remove action.
+      // Refresh the persisted status (permanent inspection failures are terminal).
+      onChanged();
       return false;
     }
   }
@@ -301,6 +310,8 @@ export function AttachmentUploader({
     }
     admittingFiles.current = true;
     try {
+      setError(undefined);
+      setValidationErrors([]);
       const maxBatch = capability?.maxBatchCount ?? 10;
       const chosen = files.slice(0, maxBatch);
       const rejected: string[] =
@@ -313,10 +324,13 @@ export function AttachmentUploader({
           validateUploadFile(file, capability ?? {});
           accepted.push(file);
         } catch (cause) {
-          rejected.push(`${file.name}: ${message(cause)}`);
+          rejected.push(file.size < 1 ? intl.message("files.emptyFile", { name: file.name })
+            : capability?.maxFileBytes !== undefined && file.size > capability.maxFileBytes
+              ? intl.message("files.tooLarge", { name: file.name, size: collaborationFileSize(file.size, intl), maximum: maximumSize! })
+              : allowedTypes ? intl.message("files.unsupportedFile", { name: file.name, types: allowedTypes }) : message(cause));
         }
       }
-      if (rejected.length) setError(rejected.join(" "));
+      if (rejected.length) setValidationErrors(rejected);
       if (!accepted.length) return;
       const valid = accepted,
         pending: { file: File; existing: Readonly<Record<string, unknown>> }[] =
@@ -359,7 +373,7 @@ export function AttachmentUploader({
       }
       if (separate.length) enqueue(separate);
       if (pending.length) setDuplicates((current) => [...current, ...pending]);
-      setError(rejected.length ? rejected.join(" ") : undefined);
+      setValidationErrors(rejected);
     } finally {
       admittingFiles.current = false;
     }
@@ -383,7 +397,7 @@ export function AttachmentUploader({
   return (
     <Card
       className="a-attachment-uploader"
-      hidden={!expanded && !queue.length && !duplicates.length && !error}
+      hidden={!expanded && !queue.length && !duplicates.length && !error && !validationErrors.length}
       role="region"
       aria-label={intl.message("files.dropZone")}
       aria-busy={busy}
@@ -392,7 +406,7 @@ export function AttachmentUploader({
       onDragEnter={(event) => {
         if (
           Array.from(event.dataTransfer.types).includes(
-            intl.message("collaboration.files"),
+            "Files",
           )
         ) {
           event.preventDefault();
@@ -404,7 +418,7 @@ export function AttachmentUploader({
       onDragOver={(event) => {
         if (
           Array.from(event.dataTransfer.types).includes(
-            intl.message("collaboration.files"),
+            "Files",
           )
         ) {
           event.preventDefault();
@@ -462,6 +476,7 @@ export function AttachmentUploader({
                 {intl.message("files.browse")}
                 <input
                   aria-label={intl.message("files.upload")}
+                  aria-describedby={requirementsId}
                   type="file"
                   accept={capability?.allowedContentTypes?.join(",")}
                   multiple
@@ -483,20 +498,11 @@ export function AttachmentUploader({
             count: capability?.maxBatchCount ?? 10,
           })}
         </span>
-        <details className="a-upload-help">
-          <summary>{intl.message("files.requirements")}</summary>
-          <p>
-            {capability?.allowedContentTypes?.length
-              ? `Allowed types: ${capability.allowedContentTypes.map((type) => ({ "application/pdf": "PDF", "image/jpeg": "JPEG", "image/png": "PNG" })[type] ?? type).join(", ")}.`
-              : intl.message("files.allowedHelp")}
-            {capability?.maxFileBytes === 0
-              ? " Uploads are not permitted for this record."
-              : capability?.maxFileBytes !== undefined
-                ? ` Maximum size: ${collaborationFileSize(capability.maxFileBytes, intl)} per file.`
-                : ""}{" "}
-            {uploadsAllowed ? intl.message("files.pasteHelp") : ""}
-          </p>
-        </details>
+        <span id={requirementsId}>
+          {allowedTypes || intl.message("files.allowedHelp")}
+          {uploadsAllowed && maximumSize ? ` · ${intl.message("files.perFileLimit", { size: maximumSize })}` : ""}
+        </span>
+        {uploadsAllowed ? <span>{intl.message("files.pasteHelp")}</span> : null}
       </div>
       {duplicates.length ? (
         <section
@@ -544,13 +550,15 @@ export function AttachmentUploader({
               <strong>{item.file.name}</strong>
               {" — "}
               <span role={item.state === "failed" ? "alert" : "status"}>
-                {item.state === "uploading"
-                  ? "Uploading…"
+                {item.state === "failed" && item.failureKind
+                  ? intl.message(item.failureKind === "inspection" ? "files.inspectionUnsupported" : "files.malwareDetected")
+                  : item.state === "uploading"
+                  ? intl.message("files.uploading")
                   : item.state === "finalizing"
                     ? intl.message("files.finalizing")
                     : item.state === "processing"
                       ? intl.message("files.uploadProcessing")
-                      : item.state}
+                      : intl.message(item.state === "ready" ? "files.ready" : item.state === "queued" ? "files.queued" : "files.failed")}
               </span>
               {item.state === "uploading" ? (
                 <progress aria-label={`Uploading ${item.file.name}`} max={1} />
@@ -605,6 +613,7 @@ export function AttachmentUploader({
           ))}
         </ul>
       ) : null}
+      {validationErrors.length ? <ul role="alert" className="a-upload-validation">{validationErrors.map((text, index) => <li key={index}>{text}</li>)}</ul> : null}
       {error ? <p role="alert">{error}</p> : null}
       {queue.some((item) => item.state === "failed" && item.retryable) &&
       !busy ? (

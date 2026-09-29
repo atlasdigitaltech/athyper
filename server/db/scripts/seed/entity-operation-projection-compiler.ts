@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceGraph } from "@athyper/server-contract-metadata";
+import { COMMON_REFERENCE_VIEW_PERMISSION, isIdentityPermissionCode, assertCommonReferenceGraph } from "@athyper/server-contract-metadata";
 import type { CanonicalCatalogV2, CatalogPlane } from "./canonical-catalog-v2-model.js";
 import type { ExactScopeCompatibilityContract, ScopeKind } from "./exact-scope-compatibility-model.js";
 
@@ -132,7 +132,7 @@ export function compileEntityOperationProjection(input: {
 }
 
 function rejectNonCanonical(code: string, plane: TargetPlane): void {
-  if (code === COMMON_REFERENCE_VIEW_PERMISSION) return;
+  if (code === COMMON_REFERENCE_VIEW_PERMISSION || isIdentityPermissionCode(code)) return;
   const parts=code.split(".");
   if(parts.length!==4||parts[0]!==plane||parts[1]==="action"||parts[2]==="action")throw new Error(`non-canonical permission binding rejected: ${code}`);
 }

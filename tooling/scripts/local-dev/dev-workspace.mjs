@@ -37,6 +37,10 @@ export function configureDevPublication(config, preset, path = join(homedir(), "
     const service = config.services[name];
     if (!service) continue;
     service.environment ??= {};
+    // DEV serves both native and published split-artifact metadata. Persist this
+    // in generated compose files so recreation does not lose the runtime reader.
+    // Compiled-only plane settings still take precedence; reader errors fail closed.
+    service.environment.METADATA_FORMAT_ROUTING = "true";
     service.volumes = (service.volumes ?? []).filter(m => m.target !== "/run/dev-publication/server.json");
     delete service.environment.ATHYPER_DEV_PUBLICATION_CONFIG;
     service.environment.ATHYPER_DEV_PRESET = preset;

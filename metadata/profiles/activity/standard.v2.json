@@ -1,0 +1,65 @@
+{
+  "schema": "athyper.capability-profile/1",
+  "profileCode": "platform.activity.standard",
+  "profileVersion": 2,
+  "capabilityKey": "activity",
+  "defaults": {
+    "views": [
+      "timeline",
+      "auditLog",
+      "snapshots"
+    ],
+    "defaultView": "timeline",
+    "snapshots": {
+      "manualCapture": true,
+      "automaticCapture": "none",
+      "captureOperations": [],
+      "retentionClass": "standard"
+    },
+    "query": {
+      "defaultRangeDays": 30,
+      "maxRangeDays": 90,
+      "pageSize": 50
+    }
+  },
+  "permittedOverrides": {
+    "views": {
+      "allowedSubset": [
+        "timeline",
+        "auditLog",
+        "snapshots"
+      ]
+    },
+    "defaultView": {
+      "allowedValues": [
+        "timeline",
+        "auditLog",
+        "snapshots"
+      ]
+    },
+    "snapshots.manualCapture": {
+      "allowedValues": [
+        true,
+        false
+      ]
+    },
+    "snapshots.retentionClass": {
+      "allowedValues": [
+        "standard",
+        "operational"
+      ]
+    },
+    "query.defaultRangeDays": {
+      "minimum": 1,
+      "maximum": 90
+    },
+    "query.maxRangeDays": {
+      "minimum": 1,
+      "maximum": 90
+    },
+    "query.pageSize": {
+      "minimum": 1,
+      "maximum": 100
+    }
+  }
+}

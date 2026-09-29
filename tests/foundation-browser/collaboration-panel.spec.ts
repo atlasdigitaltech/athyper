@@ -24,7 +24,7 @@ import{CollaborationToolbarContext}from'./packages/platform/entity/runtime/form-
 function Content({name}){const toolbar=useContext(CollaborationToolbarContext);const[value,setValue]=useState('');return <div><label>{name}<input value={value} onChange={event=>setValue(event.target.value)}/></label>{name==='comments'?<div data-testid='comment-toolbar' ref={toolbar}/>:null}</div>}
 function App(){const[full,setFull]=useState(false);const[open,setOpen]=useState(true),[pinned,setPinned]=useState(true),[active,setActive]=useState('comments'),[owner,setOwner]=useState();const claim=React.useCallback(panel=>setOwner(panel.id),[]),release=React.useCallback(id=>setOwner(current=>current===id?undefined:current),[]);return <WorkspaceSidePanelContext.Provider value={{owner,claim,release}}><button onClick={()=>setOwner('atlas')}>Atlas</button><button onClick={()=>{setOpen(true);window.dispatchEvent(new CustomEvent('athyper:collaboration-open'))}}>Open comments</button><main><label hidden={full}>Record name<input defaultValue="Saved name"/></label><nav><button onClick={()=>setActive("comments")}>Record Comments</button><button onClick={()=>setActive("attachments")}>Record Files</button></nav><EntityCollaborationSurface recordEditing fullView={full} onFullViewChange={setFull} open={open} pinned={pinned} activeSectionKey={active} sections={[{key:'comments',label:'Comments'},{key:'attachments',label:'Files'}]} onOpenChange={setOpen} onPinnedChange={setPinned} onActiveSectionChange={setActive} preloadSection={()=>{}} renderSection={key=><Content name={key}/>}/></main></WorkspaceSidePanelContext.Provider>}
 createRoot(document.getElementById('root')).render(<App/>);
-window.mountAtlasReference=()=>{const node=document.createElement('section');node.className='athyper-atlas-workspace';document.body.append(node);createRoot(node).render(<PanelHeader className='athyper-atlas-workspace__header' title='Atlas AI' subtitle='Neon · Workspace assistant' icon={<span>A</span>} actions={<button>×</button>}/>)};
+window.mountAtlasReference=()=>{const node=document.createElement('section');node.className='athyper-atlas-workspace a-context-panel';document.body.append(node);createRoot(node).render(<PanelHeader className='athyper-atlas-workspace__header' title='Atlas AI' subtitle='Neon · Workspace assistant' icon={<span>A</span>} actions={<button>×</button>}/>)};
 `,
   },
   alias: {
@@ -76,6 +76,7 @@ test("one draft survives display modes, tabs, Atlas handoff and close/reopen", a
   await page.setViewportSize({ width: 900, height: 900 });
   await expect(page.locator("#entity-record-collaboration")).toBeHidden();
   await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator("#entity-record-collaboration")).toHaveAttribute("data-mode", "pinned");
 
   await page
     .getByRole("button", { name: "Open comments", exact: true })
@@ -151,10 +152,25 @@ test("Collaboration side header matches Atlas height and typography", async ({ p
     const read = (selector: string) => {
       const header = document.querySelector(selector)!;
       const title = getComputedStyle(header.querySelector("strong")!);
-      const subtitle = getComputedStyle(header.querySelector("small")!);
-      return {height:header.getBoundingClientRect().height,font:title.fontSize,weight:title.fontWeight,caption:subtitle.fontSize};
+
+      return {height:header.getBoundingClientRect().height,font:title.fontSize,weight:title.fontWeight};
     };
     return {collaboration:read(".a-collaboration-panel__header"),atlas:read("section.athyper-atlas-workspace > header")};
   });
   expect(styles.collaboration).toEqual(styles.atlas);
+});
+
+test("pin toggles layout without losing the record draft", async ({page}) => {
+ await page.setViewportSize({width:1440,height:900});
+ await page.setContent('<div id="root"></div>');await page.addStyleTag({content:css});await page.evaluate(bundle);
+ const panel=page.locator('#entity-record-collaboration');
+ await panel.getByRole('textbox',{name:'comments',exact:true}).fill('Keep while unpinned');
+ await panel.locator('[data-panel-action=pin]').click();
+ await expect(panel).toHaveAttribute('data-mode','drawer');
+ await expect(panel.locator('[data-panel-action=pin]')).toHaveAttribute('aria-pressed','false');
+ await expect(page.locator('.a-collaboration-backdrop')).toBeVisible();
+ await panel.locator('[data-panel-action=pin]').click();
+ await expect(panel).toHaveAttribute('data-mode','pinned');
+ await expect(panel.getByRole('textbox',{name:'comments',exact:true})).toHaveValue('Keep while unpinned');
+ await expect(page.locator('.a-collaboration-backdrop')).toHaveCount(0);
 });

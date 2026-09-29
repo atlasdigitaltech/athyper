@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Maximize2Icon,
+  PinIcon, PinOffIcon, Maximize2Icon,
   BellIcon,
   CheckIcon,
   ChevronRightIcon,
@@ -20,11 +20,14 @@ import {
   Drawer,
   FilterChipGroup,
   PanelTabs,
+  PanelContextRow,
   PanelEmptyState,
   Button,
 } from "@athyper/platform-ui";
 import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useWorkspaceSidePanel } from "./workspace-side-panel";
+import { useShellI18n } from "./shell-i18n";
 
 export type ShellActivityTab = "notifications" | "inbox";
 export type ShellNotificationTone = "info" | "success" | "warning" | "critical";
@@ -129,6 +132,20 @@ export function ShellActivityCenter({
   onTabChange,
   onClose,
 }: ShellActivityCenterProps) {
+  const intl = useShellI18n();
+  const [pinned, setPinned] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(480);
+  const [compact, setCompact] = useState(true);
+  const slot = useWorkspaceSidePanel(), claim = slot?.claim, release = slot?.release;
+  useEffect(()=>{const media=window.matchMedia("(max-width: 1100px)");const update=()=>setCompact(media.matches);update();media.addEventListener("change",update);return ()=>media.removeEventListener("change",update);},[]);
+  useEffect(()=>{
+    let observer: ResizeObserver | undefined;
+    const frame=requestAnimationFrame(()=>{const panel=document.getElementById("athyper-activity-center");if(!panel)return;
+      observer=new ResizeObserver(()=>setPanelWidth(panel.getBoundingClientRect().width));observer.observe(panel);});
+    return ()=>{cancelAnimationFrame(frame);observer?.disconnect();};
+  },[]);
+  useEffect(()=>{claim?.({id:"activity-center",pinned:pinned && !compact,width:panelWidth});},[claim,pinned,compact,panelWidth]);
+  useEffect(()=>()=>release?.("activity-center"),[release]);
   const activeError =
     dataSource?.errors?.[activeTab]?.message ?? dataSource?.error;
   const activeErrorStatus =
@@ -221,37 +238,25 @@ export function ShellActivityCenter({
       }}
     >
       <Drawer.Panel
+        pinned={pinned && !compact}
         id="athyper-activity-center"
         interactionRoots={headerActions}
         size="standard"
         variant="activity"
         mobilePresentation="fullscreen"
-        className="athyper-activity-center"
+        className="athyper-activity-center a-context-panel"
       >
         <Drawer.Header
           appearance="panel"
           icon={<ActivityGlyph kind={activeTab} />}
           title={activeTab === "notifications" ? "Notifications" : "Inbox"}
-          description="Updates and work that need your attention"
-          actions={
-            fullPageHref ? (
-              <Tooltip
-                portal
-                side="bottom"
-                label="Open Activity center in full view"
-              >
-                <a
-                  className="athyper-activity-expand"
-                  aria-label="Open Activity center in full view"
-                  href={fullPageHref}
-                >
-                  <Maximize2Icon size={18} />
-                </a>
-              </Tooltip>
-            ) : undefined
-          }
+          capabilities={{
+            ...(!compact ? {pin:{label:intl.message(pinned ? "panel.unpin" : "panel.pin"),icon:pinned ? <PinOffIcon size={18}/> : <PinIcon size={18}/>,pressed:pinned,onClick:()=>setPinned(value=>!value)}} : {}),
+            ...(fullPageHref ? {fullView:{label:"Open Activity center in full view",icon:<Maximize2Icon size={18}/>,href:fullPageHref}} : {}),
+          }}
           closeLabel="Close activity center"
         />
+        <PanelContextRow scope={{kind:"global", label:intl.message(activeTab === "notifications" ? "panel.notificationsScope" : "panel.inboxScope"), detail:intl.message("panel.currentTenant")}} />
         <PanelTabs
           label="Activity type"
           value={activeTab}

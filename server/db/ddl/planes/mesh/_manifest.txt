@@ -170,6 +170,7 @@ common/shared/11_migrated_view_grants.sql
 planes/mesh/master/11_grants.sql
 common/master/11_grants.sql
 common/snapshot/11_grants.sql
+common/snapshot/12_record_history.sql
 common/audit/11_grants.sql
 common/log/11_grants.sql
 planes/mesh/control/11_grants.sql
@@ -204,6 +205,7 @@ common/master/12_contact_person_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
 common/authz/16_content_record_acl_reference_seed.sql
 common/authz/17_common_reference_permission.sql
+common/authz/19_common_activity_permissions.sql
 planes/mesh/mesh/12_certification_reference_seed.sql
 planes/mesh/control/12_lookup_reference_entrypoint.sql
 planes/mesh/control/12_reference_seed.sql
@@ -225,3 +227,7 @@ common/master/22_principal_surface_arrangement.sql
 
 common/document/13_processing_grants.sql
 common/document/14_collaboration_participant_directory.sql
+
+planes/mesh/master/26_entity_owner_access.sql
+common/authz/20_common_identity_permissions.sql
+common/authz/21_entity_default_access.sql

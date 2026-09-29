@@ -35,7 +35,7 @@ const bundle = build({
     `, loader: "js" }));
   } }],
 }).then(r => r.outputFiles[0]!.text);
-const styles = ["packages/platform/foundation/theme/src/styles.css", "packages/platform/foundation/ui/src/styles.css", "packages/platform/shell/shell/src/styles.css", "packages/platform/entity/runtime/form-detail/src/detail-workspace.css", "packages/platform/entity/runtime/form-detail/src/styles.css", "packages/platform/entity/runtime/form-detail/src/record/record-collaboration.css"].map(p => readFileSync(p, "utf8").replace(/@import[^;]+;/g, "")).join("\n");
+const styles = ["packages/platform/foundation/theme/src/styles.css", "packages/platform/foundation/ui/src/styles.css", "packages/platform/shell/shell/src/styles.css", "packages/platform/entity/runtime/form-detail/src/detail-workspace.css", "packages/platform/entity/runtime/form-detail/src/styles.css", "packages/platform/entity/runtime/form-detail/src/record/record.css", "packages/platform/entity/runtime/form-detail/src/record/record-collaboration.css"].map(p => readFileSync(p, "utf8").replace(/@import[^;]+;/g, "")).join("\n");
 async function mount(page: import("@playwright/test").Page, kinds = ["comments", "attachments"], recordPage = false, initialUnpinned = false, locale?: string) {
   await page.route("https://collaboration.test/**", route => route.fulfill({ contentType: "text/html", body: "<html></html>" }));
   await page.goto("https://collaboration.test/");
@@ -66,12 +66,12 @@ for (const [locale, name, comments, files] of [["en","Name","Comments","Files"],
   await expect(page.locator('[role="tablist"] [role="menu"]')).toHaveCount(0);
   const controls=page.locator(".a-entity-record__collaboration-control");
   await expect(controls.nth(0)).toContainText(comments!);await expect(controls.nth(1)).toContainText(files!);
-  await controls.nth(0).click();await expect(page.getByRole("heading",{name:comments,exact:true})).toBeVisible();
+  await controls.nth(0).click();await expect(page.locator("#collaboration-section-comments")).toBeVisible();await expect(page.locator(".a-collaboration-panel__header")).toHaveCount(0);
   await controls.nth(1).click();
   await expect(page.locator(".a-files-empty-state:visible")).toHaveCount(1);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
   if(locale==="ar") {
-    await page.locator(".a-collaboration-panel__controls button").click();
+    await page.locator("[data-panel-action=fullView]").click();
     const resize=page.getByRole("separator");await resize.focus();await resize.press("Home");
     const width=Number(await resize.getAttribute("aria-valuenow"));await resize.press("ArrowRight");
     await expect(resize).toHaveAttribute("aria-valuenow",String(width+20));
@@ -86,16 +86,16 @@ test("switching Country locale preserves the active collaboration draft and reco
   await mount(page,["comments","attachments"],true,false,"en");
   await page.evaluate(()=>{(window as any).writable=true});
   await page.getByRole("button",{name:"Open Comments",exact:true}).click();
-  await page.getByRole("button",{name:/Add (the first )?comment/}).click();
+  await page.locator("[data-action-dock-trigger]:visible").click();
   const editor=page.locator('[contenteditable="true"]').first();await editor.fill("Keep my draft افغانستان");
   await page.evaluate(()=>(window as any).changeLocale("ar"));
   await expect(page.locator("html")).toHaveAttribute("dir","rtl");
   await expect(editor).toHaveText("Keep my draft افغانستان");
-  await expect(page.getByRole("heading",{name:"التعليقات",exact:true})).toBeVisible();
+  await expect(page.locator("#collaboration-section-comments")).toBeVisible();
   await page.evaluate(()=>(window as any).changeLocale("ms"));
   await expect(page.locator("html")).toHaveAttribute("dir","ltr");
   await expect(editor).toHaveText("Keep my draft افغانستان");
-  await expect(page.getByRole("heading",{name:"Komen",exact:true})).toBeVisible();
+  await expect(page.locator("#collaboration-section-comments")).toBeVisible();
   await expect(page.getByRole("heading",{name:"Example",exact:true})).toBeVisible();
 });
 test("old unpinned preferences open full view without an overlay", async ({page}) => {
@@ -124,7 +124,7 @@ test("authorized capability controls load lazily and reset on tenant switch", as
 test("direct-link close restores record navigation and keeps section menus outside tablists",async({page})=>{
  await page.setViewportSize({width:1440,height:900});
  await mount(page,["comments","attachments"],true,true);
- await page.locator(".a-collaboration-panel__controls button").first().click();
+ await page.locator("[data-panel-action=fullView]").first().click();
  await page.locator(".a-collaboration-panel").press("Escape");
  await expect(page.getByRole("tab",{name:"Overview",exact:true})).toBeFocused();
  await expect(page.locator('[role="tablist"] [role="menu"]')).toHaveCount(0);
@@ -150,7 +150,7 @@ test("full collaboration has exclusive navigation selection and restores record/
   const files = page.getByRole("button", {name:"Open Files",exact:true});
   const body = page.locator('.a-metadata-detail__layout');
   await comments.click();
-  await page.getByRole("button", {name:/Add (the first )?comment/}).click();
+  await page.locator("[data-action-dock-trigger]:visible").click();
   const composer = page.locator('[contenteditable="true"]').first();
   await composer.fill("Preserve my full-view draft");
   await expect(overview).toHaveAttribute("aria-selected","false");
@@ -202,10 +202,10 @@ for (const width of [1920, 1024, 390]) test(`full-view Comments and Files share 
   const mountBounds=await page.locator('.a-collaboration-mount').boundingBox();
   expect(Math.abs(bounds!.x-mountBounds!.x)).toBeLessThan(1);
   expect(Math.abs(bounds!.width-mountBounds!.width)).toBeLessThan(1);
-  await expect(panel.getByRole('heading',{name:'Comments',exact:true})).toBeVisible();
-  await expect(panel.getByRole('button',{name:/Close/})).toHaveCount(0);
+  await expect(panel.locator('.a-collaboration-panel__header')).toHaveCount(0);
+  await expect(panel.locator('[data-panel-action=close]')).toBeVisible();
   const contentBounds=await panel.locator('.a-collaboration-comments').boundingBox();
-  expect(contentBounds!.x).toBeGreaterThan(bounds!.x);
+  expect(Math.abs(contentBounds!.x-bounds!.x)).toBeLessThan(1);
   const aligned=async (selector:string) => {
     const box=await panel.locator(selector).boundingBox();
     expect(box).not.toBeNull();
@@ -214,17 +214,17 @@ for (const width of [1920, 1024, 390]) test(`full-view Comments and Files share 
   };
   await aligned('.a-collaboration-comments');
   await aligned('.a-comment-filters');
-  await panel.getByRole('button',{name:/Add (the first )?comment/}).click();
+  await panel.locator("[data-action-dock-trigger]:visible").click();
   await aligned('.a-comment-composer-card');
-  const controlsRight=async()=>{const box=await panel.locator('.a-collaboration-panel__controls').boundingBox();return box!.x+box!.width;};
+  const controlsRight=async()=>{const box=await panel.locator('.a-panel-header__actions').boundingBox();return box!.x+box!.width;};
   const commentsRight=await controlsRight();
   await opener.getByRole('button',{name:'Open Files',exact:true}).click();
   await expect(panel.locator('.a-attachment-workspace')).toBeVisible();
   await aligned('.a-attachment-workspace');
-  await panel.getByRole('button',{name:'＋ Add files',exact:true}).click();
+  await panel.locator('[data-action-dock-trigger]:visible').click();
   await aligned('.a-attachment-uploader');
   await aligned('.a-files-discovery-controls');
-  await expect(panel.getByRole('heading',{name:'Files',exact:true})).toBeVisible();
+  await expect(panel.locator('.a-collaboration-panel__header')).toHaveCount(0);
   expect(Math.abs(await controlsRight()-commentsRight)).toBeLessThan(1);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
@@ -251,7 +251,7 @@ test("authorized writes use the existing composer and upload components", async 
   await mount(page);
   await page.evaluate(() => { (window as any).writable = true; });
   await page.getByRole("button", {name:"Comments",exact:true}).click();
-  await page.getByRole("button",{name:/Add (the first )?comment/}).click();
+  await page.locator("[data-action-dock-trigger]:visible").click();
   await expect(page.locator('[contenteditable="true"]').first()).toBeVisible();
   await page.getByRole("navigation",{name:"Record collaboration"}).getByRole("button",{name:"Files",exact:true}).click();
   await expect(page.locator('input[type="file"]').first()).toBeAttached();
@@ -259,7 +259,7 @@ test("authorized writes use the existing composer and upload components", async 
 
 test("one composer and draft survive full/side switches and browser Back",async({page})=>{
  await page.setViewportSize({width:1440,height:900});await mount(page);await page.evaluate(()=>{(window as any).writable=true;});
- await page.getByRole('button',{name:'Comments',exact:true}).click();await page.getByRole('button',{name:/Add (the first )?comment/}).click();
+ await page.getByRole('button',{name:'Comments',exact:true}).click();await page.locator("[data-action-dock-trigger]:visible").click();
  const editor=page.locator('[contenteditable="true"]');await editor.fill('Keep this unsent draft');
  await page.getByRole('button',{name:'Open Collaboration in side view',exact:true}).click();await expect(page).toHaveURL(/collaborationMode=side/);
  await page.getByRole('button',{name:'Open collaboration in full view',exact:true}).click();await expect(page).toHaveURL(/collaborationMode=content/);
@@ -285,7 +285,7 @@ for (const width of [1440, 390]) test(`full discussion scrolls with the page and
   await expect(page.locator('.a-record-header')).toBeVisible();
   expect(await page.locator('.a-record-header').boundingBox()).toEqual(headerBefore);
   expect(await page.evaluate(()=>window.scrollY)).toBe(pageBefore);
-  await page.getByRole('button',{name:/Add (the first )?comment/}).click();
+  await page.locator("[data-action-dock-trigger]:visible").click();
   const composer=page.locator('.a-comment-composer-card');
   const feed=page.locator('.a-comment-feed');
   await expect(composer).toBeInViewport({ratio:1});
@@ -304,7 +304,7 @@ for (const width of [1440, 390]) test(`full discussion scrolls with the page and
   const last=(await page.locator('.a-comment-thread').last().boundingBox())!;
   const dock=(await page.locator('.a-comment-compose-dock').boundingBox())!;
   expect(last.y+last.height).toBeLessThanOrEqual(dock.y);
-  await expect(page.getByRole('button',{name:'Resume draft',exact:true})).toBeInViewport();
+  await expect(page.locator('.a-comment-compose-dock')).toBeInViewport();
   await page.screenshot({path:`/tmp/comments-page-scroll-${width}.png`});
   await page.getByRole('tab',{name:'Overview',exact:true}).click();
   await expect(page.locator('.a-record-header')).toBeVisible();
@@ -314,14 +314,14 @@ test("reading mode starts compact in side and full view",async({page})=>{
   await mount(page);
   await page.evaluate(()=>{(window as any).writable=true;});
   await page.getByRole('button',{name:'Comments',exact:true}).click();
-  const add=page.getByRole('button',{name:'＋ Add the first comment',exact:true});
+  const add=page.locator('[data-action-dock-trigger]:visible');
   await expect(add).toBeVisible();
-  await expect(page.getByRole('textbox',{name:'Comment',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('textbox',{name:'Comment',exact:true})).toBeVisible();
   await expect(add).toBeVisible();
   await page.getByRole('navigation',{name:'Record collaboration'}).getByRole('button',{name:'Files',exact:true}).click();
-  await expect(page.getByRole('button',{name:'＋ Add files',exact:true})).toBeVisible();
+  await expect(page.locator('[data-action-dock-trigger]:visible')).toBeVisible();
   await expect(page.getByText('Drag and drop files here',{exact:true})).toBeHidden();
-  await page.getByRole('button',{name:'＋ Add files',exact:true}).click();
+  await page.locator('[data-action-dock-trigger]:visible').click();
   await expect(page.getByText('Drag and drop files here',{exact:true})).toBeVisible();
 });
 
@@ -333,8 +333,8 @@ test("docked section switches preserve the selected view and comment reading sta
  const feed=page.locator('.a-comment-feed');await feed.evaluate(el=>{window.scrollTo(0,window.scrollY+el.getBoundingClientRect().top+200);window.dispatchEvent(new Event('scroll'));});
  await page.getByRole('button',{name:'Open Collaboration in side view',exact:true}).click();
  await expect(group).toHaveValue('user');await expect.poll(()=>feed.evaluate(el=>el.scrollTop)).toBe(200);
- await page.getByRole('tab',{name:'Files',exact:true}).click();await expect(page.locator('.a-collaboration-panel')).toHaveAttribute('data-mode','pinned');
- await page.getByRole('tab',{name:'Comments',exact:true}).click();await expect(group).toHaveValue('user');
+ await page.getByRole('button',{name:'Open Files',exact:true}).click();await expect(page.locator('.a-collaboration-panel')).toHaveAttribute('data-mode','pinned');
+ await page.getByRole('button',{name:'Open Comments',exact:true}).click();await expect(group).toHaveValue('user');
  await page.getByRole('button',{name:'Open collaboration in full view',exact:true}).click();await expect.poll(()=>feed.evaluate(el=>Math.round(-el.getBoundingClientRect().top))).toBe(200);
 });
 
@@ -354,4 +354,60 @@ for (const width of [1440, 390]) test(`returning from Files to the first Overvie
   await page.getByRole('menuitem', { name: 'Audit', exact: true }).click();
   await expect(page.locator('[data-detail-section="audit"]')).toBeFocused();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+});
+
+test('Files side panel scrolls discovery with results and keeps the dock fixed',async({page})=>{
+ await page.setViewportSize({width:1440,height:900});await mount(page,['comments','attachments'],true);
+ await page.evaluate(()=>{(window as any).writable=true;(window as any).commentItems=Array.from({length:25},(_,i)=>({id:`file-${i}`,fileName:`Document ${i}.txt`,displayName:`Document ${i}.txt`,contentType:'text/plain',sizeBytes:64,status:'active',createdAt:'2026-09-28T00:00:00Z'}));});
+ await page.getByRole('button',{name:'Open Files',exact:true}).click();await page.getByRole('button',{name:'Open Collaboration in side view',exact:true}).click();
+ const results=page.locator('.a-files-scroll-area'),dock=page.locator('.a-files-action-dock');await expect(dock).toBeInViewport();
+ const filterBefore=(await page.locator('.a-files-discovery-controls').boundingBox())!;
+ const before=await dock.boundingBox();await results.evaluate(n=>{n.scrollTop=300;});expect(await results.evaluate(n=>n.scrollTop)).toBeGreaterThan(0);
+ const after=await dock.boundingBox();expect(Math.abs(before!.y-after!.y)).toBeLessThan(1);
+ expect((await page.locator('.a-files-discovery-controls').boundingBox())!.y).toBeLessThan(filterBefore.y-100);
+ await expect(results).toHaveCSS('scrollbar-width','thin');
+});
+
+for (const width of [390, 768, 1440]) for (const theme of ['light','dark']) test(`toolbar-first record tools avoid repeated chrome at ${width} ${theme}`,async({page})=>{
+ await page.setViewportSize({width,height:900});await mount(page,['comments','attachments'],true);
+ await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;(window as any).writable=true;},theme);
+ await page.getByRole('button',{name:'Open Comments',exact:true}).click();
+ const panel=page.locator('.a-collaboration-panel');
+ await expect(panel).toHaveAttribute('data-toolbar-first','true');
+ await expect(panel.locator('.a-panel-header,.a-panel-context')).toHaveCount(0);
+ await expect(panel.locator('.a-comment-filters [data-panel-action=new]')).toHaveCount(0);
+ await expect(panel.locator('.a-comment-compose-dock')).toBeVisible();
+ await expect(panel.locator('.a-comment-compose-dock').getByRole('button',{name:'Send',exact:true})).toBeDisabled();
+ const dockBox=(await panel.locator('.a-comment-compose-dock').boundingBox())!;
+ expect(dockBox.y+dockBox.height).toBeGreaterThan(820);
+
+ const scopes=await panel.locator('.a-comment-filters > [role=group] > button').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().width));
+ expect(Math.max(...scopes)-Math.min(...scopes)).toBeLessThan(1);
+ if(width>1100){
+   const sorting=(await panel.locator('.a-comment-view-options').boundingBox())!;
+   const commands=(await panel.locator('.a-comment-view-controls').boundingBox())!;
+   expect(commands.x-(sorting.x+sorting.width)).toBeLessThanOrEqual(20);
+ }
+ await page.screenshot({path:`/tmp/comment-toolbar-${width}-${theme}.png`});
+
+ await panel.locator('[data-action-dock-trigger]:visible').click();
+ await page.getByRole('button',{name:'Minimize composer',exact:true}).click();
+ await expect(panel.locator('.a-comment-compose-dock')).toBeFocused();
+ await panel.locator('[data-action-dock-trigger]:visible').click();
+ await page.locator('[contenteditable=true]').first().fill('Keep this draft');
+ await page.getByRole('button',{name:'Minimize composer',exact:true}).click();
+ await expect(page.locator('[contenteditable=true]').first()).toHaveText('Keep this draft');
+ await page.getByRole('button',{name:'Open Files',exact:true}).click();
+ await expect(panel.locator('.a-panel-header,.a-panel-context')).toHaveCount(0);
+ await expect(panel.locator('[data-action-dock-trigger]:visible')).toHaveCount(1);
+ await expect(panel.locator('.a-files-action-dock')).toBeVisible();
+ if(width>1100){
+   await panel.locator('[data-panel-action=fullView]').click();
+   await expect(panel.locator('.a-panel-header')).toHaveCount(1);
+   await expect(panel.locator('.a-panel-context')).toHaveCount(1);
+   await expect(panel.locator('.a-collaboration-panel__tabs')).toBeHidden();
+   await expect(panel.locator('[data-action-dock-trigger]:visible')).toHaveCount(1);
+ }
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:`/tmp/record-tools-${width}-${theme}.png`});
 });

@@ -683,6 +683,7 @@ COMMENT ON COLUMN master.principal.external_ref IS
   'Optional opaque upstream business correlation key; never an IAM subject identifier.';
 
 CREATE TABLE master.principal_profile (
+    record_version    bigint NOT NULL DEFAULT 1 CHECK (record_version > 0),
     id                uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id         uuid        NOT NULL,
     principal_id      uuid        NOT NULL,
@@ -885,6 +886,7 @@ COMMENT ON TABLE master.principal_ui_preference IS
   'Small registered UI override. It must not store saved views, layouts, recents, history, documents, or other large payloads.';
 
 CREATE TABLE master.principal_notification_preference (
+    record_version    bigint NOT NULL DEFAULT 1 CHECK (record_version > 0),
     id                  uuid                                   NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid                                   NOT NULL,
     principal_id        uuid                                   NOT NULL,

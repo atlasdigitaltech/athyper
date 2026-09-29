@@ -12,7 +12,7 @@ import type {
   StagedUpload,
 } from "@athyper/server-contract-attachments";
 import { fingerprintCommand, parseIdempotencyKey, type CommandExecutionStore, type OutboxWriter } from "@athyper/server-contract-events";
-import type { MalwareScanner } from "@athyper/server-contract-malware-scanning";
+import { MalwareDocumentUnsupportedError, type MalwareScanner } from "@athyper/server-contract-malware-scanning";
 import type { ObjectStorage } from "@athyper/server-contract-object-storage";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
 import type {
@@ -82,6 +82,7 @@ export interface AttachmentRepository<T> {
     },
     tx: T,
   ): Promise<AttachmentRecord>;
+  failInspection(identity: AttachmentIdentity, reason: string, tx: T): Promise<void>;
   quarantine(
     identity: AttachmentIdentity,
     reason: string,
@@ -553,6 +554,19 @@ export function createAttachmentLifecycle<T>(
         // do with the deadline at all, e.g. quarantine) would leave the stream open until the
         // timeout separately fires later.
         deadline.dispose();
+        if (error instanceof MalwareDocumentUnsupportedError) {
+          await options.transactions.run(identity.planeKey, identity, async (tx) => {
+            await options.repository.lockForStaging?.(identity, tx);
+            const latest = await options.repository.load(identity, tx);
+            // A competing finalization may already have committed. Never demote it.
+            if (!latest || !["pending", "uploading", "uploaded"].includes(latest.status)) return;
+            await options.repository.failInspection(identity, error.inspectionReason, tx);
+            await options.quota.release(identity, tx);
+            await appendLifecycleEvent(options.outbox, identity, "attachments.failed",
+              `attachment:${identity.attachmentId}:inspection-failed`,
+              { code: error.code, inspectionReason: error.inspectionReason }, tx);
+          });
+        }
         await recordPendingCleanup(options,identity,[destinationKey]);
         throw error;
       } finally {

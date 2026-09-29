@@ -29,7 +29,7 @@ BEGIN
   author:=(policy->>'authorPrincipalId')::uuid; publisher:=(policy->>'publisherPrincipalId')::uuid;
   IF (config->>'schema'='athyper.machine-publication-enrollment/1' AND config->>'environment'='dev'
     AND config->>'permissionCode'='studio.metadata.contract.publish_automated' AND config->>'tenantId'=tenant::text
-    AND policy->>'schema' IN ('athyper.dev-reference-onboarding/1','athyper.dev-entity-successor-policy/1') AND policy->>'environment'='local'
+    AND policy->>'schema' IN ('athyper.dev-reference-onboarding/1','athyper.dev-entity-onboarding/1','athyper.dev-entity-successor-policy/1') AND policy->>'environment'='local'
     AND policy->>'instance'='dev' AND policy->>'entityId'=cs.entity_id::text
     AND author<>publisher AND cs.created_by<>publisher AND d.created_by<>d.updated_by
     AND d.updated_by<>author AND d.updated_by<>publisher) IS NOT TRUE
@@ -91,8 +91,8 @@ BEGIN
     END IF;
     -- Derived internal preparation coordinates, not extra authority added to
     -- the enrolled policy. The policy digest above uses the original document.
-    SELECT value#>'{layoutConfig,systemReferenceProduct}' INTO STRICT marker FROM jsonb_array_elements(saved->'surfaces')
-      WHERE value#>'{layoutConfig,systemReferenceProduct}' IS NOT NULL;
+    SELECT COALESCE(value#>'{layoutConfig,systemReferenceProduct}',value#>'{layoutConfig,tableEntityProduct}') INTO STRICT marker FROM jsonb_array_elements(saved->'surfaces')
+      WHERE COALESCE(value#>'{layoutConfig,systemReferenceProduct}',value#>'{layoutConfig,tableEntityProduct}') IS NOT NULL;
     IF (SELECT array_agg(t->>'plane' ORDER BY t->>'plane') FROM jsonb_array_elements(policy->'targets') t)
       IS DISTINCT FROM (SELECT array_agg(t ORDER BY t) FROM jsonb_array_elements_text(marker->'targetPlanes') t) THEN
       RAISE EXCEPTION 'SYSTEM_PUBLICATION_SUCCESSOR_TARGETS_CHANGED' USING ERRCODE='42501'; END IF;
@@ -202,7 +202,7 @@ BEGIN
     OR jsonb_array_length(p_descriptor->'runtimeProfiles')=0
     OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_descriptor->'runtimeProfiles') p WHERE p->>'storagePlane' IS DISTINCT FROM p_plane)
     OR p_descriptor#>>'{entity,entityCode}' IS DISTINCT FROM authority#>>'{graph,entity,entityCode}'
-    OR p_compliance->>'schema' IS DISTINCT FROM 'athyper.system-reference-compilation-source/1'
+    OR p_compliance->>'schema' IS DISTINCT FROM (CASE WHEN EXISTS (SELECT 1 FROM jsonb_array_elements(authority#>'{graph,surfaces}') s WHERE s#>'{layoutConfig,tableEntityProduct}' IS NOT NULL) THEN 'athyper.table-entity-compilation-source/1' ELSE 'athyper.system-reference-compilation-source/1' END)
     OR p_compliance->>'productHash' IS DISTINCT FROM authority#>>'{policy,productHash}'
     OR p_compliance->>'sourceContractHash' IS DISTINCT FROM authority#>>'{policy,contractHash}'
     OR p_compliance->>'sourceDescriptorHash' IS DISTINCT FROM authority#>>'{policy,descriptorHash}'
@@ -234,7 +234,7 @@ BEGIN
       RAISE EXCEPTION 'SYSTEM_PUBLICATION_SUCCESSOR_POLICY_LINK_DENIED' USING ERRCODE='42501'; END IF;
     IF p.tenant_id::text IS DISTINCT FROM authority->>'tenantId' OR p.id<>r.id
       OR p.created_by<>r.published_by OR r.published_by IS DISTINCT FROM master.current_principal_id_soft()
-      OR p.release_key IS DISTINCT FROM ('metadata.reference.'||(authority#>>'{graph,entity,entityCode}'))
+      OR p.release_key IS DISTINCT FROM ((CASE WHEN EXISTS (SELECT 1 FROM jsonb_array_elements(authority#>'{graph,surfaces}') s WHERE s#>'{layoutConfig,tableEntityProduct}' IS NOT NULL) THEN 'metadata.entity.' ELSE 'metadata.reference.' END)||(authority#>>'{graph,entity,entityCode}'))
       OR p.metadata->>'sourceContractHash' IS DISTINCT FROM authority#>>'{policy,contractHash}'
       OR p.metadata->>'sourceDescriptorHash' IS DISTINCT FROM authority#>>'{policy,descriptorHash}'
       OR p.metadata->>'productHash' IS DISTINCT FROM authority#>>'{policy,productHash}' THEN

@@ -111,7 +111,7 @@ export class KyselyRecordSnapshotRepository implements RecordSnapshotRepository 
   }
 }
 
-function snapshotRow(
+export function snapshotRow(
   row: Row,
   payload: Readonly<Record<string, unknown>>,
 ): RecordSnapshot {

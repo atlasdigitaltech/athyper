@@ -2,6 +2,9 @@ import { entityEnglishMessages } from "@athyper/platform-i18n/entity-messages";
 import type { MessageCatalog } from "@athyper/platform-i18n";
 
 export const shellEnglishMessages: MessageCatalog = Object.freeze({
+  "panel.notificationsScope": "Your notifications", "panel.inboxScope": "Your work", "panel.currentTenant": "Current tenant",
+  "panel.pin": "Pin panel to the side",
+  "panel.unpin": "Unpin panel",
   ...entityEnglishMessages,
   "shell.skip": "Skip to main content", "shell.navigation.open": "Open navigation", "shell.navigation.close": "Close navigation", "shell.navigation.expand": "Expand navigation", "shell.navigation.collapse": "Collapse navigation", "shell.navigation.application": "Application navigation", "shell.navigation.breadcrumb": "Breadcrumb",
   "shell.actions.label": "Application actions", "shell.actions.search": "Search", "shell.actions.notifications": "Notifications", "shell.actions.inbox": "Inbox", "shell.actions.utilities": "Utilities", "shell.actions.unread": "unread", "shell.actions.open": "open", "shell.search.title": "Search this workspace", "shell.search.help": "Find an available module or page", "shell.search.placeholder": "Search modules and pages", "shell.search.results": "Search results", "shell.search.empty": "No matching pages", "shell.search.emptyHelp": "Try another module or workspace name.",
@@ -13,6 +16,9 @@ export const shellEnglishMessages: MessageCatalog = Object.freeze({
 });
 
 export const shellArabicMessages: MessageCatalog = Object.freeze({
+  "panel.notificationsScope": "إشعاراتك", "panel.inboxScope": "عملك", "panel.currentTenant": "المستأجر الحالي",
+  "panel.pin": "تثبيت اللوحة على الجانب",
+  "panel.unpin": "إلغاء تثبيت اللوحة",
   "shell.skip": "تخطي إلى المحتوى الرئيسي", "shell.navigation.open": "فتح التنقل", "shell.navigation.close": "إغلاق التنقل", "shell.navigation.expand": "توسيع التنقل", "shell.navigation.collapse": "طي التنقل", "shell.navigation.application": "تنقل التطبيق", "shell.navigation.breadcrumb": "مسار التنقل",
   "shell.actions.label": "إجراءات التطبيق", "shell.actions.search": "بحث", "shell.actions.notifications": "الإشعارات", "shell.actions.inbox": "صندوق الوارد", "shell.actions.utilities": "الأدوات", "shell.actions.unread": "غير مقروء", "shell.actions.open": "مفتوح", "shell.search.title": "البحث في مساحة العمل", "shell.search.help": "ابحث عن وحدة أو صفحة متاحة", "shell.search.placeholder": "البحث في الوحدات والصفحات", "shell.search.results": "نتائج البحث", "shell.search.empty": "لا توجد صفحات مطابقة", "shell.search.emptyHelp": "جرّب اسم وحدة أو مساحة عمل أخرى.",
   "shell.quick.label": "الوصول السريع", "shell.quick.favourites": "المفضلة", "shell.quick.openFavourites": "فتح المفضلة", "shell.quick.recent": "العناصر الأخيرة", "shell.quick.openRecent": "فتح العناصر الأخيرة",

@@ -2,12 +2,13 @@ import type { AuthoringPlane, MetaEntityChangeSet, MetaEntityGraph } from "@athy
 import { parseDevEntitySuccessorPolicy, type DevEntitySuccessorPolicy } from "@athyper/server-contract-publication";
 import type { MetaEntityAuthoringService } from "../authoring-service.js";
 import { compileGraph } from "../deterministic.js";
+import { compileSystemEntityTarget } from "../compilation/entity-target-compiler.js";
 import { compileSystemReferenceTarget } from "../compilation/target-compiler.js";
 
 /** Operator-reviewed onboarding policy, never constructed from an HTTP graph or
  * inferred from a classifier assessment. This contract grants nothing by itself. */
 export interface ReferenceOnboardingPolicy {
-  readonly schema: "athyper.dev-reference-onboarding/1";
+  readonly schema: "athyper.dev-reference-onboarding/1" | "athyper.dev-entity-onboarding/1";
   readonly policyId: string;
   readonly revision: number;
   readonly environment: "local";
@@ -50,7 +51,7 @@ const hash = /^[a-f0-9]{64}$/;
 
 /** Shared structural validation for enrollment and execution; grants no authority. */
 export function assertReferenceOnboardingPolicy(p: ReferenceOnboardingPolicy): void {
-  check(p && p.schema === "athyper.dev-reference-onboarding/1" && p.environment === "local" && p.instance === "dev" && p.preset === "devfull", "REFERENCE_ONBOARDING_DEV_ONLY");
+  check(p && ["athyper.dev-reference-onboarding/1", "athyper.dev-entity-onboarding/1"].includes(p.schema) && p.environment === "local" && p.instance === "dev" && p.preset === "devfull", "REFERENCE_ONBOARDING_DEV_ONLY");
   check(typeof p.policyId === "string" && /^[a-z][a-z0-9_.-]{1,126}$/.test(p.policyId) && Number.isSafeInteger(p.revision) && p.revision > 0, "REFERENCE_ONBOARDING_POLICY_INVALID");
   check([p.changeSetId, p.entityId, p.authorPrincipalId, p.publisherPrincipalId].every(v => typeof v === "string" && uuid.test(v)) && p.authorPrincipalId !== p.publisherPrincipalId, "REFERENCE_ONBOARDING_IDENTITIES_INVALID");
   check([p.productHash, p.contractHash, p.descriptorHash].every(v => typeof v === "string" && hash.test(v)), "REFERENCE_ONBOARDING_PIN_INVALID");
@@ -75,9 +76,9 @@ export class ReferenceFirstPublicationWorkflow {
     check(cs.createdBy !== p.publisherPrincipalId && (!cs.submittedBy || cs.submittedBy === p.authorPrincipalId) && (!cs.approvedBy || cs.approvedBy === p.publisherPrincipalId), "REFERENCE_ONBOARDING_ACTOR_MISMATCH");
     const compiled = compileGraph(graph);
     check(compiled.contractHash === p.contractHash && compiled.descriptorHash === p.descriptorHash, "REFERENCE_ONBOARDING_SOURCE_CHANGED");
-    const targets = p.targetPlanes.map(plane => compileSystemReferenceTarget(graph, plane));
-    const marker = graph.surfaces!.map(s => s.layoutConfig?.systemReferenceProduct).find(Boolean) as { productHash: string; targetPlanes: string[] };
-    check(marker.productHash === p.productHash && [...marker.targetPlanes].sort().join() === [...p.targetPlanes].sort().join(), "REFERENCE_ONBOARDING_ENROLLMENT_MISMATCH");
+    const targets = p.targetPlanes.map(plane => p.schema === "athyper.dev-entity-onboarding/1" ? compileSystemEntityTarget(graph, plane) : compileSystemReferenceTarget(graph, plane));
+    const marker = graph.surfaces!.map(s => p.schema === "athyper.dev-entity-onboarding/1" ? s.layoutConfig?.tableEntityProduct : s.layoutConfig?.systemReferenceProduct).find(Boolean) as { productHash: string; targetPlanes: string[] };
+    check(marker && marker.productHash === p.productHash && [...marker.targetPlanes].sort().join() === [...p.targetPlanes].sort().join(), "REFERENCE_ONBOARDING_ENROLLMENT_MISMATCH");
     return targets;
   }
   async run() {
@@ -181,3 +182,5 @@ export class EntitySuccessorPublicationWorkflow {
     });
   }
 }
+
+export { ReferenceFirstPublicationWorkflow as EntityFirstPublicationWorkflow };

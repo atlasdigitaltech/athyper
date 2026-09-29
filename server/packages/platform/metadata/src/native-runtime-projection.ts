@@ -15,6 +15,28 @@ export function projectFieldQueryAccess(queryUses: readonly string[], configured
   };
 }
 
+/** Stored field writes must agree with both the native operation and its field policy.
+ * A writable field alone never grants an operation or makes it executable. */
+export function projectStoredFieldWrites(field: Row, policy: Row, operations: readonly Row[]) {
+  if (field.valueOrigin !== "stored" || !["read_only", "write_once", "mutable"].includes(field.writeMode))
+    throw Error(`NATIVE_PROJECTION_FIELD_ADAPTER_REQUIRED:${field.fieldKey}`);
+  const requested = policy.writeOperations ?? [];
+  if (!Array.isArray(requested)) throw Error("NATIVE_PROJECTION_FIELD_WRITES_INVALID");
+  return requested.map((key: unknown) => {
+    if (key !== "create" && key !== "patch") throw Error("NATIVE_PROJECTION_FIELD_WRITE_OPERATION_UNSUPPORTED");
+    if (field.writeMode === "read_only" || (field.writeMode === "write_once" && key !== "create"))
+      throw Error(`NATIVE_PROJECTION_FIELD_WRITE_MODE_MISMATCH:${field.fieldKey}`);
+    const operation = operations.find(operation => operation.operationKey === key && operation.status !== "deprecated");
+    // Persisted native operations do not carry the optional authoring fieldKeys
+    // hint. The published field policy above is the write allowlist. When an
+    // authoring hint is present, it must agree rather than widen that policy.
+    if (!operation || operation.operationKind !== (key === "patch" ? "update" : "create") ||
+        (operation.fieldKeys !== undefined && (!Array.isArray(operation.fieldKeys) || !operation.fieldKeys.includes(field.fieldKey))))
+      throw Error(`NATIVE_PROJECTION_FIELD_WRITE_BINDING_REQUIRED:${field.fieldKey}`);
+    return key;
+  });
+}
+
 /** A standalone list surface does not replace its registered application shell.
  * An explicitly authored application remains a complete replacement. Existing
  * action/section contracts retain their permission and scope requirements. */
@@ -216,10 +238,6 @@ export function compileNativeRuntimeProjection(input: {
       ? { detailRouteTemplate: registration.detailRouteTemplate }
       : {}),
     fields: fields.filter(field => !(field.valueOrigin === "runtime" && runtimeInputs.has(field.fieldKey))).map((field) => {
-      if (field.valueOrigin !== "stored" || field.writeMode !== "read_only")
-        throw Error(
-          `NATIVE_PROJECTION_FIELD_ADAPTER_REQUIRED:${field.fieldKey}`,
-        );
       if (!registration.columns.includes(field.storagePath))
         throw Error(
           `NATIVE_PROJECTION_STORAGE_COLUMN_MISSING:${field.fieldKey}`,
@@ -236,13 +254,16 @@ export function compileNativeRuntimeProjection(input: {
       );
       const display = registration.fieldPresentationDefaults?.[field.fieldKey];
       const choices = projectNativeFieldChoices(binding?.displayConfig, field.dataType);
+      const constraints=Object.fromEntries(Object.entries({minLength:field.typeConfig?.min_length,maxLength:field.typeConfig?.max_length,pattern:field.typeConfig?.pattern,minimum:field.typeConfig?.minimum,maximum:field.typeConfig?.maximum}).filter(([,value])=>value!==undefined));
       return {
         ...choices,
+        ...(Object.keys(constraints).length ? {validation:{...choices.validation,...constraints}} : {}),
         key: field.fieldKey,
         storagePath: field.storagePath,
         type: field.dataType,
-        required: false,
-        writableOn: [],
+        required: field.writeMode !== "read_only" && field.cardinality === "one",
+        writableOn: projectStoredFieldWrites(field, policy, rows("operations")),
+        ...(field.dataClassification && field.dataClassification !== "public" ? { classification: field.dataClassification } : {}),
         ...projectFieldQueryAccess(policy.queryUses, searchableFields.has(field.id)),
         list: {
           ...choices.list,
@@ -267,6 +288,9 @@ export function compileNativeRuntimeProjection(input: {
     ),
     ...Object.fromEntries(
       [
+        "ownerAccess",
+        "recordPredicates",
+        "mutationPolicy",
         "authorizationRuntime",
         "listPresentation",
         "recordPresentation",

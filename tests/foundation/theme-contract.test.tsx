@@ -46,8 +46,10 @@ describe("foundation theme contract", () => {
     assert.equal(MONO_COLOR_TOKENS.light.brand, ATLAS_MONO_BRAND.colors.primary);
     assert.equal(MONO_COLOR_TOKENS.light.brandForeground, ATLAS_MONO_BRAND.colors.primaryForeground);
     assert.notEqual(MONO_COLOR_TOKENS.light.background, COLOR_TOKENS.light.background);
+    for (const mode of ["light", "dark"] as const) assert.equal(MONO_COLOR_TOKENS[mode].focus, "var(--a-selection-subtle-foreground)");
+    assert.equal(MONO_COLOR_TOKENS["high-contrast"].focus, COLOR_TOKENS["high-contrast"].focus);
     for (const mode of COLOR_MODES) {
-      for (const token of ["danger", "dangerForeground", "warning", "warningForeground", "success", "successForeground", "focus"] as const) {
+      for (const token of ["danger", "dangerForeground", "warning", "warningForeground", "success", "successForeground"] as const) {
         assert.equal(MONO_COLOR_TOKENS[mode][token], COLOR_TOKENS[mode][token], `${mode}.${token} should stay chromatic so status meaning does not depend on hue alone`);
       }
     }

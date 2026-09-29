@@ -139,3 +139,7 @@ review that separately before revoking its plane membership and the two newly
 added Keycloak role mappings.
 
 This document is a local operational receipt, not tamper-evident audit storage.
+
+## Activity permissions — 2026-09-28
+
+Following Country release 9, refreshed the existing DEV full-admin roles at the user's request. Added the three canonical Activity permissions (audit query, snapshot read, snapshot capture) for both managed tenants on Studio, Neon and Mesh. Reconciliation reports no remaining published-permission gaps. Active member/role chains were verified for all four managed test accounts. See [Activity access verification](../reports/activity-full-admin-access-20260928.json).

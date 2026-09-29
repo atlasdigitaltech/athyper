@@ -1,6 +1,6 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 
-export type RecordMutationAction = "create" | "patch" | "delete" | "transition" | "aggregate";
+export type RecordMutationAction = "create" | "patch" | "delete" | "transition" | "aggregate" | "domain";
 export type MutationOrigin = "classic" | "workspace" | "import" | "job" | "operation";
 export type MutationValidationMode = "strict" | "lenient";
 
@@ -22,6 +22,9 @@ export interface BaseRecordCommand {
 }
 
 export interface CreateRecordCommand extends BaseRecordCommand {
+  readonly scopeCoordinate?: import("./query.js").RecordListScopeCoordinate;
+  /** Requested owner is checked against self/admin policy, never an ownership grant. */
+  readonly ownerPrincipalId?: string;
   readonly input: Readonly<Record<string, unknown>>;
 }
 

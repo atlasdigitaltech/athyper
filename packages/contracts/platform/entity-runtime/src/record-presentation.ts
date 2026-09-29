@@ -1,3 +1,4 @@
+import { parseEntityRelationships, type EntityRelationshipV1 } from "./entity-relationship";
 import type { EntityAccessDecisionV1 } from "./access-decision";
 import { isObjectRecord, isBoundedNonBlankText } from "./validation/values";
 import { parsePresentationLocalization, type EntityPresentationLocalizationV1 } from "./presentation-localization";
@@ -11,6 +12,7 @@ import {
 /** Published record presentation contains field and operation references, never executable UI. */
 export type RecordBadgeTone = "neutral" | "success" | "warning" | "danger";
 export interface EntityRecordPresentationV1 {
+  readonly entityRelationships?: readonly EntityRelationshipV1[];
   readonly localizedLabels?: EntityPresentationLocalizationV1;
   readonly schemaVersion: 1;
   /** Absent on older definitions: retain selected-section behavior. */
@@ -36,6 +38,7 @@ export interface EntityRecordPresentationV1 {
     readonly fields: readonly string[];
     readonly placement: "direct" | "overflow";
     readonly scopePrompt?: string;
+    readonly relationshipKey?: string;
   }[];
   readonly actions: readonly {
     readonly key: string;
@@ -130,6 +133,7 @@ export function parseEntityRecordPresentation(
     : parseRecordSummaryView(raw.summaryView);
   const result: EntityRecordPresentationV1 = {
     schemaVersion: 1,
+    ...(raw.entityRelationships === undefined ? {} : { entityRelationships: parseEntityRelationships(raw.entityRelationships) }),
     ...(raw.localizedLabels === undefined ? {} : { localizedLabels: parsePresentationLocalization(raw.localizedLabels) }),
     ...(raw.related === undefined ? {} : { related: parseRelatedPresentations(raw.related) }),
     ...(panel ? { panel } : {}),
@@ -159,6 +163,7 @@ export function parseEntityRecordPresentation(
         label: text(item.label),
         ...(item.localizedLabel === undefined ? {} : { localizedLabel: parseEntityRuntimeLocalizedText(item.localizedLabel) }),
         fields: list(item.fields ?? []).map(key),
+        ...(item.relationshipKey === undefined ? {} : { relationshipKey: key(item.relationshipKey) }),
         ...(item.scopePrompt === undefined ? {} : { scopePrompt: text(item.scopePrompt) }),
         placement: choice(item.placement ?? "direct", [
           "direct",
@@ -181,6 +186,10 @@ export function parseEntityRecordPresentation(
     }),
   };
   unique(result.sections.map((item) => item.key));
+  for (const section of result.sections) if (section.relationshipKey) {
+    if (section.fields.length || !result.entityRelationships?.some(relation => relation.key === section.relationshipKey))
+      throw new TypeError("Invalid related entity section");
+  }
   for (const profile of result.related ?? []) if (!result.sections.some(section => section.key === profile.sectionKey)) throw new TypeError(`Unknown related section: ${profile.sectionKey}`);
   if (result.panel) {
     const sections = new Set(result.sections.map((item) => item.key));
@@ -247,6 +256,7 @@ export function validateRecordPresentationReferences(
     ...presentation.badges.map((item) => item.field),
     ...presentation.sections.flatMap((item) => item.fields),
   ];
+  for (const relation of presentation.entityRelationships ?? []) referenced.push(relation.tenant.source, ...relation.fields.map(field => field.source));
   for (const field of referenced)
     if (!fields.includes(field))
       throw new TypeError(`Unknown record presentation field: ${field}`);
@@ -262,10 +272,12 @@ export function readableRecordPresentation(
   fields: readonly string[],
   operations: readonly string[],
   fallbackTitle: string,
+  authorizedRelationships: readonly string[] = [],
 ): EntityRecordPresentationV1 {
-  const visibleSections = presentation.sections.filter(section => section.fields.some(key => fields.includes(key))).map(section => section.key);
+  const visibleSections = presentation.sections.filter(section => section.fields.some(key => fields.includes(key)) || Boolean(section.relationshipKey && authorizedRelationships.includes(section.relationshipKey))).map(section => section.key);
   return {
     ...presentation,
+    ...(presentation.entityRelationships ? {entityRelationships: presentation.entityRelationships.filter(relation => authorizedRelationships.includes(relation.key))} : {}),
     ...(presentation.localizedLabels ? { localizedLabels: { ...presentation.localizedLabels,
       fields: Object.fromEntries(Object.entries(presentation.localizedLabels.fields).filter(([key]) => fields.includes(key))),
     } } : {}),
@@ -296,7 +308,7 @@ export function readableRecordPresentation(
         ...item,
         fields: item.fields.filter((key) => fields.includes(key)),
       }))
-      .filter((item) => item.fields.length > 0),
+      .filter((item) => item.fields.length > 0 || Boolean(item.relationshipKey && authorizedRelationships.includes(item.relationshipKey))),
     actions: presentation.actions.filter((item) =>
       operations.includes(item.operationKey),
     ),

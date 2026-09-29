@@ -1359,7 +1359,7 @@ CREATE TABLE metadata.entity_materialization_field_mapping (
 CREATE TABLE metadata.entity_capability (
  id uuid NOT NULL DEFAULT shared.uuidv7() PRIMARY KEY,
  tenant_id uuid, entity_id uuid NOT NULL, change_set_id uuid NOT NULL,
- capability_key text NOT NULL CHECK(capability_key IN ('comments','attachments')),
+ capability_key text NOT NULL CONSTRAINT entity_capability_capability_key_check CHECK(capability_key IN ('comments','attachments','activity')),
  declaration jsonb NOT NULL CHECK(jsonb_typeof(declaration)='object'),
  binding jsonb CHECK(binding IS NULL OR jsonb_typeof(binding)='object'),
  profile jsonb CHECK(profile IS NULL OR jsonb_typeof(profile)='object'),

@@ -1,0 +1,269 @@
+[
+  {
+    "plane": "studio",
+    "releases": [
+      {
+        "publication_key": "metadata.entity.principal",
+        "source_release_id": "d450f7e8-2d71-4abd-8b1f-82f6ab8148bc",
+        "source_release_no": 1,
+        "status": "active",
+        "artifact_hash": "f128eb0f293070ca4652f6891046d9669649296a0830d62eac43b0fe647a8296",
+        "activated_at": "2026-09-29T06:16:30.054135+00:00",
+        "verification_evidence": {
+          "payload_hash": "5c18d9e780294ea3c000c27d5dc4320688a50e89c118d9938841c12c43e6a264",
+          "target_plane": "studio",
+          "manifest_valid": true,
+          "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+          "runtime_compatible": true,
+          "signature_verified": true,
+          "signature_algorithm": "Ed25519",
+          "payload_schema_version": "2.0"
+        },
+        "coordinates": {
+          "entityCode": "principal",
+          "plane_code": "studio",
+          "release_id": "d450f7e8-2d71-4abd-8b1f-82f6ab8148bc",
+          "release_no": 1,
+          "publication_key": "metadata.entity.principal",
+          "compiled_release_id": "d450f7e8-2d71-4abd-8b1f-82f6ab8148bc",
+          "compiled_release_hash": "sha256:7d33691759d5e3aa32a3a1a412810c685f64aa0679648a0410b9536bd3c6ca39"
+        },
+        "payload_schema_version": "2.0"
+      },
+      {
+        "publication_key": "metadata.entity.principal_notification_preference",
+        "source_release_id": "dde41bc0-c1f4-43b3-9048-70817779df2a",
+        "source_release_no": 1,
+        "status": "active",
+        "artifact_hash": "be2546a97e302593c56ed30b24569ab7980d67934a020fec32b4f04b8f31fcc0",
+        "activated_at": "2026-09-29T06:16:06.056495+00:00",
+        "verification_evidence": {
+          "payload_hash": "820237d5b0570d5009c5faf661527686e482e0dcd380555e0a3ffe26ac62a964",
+          "target_plane": "studio",
+          "manifest_valid": true,
+          "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+          "runtime_compatible": true,
+          "signature_verified": true,
+          "signature_algorithm": "Ed25519",
+          "payload_schema_version": "2.0"
+        },
+        "coordinates": {
+          "entityCode": "principal_notification_preference",
+          "plane_code": "studio",
+          "release_id": "dde41bc0-c1f4-43b3-9048-70817779df2a",
+          "release_no": 1,
+          "publication_key": "metadata.entity.principal_notification_preference",
+          "compiled_release_id": "dde41bc0-c1f4-43b3-9048-70817779df2a",
+          "compiled_release_hash": "sha256:ad5dd0c059d809cb5362007b7e9f9436a7feb2c8cbf42496b7533f62e8346ea2"
+        },
+        "payload_schema_version": "2.0"
+      },
+      {
+        "publication_key": "metadata.entity.principal_profile",
+        "source_release_id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+        "source_release_no": 1,
+        "status": "active",
+        "artifact_hash": "fded6c7c653aa8476168f16d9e91e74e87411ee26167c0a04acd360e2bc13570",
+        "activated_at": "2026-09-29T06:16:05.983939+00:00",
+        "verification_evidence": {
+          "payload_hash": "736d7bbcaffed03186874818c863438f53f3aa75c94643c33898f41403fae21d",
+          "target_plane": "studio",
+          "manifest_valid": true,
+          "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+          "runtime_compatible": true,
+          "signature_verified": true,
+          "signature_algorithm": "Ed25519",
+          "payload_schema_version": "2.0"
+        },
+        "coordinates": {
+          "entityCode": "principal_profile",
+          "plane_code": "studio",
+          "release_id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+          "release_no": 1,
+          "publication_key": "metadata.entity.principal_profile",
+          "compiled_release_id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+          "compiled_release_hash": "sha256:e599f64d588004c3073eda0a3e7d65a2de68d724099b9fd218e3c1c63e1e63e1"
+        },
+        "payload_schema_version": "2.0"
+      }
+    ]
+  },
+  {
+    "plane": "neon",
+    "releases": [
+      {
+        "publication_key": "metadata.entity.principal",
+        "source_release_id": "d450f7e8-2d71-4abd-8b1f-82f6ab8148bc",
+        "source_release_no": 1,
+        "status": "active",
+        "artifact_hash": "77a04af9e7d0c1c7346e85bfdeb5ac96578c1dcb300f54725dd941d024705f70",
+        "activated_at": "2026-09-29T06:16:30.025118+00:00",
+        "verification_evidence": {
+          "payload_hash": "13869b8d80e872637f0f30d0fb7072e52fd25fdaefb9a13b83bf9f1d47ee861e",
+          "target_plane": "neon",
+          "manifest_valid": true,
+          "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+          "runtime_compatible": true,
+          "signature_verified": true,
+          "signature_algorithm": "Ed25519",
+          "payload_schema_version": "2.0"
+        },
+        "coordinates": {
+          "entityCode": "principal",
+          "plane_code": "neon",
+          "release_id": "d450f7e8-2d71-4abd-8b1f-82f6ab8148bc",
+          "release_no": 1,
+          "publication_key": "metadata.entity.principal",
+          "compiled_release_id": "d450f7e8-2d71-4abd-8b1f-82f6ab8148bc",
+          "compiled_release_hash": "sha256:12a2140aa5327cf1851cecfa4525228ab7c5e0d0ef7da08be994720242500725"
+        },
+        "payload_schema_version": "2.0"
+      },
+      {
+        "publication_key": "metadata.entity.principal_notification_preference",
+        "source_release_id": "dde41bc0-c1f4-43b3-9048-70817779df2a",
+        "source_release_no": 1,
+        "status": "active",
+        "artifact_hash": "3ab998ccfcf40fd47586dc8ac8c005836a0ef6e32cd6f0231eafc026bf5798d9",
+        "activated_at": "2026-09-29T06:16:06.018491+00:00",
+        "verification_evidence": {
+          "payload_hash": "d31431c88e87654dccfc2839624269ed79b12ee5b19b4135d5df923a6fb57d0b",
+          "target_plane": "neon",
+          "manifest_valid": true,
+          "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+          "runtime_compatible": true,
+          "signature_verified": true,
+          "signature_algorithm": "Ed25519",
+          "payload_schema_version": "2.0"
+        },
+        "coordinates": {
+          "entityCode": "principal_notification_preference",
+          "plane_code": "neon",
+          "release_id": "dde41bc0-c1f4-43b3-9048-70817779df2a",
+          "release_no": 1,
+          "publication_key": "metadata.entity.principal_notification_preference",
+          "compiled_release_id": "dde41bc0-c1f4-43b3-9048-70817779df2a",
+          "compiled_release_hash": "sha256:9cc4101463562ea3a0ed869af2f74ff17c259f5bcd6d2d226f5d3102f2821730"
+        },
+        "payload_schema_version": "2.0"
+      },
+      {
+        "publication_key": "metadata.entity.principal_profile",
+        "source_release_id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+        "source_release_no": 1,
+        "status": "active",
+        "artifact_hash": "18aca456d1d19b01de73d13db0056c4d63c2c9a6364380a711eaf03985f5b022",
+        "activated_at": "2026-09-29T06:16:05.947052+00:00",
+        "verification_evidence": {
+          "payload_hash": "0267606d92d19e32c7ec9644a95c64a3c24f55c75b36ea6ad0c19603f2927a9e",
+          "target_plane": "neon",
+          "manifest_valid": true,
+          "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+          "runtime_compatible": true,
+          "signature_verified": true,
+          "signature_algorithm": "Ed25519",
+          "payload_schema_version": "2.0"
+        },
+        "coordinates": {
+          "entityCode": "principal_profile",
+          "plane_code": "neon",
+          "release_id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+          "release_no": 1,
+          "publication_key": "metadata.entity.principal_profile",
+          "compiled_release_id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+          "compiled_release_hash": "sha256:dc2d80f567a9cff2c4f7b2d66892087f94eb397ad02476b0776545f5ac49fbb9"
+        },
+        "payload_schema_version": "2.0"
+      }
+    ]
+  },
+  {
+    "plane": "mesh",
+    "releases": [
+      {
+        "publication_key": "metadata.entity.principal",
+        "source_release_id": "d450f7e8-2d71-4abd-8b1f-82f6ab8148bc",
+        "source_release_no": 1,
+        "status": "active",
+        "artifact_hash": "2f06cc6b8289a795c506bce1cad1432042b5b6e9226ec06a430b6b45ad8c5494",
+        "activated_at": "2026-09-29T06:16:30.006687+00:00",
+        "verification_evidence": {
+          "payload_hash": "2793f858c702c80cd2712812a3556ca59cf30b5366d96f5170935f75fc26a50d",
+          "target_plane": "mesh",
+          "manifest_valid": true,
+          "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+          "runtime_compatible": true,
+          "signature_verified": true,
+          "signature_algorithm": "Ed25519",
+          "payload_schema_version": "2.0"
+        },
+        "coordinates": {
+          "entityCode": "principal",
+          "plane_code": "mesh",
+          "release_id": "d450f7e8-2d71-4abd-8b1f-82f6ab8148bc",
+          "release_no": 1,
+          "publication_key": "metadata.entity.principal",
+          "compiled_release_id": "d450f7e8-2d71-4abd-8b1f-82f6ab8148bc",
+          "compiled_release_hash": "sha256:ee52600e466ec96c4a4c717f4e8f7efb9457d6e0dae79ddcb9b70efb53e251b5"
+        },
+        "payload_schema_version": "2.0"
+      },
+      {
+        "publication_key": "metadata.entity.principal_notification_preference",
+        "source_release_id": "dde41bc0-c1f4-43b3-9048-70817779df2a",
+        "source_release_no": 1,
+        "status": "active",
+        "artifact_hash": "37d36dde1466265f641140aa822e98d8dd5f7f3f4c1d9bc3ebad37f88d6860f2",
+        "activated_at": "2026-09-29T06:16:06.020201+00:00",
+        "verification_evidence": {
+          "payload_hash": "1df0161d7286b96cba06c332849ca131faf479956d7c5ca1b94d22f91e99f7a1",
+          "target_plane": "mesh",
+          "manifest_valid": true,
+          "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+          "runtime_compatible": true,
+          "signature_verified": true,
+          "signature_algorithm": "Ed25519",
+          "payload_schema_version": "2.0"
+        },
+        "coordinates": {
+          "entityCode": "principal_notification_preference",
+          "plane_code": "mesh",
+          "release_id": "dde41bc0-c1f4-43b3-9048-70817779df2a",
+          "release_no": 1,
+          "publication_key": "metadata.entity.principal_notification_preference",
+          "compiled_release_id": "dde41bc0-c1f4-43b3-9048-70817779df2a",
+          "compiled_release_hash": "sha256:5e2253cfb806b993af157a6ce31854d9c32843f4367911a8060f789c3a949daa"
+        },
+        "payload_schema_version": "2.0"
+      },
+      {
+        "publication_key": "metadata.entity.principal_profile",
+        "source_release_id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+        "source_release_no": 1,
+        "status": "active",
+        "artifact_hash": "1c562e9ed81fe28636f26b627ebd69b8932203aff318c158b26674f5386b5bb3",
+        "activated_at": "2026-09-29T06:16:05.910833+00:00",
+        "verification_evidence": {
+          "payload_hash": "8bb73dd74b43266f1ca9938af2c345e7e99f7d6ef88203488942aa1a0108e7e7",
+          "target_plane": "mesh",
+          "manifest_valid": true,
+          "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+          "runtime_compatible": true,
+          "signature_verified": true,
+          "signature_algorithm": "Ed25519",
+          "payload_schema_version": "2.0"
+        },
+        "coordinates": {
+          "entityCode": "principal_profile",
+          "plane_code": "mesh",
+          "release_id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+          "release_no": 1,
+          "publication_key": "metadata.entity.principal_profile",
+          "compiled_release_id": "9f06d37d-2d34-4ff7-8f29-b6beb71497a1",
+          "compiled_release_hash": "sha256:829b634aa8027434e00e903cd60ab9e18fbd4ec34d062960d961626fef85b6c3"
+        },
+        "payload_schema_version": "2.0"
+      }
+    ]
+  }
+]

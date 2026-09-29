@@ -1,5 +1,5 @@
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
-import { capabilityArtifactMembers } from "@athyper/server-contract-publication";
+import { capabilityArtifactMembers, capabilityBindingKey } from "@athyper/server-contract-publication";
 import {
   compileEntityAuthorizationRuntime,
   compileEntityAuthorization,
@@ -37,7 +37,7 @@ export function graphDependencies(
   for (const capability of graph.capabilities ?? []) {
     if (!capability.declaration.enabled) continue;
     const binding = capabilityArtifactMembers(graph.entity.entityCode, [capability]).operationBindings[
-      capability.capabilityKey === "comments" ? "commentBinding" : "attachmentBinding"]!;
+      capabilityBindingKey(capability.capabilityKey)]!;
     add({kind:"handler",key:binding.serviceKey});
     add({kind:"resolver",key:binding.admissionResolverKey});
     for (const action of binding.actions) {

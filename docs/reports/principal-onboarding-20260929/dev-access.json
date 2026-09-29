@@ -1,0 +1,95 @@
+[
+  {
+    "plane": "studio",
+    "mode": "applied",
+    "roles": [
+      {
+        "tenant": "athyper",
+        "role": "entity.principal.self",
+        "permission_count": 5
+      },
+      {
+        "tenant": "athyper",
+        "role": "test.full_admin",
+        "permission_count": 6
+      },
+      {
+        "tenant": "cirrusatlantic",
+        "role": "entity.principal.self",
+        "permission_count": 5
+      },
+      {
+        "tenant": "cirrusatlantic",
+        "role": "test.full_admin",
+        "permission_count": 6
+      },
+      {
+        "tenant": "technostat",
+        "role": "entity.principal.self",
+        "permission_count": 5
+      }
+    ]
+  },
+  {
+    "plane": "neon",
+    "mode": "applied",
+    "roles": [
+      {
+        "tenant": "athyper",
+        "role": "entity.principal.self",
+        "permission_count": 5
+      },
+      {
+        "tenant": "athyper",
+        "role": "test.full_admin",
+        "permission_count": 6
+      },
+      {
+        "tenant": "cirrusatlantic",
+        "role": "entity.principal.self",
+        "permission_count": 5
+      },
+      {
+        "tenant": "cirrusatlantic",
+        "role": "test.full_admin",
+        "permission_count": 6
+      },
+      {
+        "tenant": "technostat",
+        "role": "entity.principal.self",
+        "permission_count": 5
+      }
+    ]
+  },
+  {
+    "plane": "mesh",
+    "mode": "applied",
+    "roles": [
+      {
+        "tenant": "athyper",
+        "role": "entity.principal.self",
+        "permission_count": 5
+      },
+      {
+        "tenant": "athyper",
+        "role": "test.full_admin",
+        "permission_count": 6
+      },
+      {
+        "tenant": "cirrusatlantic",
+        "role": "entity.principal.self",
+        "permission_count": 5
+      },
+      {
+        "tenant": "cirrusatlantic",
+        "role": "test.full_admin",
+        "permission_count": 6
+      },
+      {
+        "tenant": "technostat",
+        "role": "entity.principal.self",
+        "permission_count": 5
+      }
+    ]
+  }
+]

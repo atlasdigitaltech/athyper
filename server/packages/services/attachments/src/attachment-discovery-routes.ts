@@ -8,7 +8,7 @@ import type { AttachmentRouteOptions } from "./attachment-routes.js";
 
 type Tx = Transaction<Record<string, never>>;
 type Identity = { planeKey: "neon" | "studio" | "mesh"; tenantId: string; principalId: string; attachmentId: string };
-type Row = { id: string; sha256: string; content_type: string; derivative_content_type: string | null; storage_key: string | null; status: string; last_error_code?: string | null; scan_status: string | null; size_bytes: number; file_name: string; extracted_text: string | null };
+type Row = { draft_id?: string | null; id: string; sha256: string; content_type: string; derivative_content_type: string | null; storage_key: string | null; status: string; last_error_code?: string | null; scan_status: string | null; size_bytes: number; file_name: string; extracted_text: string | null };
 type BrowseRow = { added_at?: Date | string; added_by_display_name?: string; id: string; pinned_attachment_id: string | null; link_kind: string; version_history: unknown; series_id: string; link_id: string; folder_id: string | null; folder_name: string | null; category: string | null; version_no: number; file_name: string; display_name: string | null; content_type: string | null; size_bytes: number | string | null; status: string; created_at: Date | string; series_revision: string };
 const renditions = new Set(["thumbnail_sm", "thumbnail_md", "page_preview", "preview_default"]);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,18 +32,22 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
       if (!admitted?.entityType || !admitted.entityId) throw new DiscoveryError(403,"ENTITY_CAPABILITY_DENIED");
       const specification = createHash("sha256").update(`v1:${rendition}`).digest("hex");
       const row = await options.transactions.run(context.planeKey, context, async tx => (await sql<Row>`
-        SELECT a.id::text,a.sha256,a.content_type,a.file_name,d.content_type derivative_content_type,d.storage_key,d.status,d.last_error_code,d.scan_status,d.size_bytes
+        SELECT a.draft_id::text,a.id::text,a.sha256,a.content_type,a.file_name,d.content_type derivative_content_type,d.storage_key,d.status,d.last_error_code,d.scan_status,d.size_bytes
         FROM document.attachment a
         JOIN document.attachment_series s ON s.tenant_id=a.tenant_id AND s.id=a.series_id
         LEFT JOIN document.attachment_derivative d ON d.tenant_id=a.tenant_id AND d.attachment_id=a.id
           AND d.source_sha256=a.sha256 AND d.specification_hash=${specification} AND d.rendition_code=${rendition}
         WHERE a.tenant_id=${context.tenantId}::uuid AND a.id=${attachmentId}::uuid AND a.status='active' AND a.is_active AND a.is_virus_scanned
-          AND EXISTS (SELECT 1 FROM document.attachment_link l WHERE l.tenant_id=a.tenant_id AND l.attachment_series_id=a.series_id
+          AND (EXISTS (SELECT 1 FROM document.attachment_link l WHERE l.tenant_id=a.tenant_id AND l.attachment_series_id=a.series_id
             AND ((l.entity_type=${admitted.entityType} AND l.entity_id=${admitted.entityId})
               OR (l.entity_type='document.comment' AND l.link_kind='comment' AND l.entity_id=${admitted.commentId ?? ""}
                 AND EXISTS (SELECT 1 FROM document.comment c WHERE c.tenant_id=a.tenant_id AND c.id::text=l.entity_id
                   AND c.entity_type=${admitted.entityType} AND c.entity_id=${admitted.entityId} AND c.status<>'deleted')))
             AND (l.pinned_attachment_id=a.id OR (l.pinned_attachment_id IS NULL AND s.current_attachment_id=a.id)))
+          OR (a.uploaded_by=${context.principalId}::uuid
+            AND a.metadata->>'entity_type'=${admitted.entityType} AND a.metadata->>'entity_id'=${admitted.entityId}
+            AND EXISTS (SELECT 1 FROM document.comment_draft draft WHERE draft.tenant_id=a.tenant_id AND draft.id=a.draft_id
+              AND draft.principal_id=a.uploaded_by AND draft.entity_id=${admitted.entityId} AND draft.expires_at>clock_timestamp())))
         ORDER BY d.created_at DESC LIMIT 1`.execute(tx)).rows[0]);
       if (!row) throw new DiscoveryError(404,"PREVIEW_NOT_AVAILABLE");
       if (!["image/png","image/jpeg","image/webp","application/pdf"].includes(row.content_type)) return { state: "unsupported", detail: "Preview is unavailable for this format. Download the original file." };
@@ -52,12 +56,12 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
         const url = await options.storage.createDownloadUrl(row.storage_key, 120, {contentType, contentDisposition: contentType === "application/pdf" ? 'inline; filename="preview.pdf"' : 'inline; filename="preview.webp"'});
         return { state: "ready", url, expiresAt: new Date(Date.now()+120_000).toISOString(), contentType };
       }
-      // Finalization can run before a draft is posted and gains its comment pin.
-      // Retry only that missing-link failure after the authorized link query above succeeds.
-      const linkedAfterScan = Boolean(admitted.commentId) && (!row.status || (row.status === "failed" && row.last_error_code === "source_not_found"));
+      // Recover earlier missing-link failures after verifying a live owned draft or posted-comment link.
+      // Other processing failures and quarantine remain terminal.
+      const linkedAfterScan = Boolean(admitted.commentId || row.draft_id) && (!row.status || (row.status === "failed" && row.last_error_code === "source_not_found"));
       if (!linkedAfterScan && ["skipped","quarantined","failed"].includes(row.status)) return { state: "unavailable", detail: "Preview could not be generated. Encrypted and unsupported documents require downloading the original." };
       if (!options.schedule) return { state: "unavailable", detail: "Preview provider is unavailable." };
-      await options.schedule({ planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId,sourceSha256:row.sha256,...(linkedAfterScan ? {rebuild:{mode:"failed" as const,reason:"Comment attachment is now linked",requestId:`comment-linked-${admitted.commentId}`}} : {}) });
+      await options.schedule({ planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId,sourceSha256:row.sha256,...(linkedAfterScan ? {rebuild:{mode:"failed" as const,reason:"Comment attachment is now linked",requestId:`comment-linked-${admitted.commentId ?? row.draft_id}`}} : {}) });
       return { state: "processing", detail: "Preparing preview. The original file remains available." };
     },
     async extract(context: VerifiedRequestContext, attachmentId: string) {

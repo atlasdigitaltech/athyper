@@ -27,7 +27,11 @@ const client = {
         ? operation.path(options.params??{})
         : operation.path;
     calls.push({ path, method: operation.method, ...options });
-    if (path.startsWith("/api/collab/participants?")) return {items:[{id:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",displayName:"Alex Reviewer"}]};
+    if (path.startsWith("/api/collab/participants?")) {
+      await new Promise(resolve=>setTimeout(resolve, (window as any).mentionDelay ?? 0));
+      if ((window as any).mentionMode === "error") throw new Error("Directory unavailable");
+      return {items:(window as any).mentionMode === "empty" ? [] : (window as any).mentionMode === "self" ? [{id:"owner",displayName:"Catl Admin",username:"catl.admin"}] : [{id:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",displayName:"Alex Reviewer",username:"alex.reviewer"}]};
+    }
     if (operation.method === "PATCH") {
       if ((window as any).editFails)
         throw new ApiTransportError("http", "Changed on server", 409);
@@ -58,7 +62,8 @@ const client = {
       };
       return { inserted: liked };
     }
-    if(path.endsWith("/sections/attachments")) return {capability:{actions:[{key:"create"},{key:"finalize"}],allowedContentTypes:["application/pdf","image/png"],maxFileBytes:26214400}};
+    if(path.includes("/sections/attachments")) throw new Error("COMPILED_ENTITY_ARTIFACT_NOT_IN_RELEASE:country/presentation.detail");
+    if(path.endsWith("/collaboration/attachments")) return {capability:{actions:(window as any).denyCommentFiles ? [] : [{key:"create"},{key:"finalize"}],allowedContentTypes:["application/pdf","image/png"],maxFileBytes:26214400}};
     if (path.endsWith("/drafts")) return { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" };
     if ((window as any).postedCommentId && path === "/api/collab/comments" && options?.method !== "GET") return { id: (window as any).postedCommentId };
     return {};

@@ -44,3 +44,20 @@ export {
   sharedReferenceDefinitions,
 } from "./shared-reference-directory.js";
 export { registerSharedReferenceDirectoryRoutes } from "./shared-reference-directory-routes.js";
+
+export * from "./snapshots/activity-snapshot-repository.js";
+export { readableRecordFields } from "./record-read-access.js";
+export { createRecordHistoryHook, qualifyRecordHistoryDescriptor, type RecordHistoryBinding, type RecordHistoryAdapter } from "./record-history.js";
+export type { RecordHistoryHook, IdempotentRecordCommand } from "./record-execution.js";
+
+export * from "./actions/transactional-action-service.js";
+
+export * from "./owned-history-adapter.js";
+
+export * from "./snapshots/collection-capture.js";
+export * from "./snapshots/collection-comparison.js";
+
+export { createParentCollectionScopeResolver } from "./parent-collection-scope.js";
+export { createRecordOwnerAccessAdapter } from "./record-owner-access.js";
+
+export * from "./record-mutation-policy.js";

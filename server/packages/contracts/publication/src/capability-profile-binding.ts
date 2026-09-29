@@ -1,3 +1,4 @@
+import { activityPolicyActions, parseActivityPolicy } from "./activity-policy.js";
 import { resolveCapabilityProfileDefaults, type CapabilityProfile } from "./capability-profile.js";
 import type { EntityCapabilityAuthoringMember } from "./entity-capabilities.js";
 import { capabilityProfileActions } from "./common-capability-permissions.js";
@@ -6,6 +7,9 @@ import { capabilityProfileActions } from "./common-capability-permissions.js";
 export function capabilityProfileBinding(member: EntityCapabilityAuthoringMember, entityCode: string): Record<string, unknown> {
   const resolved = resolveCapabilityProfileDefaults(member, () => member.profileDefinition);
   const kind = member.capabilityKey;
+  if (kind === "activity") return { schemaVersion: 1, serviceKey: "platform.activity.v1", ownerEntityCode: entityCode,
+    admissionResolverKey: "platform.records.admission.v1", layouts: ["drawer", "content"],
+    ...resolved.defaults, actions: activityPolicyActions(parseActivityPolicy(resolved.defaults)) };
   const actions = capabilityProfileActions(kind, Array.isArray(resolved.defaults.categories) ? resolved.defaults.categories : []);
   const shared = { schemaVersion: 1, serviceKey: `platform.${kind}.v1`, ownerEntityCode: entityCode,
     admissionResolverKey: "platform.records.admission.v1", layouts: ["drawer", "content"], actions };

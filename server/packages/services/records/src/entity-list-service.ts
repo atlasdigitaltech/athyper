@@ -111,6 +111,7 @@ export function createEntityListService(options: {
     >
   >;
   readonly standardViewSources?: StandardViewSources;
+  readonly activity?: (input: { context: VerifiedRequestContext; entityCode: string; recordId: string }) => Promise<boolean>;
   readonly collaboration?: (input: { context: VerifiedRequestContext; entityCode: string; recordId: string }) => Promise<readonly ("comments" | "attachments")[]>;
   readonly summary?: (input: { context: VerifiedRequestContext; entityCode: string; recordId: string; releaseId: string }) => Promise<import("@athyper/contract-platform-entity-runtime").EntityRecordSummaryViewV1 | undefined>;
   readonly metadata: MetadataReader;
@@ -490,6 +491,11 @@ export function createEntityListService(options: {
           : (readable.find(
               (field) => field.storagePath === descriptor.storage.idField,
             )?.key ?? readable[0]!.key);
+      const authorizedRelationships: string[] = [];
+      if (recordId) for (const relation of descriptor.recordPresentation?.entityRelationships ?? []) {
+        const child = await options.metadata.getEntityDescriptor(context, relation.targetEntity);
+        if (child && await operationAllowed(options.authorizer, context, child, "list")) authorizedRelationships.push(relation.key);
+      }
       const presentation = readableRecordPresentation(
         descriptor.recordPresentation ??
           parseEntityRecordPresentation({
@@ -517,17 +523,20 @@ export function createEntityListService(options: {
           action.kind === "edit" ? "patch" : action.code,
         ),
         titleField,
+        authorizedRelationships,
       );
-      // Both read-only hooks are independent, but neither may run before record
+      // These read-only hooks are independent, but none may run before record
       // admission and readable-field projection have succeeded. No transaction
       // is passed between these independently scoped read providers.
-      const [collaboration, summaryView] = await Promise.all([
+      const [collaboration, summaryView, activity] = await Promise.all([
         recordId && options.collaboration ? options.collaboration({ context, entityCode, recordId }) : [],
         recordId && options.summary ? options.summary({ context, entityCode, recordId, releaseId: descriptor.releaseId }) : undefined,
+        recordId && options.activity ? options.activity({context,entityCode,recordId}) : false,
       ]);
       return parseEntityDetailDescriptor({
         schema: "athyper.entity-detail-descriptor/1",
         collaboration,
+        activity,
         presentation: { ...presentation, summaryView },
         plane: descriptor.planeKey,
         entity: {
@@ -1554,6 +1563,8 @@ async function resolveCollectionScope(
   descriptor: EntityRuntimeDescriptor,
   coordinate?: ListRecordsQuery["scopeCoordinate"],
 ): Promise<RecordCollectionScopeResolution> {
+  if (!resolver && (coordinate?.parentEntityCode || coordinate?.parentRecordId || coordinate?.relationshipKey))
+    throw new RecordServiceError(403, "ENTITY_PARENT_ACCESS_DENIED", "Related record scope is unavailable");
   if (resolver)
     return resolver.resolve({
       context,

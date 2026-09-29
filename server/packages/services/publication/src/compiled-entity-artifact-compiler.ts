@@ -73,10 +73,10 @@ export function compileCompiledEntityArtifacts(
       const mapped=capabilityArtifactMembers(String(source.content.entityCode),members);
       if(source.content.artifactType==="core") {
         const existing=source.content.capabilities as Record<string,unknown>|undefined;
-        if(existing && (existing.comments!==undefined || existing.attachments!==undefined)) throw new TypeError("CAPABILITY_POLICY_DUPLICATE_SOURCE");
+        if(existing && (existing.comments!==undefined || existing.attachments!==undefined || existing.activity!==undefined)) throw new TypeError("CAPABILITY_POLICY_DUPLICATE_SOURCE");
         source={...source,content:{...source.content,capabilities:{...existing,...mapped.capabilities}}};
       } else {
-        if(source.content.commentBinding!==undefined||source.content.attachmentBinding!==undefined) throw new TypeError("CAPABILITY_POLICY_DUPLICATE_SOURCE");
+        if(source.content.commentBinding!==undefined||source.content.attachmentBinding!==undefined||source.content.activityBinding!==undefined) throw new TypeError("CAPABILITY_POLICY_DUPLICATE_SOURCE");
         source={...source,content:{...source.content,...mapped.operationBindings}};
       }
     }
@@ -85,7 +85,7 @@ export function compileCompiledEntityArtifacts(
       for (const profile of sources.filter(item => item.content.artifactType === "capability_profile"
           && item.content.entityCode === source.content.entityCode)) {
         const definition = profile.content.profile as { capabilityKey?: string } | undefined;
-        const key = definition?.capabilityKey === "comments" ? "commentBinding" : definition?.capabilityKey === "attachments" ? "attachmentBinding" : undefined;
+        const key = definition?.capabilityKey === "comments" ? "commentBinding" : definition?.capabilityKey === "attachments" ? "attachmentBinding" : definition?.capabilityKey === "activity" ? "activityBinding" : undefined;
         if (!key || !content[key]) throw new TypeError("CAPABILITY_PROFILE_BINDING_REQUIRED");
         const binding = content[key] as Record<string, unknown>;
         if (binding.profilePolicy !== undefined) throw new TypeError("CAPABILITY_PROFILE_PIN_AUTHORING_FORBIDDEN");

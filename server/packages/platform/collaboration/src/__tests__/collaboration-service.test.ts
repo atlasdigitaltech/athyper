@@ -15,6 +15,14 @@ const id = {
 };
 
 describe("collaboration transaction boundary", () => {
+  it("allows an empty rich-text draft for attachment staging but rejects an empty posted comment", async () => {
+    const { service, persistence } = harness();
+    const empty = { ...base, text: "", format: "rich_json" as const, content: { type: "doc", schema: "athyper.rich-text/1.0", content: [{ type: "paragraph", content: [] }] } };
+    await service.putDraft(empty);
+    expect([...persistence.inspect().drafts.values()][0]?.text).toBe("");
+    await expect(service.create(empty)).rejects.toMatchObject({ code: "INVALID_RICH_TEXT" });
+    await expect(service.putDraft({ ...empty, content: { ...empty.content, content: [{ type: "unsupported" }] } })).rejects.toMatchObject({ code: "INVALID_RICH_TEXT" });
+  });
   it("keeps edit upload drafts separate from root and reply drafts",async()=>{
     const {service,persistence}=harness();
     const parent=await service.create(base);

@@ -113,3 +113,43 @@ Validation: 77 attachment-service tests and 9 admission tests passed, with servi
 TypeScript checks. Signed-in browser verification returned ready comment thumbnails
 and opened the inline preview viewer. All four renditions for the existing image
 attachments reached ready, including the earlier pasted image.
+
+
+PDF inspection compatibility and terminal failures (2026-09-28): the guard now
+accepts unencrypted PDFs with object streams and cross-reference streams. Object
+streams are decoded within the shared aggregate decoded-byte budget, object-count
+limit, worker memory/stack limits and scanner deadline; embedded payloads still
+receive independent scans. Index offsets do not skip object inspection. Encrypted
+PDFs, incremental revisions, malformed structures and unsupported decoding methods
+remain rejected with a specific `inspectionReason` and an appropriate explanation.
+The public error code remains `MALWARE_DOCUMENT_UNSUPPORTED` (422).
+
+A permanent inspection rejection now persists `failed` with its reason, releases
+the upload reservation, and cannot promote a file or overwrite another attempt's
+successful finalization. Transient scanner outages remain retryable. The uploader
+refreshes record status and displays the failure once on the queue item, with
+Remove from queue for terminal rejections. New logic does not retrospectively
+classify earlier stuck uploads without inspecting them again.
+
+Validation: 86 scanner tests, 96 attachment service tests, four upload browser
+checks, and typechecks for the scanner adapter, attachment service and form-detail
+package passed. The original reported invoice was not available for reproduction.
+
+
+Incremental PDF support (2026-09-28): revisions are inspected in order before
+later object definitions replace earlier ones. Each revision also revisits the
+effective file-spec references, so replacing an untyped referenced payload cannot
+skip inspection. Decoded bytes, object counts and embedded payload inspections
+share limits across the document, with at most 64 revisions and the existing
+worker memory/stack limits and scanner deadline. Previous-revision pointers must
+refer backward to known cross-reference offsets. Ambiguous indirect object-stream
+decoding metadata remains unsupported. Encryption remains rejected.
+
+Both original local files, July Invoice 2026.pdf and August Invoice 2026.pdf,
+passed the updated full scanner against the local ClamAV service (signature
+version 28136). Originals were not modified or added to the repository. A scanner
+regression confirms an embedded EICAR payload in an earlier revision is detected
+even when replaced with clean content later. The upload queue now distinguishes
+Inspection unsupported from Malware detected using the server problem code.
+Validation: 93 scanner tests, three upload browser checks, and typechecks for the
+scanner adapter, attachment service and form-detail package passed.

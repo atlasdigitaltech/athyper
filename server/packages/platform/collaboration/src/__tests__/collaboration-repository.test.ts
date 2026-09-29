@@ -22,6 +22,22 @@ const command = {
   text: "hello",
   parentCommentId: "44444444-4444-4444-8444-444444444444",
 };
+describe("attachment draft scopes", () => {
+  it("validates the registered entity type while persisting an isolated edit scope", async () => {
+    const scope = "entity_edit_0123456789abcdef0123456789abcdef";
+    const captured: {sql: string; parameters: readonly unknown[]}[] = [];
+    await run([[{active: true}], [{id: "draft"}]], (repo, tx) =>
+      repo.putDraft({...command, parentCommentId: undefined, contextType: scope, text: ""}, tx), captured);
+    expect(captured[0]!.parameters).toContain("entity");
+    expect(captured[0]!.parameters).not.toContain(scope);
+    expect(captured[1]!.parameters).toContain(scope);
+    expect(captured[1]!.parameters).toContain("");
+  });
+  it("does not bypass lookup validation for arbitrary context codes", async () => {
+    await expect(run([[{active: false}]], (repo, tx) =>
+      repo.putDraft({...command, contextType: "entity_edit_invalid"}, tx))).rejects.toMatchObject({code: "INVALID_COLLABORATION_LOOKUP"});
+  });
+});
 async function run(
   rows: Record<string, unknown>[][],
   work: (

@@ -294,7 +294,7 @@ export function createCollaborationService<Transaction>(
       );
     },
     async putDraft(input) {
-      const initial = prepare(input);
+      const initial = prepare(input, true);
       const capability = await options.authorizeCapability?.("draft", input, {...initial});
       if (!capability) await requirePermission(
         options.authorizer,
@@ -304,7 +304,7 @@ export function createCollaborationService<Transaction>(
       const prepared = {...initial, visibility: input.visibility ?? capability?.defaultAudience ?? "public" as const};
       validateCoordinate(prepared);
       if (prepared.intent !== undefined) validateCode(prepared.intent);
-      validateBody(prepared.text);
+      validateBody(prepared.text, true);
       validateAttachments(prepared.attachmentIds);
       validateNotificationAttachments(prepared);
       return transact(options, prepared.context, (tx) =>
@@ -560,8 +560,8 @@ function validateCoordinate(value: {
       "Invalid collaboration resource coordinate",
     );
 }
-function validateBody(text: string): void {
-  if (!text.trim() || text.length > 50_000)
+function validateBody(text: string, allowEmpty = false): void {
+  if ((!allowEmpty && !text.trim()) || text.length > 50_000)
     throw new CollaborationError(
       400,
       "INVALID_COMMENT_TEXT",
@@ -615,7 +615,7 @@ function prepare<
   T extends
     | CreateCommentCommand
     | import("@athyper/server-contract-collaboration").EditCommentCommand,
->(command: T): T {
+>(command: T, allowEmpty = false): T {
   if ((command.format ?? "plain") === "plain") {
     if (command.content !== undefined)
       throw new CollaborationError(
@@ -638,7 +638,7 @@ function prepare<
       "INVALID_RICH_TEXT",
       "rich_json content is required",
     );
-  const projected = projectRichText(command.content);
+  const projected = projectRichText(command.content, { allowEmpty });
   return {
     ...command,
     text: projected.text,

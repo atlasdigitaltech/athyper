@@ -344,7 +344,7 @@ export function ShellChrome({
   };
   const [sidePanel, setSidePanel] = useState<WorkspaceSidePanelRegistration>();
   const claimSidePanel = useCallback((panel: WorkspaceSidePanelRegistration) => {
-    dismissTransient();
+    if (panel.id !== "activity-center") dismissTransient();
     setAtlasOpen(false);
     setSidePanel(panel);
   }, [setAtlasOpen, dismissTransient]);

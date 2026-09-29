@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { parseTableEntityProduct } from "../../../../packages/planes/studio/meta-entity-authoring/src/authoring/table-product.js";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve, relative } from "node:path";
@@ -6,22 +7,23 @@ import { pathToFileURL } from "node:url";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 import { loadReferenceProduct } from "../../provisioning/prepare-reference-runtime.js";
-import { importSystemReferenceProduct } from "../../../../packages/planes/studio/meta-entity-authoring/src/system-reference-authoring.js";
+import { importEntityProduct } from "../../../../packages/planes/studio/meta-entity-authoring/src/system-reference-authoring.js";
 import { KyselyMetaEntityAuthoringRepository } from "../../../../packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.js";
 import { compileGraph, validateGraph, runContractTests } from "../../../../packages/planes/studio/meta-entity-authoring/src/deterministic.js";
-import { compileSystemReferenceTarget } from "../../../../packages/planes/studio/meta-entity-authoring/src/compilation/target-compiler.js";
+import { compileSystemEntityTarget } from "../../../../packages/planes/studio/meta-entity-authoring/src/compilation/entity-target-compiler.js";
 
 /** Authenticated local maintenance operation; creates drafts, never approvals. */
 async function main() {
   const args = process.argv.slice(2);
   const directory = args.find(a => a.startsWith("--product="))?.slice(10);
-  if (!directory || args.some(a => !a.startsWith("--product=") && a !== "--check" && a !== "--confirm=DEV-IMPORT-REFERENCE-DRAFT"))
+  if (!directory || args.some(a => !a.startsWith("--product=") && a !== "--check" && a !== "--confirm=DEV-IMPORT-REFERENCE-DRAFT" && a !== "--confirm=DEV-IMPORT-ENTITY-DRAFT"))
     throw Error("Use --product=<metadata product> [--check|--confirm=DEV-IMPORT-REFERENCE-DRAFT]");
   const root = resolve("metadata/products/shared/entities");
   const path = resolve(directory);
   const child = relative(root, path);
   if (!child || child.startsWith("..") || child.includes("/")) throw Error("Expected a direct shared metadata product directory");
-  const product = loadReferenceProduct(path);
+  const definition = JSON.parse(readFileSync(resolve(path,"definition.json"),"utf8"));
+  const product = definition.schema === "athyper.table-entity-product/1" ? parseTableEntityProduct(definition) : loadReferenceProduct(path);
   const inspected = JSON.parse(execFileSync("docker", ["inspect", "athyper-dev-db-1"], { encoding: "utf8" }))[0];
   if (inspected.Config.Labels["com.docker.compose.project"] !== "athyper-dev" || !inspected.State.Running)
     throw Error("Running DEV database required");
@@ -33,12 +35,12 @@ async function main() {
     host: network.IPAddress, database: "athyper_studio", user: env.POSTGRES_USER,
     password: readFileSync(secret, "utf8").trim(), max: 1,
   }) }) });
-  const dryRun = !args.includes("--confirm=DEV-IMPORT-REFERENCE-DRAFT");
+  const dryRun = !args.includes("--confirm=DEV-IMPORT-REFERENCE-DRAFT") && !args.includes("--confirm=DEV-IMPORT-ENTITY-DRAFT");
   const rollback = new Error("ROLLBACK_CHECK");
   let receipt: unknown;
   try {
     await db.transaction().execute(async tx => {
-      const actor = (await sql<{ id: string }>`SELECT p.id FROM master.principal p JOIN master.tenant t ON t.id=p.tenant_id
+      const actor = (await sql<{ id: string; tenant_id:string }>`SELECT p.id,p.tenant_id FROM master.principal p JOIN master.tenant t ON t.id=p.tenant_id
         WHERE t.code='athyper' AND p.code='seed.three-plane-provisioner' AND p.status='active'`.execute(tx)).rows;
       if (actor.length !== 1) throw Error("Unique DEV maintenance principal required");
       await sql`SELECT set_config('app.database_plane','studio',true),set_config('app.current_plane_key','studio',true),
@@ -49,13 +51,13 @@ async function main() {
         FROM pg_constraint WHERE conrelid='metadata.entity_operation_permission'::regclass
           AND conname='entity_operation_permission_plane_chk'`.execute(tx)).rows[0]?.supported;
       if (!studioBinding) await sql.raw(readFileSync("server/db/migrations/20260926_studio_entity_operation_bindings.sql", "utf8")).execute(tx);
-      const imported = await importSystemReferenceProduct(tx, {
+      const imported = await importEntityProduct(tx, {
         async assertAuthorized(request) {
           // The connection is authenticated to the guarded DEV administrator
           // endpoint. Do not pretend to be one of the human test-admin users.
           const privileged = (await sql<{ allowed: boolean }>`SELECT rolsuper OR pg_has_role(current_user,'athyperadmin','MEMBER') AS allowed
             FROM pg_roles WHERE rolname=current_user`.execute(tx)).rows[0]?.allowed;
-          if (!privileged || request.actorId !== actor[0]!.id || request.action !== "system_reference.import")
+          if (!privileged || request.actorId !== actor[0]!.id || request.action !== (product.schema === "athyper.table-entity-product/1" ? "system_entity.import" : "system_reference.import"))
             throw Error("DEV_SYSTEM_REFERENCE_IMPORT_DENIED");
         },
       }, { product, actorId: actor[0]!.id });
@@ -66,14 +68,23 @@ async function main() {
       const validation = validateGraph(stored);
       const tests = runContractTests(stored);
       if (validation.issues.length || !tests.passed) throw Error("Persisted graph validation failed");
-      if (!imported.reused) {
+      if (!imported.reused && imported.changeSet.tenantId !== null) {
         await repository.recordValidation(imported.changeSet.id, imported.changeSet.revision, validation, actor[0]!.id);
         await repository.recordTestRun(imported.changeSet.id, imported.changeSet.revision, tests, actor[0]!.id);
       }
-      receipt = { mode: dryRun ? "rolled_back" : "draft_persisted", ...imported,
+      const workloads=(await sql<{id:string;code:string}>`SELECT id,code FROM master.principal WHERE tenant_id=${actor[0]!.tenant_id}::uuid
+        AND code IN ('dev.metadata.author','dev.metadata.publisher') AND status='active' AND principal_type='service_account'`.execute(tx)).rows;
+      const author=workloads.find(row=>row.code==='dev.metadata.author'),publisher=workloads.find(row=>row.code==='dev.metadata.publisher');
+      const policy=author&&publisher?{
+        schema: product.schema === "athyper.table-entity-product/1" ? "athyper.dev-entity-onboarding/1" : "athyper.dev-reference-onboarding/1",
+        policyId:`dev.entity.${stored.entity.entityCode}.${imported.productHash.slice(0,12)}`,revision:1,environment:"local",instance:"dev",preset:"devfull",
+        changeSetId:imported.changeSet.id,entityId:imported.entityId,productHash:imported.productHash,contractHash:compiled.contractHash,
+        descriptorHash:compiled.descriptorHash,targetPlanes:product.planes,authorPrincipalId:author.id,publisherPrincipalId:publisher.id,
+      }:undefined;
+      receipt = { ...(policy?{publicationPolicyCandidate:policy}:{}), mode: dryRun ? "rolled_back" : "draft_persisted", ...imported,
         contractHash: compiled.contractHash, descriptorHash: compiled.descriptorHash,
         unsignedTargets: product.planes.map(plane => {
-          const target = compileSystemReferenceTarget(stored, plane);
+          const target = compileSystemEntityTarget(stored, plane);
           return { plane, sourceContractHash: target.sourceContractHash, descriptorHash: target.artifact.descriptorHash };
         }),
         validationIssues: validation.issues.length, contractTestsPassed: tests.passed,

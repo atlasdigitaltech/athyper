@@ -1,4 +1,6 @@
 "use client";
+import { EntityRecordFields } from "./record-fields";
+import { EntityRelatedSection } from "./related-entity-section";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   resolveRecordHeader,
@@ -168,7 +170,12 @@ export function MetadataDetailWorkspace({
     <DetailCollaboration
       entityCode={entityCode}
       recordId={record.id}
+      recordTitle={header.title}
+      entityLabel={descriptor.entity.label}
       kinds={descriptor.collaboration ?? []}
+      activity={descriptor.activity}
+      activityPresentation={descriptor}
+      fieldLabels={Object.fromEntries(descriptor.fields.map(field=>[field.key,field.label]))}
       renderRecord={(collaboration) => (
         <PageWorkspace
           width="wide"
@@ -331,53 +338,9 @@ export function MetadataDetailWorkspace({
                       <h2 id={`${navigationId}-section-${section.key}`}>
                         {section.label}
                       </h2>
-                      <dl className="a-record-detail-fields">
-                        {section.fields
-                          .flatMap(
-                            (key) =>
-                              descriptor.fields.find(
-                                (field) => field.key === key,
-                              ) ?? [],
-                          )
-                          .map((field) => {
-                            const value = record.values[field.key];
-                            const temporal =
-                              (field.kind === "date" ||
-                                field.kind === "datetime") &&
-                              typeof value === "string" &&
-                              Number.isFinite(Date.parse(value));
-                            return (
-                              <div key={field.key}>
-                                <dt>{field.label}</dt>
-                                <dd>
-                                  {temporal ? (
-                                    <time
-                                      dateTime={value as string}
-                                      title={value as string}
-                                    >
-                                      {intl
-                                        ? intl.date(
-                                            value as string,
-                                            field.kind === "date"
-                                              ? {
-                                                  dateStyle: "medium",
-                                                  timeZone: "UTC",
-                                                }
-                                              : {
-                                                  dateStyle: "medium",
-                                                  timeStyle: "short",
-                                                },
-                                          )
-                                        : display(value)}
-                                    </time>
-                                  ) : (
-                                    typeof value === "boolean" ? intl.message(value ? "entity.value.yes" : "entity.value.no") : typeof value === "number" && Number.isFinite(value) ? intl.number(value, {maximumFractionDigits:20}) : display(value)
-                                  )}
-                                </dd>
-                              </div>
-                            );
-                          })}
-                      </dl>
+                      {section.relationshipKey ? <EntityRelatedSection ownerEntityCode={entityCode} ownerRecordId={record.id}
+                        relationship={presentation.entityRelationships!.find(relation => relation.key === section.relationshipKey)!} /> :
+                        <EntityRecordFields descriptor={descriptor} record={record} fieldKeys={section.fields} />}
                     </Card>
                   </section>
                 ),
@@ -395,11 +358,4 @@ export function MetadataDetailWorkspace({
       )}
     />
   );
-}
-function display(value: unknown): string {
-  return value === null || value === undefined || value === ""
-    ? "—"
-    : typeof value === "object"
-      ? JSON.stringify(value)
-      : String(value);
 }

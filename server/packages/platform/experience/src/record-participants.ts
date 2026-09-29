@@ -2,6 +2,7 @@ import type { EntityCapabilityRequest } from "./entity-capability-policy.js";
 export interface RecordParticipant {
   readonly id: string;
   readonly displayName: string;
+  readonly username?: string;
 }
 /** Candidates never imply membership. Every returned/selected ID is readmitted. */
 export function createRecordParticipantResolver(options: {

@@ -1,0 +1,56 @@
+[
+  {
+    "plane": "studio",
+    "path": "tests/e2e/.auth/dev/studio/catl.owner.json",
+    "status": 200,
+    "state": "anonymous"
+  },
+  {
+    "plane": "studio",
+    "path": "tests/e2e/.auth/studio.json",
+    "status": 200,
+    "state": "anonymous"
+  },
+  {
+    "plane": "studio",
+    "path": "tests/e2e/.auth/studio-owner.json",
+    "status": 200,
+    "state": "anonymous"
+  },
+  {
+    "plane": "neon",
+    "path": "tests/e2e/.auth/dev/neon/catl.owner.json",
+    "status": 200,
+    "state": "anonymous"
+  },
+  {
+    "plane": "neon",
+    "path": "tests/e2e/.auth/neon.json",
+    "status": 200,
+    "state": "anonymous"
+  },
+  {
+    "plane": "neon",
+    "path": "tests/e2e/.auth/neon-owner.json",
+    "status": 200,
+    "state": "anonymous"
+  },
+  {
+    "plane": "mesh",
+    "path": "tests/e2e/.auth/dev/mesh/catl.owner.json",
+    "status": 200,
+    "state": "anonymous"
+  },
+  {
+    "plane": "mesh",
+    "path": "tests/e2e/.auth/mesh.json",
+    "status": 200,
+    "state": "anonymous"
+  },
+  {
+    "plane": "mesh",
+    "path": "tests/e2e/.auth/mesh-owner.json",
+    "status": 200,
+    "state": "anonymous"
+  }
+]

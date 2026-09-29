@@ -25,7 +25,7 @@ export interface EntityCapabilityRequest {
   readonly context: VerifiedRequestContext;
   readonly entityCode: string;
   readonly recordId: string;
-  readonly kind: EntityCapabilityKind;
+  readonly kind: Exclude<EntityCapabilityKind, "activity">;
   readonly action: string;
   readonly input?: Readonly<Record<string, unknown>>;
   /** Trusted route preflight: authorization still applies, command tokens do not. */

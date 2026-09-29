@@ -29,3 +29,8 @@ export { compileSystemReferenceTarget } from "./compilation/target-compiler.js";
 export { prepareEntitySuccessorDraft, type PrepareEntitySuccessorInput, type EntitySuccessorDraftAuthority } from "./publication/prepare-successor.js";
 export { assertEntitySuccessorSource } from "./publication/successor-source.js";
 export { createCapabilityProfileFileResolver } from "./authoring/capability-profile-files.js";
+
+export { importEntityProduct } from "./system-reference-authoring.js";
+export { parseTableEntityProduct, compileTableEntityProduct, type TableEntityProduct } from "./authoring/table-product.js";
+export { compileSystemEntityTarget } from "./compilation/entity-target-compiler.js";
+export { EntityFirstPublicationWorkflow } from "./publication/publication-workflow.js";

@@ -2,6 +2,9 @@
 
 ## Start here
 
+- [Meta Entity onboarding](runbooks/meta-entity-onboarding.md): Country-based
+  Studio-to-runtime procedure, plane selection, `state_region` and Business Partner
+  sequencing, with a [metadata property reference](runbooks/meta-entity-property-reference.md).
 - [Local development](runbooks/local-development.md): current daily commands.
 - [Shared DEV workspace](runbooks/shared-dev-workspace.md): source/image modes,
   infrastructure, previews and recovery.

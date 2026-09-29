@@ -1,6 +1,8 @@
 # Entity Activity capability — prototype and DDL review
 
-Date: 2026-09-28. Status: agreed initial scope with implementation recommendations; not an implementation or deployment approval.
+Date: 2026-09-28. Status: source foundation, publication integration, Activity APIs/providers and shared side/full UI implemented and tested locally. The initial authoritative root-history and automatic-capture provider is also implemented locally; see [recording scope and validation](../architecture/application-experience/entity-activity-recording.md). Live publication and acceptance remain pending.
+
+Build sequence, global profile inheritance, permission naming, and the initial shared-reference enrollment are defined in the [updated implementation plan](../architecture/application-experience/entity-activity-implementation-plan.md). That plan accounts for Country's read-only storage and absent record-version field; it supersedes generic assumptions about enabling Versions or automatic capture for the first entity.
 
 Reviewed prototype: `/home/chandravel_natarajan/work/experiments/entity-activity-versions-audit-v2.html`.
 
@@ -145,3 +147,9 @@ Prototype checks performed: rendered at desktop width; switched tabs; selected t
 - [Studio snapshot/revision tables](../../server/db/ddl/planes/studio/snapshot/03_tables.sql), [Neon document revisions](../../server/db/ddl/planes/neon/document/03_tables.sql), [Neon mutation evidence](../../server/db/ddl/planes/neon/control/03_tables.sql).
 - [Snapshot routes](../../server/packages/services/records/src/snapshots/snapshot-routes.ts), [service](../../server/packages/services/records/src/snapshots/snapshot-service.ts), [repository](../../server/packages/services/records/src/snapshots/kysely-snapshot-repository.ts).
 - [Audit governance service](../../server/packages/platform/audit/src/governance-service.ts), [capability profiles](../../server/packages/contracts/publication/src/capability-profile.ts), [detail collaboration integration](../../packages/platform/entity/runtime/form-detail/src/detail-collaboration.tsx).
+
+## Adapter and DEV rollout follow-up
+
+Aggregate/domain recording registrations and hard/soft-delete tombstones are implemented and PostgreSQL-verified. DEV schema/catalog and runtime rollout are complete; Country remains read-only on release 8 pending authenticated proposal and independent approval of its prepared Activity successor. See the [rollout evidence and manual testing plan](../reports/entity-activity-rollout-20260928.md). Direct SQL edits can test manual snapshot comparison after publication, but bypass authoritative Versions and automatic capture.
+
+Publication follow-up: Country release 9 is active on all three DEV planes, with verified signatures and Audit Log/Saved Snapshots bindings. Shared Activity browser relay registration was corrected and validated. Application manual acceptance remains with the user; Country is still read-only.

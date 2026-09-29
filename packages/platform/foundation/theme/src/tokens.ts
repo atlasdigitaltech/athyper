@@ -254,7 +254,7 @@ export const COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
   });
 
 /**
- * Atlas Mono: greyscale surfaces/chrome. Danger/warning/success/focus are
+ * Atlas Mono: greyscale surfaces/chrome. Danger/warning/success are
  * copied unchanged from COLOR_TOKENS so status meaning never depends on hue
  * alone — see foundation theme assessment in the design-system rollout notes.
  */
@@ -270,6 +270,7 @@ export const MONO_COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
       mutedForeground: "#595959",
       border: "#d9d9d9",
       input: "#a6a6a6",
+      focus: "var(--a-selection-subtle-foreground)",
       brand: ATLAS_MONO_BRAND.colors.primary,
       brandForeground: ATLAS_MONO_BRAND.colors.primaryForeground,
       brandHover: ATLAS_MONO_BRAND.colors.primaryHover,
@@ -285,6 +286,7 @@ export const MONO_COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
       mutedForeground: "#a6a6a6",
       border: "#3d3d3d",
       input: "#595959",
+      focus: "var(--a-selection-subtle-foreground)",
       primary: "color-mix(in srgb, var(--a-brand) 32%, white)",
       primaryForeground: "color-mix(in srgb, var(--a-brand) 24%, black)",
       selectionStrong: "#333333",

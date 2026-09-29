@@ -1,3 +1,4 @@
+import { HttpError } from "@athyper/server-runtime-http";
 import { sql, type Transaction } from "kysely";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
 import type {
@@ -28,7 +29,7 @@ export function createKyselyNotificationPreferenceStore(
         );
         const current = await read(tx, s);
         if (current.version !== expected) return undefined;
-        await sql`UPDATE master.principal_notification_preference SET status='inactive',status_changed_at=now(),status_changed_by=${s.principalId}::uuid,updated_at=now(),updated_by=${s.principalId}::uuid WHERE tenant_id=${s.tenantId}::uuid AND principal_id=${s.principalId}::uuid AND status='active'`.execute(
+        await sql`UPDATE master.principal_notification_preference SET status='inactive',status_changed_at=now(),status_changed_by=${s.principalId}::uuid,updated_at=now(),updated_by=${s.principalId}::uuid WHERE tenant_id=${s.tenantId}::uuid AND principal_id=${s.principalId}::uuid AND status='active' AND is_enabled IS TRUE`.execute(
           tx,
         );
         for (const item of items)
@@ -141,8 +142,42 @@ export function createPreferenceInvalidationPublisher(
 async function writeInvalidation(
   tx: Tx,
   e: Parameters<PreferenceInvalidationPublisher["publish"]>[0],
+  actorId: string = e.principalId,
 ): Promise<void> {
-  await sql`INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,aggregate_type,actor_id,source,payload,created_by) VALUES(${e.tenantId}::uuid,'platform.notifications.preferences',${e.type},${`${e.principalId}:${e.version}`},'principal_notification_preferences',${e.principalId}::uuid,'notifications',${JSON.stringify(e)}::jsonb,${e.principalId}::uuid) ON CONFLICT (tenant_id,event_key) WHERE event_key IS NOT NULL DO NOTHING`.execute(
+  await sql`INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,aggregate_type,actor_id,source,payload,created_by) VALUES(${e.tenantId}::uuid,'platform.notifications.preferences',${e.type},${`${e.principalId}:${e.version}`},'principal_notification_preferences',${actorId}::uuid,'notifications',${JSON.stringify(e)}::jsonb,${actorId}::uuid) ON CONFLICT (tenant_id,event_key) WHERE event_key IS NOT NULL DO NOTHING`.execute(
     tx,
   );
+}
+
+/** Owning-service invariants used by the shared Entity Framework mutation policy
+ * registry. Uses the caller's transaction and actor; never impersonates the owner. */
+export function createNotificationPreferenceRecordPolicy() {
+  type Context={tenantId:string;principalId:string;planeKey:PreferencePlane};
+  type Descriptor={storage:{schema:string;object:string}};
+  const assertStorage=(descriptor:Descriptor)=>{
+    if(descriptor.storage.schema!=="master"||descriptor.storage.object!=="principal_notification_preference")throw Error("NOTIFICATION_PREFERENCE_STORAGE_MISMATCH");
+  };
+  return {
+    async validate({context,descriptor,values}:{context:Context;descriptor:Descriptor;values:Readonly<Record<string,unknown>>},tx:Tx){
+      assertStorage(descriptor);
+      const principalId=String(values["principal_id"]??"");
+      if(!/^[0-9a-f-]{36}$/i.test(principalId))throw Error("NOTIFICATION_PREFERENCE_OWNER_REQUIRED");
+      const eventCode=String(values["event_code"]??""),channel=String(values["channel"]??"");
+      if(eventCode==="platform.preferences.version"||! /^[a-z][a-z0-9_.:-]{1,126}$/.test(eventCode)||!["in_app","email","sms","push","whatsapp"].includes(channel))
+        throw new HttpError(400,"INVALID_NOTIFICATION_PREFERENCE","Choose a supported notification event and channel.");
+      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${context.tenantId}:${principalId}:notification-preferences`},0))`.execute(tx);
+      const scope={tenantId:context.tenantId,principalId,planeKey:context.planeKey};
+      const capabilities=createKyselyPreferenceCapabilities({run:async(_plane,_actor,work)=>work(tx)});
+      if(values["is_enabled"]===true && values["status"]!=="inactive"){
+        if(!await capabilities.supports(scope,channel as PreferenceChannel)||!await capabilities.hasConsent(scope,channel as PreferenceChannel))
+          throw new HttpError(400,"INVALID_NOTIFICATION_PREFERENCE","This channel requires a verified contact or consent for the selected user.");
+      }
+    },
+    async committed({context,descriptor,record}:{context:Context;descriptor:Descriptor;record:Readonly<Record<string,unknown>>},tx:Tx){
+      assertStorage(descriptor);
+      const scope={tenantId:context.tenantId,principalId:String(record["principal_id"]),planeKey:context.planeKey};
+      const snapshot=await read(tx,scope);
+      await writeInvalidation(tx,{type:"notification.preferences.invalidated",...scope,version:snapshot.version,occurredAt:new Date().toISOString()},context.principalId);
+    },
+  };
 }

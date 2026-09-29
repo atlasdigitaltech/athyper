@@ -15,9 +15,16 @@ export * from "./entity-capabilities.js";
 export * from "./capability-authoring-mode.js";
 export * from "./capability-profile.js";
 export * from "./capability-profile-binding.js";
+export * from "./activity-policy.js";
+export * from "./activity-enrollment.js";
 export * from "./notification-policy.js";
 export * from "./collection-configuration.js";
 export { parseDevPublicationPolicy, parseDevPublicationTarget, DEV_CHANGE_KINDS,
   type DevPublicationPolicy, type DevPublicationTarget, type DevChangeKind } from "./policy/dev-publication-policy.js";
 export { parseDevPublicationAssessment, DEV_REVIEW_REASONS,
   type DevPublicationAssessment, type DevReviewReason } from "./evidence/dev-publication-decision.js";
+
+export * from "./activity-binding.js";
+export * from "./activity-permissions.js";
+
+export * from "./activity-collections.js";

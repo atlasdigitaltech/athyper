@@ -59,6 +59,13 @@ export type StandardViewRelationshipConstraint =
 
 export type RecordCollectionScopeConstraint =
   | Readonly<{
+      readonly kind: "entity.parent.v1";
+      readonly entityCode: string;
+      readonly storageSchema: string;
+      readonly storageObject: string;
+      readonly predicates: readonly { readonly field: string; readonly value: string | number | boolean }[];
+    }>
+  | Readonly<{
       readonly kind: "neon.business_partner.directory.v1";
       readonly partnerRole?: "supplier" | "customer";
       readonly eligibleIds?: readonly string[];

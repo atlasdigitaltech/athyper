@@ -1,0 +1,12 @@
+{
+  "status": "dispatched",
+  "release": {
+    "id": "39f1958f-facd-4d9d-b53b-989aaecc307d",
+    "releaseNo": 9
+  },
+  "targetPlanes": [
+    "studio",
+    "neon",
+    "mesh"
+  ]
+}

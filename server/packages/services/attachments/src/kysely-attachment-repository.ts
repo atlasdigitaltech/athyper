@@ -160,6 +160,9 @@ export function createKyselyAttachmentRepository(
         throw new Error("Attachment series version has changed");
       return map({ ...row, is_current: true });
     },
+    async failInspection(identity, reason, tx) {
+      await sql`UPDATE document.attachment SET status='failed',is_active=false,metadata=metadata||${JSON.stringify({ failure_code: "MALWARE_DOCUMENT_UNSUPPORTED", inspection_reason: reason })}::jsonb,status_changed_at=clock_timestamp(),status_changed_by=${identity.principalId}::uuid,updated_by=${identity.principalId}::uuid WHERE tenant_id=${identity.tenantId}::uuid AND id=${identity.attachmentId}::uuid AND uploaded_by=${identity.principalId}::uuid AND status IN('pending','uploading','uploaded')`.execute(tx);
+    },
     async quarantine(identity, reason, tx) {
       await sql`UPDATE document.attachment SET status='quarantined',is_active=false,metadata=metadata||${JSON.stringify({ quarantine_reason: reason })}::jsonb,status_changed_at=clock_timestamp(),status_changed_by=${identity.principalId}::uuid,updated_by=${identity.principalId}::uuid WHERE tenant_id=${identity.tenantId}::uuid AND id=${identity.attachmentId}::uuid`.execute(
         tx,

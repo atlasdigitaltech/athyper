@@ -1,0 +1,236 @@
+{
+  "verifiedAt": "2026-09-28T07:06:27.352267+00:00",
+  "results": [
+    {
+      "plane": "studio",
+      "activeAssignments": [
+        {
+          "tenant": "athyper",
+          "principal": "athyper.admin",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.owner",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.admin",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.owner",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        }
+      ]
+    },
+    {
+      "plane": "neon",
+      "activeAssignments": [
+        {
+          "tenant": "athyper",
+          "principal": "athyper.admin",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.owner",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.admin",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.owner",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        }
+      ]
+    },
+    {
+      "plane": "mesh",
+      "activeAssignments": [
+        {
+          "tenant": "athyper",
+          "principal": "athyper.admin",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.owner",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "athyper",
+          "principal": "athyper.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.admin",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.admin",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.owner",
+          "role": "test.full_admin",
+          "permission": "common.audit.event.query"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.capture"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "principal": "catl.owner",
+          "role": "test.full_admin",
+          "permission": "common.records.snapshot.read"
+        }
+      ]
+    }
+  ]
+}

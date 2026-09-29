@@ -1,3 +1,4 @@
+import { prepareRecordOwnerAccess, type RecordOwnerAccessAdapter } from "./record-owner-access.js";
 import { executeAuthorizedAggregate } from "./authorized-aggregate.js";
 import { MAX_LIST_FILTERS } from "./list-limits.js";
 import { validateFilterValue } from "./filter-value-validation.js";
@@ -29,6 +30,7 @@ import {
 } from "./record-read-access.js";
 
 export interface RecordQueryServiceOptions<Transaction = unknown> {
+  readonly ownerAccess?: RecordOwnerAccessAdapter<Transaction>;
   readonly metadata: MetadataReader;
   readonly authorizer: Authorizer;
   readonly repository: RecordRepository<Transaction>;
@@ -220,6 +222,7 @@ export function createRecordListExecutor<Transaction = unknown>(
           principalId: query.context.principalId,
         },
         async (transaction) => {
+          await prepareRecordOwnerAccess(options.ownerAccess,{context:query.context,descriptor,operation:"list"},transaction);
           const input = {
             descriptor: {
               ...descriptor,
@@ -417,14 +420,16 @@ export function createRecordQueryService<Transaction = unknown>(
           tenantId: query.context.tenantId,
           principalId: query.context.principalId,
         },
-        (transaction) =>
-          options.repository.get(
+        async (transaction) => {
+          await prepareRecordOwnerAccess(options.ownerAccess,{context:query.context,descriptor,operation:"read"},transaction);
+          return options.repository.get(
             descriptor,
             query.context.tenantId,
             query.recordId,
             projection,
             transaction,
-          ),
+          );
+        },
       );
       if (data && enforced) assertProfiledScalarProjection(data, projection);
       return { data };
@@ -456,6 +461,8 @@ async function resolveCollectionScope(
   query: ListRecordsQuery,
   descriptor: Awaited<ReturnType<typeof descriptorFor>>,
 ): Promise<RecordCollectionScopeResolution> {
+  if (!resolver && (query.scopeCoordinate?.parentEntityCode || query.scopeCoordinate?.parentRecordId || query.scopeCoordinate?.relationshipKey))
+    throw new RecordServiceError(403, "ENTITY_PARENT_ACCESS_DENIED", "Related record scope is unavailable");
   if (resolver)
     return resolver.resolve({
       context: query.context,

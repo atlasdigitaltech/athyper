@@ -12,10 +12,12 @@ export const entityDescriptorClient = Object.freeze({
   form: (client: HttpClient, entityCode: string, mode: "create" | "edit") => client.request(formDescriptor, { params: { entityCode }, query: { mode } }),
   detail: (client: HttpClient, entityCode: string, recordId?: string) => client.request(detailDescriptor, { params: { entityCode }, ...(recordId ? { query: { recordId } } : {}) }),
   record: (client: HttpClient, entityCode: string, recordId: string) => client.request(recordRead, { params: { entityCode, recordId } }),
-  create: (client: HttpClient, entityCode: string, values: Readonly<Record<string, unknown>>, idempotencyKey: string) => client.request(recordCreate, { params: { entityCode }, body: values, idempotencyKey }),
+  create: (client: HttpClient, entityCode: string, values: Readonly<Record<string, unknown>>, idempotencyKey: string, parentScope?: {parentEntityCode:string;parentRecordId:string;relationshipKey:string}) => client.request(recordCreate, { params: { entityCode }, body: values, idempotencyKey, ...(parentScope ? {query:parentScope} : {}) }),
   patch: (client: HttpClient, entityCode: string, recordId: string, values: Readonly<Record<string, unknown>>, version: number, idempotencyKey: string) => client.request(recordPatch, { params: { entityCode, recordId }, body: values, headers: { "If-Match": String(version) }, idempotencyKey }),
 });
 
 function parseReceipt(value: unknown): RecordMutationReceipt { if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("mutation receipt is invalid"); const item = value as Record<string, unknown>; if (item.kind !== "Committed" || (item.action !== "create" && item.action !== "patch") || typeof item.entityCode !== "string" || typeof item.recordId !== "string" || typeof item.replayed !== "boolean") throw new TypeError("mutation receipt is invalid"); const version = typeof item.version === "number" && Number.isInteger(item.version) && item.version >= 0 ? item.version : undefined; return Object.freeze({ kind: "Committed", action: item.action, entityCode: item.entityCode, recordId: item.recordId, replayed: item.replayed, ...(version === undefined ? {} : { version }) }); }
 export * from "./runtime-client";
 export * from "./intake-operation-client";
+export { entityActivityClient } from "./activity-client";
+export { entityActivityCollectionsClient } from "./activity-collection-client";

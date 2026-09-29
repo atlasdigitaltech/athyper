@@ -254,7 +254,9 @@ BEGIN
     END IF;
 
     IF NOT control.lookup_value_is_active(
-        'document.comment_type', NEW.context_type, NEW.tenant_id
+        'document.comment_type',
+        CASE WHEN NEW.context_type ~ '^entity_edit_[0-9a-f]{32}$' THEN 'entity' ELSE NEW.context_type END,
+        NEW.tenant_id
     ) THEN
         RAISE EXCEPTION 'Unknown or inactive comment context type %', NEW.context_type
             USING ERRCODE = 'foreign_key_violation';

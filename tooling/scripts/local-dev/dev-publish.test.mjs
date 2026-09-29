@@ -41,12 +41,12 @@ test("only DEVFULL API and publication workers receive read-only configuration; 
     };
     configureDevPublication(config, "devfull", path);
     configureDevPublication(config, "devfull", path);
-    assert.equal(config.services.api.volumes.length, 1);
-    assert.equal(config.services.api.volumes[0].read_only, true);
+    assert.equal(config.services.api.volumes.filter(m => m.target === "/run/dev-publication/server.json").length, 1);
+    assert.equal(config.services.api.volumes.find(m => m.target === "/run/dev-publication/server.json").read_only, true);
     assert.equal(config.services.worker.volumes.length, 1);
     assert.equal(config.services.worker.volumes[0].read_only, true);
     configureDevPublication(config, "devsimple", path);
-    assert.equal(config.services.api.volumes.length, 0);
+    assert.equal(config.services.api.volumes.filter(m => m.target === "/run/dev-publication/server.json").length, 0);
     assert.equal(config.services.worker.volumes.length, 0);
     assert.equal(
       config.services.api.environment.ATHYPER_DEV_PUBLICATION_CONFIG,
@@ -54,5 +54,19 @@ test("only DEVFULL API and publication workers receive read-only configuration; 
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("DEV recreation retains format routing in both presets without changing compiled-only planes", () => {
+  for (const preset of ["devfull", "devsimple"]) {
+    const config = { services: Object.fromEntries(["api", "worker", "scheduler"].map(name =>
+      [name, { environment: { METADATA_COMPILED_ONLY_PLANES: "neon" }, volumes: [] }])) };
+    configureDevPublication(config, preset, "/nonexistent/dev-publication.json");
+    const recreated = JSON.parse(JSON.stringify(config));
+    configureDevPublication(recreated, preset, "/nonexistent/dev-publication.json");
+    for (const service of Object.values(recreated.services)) {
+      assert.equal(service.environment.METADATA_FORMAT_ROUTING, "true");
+      assert.equal(service.environment.METADATA_COMPILED_ONLY_PLANES, "neon");
+    }
   }
 });

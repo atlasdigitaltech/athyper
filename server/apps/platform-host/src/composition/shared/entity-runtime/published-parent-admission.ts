@@ -10,9 +10,9 @@ type Release = NonNullable<Awaited<ReturnType<PinnedCompiledEntityReader["resolv
  * persisted-scope providers instead of falling through to this admission. */
 export function createPublishedParentAdmission(options: {
   reader: PinnedCompiledEntityReader;
-  read(input: EntityCapabilityRequest, descriptor: EntityRuntimeDescriptor): Promise<boolean>;
+  read(input: Pick<EntityCapabilityRequest, "context" | "entityCode" | "recordId">, descriptor: EntityRuntimeDescriptor): Promise<boolean>;
 }) {
-  return async (input: EntityCapabilityRequest, admitted?: Release) => {
+  return async (input: Pick<EntityCapabilityRequest, "context" | "entityCode" | "recordId">, admitted?: Release) => {
     const { context, entityCode } = input;
     if (!context.tenantId || !context.principalId || !input.recordId) return false;
     const release = admitted ?? await options.reader.resolve({ tenantId: context.tenantId, principalId: context.principalId,

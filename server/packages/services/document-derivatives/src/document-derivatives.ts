@@ -434,8 +434,10 @@ export function createKyselyDerivativeRepository(): DerivativeRepository<Derivat
         JOIN document.attachment_series s ON s.tenant_id=a.tenant_id AND s.id=a.series_id
         WHERE d.id=${input.id}::uuid AND d.tenant_id=${input.tenantId}::uuid
           AND a.status='active' AND a.is_active AND a.is_virus_scanned
-          AND EXISTS (SELECT 1 FROM document.attachment_link l WHERE l.tenant_id=a.tenant_id AND l.attachment_series_id=a.series_id
+          AND (EXISTS (SELECT 1 FROM document.attachment_link l WHERE l.tenant_id=a.tenant_id AND l.attachment_series_id=a.series_id
             AND (l.pinned_attachment_id=a.id OR (l.pinned_attachment_id IS NULL AND s.current_attachment_id=a.id)))
+            OR EXISTS (SELECT 1 FROM document.comment_draft draft WHERE draft.tenant_id=a.tenant_id AND draft.id=a.draft_id
+              AND draft.principal_id=a.uploaded_by AND draft.expires_at>clock_timestamp()))
         FOR SHARE OF a`.execute(tx);
       if (!eligible.rows.length) throw new Error("Derivative source is no longer eligible");
       await sql`
@@ -559,8 +561,10 @@ export function createKyselyDerivativeSourceRepository(): DerivativeSourceReposi
           AND attachment.id = ${attachmentId}::uuid
           AND attachment.status = 'active'
           AND attachment.is_active AND attachment.is_virus_scanned
-          AND EXISTS (SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id
+          AND (EXISTS (SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id
             AND (link.pinned_attachment_id=attachment.id OR (link.pinned_attachment_id IS NULL AND series.current_attachment_id=attachment.id)))
+            OR EXISTS (SELECT 1 FROM document.comment_draft draft WHERE draft.tenant_id=attachment.tenant_id AND draft.id=attachment.draft_id
+              AND draft.principal_id=attachment.uploaded_by AND draft.expires_at>clock_timestamp()))
         LIMIT 1
       `.execute(tx);
       const row = result.rows[0];

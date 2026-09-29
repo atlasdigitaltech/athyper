@@ -14,5 +14,6 @@ export interface PlaneTransactionCoordinator<Transaction = unknown> {
     actor: TransactionActor,
     work: (transaction: Transaction, signal?: AbortSignal) => Promise<Result>,
     signal?: AbortSignal,
+    options?: { readonly isolationLevel: "repeatable read" },
   ): Promise<Result>;
 }

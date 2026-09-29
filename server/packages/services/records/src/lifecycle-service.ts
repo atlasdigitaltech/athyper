@@ -34,9 +34,10 @@ export function createRecordLifecycleService<Transaction>(options: RecordExecuti
         if (result.versionConflict !== undefined) return { kind: "VersionConflict", expectedVersion: command.expectedVersion!, currentVersion: result.versionConflict } as const;
         if (!result.record) return { kind: "NotFound", entityCode: command.entityCode, recordId: command.recordId } as const;
         await appendRecordSideEffects(options, command, transaction, "transition", command.recordId, result.record);
-        const versionValue = descriptor.storage.versionField ? result.record[descriptor.storage.versionField] : undefined;
-        return { kind: "Committed", action: "transition", entityCode: command.entityCode, recordId: command.recordId, record: result.record, ...(typeof versionValue === "number" ? { version: versionValue } : {}), replayed: false } as const;
-        });
+        const versionRaw = descriptor.storage.versionField ? result.record[descriptor.storage.versionField] : undefined;
+        const versionValue = typeof versionRaw === "number" || typeof versionRaw === "string" && /^[0-9]+$/.test(versionRaw) ? Number(versionRaw) : NaN;
+        return { kind: "Committed", action: "transition", entityCode: command.entityCode, recordId: command.recordId, record: result.record, ...(Number.isSafeInteger(versionValue) && versionValue > 0 ? { version: versionValue } : {}), replayed: false } as const;
+        }, descriptor);
       });
     },
   };

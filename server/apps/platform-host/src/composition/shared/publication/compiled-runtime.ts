@@ -1,3 +1,4 @@
+import { ACTIVITY_ACTIONS } from "@athyper/server-contract-publication";
 import { canonicalBytes, sha256 as hashBytes } from "@athyper/server-adapter-publication-signing";
 import { sql, type Kysely } from "kysely";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
@@ -6,7 +7,7 @@ import { parseDevEntitySuccessorPolicy } from "@athyper/server-contract-publicat
 import { assertPublicationCompilerIdentity, publicationCompilerIdentity } from "./compiler-build.js";
 import { findCompilationRecovery } from "./compilation-recovery-authority.js";
 import { assertSuccessorTargetHeads } from "./successor-targets.js";
-import { compileGraph, compileSystemReferenceTarget, sha256 } from "@athyper/server-plane-studio-meta-entity-authoring";
+import { compileGraph, compileSystemEntityTarget, sha256 } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { lowerNativeRuntimePublication, compileCompiledEntityArtifacts, compiledEntityRuntimeProjection,
   type CompiledRuntimePublication, type CompiledRuntimeSource } from "@athyper/server-service-publication";
 import { qualifyReferencePublicationTarget } from "./target-qualification.js";
@@ -87,15 +88,15 @@ export function createCompiledRuntimePublication(options: {
     const db = options.targets().databases[plane];
     if (!db) throw Error("PUBLICATION_TARGET_DATABASE_UNAVAILABLE");
     const sources = (await sql<{ name: string }>`SELECT table_schema||'.'||table_name name FROM information_schema.tables
-      WHERE table_schema='shared' AND table_type='BASE TABLE'`.execute(db)).rows;
+      WHERE table_schema IN ('shared','master') AND table_type='BASE TABLE'`.execute(db)).rows;
     // Closed host implementation vocabulary, not caller-provided registry keys.
     // qualifyReferencePublicationTarget separately proves installed callables,
     // capability methods and infrastructure at compile/sign/dispatch.
     return { sourceObjects: new Set(sources.map(s => s.name)), permissions: new Set((await catalog(plane)).map(p => p.code)),
-      handlers: new Set(["entity.record.list.v1", "entity.record.read.v1", "platform.comments.v1", "platform.attachments.v1",
+      handlers: new Set(["platform.activity.v1", ...Object.values(ACTIVITY_ACTIONS).map(action => action.handlerKey), "entity.record.list.v1", "entity.record.read.v1", "entity.record.create.v1", "entity.record.patch.v1", "platform.notifications.preferences.v1", "platform.comments.v1", "platform.attachments.v1",
         ...["read", "create", "update_own", "archive_own", "reply", "react", "draft", "flag", "mention", "history"].map(a => `platform.comments.${a}.v1`),
         ...["read", "create", "finalize", "download", "archive", "status", "version", "rename", "category", "folder", "unlink", "preview", "extract", "search"].map(a => `platform.attachments.${a}.v1`)]),
-      renderers: new Set(["platform.comments.v1", "platform.attachments.v1"]),
+      renderers: new Set(["platform.comments.v1", "platform.attachments.v1", "platform.activity.v1"]),
       resolvers: new Set(["tenant.record.v1", "platform.records.admission.v1"]), evaluators: new Set() };
   }
   async function lower(source: CompiledRuntimeSource) {
@@ -104,14 +105,17 @@ export function createCompiledRuntimePublication(options: {
     const { recoveryEvidence: _providedRecovery, ...providedSource } = source as typeof saved;
     if (sha256(originalSource) !== sha256(providedSource)) throw Error("COMPILED_PUBLICATION_SOURCE_CHANGED");
     const graph = saved.contract as unknown as MetaEntityGraph;
-    const target = compileSystemReferenceTarget(graph, saved.plane);
+    const target = compileSystemEntityTarget(graph, saved.plane);
     if (sha256(target.artifact.descriptor) !== saved.sourceDescriptorHash || compileGraph(graph).contractHash !== saved.sourceContractHash)
       throw Error("COMPILED_PUBLICATION_TARGET_SOURCE_MISMATCH");
     await qualifyReferencePublicationTarget(target, options.targets());
     const profile = target.graph.runtimeProfiles![0]!;
     return lowerNativeRuntimePublication(saved, { registration: {
       entityCode: saved.entityCode, plane: saved.plane,
-      storage: { schema: profile.storageSchema!, object: profile.storageObject!, idField: "id", statusField: "status" },
+      storage: { schema: profile.storageSchema!, object: profile.storageObject!, idField: "id",
+        ...(profile.tenantFieldKey ? {tenantField:profile.tenantFieldKey} : {}),
+        ...(profile.recordVersionFieldKey ? {versionField:profile.recordVersionFieldKey} : {}),
+        ...(target.graph.fields.some(field => field.fieldKey === "status") ? {statusField:"status"} : {}), },
       columns: target.graph.fields.filter(f => f.status !== "deprecated").map(f => f.storagePath!),
       detailRouteTemplate: `/app/entity/${saved.entityCode}/:recordId`,
     }, permissions: await catalog(saved.plane) });

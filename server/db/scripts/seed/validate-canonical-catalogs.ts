@@ -3,7 +3,7 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { COMMON_REFERENCE_VIEW_PERMISSION } from "@athyper/server-contract-metadata";
+import { COMMON_REFERENCE_VIEW_PERMISSION, IDENTITY_PERMISSION_CATALOG, isIdentityPermissionCode } from "@athyper/server-contract-metadata";
 
 import { deterministicPermissionId, type CatalogPlane } from "./canonical-catalog-v2-model.js";
 
@@ -47,7 +47,9 @@ for (const plane of planes) {
   const ids = new Set<string>();
   for (const permission of source.permissions) {
     const commonReference = permission.canonicalCode === COMMON_REFERENCE_VIEW_PERMISSION;
-    const product = commonReference ? "common" : plane;
+    const identity = isIdentityPermissionCode(permission.canonicalCode);
+    const product = commonReference || identity ? "common" : plane;
+    if (identity && (permission.permissionKind !== "capability" || permission.riskTier !== IDENTITY_PERMISSION_CATALOG[permission.canonicalCode as keyof typeof IDENTITY_PERMISSION_CATALOG] || permission.requiresMfa || permission.requiresSod)) throw Error("Invalid common identity capability definition");
     const expectedCode = `${product}.${permission.domain}.${permission.entity}.${permission.operation}`;
     if (commonReference && (permission.permissionKind !== "capability" || permission.riskTier !== "low" || permission.requiresMfa)) throw new Error("Invalid common reference capability definition");
     if (permission.canonicalCode !== expectedCode || permission.product !== product || permission.canonicalCode.split(".").length !== 4) {

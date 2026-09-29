@@ -815,7 +815,7 @@
  .athyper-page-header>.athyper-page-header__actions{grid-column:1 / -1;grid-row:calc(var(--header-support-row) + 1);justify-content:flex-start;padding-block-start:var(--a-space-2)}
 }
 
-@media(min-width:1101px){.athyper-shell[data-workspace-panel-pinned=true] .athyper-shell__body{margin-right:var(--workspace-panel-width)}}
+@media(min-width:1101px){.athyper-shell[data-workspace-panel-pinned=true] .athyper-shell__body{margin-inline-end:var(--workspace-panel-width)}}
 
 /* Record collaboration and Atlas share the same side-panel header geometry. */
 .athyper-atlas-workspace__resize { position:absolute; inset-block:0; left:-3px; width:6px; cursor:ew-resize; touch-action:none; z-index:3; }
@@ -886,3 +886,11 @@
 
 /* Activity leaves the global header available for switching shell tools. */
 .a-drawer-layer[data-variant=activity] { inset-block-start:3.5rem; padding-block-start:0; }
+
+/* Atlas uses the same header/context/tool spacing as record and attention panels. */
+.athyper-atlas-workspace__tools :is(button,a) { display:inline-flex; align-items:center; justify-content:center; inline-size:var(--a-touch-target); border:var(--a-border-width) solid var(--a-border); border-radius:var(--a-radius-sm); background:var(--a-surface); color:var(--a-foreground); cursor:pointer; }
+.athyper-atlas-workspace__tools :is(button,a):focus-visible { outline:var(--a-focus-width) solid var(--a-focus); }
+.athyper-atlas-workspace .a-panel-context .athyper-atlas-workspace__breadcrumb { min-inline-size:0; }
+.athyper-atlas-workspace .athyper-atlas-workspace__messages { min-block-size:0; }
+
+.athyper-atlas-workspace__action-dock.a-panel-footer { display:block; padding:0; max-block-size:50%; overflow:auto; }

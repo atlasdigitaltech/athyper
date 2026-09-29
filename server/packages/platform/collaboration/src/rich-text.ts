@@ -35,6 +35,7 @@ export interface RichTextProjection {
 
 export function projectRichText(
   value: Readonly<Record<string, unknown>>,
+  options: { readonly allowEmpty?: boolean } = {},
 ): RichTextProjection {
   const root = value as unknown as RichTextNode;
   const state = {
@@ -48,8 +49,8 @@ export function projectRichText(
   validateNode(root, state, 0, true);
   const document = value as RichTextDocument;
   const text = richTextPlain(document).trim();
-  if (!text && state.attachments.size === 0)
-    invalid("Rich text must contain text or an attachment image");
+  if (!options.allowEmpty && !text && state.attachments.size === 0)
+    invalid("Rich text must contain text or an attachment");
   if (text.length > 50_000)
     invalid("Rich text exceeds 50000 projected characters");
   return {

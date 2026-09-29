@@ -6,6 +6,8 @@ import { entityRuntimeClient, type EntityRuntimeSectionResource } from "@athyper
 import { useApiClient } from "@athyper/platform-shell-app-foundation";
 import { Button } from "@athyper/platform-ui";
 import { EntityCollaborationSurface } from "./collaboration-surface";
+import type { ActivityPresentation } from "./activity-comparison-model";
+import { ActivityWorkspace } from "./activity-workspace";
 import { CompiledEntitySectionContent } from "./compiled-section-content";
 import { mergeSectionPages } from "./use-section-resource";
 
@@ -20,19 +22,20 @@ export interface DetailCollaborationNavigation {
   readonly open: (key: string) => void;
   readonly showRecord: (updateLocation?: (url: URL) => void) => void;
 }
-export function DetailCollaboration({ entityCode, recordId, kinds, renderRecord }: { entityCode: string; recordId: string; kinds: readonly Kind[]; renderRecord?: (navigation: DetailCollaborationNavigation) => ReactNode }) {
+export function DetailCollaboration({ entityCode, recordId, kinds: collaborationKinds, activity = false, fieldLabels, activityPresentation, recordTitle, entityLabel, renderRecord }: { entityCode: string; recordId: string; kinds: readonly Kind[]; activity?: boolean; recordTitle?: string; entityLabel?: string; activityPresentation?: ActivityPresentation; fieldLabels?: Readonly<Record<string,string>>; renderRecord?: (navigation: DetailCollaborationNavigation) => ReactNode }) {
+  const kinds: readonly (Kind | "activity")[] = [...collaborationKinds, ...(activity ? ["activity" as const] : [])];
   const intl = useEntityI18n();
   const state = useRecordCollaboration();
   const active = kinds.includes(state.collaborationSection as Kind) ? state.collaborationSection! : kinds[0] ?? "comments";
-  const sections = kinds.map(key => ({ key, label: key === "comments" ? intl.message("collaboration.comments") : intl.message("collaboration.files") }));
+  const sections = kinds.map(key => ({ key, label: key === "activity" ? intl.message("activity.title") : key === "comments" ? intl.message("collaboration.comments") : intl.message("collaboration.files") }));
   const open = (key: string) => { if (kinds.includes(key as Kind)) state.setCollaborationTab(key); };
   const showRecord = (updateLocation?: (url: URL) => void) => state.setCollaborationPanel(false, active, updateLocation);
-  const surface = kinds.length ? <EntityCollaborationSurface showFullClose={!renderRecord} open={state.collaborationOpen} activeSectionKey={active} sections={sections} onOpenChange={value => state.setCollaborationPanel(value, active)}
+  const surface = kinds.length ? <EntityCollaborationSurface recordContext={{label:recordTitle ?? recordId, detail:entityLabel ?? entityCode}} showFullClose={!renderRecord} open={state.collaborationOpen} activeSectionKey={active} sections={sections} onOpenChange={value => state.setCollaborationPanel(value, active)}
       fullView={state.collaborationFull} onFullViewChange={state.changeCollaborationFull}
       pinned={state.collaborationPinned} onPinnedChange={state.setCollaborationPinned}
       onActiveSectionChange={key => { if (kinds.includes(key as Kind)) state.setCollaborationTab(key); }}
       preloadSection={() => {}} renderSection={key => kinds.includes(key as Kind)
-        ? <CapabilityContent key={key} entityCode={entityCode} recordId={recordId} kind={key as Kind} /> : null} /> : null;
+        ? key === "activity" ? <ActivityWorkspace entityCode={entityCode} recordId={recordId} fieldLabels={fieldLabels} metadata={activityPresentation} onExpand={()=>state.changeCollaborationFull(true)} /> : <CapabilityContent key={key} entityCode={entityCode} recordId={recordId} kind={key as Kind} /> : null} /> : null;
   return <>
     {renderRecord ? renderRecord({ sections, active, surface, full: state.collaborationFull && state.collaborationOpen, open, showRecord }) : sections.length ? <nav aria-label={intl.message("collaboration.record")}>{sections.map(section => <Button key={section.key} variant="secondary" onClick={() => open(section.key)}>{section.label}</Button>)}</nav> : null}
     {renderRecord ? null : surface}

@@ -7,7 +7,7 @@ export function adoptCapabilityProfiles(graph: MetaEntityGraph, lookup: (code: s
   const before = capabilityArtifactMembers(graph.entity.entityCode, graph.capabilities ?? []);
   const capabilities = (graph.capabilities ?? []).map((member): MetaEntityCapability => {
     if (!member.declaration.enabled || member.profile) return structuredClone(member);
-    const definition = parseCapabilityProfile(lookup(`platform.collaboration.${member.capabilityKey}.standard`, 1));
+    const definition = parseCapabilityProfile(lookup(member.capabilityKey === "activity" ? "platform.activity.standard" : `platform.collaboration.${member.capabilityKey}.standard`, 1));
     const binding = member.binding as unknown as Record<string, unknown>;
     const overrides: Record<string, unknown> = {};
     const compare = (defaults: Readonly<Record<string, unknown>>, current: Record<string, unknown>, output: Record<string, unknown>) => {

@@ -1,4 +1,6 @@
 "use client";
+import { RecordPanelActionContext, RecordPanelToolbarActions } from "./panel-header-action";
+import { RecordActionDock } from "./record-action-dock";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { CollectionContinuation } from "./collection-continuation";
 import { hasRichTextContent, mapRichText, visitRichText } from "@athyper/platform-communications-collaboration-ui";
@@ -15,7 +17,7 @@ import {
   collaborationFileSize,
 } from "./collaboration-actions";
 import { AttachmentPreview } from "./attachment-preview";
-import { FileTypeIcon } from "./file-type";
+import { AttachmentThumbnail } from "./attachment-thumbnail";
 import { FileAction } from "./file-action";
 import {
   entityRuntimeClient,
@@ -27,6 +29,7 @@ import {
 } from "@athyper/platform-api-client";
 import {
   useApiClient,
+  readBrowserCsrfToken,
   useSessionIdentity,
   useToasts,
 } from "@athyper/platform-shell-app-foundation";
@@ -48,6 +51,7 @@ import {
   Card,
   Dialog,
   DialogContent,
+  Select,
   Tooltip,
 } from "@athyper/platform-ui";
 import { createPortal } from "react-dom";
@@ -100,11 +104,12 @@ export async function prepareCommentFiles(
   parentCommentId?: string,
   editDraftScope?: string,
 ) {
-  const files = await entityRuntimeClient.section(client, {
+  // Use the same record-scoped capability endpoint as Files. Reference entities
+  // need not publish a presentation.detail surface.
+  const files = await entityRuntimeClient.collaboration(client, {
     entityCode,
     recordId,
-    surfaceKey: "detail",
-    sectionKey: "attachments",
+    kind: "attachments",
   });
   const capability = files.capability;
   if (
@@ -123,7 +128,7 @@ export async function prepareCommentFiles(
         entityId: recordId,
         ...(editDraftScope ? { contextType: editDraftScope } : {}),
         ...(parentCommentId ? { parentCommentId } : {}),
-        text: richText(document) || "[Attachment draft]",
+        text: richText(document),
         format: "rich_json",
         content: document,
         visibility,
@@ -292,6 +297,7 @@ export function CommentsWorkspace({
   const composer = useRef<HTMLDivElement>(null),
     fallback = useRef<HTMLDivElement>(null);
   useComposerReveal(composer, composerOpen);
+  const managedPanel = useContext(RecordPanelActionContext);
   const fullView = useContext(CollaborationPresentationContext) === "content";
   const [host, setHost] = useState<HTMLDivElement>();
   useEffect(() => {
@@ -309,6 +315,7 @@ export function CommentsWorkspace({
         ?.querySelector<HTMLElement>('[contenteditable="true"]')
         ?.focus({ preventScroll: true }),
     );
+
   useEffect(() => {
     if (target) {
       const frame = requestAnimationFrame(() => {
@@ -359,21 +366,20 @@ export function CommentsWorkspace({
             <CollectionContinuation cursor={String(valueRecord(resource.data)?.nextCursor)} automatic={false} label={intl.message("comments.loadMore")} loading={loadingMore} failed={!!loadMoreError} onLoadMore={onLoadMore} />
           ) : null}
         </div>
-        <div className="a-comment-compose-dock" data-toast-avoid>
-        {(target ? actions.has("reply") : actions.has("create")) ? <div className="a-comment-compose-toggle" hidden={composerOpen}>
-          <button ref={composeToggle} type="button" aria-expanded={composerOpen} onClick={() => { setComposerOpen(!composerOpen); if (!composerOpen) focusComposer(); }}>
-            {target ? intl.message("comments.resumeReply") : hasDraft ? intl.message("comments.resumeDraft") : commentItems.length ? intl.message("comments.add") : intl.message("comments.addFirst")}
-          </button>
-        </div> : null}
-        <ReplyComposerPlacement fallback />
-        </div>
+        <RecordActionDock className="a-comment-compose-dock" tabIndex={-1} hidden={!(target ? actions.has("reply") : actions.has("create"))}>
+          {target && !composerOpen ? <button ref={composeToggle} type="button" onClick={()=>{setComposerOpen(true);focusComposer();}}>{intl.message("comments.resumeReply")}</button> : null}
+          <ReplyComposerPlacement fallback />
+        </RecordActionDock>
         {host && (target ? actions.has("reply") : actions.has("create"))
           ? createPortal(
-              <div ref={composer} className="a-comment-compose-slot" hidden={!composerOpen}>
+              <div ref={composer} className="a-comment-compose-slot" hidden={!composerOpen && Boolean(target)}>
                 {replyNotice ? <p role="status">{replyNotice}</p> : null}
                 <CommentComposer
                   key={draftKey}
-                  onMinimize={() => { setComposerOpen(false); requestAnimationFrame(() => composeToggle.current?.focus({preventScroll:true})); }}
+                  compact={!composerOpen && !target}
+                  onExpand={()=>setComposerOpen(true)}
+                  placeholder={managedPanel?.recordLabel ? intl.message("comments.placeholderRecord",{record:managedPanel.recordLabel}) : intl.message("comments.placeholder")}
+                  onMinimize={() => { setComposerOpen(false); requestAnimationFrame(() => composer.current?.closest<HTMLElement>(".a-comment-compose-dock")?.focus({preventScroll:true})); }}
                   entityCode={entityCode}
                   recordId={recordId}
                   parentCommentId={target?.id}
@@ -411,7 +417,7 @@ export function CommentsWorkspace({
                         }
                       } } } : {}),
                     });
-                    requestAnimationFrame(() => composeToggle.current?.focus({preventScroll:true}));
+                    requestAnimationFrame(() => composer.current?.closest<HTMLElement>(".a-comment-compose-dock")?.focus({preventScroll:true}));
                     if (target)
                       setSent({
                         rootId: target.rootId,
@@ -453,7 +459,7 @@ export function CommentComposer({
   onPosted,
   onBusyChange,
   onDismiss,
-  onMinimize,
+  onMinimize, compact, onExpand, placeholder,
 }: {
   readonly entityCode: string;
   readonly recordId: string;
@@ -468,9 +474,13 @@ export function CommentComposer({
   readonly onPosted?: (id?: string) => void;
   readonly onDismiss?: () => void;
   readonly onMinimize?: () => void;
+  readonly compact?: boolean;
+  readonly onExpand?: () => void;
+  readonly placeholder?: string;
 }) {
   const intl = useEntityI18n();
   const { push: notify } = useToasts();
+  const identity = useSessionIdentity();
   const client = useApiClient(),
     [error, setError] = useState<string>();
   const [draftId, setDraftId] = useState<string | undefined>(
@@ -615,6 +625,7 @@ export function CommentComposer({
   return (
     <RichCommentComposer
       className="a-comment-composer-card"
+      compact={compact} onExpand={onExpand} placeholder={placeholder}
       header={
         <>
           <span className="a-comment-composer-title">
@@ -633,12 +644,15 @@ export function CommentComposer({
       entityId={recordId}
       parentCommentId={parentCommentId}
       initialDocument={initialDocument}
+      currentPrincipalId={identity.scope?.principalId}
       searchMentions={
         actions.has("mention")
           ? mentionSearch(client, entityCode, recordId)
           : undefined
       }
       draftId={draftId}
+      csrfToken={readBrowserCsrfToken}
+      renderAttachment={(id, name) => <CommentFile attachmentId={id} name={name} version="" />}
       maxAttachments={capability?.maxAttachments}
       prepareAttachments={async (document, visibility) => {
         if (draftTimer.current) window.clearTimeout(draftTimer.current);
@@ -1005,7 +1019,8 @@ export function CommentCollection({
         entityType={entityCode}
         entityId={recordId}
         initialDocument={editableCommentDocument(editing)}
-        searchMentions={
+        currentPrincipalId={identity.scope?.principalId}
+      searchMentions={
           actions.has("mention")
             ? mentionSearch(client, entityCode, recordId)
             : undefined
@@ -1020,7 +1035,9 @@ export function CommentCollection({
         submitAriaLabel={intl.message("comments.save")}
         onCancel={closeAction}
         cancelLabel={intl.message("comments.cancelEdit")}
-        maxAttachments={capability?.maxAttachments}
+        csrfToken={readBrowserCsrfToken}
+      renderAttachment={(id, name) => <CommentFile attachmentId={id} name={name} version="" />}
+      maxAttachments={capability?.maxAttachments}
         allowAttachments={Boolean(capability?.maxAttachments)}
         prepareAttachments={async (document, visibility) => {
           const prepared = await prepareCommentFiles(
@@ -1115,7 +1132,7 @@ export function CommentCollection({
         <div className="a-comment-view-options">
           <label>
             <span className="a-visually-hidden">{intl.message("comments.order")}</span>
-            <select
+            <Select
               disabled={Boolean(editing)}
               value={newestFirst ? "newest" : "oldest"}
               onChange={(event) =>
@@ -1124,11 +1141,11 @@ export function CommentCollection({
             >
               <option value="oldest">{intl.message("comments.oldest")}</option>
               <option value="newest">{intl.message("comments.newest")}</option>
-            </select>
+            </Select>
           </label>
           <label>
             <span className="a-visually-hidden">{intl.message("comments.groupBy")}</span>
-            <select
+            <Select
               disabled={Boolean(editing)}
               aria-label={intl.message("comments.groupBy")}
               value={groupBy}
@@ -1136,10 +1153,10 @@ export function CommentCollection({
             >
               <option value="date">{intl.message("comments.groupDate")}</option>
               <option value="user">{intl.message("comments.groupUser")}</option>
-            </select>
+            </Select>
           </label>
         </div>
-        <div className="a-comment-view-controls" ref={toolbarRef} />
+        <div className="a-comment-view-controls" ref={toolbarRef}><RecordPanelToolbarActions/></div>
       </div>
       {!visibleComments.length && !(commentFilter === "mentions" && (mentionBusy || mentionError)) ? (
         <EmptySectionState
@@ -1198,7 +1215,7 @@ export function CommentCollection({
               <p>
                 {intl.message("comments.reportHelp")}
               </p>
-              <label>{intl.message("comments.reason")}<select
+              <label>{intl.message("comments.reason")}<Select
                   aria-label={intl.message("comments.reason")}
                   autoFocus
                   required
@@ -1213,7 +1230,7 @@ export function CommentCollection({
                   <option value="misinformation">{intl.message("comments.misinformation")}</option>
                   <option value="off_topic">{intl.message("comments.offTopic")}</option>
                   <option value="other">{intl.message("comments.other")}</option>
-                </select>
+                </Select>
               </label>
               <label>{intl.message("comments.optionalContext")}<textarea
                   value={reportDetail}
@@ -2004,7 +2021,7 @@ export function CommentFile({
   const visible = useContext(CollaborationVisibilityContext);
   return (
     <div className="a-comment-file">
-      <FileTypeIcon name={name} />
+      <AttachmentThumbnail attachmentId={attachmentId} name={name} contentType="" canPreview onPreview={() => setPreview(value => !value)} />
       <div className="a-comment-file__identity">
         <button
           type="button"
@@ -2015,9 +2032,9 @@ export function CommentFile({
         >
           {name}
         </button>
-        <small>
-          {size != null ? `${collaborationFileSize(size, intl)} · ` : ""}v{version}
-        </small>
+        {size != null || version ? <small>
+          {size != null ? collaborationFileSize(size, intl) : ""}{size != null && version ? " · " : ""}{version ? `v${version}` : ""}
+        </small> : null}
       </div>
       <FileAction
         id={previewButtonId}
@@ -2074,7 +2091,7 @@ function mentionSearch(
     const params = new URLSearchParams({ entityType, entityId, q, visibility });
     const result = await client.request(
       createOperation<{
-        items: readonly { id: string; displayName: string }[];
+        items: readonly { id: string; displayName: string; username?: string }[];
       }>({ method: "GET", path: () => `/api/collab/participants?${params}` }),
       {},
     );

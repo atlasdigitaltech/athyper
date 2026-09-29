@@ -22,3 +22,11 @@ export * from "./entity-canonical-read-admission.js";
 export {validateDataInput,dataFieldVisible} from "@athyper/contract-platform-entity-runtime";
 export * from "./collection-compilation.js";
 export { compileFieldPattern, FIELD_PATTERN_INPUT_LIMIT } from "./field-pattern.js";
+
+export { parseRecordOwnerAccess, type RecordOwnerAccessV1 } from "./record-owner-access.js";
+
+export * from "./identity-permissions.js";
+
+export * from "./record-mutation-policy.js";
+
+export * from "./record-predicates.js";

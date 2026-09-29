@@ -194,7 +194,7 @@ function headers(
   jsonBody: boolean,
   idempotencyKey?: string,
 ): HeadersInit {
-  const csrf = options.csrfToken?.() ?? browserCsrf();
+  const csrf = options.csrfToken ? options.csrfToken() : browserCsrf();
   return {
     ...(jsonBody ? { "Content-Type": "application/json" } : {}),
     ...(csrf ? { "X-CSRF-Token": csrf } : {}),
@@ -212,21 +212,12 @@ function attachmentCoordinate(options: AttachmentApiClientOptions): {
     );
   return { entityType: options.entityType, entityId: options.entityId };
 }
+// Replaced by the browser bundler, matching the active session cookie namespace.
+declare const process: { readonly env: { readonly NODE_ENV?: string } };
 function browserCsrf(): string | undefined {
   if (typeof document === "undefined") return undefined;
-  const meta = document.querySelector<HTMLMetaElement>(
-    'meta[name="csrf-token"]',
-  )?.content;
-  if (meta) return meta;
-  const cookies = new Map(
-    document.cookie.split(";").map((part) => {
-      const [name, ...value] = part.trim().split("=");
-      return [name, value.join("=")] as const;
-    }),
-  );
-  for (const name of ["__Host-athyper-csrf", "athyper-csrf", "XSRF-TOKEN"]) {
-    const value = cookies.get(name);
-    if (value) return decodeURIComponent(value);
-  }
-  return undefined;
+  const prefix = `${process.env.NODE_ENV === "production" ? "__Host-" : ""}athyper-csrf=`;
+  const value = document.cookie.split(";").map(part => part.trim()).find(part => part.startsWith(prefix))?.slice(prefix.length);
+  if (!value) return undefined;
+  try { return decodeURIComponent(value); } catch { return undefined; }
 }

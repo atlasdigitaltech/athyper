@@ -1,5 +1,13 @@
 /** Shared entity UI copy. Entity-specific labels remain in published metadata. */
 export const entityEnglishMessages = Object.freeze({
+  "entity.related.unavailable": "This section could not be loaded.",
+  "entity.related.loading": "Loading…",
+  "entity.related.empty": "No record has been added.",
+  "entity.related.add": "Add",
+  "entity.related.edit": "Edit",
+  "entity.related.cancel": "Cancel",
+  "entity.related.back": "Back to list",
+
   "validation.required": "{field} is required.",
   "validation.maxLength": "{field} must be {max} characters or fewer.",
   "validation.option": "Choose an available option for {field}.",

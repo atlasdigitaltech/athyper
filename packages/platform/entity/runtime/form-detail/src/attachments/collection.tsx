@@ -1,4 +1,6 @@
 "use client";
+import { RecordActionDock } from "../record-action-dock";
+import { RecordPanelToolbarActions } from "../panel-header-action";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { writeRecordLocation } from "../record/write-record-location";
 import { uploadRecordAttachment } from "../upload-record-attachment";
@@ -57,6 +59,7 @@ import {
   Card,
   Dialog,
   DialogContent,
+  Select,
   Tooltip,
 } from "@athyper/platform-ui";
 import {
@@ -149,7 +152,7 @@ export function AttachmentCollection({
   >(undefined);
   const rememberBrowse = () => {
     const element =
-      workspaceRef.current?.closest(".a-collaboration-panel__body") ?? null;
+      workspaceRef.current?.querySelector(".a-files-scroll-area") ?? null;
     browseScroll.current = {
       element,
       top: element?.scrollTop ?? 0,
@@ -181,7 +184,7 @@ export function AttachmentCollection({
     if (!canOpenPreview) return;
     previewOpener.current = document.activeElement as HTMLElement;
     const element =
-      workspaceRef.current?.closest(".a-collaboration-panel__body") ?? null;
+      workspaceRef.current?.querySelector(".a-files-scroll-area") ?? null;
     previewScroll.current = {
       element,
       top: element?.scrollTop ?? 0,
@@ -779,6 +782,45 @@ export function AttachmentCollection({
             : item.folderId === folderFilter)) &&
         (!categoryFilter || item.category === categoryFilter),
     );
+  const discoveryActions = (
+    <div className="a-files-toolbar">
+      {canFolder ? (
+        <FileAction
+          label={intl.message("files.newFolder")}
+          icon={<FolderPlusIcon size={18} aria-hidden="true" />}
+          onClick={() => {
+            setError(undefined);
+            setDialog({ kind: "folder" });
+          }}
+        />
+      ) : null}
+      {
+        <span className="a-file-filter-action">
+          <FileAction
+            label={intl.message("files.filters")}
+            badge={
+              folderFilter || categoryFilter ? (
+                <span
+                  className="a-file-filter-count"
+                  aria-label={intl.message("files.activeFilters")}
+                >
+                  {Number(Boolean(folderFilter)) +
+                    Number(Boolean(categoryFilter))}
+                </span>
+              ) : null
+            }
+            icon={
+              <SlidersHorizontalIcon size={18} aria-hidden="true" />
+            }
+            aria-expanded={filtersOpen}
+            aria-controls="file-browse-filters"
+            onClick={() => setFiltersOpen((value) => !value)}
+          />
+        </span>
+      }
+      <RecordPanelToolbarActions omitNew/>
+    </div>
+  );
   return (
     <section
       ref={workspaceRef}
@@ -797,6 +839,7 @@ export function AttachmentCollection({
         }
       }}
     >
+      <div className="a-files-scroll-area">
       {fileLinkNotice ? <p role="status">{fileLinkNotice}</p> : null}
       <section
         className="a-files-discovery-controls"
@@ -808,23 +851,6 @@ export function AttachmentCollection({
           }}
         >
           <FileSearchInput
-            creationAction={
-              upload ? (
-                <button
-                  type="button"
-                  aria-expanded={uploadOpen}
-                  aria-controls={uploadOpen ? uploadAreaId : undefined}
-                  onClick={() => setUploadOpen(!uploadOpen)}
-                >
-                  <span>{intl.message("files.addButton")}</span>
-                  <ChevronDownIcon
-                    size={16}
-                    aria-hidden="true"
-                    className="a-files-upload-chevron"
-                  />
-                </button>
-              ) : undefined
-            }
             search={search}
             nameQuery={filter}
             onNameQuery={setFilter}
@@ -833,50 +859,8 @@ export function AttachmentCollection({
               if (contentSearch) clearSearch();
               else setFilter("");
             }}
-            actions={
-              <div className="a-files-toolbar">
-                {canFolder ? (
-                  <FileAction
-                    label={intl.message("files.newFolder")}
-                    icon={<FolderPlusIcon size={18} aria-hidden="true" />}
-                    onClick={() => {
-                      setError(undefined);
-                      setDialog({ kind: "folder" });
-                    }}
-                  />
-                ) : null}
-                {
-                  <span className="a-file-filter-action">
-                    <FileAction
-                      label={intl.message("files.filters")}
-                      badge={
-                        folderFilter || categoryFilter ? (
-                          <span
-                            className="a-file-filter-count"
-                            aria-label={intl.message("files.activeFilters")}
-                          >
-                            {Number(Boolean(folderFilter)) +
-                              Number(Boolean(categoryFilter))}
-                          </span>
-                        ) : null
-                      }
-                      icon={
-                        <SlidersHorizontalIcon size={18} aria-hidden="true" />
-                      }
-                      aria-expanded={filtersOpen}
-                      aria-controls="file-browse-filters"
-                      onClick={() => setFiltersOpen((value) => !value)}
-                    />
-                  </span>
-                }
-              </div>
-            }
+            actions={fullView ? discoveryActions : undefined}
           />
-        </div>
-        <div id={uploadAreaId} className="a-files-upload-area">
-          <UploadExpandedContext.Provider value={uploadOpen}>
-            {upload}
-          </UploadExpandedContext.Provider>
         </div>
         {items.some((item) =>
           ["pending", "uploading", "uploaded", "processing"].includes(
@@ -976,7 +960,7 @@ export function AttachmentCollection({
               ) : categoryTarget ? (
                 <label>
                   {intl.message("files.category")}
-                  <select
+                  <Select
                     value={categoryValue}
                     onChange={(event) =>
                       setCategoryValue(
@@ -990,12 +974,12 @@ export function AttachmentCollection({
                     <option value="evidence">
                       {intl.message("files.evidence")}
                     </option>
-                  </select>
+                  </Select>
                 </label>
               ) : (
                 <label>
                   {intl.message("files.folder")}
-                  <select
+                  <Select
                     value={moveValue}
                     onChange={(event) =>
                       setMoveValue(event.currentTarget.value)
@@ -1007,7 +991,7 @@ export function AttachmentCollection({
                         {String(folder.name)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
               )}
               {error ? <p role="alert">{error}</p> : null}
@@ -1049,7 +1033,7 @@ export function AttachmentCollection({
         >
           <label>
             {intl.message("files.folder")}
-            <select
+            <Select
               value={folderFilter}
               onChange={(event) => setFolderFilter(event.currentTarget.value)}
             >
@@ -1060,18 +1044,18 @@ export function AttachmentCollection({
                   {String(folder.name)}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label>
             {intl.message("files.category")}
-            <select
+            <Select
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.currentTarget.value)}
             >
               <option value="">{intl.message("files.allCategories")}</option>
               <option value="general">{intl.message("files.general")}</option>
               <option value="evidence">{intl.message("files.evidence")}</option>
-            </select>
+            </Select>
           </label>
         </div>
         {categoryFilter ? (
@@ -1085,6 +1069,7 @@ export function AttachmentCollection({
           </div>
         ) : null}
         <div className="a-files-browse-summary">
+          {!fullView ? discoveryActions : null}
           <nav
             className="a-file-folders"
             aria-label={intl.message("files.recordFolders")}
@@ -1366,8 +1351,8 @@ export function AttachmentCollection({
                         </small>
                       </span>
                       <small className="a-file-metadata">
-                        {collaborationFileSize(item.sizeBytes, intl)} ·{" "}
-                        {collaborationTime(item.createdAt, intl)}
+                        {collaborationFileSize(item.sizeBytes, intl)}
+                        {!item.addedAt ? ` · ${collaborationTime(item.createdAt, intl)}` : ""}
                       </small>
                       <small className="a-file-version">
                         <span className="a-file-version-status">
@@ -1718,6 +1703,15 @@ export function AttachmentCollection({
           {errors.workspace}
         </p>
       ) : null}
+      </div>
+      {upload ? <RecordActionDock className="a-files-action-dock">
+        <div id={uploadAreaId} className="a-files-upload-area">
+          <UploadExpandedContext.Provider value={uploadOpen}>
+            {upload}
+          </UploadExpandedContext.Provider>
+        </div>
+        <Button className="a-record-dock-action" variant="secondary" data-action-dock-trigger aria-expanded={uploadOpen} aria-controls={uploadAreaId} onClick={()=>setUploadOpen(!uploadOpen)}><UploadIcon aria-hidden="true"/>{intl.message("files.addButton")}</Button>
+      </RecordActionDock> : null}
     </section>
   );
 }

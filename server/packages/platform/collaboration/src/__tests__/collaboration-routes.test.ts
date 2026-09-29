@@ -67,6 +67,19 @@ const body = {
   text: "hello",
 };
 describe("collaboration HTTP boundary", () => {
+  it("accepts an empty attachment draft but rejects an empty posted comment", async () => {
+    const h = await harness();
+    const payload = {
+      ...body,
+      text: "",
+      format: "rich_json",
+      content: { type: "doc", schema: "athyper.rich-text/1.0", content: [{ type: "paragraph", content: [] }] },
+    };
+    expect((await h.request("POST", "/drafts", payload)).status).toBe(200);
+    expect(h.service.putDraft).toHaveBeenCalledWith(expect.objectContaining(payload));
+    expect((await h.request("POST", "/comments", payload)).status).toBe(400);
+    expect(h.service.create).not.toHaveBeenCalled();
+  });
   it.each([
     ["POST", "/comments", { ...body, intent: 1 }],
     ["POST", "/comments", { ...body, content: [] }],

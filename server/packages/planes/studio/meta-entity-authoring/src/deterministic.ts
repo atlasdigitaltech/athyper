@@ -1,3 +1,5 @@
+import { parseRecordMutationPolicy, parseRecordPredicates } from "@athyper/server-contract-metadata";
+import { parseRecordOwnerAccess } from "@athyper/server-contract-metadata";
 import {collectionPublicationFromGraph} from "@athyper/server-contract-publication";
 import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceGraph } from "@athyper/server-contract-metadata";
 import { capabilityArtifactMembers, capabilityAuthoringMode, PublicationContractError, parseCapabilityBinding, parseCapabilityDeclaration } from "@athyper/server-contract-publication";
@@ -92,7 +94,7 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
   const capabilityKeys = new Set<string>();
   for (const [index, member] of (graph.capabilities ?? []).entries()) {
     try {
-      if (!member || !["comments", "attachments"].includes(member.capabilityKey) || capabilityKeys.has(member.capabilityKey)) throw new Error("Unknown or duplicate capability");
+      if (!member || !["comments", "attachments", "activity"].includes(member.capabilityKey) || capabilityKeys.has(member.capabilityKey)) throw new Error("Unknown or duplicate capability");
       capabilityAuthoringMode(member, `capabilities[${index}]`);
       capabilityKeys.add(member.capabilityKey);
       capabilityArtifactMembers(entityCode, [member]);
@@ -549,6 +551,15 @@ export function compileGraph(
   );
   if (directoryRules.length > 1)
     throw new TypeError("Only one directory scope rule is allowed");
+  const ownerAccessBindings = (graph.surfaces ?? []).flatMap(surface => surface.layoutConfig?.ownerAccess === undefined ? [] : [parseRecordOwnerAccess(surface.layoutConfig.ownerAccess)]);
+  if (ownerAccessBindings.length > 1) throw new Error("Ambiguous record owner access");
+  const ownerAccess = ownerAccessBindings[0];
+  if (ownerAccess && (!graph.runtimeProfiles?.every(profile => profile.tenantFieldKey) || !graph.fields.some(field => field.fieldKey === ownerAccess.ownerField && field.dataType === "uuid" && field.writeMode === "read_only")))
+    throw new Error("Owner access requires tenant storage and an immutable UUID owner field");
+  const predicateSets=(graph.surfaces??[]).flatMap(surface=>surface.layoutConfig?.recordPredicates===undefined?[]:[parseRecordPredicates(surface.layoutConfig.recordPredicates)]);
+  if(predicateSets.length>1 || predicateSets[0]?.some(p=>!graph.fields.some(f=>f.fieldKey===p.field&&f.valueOrigin==="stored")))throw Error("Invalid record predicate binding");
+  const mutationPolicies=(graph.surfaces??[]).flatMap(surface=>surface.layoutConfig?.mutationPolicy===undefined?[]:[parseRecordMutationPolicy(surface.layoutConfig.mutationPolicy)]);
+  if(mutationPolicies.length>1)throw Error("Ambiguous mutation policy");
   const collectionRelationship = compileCollectionRelationship(graph);
   const collectionCompilation = compileCollectionCompilation(graph);
   const collectionConfiguration=collectionPublicationFromGraph(graph);
@@ -562,6 +573,9 @@ export function compileGraph(
     ...(collectionRelationship ? { collectionRelationship } : {}),
     ...(collectionCompilation ? { collectionCompilation } : {}),
     ...(recordPresentation ? { recordPresentation } : {}),
+    ...(ownerAccess ? { ownerAccess } : {}),
+    ...(predicateSets[0]?{recordPredicates:predicateSets[0]}:{}),
+    ...(mutationPolicies[0]?{mutationPolicy:mutationPolicies[0]}:{}),
     entity: graph.entity,
     ...(graph.capabilities?.length ? capabilityArtifactMembers(graph.entity.entityCode, graph.capabilities) : {}),
     fields: graph.fields,

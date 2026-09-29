@@ -1,0 +1,64 @@
+{
+  "schema": "athyper.dev-entity-successor-policy/1",
+  "environment": "local",
+  "instance": "dev",
+  "authorityTenantId": "11111111-1111-4111-8111-111111111111",
+  "policyId": "entity.successor.b7e5b981-2227-4720-ba5d-040a48ab6842.9.activity",
+  "revision": 1,
+  "entityId": "b7e5b981-2227-4720-ba5d-040a48ab6842",
+  "changeSetId": "3a38a9c2-8797-4de0-bd1a-3a6315a21a50",
+  "contractHash": "fc4ccddb8742cff2b18784eeb33354400a4821e44fb92752c39a78e6653875cd",
+  "descriptorHash": "be2bc22232be4bc7f9a173373d3417a12a8ac7c9ffdf7e6b10669ecc88152033",
+  "authorPrincipalId": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+  "publisherPrincipalId": "c0febdd1-491c-46b8-8113-160be767b88d",
+  "predecessor": {
+    "authoringReleaseId": "1b7b9805-fe13-4439-9914-df5f4123684b",
+    "authoringReleaseNo": 8,
+    "authoringReleaseHash": "5b68ae9a4c3618b67df01a8c0759bba9a4e4a039defab098ba15b8b737d59b8e",
+    "publicationReleaseId": "1b7b9805-fe13-4439-9914-df5f4123684b",
+    "publicationReleaseNo": 8,
+    "publicationReleaseHash": "5b68ae9a4c3618b67df01a8c0759bba9a4e4a039defab098ba15b8b737d59b8e",
+    "revisionId": "01a0e5fa-7931-771e-a389-1f5215566936",
+    "contractHash": "de060c48ccea3bae03623fc511e8c29a70d0e39181f38c0bd0dc47c823dcb16a"
+  },
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "35995c9e6a15a7e81cce4cd72b14e8c1ab284e6f600e76ff216cda4e997edd8e"
+  },
+  "targets": [
+    {
+      "plane": "studio",
+      "environment": "local",
+      "instance": "dev",
+      "publicationKey": "metadata.reference.country",
+      "appliedReleaseId": "01a0e5fa-8ae0-7e82-b169-847dc9767783",
+      "sourceReleaseId": "1b7b9805-fe13-4439-9914-df5f4123684b",
+      "sourceReleaseNo": 8,
+      "artifactHash": "8437f8bb4dd645036328b5423bb65e43a5c6e5b71e118472addf46811710efe8",
+      "headVersion": 8
+    },
+    {
+      "plane": "neon",
+      "environment": "local",
+      "instance": "dev",
+      "publicationKey": "metadata.reference.country",
+      "appliedReleaseId": "01a0e5fa-88f8-79bf-b167-ba6c121a1954",
+      "sourceReleaseId": "1b7b9805-fe13-4439-9914-df5f4123684b",
+      "sourceReleaseNo": 8,
+      "artifactHash": "37666b49f9e88eade698f44e5573f361ccbee05ba6ec90b27cb269d32658148c",
+      "headVersion": 8
+    },
+    {
+      "plane": "mesh",
+      "environment": "local",
+      "instance": "dev",
+      "publicationKey": "metadata.reference.country",
+      "appliedReleaseId": "01a0e5fa-8b1b-70f7-8ba5-cede6c4bc907",
+      "sourceReleaseId": "1b7b9805-fe13-4439-9914-df5f4123684b",
+      "sourceReleaseNo": 8,
+      "artifactHash": "1c2fa2da6880c504f4c0495cf7a7c29c9175127dd75e468267eb9e8c174ac874",
+      "headVersion": 8
+    }
+  ]
+}

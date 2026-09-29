@@ -1,3 +1,5 @@
+import { parseEntityListScopeCoordinate } from "./list-scope-coordinate.js";
+export { parseEntityListScopeCoordinate } from "./list-scope-coordinate.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { defineRouteContract, HttpError, registerContractRoute } from "@athyper/server-runtime-http";
 import type { Application, RequestHandler, Response } from "express";
@@ -30,7 +32,7 @@ function asHttpError(error: unknown): unknown {
   return error;
 }
 const body = { type: "object", additionalProperties: true } as const;
-const scopeProperties = { companyCodeIds: {type:"string",maxLength:3699}, operatingOrganizationIds:{type:"string",maxLength:3699}, partnerRole:{type:"string",enum:["supplier","customer"]},eligibleOperation:{type:"string",enum:["order","invoice","payment"]}, companyCodeId: { type: "string", format: "uuid" }, legalEntityId: { type: "string", format: "uuid" }, operatingOrganizationId: { type: "string", format: "uuid" }, networkAccountId: { type: "string", format: "uuid" } } as const;
+const scopeProperties = { parentEntityCode: {type:"string",pattern:"^[a-z][a-z0-9_]{1,62}$"}, parentRecordId: {type:"string",format:"uuid"}, relationshipKey: {type:"string",pattern:"^[a-z][a-z0-9_]{1,62}$"}, companyCodeIds: {type:"string",maxLength:3699}, operatingOrganizationIds:{type:"string",maxLength:3699}, partnerRole:{type:"string",enum:["supplier","customer"]},eligibleOperation:{type:"string",enum:["order","invoice","payment"]}, companyCodeId: { type: "string", format: "uuid" }, legalEntityId: { type: "string", format: "uuid" }, operatingOrganizationId: { type: "string", format: "uuid" }, networkAccountId: { type: "string", format: "uuid" } } as const;
 const descriptorQuery = { type: "object", additionalProperties: false, properties: { ...scopeProperties, filterChoiceField: { type: "string", pattern: "^[a-z][a-z0-9_]*$", maxLength: 128 } } } as const;
 const query = { type: "object", additionalProperties: false, properties: { standardView: {type:"string",pattern:"^[a-z][a-z0-9_.-]{0,126}$"}, limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 127 }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, ...scopeProperties } } as const;
 const contracts = {
@@ -42,33 +44,5 @@ const contracts = {
   list: defineRouteContract({ method: "get", path: "/api/entity-runtime/:entityCode/list", operationId: "entityList.list", summary: "Query an authorized normalized entity list", tags: ["Entity runtime"], authenticated: true, request: { query }, responses: { 200: { description: "Normalized entity list page", body }, 400: { description: "Invalid list query or work-context coordinate" }, 403: { description: "Forbidden" }, 409: { description: "Validated work context required" } } }),
 } as const;
 
-export function parseEntityListScopeCoordinate(queryValue: Readonly<Record<string, unknown>>) {
-  const companyCodeIds = optionalUuidList(queryValue["companyCodeIds"], "companyCodeIds");
-  const operatingOrganizationIds = optionalUuidList(queryValue["operatingOrganizationIds"], "operatingOrganizationIds");
-  const partnerRole = queryValue["partnerRole"] as "supplier"|"customer"|undefined;
-  const eligibleOperation = queryValue["eligibleOperation"] as "order"|"invoice"|"payment"|undefined;
-  if(partnerRole!==undefined && !["supplier","customer"].includes(partnerRole)) throw new RecordServiceError(400,"INVALID_ROLE","Invalid partner role");
-  if(eligibleOperation!==undefined && !["order","invoice","payment"].includes(eligibleOperation)) throw new RecordServiceError(400,"INVALID_OPERATION","Invalid eligibility operation");
-  const companyCodeId = optionalUuid(queryValue["companyCodeId"], "companyCodeId");
-  const legalEntityId = optionalUuid(queryValue["legalEntityId"], "legalEntityId");
-  const operatingOrganizationId = optionalUuid(queryValue["operatingOrganizationId"], "operatingOrganizationId");
-  const networkAccountId = optionalUuid(queryValue["networkAccountId"], "networkAccountId");
-  if ((companyCodeIds && (companyCodeId || legalEntityId)) || (operatingOrganizationIds && operatingOrganizationId)) throw new RecordServiceError(400,"INVALID_WORK_CONTEXT","Use either single or multiple coordinates, not both");
-  if (Boolean(companyCodeId) !== Boolean(legalEntityId)) throw new RecordServiceError(400, "INVALID_WORK_CONTEXT", "companyCodeId and legalEntityId must be supplied together");
-  if (!companyCodeIds && !operatingOrganizationIds && !companyCodeId && !operatingOrganizationId && !networkAccountId && !partnerRole && !eligibleOperation) return undefined;
-  return Object.freeze({ ...(companyCodeIds ? {companyCodeIds} : {}), ...(operatingOrganizationIds ? {operatingOrganizationIds} : {}), ...(partnerRole?{partnerRole}:{}),...(eligibleOperation?{eligibleOperation}:{}), ...(companyCodeId ? { companyCodeId, legalEntityId: legalEntityId as string } : {}), ...(operatingOrganizationId ? { operatingOrganizationId } : {}), ...(networkAccountId ? { networkAccountId } : {}) });
-}
-
-function optionalUuid(value: unknown, name: string): string | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new RecordServiceError(400, "INVALID_WORK_CONTEXT", `${name} must be a UUID`);
-  return value.toLowerCase();
-}
 
 function recordQueryId(value: unknown): string { if (typeof value !== "string") throw new RecordServiceError(400,"INVALID_RECORD_ID","recordId must be a string"); return recordId(value); }
-
-function optionalUuidList(value: unknown, name: string): readonly string[] | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "string" || !value || value.split(",").length > 100) throw new RecordServiceError(400,"INVALID_WORK_CONTEXT",`${name} requires 1–100 UUIDs`);
-  return Object.freeze([...new Set(value.split(",").map(id => optionalUuid(id, name)!))].sort());
-}

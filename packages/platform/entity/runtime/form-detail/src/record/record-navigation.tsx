@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import {
   ChevronDownIcon,
   FileTextIcon,
+  HistoryIcon,
   MessageCircleIcon,
   SettingsIcon,
 } from "@athyper/platform-icons";
@@ -108,12 +109,12 @@ export function RecordModeNavigation({
           aria-label={intl.message("navigation.openSection", {section: section.key === "attachments" ? intl.message("collaboration.files") : section.key === "comments" ? intl.message("collaboration.comments") : section.label})}
           onClick={() => onOpenCollaboration(section.key)}
         >
-          {section.key === "comments" ? (
+          {section.key === "activity" ? <HistoryIcon aria-hidden="true" /> : section.key === "comments" ? (
             <MessageCircleIcon aria-hidden="true" />
           ) : (
             <FileTextIcon aria-hidden="true" />
           )}
-          <span>{section.key === "attachments" ? intl.message("collaboration.files") : intl.message("collaboration.comments")}</span>
+          <span>{section.key === "attachments" ? intl.message("collaboration.files") : section.key === "comments" ? intl.message("collaboration.comments") : section.label}</span>
         </button>
       ))}
       {sectionSettings || navigation.summaryView ? <details ref={viewMenu} className="a-entity-record__view-control">

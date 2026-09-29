@@ -333,7 +333,7 @@ describe("attachment route security regressions", () => {
     const f=fixture(["neon.collaboration.attachment.finalize"]);
     f.attachments.finalize.mockRejectedValueOnce(new MalwareDocumentUnsupportedError());
     await f.invoke("/api/attachments/:attachmentId/finalize",{contentType:"application/pdf"});
-    expect(f.output).toMatchObject({status:422,body:{code:"MALWARE_DOCUMENT_UNSUPPORTED",detail:expect.stringContaining("cannot be safely inspected")}});
+    expect(f.output).toMatchObject({status:422,body:{code:"MALWARE_DOCUMENT_UNSUPPORTED",detail:expect.stringContaining("inspection service"),inspectionReason:"unsupported_structure"}});
     expect(f.next).not.toHaveBeenCalled();
   });
   it("forwards the relay idempotency header into stage and finalize admission", async () => {

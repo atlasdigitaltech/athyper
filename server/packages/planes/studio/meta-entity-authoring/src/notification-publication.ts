@@ -13,8 +13,9 @@ import { compileGraph, sha256 } from "./deterministic.js";
 /** A notification-only draft publishes on a separate activation head. It cannot
  * replace an application's entity_runtime descriptor or execute domain operations. */
 export function notificationPublicationDescriptor(graph: MetaEntityGraph) {
+  if (graph.capabilities?.some(member => member.capabilityKey === "activity" && member.declaration.enabled)) return null;
   const configured = (graph.capabilities ?? []).filter(
-    (m) => m.binding?.notifications !== undefined,
+    (m) => m.capabilityKey !== "activity" && m.binding?.notifications !== undefined,
   );
   if (!configured.length) return null;
   const nonempty = Object.entries(graph).filter(
@@ -38,7 +39,7 @@ export function notificationPublicationDescriptor(graph: MetaEntityGraph) {
       m.capabilityKey,
       parseEntityNotificationConfiguration(
         m.binding!.notifications,
-        m.capabilityKey,
+        m.capabilityKey as "comments" | "attachments",
       ),
     ]),
   );

@@ -10,7 +10,7 @@ describe("plane transaction coordinator", () => {
       "utf8",
     );
 
-    expect(coordinator).toContain("run(planeKey, actor, work)");
+    expect(coordinator).toContain("run(planeKey, actor, work, _signal, options)");
     expect(coordinator).not.toContain("run(planeKey, _actor, work)");
     expect(coordinator.match(/stampTransactionActor\(\s*transaction as unknown as Transaction<Record<string, never>>,\s*actor,?\s*\)/g)).toHaveLength(3);
   });

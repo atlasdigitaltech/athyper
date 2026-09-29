@@ -115,6 +115,45 @@ for (const theme of ["light", "dark", "high-contrast"]) {
     ).toBe("3px");
   });
 }
+for (const theme of ["light", "dark"]) {
+  test(`Mono ${theme} focus and dropdown selection follow semantic tokens`, async ({page}) => {
+    await page.evaluate(theme => {
+      document.documentElement.dataset.themeFamily = "atlas-mono";
+      document.documentElement.dataset.theme = theme;
+    }, theme);
+    await page.getByRole("button", {name:"New folder", exact:true}).click();
+    const input = page.getByLabel("Folder name", {exact:true});
+    await input.focus();
+    const colors = await input.evaluate(el => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--a-selection-subtle-foreground)";
+      el.parentElement!.append(probe);
+      const expected = getComputedStyle(probe).color;
+      probe.remove();
+      return {actual:getComputedStyle(el).outlineColor, expected};
+    });
+    expect(colors.actual).toBe(colors.expected);
+    await page.getByRole("button", {name:"Cancel",exact:true}).click();
+    await page.getByRole("button", {name:"Filters",exact:true}).click();
+    const select = page.locator("select.a-select").first();
+    await expect(select).toHaveCSS("appearance", "base-select");
+    await select.click();
+    const option = select.locator("option").last();
+    await option.click();
+    const value = await option.getAttribute("value");
+    await expect(select).toHaveValue(value!);
+    await page.mouse.move(0, 0);
+    const selection = await option.evaluate(el => {
+      const probe = document.createElement("span");
+      probe.style.background = "var(--a-selection-strong)";
+      document.body.append(probe);
+      const expected = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return {actual:getComputedStyle(el).backgroundColor, expected};
+    });
+    expect(selection.actual).toBe(selection.expected);
+  });
+}
 test("downloads preserve the record and use an isolated browser target", async ({
   page,
 }) => {
@@ -280,7 +319,7 @@ test.beforeEach(async ({ page }) => {
   );
   await page.goto("https://files.test/");
   await page.evaluate(bundle);
-  await page.getByRole("button",{name:"＋ Add files",exact:true}).click();
+  await page.getByRole("button",{name:"Add files",exact:true}).click();
 });
 test("record content search replaces browsing, highlights safe snippets and paginates", async ({
   page,
@@ -432,7 +471,7 @@ test("visible drop zone validates files and uploads dropped bytes through finali
   await zone.dispatchEvent("drop", { dataTransfer: valid });
   await expect(zone).not.toHaveAttribute("data-dragging", "true");
   await expect(zone.getByRole("list", { name: "Upload queue" })).toContainText(
-    "dropped.pdf — Uploaded · Processing",
+    "dropped.pdf — Updating file list…",
   );
   expect(puts).toBe(1);
   const calls = await page.evaluate(() => (window as any).fileCalls);
@@ -881,7 +920,7 @@ test("upload completion batches toast and waits for list visibility before clear
     },
   ]);
   const queue = page.getByRole("list", { name: "Upload queue" });
-  await expect(queue).toContainText("Uploaded · Processing");
+  await expect(queue).toContainText("Updating file list…");
   await page.getByRole("button",{name:"＋ Add files",exact:true}).click();
   await expect(queue).toBeVisible();
   await expect(page.locator(".a-global-toast")).toContainText(
@@ -894,7 +933,7 @@ test("upload completion batches toast and waits for list visibility before clear
     (window as any).showUploaded = true;
     (window as any).refreshFiles();
   });
-  await expect(queue).toContainText("ready");
+  await expect(queue).toContainText("Ready");
   await page.clock.runFor(1900);
   await expect(queue.locator("li")).toHaveCount(2);
   await page.clock.runFor(200);
@@ -923,7 +962,7 @@ test("failed uploads stay visible and can be removed from the queue", async ({
       buffer: Buffer.from("fail"),
     });
   const queue = page.getByRole("list", { name: "Upload queue" });
-  await expect(queue).toContainText("failed");
+  await expect(queue).toContainText("Failed");
   await expect(
     queue.getByRole("button", { name: "Retry this file" }),
   ).toBeVisible();
@@ -1098,7 +1137,8 @@ test("image thumbnails load only near the viewport, preserve tile size and fall 
   await page
     .locator(".a-attachment-workspace__list")
     .evaluate((el) => ((el as HTMLElement).style.marginTop = "2500px"));
-  await page.evaluate(() => (window as any).setFileName("screenshot.png"));
+  await page.waitForTimeout(100);
+  await page.evaluate(() => { (window as any).fileCalls.length = 0; (window as any).setFileName("screenshot.png"); });
   await page.waitForTimeout(200);
   expect(
     await page.evaluate(
@@ -1305,4 +1345,72 @@ test("mixed upload results show one warning with a review action", async ({ page
   await expect(queue).toBeFocused();
   await expect(queue).toContainText('failed.pdf');
   await expect(toast).toHaveCount(0);
+});
+
+
+test("terminal PDF inspection failure appears once with removal instead of retry", async ({ page }) => {
+  await page.evaluate(() => (window as any).inspectionFailure = true);
+  await page.route('https://storage.test/upload', route => route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' } }));
+  await page.getByLabel('Upload files', { exact: true }).setInputFiles({ name: 'invoice.pdf', mimeType: 'application/pdf', buffer: Buffer.from('pdf') });
+  const queue = page.getByRole('list', { name: 'Upload queue' });
+  await expect(queue).toContainText('Inspection unsupported');
+  await expect(queue).not.toContainText('Malware detected');
+  await expect(page.getByText(/This PDF uses an unsupported decoding method/)).toHaveCount(1);
+  await expect(queue.getByRole('button', { name: 'Retry this file' })).toHaveCount(0);
+  await expect(page.locator('.a-global-toast')).toHaveCount(0);
+  await queue.getByRole('button', { name: 'Remove from queue' }).click();
+  await expect(queue).toHaveCount(0);
+});
+
+
+test("a positive malware verdict has a distinct upload status", async ({ page }) => {
+  await page.evaluate(() => (window as any).malwareFailure = true);
+  await page.route('https://storage.test/upload', route => route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' } }));
+  await page.getByLabel('Upload files', { exact: true }).setInputFiles({ name: 'unsafe.pdf', mimeType: 'application/pdf', buffer: Buffer.from('fixture') });
+  const queue = page.getByRole('list', { name: 'Upload queue' });
+  await expect(queue).toContainText('Malware detected');
+  await expect(queue).not.toContainText('Inspection unsupported');
+  await expect(queue.getByRole('button', { name: 'Retry this file' })).toHaveCount(0);
+});
+
+
+test("PDF thumbnail waits for generation and preserves the PDF badge and viewer", async ({ page }) => {
+  await page.clock.install();
+  await page.route('https://storage.test/thumb.png', route => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64') }));
+  const list = page.locator('.a-attachment-workspace__list');
+  await list.evaluate(el => (el as HTMLElement).style.marginTop = '2500px');
+  await page.clock.runFor(100);
+  await page.evaluate(() => { (window as any).fileCalls.length = 0; (window as any).thumbnailProcessing = true; (window as any).setFileName('invoice.pdf'); });
+  await page.clock.runFor(100);
+  expect(await page.evaluate(() => (window as any).fileCalls.filter((c: any) => c.body?.rendition === 'thumbnail_sm').length)).toBe(0);
+  const tile = page.locator('.a-attachment-thumbnail');
+  await tile.scrollIntoViewIfNeeded();
+  await expect(tile.getByRole('status')).toBeVisible();
+  await page.evaluate(() => (window as any).thumbnailProcessing = false);
+  await page.clock.runFor(1100);
+  await expect(tile.locator('img')).toBeVisible();
+  await expect(tile.locator('.a-attachment-thumbnail__badge')).toHaveText('PDF');
+  await expect(tile).toHaveCSS('width', '40px');
+  await tile.locator('img').dispatchEvent('error');
+  await expect(tile.getByRole('img', { name: 'PDF (PDF)', exact: true })).toBeVisible();
+  await tile.getByRole('button', { name: 'Preview invoice.pdf', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Selected file preview' })).toBeVisible();
+});
+
+test("upload requirements and early validation use the record capability", async ({ page }) => {
+  await page.route('https://storage.test/upload', route => route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' } }));
+  const zone = page.getByRole('region', { name: 'File upload drop zone' });
+  const picker = page.getByLabel('Upload files', { exact: true });
+  await expect(picker).toHaveAttribute('accept', 'application/pdf,image/png');
+  await expect(zone).toContainText('PDF, PNG');
+  await expect(zone).toContainText('Up to 1 KB per file');
+  await picker.setInputFiles([
+    { name: 'oversized.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(2048) },
+    { name: 'unsupported.txt', mimeType: 'text/plain', buffer: Buffer.from('text') },
+    { name: 'valid.pdf', mimeType: 'application/pdf', buffer: Buffer.from('valid') },
+  ]);
+  const errors = zone.getByRole('alert');
+  await expect(errors).toContainText('“oversized.pdf” is 2 KB; the limit is 1 KB per file.');
+  await expect(errors).toContainText('“unsupported.txt” cannot be uploaded. Choose PDF, PNG.');
+  await expect.poll(() => page.evaluate(() => (window as any).stagedFiles?.map((f: any) => f.fileName))).toEqual(['valid.pdf']);
 });

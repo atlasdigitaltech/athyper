@@ -72,7 +72,11 @@ const client = {
         uploadUrl: "https://storage.test/upload",
       };
     }
-    if (path.endsWith("/finalize")) return { status: "active" };
+    if (path.endsWith("/finalize")) {
+      if ((window as any).inspectionFailure) throw new ApiTransportError("http", "This PDF uses an unsupported decoding method. Export a fresh PDF and try again.", 422, { code: "MALWARE_DOCUMENT_UNSUPPORTED" });
+      if ((window as any).malwareFailure) throw new ApiTransportError("http", "Attachment was quarantined", 422, { code: "ATTACHMENT_QUARANTINED" });
+      return { status: "active" };
+    }
     if (path.endsWith("/search")) {
       const q = options.body.q;
       if (q === "slow")
@@ -96,6 +100,7 @@ const client = {
         ...(!options.body.after ? { nextCursor: "next" } : {}),
       };
     }
+    if (path.endsWith("/preview") && options.body.rendition === "thumbnail_sm" && (window as any).thumbnailProcessing) return { state: "processing" };
     if (path.endsWith("/preview"))
       return {
         state: "ready",

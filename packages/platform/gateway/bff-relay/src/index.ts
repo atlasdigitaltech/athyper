@@ -1069,6 +1069,18 @@ export const ENTITY_RUNTIME_OPERATION: RelayOperation = Object.freeze({
   idempotency: "required",
   maxBodyBytes: 256 * 1024,
 });
+/** Closed Activity endpoints shared by Studio, Neon and Mesh. */
+export const ENTITY_ACTIVITY_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
+  ...["", "/timeline", "/audit", "/versions", "/snapshots", "/snapshots/:snapshotId", "/snapshots/:snapshotId/collections/:collectionKey"].map(suffix => ({
+    id: `entity-runtime.activity.read${suffix.replaceAll("/", ".")}`,
+    method: "GET" as const,
+    path: `/api/entity-runtime/:entityCode/records/:recordId/activity${suffix}` as const,
+    requestClass: "json" as const, requiresTenant: true,
+  })),
+  {id:"entity-runtime.activity.capture",method:"POST",path:"/api/entity-runtime/:entityCode/records/:recordId/activity/snapshots",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:1024},
+  {id:"entity-runtime.activity.collection-compare",method:"POST",path:"/api/entity-runtime/:entityCode/records/:recordId/activity/compare/collections/:collectionKey",requestClass:"json",requiresTenant:true,idempotency:"none",maxBodyBytes:8192},
+  {id:"entity-runtime.activity.compare",method:"POST",path:"/api/entity-runtime/:entityCode/records/:recordId/activity/compare",requestClass:"json",requiresTenant:true,idempotency:"none",maxBodyBytes:4096},
+]);
 export const ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     ENTITY_FORM_DESCRIPTOR_OPERATION,
@@ -1082,6 +1094,7 @@ export const ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS: readonly RelayOperation[] =
     ENTITY_RUNTIME_SECTION_OPERATION,
     ENTITY_RUNTIME_COMMENTS_READ_OPERATION,
     ENTITY_RUNTIME_ATTACHMENTS_READ_OPERATION,
+    ...ENTITY_ACTIVITY_RELAY_OPERATIONS,
     ENTITY_RUNTIME_OPERATION,
   ]);
 export const EXPERIENCE_SURFACE_READ_OPERATION: RelayOperation = Object.freeze({

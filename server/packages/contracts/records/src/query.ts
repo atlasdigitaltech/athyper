@@ -1,6 +1,10 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 
 export interface RecordListScopeCoordinate {
+  /** Untrusted parent reference; resolved and authorized by the server on every request. */
+  readonly parentEntityCode?: string;
+  readonly parentRecordId?: string;
+  readonly relationshipKey?: string;
   readonly companyCodeIds?: readonly string[];
   readonly operatingOrganizationIds?: readonly string[];
   readonly partnerRole?: "supplier" | "customer";

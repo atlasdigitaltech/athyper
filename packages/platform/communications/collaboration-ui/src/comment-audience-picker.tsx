@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { useComposerPopover } from "./use-composer-popover";
 type Audience = "public" | "internal" | "private";
 
 /** Only the audiences admitted by the capability are offered. */
@@ -19,28 +20,17 @@ export function CommentAudiencePicker({
   const labels = { public: intl.message("comments.public"), internal: intl.message("comments.internal"), private: intl.message("comments.private") };
   const descriptions = { public: intl.message("comments.publicHelp"), internal: intl.message("comments.internalHelp"), private: intl.message("comments.privateHelp") };
   const root = useRef<HTMLDetailsElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const open = useComposerPopover(root, panel, () => panel.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({preventScroll:true}));
   const close = () => {
+    panel.current?.hidePopover();
     root.current?.removeAttribute("open");
-    root.current?.querySelector("summary")?.focus();
+    root.current?.querySelector("summary")?.focus({preventScroll:true});
   };
-  useEffect(() => {
-    const outside = (event: PointerEvent) => {
-      if (event.target instanceof Node && !root.current?.contains(event.target))
-        root.current?.removeAttribute("open");
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, []);
   return (
     <details
       ref={root}
       className="a-comment-audience-picker"
-      onToggle={() => {
-        if (root.current?.open)
-          root.current
-            .querySelector<HTMLElement>('[aria-checked="true"]')
-            ?.focus();
-      }}
       onKeyDown={(event) => {
         if (event.key === "Escape" && root.current?.open) {
           event.preventDefault();
@@ -68,7 +58,7 @@ export function CommentAudiencePicker({
                 : (current +
                     (event.key === "ArrowDown" ? 1 : items.length - 1)) %
                   items.length;
-          items[next]?.focus();
+          items[next]?.focus({preventScroll:true});
         }
       }}
     >
@@ -76,6 +66,7 @@ export function CommentAudiencePicker({
         role="button"
         aria-label={intl.message("comments.audienceLabel", { audience: labels[value] })}
         aria-haspopup="menu"
+        aria-expanded={open}
         aria-disabled={disabled}
         tabIndex={disabled ? -1 : 0}
         onClick={(event) => {
@@ -84,7 +75,7 @@ export function CommentAudiencePicker({
       >
         {labels[value]} <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </summary>
-      <div role="menu" aria-label={intl.message("comments.audience")}>
+      <div ref={panel} popover="auto" className="a-composer-popover" role="menu" aria-label={intl.message("comments.audience")}>
         {options.map((option) => (
           <button
             key={option}

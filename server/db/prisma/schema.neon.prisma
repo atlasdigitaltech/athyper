@@ -20875,6 +20875,7 @@ model principal_notification_preference {
   created_by        String    @db.Uuid
   updated_at        DateTime? @db.Timestamptz(6)
   updated_by        String?   @db.Uuid
+  record_version    BigInt    @default(1)
   principal         principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "principal_notification_preference_principal_fk")
   tenant            tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "principal_notification_preference_tenant_fk")
 
@@ -20902,6 +20903,7 @@ model principal_profile {
   created_by     String    @db.Uuid
   updated_at     DateTime? @db.Timestamptz(6)
   updated_by     String?   @db.Uuid
+  record_version BigInt    @default(1)
   principal      principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "principal_profile_principal_fk")
   tenant         tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "principal_profile_tenant_fk")
 
@@ -23110,6 +23112,19 @@ model athyper_foundation_receipt_v1 {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model athyper_schema_migration_v1 {
+  migration_name  String    @id
+  sha256          String
+  status          String
+  runner_id       String
+  started_at      DateTime  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  completed_at    DateTime? @db.Timestamptz(6)
+  failure_message String?
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model schema_provisions {
   id                BigInt   @id @default(autoincrement())
   plane             String
@@ -24321,6 +24336,7 @@ model entity_snapshot_identity {
   entity_snapshot_identity                                                                                         entity_snapshot_identity?               @relation("entity_snapshot_identityToentity_snapshot_identity", fields: [tenant_id, previous_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_snapshot_identity_previous_fk")
   other_entity_snapshot_identity                                                                                   entity_snapshot_identity[]              @relation("entity_snapshot_identityToentity_snapshot_identity")
   tenant                                                                                                           tenant                                  @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "entity_snapshot_identity_tenant_fk")
+  record_version                                                                                                   record_version[]
 
   @@id([tenant_id, id])
   @@unique([tenant_id, entity_type, entity_id, payload_hash], map: "entity_snapshot_identity_entity_hash_uq")
@@ -24395,6 +24411,33 @@ model mesh_business_partner_profile_received {
   @@unique([tenant_id, publication_id], map: "mesh_bp_profile_received_publication_uq")
   @@unique([tenant_id, id], map: "mesh_bp_profile_received_tenant_id_uq")
   @@index([tenant_id, network_relationship_id, publication_version(sort: Desc)], map: "mesh_bp_profile_received_relationship_idx")
+  @@schema("snapshot")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model record_version {
+  id                       String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                String                    @db.Uuid
+  plane_code               String
+  entity_type              String
+  entity_code              String
+  entity_id                String                    @db.Uuid
+  source_record_version    BigInt
+  occurred_at              DateTime                  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  actor_principal_id       String                    @db.Uuid
+  operation                String
+  transition_code          String?
+  release_id               String                    @db.Uuid
+  contract_hash            String
+  changed_fields           String[]
+  payload_json             Json
+  snapshot_id              String?                   @db.Uuid
+  entity_snapshot_identity entity_snapshot_identity? @relation(fields: [tenant_id, snapshot_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "record_version_snapshot_fk")
+
+  @@unique([tenant_id, plane_code, entity_type, entity_id, source_record_version], map: "record_version_source_uq")
+  @@index([tenant_id, plane_code, entity_code, entity_type, entity_id, occurred_at(sort: Desc), id(sort: Desc)], map: "record_version_feed_idx")
   @@schema("snapshot")
 }
 

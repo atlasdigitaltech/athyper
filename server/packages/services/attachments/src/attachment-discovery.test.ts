@@ -22,6 +22,26 @@ function fixture(rows: Record<string, unknown>[], allowed=true, commentId?:strin
   return {service,sign,schedule,queries,authorizeCapability};
 }
 describe("qualified attachment discovery",()=>{
+  it("previews a live owned draft and retries only an earlier missing-source failure",async()=>{
+    const f=fixture([{id,draft_id:id,sha256:"hash",content_type:"application/pdf",status:"failed",last_error_code:"source_not_found"}]);
+    expect(await f.service.preview(context,{attachmentId:id})).toMatchObject({state:"processing"});
+    expect(f.schedule).toHaveBeenCalledWith(expect.objectContaining({rebuild:expect.objectContaining({requestId:`comment-linked-${id}`})}));
+    const query=f.queries[0]!;
+    expect(query.sql).toContain("a.uploaded_by=");
+    expect(query.parameters).toContain(context.principalId);
+    expect(query.sql).toContain("draft.tenant_id=a.tenant_id AND draft.id=a.draft_id");
+    expect(query.sql).toContain("draft.principal_id=a.uploaded_by");
+    expect(query.sql).toContain("draft.expires_at>clock_timestamp()");
+    expect(query.sql).toContain("a.metadata->>'entity_type'=");
+    expect(query.sql).toContain("a.is_virus_scanned");
+    const quarantined=fixture([{id,draft_id:id,content_type:"application/pdf",status:"quarantined",last_error_code:"source_not_found"}]);
+    expect(await quarantined.service.preview(context,{attachmentId:id})).toMatchObject({state:"unavailable"});
+    expect(quarantined.schedule).not.toHaveBeenCalled();
+    const expired=fixture([]);
+    await expect(expired.service.preview(context,{attachmentId:id})).rejects.toThrow("PREVIEW_NOT_AVAILABLE");
+    expect(expired.sign).not.toHaveBeenCalled();
+    expect(expired.schedule).not.toHaveBeenCalled();
+  });
   it("deduplicates before cursor pagination and resolves attribution after the bounded page",async()=>{
     const f=fixture([]);
     await f.service.browse(context,{entityType:"business_partner",entityId:"record",after:id});

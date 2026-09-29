@@ -7,6 +7,7 @@ import { loadReferenceProduct } from "../../provisioning/prepare-reference-runti
 import { KyselyMetaEntityAuthoringRepository } from "../../../../packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.js";
 import { compileGraph, validateGraph, runContractTests, sha256 } from "../../../../packages/planes/studio/meta-entity-authoring/src/deterministic.js";
 import { compileSystemReferenceTarget } from "../../../../packages/planes/studio/meta-entity-authoring/src/compilation/target-compiler.js";
+import { amendSuccessorCapabilities } from "../../../../packages/planes/studio/meta-entity-authoring/src/publication/amend-successor-capabilities.js";
 import { amendSuccessorCollaboration } from "../../../../packages/planes/studio/meta-entity-authoring/src/publication/amend-successor-collaboration.js";
 import { amendSuccessorLocalization } from "../../../../packages/planes/studio/meta-entity-authoring/src/publication/amend-successor-localization.js";
 import { adoptCapabilityProfiles } from "../../../../packages/planes/studio/meta-entity-authoring/src/authoring/adopt-capability-profiles.js";
@@ -18,11 +19,14 @@ async function main() {
   const requestId = args.find(a => a.startsWith("--request="))?.slice(10);
   const navigationProductPath = args.find(a => a.startsWith("--navigation-product="))?.slice(21);
   const collaborationProductPath = args.find(a => a.startsWith("--collaboration-product="))?.slice(24);
+  const capabilityProductPath = args.find(a => a.startsWith("--capability-product="))?.slice(21);
   const profileDirectory = args.find(a => a.startsWith("--capability-profiles="))?.slice(22);
   const localizationProductPath = args.find(a => a.startsWith("--localization-product="))?.slice(23);
-  if (!baselinePath || !requestId || args.some(a => !a.startsWith("--baseline=") && !a.startsWith("--request=") && !a.startsWith("--navigation-product=") && !a.startsWith("--collaboration-product=") && !a.startsWith("--capability-profiles=") && !a.startsWith("--localization-product=") && !["--check", "--confirm=DEV-PREPARE-ENTITY-SUCCESSOR"].includes(a)))
-    throw Error("Use --baseline=<captured JSON> --request=<UUID> [--navigation-product=<directory>] [--collaboration-product=<directory>] [--localization-product=<directory>] [--capability-profiles=<directory>] [--check|--confirm=DEV-PREPARE-ENTITY-SUCCESSOR]");
+  if (!baselinePath || !requestId || args.some(a => !a.startsWith("--baseline=") && !a.startsWith("--request=") && !a.startsWith("--navigation-product=") && !a.startsWith("--collaboration-product=") && !a.startsWith("--capability-product=") && !a.startsWith("--capability-profiles=") && !a.startsWith("--localization-product=") && !["--check", "--confirm=DEV-PREPARE-ENTITY-SUCCESSOR"].includes(a)))
+    throw Error("Use --baseline=<captured JSON> --request=<UUID> [--navigation-product=<directory>] [--collaboration-product=<directory>] [--capability-product=<directory>] [--localization-product=<directory>] [--capability-profiles=<directory>] [--check|--confirm=DEV-PREPARE-ENTITY-SUCCESSOR]");
   const navigationProduct = navigationProductPath ? loadReferenceProduct(navigationProductPath) : undefined;
+  if (collaborationProductPath && capabilityProductPath) throw Error("Specify only one capability product amendment");
+  const capabilityProduct = capabilityProductPath ? loadReferenceProduct(capabilityProductPath) : undefined;
   const collaborationProduct = collaborationProductPath ? loadReferenceProduct(collaborationProductPath) : undefined;
   const localizationProduct = localizationProductPath ? loadReferenceProduct(localizationProductPath) : undefined;
   const profileResolver = profileDirectory ? createCapabilityProfileFileResolver(profileDirectory) : undefined;
@@ -103,10 +107,10 @@ async function main() {
           result = { ...result, changeSet, artifact: compileGraph(await repository.loadGraph(changeSet.id)) };
         }
       }
-      if (collaborationProduct) {
+      if (collaborationProduct || capabilityProduct) {
         const repository = new KyselyMetaEntityAuthoringRepository(tx);
         const graph = await repository.loadGraph(result.changeSet.id);
-        const amended = amendSuccessorCollaboration(graph, collaborationProduct);
+        const amended = capabilityProduct ? amendSuccessorCapabilities(graph, capabilityProduct) : amendSuccessorCollaboration(graph, collaborationProduct!);
         if (sha256(amended) !== sha256(graph)) {
           for (const target of baseline.targets) compileSystemReferenceTarget(amended, target.plane);
           const changeSet = await repository.replaceGraph({ changeSetId: result.changeSet.id,

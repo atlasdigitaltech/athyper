@@ -1,3 +1,4 @@
+import { parseRecordOwnerAccess, parseRecordMutationPolicy, parseRecordPredicates } from "@athyper/server-contract-metadata";
 import { parseEntityIntakeSurfaces, parsePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
 import { COMMON_REFERENCE_VIEW_PERMISSION, assertCommonReferenceDescriptor, compileFieldPattern } from "@athyper/server-contract-metadata";
 import { parseEntityIntakeFlows } from "@athyper/contract-platform-entity-runtime";
@@ -49,6 +50,11 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
   const intakeSurfaces = parseEntityIntakeSurfaces(value["intakeSurfaces"] ?? []);
   const intakeFlows = parseEntityIntakeFlows(value["intakeFlows"] ?? []);
   for (const flow of intakeFlows) if (!operations[flow.entryOperation] || !operations[flow.completionOperation]) throw new TypeError("Intake references an unpublished operation");
+  const ownerAccess = value["ownerAccess"] === undefined ? undefined : parseRecordOwnerAccess(value["ownerAccess"]);
+  if (ownerAccess && (!storage["tenantField"] || [ownerAccess.ownerField, ownerAccess.createdByField, ownerAccess.updatedByField].some(key => !fields.some(field => field.key === key && field.type === "uuid" && field.writableOn.length === 0))))
+    throw new Error("Owner access requires tenant storage and an immutable UUID owner field");
+  const recordPredicates=value["recordPredicates"]===undefined?undefined:parseRecordPredicates(value["recordPredicates"]);
+  if(recordPredicates?.some(predicate=>!fields.some(field=>field.key===predicate.field&&field.valueOrigin!=="computed"&&field.valueOrigin!=="aggregate")))throw Error("Record predicate requires a stored field");
   const recordPresentation = value["recordPresentation"] === undefined ? undefined : parseEntityRecordPresentation(value["recordPresentation"]);
   const authorization = value["authorization"] === undefined ? undefined : parseEntityAuthorizationProfile(value["authorization"], {
     entityCode: row.entity_code, planeKey, fields: fields.map(field => field.key), operations,
@@ -94,6 +100,9 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
     ...(authorizationRuntime ? { authorizationRuntime } : {}),
     ...(ai ? { ai } : {}),
     ...(recordPresentation ? { recordPresentation } : {}),
+    ...(ownerAccess ? { ownerAccess } : {}),
+    ...(recordPredicates?{recordPredicates}:{}),
+    ...(value["mutationPolicy"] === undefined ? {} : {mutationPolicy:parseRecordMutationPolicy(value["mutationPolicy"])}),
     ...(value["directoryScope"] === undefined ? {} : { directoryScope: parseEntityDirectoryScope(value["directoryScope"]) }),
     ...(collectionRelationship ? { collectionRelationship } : {}),
     operations,

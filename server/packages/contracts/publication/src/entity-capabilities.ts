@@ -1,3 +1,4 @@
+import { isActivityCapabilityAction, parseActivityBinding, type ActivityBinding } from "./activity-binding.js";
 import { PublicationContractError } from "./errors.js";
 import { capabilityAuthoringMode } from "./capability-authoring-mode.js";
 import { parseCapabilityProfile, validateCapabilityProfileBinding } from "./capability-profile.js";
@@ -10,7 +11,11 @@ import type {
 } from "./artifact.js";
 
 export const ENTITY_CAPABILITY_VERSION = 1 as const;
-export type EntityCapabilityKind = "comments" | "attachments";
+export const ENTITY_CAPABILITY_KINDS = ["comments", "attachments", "activity"] as const;
+export type EntityCapabilityKind = typeof ENTITY_CAPABILITY_KINDS[number];
+export function capabilityBindingKey(kind: EntityCapabilityKind): "commentBinding" | "attachmentBinding" | "activityBinding" {
+  return kind === "comments" ? "commentBinding" : kind === "attachments" ? "attachmentBinding" : "activityBinding";
+}
 export type CapabilityDeclaration =
   | { readonly enabled: false; readonly reasonCode?: string }
   | {
@@ -28,7 +33,7 @@ export interface CapabilityPolicyReference {
 export interface EntityCapabilityAuthoringMember extends CapabilityProfileSource {
   readonly capabilityKey: EntityCapabilityKind;
   readonly declaration: CapabilityDeclaration;
-  readonly binding?: CommentBinding | AttachmentBinding;
+  readonly binding?: CommentBinding | AttachmentBinding | ActivityBinding;
 }
 /** The sole Studio-member to split-artifact mapping; no independent surface policy. */
 export function capabilityArtifactMembers(
@@ -36,12 +41,13 @@ export function capabilityArtifactMembers(
   members: readonly EntityCapabilityAuthoringMember[],
 ) {
   const capabilities: Record<string, CapabilityDeclaration> = {};
-  const operationBindings: Record<string, CommentBinding | AttachmentBinding> =
+  const operationBindings: Record<string, CommentBinding | AttachmentBinding | ActivityBinding> =
     {};
   for (const member of members) {
-    if (!member || !["comments", "attachments"].includes(member.capabilityKey))
+    if (!member || !ENTITY_CAPABILITY_KINDS.includes(member.capabilityKey))
       fail(entityCode, "unknown capability member");
     const mode = capabilityAuthoringMode(member, `${entityCode}.capabilities.${member.capabilityKey}`);
+    if (member.capabilityKey === "activity" && member.declaration.enabled && mode !== "profile") fail(entityCode, "Activity requires a pinned source profile");
     object(
       member,
       ["id", "capabilityKey", "declaration", "binding", "profile", "profileDefinition", "overrides"],
@@ -57,9 +63,7 @@ export function capabilityArtifactMembers(
     capabilities[member.capabilityKey] = declaration;
     if (declaration.enabled)
       operationBindings[
-        member.capabilityKey === "comments"
-          ? "commentBinding"
-          : "attachmentBinding"
+        capabilityBindingKey(member.capabilityKey)
       ] = parseCapabilityBinding(
         mode === "profile" ? capabilityProfileBinding(member, entityCode) : member.binding,
         member.capabilityKey,
@@ -68,7 +72,7 @@ export function capabilityArtifactMembers(
     else if (member.binding !== undefined)
       fail(entityCode, "disabled capability has policy");
   }
-  const notificationPolicies = Object.fromEntries(members.flatMap(member => member.declaration.enabled && member.binding?.notifications
+  const notificationPolicies = Object.fromEntries(members.flatMap(member => member.capabilityKey !== "activity" && member.declaration.enabled && member.binding && "notifications" in member.binding && member.binding.notifications
     ? [[member.capabilityKey, compileEntityNotificationConfiguration(member.binding.notifications, member.capabilityKey)]] : []));
   return { capabilities, operationBindings, ...(Object.keys(notificationPolicies).length ? { notificationPolicies } : {}) };
 }
@@ -135,7 +139,7 @@ export interface AttachmentBinding extends CapabilityBinding {
     readonly renditions: readonly string[];
   };
 }
-const kinds = ["comments", "attachments"] as const;
+const kinds = ENTITY_CAPABILITY_KINDS;
 const base = [
   "profilePolicy",
   "notifications",
@@ -286,6 +290,7 @@ export function parseCapabilityDeclaration(
   }
   return Object.freeze({ ...v }) as CapabilityDeclaration;
 }
+export function parseCapabilityBinding(value: unknown, kind: "activity", entityCode: string): ActivityBinding;
 export function parseCapabilityBinding(
   value: unknown,
   kind: "comments",
@@ -296,16 +301,18 @@ export function parseCapabilityBinding(
   kind: "attachments",
   entityCode: string,
 ): AttachmentBinding;
+export function parseCapabilityBinding(value: unknown, kind: "comments" | "attachments", entityCode: string): CommentBinding | AttachmentBinding;
 export function parseCapabilityBinding(
   value: unknown,
   kind: EntityCapabilityKind,
   entityCode: string,
-): CommentBinding | AttachmentBinding;
+): CommentBinding | AttachmentBinding | ActivityBinding;
 export function parseCapabilityBinding(
   value: unknown,
   kind: EntityCapabilityKind,
   entityCode: string,
-): CommentBinding | AttachmentBinding {
+): CommentBinding | AttachmentBinding | ActivityBinding {
+  if (kind === "activity") return parseActivityBinding(value, entityCode);
   const path = `${entityCode}/operation.${kind === "comments" ? "commentBinding" : "attachmentBinding"}`;
   const fields =
     kind === "comments"
@@ -526,7 +533,7 @@ export function parseCapabilityBinding(
     );
   }
   return Object.freeze(structuredClone(v)) as unknown as
-    CommentBinding | AttachmentBinding;
+    CommentBinding | AttachmentBinding | ActivityBinding;
 }
 
 /** Pure graph validation used both at compilation and persisted-payload admission. */
@@ -549,7 +556,7 @@ export function validateEntityCapabilities(
         core.entityCode,
       );
       const property =
-        kind === "comments" ? "commentBinding" : "attachmentBinding";
+        capabilityBindingKey(kind);
       const raw = operation?.content[property];
       const sections = artifacts.filter(
         (a) =>
@@ -567,6 +574,7 @@ export function validateEntityCapabilities(
       }
       if (!operation) fail(core.artifactKey, "missing Operation artifact");
       const binding = parseCapabilityBinding(raw, kind, core.entityCode);
+      if (kind === "activity" && !binding.profilePolicy) fail(operation.artifactKey, "Activity requires an immutable profile dependency");
       if (registry) {
         if (
           !registry.resolvers.has(binding.admissionResolverKey) ||
@@ -579,7 +587,7 @@ export function validateEntityCapabilities(
             !registry.handlers.has(action.handlerKey) ||
             !registry.permissions?.has(action.permissionCode) ||
             (!action.permissionCode.startsWith(`${core.plane}.`) &&
-              !isCommonCapabilityAction(kind, action))
+              !(kind === "activity" ? isActivityCapabilityAction(action) : isCommonCapabilityAction(kind, action)))
           )
             fail(
               operation.artifactKey,

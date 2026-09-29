@@ -1720,7 +1720,9 @@ BEGIN
       WHERE item->>'permissionCode' LIKE 'legacy.%'
          OR array_length(string_to_array(item->>'permissionCode','.'),1)<>4
          OR (split_part(item->>'permissionCode','.',1)<>lower(p_plane_code)
-             AND item->>'permissionCode'<>'common.platform.reference.view')
+             AND item->>'permissionCode' NOT IN ('common.platform.reference.view',
+               'common.identity.principal.read','common.identity.principal_profile.read','common.identity.principal_profile.edit',
+               'common.identity.principal_notification_preference.read','common.identity.principal_notification_preference.edit'))
          OR split_part(item->>'permissionCode','.',2)='action'
          OR split_part(item->>'permissionCode','.',3)='action'
          OR COALESCE(item->>'permissionId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
@@ -1756,6 +1758,26 @@ BEGIN
              OR item->>'coordinateSource' IS DISTINCT FROM 'tenant_context'
              OR item->>'coordinateKey' IS NOT NULL OR item->>'resolverKey' IS NOT NULL) THEN
         RAISE EXCEPTION 'COMMON_REFERENCE_READ_ONLY_BINDING_REQUIRED' USING ERRCODE='check_violation';
+      END IF;
+    END IF;
+    -- Identity capabilities stay exact-tenant and bound to their published owner
+    -- dataset. Administer is a separate runtime authority, never an operation binding.
+    IF EXISTS (SELECT 1 FROM jsonb_array_elements(v_bindings) item WHERE item->>'permissionCode' LIKE 'common.identity.%') THEN
+      IF p_compiled_json->>'planeKey' IS DISTINCT FROM lower(p_plane_code)
+        OR p_compiled_json#>>'{storage,schema}' IS DISTINCT FROM 'master'
+        OR p_compiled_json#>>'{storage,tenantField}' IS DISTINCT FROM 'tenant_id'
+        OR p_compiled_json#>>'{storage,object}' IS DISTINCT FROM p_compiled_json->>'entityCode'
+        OR p_compiled_json#>>'{ownerAccess,administerPermission}' IS DISTINCT FROM 'common.identity.principal.administer'
+        OR p_compiled_json#>>'{ownerAccess,ownerField}' IS DISTINCT FROM (CASE WHEN p_compiled_json->>'entityCode'='principal' THEN 'id' ELSE 'principal_id' END)
+        OR EXISTS (SELECT 1 FROM jsonb_array_elements(v_bindings) item
+          WHERE item->>'permissionCode' IS DISTINCT FROM 'common.identity.'||(p_compiled_json->>'entityCode')||'.'||(CASE WHEN item->>'operationKey' IN ('list','read') THEN 'read' ELSE 'edit' END)
+            OR item->>'operationKey' NOT IN ('list','read','create','patch')
+            OR item->>'entityCode' IS DISTINCT FROM p_compiled_json->>'entityCode'
+            OR item->>'permissionKind' IS DISTINCT FROM 'capability'
+            OR item->>'scopeKind' IS DISTINCT FROM 'tenant'
+            OR item->>'coordinateSource' IS DISTINCT FROM 'tenant_context'
+            OR item->>'coordinateKey' IS NOT NULL OR item->>'resolverKey' IS NOT NULL) THEN
+        RAISE EXCEPTION 'COMMON_IDENTITY_OWNER_BINDING_REQUIRED' USING ERRCODE='check_violation';
       END IF;
     END IF;
     IF EXISTS(SELECT 1 FROM jsonb_array_elements(v_bindings) item

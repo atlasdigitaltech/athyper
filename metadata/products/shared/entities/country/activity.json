@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.entity-activity-source/1",
+  "profile": {
+    "code": "platform.activity.standard",
+    "version": 2
+  }
+}

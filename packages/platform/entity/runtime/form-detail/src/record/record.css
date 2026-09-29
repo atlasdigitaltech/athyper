@@ -564,3 +564,7 @@
   font-weight: var(--a-font-weight-regular);
   line-height: var(--a-line-height-snug);
 }
+
+/* Hidden navigation settings cannot create overflow for long translations. */
+.a-entity-record__view-control:not([open]) > div { display:none; }
+.a-entity-record__view-setting-copy { min-inline-size:0; white-space:normal; overflow-wrap:anywhere; }
