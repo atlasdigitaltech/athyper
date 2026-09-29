@@ -60,25 +60,13 @@ export function createAtlasBusinessContextResolver(options: {
         descriptor.planeKey !== context.planeKey
       )
         return deny();
-      // Legacy BP context transport is allowed; this does not enable any additional tools.
       if (
         descriptor.ai &&
         (!descriptor.ai.enabled ||
           !descriptor.ai.contextKinds.includes(page.kind))
       )
         return deny();
-      if (
-        !descriptor.ai &&
-        !(context.planeKey === "neon" && page.entityCode === "business_partner")
-      )
-        return deny();
-      // Case relationships remain owner-specific. Work coordinates are validated by the Records list owner.
-      if (
-        page.kind === "record" &&
-        page.entityCode === "business_partner" &&
-        page.roleLens &&
-        !["all", "supplier", "customer"].includes(page.roleLens)
-      )
+      if (!descriptor.ai)
         return deny();
       if (
         page.workContext?.networkAccountId &&
@@ -88,13 +76,11 @@ export function createAtlasBusinessContextResolver(options: {
       )
         return deny();
       if (page.kind === "record" && page.caseId) {
-        if (page.entityCode !== "business_partner" || !options.cases)
-          return deny();
+        if (!options.cases) return deny();
         try {
           await options.cases.read({
             context,
             requestId: page.caseId,
-            businessPartnerId: page.recordId,
           });
         } catch {
           return deny();

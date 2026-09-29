@@ -15,7 +15,6 @@ import { runWithRequestContext } from "@athyper/server-foundation/context";
 import {
   DevelopmentPublicationWorkflow,
   KyselyMetaEntityAuthoringRepository,
-  publishedBusinessPartnerIntakeOverlay,
   sha256,
   baselineJsonHash,
   type MetaEntityAuthoringService,
@@ -75,7 +74,7 @@ export function admitDevIntakePrerequisite(
     sha256(graph) === pin.contractHash,
     "DEV_PUBLICATION_PREREQUISITE_CHANGED",
   );
-  let proposed = structuredClone(publishedBusinessPartnerIntakeOverlay(graph));
+  let proposed = structuredClone(graph);
   // A reviewed restoration carrier is a one-time coordinate. The fresh workload
   // draft must review a new coordinate and the full native intake projection;
   // prepareRuntimeRestorationRelease still enforces an empty target at publish.
@@ -336,9 +335,8 @@ export function registerDevPublicationRoutes(
             (p: unknown) =>
               typeof p === "string" && config.targets.includes(p as never),
           ) &&
-          (body.overlay === "intake-presentation" ||
-            (body.overlay === "intake-prerequisite" &&
-              Boolean(config.intakePrerequisite))) &&
+          body.overlay === "intake-prerequisite" &&
+          Boolean(config.intakePrerequisite) &&
           (body.dryRun === undefined || typeof body.dryRun === "boolean"),
         "DEV_PUBLICATION_REQUEST_INVALID",
       );
@@ -379,15 +377,12 @@ export function registerDevPublicationRoutes(
         },
         {
           current,
-          overlays: {
-            "intake-presentation": publishedBusinessPartnerIntakeOverlay,
-            ...(prerequisite
-              ? {
-                  "intake-prerequisite": (graph) =>
-                    reusePublishedIntakePrerequisite(graph, prerequisite.graph),
-                }
-              : {}),
-          },
+          overlays: prerequisite
+            ? {
+                "intake-prerequisite": (graph) =>
+                  reusePublishedIntakePrerequisite(graph, prerequisite.graph),
+              }
+            : {},
           withCurrent: (request, sourceReleaseId, work) =>
             db(config.author.principalId, async (tx) => {
               const lock = await sql<{

@@ -24,7 +24,6 @@ export * from "./attachment-context.js";
 export * from "./surface-draft-generation.js";
 export * from "./atlas-surface-draft-routes.js";
 
-export * from "./business-partner-tools.js";
 export * from "./kysely-thread-repository.js";
 export * from "./conversation-composition.js";
 
@@ -35,8 +34,6 @@ export * from "./insight-reuse-policy.js";
 export * from "./redis-insight-cache.js";
 
 export * from "./business-context.js";
-export { createBusinessPartnerInsightTools } from "./business-partner-insight-tools.js";
-
 export { createAtlasEntitySectionTool } from "./entity-section-tool.js";
 
 

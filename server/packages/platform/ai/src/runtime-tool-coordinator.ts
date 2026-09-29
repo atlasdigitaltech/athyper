@@ -35,7 +35,7 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
     const published = (tool: ReturnType<AtlasToolRegistry["list"]>[number]) => {
       if (!this.metadata || !businessContext) return true;
       if (!descriptor || descriptor.compiledHash !== (businessContext.entityDescriptorHash ?? businessContext.descriptorHash) || descriptor.planeKey !== context.planeKey || descriptor.entityCode !== businessContext.page.entityCode) return false;
-      if (!descriptor.ai) return businessContext.page.entityCode === "business_partner" && context.planeKey === "neon";
+      if (!descriptor.ai) return false;
       if (!descriptor.ai.enabled || !descriptor.ai.contextKinds.includes(businessContext.page.kind)) return false;
       // Mutations keep their separate confirmation/owner contract, never inferred from read metadata.
       return tool.manifest.access !== "read" || descriptor.ai.insightProviders.some(ref => ref.id === tool.manifest.toolCode && String(ref.version) === tool.manifest.version && entityAiProviderContextKind(ref.id) === businessContext.page.kind);
@@ -43,7 +43,6 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
     return this.registry.list()
       .filter(published)
       .filter(tool => tool.manifest.toolCode !== ENTITY_RECORD_TOOL || Boolean(entityRecord))
-      .filter(tool => !businessContext || !tool.manifest.toolCode.startsWith("bp_") || businessContext.page.entityCode === "business_partner")
       .filter((tool) => (!allowedToolCodes || allowedToolCodes.includes(tool.manifest.toolCode)) && (tool.manifest.access === "read" ? admission.readToolsAllowed : admission.mutationToolsAllowed) && tool.manifest.allowedPlanes.includes(context.planeKey) && tool.manifest.requiredPermissions.every((permission) => hasPermission(context, permission)))
       .map((tool) => tool.manifest.toolCode === ENTITY_RECORD_TOOL ? entityRecord! : ({ name: tool.manifest.toolCode, description: tool.manifest.description, inputSchema: tool.manifest.inputSchema, ...(tool.entitySection ? {entitySection: tool.entitySection} : {}) }))
       .map(tool => {
@@ -68,35 +67,12 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
       if (!definition || page?.kind !== "record" || input.arguments.recordId !== page.recordId || Object.keys(input.arguments).some(key => key !== "recordId")) throw new AtlasServiceError("TOOL_DENIED", "Record capability requires the current published record context.");
       input = {...input, arguments: {recordId: page.recordId, entityCode: page.entityCode, descriptorHash: input.businessContext!.entityDescriptorHash ?? input.businessContext!.descriptorHash, ...(page.workContext ? {scopeCoordinate: page.workContext} : {})}};
     }
-    if (registration.manifest.toolCode === "bp_read_list_insights") {
-      if (!page || page.kind !== "manage" || page.entityCode !== "business_partner" || Object.keys(input.arguments).some(key => key !== "target")) throw new AtlasServiceError("TOOL_DENIED", "List insights require the current Manage context.");
-      input = {...input, arguments: {...input.arguments, page}};
-    }
     if (page && registration.entitySection) {
       const ids = page.kind === "record" ? [page.recordId] : page.analysisTarget === "selection" ? page.selectedIds : page.analysisTarget === "visible_page" ? page.visibleIds : undefined;
       if (page.entityCode !== registration.entitySection.entityCode || (ids && !ids.includes(String(input.arguments.recordId)))) throw new AtlasServiceError("TOOL_DENIED", "Section target does not match the current Atlas context.");
     }
     if(page?.kind==="record" && page.asOf)throw new AtlasServiceError("TOOL_DENIED","Current-data tools are unavailable for a historical context.");
-    if(page && ["bp_read_summary", "bp_read_brief", "bp_explain_readiness", "bp_check_eligibility"].includes(registration.manifest.toolCode)) {
-      const target=input.arguments.recordId;
-      const boundIds=page.kind==="record"?[page.recordId]:page.analysisTarget==="selection"?page.selectedIds:page.analysisTarget==="visible_page"?page.visibleIds:undefined;
-      if(page.entityCode!=="business_partner" || (boundIds && !boundIds.includes(String(target))))throw new AtlasServiceError("TOOL_DENIED","The tool target does not match the current Atlas context.");
-      if(input.arguments.operatingOrganizationId && !page.workContext?.operatingOrganizationId) throw new AtlasScopeSelectionRequiredError();
-      if(input.arguments.operatingOrganizationId && input.arguments.operatingOrganizationId!==page.workContext?.operatingOrganizationId)throw new AtlasServiceError("TOOL_DENIED","The tool work context does not match the explicit Atlas work context.");
-      if(page.workContext?.operatingOrganizationId)input={...input,arguments:{...input.arguments,operatingOrganizationId:page.workContext.operatingOrganizationId}};
-    }
-    if (page && ["bp_read_brief", "bp_explain_readiness", "bp_check_eligibility"].includes(registration.manifest.toolCode)) {
-      for (const [key, value] of [["companyCodeId", page.workContext?.companyCodeId], ["role", page.kind === "record" ? page.roleLens : undefined]] as const) {
-        if (input.arguments[key] && (!value || value === "all")) throw new AtlasScopeSelectionRequiredError();
-        if (input.arguments[key] && input.arguments[key] !== value) throw new AtlasServiceError("TOOL_DENIED", "The tool scope does not match the explicit Atlas context.");
-        if (value && value !== "all") input = {...input, arguments: {...input.arguments, [key]: value}};
-      }
-    }
     const governance = registration.manifest.access === "mutation" ? mutationGovernance(input.arguments) : undefined;
-    if (page && ["bp_explain_case_validation", "bp_explain_case_diff", "bp_submit_case"].includes(registration.manifest.toolCode)) {
-      const caseId = governance?.affectedEntityId ?? input.arguments.caseId;
-      if (page.kind !== "record" || page.entityCode !== "business_partner" || !page.caseId || caseId !== page.caseId) throw new AtlasServiceError("TOOL_DENIED", "The case target does not match the current Atlas context.");
-    }
     const preview = await this.service.preview({ context: input.context, threadId: input.threadId, runId: input.runId, callId: input.callId, toolCode: registration.manifest.toolCode, toolVersion: registration.manifest.version, arguments: input.arguments, summary: registration.manifest.displayName, ...(governance ?? {}) });
     if (preview.confirmationRequired) return { preview };
     const result = await this.service.run({ context: input.context, proposalId: preview.proposalId, arguments: input.arguments, signal: input.signal });

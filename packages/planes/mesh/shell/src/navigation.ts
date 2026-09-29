@@ -22,17 +22,4 @@ const catalogRoutes = PLATFORM_CATALOG_ROUTES.mesh.flatMap((workspace, workspace
   })),
 );
 
-const partnerNetworkRoute = catalogRoutes.find((route) => route.moduleCode === "npm");
-if (!partnerNetworkRoute) throw new Error("MESH partner-network catalog route is required");
-
-export const meshRoutes = definePlaneRoutes([
-  ...catalogRoutes,
-  {
-    ...partnerNetworkRoute,
-    id: "mesh.network-rel.npm.business-partner",
-    href: "/mdg/business-partner",
-    label: "Business Partner",
-    requiredPermissions: ["mesh.catalog.network_account.read"],
-    navigation: "hidden",
-  },
-]);
+export const meshRoutes = definePlaneRoutes(catalogRoutes);

@@ -5,7 +5,6 @@ export * from "./publication/publication-workflow.js";
 export { prepareSystemReferenceRelease } from "./publication/prepare-release.js";
 export * from "./authoring-service.js";
 export * from "./development-publication.js";
-export * from "./intake-presentation.js";
 export * from "./graph-preview.js";
 export * from "./durable-graph-preview.js";
 export * from "./durable-graph-preview-adapter.js";

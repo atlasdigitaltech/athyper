@@ -37,13 +37,6 @@ import {
   createCustomerPortalDeliveryHandler,
   CUSTOMER_PORTAL_QUEUE,
   CUSTOMER_PORTAL_JOB,
-  ExternalWorkerIdentityIntentConsumer,
-  KyselyExternalWorkerIdentityIntentRepository,
-  ExternalWorkerIdentityDeliveryWorker,
-  KyselyExternalWorkerIdentityDeliveryRepository,
-  EXTERNAL_WORKER_IDENTITY_DELIVERY_QUEUE,
-  DELIVER_EXTERNAL_WORKER_IDENTITY_INTENTS_JOB,
-  createExternalWorkerIdentityDeliveryHandler,
   IdentityReplayApprovalService,
   createIdentityReplayAuthorizer,
   KyselyIdentityReplayApprovalRepository,
@@ -282,7 +275,6 @@ export function registerPlatform(
       ),
     );
   registerProjectionReconciliationWorker(container);
-  registerExternalWorkerIdentityDelivery(container);
   registerCustomerPortalDelivery(container);
   registerIdentitySagaWorker(container, config);
   if (studioDatabase)
@@ -559,129 +551,6 @@ function registerIdentitySagaRoutes(
         response.status(200).json(row);
       } catch (error) {
         next(error);
-      }
-    },
-  );
-}
-
-function registerExternalWorkerIdentityDelivery(container: Container): void {
-  const neon = container.adapters.jobNeonDatabase,
-    studio = container.adapters.jobAthyperDatabase;
-  if (!neon || !studio) return;
-  const repository = new KyselyExternalWorkerIdentityDeliveryRepository(
-    (work) =>
-      neon.withSystemTransaction((transaction) => work(transaction as never)),
-  );
-  const worker = new ExternalWorkerIdentityDeliveryWorker({
-    workerId: `external-worker-identity-${process.env["HOSTNAME"] ?? "worker"}`,
-    repository,
-    async consumer(tenantId) {
-      const actor = await studio.withSystemTransaction(
-        async (transaction) =>
-          (
-            await sql<{
-              id: string;
-            }>`SELECT id FROM master.principal WHERE tenant_id=${tenantId}::uuid AND status='active' ORDER BY (principal_type='service_account') DESC,created_at,id LIMIT 1`.execute(
-              transaction,
-            )
-          ).rows[0],
-      );
-      if (!actor)
-        throw Object.assign(
-          new Error("Studio recipient tenant has no active delivery principal"),
-          { code: "EXTERNAL_WORKER_INTENT_ACTOR_MISSING" },
-        );
-      return new ExternalWorkerIdentityIntentConsumer(
-        new KyselyExternalWorkerIdentityIntentRepository(
-          (work) =>
-            studio.withSystemTransaction((transaction) =>
-              work(transaction as never),
-            ),
-          actor.id,
-        ),
-      );
-    },
-    capture(error, item) {
-      captureOperationalError(error, {
-        component: "external-worker-identity-delivery",
-        "outbox.id": item.outboxId,
-        "source.tenant_id": item.sourceTenantId,
-      });
-    },
-  });
-  if (container.runtimes.jobs)
-    container.runtimes.jobs.register(
-      EXTERNAL_WORKER_IDENTITY_DELIVERY_QUEUE,
-      DELIVER_EXTERNAL_WORKER_IDENTITY_INTENTS_JOB,
-      createExternalWorkerIdentityDeliveryHandler(worker),
-    );
-  container.runtimes.jobDefinitions.push({
-    code: DELIVER_EXTERNAL_WORKER_IDENTITY_INTENTS_JOB,
-    owner: "@athyper/server-platform-iam",
-    queue: EXTERNAL_WORKER_IDENTITY_DELIVERY_QUEUE,
-    name: DELIVER_EXTERNAL_WORKER_IDENTITY_INTENTS_JOB,
-    scope: "plane",
-    payloadSchema: {
-      name: DELIVER_EXTERNAL_WORKER_IDENTITY_INTENTS_JOB,
-      version: 1,
-    },
-    timeoutMs: 120_000,
-    maxAttempts: 1,
-    executionRetentionDays: 90,
-  });
-  if (container.runtimes.scheduler)
-    container.runtimes.scheduledJobs.push({
-      scheduleId: "trustiam-external-worker-intent-delivery",
-      queue: EXTERNAL_WORKER_IDENTITY_DELIVERY_QUEUE,
-      name: DELIVER_EXTERNAL_WORKER_IDENTITY_INTENTS_JOB,
-      data: { limit: 100 },
-      pattern: { kind: "interval", everyMs: 15_000 },
-      options: {
-        jobId: "trustiam:external-worker:intent:delivery",
-        maxAttempts: 1,
-        payloadSchema: {
-          name: DELIVER_EXTERNAL_WORKER_IDENTITY_INTENTS_JOB,
-          version: 1,
-        },
-        execution: {
-          planeKey: "studio",
-          scope: "plane",
-          principalId: "trustiam-external-worker-intent-delivery",
-        },
-      },
-    });
-  container.runtimes.health.register(
-    "trustiam.external-worker-intent-delivery",
-    async () => {
-      try {
-        const row = await neon.withSystemTransaction(
-          async (transaction) =>
-            (
-              await sql<{
-                pending: number;
-                dead_letters: number;
-                oldest_seconds: number | null;
-              }>`SELECT count(*) FILTER(WHERE status IN('pending','failed','processing'))::int pending,count(*) FILTER(WHERE status='dead_letter')::int dead_letters,extract(epoch FROM clock_timestamp()-min(created_at) FILTER(WHERE status IN('pending','failed','processing')))::int oldest_seconds FROM event.outbox WHERE topic='neon-workforce-iam'`.execute(
-                transaction,
-              )
-            ).rows[0],
-        );
-        return row &&
-          row.dead_letters === 0 &&
-          Number(row.oldest_seconds ?? 0) < 900
-          ? { status: "healthy", message: `pending=${row.pending}` }
-          : {
-              status: "unhealthy",
-              message: `pending=${row?.pending ?? 0}, dead_letters=${row?.dead_letters ?? 0}, oldest_seconds=${row?.oldest_seconds ?? 0}`,
-            };
-      } catch (error) {
-        return {
-          status: "unhealthy",
-          message:
-            error instanceof Error
-              ? error.message
-              : "External-worker IAM delivery unavailable",
-        };
       }
     },
   );

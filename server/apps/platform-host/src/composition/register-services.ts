@@ -27,7 +27,6 @@ import { createKyselyPermissionResolver } from "@athyper/server-platform-iam";
 import { expireCommentDrafts } from "@athyper/server-platform-collaboration";
 import { createEntityCapabilityPolicy, EntityCapabilityPolicyError, canReplyAtDepth } from "@athyper/server-platform-experience";
 import { createMetaEntityActivationInspector } from "./meta-entity-activation-inspection.js";
-import { createTaskEditPolicyAuthoring, mountTaskEditPolicyAuthoring } from "./task-edit-policy-authoring.js";
 import { HttpError } from "@athyper/server-runtime-http";
 import { addressFormChoices, bankFormChoices, bankFormSources, createSharedReferenceDirectory, isSharedReferenceSourceKey, requiresSharedReferenceDependency } from "@athyper/server-service-records";
 import { readPublishedNotificationConfiguration, readPublishedCollectionConfiguration } from "@athyper/server-service-publication";
@@ -86,7 +85,6 @@ import { registerContactVerification, type ContactVerificationFactory } from "./
 import { createKyselyEntitlementRuntime } from "@athyper/server-platform-entitlements";
 import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
 import { TenantPublicationOrchestrator } from "./tenant-publication-orchestrator.js";
-import { createRevisionAuthorizer, type RevisionPermissions } from "./shared/entity-runtime/revision-authorizer.js";
 import { createEntityRuntimeHandlerRegistry } from "./entity-runtime-handler-registry.js";
 import type {
   CommandExecutionStore,
@@ -406,7 +404,6 @@ export interface ServiceRegistrationDependencies {
   readonly activityAdapters?: readonly import("./shared/entity-runtime/activity-recording.js").ActivityAdapterRegistration[];
   readonly compiledRuntimePublication?: ConstructorParameters<typeof KyselyPublicationAuthorityWork>[0]["compiledRuntimePublication"];
   readonly entityParentScopeBindings?: readonly EntityParentScopeBinding[];
-  readonly taskPolicyPermissions?: RevisionPermissions;
   readonly entityScopeBindings?: readonly EntityScopeBinding[];
   readonly entityBackends?: readonly Omit<Parameters<typeof createEntityBackendAuthorizer>[0], "authority">[];
   readonly documentBindings?: Pick<Parameters<typeof createDocumentService<RecordTransaction>>[0], "resolveTrustedSource" | "authorizeArtifact">;
@@ -794,7 +791,6 @@ export function registerServices(
             return rows;
           }),
       },
-      dependencies.taskPolicyPermissions,
       dependencies.compiledRuntimePublication ?? (() => {
         if (config.mode !== "worker") return undefined;
         const configuration = loadPublicationWorkloadConfiguration(process.env, config.env);
@@ -4600,39 +4596,11 @@ function registerPublication(
   authorizationCompilation?: ConstructorParameters<
     typeof KyselyPublicationAuthorityWork
   >[0]["authorizationCompilation"],
-  taskPolicyPermissions?: RevisionPermissions,
   compiledRuntimePublication?: ConstructorParameters<typeof KyselyPublicationAuthorityWork>[0]["compiledRuntimePublication"],
 ): void {
   const authorityDatabase = databases.studio;
   if (!authorityDatabase)
     throw new Error("Publication requires the Studio authority database");
-  if (config.publication.apiEnabled && container.adapters.taskPolicyWriterDatabase) {
-    const taskPolicyDatabase = container.adapters.taskPolicyWriterDatabase.database as unknown as Kysely<Record<string, never>>;
-    const taskPolicyAuthorizer = createRevisionAuthorizer({ permissions: taskPolicyPermissions, get: (tenantId, revisionId) => taskPolicyDatabase.transaction().execute(async tx => {
-      await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(tx);
-      const row = (await sql<{created_by:string}>`SELECT created_by FROM control.policy_definition WHERE tenant_id=${tenantId}::uuid AND id=${revisionId}::uuid AND entity_type='workflow.task_edit'`.execute(tx)).rows[0];
-      return row ? {createdBy:row.created_by} : null;
-    }) });
-    const taskEditAuthoring = createTaskEditPolicyAuthoring({ database: taskPolicyDatabase, authorizer: taskPolicyAuthorizer, permissions: taskPolicyPermissions,
-      resolvePrincipal: async (context, tx) => {
-        const identities = await authorityDatabase.transaction().execute(async source => {
-          await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true),set_config('app.current_principal_id',${context.principalId},true)`.execute(source);
-          return (await sql<{provider_code:string;realm_key:string;subject_id:string;issuer:string|null}>`SELECT provider_code,realm_key,subject_id,issuer FROM master.principal_identity_binding WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND realm_key=${context.realmKey} AND status='active' AND is_active AND is_primary`.execute(source)).rows;
-        });
-        if(identities.length!==1) throw new HttpError(409,"TASK_POLICY_IDENTITY_UNRESOLVED","Studio author identity is not uniquely bound");
-        const identity=identities[0]!;
-        const targets=(await sql<{principal_id:string}>`SELECT b.principal_id FROM master.principal_identity_binding b WHERE b.tenant_id=${context.tenantId}::uuid AND b.provider_code=${identity.provider_code} AND b.realm_key=${identity.realm_key} AND b.subject_id=${identity.subject_id} AND b.issuer IS NOT DISTINCT FROM ${identity.issuer} AND b.status='active' AND b.is_active`.execute(tx)).rows;
-        if(targets.length!==1) throw new HttpError(409,"TASK_POLICY_IDENTITY_UNRESOLVED","The author has no unique active identity in the target plane");
-        const targetId=targets[0]!.principal_id;
-        await sql`SELECT set_config('app.current_principal_id',${targetId},true)`.execute(tx);
-        if(!(await sql`SELECT id FROM master.principal WHERE tenant_id=${context.tenantId}::uuid AND id=${targetId}::uuid AND status='active' AND is_active`.execute(tx)).rows.length) throw new HttpError(409,"TASK_POLICY_IDENTITY_UNRESOLVED","Target author identity is inactive");
-        return targetId;
-      },
-    });
-    container.platform.httpRegistrars.push(app => mountTaskEditPolicyAuthoring(app, {
-      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, service: taskEditAuthoring,
-    }));
-  }
   const devConfiguration = loadDevPublicationConfiguration(process.env, config.env);
   const devRuntime = devConfiguration?.runtimeApproval && authorizationCompilation
     ? createDevRuntimePublication({ environment: config.env, database: (container.adapters.athyperDatabase?.database ?? authorityDatabase) as Kysely<Record<string, never>>,
@@ -4933,8 +4901,6 @@ function createDatabaseOutboxWriter(
     | "governance"
     | "finance"
     | "attachments"
-    | "business-partner"
-    | "mesh-business-partner"
     | "master-data",
 ): OutboxWriter<RecordTransaction> {
   return {

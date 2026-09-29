@@ -147,9 +147,6 @@ importers:
       '@athyper/platform-theme':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/theme
-      '@athyper/product-mesh-business-partner':
-        specifier: workspace:*
-        version: link:../../packages/planes/mesh/business-partner
       '@athyper/product-mesh-shell':
         specifier: workspace:*
         version: link:../../packages/planes/mesh/shell
@@ -247,9 +244,6 @@ importers:
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/ui
-      '@athyper/product-neon-business-partner':
-        specifier: workspace:*
-        version: link:../../packages/planes/neon/business-partner
       '@athyper/product-neon-entity-extensions':
         specifier: workspace:*
         version: link:../../packages/planes/neon/entity-extensions
@@ -259,9 +253,6 @@ importers:
       '@athyper/product-neon-shell':
         specifier: workspace:*
         version: link:../../packages/planes/neon/shell
-      '@athyper/product-neon-workforce':
-        specifier: workspace:*
-        version: link:../../packages/planes/neon/workforce
       geist:
         specifier: ^1.3.1
         version: 1.7.2(next@16.3.3(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(@types/node@25.6.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))
@@ -353,9 +344,6 @@ importers:
       '@athyper/platform-theme':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/theme
-      '@athyper/product-studio-business-partner':
-        specifier: workspace:*
-        version: link:../../packages/planes/studio/business-partner
       '@athyper/product-studio-shell':
         specifier: workspace:*
         version: link:../../packages/planes/studio/shell
@@ -712,43 +700,6 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/planes/mesh/business-partner:
-    dependencies:
-      '@athyper/contract-platform-entity-list':
-        specifier: workspace:*
-        version: link:../../../contracts/platform/entity-list
-      '@athyper/platform-brand':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/brand
-      '@athyper/platform-entity-list-view':
-        specifier: workspace:*
-        version: link:../../../platform/entity/runtime/list-view
-      '@athyper/platform-icons':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/icons
-      '@athyper/platform-shell':
-        specifier: workspace:*
-        version: link:../../../platform/shell/shell
-      '@athyper/platform-shell-app-foundation':
-        specifier: workspace:*
-        version: link:../../../platform/shell/app-foundation
-      '@athyper/product-mesh-shell':
-        specifier: workspace:*
-        version: link:../shell
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
   packages/planes/mesh/shell:
     dependencies:
       '@athyper/platform-api-client':
@@ -782,82 +733,6 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
-
-  packages/planes/neon/business-partner:
-    dependencies:
-      '@athyper/contract-neon-party':
-        specifier: workspace:*
-        version: link:../../../contracts/neon/party
-      '@athyper/contract-platform-entity-runtime':
-        specifier: workspace:*
-        version: link:../../../contracts/platform/entity-runtime
-      '@athyper/platform-api-client':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/api-client
-      '@athyper/platform-communications-collaboration-ui':
-        specifier: workspace:*
-        version: link:../../../platform/communications/collaboration-ui
-      '@athyper/platform-entity-descriptor-client':
-        specifier: workspace:*
-        version: link:../../../platform/entity/runtime/descriptor-client
-      '@athyper/platform-entity-form-detail':
-        specifier: workspace:*
-        version: link:../../../platform/entity/runtime/form-detail
-      '@athyper/platform-icons':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/icons
-      '@athyper/platform-shell':
-        specifier: workspace:*
-        version: link:../../../platform/shell/shell
-      '@athyper/platform-shell-app-foundation':
-        specifier: workspace:*
-        version: link:../../../platform/shell/app-foundation
-      '@athyper/platform-surface-kit':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/surface-kit
-      '@athyper/platform-temporal':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/temporal
-      '@athyper/platform-ui':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/ui
-      '@athyper/product-neon-entity-extensions':
-        specifier: workspace:*
-        version: link:../entity-extensions
-      '@athyper/product-neon-shell':
-        specifier: workspace:*
-        version: link:../shell
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/jsdom':
-        specifier: 21.1.7
-        version: 21.1.7
-      '@types/node':
-        specifier: ^25.6.0
-        version: 25.6.0
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.14)
-      jsdom:
-        specifier: ^25.0.1
-        version: 25.0.1
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      react-dom:
-        specifier: ^19.2.5
-        version: 19.2.8(react@19.2.8)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/planes/neon/entity-extensions:
     dependencies:
@@ -979,95 +854,6 @@ importers:
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.14)
-      jsdom:
-        specifier: ^25.0.1
-        version: 25.0.1
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      react-dom:
-        specifier: ^19.2.5
-        version: 19.2.8(react@19.2.8)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
-
-  packages/planes/neon/workforce:
-    dependencies:
-      '@athyper/platform-api-client':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/api-client
-      '@athyper/platform-shell':
-        specifier: workspace:*
-        version: link:../../../platform/shell/shell
-      '@athyper/platform-shell-app-foundation':
-        specifier: workspace:*
-        version: link:../../../platform/shell/app-foundation
-      '@athyper/platform-surface-kit':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/surface-kit
-      '@athyper/platform-ui':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/ui
-      '@athyper/product-neon-shell':
-        specifier: workspace:*
-        version: link:../shell
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
-
-  packages/planes/studio/business-partner:
-    dependencies:
-      '@athyper/contract-platform-entity-runtime':
-        specifier: workspace:*
-        version: link:../../../contracts/platform/entity-runtime
-      '@athyper/platform-api-client':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/api-client
-      '@athyper/platform-entity-form-detail':
-        specifier: workspace:*
-        version: link:../../../platform/entity/runtime/form-detail
-      '@athyper/platform-entity-list-view':
-        specifier: workspace:*
-        version: link:../../../platform/entity/runtime/list-view
-      '@athyper/platform-icons':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/icons
-      '@athyper/platform-shell':
-        specifier: workspace:*
-        version: link:../../../platform/shell/shell
-      '@athyper/platform-shell-app-foundation':
-        specifier: workspace:*
-        version: link:../../../platform/shell/app-foundation
-      '@athyper/platform-ui':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/ui
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
