@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 225,
+    "configuration:new": 226,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 98,
@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 336,
+    "operational-scripts:new": 337,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -6639,6 +6639,19 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
+        "server/production.env.example",
+        "server/staging.env.example"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:publication_recovery_database_url",
+      "category": "configuration",
+      "key": "publication_recovery_database_url",
+      "legacyLocations": [],
+      "currentLocations": [
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -17276,6 +17289,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/publication-recovery-audit.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:publication-recovery-discovery.test",
+      "category": "operational-scripts",
+      "key": "publication-recovery-discovery.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/publication-recovery-discovery.test.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

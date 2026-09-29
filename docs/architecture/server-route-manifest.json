@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2722,
+          "line": 2757,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2395,
+          "line": 2430,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -7817,7 +7817,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/shared/verification.ts",
-          "line": 65,
+          "line": 68,
           "declaredPath": "/api/platform/verification",
           "kind": "contract"
         }
@@ -7937,7 +7937,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/publication-routes.ts",
-          "line": 28,
+          "line": 29,
           "declaredPath": "/api/publication/deployments/:deploymentId",
           "kind": "contract"
         }
@@ -7952,7 +7952,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/publication-routes.ts",
-          "line": 25,
+          "line": 26,
           "declaredPath": "/api/publication/deployments/:deploymentId/provenance",
           "kind": "contract"
         }
@@ -7967,7 +7967,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/publication-routes.ts",
-          "line": 23,
+          "line": 24,
           "declaredPath": "/api/publication/operations/dead-letters",
           "kind": "contract"
         }
@@ -7982,7 +7982,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/publication-routes.ts",
-          "line": 24,
+          "line": 25,
           "declaredPath": "/api/publication/operations/destinations/:plane/:targetInstance/health",
           "kind": "contract"
         }
@@ -7997,7 +7997,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/publication-routes.ts",
-          "line": 27,
+          "line": 28,
           "declaredPath": "/api/publication/releases/:releaseId",
           "kind": "contract"
         }
@@ -16171,7 +16171,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/shared/verification.ts",
-          "line": 80,
+          "line": 85,
           "declaredPath": "/api/platform/verification/runs",
           "kind": "contract"
         }
@@ -16313,7 +16313,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/publication-routes.ts",
-          "line": 30,
+          "line": 31,
           "declaredPath": "/api/publication/deployments/:deploymentId/retry",
           "kind": "contract"
         }
@@ -16328,7 +16328,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/publication-routes.ts",
-          "line": 26,
+          "line": 27,
           "declaredPath": "/api/publication/operations/deliveries/:deliveryId/replay",
           "kind": "contract"
         }
@@ -16343,7 +16343,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/publication-routes.ts",
-          "line": 31,
+          "line": 32,
           "declaredPath": "/api/publication/publication-keys/:key/rollback",
           "kind": "contract"
         }
@@ -16358,7 +16358,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/publication-routes.ts",
-          "line": 29,
+          "line": 30,
           "declaredPath": "/api/publication/releases/:releaseId/publish",
           "kind": "contract"
         }
