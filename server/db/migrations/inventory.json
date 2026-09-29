@@ -1418,7 +1418,7 @@
       "callers": [],
       "reason": "Post-baseline forward upgrade retained unchanged for reviewed rehearsal. Current foundation owns the final schema; excluded from automatic startup. Notification operations capability catalog; no user grants. Retain exact existing SQL bytes.",
       "canonicalPaths": [
-        "ddl/planes/neon/authz/24_notification_operations_permissions.sql"
+        "ddl/planes/neon/authz/23_hr_policy_simulate_permission.sql"
       ],
       "legacyPlanes": [
         "neon"
