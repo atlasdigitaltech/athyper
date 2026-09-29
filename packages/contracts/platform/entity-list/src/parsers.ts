@@ -14,6 +14,7 @@ import {
 } from "./experience";
 import {
   ENTITY_LIST_MAX_FILTERS,
+  ENTITY_LIST_MAX_SEARCH_LENGTH,
   ENTITY_LIST_MAX_SORT_LEVELS,
   ENTITY_LIST_MAX_VISIBLE_COLUMNS,
 } from "./types";
@@ -1126,8 +1127,10 @@ function optionalText(value: unknown, name: string): string | undefined {
 }
 function optionalQuery(value: unknown): string | undefined {
   const result = optionalText(value, "query");
-  if (result && result.length > 512)
-    throw new TypeError("query exceeds 512 characters");
+  if (result && result.length > ENTITY_LIST_MAX_SEARCH_LENGTH)
+    throw new TypeError(
+      `query exceeds ${ENTITY_LIST_MAX_SEARCH_LENGTH} characters`,
+    );
   return result;
 }
 function boolean(value: unknown, name: string): boolean {

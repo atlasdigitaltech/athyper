@@ -48,6 +48,8 @@ export const ENTITY_LIST_MAX_VISIBLE_COLUMNS = 100;
 export const ENTITY_LIST_MAX_FILTERS = 20;
 export const ENTITY_LIST_MAX_SORT_LEVELS = 10;
 export const ENTITY_LIST_MAX_URL_LENGTH = 8_192;
+/** Longest search term the records API accepts (route schema and query service). */
+export const ENTITY_LIST_MAX_SEARCH_LENGTH = 512;
 /** Values accepted by every Entity Framework relative-date filter endpoint. */
 export const ENTITY_LIST_RELATIVE_DATE_VALUES = [
   "today",

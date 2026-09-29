@@ -1,4 +1,4 @@
-import { ENTITY_LIST_MAX_FILTERS, ENTITY_LIST_MAX_URL_LENGTH, ENTITY_LIST_MAX_VISIBLE_COLUMNS } from "./types";
+import { ENTITY_LIST_MAX_FILTERS, ENTITY_LIST_MAX_SEARCH_LENGTH, ENTITY_LIST_MAX_URL_LENGTH, ENTITY_LIST_MAX_VISIBLE_COLUMNS } from "./types";
 import { parseEntityListDescriptor, parseListLocationState, parseSaveableListState } from "./parsers";
 import type { EntityListDescriptorV1, JsonValue, ListFilterOperator, ListFilterV1, ListLocationStateV1, ListSortV1, SaveableListStateV1, SpreadsheetStateV1 } from "./types";
 
@@ -66,7 +66,13 @@ export function decodeListLocationState(input: URLSearchParams | string, descrip
 }
 
 export function encodeListLocationState(state: ListLocationStateV1, descriptor: EntityListDescriptorV1, options: ListLocationCodecOptions = {}): URLSearchParams {
-  const normalized = parseListLocationState(state, descriptor);
+  // An over-long query can never reach the records API. Drop it instead of
+  // throwing so every other part of the state (filters, sort, pagination)
+  // still round-trips through the URL.
+  const normalized = parseListLocationState(
+    (state.query?.trim().length ?? 0) > ENTITY_LIST_MAX_SEARCH_LENGTH ? { ...state, query: undefined } : state,
+    descriptor,
+  );
   const base = normalizedBase(descriptor, options.baseState);
   const parameters = new URLSearchParams();
   if (normalized.standardViewKey !== base.standardViewKey) parameters.set("standardView",normalized.standardViewKey??"");

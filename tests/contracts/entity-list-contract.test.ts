@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   decodeListLocationState,
   ENTITY_LIST_MAX_FILTERS,
+  ENTITY_LIST_MAX_SEARCH_LENGTH,
   ENTITY_LIST_MAX_URL_LENGTH,
   ENTITY_LIST_MAX_VISIBLE_COLUMNS,
   encodeListLocationState,
@@ -224,6 +225,20 @@ describe("entity list browser contract", () => {
     assert.deepEqual(state.columns, ["code", "name"]);
     assert.equal(state.mode, "table");
     assert.equal(state.pageSize, 50);
+  });
+
+  it("drops an over-long query when encoding instead of throwing, keeping the rest of the state", () => {
+    const descriptor = parseEntityListDescriptor(descriptorPayload);
+    const state = decodeListLocationState("?sort=status:desc:last&density=compact&pageSize=100", descriptor);
+    const oversized = { ...state, query: "x".repeat(ENTITY_LIST_MAX_SEARCH_LENGTH + 1) };
+    const encoded = encodeListLocationState(oversized, descriptor);
+    assert.equal(encoded.has("q"), false);
+    assert.deepEqual(
+      decodeListLocationState(encoded, descriptor),
+      decodeListLocationState(encodeListLocationState({ ...state, query: undefined }, descriptor), descriptor),
+    );
+    assert.equal(encodeListLocationState({ ...state, query: "x".repeat(ENTITY_LIST_MAX_SEARCH_LENGTH) }, descriptor).get("q")?.length, ENTITY_LIST_MAX_SEARCH_LENGTH);
+    assert.throws(() => parseListLocationState(oversized, descriptor), /query exceeds/);
   });
 
   it("round-trips canonical location state and excludes navigation state when saving", () => {
