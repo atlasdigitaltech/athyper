@@ -70,7 +70,8 @@ const UUID_SCHEMA = {
     "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
 } as const;
 
-export function registerPlatform(
+/** Registers the shared Identity/IAM platform capability. */
+export function registerIdentityPlatform(
   container: Container,
   config: HostConfig,
   dependencies: PlatformRegistrationDependencies = {},
@@ -198,6 +199,9 @@ export function registerPlatform(
     }),
   );
 }
+
+/** @deprecated Use registerIdentityPlatform for new host composition. */
+export const registerPlatform = registerIdentityPlatform;
 
 function registerIdentitySagaWorker(
   container: Container,
