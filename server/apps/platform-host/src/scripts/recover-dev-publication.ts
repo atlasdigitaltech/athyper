@@ -1,16 +1,16 @@
 /** Operator-only container command; no HTTP endpoint and no queue consumers.
  * Composes the SAME production loader, runtime qualifier and activation guard.
  */
-import { loadConfig } from "../config/index.js";
+import { loadConfig } from "../config/environment.js";
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 import { runWithRequestContext } from "@athyper/server-foundation/context";
-import { createContainer } from "../composition/create-container.js";
+import { createContainer } from "../kernel/container.js";
 import { registerAdapters } from "../composition/register-adapters.js";
 import { registerRuntimes } from "../composition/register-runtimes.js";
 import { registerPlatform } from "../composition/register-platform.js";
 import { registerServices } from "../composition/register-services.js";
 import { loadDeploymentEntityReleaseReview } from "../composition/entity-release-review-deployment.js";
-import { loadDevPublicationConfiguration } from "../composition/dev-publication.js";
+import { loadDevPublicationConfiguration } from "../development/publication.js";
 import { sql, type Kysely } from "kysely";
 import { KyselyPublicationAuthorityRepository } from "@athyper/server-service-publication";
 

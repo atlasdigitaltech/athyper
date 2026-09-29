@@ -13,7 +13,7 @@ export async function bootstrap(role: ProcessRole) {
   console.info(JSON.stringify({ event: "host.deployment_profile", ...profile }));
 
   // Validate the profile before importing configuration and composition.
-  const { loadConfig } = await import("../config/index.js");
+  const { loadConfig } = await import("../config/environment.js");
   const config = selectDatabaseConfiguration(loadConfig(selectDeploymentEnvironment(process.env, plan)), plan);
   if (role === "scheduler" && config.bullMq.url) {
     const { assertDedicatedJobStore } = await import("@athyper/server-runtime-jobs");
@@ -22,7 +22,7 @@ export async function bootstrap(role: ProcessRole) {
   const lifecycle = createLifecycle();
   try {
     // Load the complete compatibility graph before constructing resources.
-    const { createContainer } = await import("../composition/create-container.js");
+    const { createContainer } = await import("./container.js");
     const { registerAdapters } = await import("../composition/register-adapters.js");
     const { registerRuntimes } = await import("../composition/register-runtimes.js");
     const { registerPlatform } = await import("../composition/register-platform.js");
@@ -33,12 +33,12 @@ export async function bootstrap(role: ProcessRole) {
       : undefined;
     const container = createContainer();
     registerAdapters(container, config, lifecycle, {}, plan);
-    registerRuntimes(container, config, lifecycle);
-    registerPlatform(container, config);
+    registerRuntimes(container, config, lifecycle, {}, plan);
+    registerPlatform(container, config, { servedPlanes: plan.servedPlanes });
     const review = reviewFactory && reviewPath
       ? await reviewFactory(container, reviewPath)
       : undefined;
-    registerServices(container, review ? { entityAuthorizationReleaseReview: review } : {}, config, lifecycle);
+    registerServices(container, review ? { entityAuthorizationReleaseReview: review } : {}, config, lifecycle, plan);
     return { config, lifecycle, container, profile };
   } catch (error) {
     try { await lifecycle.shutdown("bootstrap_failed"); }

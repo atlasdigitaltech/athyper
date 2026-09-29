@@ -445,3 +445,29 @@ describe("BullMQ job runtime", () => {
     await runtime.close();
   });
 });
+
+it("isolates physical queues and rejects foreign work before invoking handlers", async () => {
+  const add = vi.fn(async (_name: string, _data: unknown) => ({ id: "job-owned" }));
+  const queues: string[] = [], workers: string[] = [];
+  let processor: ((job: BullMqJobLike) => Promise<unknown>) | undefined;
+  const handle = vi.fn(async () => ({ status: "completed" as const }));
+  const runtime = createBullMqJobRuntime({ redisUrl: "redis://localhost/2",
+    deployment: { namespace: "host-neon", planes: ["neon"] },
+    createQueue: name => { queues.push(name); return { add, close: async () => {} }; },
+    createWorker: (name, run) => { workers.push(name); processor = run; return { close: async () => {} }; },
+  });
+  try {
+    runtime.register("records", "maintain", { handle });
+    await expect(runtime.enqueue("records", "maintain", {}, { execution: { planeKey: "mesh", scope: "plane", principalId: "worker" } })).rejects.toThrow("JOB_DEPLOYMENT_PLANE_EXCLUDED");
+    expect(queues).toEqual([]);
+    await runtime.enqueue("records", "maintain", {}, { execution: { planeKey: "neon", scope: "plane", principalId: "worker" } });
+    await runtime.start();
+    expect(queues).toEqual(["host-neon.records"]);
+    expect(workers).toEqual(queues);
+    const job = { id: "1", name: "maintain", data: { planeKey: "mesh" }, attemptsMade: 0, timestamp: Date.now(), opts: {}, updateProgress: async () => {} };
+    await expect(processor!(job)).rejects.toThrow("JOB_DEPLOYMENT_PLANE_EXCLUDED");
+    expect(handle).not.toHaveBeenCalled();
+    await processor!({ ...job, data: add.mock.calls[0]![1] });
+    expect(handle).toHaveBeenCalledOnce();
+  } finally { await runtime.close(); }
+});

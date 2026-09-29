@@ -12,7 +12,7 @@ import { compileCompiledEntityArtifacts, compiledEntityRuntimeProjection } from 
 import { canonicalBytes } from '../../../server/packages/adapters/publication-signing/src/canonical-json.js';
 import { createInfisicalSecretStore } from '../../../server/packages/adapters/secretstore-infisical/src/index.js';
 import { CachedPublicationKeyResolver, Ed25519PublicationSigner, Ed25519PublicationVerifier } from '../../../server/packages/adapters/publication-signing/src/index.js';
-import { loadDevPublicationConfiguration, verifyDevPublicationCredential } from '../../../server/apps/platform-host/src/composition/dev-publication.js';
+import { loadDevPublicationConfiguration, verifyDevPublicationCredential } from '../../../server/apps/platform-host/src/development/publication.js';
 const root=process.cwd();
 if(!process.argv.includes('--inside')){
  const successor=process.argv.includes('--confirm-main-dev-binding-successor');

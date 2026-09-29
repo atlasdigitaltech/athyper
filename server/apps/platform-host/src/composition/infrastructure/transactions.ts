@@ -1,7 +1,7 @@
 import { type PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
 import { sql, type Transaction } from "kysely";
 import { stampTransactionActor } from "@athyper/server-adapter-db-core";
-import type { Container } from "../create-container.js";
+import type { Container } from "../../kernel/container.js";
 
 type RecordTransaction = Transaction<Record<string, never>>;
 

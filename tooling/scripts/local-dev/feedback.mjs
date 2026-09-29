@@ -12,7 +12,7 @@ assert.equal(plan.checkout, checkout);
 assert.equal(supervisorState(plan)?.alive, true);
 const source = join(
   checkout,
-  "server/apps/platform-host/src/processes/api/index.ts",
+  "server/apps/platform-host/src/composition/runtimes/http.ts",
 );
 const log = join(plan.root, "api-source.log");
 const original = statSync(source);

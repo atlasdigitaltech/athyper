@@ -4,8 +4,8 @@ import { type PlaneTransactionCoordinator } from "@athyper/server-foundation/tra
 import type { PlaneKey } from "@athyper/server-foundation/context";
 import { createDistributedDescriptorCache, createDistributedCompiledEntityArtifactCache, createMetadataService, createCompiledMetadataReader, readCompiledRuntimeContract, createRuntimeMetaCompiledEntityReleaseSource, createRuntimeDescriptorRepository, PinnedCompiledEntityReader } from "@athyper/server-platform-metadata";
 import type { Kysely, Transaction } from "kysely";
-import type { HostConfig } from "../../../config/index.js";
-import type { Container } from "../../create-container.js";
+import type { HostConfig } from "../../../config/environment.js";
+import type { Container } from "../../../kernel/container.js";
 
 type RecordTransaction = Transaction<Record<string, never>>;
 

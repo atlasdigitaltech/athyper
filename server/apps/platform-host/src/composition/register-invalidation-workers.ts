@@ -4,8 +4,8 @@ import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
 import { createInvalidationWorker } from "@athyper/server-platform-jobs";
 import { createKyselyInvalidationRepository } from "@athyper/server-platform-metadata";
 import type { Kysely } from "kysely";
-import type { HostConfig } from "../config/index.js";
-import type { Container } from "./create-container.js";
+import type { HostConfig } from "../config/environment.js";
+import type { Container } from "../kernel/container.js";
 
 export function registerInvalidationWorkers(
   container: Container,

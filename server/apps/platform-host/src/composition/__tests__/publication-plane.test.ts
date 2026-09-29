@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { publicationPlaneToHostPlane } from "../publication-plane.js";
+import { publicationPlaneToHostPlane } from "../shared/publication/plane.js";
 
 describe("Publication plane host composition", () => {
   it.each([

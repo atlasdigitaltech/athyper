@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {assertGraphPreviewAiBindings} from "../graph-preview-ai-bindings.js";
+import {assertGraphPreviewAiBindings} from "../../development/graph-preview-ai-bindings.js";
 const baseline = {ai: {enabled:true,searchFieldKeys:["old_name"],summaryFieldKeys:["old_name"],insightProviders:[{id:"registered",version:1}]},fields:[{key:"name",storagePath:"name"}],authorization:{fieldPolicies:[{fields:["name"],representation:"plain",readOperation:"read"}]}};
 const proposed = () => ({...baseline,ai:{...baseline.ai,searchFieldKeys:["name"],summaryFieldKeys:["name"]}});
 describe("preview AI field bindings",()=>{

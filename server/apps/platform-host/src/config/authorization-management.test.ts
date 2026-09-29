@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertAuthorizationManagementHostQualification } from "./index.js";
+import { assertAuthorizationManagementHostQualification } from "./environment.js";
 
 describe("C4 authorization management host qualification", () => {
   const qualified = {

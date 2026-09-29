@@ -2,7 +2,7 @@ import type { ProvisioningCommandTransport } from "@athyper/server-contract-inte
 import { createIamAuthenticationMiddleware, readVerifiedRequestContext } from "@athyper/server-platform-iam";
 import { createCommandEnvelopeFactory, createGuestAccessExpiryHandler, createOnboardingSaga, EXPIRE_ONBOARDING_GUEST_ACCESS_JOB, KyselyOnboardingSagaRepository, OnboardingCaseLifecycleService, OnboardingMaintenanceService, ONBOARDING_MAINTENANCE_QUEUE, registerOnboardingRoutes } from "@athyper/server-plane-studio";
 import { sql, type Kysely, type Transaction } from "kysely";
-import type { Container } from "../../../../create-container.js";
+import type { Container } from "../../../../../kernel/container.js";
 import { createHash, randomUUID } from "node:crypto";
 import type { ProcessRole } from "../../../../../config/deployment-profile.js";
 

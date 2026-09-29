@@ -43,7 +43,7 @@ relationship/snapshot model. BP metadata definitions are untouched.
 
 ## Verification limits
 
-Live fixture integration now also passes: see tests-after-live-scope-bindings.txt.
+Live fixture integration now also passes: see history/tests-after-live-scope-bindings.txt.
 Opt in with ENTITY_SCOPE_POSTGRES_TEST=1 and run persisted-scopes.postgres.test.ts.
 It creates its own disposable PostgreSQL 16 container with tmpfs storage and removes
 it after the run; no external database URL or application volumes are used.

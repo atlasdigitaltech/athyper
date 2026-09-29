@@ -706,7 +706,7 @@ The API exposes liveness/readiness/health interfaces, and the runtime compositio
 
 These are failure boundaries, not promises of automatic fallback. Each capability's code and configuration determine whether failure blocks startup, denies an operation, or defers work.
 
-Sources: [API process](../../server/apps/platform-host/src/processes/api/index.ts), [service health composition](../../server/apps/platform-host/src/composition/register-services.ts).
+Sources: [API process](../../server/apps/platform-host/src/composition/runtimes/http.ts), [service health composition](../../server/apps/platform-host/src/composition/register-services.ts).
 
 ### 14.2 Backup and recovery
 

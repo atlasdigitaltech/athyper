@@ -88,7 +88,7 @@ RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharin
 
 # Exercise the emitted dependency graph before an image can replace a running API.
 RUN cd /runtime && node --input-type=module -e \
-    "await import('@athyper/server-service-master-data'); await import('@athyper/server-service-publication'); await import('./dist/processes/api/index.js'); await import('./dist/processes/worker/index.js')"
+    "await import('@athyper/server-service-master-data'); await import('@athyper/server-service-publication'); await import('./dist/composition/runtimes/http.js'); await import('./dist/composition/runtimes/workers.js')"
 
 FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS runtime
 

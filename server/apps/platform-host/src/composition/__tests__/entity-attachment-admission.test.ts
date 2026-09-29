@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import { createEntityAttachmentAdmission } from "../entity-attachment-admission.js";
+import { createEntityAttachmentAdmission } from "../shared/documents/attachment-admission.js";
 
 const context = {
   principalId: "author",

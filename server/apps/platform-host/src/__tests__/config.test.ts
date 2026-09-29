@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { loadConfig } from "../config/index.js";
+import { loadConfig } from "../config/environment.js";
 
 describe("loadConfig", () => {
   function cloudStorage() {

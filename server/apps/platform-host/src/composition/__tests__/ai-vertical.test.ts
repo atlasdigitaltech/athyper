@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { AtlasModelBinding, AtlasModelProvider } from "@athyper/server-contract-ai";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerAtlas, type ServiceRegistrationDependencies } from "../register-services.js";
 
 const binding: AtlasModelBinding = { bindingId: "binding-1", bindingRevision: "1", publicModelId: "atlas-fast", providerId: "openai", upstreamModelId: "gpt-exact", adapterId: "openai-responses", adapterVersion: "1", displayTier: "fast", exposure: "product", status: "available", capabilities: { streaming: true, tools: true, vision: false, structuredOutput: true, maxContextTokens: 1000, maxOutputTokens: 100 }, credentialPolicy: "platform", credentialOwnerId: "platform-openai", providerRegion: "global", dataHandlingProfileId: "no-store", routingPolicyId: "no-fallback-v1", allowedDataClasses: ["internal"], priceVersion: "1", inputPricePerMtokUsd: 1, outputPricePerMtokUsd: 1 };

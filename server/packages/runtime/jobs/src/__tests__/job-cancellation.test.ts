@@ -142,3 +142,17 @@ describe("cross-process cancellation", () => {
     finally { await runtime.close(); }
   });
 });
+
+it("does not cancel another deployment's matching logical queue/job", async () => {
+  const createConnection = broker();
+  const neon = createRedisJobCancellationTransport("redis://localhost/2", { namespace: "host-neon", createConnection, timeoutMs: 20 });
+  const mesh = createRedisJobCancellationTransport("redis://localhost/2", { namespace: "host-mesh", createConnection, timeoutMs: 20 });
+  const meshHandler = vi.fn(async () => true);
+  try {
+    await mesh.listen(meshHandler);
+    expect(await neon.request("records", "same-id", 1)).toBe(false);
+    expect(meshHandler).not.toHaveBeenCalled();
+    expect(await mesh.request("records", "same-id", 1)).toBe(true);
+    expect(meshHandler).toHaveBeenCalledOnce();
+  } finally { await Promise.all([neon.close(), mesh.close()]); }
+});

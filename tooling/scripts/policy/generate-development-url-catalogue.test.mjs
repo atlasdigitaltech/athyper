@@ -129,11 +129,11 @@ test("static scanner expands descriptor paths and reports unresolved declaration
   assert.match(result.unresolved[0].expression, /options.dynamicPath/);
 });
 
-test("catalogue covers the complete Swagger snapshot, compatibility APIs, finance and all app categories", async () => {
+test("catalogue covers the complete Swagger snapshot and all app categories", async () => {
   const snapshot = JSON.parse(
     readFileSync(
       new URL(
-        "../../../docs/architecture/business-partner/development-openapi-inventory.json",
+        "../../../docs/architecture/development-openapi-inventory.json",
         import.meta.url,
       ),
       "utf8",
@@ -162,12 +162,10 @@ test("catalogue covers the complete Swagger snapshot, compatibility APIs, financ
   }
   assert.ok(!deployed.includes("Not found by source scanner"));
   for (const path of [
-    "/api/neon/business-partner-cases/{requestId}/materialize",
-    "/api/neon/business-partner-requests/{requestId}/apply",
-    "/api/neon/external/candidate-registrations/accept",
+    "/api/entity-runtime/{entityCode}/detail-descriptor",
+    "/api/entity-runtime/{entityCode}/records/{recordId}",
     "/api/content/items/{id}/publish",
     "/api/meta-entity-authoring/change-sets/{id}/publish",
-    "/api/neon/finance/budget/command",
   ])
     assert.ok(markdown.includes(path), path);
   for (const app of ["studio", "neon", "mesh"]) {

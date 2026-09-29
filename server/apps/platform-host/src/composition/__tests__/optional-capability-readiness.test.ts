@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createContainer } from "../create-container.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerStudioOnboarding } from "../spaces/studio/trustiam/onb/register.js";
 
 describe("optional capability readiness", () => {

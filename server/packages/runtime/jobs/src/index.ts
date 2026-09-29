@@ -4,3 +4,4 @@ export * from "./bullmq-job-runtime.js";
 export * from "./job-cancellation.js";
 export * from "./job-retention.js";
 export * from "./queue-maintenance.js";
+export * from "./deployment-boundary.js";

@@ -4,8 +4,8 @@ import type { VerifiedToken } from "@athyper/server-contract-auth";
 import { createInMemoryAuditSink } from "@athyper/server-platform-audit";
 import type { PushPlatform } from "@athyper/server-contract-notifications";
 import { createHttpApplication } from "@athyper/server-runtime-http";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerPlatform } from "../register-platform.js";
 import { registerServices } from "../register-services.js";
 

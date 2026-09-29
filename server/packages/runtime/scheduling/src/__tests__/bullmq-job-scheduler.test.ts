@@ -560,3 +560,44 @@ describe("BullMQ job scheduler", () => {
     expect(state.owner).toBeUndefined();
   });
 });
+
+it("uses the producer/worker namespace and rejects unowned schedule planes before claiming ownership", async () => {
+  const owners = createInMemoryScheduleOwnerRegistry();
+  const names: string[] = [];
+  const upsertJobScheduler = vi.fn(async () => {});
+  const scheduler = createBullMqJobScheduler({ redisUrl: "redis://localhost/2", deployment: { namespace: "host-neon", planes: ["neon"] }, ownerRegistry: owners,
+    createQueue: name => { names.push(name); return { upsertJobScheduler, removeJobScheduler: async () => true, close: async () => {} }; },
+  });
+  const definition = { scheduleId: "records.maintenance", queue: "records", name: "maintain", data: {}, pattern: { kind: "interval" as const, everyMs: 60000 }, options: { execution: { planeKey: "mesh" as const, scope: "plane" as const, principalId: "worker" } } };
+  try {
+    await expect(scheduler.upsert(definition)).rejects.toThrow("JOB_DEPLOYMENT_PLANE_EXCLUDED");
+    expect(await owners.listScheduleIds()).toEqual([]);
+    expect(names).toEqual([]);
+    await scheduler.upsert({ ...definition, options: { execution: { ...definition.options.execution, planeKey: "neon" } } });
+    expect(names).toEqual(["host-neon.records"]);
+    expect(upsertJobScheduler).toHaveBeenCalledOnce();
+  } finally { await scheduler.close(); }
+});
+
+it("namespaces both leader fencing and durable owner inventory", async () => {
+  const calls: Array<readonly unknown[]> = [];
+  const client = {
+    async eval(...args: readonly unknown[]) {
+      calls.push(args);
+      return String(args[0]).includes("psetex") ? "owner:1" : 1;
+    },
+    hget: async () => null,
+    hkeys: async () => [],
+  };
+  const connection = { client: Promise.resolve(client), close: async () => {} };
+  const scheduler = createProductionBullMqJobScheduler({
+    redisUrl: "redis://localhost/2", deployment: { namespace: "host-neon", planes: ["neon"] },
+    leaderElection: { key: "dev:leader", connection }, ownerRegistryOptions: { key: "dev:owners", connection },
+    createQueue: () => ({ upsertJobScheduler: async () => {}, removeJobScheduler: async () => true, close: async () => {} }),
+  });
+  try {
+    await scheduler.upsert({ scheduleId: "maintenance", queue: "records", name: "maintain", data: {}, pattern: { kind: "interval", everyMs: 60000 }, options: { execution: { planeKey: "neon", scope: "plane", principalId: "worker" } } });
+    expect(calls.some(args => args[2] === "dev:leader:host-neon" && args[3] === "dev:leader:host-neon:generation")).toBe(true);
+    expect(calls.some(args => args[2] === "dev:leader:host-neon" && args[3] === "dev:owners:host-neon")).toBe(true);
+  } finally { await scheduler.close(); }
+});

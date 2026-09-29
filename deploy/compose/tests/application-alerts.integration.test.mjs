@@ -50,7 +50,7 @@ test(
             "import('/audit/process-metrics-endpoint.ts').then(({startProcessMetricsEndpoint})=>startProcessMetricsEndpoint({render:()=> 'athyper_business_partner_metrics_collection_success 1\\n'}, {port:9464,host:'0.0.0.0'}))",
           ],
           volumes: [
-            `${root}/server/apps/platform-host/src/processes/process-metrics-endpoint.ts:/audit/process-metrics-endpoint.ts:ro`,
+            `${root}/server/apps/platform-host/src/diagnostics/telemetry/process-metrics-endpoint.ts:/audit/process-metrics-endpoint.ts:ro`,
           ],
           networks: ["test"],
         },

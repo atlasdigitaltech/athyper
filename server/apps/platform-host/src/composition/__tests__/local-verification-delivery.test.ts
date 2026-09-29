@@ -1,6 +1,6 @@
 import {randomBytes} from 'node:crypto';
 import {expect,it,vi} from 'vitest';
-import {queueLocalVerificationEmail,localVerificationEmailHandler} from '../local-verification-delivery.js';
+import {queueLocalVerificationEmail,localVerificationEmailHandler} from '../../development/verification-delivery.js';
 import type {Transaction} from 'kysely';
 import type {VerifiedRequestContext} from '@athyper/server-contract-auth';
 import { Kysely, DummyDriver, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from 'kysely';

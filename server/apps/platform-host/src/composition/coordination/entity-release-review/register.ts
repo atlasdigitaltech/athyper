@@ -1,5 +1,5 @@
 import type { Kysely } from "kysely";
-import type { Container } from "../../create-container.js";
+import type { Container } from "../../../kernel/container.js";
 import { loadDeploymentEntityReleaseReview } from "../../entity-release-review-deployment.js";
 
 /** Cross-plane coordination, not ownership by either plane's application. */

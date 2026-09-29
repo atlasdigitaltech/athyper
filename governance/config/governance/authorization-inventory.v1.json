@@ -11064,7 +11064,7 @@
       "sha256": "035b28fd3f173d330d74679eb5cc4c10324b9d1b6e1bf83fa67683616a4220fc"
     },
     {
-      "path": "server/apps/platform-host/src/composition/entity-case-backend-mapping.ts",
+      "path": "server/apps/platform-host/src/composition/spaces/neon/entity-case-backend-mapping.ts",
       "artifactClass": "runtime",
       "sha256": "777c190496553f42da14137fae4ea494e96d4762cf17a667ac9ace9073073f02"
     },
@@ -11079,7 +11079,7 @@
       "sha256": "d12c9d441654c54d5c4cfb5b71ea380cd29284172f421e460e9d5d40a77ce400"
     },
     {
-      "path": "server/apps/platform-host/src/composition/local-graph-preview.ts",
+      "path": "server/apps/platform-host/src/development/graph-preview.ts",
       "artifactClass": "runtime",
       "sha256": "54cf1367f3075d080ce419f7e405570e02209a0995812ded57df840d2e3d75df"
     },
@@ -34043,7 +34043,7 @@
     },
     {
       "field": "allowed",
-      "path": "server/apps/platform-host/src/composition/local-graph-preview.ts",
+      "path": "server/apps/platform-host/src/development/graph-preview.ts",
       "artifactClass": "runtime",
       "lines": [
         59
@@ -45396,7 +45396,7 @@
     },
     {
       "field": "permissionCode",
-      "path": "server/apps/platform-host/src/composition/entity-case-backend-mapping.ts",
+      "path": "server/apps/platform-host/src/composition/spaces/neon/entity-case-backend-mapping.ts",
       "artifactClass": "runtime",
       "lines": [
         22,
@@ -45413,7 +45413,7 @@
     },
     {
       "field": "permissionCode",
-      "path": "server/apps/platform-host/src/composition/local-graph-preview.ts",
+      "path": "server/apps/platform-host/src/development/graph-preview.ts",
       "artifactClass": "runtime",
       "lines": [
         57,
@@ -50834,7 +50834,7 @@
     },
     {
       "field": "permissions",
-      "path": "server/apps/platform-host/src/composition/local-graph-preview.ts",
+      "path": "server/apps/platform-host/src/development/graph-preview.ts",
       "artifactClass": "runtime",
       "lines": [
         103,

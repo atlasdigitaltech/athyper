@@ -3,8 +3,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { VerifiedToken, EffectivePermissionSnapshot } from "@athyper/server-contract-auth";
 import { createInMemoryAuditSink } from "@athyper/server-platform-audit";
 import { createHttpApplication } from "@athyper/server-runtime-http";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerPlatform } from "../register-platform.js";
 import { registerContactVerification, type ContactVerificationFactory, type ContactVerificationAdapter } from "../register-contact-verification.js";
 

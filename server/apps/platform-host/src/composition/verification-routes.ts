@@ -9,8 +9,8 @@ import {
   registerContractRoute,
   type Application,
 } from "@athyper/server-runtime-http";
-import type { HostConfig } from "../config/index.js";
-import type { Container } from "./create-container.js";
+import type { HostConfig } from "../config/environment.js";
+import type { Container } from "../kernel/container.js";
 
 const VERIFICATION_QUEUE = "system-verification";
 const VERIFICATION_JOB = "verification.probe";

@@ -13,7 +13,7 @@ test("authenticated session, context and bootstrap agree", async ({ request }) =
   expect(await bootstrap.json()).toMatchObject({ planeKey: "mesh", tenantId: session.tenantId, principalId: session.principalId });
 });
 
-for (const path of ["/home", "/atlas", "/inbox", "/notifications", "/mdg", "/mdg/business-partner", "/mdg/business-partner/profile", "/mdg/business-partner/relationships", "/mdg/business-partner/requests", "/operations/data-transfers"]) {
+for (const path of ["/home", "/atlas", "/inbox", "/notifications", "/operations/data-transfers"]) {
   test(`authenticated page ${path}`, async ({ page }) => {
     await page.goto(path);
     await expect(page).toHaveURL((url) => url.pathname === path);

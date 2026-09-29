@@ -1,3 +1,4 @@
+import type { RegistrationPlan } from "../kernel/registration-plan.js";
 import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
 import { runWithJobContext } from "@athyper/server-foundation/context";
 import {
@@ -22,9 +23,9 @@ import {
   type ClosableJobScheduler,
 } from "@athyper/server-runtime-scheduling";
 
-import type { HostConfig } from "../config/index.js";
-import type { Container } from "./create-container.js";
-import { captureOperationalError } from "../monitoring/error-collector.js";
+import type { HostConfig } from "../config/environment.js";
+import type { Container } from "../kernel/container.js";
+import { captureOperationalError } from "../diagnostics/telemetry/error-collector.js";
 
 export interface RuntimeRegistrationDependencies {
   createJobs(options: BullMqJobRuntimeOptions): JobRuntime;
@@ -41,8 +42,11 @@ export function registerRuntimes(
   config: HostConfig,
   lifecycle: LifecycleManager,
   overrides: Partial<RuntimeRegistrationDependencies> = {},
+  plan?: RegistrationPlan,
 ): void {
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...overrides };
+  const deployment = plan && plan.profile.name !== "combined"
+    ? { namespace: `host-${plan.profile.name}`, planes: plan.servedPlanes } : undefined;
   if (
     (config.mode === "worker" || config.mode === "scheduler") &&
     !config.bullMq.url
@@ -56,7 +60,7 @@ export function registerRuntimes(
     config.bullMq.url &&
     (config.mode === "api" || config.mode === "worker")
   ) {
-    const jobTransactions = createJobTransactionCoordinator(container);
+    const jobTransactions = createJobTransactionCoordinator(container, plan?.servedPlanes);
     container.runtimes.jobTransactions = jobTransactions;
     const executionStore = createKyselyJobExecutionStore(jobTransactions);
     const executionLifecycle = createJobExecutionLifecycle({
@@ -90,6 +94,7 @@ export function registerRuntimes(
     });
     const jobs = dependencies.createJobs({
       redisUrl: config.bullMq.url,
+      ...(deployment ? { deployment } : {}),
       concurrency: config.bullMq.concurrency,
       lifecycle: monitoredLifecycle,
     });
@@ -105,6 +110,7 @@ export function registerRuntimes(
           ? 30_000
           : 0,
       redisUrl: config.bullMq.url,
+      ...(deployment ? { deployment } : {}),
       leaderElection: {
         key: `athyper:${config.env}:scheduling:leader`,
         onLeadershipLost: (error) =>
@@ -162,7 +168,12 @@ export async function startRuntimes(
 
 function createJobTransactionCoordinator(
   container: Container,
+  servedPlanes?: readonly ("studio" | "neon" | "mesh")[],
 ): JobTransactionCoordinator {
+  const planes = servedPlanes ? new Set(servedPlanes) : undefined;
+  const admit = (plane: "studio" | "neon" | "mesh") => {
+    if (planes && !planes.has(plane)) throw Error("JOB_DEPLOYMENT_PLANE_EXCLUDED");
+  };
   const adapterFor = (planeKey: "studio" | "neon" | "mesh") => {
     const adapter =
       planeKey === "studio"
@@ -185,6 +196,7 @@ function createJobTransactionCoordinator(
   };
   return {
     runTenant(planeKey, actor, work) {
+      admit(planeKey);
       return runWithJobContext(
         {
           requestId: `job-store:${planeKey}:${actor.tenantId}`,
@@ -198,6 +210,7 @@ function createJobTransactionCoordinator(
       );
     },
     runSystem(planeKey, work) {
+      admit(planeKey);
       return systemAdapterFor(planeKey).withSystemTransaction((transaction) =>
         work(transaction as unknown as JobTransaction),
       );

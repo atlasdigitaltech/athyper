@@ -1,3 +1,4 @@
+import { createJobDeploymentBoundary, type JobDeploymentBoundary } from "@athyper/server-runtime-jobs";
 import { jobRetention } from "@athyper/server-runtime-jobs";
 import { Queue, type JobsOptions, type RepeatOptions } from "bullmq";
 import type {
@@ -51,6 +52,7 @@ export interface BullMqScheduleQueue {
 
 export interface BullMqJobSchedulerOptions {
   readonly redisUrl: string;
+  readonly deployment?: JobDeploymentBoundary;
   readonly createQueue?: (
     queue: string,
     connection: BullMqConnectionOptions,
@@ -72,6 +74,7 @@ export interface ClosableJobScheduler extends JobScheduler {
 export function createBullMqJobScheduler(
   options: BullMqJobSchedulerOptions,
 ): ClosableJobScheduler {
+  const boundary = createJobDeploymentBoundary(options.deployment);
   const connection = createBullMqConnectionOptions(options.redisUrl);
   const createQueue =
     options.createQueue ??
@@ -83,7 +86,7 @@ export function createBullMqJobScheduler(
       ? undefined
       : createRedisSchedulerLeaderLease(
           options.redisUrl,
-          options.leaderElection,
+          { ...options.leaderElection, ...(boundary.namespace ? { key: `${options.leaderElection && options.leaderElection.key || "athyper:scheduling:leader"}:${boundary.namespace}` } : {}) },
         ));
   if (!leaderLease && !options.ownerRegistry) {
     throw new Error(
@@ -94,6 +97,7 @@ export function createBullMqJobScheduler(
     options.ownerRegistry ??
     createRedisScheduleOwnerRegistry(options.redisUrl, {
       ...options.ownerRegistryOptions,
+      ...(boundary.namespace ? { key: `${options.ownerRegistryOptions?.key ?? "athyper:scheduling:owners"}:${boundary.namespace}` } : {}),
       leaseKey: leaderLease!.leaseKey,
     });
   let closed = false;
@@ -130,7 +134,7 @@ export function createBullMqJobScheduler(
     validateQueue(name);
     const existing = queues.get(name);
     if (existing) return existing;
-    const created = createQueue(name, connection);
+    const created = createQueue(boundary.queue(name), connection);
     queues.set(name, created);
     return created;
   };
@@ -143,6 +147,7 @@ export function createBullMqJobScheduler(
 
     async upsert(definition) {
       assertOpen(closed);
+      boundary.assertExecution(definition.options?.execution);
       const fencingToken = await acquireMutationFence();
       validateScheduleId(definition.scheduleId);
       const previousOwner = await ownerRegistry.get(definition.scheduleId);
@@ -182,6 +187,7 @@ export function createBullMqJobScheduler(
     },
 
     async inspect(definition): Promise<ScheduleDriftReport> {
+      boundary.assertExecution(definition.options?.execution);
       assertOpen(closed);
       validateScheduleId(definition.scheduleId);
       const queue = queueFor(definition.queue);

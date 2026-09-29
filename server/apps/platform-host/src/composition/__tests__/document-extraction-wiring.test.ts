@@ -3,8 +3,8 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import type { JobHandler } from "@athyper/server-contract-jobs";
 import { createInMemoryAuditSink } from "@athyper/server-platform-audit";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerPlatform } from "../register-platform.js";
 import { registerServices } from "../register-services.js";
 

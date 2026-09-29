@@ -13,8 +13,8 @@ import {
   enforceContractResponses,
 } from "@athyper/server-runtime-http";
 import { createInMemoryAuditSink } from "@athyper/server-platform-audit";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerPlatform } from "../register-platform.js";
 
 const servers: ReturnType<typeof createServer>[] = [];

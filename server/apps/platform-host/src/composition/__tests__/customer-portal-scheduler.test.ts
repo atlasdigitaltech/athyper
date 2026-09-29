@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerPlatform } from "../register-platform.js";
 
 it("schedules Customer delivery in the scheduler process without worker database adapters", () => {

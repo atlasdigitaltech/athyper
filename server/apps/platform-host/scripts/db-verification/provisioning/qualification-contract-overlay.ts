@@ -1,4 +1,4 @@
-import { validatePartnerSectionPublication } from "../../../src/composition/entities/partner-section-contract.js";
+import { validatePartnerSectionPublication } from "../../../src/composition/spaces/neon/partner-section-contract.js";
 export const qualificationContractArtifactKeys = ["business_partner/presentation.section.qualifications-certificates"] as const;
 /** Upgrade only the decision handler binding, never repurpose a historical combined section. */
 export function qualificationContractOverlay(baseline: readonly Record<string, any>[], sources: readonly Record<string, any>[]) {

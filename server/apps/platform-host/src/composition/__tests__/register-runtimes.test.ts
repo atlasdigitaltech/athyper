@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerRuntimes, startRuntimes } from "../register-runtimes.js";
 
 describe("runtime composition", () => {

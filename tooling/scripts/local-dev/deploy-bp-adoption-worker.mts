@@ -9,9 +9,9 @@ import {
   canonicalBytes,
   sha256,
 } from "../../../server/packages/adapters/publication-signing/src/canonical-json.js";
-import { verifyDevPublicationCredential } from "../../../server/apps/platform-host/src/composition/dev-publication.js";
-import { loadConfig } from "../../../server/apps/platform-host/src/config/index.js";
-import { createContainer } from "../../../server/apps/platform-host/src/composition/create-container.js";
+import { verifyDevPublicationCredential } from "../../../server/apps/platform-host/src/development/publication.js";
+import { loadConfig } from "../../../server/apps/platform-host/src/config/environment.js";
+import { createContainer } from "../../../server/apps/platform-host/src/kernel/container.js";
 import { registerAdapters } from "../../../server/apps/platform-host/src/composition/register-adapters.js";
 import { registerPlatform } from "../../../server/apps/platform-host/src/composition/register-platform.js";
 import { registerServices } from "../../../server/apps/platform-host/src/composition/register-services.js";

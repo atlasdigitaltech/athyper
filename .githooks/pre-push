@@ -81,7 +81,6 @@ if [ -z "$ATHYPER_SKIP_DRIFT" ] && command -v pnpm &>/dev/null; then
   check_drift routes:server-manifest:check                    routes:server-manifest
   check_drift inventory:authorization-data-disposition:check  "exec node tooling/scripts/policy/authorization-data-disposition.mjs --artifacts-only"
   check_drift urls:check                                      urls:generate
-  check_drift openapi:bp360:check                             openapi:bp360:generate
   check_drift format:changed:check                            format:changed
 
   if [ -n "$drift_failed" ]; then

@@ -23,13 +23,15 @@ interface CancellationConnection {
 /** Acknowledgements mean the owning worker has recorded cancellation, not just received it. */
 export function createRedisJobCancellationTransport(redisUrl: string, options: {
   readonly timeoutMs?: number;
+  readonly namespace?: string;
   readonly createConnection?: () => CancellationConnection;
 } = {}): JobCancellationTransport {
+  if (options.namespace !== undefined && !/^[a-z][a-z0-9-]{0,47}$/.test(options.namespace)) throw new Error("JOB_DEPLOYMENT_BOUNDARY_INVALID");
   const timeoutMs = options.timeoutMs ?? 5_000;
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1) throw new TypeError("Cancellation timeout must be a positive integer");
   const connection = createBullMqConnectionOptions(redisUrl);
   // Redis Pub/Sub spans databases, so isolate the channel by the BullMQ database.
-  const channel = `athyper:jobs:${connection.db ?? 0}:cancel`;
+  const channel = `athyper:jobs:${connection.db ?? 0}${options.namespace ? `:${options.namespace}` : ""}:cancel`;
   const replies = `${channel}:reply:${randomUUID()}`;
   const createConnection = options.createConnection ?? (() => new RedisConnection(connection, { shared: false }));
   let publisher: CancellationConnection | undefined;

@@ -1,7 +1,7 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { createIamAuthenticationMiddleware, readVerifiedRequestContext } from "@athyper/server-platform-iam";
 import type { ContactVerificationConfiguration } from "../config/contact-verification.js";
-import type { Container } from "./create-container.js";
+import type { Container } from "../kernel/container.js";
 
 type Operation = "request" | "complete" | "verify";
 type Target = { readonly operation: Operation; readonly id: string };

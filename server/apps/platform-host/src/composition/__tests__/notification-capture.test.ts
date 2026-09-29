@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerAdapters } from "../register-adapters.js";
 afterEach(() => vi.unstubAllEnvs());
 function setup() {

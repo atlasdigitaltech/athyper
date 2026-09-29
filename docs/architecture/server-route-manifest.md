@@ -10,9 +10,9 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | --- | ---: |
 | Matched identities | 66 |
 | Legacy-only identities | 802 |
-| Current-only identities | 361 |
+| Current-only identities | 350 |
 | Legacy occurrences | 898 |
-| Current occurrences | 427 |
+| Current occurrences | 416 |
 
 | Status | Method | Normalized path | Legacy sources | Current sources |
 | --- | --- | --- | ---: | ---: |
@@ -299,7 +299,6 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/governance/cycle-types/:param/templates` | 1 | 0 |
 | current-only | GET | `/api/governance/legal-holds/:param` | 0 | 1 |
 | current-only | GET | `/api/governance/process-selection/cases/:param/preview` | 0 | 1 |
-| current-only | GET | `/api/governance/process-tasks/cases/:param/view` | 0 | 1 |
 | legacy-only | GET | `/api/governance/report-packs` | 1 | 0 |
 | matched | GET | `/api/governance/report-packs/:param` | 1 | 1 |
 | matched | GET | `/api/governance/report-packs/:param/download` | 1 | 1 |
@@ -597,8 +596,6 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | GET | `/api/studio/business-partner-definitions/:param` | 0 | 1 |
 | current-only | GET | `/api/studio/experience-surfaces` | 0 | 1 |
 | current-only | GET | `/api/studio/local-business-partner-preview` | 0 | 1 |
-| current-only | GET | `/api/studio/supplier-task-rule-baselines` | 0 | 1 |
-| current-only | GET | `/api/studio/task-edit-policies/:param` | 0 | 1 |
 | legacy-only | GET | `/api/user/tenant-admin` | 1 | 0 |
 | current-only | GET | `/api/v1/records/:param/import-template.xlsx` | 0 | 1 |
 | current-only | GET | `/api/v1/records/exports/:param/download` | 0 | 1 |
@@ -903,12 +900,6 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | POST | `/api/governance/legal-holds/:param/activate` | 0 | 1 |
 | current-only | POST | `/api/governance/legal-holds/:param/release` | 0 | 1 |
 | current-only | POST | `/api/governance/legal-holds/:param/resources` | 0 | 1 |
-| current-only | POST | `/api/governance/process-tasks/cases/:param/cancel` | 0 | 1 |
-| current-only | POST | `/api/governance/process-tasks/cases/:param/decide` | 0 | 1 |
-| current-only | POST | `/api/governance/process-tasks/cases/:param/edit-preview` | 0 | 1 |
-| current-only | POST | `/api/governance/process-tasks/cases/:param/escalate` | 0 | 1 |
-| current-only | POST | `/api/governance/process-tasks/cases/:param/information` | 0 | 1 |
-| current-only | POST | `/api/governance/process-tasks/cases/:param/start` | 0 | 1 |
 | matched | POST | `/api/governance/report-packs` | 1 | 1 |
 | legacy-only | POST | `/api/iam/admin/atlas-support-sessions` | 1 | 0 |
 | legacy-only | POST | `/api/iam/admin/atlas-support-sessions/end` | 1 | 0 |
@@ -1152,8 +1143,6 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | POST | `/api/studio/publication-policies` | 0 | 1 |
 | current-only | POST | `/api/studio/publication-policies/:param/activate` | 0 | 1 |
 | current-only | POST | `/api/studio/publication-policies/:param/execute` | 0 | 1 |
-| current-only | POST | `/api/studio/task-edit-policies` | 0 | 1 |
-| current-only | POST | `/api/studio/task-edit-policies/:param/publish` | 0 | 1 |
 | current-only | POST | `/api/v1/records/:param/exports` | 0 | 1 |
 | current-only | POST | `/api/v1/records/:param/imports` | 0 | 1 |
 | current-only | POST | `/api/v1/records/exports/:param/cancel` | 0 | 1 |

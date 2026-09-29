@@ -1,6 +1,6 @@
 import { PostgresQueryCompiler, type CompiledQuery } from "kysely";
 import { expect, it, vi } from "vitest";
-import { createCollaborationSectionProviders } from "../entities/collaboration/index.js";
+import { createCollaborationSectionProviders } from "../shared/collaboration/index.js";
 
 const context = { tenantId: "tenant", principalId: "viewer", planeKey: "neon" };
 const input = {

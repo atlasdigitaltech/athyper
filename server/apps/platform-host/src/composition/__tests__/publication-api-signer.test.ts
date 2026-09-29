@@ -1,8 +1,8 @@
 import { generateKeyPairSync } from "node:crypto";
 import { it, expect, vi } from "vitest";
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerAdapters } from "../register-adapters.js";
 it("composes a working API signer without enabling compile or dispatch workers", async () => {
   const config = loadConfig(),

@@ -1132,7 +1132,7 @@
     "sha256": "7d15096b88e0b67d625eebb25516f0e0a0e02c2150786a602ee5b3d568a9b644"
   },
   {
-    "path": "server/apps/platform-host/src/composition/create-container.ts",
+    "path": "server/apps/platform-host/src/kernel/container.ts",
     "sha256": "9e61c56d884066b5a981b3c3b5c08575f94c2b3b747c7404b94a1b91cb7d0931"
   },
   {
@@ -1140,7 +1140,7 @@
     "sha256": "936b2b0dc2f5b8e1530caa0be8405b68f3a6b756881f7065edcd35fae8b8f50e"
   },
   {
-    "path": "server/apps/platform-host/src/composition/entity-case-backend-mapping.ts",
+    "path": "server/apps/platform-host/src/composition/spaces/neon/entity-case-backend-mapping.ts",
     "sha256": "777c190496553f42da14137fae4ea494e96d4762cf17a667ac9ace9073073f02"
   },
   {
@@ -1156,7 +1156,7 @@
     "sha256": "d12c9d441654c54d5c4cfb5b71ea380cd29284172f421e460e9d5d40a77ce400"
   },
   {
-    "path": "server/apps/platform-host/src/composition/local-verification-delivery.ts",
+    "path": "server/apps/platform-host/src/development/verification-delivery.ts",
     "sha256": "c0b6da0d39a8a8f8faf1603c246edab79a1ee48133889c1108fcfca3b27328ea"
   },
   {
@@ -1168,7 +1168,7 @@
     "sha256": "16c089a3768560c3af92248b878130bddd762fbceeb8cf78c3c32a4900b3490b"
   },
   {
-    "path": "server/apps/platform-host/src/composition/publication-plane.ts",
+    "path": "server/apps/platform-host/src/composition/shared/publication/plane.ts",
     "sha256": "fd493f6ce2e8ae520a0ce73928a072de84d8d74f16ef1ad20296d89382391315"
   },
   {
@@ -1204,7 +1204,7 @@
     "sha256": "1b917e76511b5d3a4e4746e85d12f71f8217e95f9a7b3fb24582aac0c94e606c"
   },
   {
-    "path": "server/apps/platform-host/src/composition/tenant-publication-orchestrator.ts",
+    "path": "server/apps/platform-host/src/composition/shared/publication/tenant-orchestrator.ts",
     "sha256": "810a6d70cf30080f51bcb71b8fbd768c13f855b659e6bf25c975253b1e62f122"
   },
   {

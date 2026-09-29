@@ -8,7 +8,7 @@ const catalogRoutes = PLATFORM_CATALOG_ROUTES.studio.flatMap(
       moduleCode: module.code,
       href: `/${workspace.routeSlug}/${module.routeSlug}` as `/${string}`,
       label: module.name,
-      iconKey: module.code === "exp" ? "layout" : "info",
+      iconKey: "info",
       requiredPermissions: [],
       requiredFeatures: [],
       navigation: "primary" as const,
@@ -31,14 +31,6 @@ if (!publicationRoute)
 
 export const studioRoutes = definePlaneRoutes([
   ...catalogRoutes,
-  {
-    ...publicationRoute,
-    id: "studio.entity.pub.graphs",
-    href: "/entity/graphs",
-    label: "Meta Entity Graphs",
-    requiredPermissions: ["metadata.entity.author"],
-    navigation: "secondary",
-  },
   {
     ...publicationRoute,
     id: "studio.entity.pub.atlas-learning",

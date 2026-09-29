@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { navigationDisplayArtifactKeys, navigationDisplayOverlay } from "./navigation-display-overlay.js";
 import { qualificationContractArtifactKeys, qualificationContractOverlay } from "./qualification-contract-overlay.js";
-import { validatePartnerSectionPublication } from "../../../src/composition/entities/partner-section-contract.js";
+import { validatePartnerSectionPublication } from "../../../src/composition/spaces/neon/partner-section-contract.js";
 
 /**
  * Publishes one already-reviewed split entity runtime set to a local DEV plane.

@@ -1,26 +1,37 @@
-import { createTransactionalRecordActionService } from "@athyper/server-service-records";
+import { createCapabilityRegistration } from "../kernel/capability-registration.js";
+import { createRegistrationPlan } from "../kernel/registration-plan.js";
+import { readDeploymentProfile } from "../config/deployment-profile.js";
+import type { RegistrationPlan } from "../kernel/registration-plan.js";
+import { createPublicationTargets } from "./shared/publication/targets.js";
+import { createHostAuthorizationManagement, type AuthorizationManagementDependencies } from "./shared/entity-governance/authorization-management.js";
+import { createGovernancePersistence } from "./shared/entity-governance/persistence.js";
+import { createEntityExperienceRuntime } from "./shared/entity-runtime/experience.js";
+import { createEntityResourceServices } from "./shared/entity-runtime/resources.js";
+import { createEntityTransferRuntime } from "./shared/entity-runtime/transfers.js";
+import { createEntityServices, type EntityServices } from "./shared/entity-runtime/services.js";
+import { createEntityExperienceHttpRegistrar, createEntityHttpRegistrars, createEntityResourceHttpRegistrar } from "./shared/entity-runtime/http.js";
+
 import { readCompiledRuntimeContract } from "@athyper/server-platform-metadata";
 import { parseActivityBinding } from "@athyper/server-contract-publication";
-import { createActivityRecordingResolver, qualifyActivityRecordingGraph, resolveRecordHistoryBinding } from "./shared/entity-runtime/activity-recording.js";
-import { createRecordHistoryHook, qualifyRecordHistoryDescriptor } from "@athyper/server-service-records";
-import { createEntityActivityPolicy, createEntityActivityService, registerEntityActivityRoutes, type EntityActivityProvider } from "@athyper/server-platform-experience";
-import { createEntityActivityProvider } from "./shared/entity-runtime/activity-provider.js";
+import { qualifyActivityRecordingGraph, resolveRecordHistoryBinding } from "./shared/entity-runtime/activity-recording.js";
+import { qualifyRecordHistoryDescriptor } from "@athyper/server-service-records";
+import { createEntityActivityPolicy, createEntityActivityService, type EntityActivityProvider } from "@athyper/server-platform-experience";
+
 import { collaborationEntityCode, collaborationEntityTypes } from "@athyper/server-platform-collaboration";
 import { parseCollectionState } from "@athyper/contract-platform-collection";
 import { activityCollectionState, collectionActivityQuery, type ActivityQuery } from "@athyper/contract-platform-activity";
-import { createActivityPresentation } from "./activity-presentation.js";
-import { createCollaborationSectionProviders } from "./entities/collaboration/index.js";
+import { createActivityPresentation } from "./shared/entity-runtime/activity-presentation.js";
+import { createCollaborationSectionProviders } from "./shared/collaboration/index.js";
 import { registerStudioOnboarding } from "./spaces/studio/trustiam/onb/register.js";
 import { registerEntityMetadata } from "./shared/entity-runtime/metadata.js";
-import { readPublishedEntityRouteCandidates } from "./shared/entity-runtime/route-admission.js";
-import { createEntityReadRuntime } from "./shared/entity-runtime/read-runtime.js";
-import { createEntityCollaborationService, createPublishedSummaryService } from "@athyper/server-platform-experience";
+
+import { createEntityCollaborationService } from "@athyper/server-platform-experience";
 import { createEntityReadRegistrations } from "./shared/entity-runtime/read-registrations.js";
 import { createPublishedParentAdmission } from "./shared/entity-runtime/published-parent-admission.js";
 import { createPublishedRecordHeader } from "./shared/entity-runtime/published-record-header.js";
-import { registerEntityReadHttp } from "./shared/entity-runtime/routes.js";
+
 import { createPlaneTransactionCoordinator } from "./infrastructure/transactions.js";
-import { createEntityAttachmentAdmission, type AttachmentCapabilitySubject } from "./entity-attachment-admission.js";
+import { createEntityAttachmentAdmission, type AttachmentCapabilitySubject } from "./shared/documents/attachment-admission.js";
 import { createAttachmentDiscoveryService, registerAttachmentDiscoveryRoutes } from "@athyper/server-service-attachments";
 import { createRecordParticipantResolver } from "@athyper/server-platform-experience";
 import { createKyselyPermissionResolver } from "@athyper/server-platform-iam";
@@ -30,7 +41,7 @@ import { createMetaEntityActivationInspector } from "./meta-entity-activation-in
 import { HttpError } from "@athyper/server-runtime-http";
 import { addressFormChoices, bankFormChoices, bankFormSources, createSharedReferenceDirectory, isSharedReferenceSourceKey, requiresSharedReferenceDependency } from "@athyper/server-service-records";
 import { readPublishedNotificationConfiguration, readPublishedCollectionConfiguration } from "@athyper/server-service-publication";
-import { localGraphPreview } from "./local-graph-preview.js";
+import { localGraphPreview } from "../development/graph-preview.js";
 import { prepareDocumentCollectionRelease } from "@athyper/server-plane-studio";
 import { RedisInferenceAdmission } from "./atlas-inference-admission.js";
 import { parseAtlasSemanticConfig } from "./atlas-semantic-index.js";
@@ -40,18 +51,18 @@ import { createAuthenticatedEntityReleaseReview } from "@athyper/server-service-
 import { getRequestContext as authoringRequestContext } from "@athyper/server-foundation/context";
 import { createMetaEntityAuthoringAuthorizer, createMetaEntityInspectionAuthorizer } from "./meta-entity-authoring-authorizer.js";
 import { createScopedMetaEntityAuthoringRepository } from "./scoped-meta-entity-authoring.js";
-import { createDevRuntimePublication } from "./dev-runtime-publication.js";
-import { loadDevPublicationConfiguration, registerDevPublicationRoutes } from "./dev-publication.js";
+import { createDevRuntimePublication } from "../development/runtime-publication.js";
+import { loadDevPublicationConfiguration, registerDevPublicationRoutes } from "../development/publication.js";
 import { registerPublicationWorkloadRoutes } from "./shared/publication/workload-routes.js";
 import { createCapabilityQualification } from "./shared/publication/capability-qualification.js";
 import { qualifyPreviewRenderer } from "@athyper/server-adapter-preview-renderer";
 import { loadPublicationWorkloadConfiguration } from "./shared/publication/workload-configuration.js";
 import { createCompiledRuntimePublication } from "./shared/publication/compiled-runtime.js";
-import { createRecordDisplayChoices } from "./entities/record-display-choices.js";
+import { createRecordDisplayChoices } from "./shared/entity-runtime/record-display-choices.js";
 import type { EntityAuthorizationRuntimeRegistration } from "@athyper/server-contract-metadata";
 import { createPublicationRuntimeQualification } from "./shared/entity-runtime/publication-qualification.js";
 import { prepareSystemReferenceRelease } from "@athyper/server-plane-studio-meta-entity-authoring";
-import { createConfiguredAuthorizationManagement } from "./authorization-management-config.js";
+
 import {
   AtlasLearningCandidateService,
   isAtlasLearningSourceCurrent,
@@ -69,7 +80,7 @@ import {
 } from "@athyper/server-plane-studio";
 import { createEntityScopeRegistry, type EntityScopeBinding } from "./shared/entity-runtime/scope-registry.js";
 import { createEntityParentAdmission, type EntityParentScopeBinding } from "./shared/entity-runtime/parent-admission.js";
-import { createEntityCaseBackendMapping } from "./entity-case-backend-mapping.js";
+import { createEntityCaseBackendMapping } from "./spaces/neon/entity-case-backend-mapping.js";
 import { createKyselyContextRefresh } from "@athyper/server-platform-iam";
 import { createAtlasBusinessContextResolver } from "@athyper/server-platform-ai";
 import { readFileSync } from "node:fs";
@@ -84,19 +95,14 @@ import {
 import { registerContactVerification, type ContactVerificationFactory } from "./register-contact-verification.js";
 import { createKyselyEntitlementRuntime } from "@athyper/server-platform-entitlements";
 import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
-import { TenantPublicationOrchestrator } from "./tenant-publication-orchestrator.js";
-import { createEntityRuntimeHandlerRegistry } from "./entity-runtime-handler-registry.js";
+
+import { createEntityRuntimeHandlerRegistry } from "./shared/entity-runtime/handler-registry.js";
 import type {
   CommandExecutionStore,
   OutboxWriter,
 } from "@athyper/server-contract-events";
 import type { ProvisioningCommandTransport } from "@athyper/server-contract-integration";
-import type {
-  AuthorizationManagementRolloutPolicySource,
-  AuthorizationWriterSwitchGate,
-  AuthorizationManagementUnitOfWork,
-  VerifiedRequestContext,
-} from "@athyper/server-contract-auth";
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type {
   DocumentArtifactRepository,
   DocumentTemplateRepository,
@@ -168,18 +174,7 @@ import type {
   RoundingRepository,
 } from "@athyper/server-contract-control-admin";
 import { createIamAuthenticationMiddleware, createShadowAuthorizer, readVerifiedRequestContext } from "@athyper/server-platform-iam";
-import {
-  createExperienceInvalidationHooks,
-  createExperienceService,
-  createMemoryExperienceCache,
-  createEntityRuntimeResourceService,
-  createEntityOperationDispatcher,
-  EntityRuntimeOperationError,
-  registerEntityRuntimeRoutes,
-  registerEntityIntakeOperationRoutes,
-  registerExperienceRoutes,
-} from "@athyper/server-platform-experience";
-import { KyselyExperiencePlaneRepository } from "@athyper/server-adapter-experience-postgres";
+import { createEntityRuntimeResourceService, EntityRuntimeOperationError, registerEntityIntakeOperationRoutes } from "@athyper/server-platform-experience";
 import {
   createCachedPolicyRepository,
   createKyselyPolicyRepository,
@@ -218,38 +213,8 @@ import {
   createKyselyPrincipalDirectory,
   registerCollaborationRoutes,
 } from "@athyper/server-platform-collaboration";
-import { REPORT_PACK_JOB, REPORT_PACK_QUEUE, REPORT_PACK_RECOVERY_JOB, createChannelConsentService, createCycleCertificationService, createCycleDeviationService, createCycleRunService, createCycleTaskService, createLegalHoldService, createModerationService, createReportPackJobHandler, createReportPackRecoveryHandler, createReportPackService, KyselyChannelConsentRepository, KyselyCommentModerationRepository, KyselyCycleExecutionRepository, KyselyLegalHoldRepository, KyselyReportPackRepository, registerGovernanceComplianceRoutes, registerGovernanceRoutes } from "@athyper/server-platform-governance";
-import {
-  assertControlServiceRoutePlaneSafety,
-  controlAdminFoundation,
-  createAuthorizationManagementService,
-  createKyselyControlRepositories,
-  createKyselyAuthorizationManagementUnitOfWork,
-  type LegacyAuthorizationTransactionBinder,
-  createBankValidationService,
-  createConnectorControlService,
-  createCycleConfigService,
-  createEntitlementControlService,
-  createFeatureFlagService,
-  createLookupService,
-  createKyselyParameterRepositories,
-  createExperienceParameterConsumer,
-  createParameterService,
-  createRoundingService,
-  createRuntimeCommandService,
-  createSafeAuthorizationManagementRolloutSelector,
-  KyselyCycleTemplateRepository,
-  createKyselyEntitlementRepositories,
-  createKyselyFeatureFlagRepositories,
-  KyselyRuntimeCommandStore,
-  registerAuthorizationManagementRoutes,
-  registerControlServiceRoutes,
-  registerParameterRoutes,
-  registerCycleConfigRoutes,
-  registerRuntimeCommandRoutes,
-  type ControlServiceRouteFlags,
-  type RuntimeCommandExecutor,
-} from "@athyper/server-platform-control-admin";
+import { REPORT_PACK_JOB, REPORT_PACK_QUEUE, REPORT_PACK_RECOVERY_JOB, createCycleCertificationService, createCycleDeviationService, createCycleRunService, createCycleTaskService, createLegalHoldService, createReportPackJobHandler, createReportPackRecoveryHandler, createReportPackService, registerGovernanceComplianceRoutes, registerGovernanceRoutes } from "@athyper/server-platform-governance";
+import { assertControlServiceRoutePlaneSafety, controlAdminFoundation, createKyselyControlRepositories, createBankValidationService, createConnectorControlService, createCycleConfigService, createEntitlementControlService, createFeatureFlagService, createLookupService, createKyselyParameterRepositories, createExperienceParameterConsumer, createParameterService, createRoundingService, createRuntimeCommandService, KyselyCycleTemplateRepository, createKyselyEntitlementRepositories, createKyselyFeatureFlagRepositories, KyselyRuntimeCommandStore, registerAuthorizationManagementRoutes, registerControlServiceRoutes, registerParameterRoutes, registerCycleConfigRoutes, registerRuntimeCommandRoutes, type ControlServiceRouteFlags, type RuntimeCommandExecutor } from "@athyper/server-platform-control-admin";
 import { ATLAS_KNOWLEDGE_QUEUE, ATLAS_MONITORING_QUEUE, INGEST_ATLAS_KNOWLEDGE_JOB, RUN_ATLAS_DRIFT_JOB, AtlasAgentRuntime, AtlasBindingRegistry, AtlasProviderRegistry, AtlasRegisteredToolCoordinator, AtlasResponseFeedbackService, KyselyAtlasResponseFeedbackStore, createAtlasEntityRecordTool, AtlasSurfaceDraftGenerator, AtlasThreadService, AtlasToolRegistry, createAtlasRecordDataGateway, AtlasToolService, AtlasExperienceConfigurationService, KyselyAtlasAttachmentContextResolver, KyselyAtlasExperienceConfigurationRepository, KyselyAtlasTenantQuotaManager, createAtlasA2Services, createAtlasConversationServices, createAtlasDriftHandler, createAtlasKnowledgeIngestionHandler, KyselyAtlasToolProposalStore, registerAtlasAdminRoutes, hasPermission as hasAtlasPermission, registerAtlasExperienceRoutes, registerAtlasRoutes, registerAtlasSurfaceDraftRoutes, type AtlasKnowledgeJobAuthority, type AtlasPromptResolver } from "@athyper/server-platform-ai";
 import { createStudioCatalogMetadataReader, createStudioMetadataDraftImportAdapter, createStudioRecordCollectionScopeResolver, KyselyMetaEntityAuthoringRepository, MetaEntityAuthoringService, PublicationServiceMetaEntityAdapter, registerMetaEntityAuthoringRoutes, prepareNotificationConfigurationRelease, prepareCollectionConfigurationRelease } from "@athyper/server-plane-studio";
 import { createMeshRecordCollectionScopeResolver, createMeshRelationshipRequestImportAdapter } from "@athyper/server-plane-mesh";
@@ -383,18 +348,18 @@ import {
 } from "@athyper/server-service-numbering";
 import { BookPeriodService, CloseReadinessService, FinanceNumberingService, FinancePostingGuard, KyselyBookPeriodRepository, KyselyCloseReadinessRepository, KyselyFinanceFoundationReader, KyselyFinanceNumberingPolicyReader, KyselyFinanceNumberingRepository, KyselyRoundingPolicyReader, RoundingResolver, SnapshotFinanceSourceDocumentReader, financeFoundation, snapshotFinancePermissionChecker } from "@athyper/server-service-finance";
 import { registerFinanceRoutes } from "./finance-routes.js";
-import { createRecordOwnerAccessAdapter, createParentCollectionScopeResolver, createKyselyRecordRepository, createKyselyCommandExecutionStore, createEntityBackendAuthorizer, createRecordMutationService, createRecordBookmarkService, createRecordSnapshotService, KyselyRecordSnapshotRepository, registerRecordsRoutes, parseEntityListScopeCoordinate, KyselyRecordTransferStore, createMetadataImportRowValidator, createObjectStorageRecordTransferArtifactStore, createObjectStorageImportWorkbookIntake, createRecordTransferJobDispatcher, createRecordTransferService, createRecordImportHandler, GovernedImportAdapterRegistry, createRecordExportHandler, registerRecordTransferRoutes, registerPublicRecordTransferRoutes, RECORD_TRANSFER_QUEUE, EXECUTE_RECORD_IMPORT_JOB, EXECUTE_RECORD_EXPORT_JOB, MAINTAIN_RECORD_TRANSFERS_JOB, RECORD_TRANSFER_MAINTENANCE_QUEUE, createRecordTransferMaintenanceHandler } from "@athyper/server-service-records";
+import { createRecordOwnerAccessAdapter, createKyselyRecordRepository, createKyselyCommandExecutionStore, createEntityBackendAuthorizer, GovernedImportAdapterRegistry, MAINTAIN_RECORD_TRANSFERS_JOB, RECORD_TRANSFER_MAINTENANCE_QUEUE, createRecordTransferMaintenanceHandler } from "@athyper/server-service-records";
 import { sql, type Kysely, type Transaction } from "kysely";
-import { stampTransactionActor } from "@athyper/server-adapter-db-core";
+
 import {
   canonicalBytes,
   MetaEntityArtifactSigner,
   sha256,
 } from "@athyper/server-adapter-publication-signing";
-import { APPLY_PUBLICATION_RELEASE_JOB, COMPILE_PUBLICATION_ARTIFACT_JOB, SIGN_PUBLICATION_ARTIFACT_JOB, DISPATCH_PUBLICATION_JOB, createPublicationAuthorityHandlers, createPublicationApplyHandler, createPublicationRecoveryHandler, createPublicationRollbackHandler, KyselyLocalProjectionRepository, KyselyPublicationAuthorityRepository, KyselyPublicationAuthorityWork, KyselyPublicationOperationsRepository, PublicationOrchestrator, PublicationOperationsService, PUBLICATION_APPLY_QUEUE, PUBLICATION_AUTHORITY_QUEUE, PUBLICATION_MAINTENANCE_QUEUE, RECOVER_STALLED_PUBLICATIONS_JOB, ROLLBACK_PUBLICATION_RELEASE_JOB, registerPublicationRoutes, VerifiedPublicationArtifactLoader } from "@athyper/server-service-publication";
-import type { PublicationPlane } from "@athyper/server-contract-publication";
-import type { HostConfig } from "../config/index.js";
-import type { Container } from "./create-container.js";
+import { APPLY_PUBLICATION_RELEASE_JOB, COMPILE_PUBLICATION_ARTIFACT_JOB, SIGN_PUBLICATION_ARTIFACT_JOB, DISPATCH_PUBLICATION_JOB, createPublicationAuthorityHandlers, createPublicationApplyHandler, createPublicationRecoveryHandler, createPublicationRollbackHandler, KyselyPublicationAuthorityRepository, KyselyPublicationAuthorityWork, KyselyPublicationOperationsRepository, PublicationOperationsService, PUBLICATION_APPLY_QUEUE, PUBLICATION_AUTHORITY_QUEUE, PUBLICATION_MAINTENANCE_QUEUE, RECOVER_STALLED_PUBLICATIONS_JOB, ROLLBACK_PUBLICATION_RELEASE_JOB, registerPublicationRoutes } from "@athyper/server-service-publication";
+
+import type { HostConfig } from "../config/environment.js";
+import type { Container } from "../kernel/container.js";
 import { registerVerification } from "./verification-routes.js";
 import { randomUUID } from "node:crypto";
 
@@ -514,15 +479,7 @@ export interface ServiceRegistrationDependencies {
     };
   };
   /** C4 adapters are injected together; no cross-plane or implicit writer fallback is composed. */
-  readonly authorizationManagement?: {
-    readonly unitOfWork?: AuthorizationManagementUnitOfWork;
-    readonly legacyTransactionBinder?: LegacyAuthorizationTransactionBinder;
-    readonly writerDatabases?: Readonly<
-      Partial<Record<PlaneKey, Kysely<Record<string, never>>>>
-    >;
-    readonly rolloutPolicies: AuthorizationManagementRolloutPolicySource;
-    readonly writerGate: AuthorizationWriterSwitchGate;
-  };
+  readonly authorizationManagement?: AuthorizationManagementDependencies;
   /** Required to enable notification attachments; resolver must enforce recipient access. */
   readonly notificationAttachmentResolver?: NotificationAttachmentResolver;
   readonly notificationAttachmentAccessPolicy?: NotificationAttachmentAccessPolicy;
@@ -560,7 +517,12 @@ export function registerServices(
   dependencies: ServiceRegistrationDependencies = {},
   config?: HostConfig,
   lifecycle?: LifecycleManager,
+  plan?: RegistrationPlan,
 ): void {
+  // Explicit entrypoints validate MODE. Direct composition callers retain API defaults.
+  const role = config?.mode === "worker" || config?.mode === "scheduler" ? config.mode : "api";
+  const capabilityRegistration = createCapabilityRegistration(plan ?? createRegistrationPlan(readDeploymentProfile({ MODE: role }, role)));
+  const servedPlanes = capabilityRegistration.planes;
   const { iam, authorizer: baseAuthorizer, audit } = container.platform;
   if (!iam || !baseAuthorizer || !audit) return;
   const refreshEntityContext = createKyselyContextRefresh({
@@ -610,23 +572,23 @@ export function registerServices(
   const authorizer = observeAuthority(baseAuthorizer);
   // Filled with the very same service instance mounted by the generic record routes.
   // The publication callback resolves it when a job runs, not during bootstrap.
-  let installedRecordMutations: ReturnType<typeof createRecordMutationService> | undefined;
-  let installedReadQueries: ReturnType<typeof createEntityReadRuntime>["queries"] | undefined;
+  let installedRecordMutations: EntityServices["mutations"] | undefined;
+  let installedReadQueries: EntityServices["queries"] | undefined;
 
-  const recordDatabases = {
+  const recordDatabases = capabilityRegistration.databases("entity.persistence", {
     ...(container.adapters.neonDatabase
       ? { neon: container.adapters.neonDatabase.database }
       : {}),
     ...(container.adapters.meshDatabase
       ? { mesh: container.adapters.meshDatabase.database }
       : {}),
-  } as unknown as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>;
-  const metadataDatabases = {
+  } as unknown as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>);
+  const metadataDatabases = capabilityRegistration.databases("entity.persistence", {
     ...recordDatabases,
     ...(container.adapters.athyperDatabase
       ? { studio: container.adapters.athyperDatabase.database }
       : {}),
-  } as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>;
+  } as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>);
   const parameterRepositories =
     dependencies.controlAdmin?.parameters ??
     createKyselyParameterRepositories(metadataDatabases);
@@ -642,37 +604,14 @@ export function registerServices(
         ? { studio: container.adapters.athyperDatabase }
         : {}),
     };
-    const experienceRepositories = createExactPlaneRepositoryProvider(
-      Object.fromEntries(
-        Object.entries(metadataDatabases).map(([planeKey, database]) => {
-          const adapter =
-            experienceAdapters[planeKey as keyof typeof experienceAdapters];
-          if (!adapter)
-            throw new Error(
-              `Experience database adapter is missing for ${planeKey}`,
-            );
-          return [
-            planeKey,
-            new KyselyExperiencePlaneRepository(database, (_context, work) =>
-              adapter.withTenantTransaction((transaction) =>
-                work(transaction as unknown as Kysely<Record<string, never>>),
-              ),
-            ),
-          ];
-        }),
-      ) as Partial<Record<PlaneKey, KyselyExperiencePlaneRepository>>,
-      { unavailableCode: "EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" },
-    );
-    const experienceCache = createMemoryExperienceCache();
-    const experience = createExperienceService({
-      repositories: experienceRepositories,
-      cache: experienceCache,
-      readPublishedEntityRoutes: async context => {
-        const adapter = experienceAdapters[context.planeKey];
-        const metadata = container.platform.metadata;
-        if (!adapter || !metadata) return [];
-        return readPublishedEntityRouteCandidates(context, metadata, work =>
-          adapter.withTenantTransaction(tx => work(tx as unknown as Kysely<Record<string, never>>)));
+    const experience = capabilityRegistration.register("entity.experience", () => createEntityExperienceRuntime({
+      databases: metadataDatabases,
+      metadata: () => container.platform.metadata,
+      run: (planeKey, work) => {
+        const adapter = experienceAdapters[planeKey];
+        if (!adapter) throw new Error(`Experience database adapter is missing for ${planeKey}`);
+        return adapter.withTenantTransaction(transaction =>
+          work(transaction as unknown as Kysely<Record<string, never>>));
       },
       ...(config?.wave0.controlAdminParametersEnabled
         ? {
@@ -681,21 +620,21 @@ export function registerServices(
             ),
           }
         : {}),
-    });
+    }));
     container.platform.experience = {
-      service: experience,
-      invalidation: createExperienceInvalidationHooks(experienceCache),
+      service: experience.service,
+      invalidation: experience.invalidation,
     };
-    container.platform.httpRegistrars.push((application) =>
-      registerExperienceRoutes(application, {
+    container.platform.httpRegistrars.push(
+      createEntityExperienceHttpRegistrar({
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
-        service: experience,
+        service: experience.service,
       }),
     );
     for (const planeKey of Object.keys(metadataDatabases) as PlaneKey[]) {
       container.runtimes.health.register(`experience.${planeKey}`, async () => {
-        const health = await experienceRepositories.health(planeKey);
+        const health = await experience.health(planeKey);
         return {
           status: health.status === "healthy" ? "healthy" : "unhealthy",
           ...(health.message ? { message: health.message } : {}),
@@ -1039,19 +978,9 @@ export function registerServices(
     };
   const exactTransactions =
     createExactPlaneTransactionCoordinator(transactions);
-  const governanceDatabases = createExactPlaneRepositoryProvider(
-    metadataDatabases,
-    {
-      unavailableCode: "GOVERNANCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE",
-      health: {
-        ...(metadataDatabases.studio
-          ? { studio: governanceDatabaseHealth }
-          : {}),
-        ...(metadataDatabases.neon ? { neon: governanceDatabaseHealth } : {}),
-        ...(metadataDatabases.mesh ? { mesh: governanceDatabaseHealth } : {}),
-      },
-    },
-  );
+  const { governanceDatabases, executionRepositories, legalHoldRepositories, reportPackRepositories, hasGovernanceDatabase, consent, moderation } = capabilityRegistration.register("entity.governance", () => createGovernancePersistence({
+    databases: metadataDatabases, transactions, audit, outbox: createDatabaseOutboxWriter("governance"),
+  }));
   const controlDatabases = createExactPlaneRepositoryProvider(
     metadataDatabases,
     {
@@ -1063,93 +992,6 @@ export function registerServices(
       },
     },
   );
-  const consentRepositories = createExactPlaneRepositoryProvider(
-    {
-      ...(metadataDatabases.studio
-        ? { studio: new KyselyChannelConsentRepository() }
-        : {}),
-      ...(metadataDatabases.neon
-        ? { neon: new KyselyChannelConsentRepository() }
-        : {}),
-      ...(metadataDatabases.mesh
-        ? { mesh: new KyselyChannelConsentRepository() }
-        : {}),
-    },
-    { unavailableCode: "GOVERNANCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" },
-  );
-  const moderationRepositories = createExactPlaneRepositoryProvider(
-    {
-      ...(metadataDatabases.studio
-        ? { studio: new KyselyCommentModerationRepository() }
-        : {}),
-      ...(metadataDatabases.neon
-        ? { neon: new KyselyCommentModerationRepository() }
-        : {}),
-      ...(metadataDatabases.mesh
-        ? { mesh: new KyselyCommentModerationRepository() }
-        : {}),
-    },
-    { unavailableCode: "GOVERNANCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" },
-  );
-  const executionRepositories = createExactPlaneRepositoryProvider(
-    {
-      ...(metadataDatabases.studio
-        ? { studio: new KyselyCycleExecutionRepository("studio", transactions) }
-        : {}),
-      ...(metadataDatabases.neon
-        ? { neon: new KyselyCycleExecutionRepository("neon", transactions) }
-        : {}),
-      ...(metadataDatabases.mesh
-        ? { mesh: new KyselyCycleExecutionRepository("mesh", transactions) }
-        : {}),
-    },
-    { unavailableCode: "GOVERNANCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" },
-  );
-  const legalHoldRepositories = createExactPlaneRepositoryProvider(
-    {
-      ...(metadataDatabases.studio
-        ? { studio: new KyselyLegalHoldRepository(metadataDatabases.studio) }
-        : {}),
-      ...(metadataDatabases.neon
-        ? { neon: new KyselyLegalHoldRepository(metadataDatabases.neon) }
-        : {}),
-      ...(metadataDatabases.mesh
-        ? { mesh: new KyselyLegalHoldRepository(metadataDatabases.mesh) }
-        : {}),
-    },
-    { unavailableCode: "GOVERNANCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" },
-  );
-  const reportPackRepositories = createExactPlaneRepositoryProvider(
-    {
-      ...(metadataDatabases.studio
-        ? { studio: new KyselyReportPackRepository(metadataDatabases.studio) }
-        : {}),
-      ...(metadataDatabases.neon
-        ? { neon: new KyselyReportPackRepository(metadataDatabases.neon) }
-        : {}),
-      ...(metadataDatabases.mesh
-        ? { mesh: new KyselyReportPackRepository(metadataDatabases.mesh) }
-        : {}),
-    },
-    { unavailableCode: "GOVERNANCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" },
-  );
-  const hasGovernanceDatabase = Object.keys(metadataDatabases).length > 0;
-  const consent = hasGovernanceDatabase
-    ? createChannelConsentService({
-        transactions: exactTransactions,
-        repositories: consentRepositories,
-        audit,
-        outbox: createDatabaseOutboxWriter("governance"),
-      })
-    : undefined;
-  const moderation = hasGovernanceDatabase
-    ? createModerationService({
-        transactions: exactTransactions,
-        repositories: moderationRepositories,
-        audit,
-        outbox: createDatabaseOutboxWriter("governance"),
-      })
-    : undefined;
   const controlRouteFlags: ControlServiceRouteFlags = {
     tenantOverrides:
       config?.wave0.controlAdminTenantOverridesEnabled ??
@@ -1451,104 +1293,11 @@ export function registerServices(
           storeFor: (context) => runtimeCommandStores.require(context.planeKey),
         })
       : undefined;
-  if (
-    config?.wave0.authorizationManagementRoutesEnabled &&
-    config.wave0.authorizationManagementMutationsEnabled &&
-    !dependencies.authorizationManagement &&
-    !config.wave0.authorizationManagementPolicyPath
-  )
-    throw new Error(
-      "Authorization mutations require configured writer-switch evidence",
-    );
-  if (
-    config?.wave0.authorizationManagementMutationsEnabled &&
-    !dependencies.authorizationManagement &&
-    !container.adapters.authorizationWriterDatabases
-  )
-    throw new Error(
-      "Authorization mutations require dedicated writer connections",
-    );
-  const authorizationOptions: ServiceRegistrationDependencies["authorizationManagement"] =
-    dependencies.authorizationManagement ??
-    (config?.wave0.authorizationManagementRoutesEnabled
-      ? createConfiguredAuthorizationManagement(
-          config.wave0.authorizationManagementPolicyPath,
-        )
-      : undefined);
-  const authorizationMode =
-    config?.wave0.authorizationManagementMode ?? "legacy";
-  const authorizationManagement = authorizationOptions
-    ? createAuthorizationManagementService({
-        unitOfWork:
-          authorizationOptions.unitOfWork ??
-          createKyselyAuthorizationManagementUnitOfWork(
-            authorizationOptions.writerDatabases ??
-              container.adapters.authorizationWriterDatabases ??
-              metadataDatabases,
-            authorizationOptions.legacyTransactionBinder,
-          ),
-        authorizer,
-        rollout: {
-          async select(input) {
-            const selected =
-              await createSafeAuthorizationManagementRolloutSelector(
-                authorizationOptions.rolloutPolicies,
-              ).select(input);
-            if (authorizationMode === "legacy")
-              return {
-                mode: "legacy",
-                revision: `host-legacy:${selected.revision}`,
-              };
-            if (authorizationMode === "shadow" && selected.mode === "enforce")
-              return {
-                mode: "shadow",
-                revision: `host-shadow:${selected.revision}`,
-              };
-            if (
-              selected.mode === "enforce" &&
-              (!config?.wave0.authorizationGoldenEvaluatorCorpusQualified ||
-                !config.wave0.authorizationDdlEpochIntegrationQualified ||
-                !config.wave0.authorizationWriterSwitchQualified)
-            )
-              throw Object.assign(
-                new Error("AUTHORIZATION_V2_ENFORCE_NOT_QUALIFIED"),
-                { code: "AUTHORIZATION_V2_ENFORCE_NOT_QUALIFIED" },
-              );
-            return selected;
-          },
-        },
-        writerGate: authorizationOptions.writerGate,
-        mutationsEnabled:
-          config?.wave0.authorizationManagementMutationsEnabled ?? false,
-        audit: {
-          async record(input) {
-            await audit.record({
-              eventCode: `authorization.management.${input.outcome}`,
-              action: "manage_authorization",
-              outcome: input.outcome === "success" ? "success" : "denied",
-              actor: { kind: "user", principalId: input.principalId },
-              tenantId: input.tenantId,
-              entityType: "authorization.management_command",
-              entityId: input.commandId,
-              requestId: input.requestId,
-              ...(input.correlationId
-                ? { correlationId: input.correlationId }
-                : {}),
-              metadata: {
-                mutationKind: input.mutationKind,
-                planeKey: input.planeKey,
-                mode: input.mode,
-                writer: input.writer,
-                ...(input.reason ? { reason: input.reason } : {}),
-                ...(input.writerSwitchEvidence
-                  ? { writerSwitchEvidence: input.writerSwitchEvidence }
-                  : {}),
-              },
-            });
-          },
-        },
-      })
-    : undefined;
+  const authorizationManagement = capabilityRegistration.register("entity.authorization", () => createHostAuthorizationManagement({
+    policy: config?.wave0 ?? {}, supplied: dependencies.authorizationManagement,
+    writerDatabases: container.adapters.authorizationWriterDatabases,
+    metadataDatabases, authorizer, audit,
+  }));
   const authorizationRoutesEnabled =
     config?.wave0.authorizationManagementRoutesEnabled ?? false;
   container.platform.controlAdmin = {
@@ -1596,8 +1345,8 @@ export function registerServices(
         service: authorizationManagement,
       }),
     );
-  for (const planeKey of ["studio", "neon", "mesh"] as const)
-    container.runtimes.health.register(
+  for (const planeKey of servedPlanes)
+    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
       `control.${planeKey}.cycle-config`,
       async () => {
         const result = await controlDatabases.health(planeKey);
@@ -1611,8 +1360,8 @@ export function registerServices(
       },
     );
   if (controlOptions && controlRoutesEnabled)
-    for (const planeKey of ["studio", "neon", "mesh"] as const)
-      container.runtimes.health.register(
+    for (const planeKey of servedPlanes)
+      capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
         `control.${planeKey}.administration`,
         async () => {
           const results = await Promise.all([
@@ -1636,8 +1385,8 @@ export function registerServices(
         },
       );
   if (runtimeCommandRoutesEnabled)
-    for (const planeKey of ["studio", "neon", "mesh"] as const)
-      container.runtimes.health.register(
+    for (const planeKey of servedPlanes)
+      capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
         `control.${planeKey}.runtime-commands`,
         async () => {
           try {
@@ -1654,8 +1403,8 @@ export function registerServices(
           }
         },
       );
-  for (const planeKey of ["studio", "neon", "mesh"] as const)
-    container.runtimes.health.register(`governance.${planeKey}`, async () => {
+  for (const planeKey of servedPlanes)
+    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,`governance.${planeKey}`, async () => {
       const result = await governanceDatabases.health(planeKey);
       return result.status === "healthy"
         ? { status: "healthy" }
@@ -1666,9 +1415,9 @@ export function registerServices(
               `Governance repository is unavailable: ${planeKey}`,
           };
     });
-  for (const planeKey of ["studio", "neon", "mesh"] as const) {
+  for (const planeKey of servedPlanes) {
     const database = metadataDatabases[planeKey];
-    container.runtimes.health.register(
+    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
       `governance.${planeKey}.compliance-ddl`,
       async () => {
         if (!database)
@@ -1687,7 +1436,7 @@ export function registerServices(
         }
       },
     );
-    container.runtimes.health.register(
+    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
       `governance.${planeKey}.object-storage`,
       async () =>
         dependencyHealth(
@@ -1697,7 +1446,7 @@ export function registerServices(
           "Immutable object storage is unavailable",
         ),
     );
-    container.runtimes.health.register(
+    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
       `governance.${planeKey}.retention`,
       async () => {
         if (!(config?.wave0.governanceRoutesEnabled ?? false))
@@ -1926,10 +1675,10 @@ export function registerServices(
   let attachmentDiscovery: ReturnType<typeof createAttachmentDiscoveryService> | undefined;
   let qualifyAttachmentPreview: (() => Promise<void>) | undefined;
   let qualifyAttachmentExtraction: (() => Promise<void>) | undefined;
-  let publishedSummaries: ReturnType<typeof createPublishedSummaryService> | undefined;
+  let publishedSummaries: ReturnType<typeof createEntityResourceServices>["summaries"] | undefined;
   let activityProvider: EntityActivityProvider | undefined;
-  let recordHistory: ReturnType<typeof createRecordHistoryHook> | undefined;
-  let activityDomainActions: ReturnType<typeof createTransactionalRecordActionService<RecordTransaction>> | undefined;
+  let recordHistory: EntityServices["recordHistory"] | undefined;
+  let activityDomainActions: EntityServices["activityDomainActions"] | undefined;
   const activityRegistrations = new Map((dependencies.activityAdapters ?? []).map(r => [r.adapter.key,r]));
   if (activityRegistrations.size !== (dependencies.activityAdapters ?? []).length) throw Error("ACTIVITY_ADAPTER_DUPLICATE");
   const historyAdapters = new Map([...activityRegistrations].map(([key,r]) => [key,r.adapter]));
@@ -1961,155 +1710,490 @@ export function registerServices(
   });
 
   if (container.platform.compiledEntityReader) {
-    const resourceHeaders = dependencies.entityResourceProviders?.headers ?? createPublishedRecordHeader({
-      reader: container.platform.compiledEntityReader,
-      read: (input, descriptor, fields) => {
-        if (!readPublishedHeader) throw new HttpError(503, "ENTITY_RESOURCE_PROVIDER_UNAVAILABLE", "The authorized record reader is unavailable");
-        return readPublishedHeader(input, descriptor, fields);
-      },
-    });
-    publishedSummaries = createPublishedSummaryService({ reader: container.platform.compiledEntityReader, headers: resourceHeaders, providers: dependencies.entityResourceProviders?.summaries });
-    const entityRuntime = createEntityRuntimeResourceService({
-      publishedSummary: (input, release) => publishedSummaries!.read(input, release),
+    const resourceHeaders =
+      dependencies.entityResourceProviders?.headers ??
+      createPublishedRecordHeader({
+        reader: container.platform.compiledEntityReader,
+        read: (input, descriptor, fields) => {
+          if (!readPublishedHeader)
+            throw new HttpError(
+              503,
+              "ENTITY_RESOURCE_PROVIDER_UNAVAILABLE",
+              "The authorized record reader is unavailable",
+            );
+          return readPublishedHeader(input, descriptor, fields);
+        },
+      });
+    const resourceServices = createEntityResourceServices({
       capabilities: capabilityPolicy,
       displayChoices: createRecordDisplayChoices(transactions),
       reader: container.platform.compiledEntityReader!,
       headers: resourceHeaders,
       sections: {
-        get: key => dependencies.entityResourceProviders?.sections.get(key),
+        get: (key) => dependencies.entityResourceProviders?.sections.get(key),
         getService: createCollaborationSectionProviders(transactions).getService,
       },
       summaries: dependencies.entityResourceProviders?.summaries,
-    });
-    const entityOperations = createEntityOperationDispatcher({
-      capabilities: capabilityPolicy,
-      reader: container.platform.compiledEntityReader!,
-      handlers: createEntityRuntimeHandlerRegistry({
-        fallback(handlerKey) {
-          if (activityDomainHandlers.has(handlerKey)) return {async execute(command) {
-            if (!activityDomainActions) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-            return {...await activityDomainActions.execute({...command,actionCode:command.operationKey,origin:"operation",validationMode:"strict"})};
-          }};
-          const capabilityHandler=/^platform\.(comments|attachments)\.([a-z_]+)\.v1$/.exec(handlerKey);
-          if(capabilityHandler) return {async execute(command) {
-            const {context,entityCode,recordId,input,expectedVersion,idempotencyKey}=command;
-            const action=capabilityHandler[2];
-            if(action === "read") {
-              if(typeof input.surfaceKey !== "string") throw new EntityRuntimeOperationError(400,"ENTITY_RUNTIME_OPERATION_INPUT_REQUIRED");
-              const resource=await entityRuntime.section({context,entityCode,recordId,surfaceKey:input.surfaceKey,sectionKey:capabilityHandler[1]!});
-              if(!resource) throw new EntityCapabilityPolicyError();
-              return {...resource};
-            }
-            if(capabilityHandler[1]==="comments") {
-              const service=container.services.collaboration;
-              if(!service) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-              if(action==="create") return {...await service.create({...input,context,entityType:entityCode,entityId:recordId,text:String(input.text ?? ""),idempotencyKey})};
-              if(action==="reply") return {...await service.create({...input,context,entityType:entityCode,entityId:recordId,text:String(input.text ?? ""),parentCommentId:String(input.parentCommentId ?? ""),idempotencyKey})};
-              if(action==="mention") { if(!service.participants) throw new EntityCapabilityPolicyError(); return {items:await service.participants({context,entityType:entityCode,entityId:recordId,query:String(input.query ?? ""),visibility:input.visibility === "private" ? "private" : input.visibility === "internal" ? "internal" : "public"})}; }
-              if(action==="draft") return {id:await service.putDraft({...input,context,entityType:entityCode,entityId:recordId,text:String(input.text ?? "")})};
-              const commentId=String(input.commentId ?? "");
-              const target=await transactions.run(context.planeKey,context,async tx=>(await sql`SELECT id FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId}`.execute(tx)).rows[0]);
-              if(!target) throw new EntityCapabilityPolicyError();
-              if(action==="history") { if(!service.history) throw new EntityCapabilityPolicyError(); return {...await service.history({context,commentId,...(typeof input.beforeRevision === "number" ? {beforeRevision:input.beforeRevision} : {})})}; }
-              if(action==="update_own") return {...await service.edit({...input,context,commentId,text:String(input.text ?? ""),expectedRevision:expectedVersion!})};
-              if(action==="archive_own") return {removed:await service.remove({context,commentId})};
-              if(action==="react") return {inserted:await service.putReaction({context,commentId,code:String(input.code ?? "")})};
-              if(action==="flag") return {id:await service.flag({context,commentId,reasonCode:String(input.reasonCode ?? ""),...(typeof input.detail === "string" ? {detail:input.detail} : {})})};
-            } else {
-              const service=container.services.attachments;
-              if(!service) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-              const attachmentId=String(input.attachmentId ?? "");
-              if (["preview","search","extract"].includes(action!)) {
-                if (!attachmentDiscovery) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-                if (action === "search") return attachmentDiscovery.search(context,{entityType:entityCode,entityId:recordId,q:String(input.q ?? ""),...(typeof input.after === "string" ? {after:input.after} : {})});
-                const scoped = await authorizeAttachmentCapability(context,action!,{attachmentId});
-                if (scoped?.entityType !== entityCode || scoped?.entityId !== recordId) throw new EntityCapabilityPolicyError();
-                if (action === "preview") return attachmentDiscovery.preview(context,{attachmentId,...(typeof input.rendition === "string" ? {rendition:input.rendition} : {})});
-                return attachmentDiscovery.extract(context,attachmentId);
-              }
-              const admission=await authorizeAttachmentCapability(context,action!,{...input,entityType:entityCode,entityId:recordId});
-              if(action!=="create") {
-                const targetAttachmentId=action==="version" ? String(input.parentAttachmentId ?? "") : attachmentId;
-                const target=await transactions.run(context.planeKey,context,async tx=>(await sql`SELECT id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${targetAttachmentId}::uuid AND metadata->>'entity_type'=${entityCode} AND metadata->>'entity_id'=${recordId}`.execute(tx)).rows[0]);
-                if(!target) throw new EntityCapabilityPolicyError();
-              }
-              const identity={planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId};
-              if(action==="create" || action==="version") {
-                const staged=await service.stage({...identity,...admission,entityType:entityCode,entityId:recordId,fileName:String(input.fileName ?? ""),contentType:String(input.contentType ?? ""),sizeBytes:Number(input.sizeBytes),...(typeof input.draftId === "string" ? {draftId:input.draftId} : {}),...(action==="version" ? {parentAttachmentId:String(input.parentAttachmentId ?? ""),expectedSeriesVersion:Number(input.expectedSeriesVersion)} : {})});
-                return {attachmentId:staged.attachmentId,uploadUrl:staged.uploadUrl,expiresAt:staged.expiresAt};
-              }
-              if(action==="finalize") {const result=await service.finalize(identity,String(input.contentType ?? ""),{authorizeCommit:async()=>{await authorizeAttachmentCapability(context,"finalize",{attachmentId,entityType:entityCode,entityId:recordId});}});return {attachmentId:result.id,status:result.status};}
-              if(action==="status") {const result=await (service.authorizedStatus ?? service.status)(identity);return {attachmentId:result.id,status:result.status};}
-              if(action==="download") return {...await service.createAuthorizedDownload(identity,120)};
-              if(action==="rename") {
-                if(!service.rename) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-                const renamed = await service.rename(identity,{displayName:String(input.displayName ?? ""),expectedSeriesRevision:String(input.expectedSeriesRevision ?? "")});
-                return {attachmentId:renamed.id,seriesId:renamed.seriesId,displayName:String(input.displayName ?? "").trim()};
-              }
-              if(action==="category") {
-                if(!service.setCategory) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-                await service.setCategory(identity,{entityType:entityCode,entityId:recordId,category:String(input.category ?? "") as "general" | "evidence"}); return {};
-              }
-              if(action==="folder") {
-                if(!service.manageFolder) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-                return {...await service.manageFolder(identity,{command:String(input.command ?? "") as "create" | "move" | "delete",entityType:entityCode,entityId:recordId,folderId:String(input.folderId ?? ""),expectedRevision:expectedVersion!,idempotencyKey:idempotencyKey!,...(typeof input.name==="string" ? {name:input.name} : {}),...(typeof input.parentFolderId==="string" ? {parentFolderId:input.parentFolderId} : {}),...(typeof input.attachmentId==="string" ? {attachmentId:input.attachmentId} : {})})};
-              }
-              if(action==="archive") { if(!service.archive) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE"); return {...await service.archive(identity)}; }
-              if(action==="unlink") {
-                if(!service.unlink) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-                return {...await service.unlink(identity,{entityType:entityCode,entityId:recordId})};
-              }
-            }
-            throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-          }};
-          if (handlerKey === "entity.record.export.v1") return {
-            async execute({ context, entityCode, input, idempotencyKey }) {
-              const transfers = container.services.records?.transfers;
-              if (!transfers) throw new EntityRuntimeOperationError(503, "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-              return transfers.requestExport(context, entityCode, input, idempotencyKey);
-            },
-          };
-          if (handlerKey === "entity.record.import.v1") return {
-            async execute({ context, entityCode, input }) {
-              const transfers = container.services.records?.transfers;
-              if (!transfers) throw new EntityRuntimeOperationError(503, "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
-              const operation = input.operation;
-              if (!['create', 'update', 'upsert', 'delete', 'replace'].includes(String(operation)))
-                throw new EntityRuntimeOperationError(400, "ENTITY_RUNTIME_OPERATION_INPUT_VALUE_INVALID");
+      createHandlers: (entityRuntime) =>
+        createEntityRuntimeHandlerRegistry({
+          fallback(handlerKey) {
+            if (activityDomainHandlers.has(handlerKey))
               return {
-                ...(await transfers.beginImport(
-                context,
-                entityCode,
-                typeof input.sessionId === "string" ? input.sessionId : undefined,
-                operation as never,
-                {
-                  scopeCoordinate: input.scopeCoordinate as never,
-                  conflictPolicy: input.conflictPolicy as never,
-                  atomicity: input.atomicity as never,
+                async execute(command) {
+                  if (!activityDomainActions)
+                    throw new EntityRuntimeOperationError(
+                      503,
+                      "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                    );
+                  return {
+                    ...(await activityDomainActions.execute({
+                      ...command,
+                      actionCode: command.operationKey,
+                      origin: "operation",
+                      validationMode: "strict",
+                    })),
+                  };
                 },
-                )),
               };
-            },
-          };
-          return undefined;
-        },
-      }),
+            const capabilityHandler =
+              /^platform\.(comments|attachments)\.([a-z_]+)\.v1$/.exec(
+                handlerKey,
+              );
+            if (capabilityHandler)
+              return {
+                async execute(command) {
+                  const {
+                    context,
+                    entityCode,
+                    recordId,
+                    input,
+                    expectedVersion,
+                    idempotencyKey,
+                  } = command;
+                  const action = capabilityHandler[2];
+                  if (action === "read") {
+                    if (typeof input.surfaceKey !== "string")
+                      throw new EntityRuntimeOperationError(
+                        400,
+                        "ENTITY_RUNTIME_OPERATION_INPUT_REQUIRED",
+                      );
+                    const resource = await entityRuntime.section({
+                      context,
+                      entityCode,
+                      recordId,
+                      surfaceKey: input.surfaceKey,
+                      sectionKey: capabilityHandler[1]!,
+                    });
+                    if (!resource) throw new EntityCapabilityPolicyError();
+                    return { ...resource };
+                  }
+                  if (capabilityHandler[1] === "comments") {
+                    const service = container.services.collaboration;
+                    if (!service)
+                      throw new EntityRuntimeOperationError(
+                        503,
+                        "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                      );
+                    if (action === "create")
+                      return {
+                        ...(await service.create({
+                          ...input,
+                          context,
+                          entityType: entityCode,
+                          entityId: recordId,
+                          text: String(input.text ?? ""),
+                          idempotencyKey,
+                        })),
+                      };
+                    if (action === "reply")
+                      return {
+                        ...(await service.create({
+                          ...input,
+                          context,
+                          entityType: entityCode,
+                          entityId: recordId,
+                          text: String(input.text ?? ""),
+                          parentCommentId: String(input.parentCommentId ?? ""),
+                          idempotencyKey,
+                        })),
+                      };
+                    if (action === "mention") {
+                      if (!service.participants)
+                        throw new EntityCapabilityPolicyError();
+                      return {
+                        items: await service.participants({
+                          context,
+                          entityType: entityCode,
+                          entityId: recordId,
+                          query: String(input.query ?? ""),
+                          visibility:
+                            input.visibility === "private"
+                              ? "private"
+                              : input.visibility === "internal"
+                                ? "internal"
+                                : "public",
+                        }),
+                      };
+                    }
+                    if (action === "draft")
+                      return {
+                        id: await service.putDraft({
+                          ...input,
+                          context,
+                          entityType: entityCode,
+                          entityId: recordId,
+                          text: String(input.text ?? ""),
+                        }),
+                      };
+                    const commentId = String(input.commentId ?? "");
+                    const target = await transactions.run(
+                      context.planeKey,
+                      context,
+                      async (tx) =>
+                        (
+                          await sql`SELECT id FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId}`.execute(
+                            tx,
+                          )
+                        ).rows[0],
+                    );
+                    if (!target) throw new EntityCapabilityPolicyError();
+                    if (action === "history") {
+                      if (!service.history)
+                        throw new EntityCapabilityPolicyError();
+                      return {
+                        ...(await service.history({
+                          context,
+                          commentId,
+                          ...(typeof input.beforeRevision === "number"
+                            ? { beforeRevision: input.beforeRevision }
+                            : {}),
+                        })),
+                      };
+                    }
+                    if (action === "update_own")
+                      return {
+                        ...(await service.edit({
+                          ...input,
+                          context,
+                          commentId,
+                          text: String(input.text ?? ""),
+                          expectedRevision: expectedVersion!,
+                        })),
+                      };
+                    if (action === "archive_own")
+                      return {
+                        removed: await service.remove({ context, commentId }),
+                      };
+                    if (action === "react")
+                      return {
+                        inserted: await service.putReaction({
+                          context,
+                          commentId,
+                          code: String(input.code ?? ""),
+                        }),
+                      };
+                    if (action === "flag")
+                      return {
+                        id: await service.flag({
+                          context,
+                          commentId,
+                          reasonCode: String(input.reasonCode ?? ""),
+                          ...(typeof input.detail === "string"
+                            ? { detail: input.detail }
+                            : {}),
+                        }),
+                      };
+                  } else {
+                    const service = container.services.attachments;
+                    if (!service)
+                      throw new EntityRuntimeOperationError(
+                        503,
+                        "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                      );
+                    const attachmentId = String(input.attachmentId ?? "");
+                    if (["preview", "search", "extract"].includes(action!)) {
+                      if (!attachmentDiscovery)
+                        throw new EntityRuntimeOperationError(
+                          503,
+                          "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                        );
+                      if (action === "search")
+                        return attachmentDiscovery.search(context, {
+                          entityType: entityCode,
+                          entityId: recordId,
+                          q: String(input.q ?? ""),
+                          ...(typeof input.after === "string"
+                            ? { after: input.after }
+                            : {}),
+                        });
+                      const scoped = await authorizeAttachmentCapability(
+                        context,
+                        action!,
+                        { attachmentId },
+                      );
+                      if (
+                        scoped?.entityType !== entityCode ||
+                        scoped?.entityId !== recordId
+                      )
+                        throw new EntityCapabilityPolicyError();
+                      if (action === "preview")
+                        return attachmentDiscovery.preview(context, {
+                          attachmentId,
+                          ...(typeof input.rendition === "string"
+                            ? { rendition: input.rendition }
+                            : {}),
+                        });
+                      return attachmentDiscovery.extract(context, attachmentId);
+                    }
+                    const admission = await authorizeAttachmentCapability(
+                      context,
+                      action!,
+                      { ...input, entityType: entityCode, entityId: recordId },
+                    );
+                    if (action !== "create") {
+                      const targetAttachmentId =
+                        action === "version"
+                          ? String(input.parentAttachmentId ?? "")
+                          : attachmentId;
+                      const target = await transactions.run(
+                        context.planeKey,
+                        context,
+                        async (tx) =>
+                          (
+                            await sql`SELECT id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${targetAttachmentId}::uuid AND metadata->>'entity_type'=${entityCode} AND metadata->>'entity_id'=${recordId}`.execute(
+                              tx,
+                            )
+                          ).rows[0],
+                      );
+                      if (!target) throw new EntityCapabilityPolicyError();
+                    }
+                    const identity = {
+                      planeKey: context.planeKey,
+                      tenantId: context.tenantId,
+                      principalId: context.principalId,
+                      attachmentId,
+                    };
+                    if (action === "create" || action === "version") {
+                      const staged = await service.stage({
+                        ...identity,
+                        ...admission,
+                        entityType: entityCode,
+                        entityId: recordId,
+                        fileName: String(input.fileName ?? ""),
+                        contentType: String(input.contentType ?? ""),
+                        sizeBytes: Number(input.sizeBytes),
+                        ...(typeof input.draftId === "string"
+                          ? { draftId: input.draftId }
+                          : {}),
+                        ...(action === "version"
+                          ? {
+                              parentAttachmentId: String(
+                                input.parentAttachmentId ?? "",
+                              ),
+                              expectedSeriesVersion: Number(
+                                input.expectedSeriesVersion,
+                              ),
+                            }
+                          : {}),
+                      });
+                      return {
+                        attachmentId: staged.attachmentId,
+                        uploadUrl: staged.uploadUrl,
+                        expiresAt: staged.expiresAt,
+                      };
+                    }
+                    if (action === "finalize") {
+                      const result = await service.finalize(
+                        identity,
+                        String(input.contentType ?? ""),
+                        {
+                          authorizeCommit: async () => {
+                            await authorizeAttachmentCapability(
+                              context,
+                              "finalize",
+                              {
+                                attachmentId,
+                                entityType: entityCode,
+                                entityId: recordId,
+                              },
+                            );
+                          },
+                        },
+                      );
+                      return { attachmentId: result.id, status: result.status };
+                    }
+                    if (action === "status") {
+                      const result = await (
+                        service.authorizedStatus ?? service.status
+                      )(identity);
+                      return { attachmentId: result.id, status: result.status };
+                    }
+                    if (action === "download")
+                      return {
+                        ...(await service.createAuthorizedDownload(
+                          identity,
+                          120,
+                        )),
+                      };
+                    if (action === "rename") {
+                      if (!service.rename)
+                        throw new EntityRuntimeOperationError(
+                          503,
+                          "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                        );
+                      const renamed = await service.rename(identity, {
+                        displayName: String(input.displayName ?? ""),
+                        expectedSeriesRevision: String(
+                          input.expectedSeriesRevision ?? "",
+                        ),
+                      });
+                      return {
+                        attachmentId: renamed.id,
+                        seriesId: renamed.seriesId,
+                        displayName: String(input.displayName ?? "").trim(),
+                      };
+                    }
+                    if (action === "category") {
+                      if (!service.setCategory)
+                        throw new EntityRuntimeOperationError(
+                          503,
+                          "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                        );
+                      await service.setCategory(identity, {
+                        entityType: entityCode,
+                        entityId: recordId,
+                        category: String(input.category ?? "") as
+                          "general" | "evidence",
+                      });
+                      return {};
+                    }
+                    if (action === "folder") {
+                      if (!service.manageFolder)
+                        throw new EntityRuntimeOperationError(
+                          503,
+                          "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                        );
+                      return {
+                        ...(await service.manageFolder(identity, {
+                          command: String(input.command ?? "") as
+                            "create" | "move" | "delete",
+                          entityType: entityCode,
+                          entityId: recordId,
+                          folderId: String(input.folderId ?? ""),
+                          expectedRevision: expectedVersion!,
+                          idempotencyKey: idempotencyKey!,
+                          ...(typeof input.name === "string"
+                            ? { name: input.name }
+                            : {}),
+                          ...(typeof input.parentFolderId === "string"
+                            ? { parentFolderId: input.parentFolderId }
+                            : {}),
+                          ...(typeof input.attachmentId === "string"
+                            ? { attachmentId: input.attachmentId }
+                            : {}),
+                        })),
+                      };
+                    }
+                    if (action === "archive") {
+                      if (!service.archive)
+                        throw new EntityRuntimeOperationError(
+                          503,
+                          "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                        );
+                      return { ...(await service.archive(identity)) };
+                    }
+                    if (action === "unlink") {
+                      if (!service.unlink)
+                        throw new EntityRuntimeOperationError(
+                          503,
+                          "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                        );
+                      return {
+                        ...(await service.unlink(identity, {
+                          entityType: entityCode,
+                          entityId: recordId,
+                        })),
+                      };
+                    }
+                  }
+                  throw new EntityRuntimeOperationError(
+                    503,
+                    "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                  );
+                },
+              };
+            if (handlerKey === "entity.record.export.v1")
+              return {
+                async execute({ context, entityCode, input, idempotencyKey }) {
+                  const transfers = container.services.records?.transfers;
+                  if (!transfers)
+                    throw new EntityRuntimeOperationError(
+                      503,
+                      "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                    );
+                  return transfers.requestExport(
+                    context,
+                    entityCode,
+                    input,
+                    idempotencyKey,
+                  );
+                },
+              };
+            if (handlerKey === "entity.record.import.v1")
+              return {
+                async execute({ context, entityCode, input }) {
+                  const transfers = container.services.records?.transfers;
+                  if (!transfers)
+                    throw new EntityRuntimeOperationError(
+                      503,
+                      "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE",
+                    );
+                  const operation = input.operation;
+                  if (
+                    !["create", "update", "upsert", "delete", "replace"].includes(
+                      String(operation),
+                    )
+                  )
+                    throw new EntityRuntimeOperationError(
+                      400,
+                      "ENTITY_RUNTIME_OPERATION_INPUT_VALUE_INVALID",
+                    );
+                  return {
+                    ...(await transfers.beginImport(
+                      context,
+                      entityCode,
+                      typeof input.sessionId === "string"
+                        ? input.sessionId
+                        : undefined,
+                      operation as never,
+                      {
+                        scopeCoordinate: input.scopeCoordinate as never,
+                        conflictPolicy: input.conflictPolicy as never,
+                        atomicity: input.atomicity as never,
+                      },
+                    )),
+                  };
+                },
+              };
+            return undefined;
+          },
+        }),
     });
-    container.platform.httpRegistrars.push((application) =>
-      registerEntityRuntimeRoutes(application, {
+    publishedSummaries = resourceServices.summaries;
+    container.platform.httpRegistrars.push(
+      createEntityResourceHttpRegistrar({
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
-        service: entityRuntime,
+        service: resourceServices.resources,
         collaboration: entityCollaboration,
-        operations: entityOperations,
+        operations: resourceServices.operations,
+        intakeProviders: dependencies.entityIntakeProviders ?? {
+          get: () => undefined,
+        },
       }),
     );
-    container.platform.httpRegistrars.push(application => registerEntityIntakeOperationRoutes(application, {
-      authenticate: createIamAuthenticationMiddleware(iam),
-      readContext: readVerifiedRequestContext,
-      providers: dependencies.entityIntakeProviders ?? { get: () => undefined },
-    }));
   }
+
   registerStudioAuthoring(
     container,
     config,
@@ -2727,173 +2811,134 @@ export function registerServices(
     const listMetadata = createStudioCatalogMetadataReader(metadata);
     const existingCollectionScopes = container.platform.experience
       ? combineRecordCollectionScopeResolvers(
-          createNeonRecordCollectionScopeResolver(container.platform.experience.service),
+          createNeonRecordCollectionScopeResolver(
+            container.platform.experience.service,
+          ),
           createMeshRecordCollectionScopeResolver(
             container.platform.experience.service,
           ),
           createStudioRecordCollectionScopeResolver(),
         )
       : undefined;
-    const collectionScopes = createParentCollectionScopeResolver({
-      metadata: listMetadata,
-      fallback: existingCollectionScopes,
-      readParent: input => queries.get(input),
-    });
-    const listExecutionOptions = {
-      ...common,
-      metadata: listMetadata,
-      ...(collectionScopes ? { collectionScopes } : {}),
-    };
-    const { listExecutor, queries, lists } = createEntityReadRuntime(listExecutionOptions, {
-      collaboration: input => entityCollaboration.describe(input),
-      activity: async input => Boolean(await entityActivity.describe(input)),
-      summary: async input => publishedSummaries?.describe(input),
-      formChoices: async (context, sourceKey) => {
-        const database=metadataDatabases[context.planeKey];
-        if(!database)throw Error("INTAKE_LOOKUP_DATABASE_UNAVAILABLE");
-        // Banking has its own capture projection until BP2-09. Other dependent
-        // shared references start empty and are loaded only after their parent
-        // field supplies an admitted scope.
-        if((bankFormSources as readonly string[]).includes(sourceKey))return bankFormChoices(database,sourceKey);
-        if (isSharedReferenceSourceKey(sourceKey)) {
-          if (requiresSharedReferenceDependency(sourceKey)) return [];
-          const page = await createSharedReferenceDirectory(database).lookup({
-            sourceKey,
-            limit: 25,
-          });
-          return page.items.map(({ value, label, data }) => ({
-            value,
-            label,
-            ...(data ? { data } : {}),
+    const entityServices = capabilityRegistration.register("entity.persistence", () => createEntityServices({
+      common,
+      listMetadata,
+      reader: container.platform.compiledEntityReader!,
+      fallbackCollectionScopes: existingCollectionScopes,
+      presentation: {
+        collaboration: (input) => entityCollaboration.describe(input),
+        activity: async (input) => Boolean(await entityActivity.describe(input)),
+        summary: async (input) => publishedSummaries?.describe(input),
+        formChoices: async (context, sourceKey) => {
+          const database = metadataDatabases[context.planeKey];
+          if (!database) throw Error("INTAKE_LOOKUP_DATABASE_UNAVAILABLE");
+          // Banking has its own capture projection until BP2-09. Other dependent
+          // shared references start empty and are loaded only after their parent
+          // field supplies an admitted scope.
+          if ((bankFormSources as readonly string[]).includes(sourceKey))
+            return bankFormChoices(database, sourceKey);
+          if (isSharedReferenceSourceKey(sourceKey)) {
+            if (requiresSharedReferenceDependency(sourceKey)) return [];
+            const page = await createSharedReferenceDirectory(database).lookup({
+              sourceKey,
+              limit: 25,
+            });
+            return page.items.map(({ value, label, data }) => ({
+              value,
+              label,
+              ...(data ? { data } : {}),
+            }));
+          }
+          if (context.planeKey !== "neon")
+            throw Error("INTAKE_LOOKUP_SOURCE_UNREGISTERED");
+          const tables: Record<string, string> = {
+            "neon.commodity_category": "master.commodity_category",
+            "neon.tax_jurisdiction": "master.tax_jurisdiction",
+            "neon.tax_type": "master.tax_type",
+            "neon.certification_type": "master.certification_type",
+          };
+          const table = tables[sourceKey];
+          const result = table
+            ? await sql<{
+                id: string;
+                code: string;
+                name: string;
+              }>`SELECT id::text,code,name FROM ${sql.table(table)} WHERE tenant_id=${context.tenantId}::uuid AND status='active' ORDER BY name,id LIMIT 2001`.execute(
+                database,
+              )
+            : undefined;
+          if (!result) throw Error("INTAKE_LOOKUP_SOURCE_UNREGISTERED");
+          if (result.rows.length > 2000)
+            throw Error("INTAKE_LOOKUP_REQUIRES_PAGED_SOURCE");
+          return result.rows.map((row) => ({
+            value: row.id,
+            label: row.code + " · " + row.name,
           }));
-        }
-        if(context.planeKey!=="neon")throw Error("INTAKE_LOOKUP_SOURCE_UNREGISTERED");
-        const tables:Record<string,string>={"neon.commodity_category":"master.commodity_category","neon.tax_jurisdiction":"master.tax_jurisdiction","neon.tax_type":"master.tax_type","neon.certification_type":"master.certification_type"};
-        const table=tables[sourceKey];
-        const result=table?await sql<{id:string;code:string;name:string}>`SELECT id::text,code,name FROM ${sql.table(table)} WHERE tenant_id=${context.tenantId}::uuid AND status='active' ORDER BY name,id LIMIT 2001`.execute(database):undefined;
-        if(!result)throw Error("INTAKE_LOOKUP_SOURCE_UNREGISTERED");
-        if(result.rows.length>2000)throw Error("INTAKE_LOOKUP_REQUIRES_PAGED_SOURCE");
-        return result.rows.map(row=>({value:row.id,label:row.code+' · '+row.name}));
+        },
+        filterChoices: async (context, fields) => {
+          const countries = fields.filter(
+            (field) => field.list?.semanticRole === "country_code",
+          );
+          if (!countries.length) return {};
+          const database = metadataDatabases[context.planeKey];
+          if (!database) return {};
+          // Shared reference data is global; only already-authorized fields reach this resolver.
+          const result = await sql<{
+            code: string;
+            name: string;
+          }>`SELECT code, name FROM shared.country ORDER BY name LIMIT 500`.execute(
+            database,
+          );
+          const choices = result.rows.map((row) => ({
+            value: row.code.trim(),
+            label: row.name,
+          }));
+          return Object.fromEntries(
+            countries.map((field) => [field.key, choices]),
+          );
+        },
       },
-      filterChoices: async (context, fields) => {
-        const countries = fields.filter(
-          (field) => field.list?.semanticRole === "country_code",
-        );
-        if (!countries.length) return {};
-        const database = metadataDatabases[context.planeKey];
-        if (!database) return {};
-        // Shared reference data is global; only already-authorized fields reach this resolver.
-        const result = await sql<{
-          code: string;
-          name: string;
-        }>`SELECT code, name FROM shared.country ORDER BY name LIMIT 500`.execute(
-          database,
-        );
-        const choices = result.rows.map((row) => ({
-          value: row.code.trim(),
-          label: row.name,
-        }));
-        return Object.fromEntries(
-          countries.map((field) => [field.key, choices]),
-        );
-      },
-    });
+      bookmarkCache: container.adapters.redisCache,
+      activityRegistrations,
+      historyAdapters,
+      activityDomainHandlers,
+      mutationPolicies: new Map([
+        [
+          "platform.notifications.preferences.v1",
+          createNotificationPreferenceRecordPolicy(),
+        ],
+      ]),
+      snapshotsEnabled: config?.wave0.recordSnapshotRoutesEnabled,
+    }));
+    const { queries, lists, mutations, snapshots, collectionScopes } =
+      entityServices;
     installedReadQueries = queries;
-    readPublishedParent = async (input, descriptor) => {
-      const pinned = createEntityReadRuntime({ ...listExecutionOptions, metadata: {
-        async getEntityDescriptor(context, entityCode) {
-          return context.tenantId === input.context.tenantId && context.principalId === input.context.principalId
-            && context.planeKey === descriptor.planeKey && entityCode === descriptor.entityCode ? descriptor : null;
-        },
-      } }).queries;
-      const found = await pinned.list({ context: input.context, entityCode: input.entityCode, recordIds: [input.recordId],
-        fields: [descriptor.storage.idField], limit: 1, countMode: "none", hydrateReferences: false });
-      return found.data.length === 1 && String(found.data[0]?.[descriptor.storage.idField]) === input.recordId;
-    };
-    readPublishedHeader = async (input, descriptor, fields) => {
-      const pinned = createEntityReadRuntime({ ...listExecutionOptions, metadata: {
-        async getEntityDescriptor(context, entityCode) {
-          return context.tenantId === input.context.tenantId && context.principalId === input.context.principalId
-            && context.planeKey === descriptor.planeKey && entityCode === descriptor.entityCode ? descriptor : null;
-        },
-      } }).queries;
-      const found = await pinned.list({ context: input.context, entityCode: descriptor.entityCode, recordIds: [input.recordId],
-        fields: [...fields], limit: 1, countMode: "none", hydrateReferences: false });
-      return found.data.length === 1 ? found.data[0]! : null;
-    };
-    // Records can run without the optional BP composition (for example a
-    // metadata-only host). BP intake checks availability at its request boundary.
-    activityProvider = createEntityActivityProvider({collectionProviders:new Map([...activityRegistrations].flatMap(([key,r])=>r.collections ? [[key,r.collections] as const] : [])),reader:container.platform.compiledEntityReader!,authorizer,transactions,
-      read:async(input,descriptor,fields,admission)=>readPublishedHeader!({context:input.context,recordId:input.recordId,release:admission.release,core:await container.platform.compiledEntityReader!.core(admission.release),fieldKeys:fields},descriptor,fields)});
-    container.platform.httpRegistrars.push(application=>registerEntityActivityRoutes(application,{
-      authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:entityActivity}));
-    const bookmarks = createRecordBookmarkService({
-      transactions,
-      listExecutor,
-      ...(container.adapters.redisCache
-        ? { cache: container.adapters.redisCache }
-        : {}),
-    });
-    const resolveHistory = createActivityRecordingResolver(container.platform.compiledEntityReader!,historyAdapters);
-    recordHistory = createRecordHistoryHook({resolve:resolveHistory,adapters:historyAdapters});
-    activityDomainActions = createTransactionalRecordActionService({...common,history:recordHistory,handlers:activityDomainHandlers});
-    const mutations = createRecordMutationService<RecordTransaction>({...common, collectionScopes, mutationPolicies:new Map([["platform.notifications.preferences.v1",createNotificationPreferenceRecordPolicy()]]), history:recordHistory, aggregateExecutor:{async execute(descriptor,command,tx) {
-      const binding = await resolveHistory(command,descriptor);
-      const executor = binding?.adapterKey ? activityRegistrations.get(binding.adapterKey)?.aggregateExecutor : undefined;
-      if (!executor) throw Error("RECORD_AGGREGATE_ADAPTER_UNAVAILABLE");
-      return executor.execute(descriptor,command,tx);
-    }}});
     installedRecordMutations = mutations;
-    const snapshots = config?.wave0.recordSnapshotRoutesEnabled
-      ? createRecordSnapshotService({
-          authorizer,
-          metadata,
-          queries,
-          mutations,
-          repository: new KyselyRecordSnapshotRepository(transactions),
-        })
-      : undefined;
-    const transferStore =
-      container.runtimes.jobs && objectStorageTransfers
-        ? new KyselyRecordTransferStore()
-        : undefined;
-    const transferArtifacts =
-      transferStore && objectStorageTransfers
-        ? createObjectStorageRecordTransferArtifactStore(objectStorageTransfers)
-        : undefined;
-    const transferScanner =
-      dependencies.malwareScanner ?? container.adapters.malwareScanner;
-    const workbookIntake =
-      objectStorageTransfers && transferScanner
-        ? createObjectStorageImportWorkbookIntake(
-            objectStorageTransfers,
-            transferScanner,
-          )
-        : undefined;
-    const importAdapters = new GovernedImportAdapterRegistry([
-      createMeshRelationshipRequestImportAdapter(),
-      createStudioMetadataDraftImportAdapter(),
-    ]);
-    const transfers =
-      transferStore && transferArtifacts && container.runtimes.jobs
-        ? createRecordTransferService({
-            staging: transferStore,
-            validator: createMetadataImportRowValidator(
-              listMetadata,
-              authorizer,
-            ),
-            jobs: createRecordTransferJobDispatcher(container.runtimes.jobs),
-            metadata: listMetadata,
-            authorizer,
-            audit,
-            outbox,
-            transactions,
-            adapters: importAdapters,
-            ...(collectionScopes ? { collectionScopes } : {}),
-            errorReports: transferArtifacts,
-            ...(workbookIntake ? { workbookIntake } : {}),
-          })
-        : undefined;
+    ({
+      readPublishedParent,
+      readPublishedHeader,
+      activityProvider,
+      recordHistory,
+      activityDomainActions,
+    } = entityServices);
+    const transferRuntime = createEntityTransferRuntime({
+      metadata: listMetadata,
+      authorizer,
+      audit,
+      outbox,
+      transactions,
+      collectionScopes,
+      queries,
+      jobs: container.runtimes.jobs,
+      storage: objectStorageTransfers,
+      scanner: dependencies.malwareScanner ?? container.adapters.malwareScanner,
+      adapters: new GovernedImportAdapterRegistry([
+        createMeshRelationshipRequestImportAdapter(),
+        createStudioMetadataDraftImportAdapter(),
+      ]),
+      metrics: container.adapters.processMetrics,
+    });
+    const transfers = transferRuntime?.transfers;
     container.services.records = {
       surfaces: lists,
       lists,
@@ -2902,151 +2947,36 @@ export function registerServices(
       ...(snapshots ? { snapshots } : {}),
       ...(transfers ? { transfers } : {}),
     };
-    if (!config || config.mode === "api") container.platform.httpRegistrars.push((application) =>
-      registerEntityReadHttp(application, {
-        views: {
-          authenticate: createIamAuthenticationMiddleware(iam),
-          readContext: readVerifiedRequestContext,
-          service: savedViews,
-          descriptor: (context, entity, query) =>
-            lists.descriptor(
-              context,
-              entity,
-              parseEntityListScopeCoordinate(query),
-            ),
-        },
-        references: {
-          authenticate: createIamAuthenticationMiddleware(iam),
-          readContext: readVerifiedRequestContext,
-          descriptor: (context, entity, query) =>
-            lists.applicationDescriptor(
-              context,
-              entity,
-              parseEntityListScopeCoordinate(query),
-            ),
-          store: createReferenceHistoryStore(transactions),
-        },
-        directory: {
-          authenticate: createIamAuthenticationMiddleware(iam),
-          readContext: readVerifiedRequestContext,
-          directory: (context) => {
-            const database = metadataDatabases[context.planeKey];
-            if (!database) throw Error("REFERENCE_LOOKUP_DATABASE_UNAVAILABLE");
-            return createSharedReferenceDirectory(database);
-          },
-        },
-        entity: {
-          authenticate: createIamAuthenticationMiddleware(iam),
-          readContext: readVerifiedRequestContext,
-          lists,
-          applicationDescriptor: (context, entityCode, scopeCoordinate) => {
-            return lists.applicationDescriptor(
-              context,
-              entityCode,
-              scopeCoordinate,
-            );
-          },
-        },
-        bookmarks: {
-          authenticate: createIamAuthenticationMiddleware(iam),
-          readContext: readVerifiedRequestContext,
-          bookmarks,
-        },
-        ...(snapshots
-          ? {
-              snapshots: {
-                authenticate: createIamAuthenticationMiddleware(iam),
-                readContext: readVerifiedRequestContext,
-                authorizer,
-                snapshots,
-              },
-            }
-          : {}),
-      }),
-    );
-    if (
-      transfers &&
-      transferStore &&
-      transferArtifacts &&
-      container.runtimes.jobs
-    ) {
-      const transferRouteOptions = {
-          authenticate: createIamAuthenticationMiddleware(iam),
-          readContext: readVerifiedRequestContext,
-          transfers,
-        },
-        metrics = container.adapters.processMetrics;
+    const entityHttp = createEntityHttpRegistrars({
+      authenticate: createIamAuthenticationMiddleware(iam),
+      readContext: readVerifiedRequestContext,
+      services: entityServices,
+      savedViews,
+      referenceHistory: createReferenceHistoryStore(transactions),
+      referenceDirectory: (context) => {
+        const database = metadataDatabases[context.planeKey];
+        if (!database) throw Error("REFERENCE_LOOKUP_DATABASE_UNAVAILABLE");
+        return createSharedReferenceDirectory(database);
+      },
+      authorizer,
+      activity: entityActivity,
+    });
+    container.platform.httpRegistrars.push(entityHttp.activity);
+    if (!config || config.mode === "api")
+      container.platform.httpRegistrars.push(entityHttp.read);
+    if (transferRuntime) {
       container.platform.httpRegistrars.push((application) =>
-        registerRecordTransferRoutes(application, transferRouteOptions),
-      );
-      if (config?.wave0.recordTransferPublicApiEnabled)
-        container.platform.httpRegistrars.push((application) =>
-          registerPublicRecordTransferRoutes(application, transferRouteOptions),
-        );
-      container.runtimes.jobs.register(
-        RECORD_TRANSFER_QUEUE,
-        EXECUTE_RECORD_IMPORT_JOB,
-        createRecordImportHandler({
-          store: transferStore,
-          metadata: listMetadata,
-          authorizer,
-          adapters: importAdapters,
-          ...(collectionScopes ? { collectionScopes } : {}),
-          transactions,
-          audit,
-          outbox,
-          ...(metrics ? { metrics } : {}),
+        transferRuntime.registerHttp(application, {
+          authenticate: createIamAuthenticationMiddleware(iam),
+          readContext: readVerifiedRequestContext,
+          publicApiEnabled: config?.wave0.recordTransferPublicApiEnabled,
         }),
       );
-      container.runtimes.jobs.register(
-        RECORD_TRANSFER_QUEUE,
-        EXECUTE_RECORD_EXPORT_JOB,
-        createRecordExportHandler({
-          store: transferStore,
-          metadata: listMetadata,
-          authorizer,
-          queries,
-          ...(collectionScopes ? { collectionScopes } : {}),
-          transactions,
-          artifacts: transferArtifacts,
-          audit,
-          outbox,
-          ...(metrics ? { metrics } : {}),
-        }),
-      );
-      container.runtimes.jobDefinitions.push(
-        {
-          code: EXECUTE_RECORD_IMPORT_JOB,
-          owner: "@athyper/server-service-records",
-          queue: RECORD_TRANSFER_QUEUE,
-          name: EXECUTE_RECORD_IMPORT_JOB,
-          scope: "tenant",
-          payloadSchema: { name: EXECUTE_RECORD_IMPORT_JOB, version: 1 },
-          timeoutMs: 300_000,
-          maxAttempts: 5,
-          executionRetentionDays: 90,
-        },
-        {
-          code: EXECUTE_RECORD_EXPORT_JOB,
-          owner: "@athyper/server-service-records",
-          queue: RECORD_TRANSFER_QUEUE,
-          name: EXECUTE_RECORD_EXPORT_JOB,
-          scope: "tenant",
-          payloadSchema: { name: EXECUTE_RECORD_EXPORT_JOB, version: 1 },
-          timeoutMs: 300_000,
-          maxAttempts: 5,
-          executionRetentionDays: 30,
-        },
+      transferRuntime.registerJobs((...definitions) =>
+        container.runtimes.jobDefinitions.push(...definitions),
       );
     }
-    container.platform.httpRegistrars.push((application) =>
-      registerRecordsRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        queries,
-        mutations,
-      }),
-    );
+    container.platform.httpRegistrars.push(entityHttp.records);
   }
 
   if (
@@ -4618,45 +4548,26 @@ function registerPublication(
   )
     throw new Error("Publication artifact store and verifier are unavailable");
   const authority = new KyselyPublicationAuthorityRepository(authorityDatabase);
-  const projections: Partial<
-    Record<PublicationPlane, KyselyLocalProjectionRepository>
-  > = {};
-  const orchestrators: Partial<
-    Record<PublicationPlane, PublicationOrchestrator>
-  > = {};
-  const loaders: Partial<Record<PublicationPlane, VerifiedPublicationArtifactLoader>> = {};
-  for (const plane of config.publication.applyEnabled
-    ? config.publication.targetPlanes
-    : []) {
-    const database = databases[plane];
-    if (!database)
-      throw new Error(`Publication target database is unavailable: ${plane}`);
-    const projection = new KyselyLocalProjectionRepository(database);
-    projections[plane] = projection;
-    const loader = new VerifiedPublicationArtifactLoader({
+  const { projections, orchestrators, loaders } = createPublicationTargets({
+    authorityDatabase,
+    databases,
+    targetPlanes: config.publication.applyEnabled ? config.publication.targetPlanes : [],
+    artifactLoader: {
       store: container.adapters.publicationArtifactStore!,
       verifier: container.adapters.publicationVerifier!,
       canonicalizer: { canonicalBytes, sha256 },
       runtimeVersion: config.publication.runtimeVersion,
-      ...(authorizationCompilation
-        ? { authorizationRuntime: authorizationCompilation.runtime }
-        : {}),
-    });
-    loaders[plane] = loader;
-    orchestrators[plane] = new TenantPublicationOrchestrator(
-      authorityDatabase,
-      database,
-      loader,
-      async (deployment, loaded) => {
-        if (loaded.document.manifest.evidence?.authorizationReviewMode !== "development_auto_approval") return;
-        if (!devRuntime || deployment.targetEnvironment !== "local" || deployment.signingKeyId !== config.publication.signingKeyId)
-          throw Error("DEV_RUNTIME_ACTIVATION_DENIED");
-        const receipt = await devRuntime.authorizeActivation(deployment.sourceReleaseId, loaded);
-        if (receipt.receiptSha256 !== loaded.document.manifest.evidence.authorizationReviewReceiptSha256)
-          throw Error("DEV_RUNTIME_APPROVAL_CHANGED");
-      },
-    );
-  }
+      ...(authorizationCompilation ? { authorizationRuntime: authorizationCompilation.runtime } : {}),
+    },
+    activationGuard: async (deployment, loaded) => {
+      if (loaded.document.manifest.evidence?.authorizationReviewMode !== "development_auto_approval") return;
+      if (!devRuntime || deployment.targetEnvironment !== "local" || deployment.signingKeyId !== config.publication.signingKeyId)
+        throw Error("DEV_RUNTIME_ACTIVATION_DENIED");
+      const receipt = await devRuntime.authorizeActivation(deployment.sourceReleaseId, loaded);
+      if (receipt.receiptSha256 !== loaded.document.manifest.evidence.authorizationReviewReceiptSha256)
+        throw Error("DEV_RUNTIME_APPROVAL_CHANGED");
+    },
+  });
   container.services.publication = { authority, projections, orchestrators, loaders };
   container.runtimes.health.register("publication.database", async () => {
     try {
@@ -4925,12 +4836,6 @@ function createDatabaseOutboxWriter(
   };
 }
 
-async function governanceDatabaseHealth(
-  database: Kysely<Record<string, never>>,
-) {
-  await sql`SELECT 1 FROM governance.channel_consent LIMIT 1`.execute(database);
-  return { status: "healthy" as const };
-}
 async function governanceComplianceDatabaseHealth(
   database: Kysely<Record<string, never>>,
 ) {

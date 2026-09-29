@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createEntityRuntimeHandlerRegistry } from "../entity-runtime-handler-registry.js";
+import { createEntityRuntimeHandlerRegistry } from "../shared/entity-runtime/handler-registry.js";
 
 describe("entity runtime handler registry", () => {
   it("leaves retired and unknown handlers unresolved", () => {

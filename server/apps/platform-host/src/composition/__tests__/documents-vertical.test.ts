@@ -8,8 +8,8 @@ import type {
 } from "@athyper/server-contract-documents";
 import { createInMemoryAuditSink } from "@athyper/server-platform-audit";
 import { createHttpApplication } from "@athyper/server-runtime-http";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerPlatform } from "../register-platform.js";
 import { registerServices } from "../register-services.js";
 

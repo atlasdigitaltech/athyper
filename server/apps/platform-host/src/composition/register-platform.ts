@@ -1,26 +1,14 @@
-import type {
-  AuditEvent,
-  AuditEventSink,
-  AuditRecorder,
-} from "@athyper/server-contract-audit";
+import { identityProblem as problem } from "./shared/identity/http-problem.js";
+import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type { TokenVerifier } from "@athyper/server-contract-auth";
 import type { OutboxWriter } from "@athyper/server-contract-events";
+import { registerAuditRoutes } from "@athyper/server-platform-audit";
 import {
-  createAuditService,
-  createStructuredLogAuditSink,
-  createTransactionBoundAuditSink,
-  registerAuditRoutes,
-} from "@athyper/server-platform-audit";
-import {
-  createIamConfig,
   createIamService,
   createIamAuthenticationMiddleware,
   readVerifiedRequestContext,
   createPermissionAuthorizer,
-  readSourcePermissionRequirement,
-  createKyselyIdentityContextResolver,
   organizationIdsFromClaims,
-  ExactPlaneAuthorizationError,
   createKyselyProvisioningRepository,
   createProvisioningVertical,
   IdentityProvisioningService,
@@ -47,28 +35,34 @@ import {
   KyselyIdentitySagaRepository,
   KyselyPlaneLocalIdentityAuthority,
   type TrustIamAuthorityOptions,
-  type IamServiceOptions,
   registerIamRoutes,
-  type IamConfig,
-  type ProvisioningVertical,
 } from "@athyper/server-platform-iam";
-
-import type { HostConfig } from "../config/index.js";
-import type { Container } from "./create-container.js";
+import type { HostConfig } from "../config/environment.js";
+import type { Container } from "../kernel/container.js";
 import { sql, type Transaction } from "kysely";
 import {
   defineRouteContract,
-  HttpError,
   registerContractRoute,
 } from "@athyper/server-runtime-http";
 import { randomUUID } from "node:crypto";
-import { captureOperationalError } from "../monitoring/error-collector.js";
+import { captureOperationalError } from "../diagnostics/telemetry/error-collector.js";
+import { registerIdentityAuthority } from "./shared/identity/authority.js";
+import { registerTrustedDeviceRoutes } from "./shared/identity/trusted-device-routes.js";
+import type { PlatformRegistrationDependencies } from "./shared/identity/registration-contract.js";
+export type { PlatformRegistrationDependencies } from "./shared/identity/registration-contract.js";
+
+type Row = Record<string, unknown>;
 
 const PROJECTION_RECONCILIATION_QUEUE = "iam.reconciliation";
+
 const RECONCILE_PROJECTIONS_JOB = "trustiam.projection.reconcile";
+
 const SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000000";
+
 const IDENTITY_SAGA_QUEUE = "iam.identity-saga";
+
 const RUN_IDENTITY_SAGA_JOB = "trustiam.identity.saga.run";
+
 const UUID_SCHEMA = {
   type: "string",
   format: "uuid",
@@ -76,120 +70,21 @@ const UUID_SCHEMA = {
     "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
 } as const;
 
-export interface PlatformRegistrationDependencies {
-  readonly tokenVerifier?: TokenVerifier;
-  readonly auditSink?: AuditEventSink;
-  readonly createAudit?: (sink: AuditEventSink) => AuditRecorder;
-  readonly createIam?: typeof createIamService;
-  /** Composition seam for an exact-plane identity authority; runtime defaults to Kysely. */
-  readonly resolveIdentityContext?: NonNullable<
-    IamServiceOptions["resolveIdentityContext"]
-  >;
-  readonly provisioning?: ProvisioningVertical;
-}
-
 export function registerPlatform(
   container: Container,
   config: HostConfig,
   dependencies: PlatformRegistrationDependencies = {},
 ): void {
-  const structuredSink = createStructuredLogAuditSink({
-    info(event, fields) {
-      console.log(JSON.stringify({ event, ...fields }));
-    },
-  });
-  const sink =
-    dependencies.auditSink ??
-    createTransactionBoundAuditSink(structuredSink, {
-      append: (event, transaction) =>
-        insertAuditEvent(
-          event,
-          transaction as Transaction<Record<string, never>>,
-        ),
-    });
-  const audit =
-    dependencies.createAudit?.(sink) ?? createAuditService({ sink });
-  container.platform.audit = audit;
-
-  const tokenVerifier =
-    dependencies.tokenVerifier ?? container.adapters.keycloakAuth;
-  if (!tokenVerifier) return;
-  const iamConfig = createIamConfig({
-    environment: config.env,
-    defaultRealmKey: config.iam.defaultRealmKey,
-    claimContextMode: config.iam.claimContextMode,
-    requireAuthorizedRole: config.iam.requireAuthorizedRole,
-    enforceRequiredActions: config.iam.enforceRequiredActions,
-    ...(config.iam.requiredActionsMatrixJson
-      ? {
-          requiredActionsMatrix: parseRequiredActionMatrix(
-            config.iam.requiredActionsMatrixJson,
-          ),
-        }
-      : {}),
-  });
-  const resolveIdentityContext =
-    dependencies.resolveIdentityContext ??
-    createKyselyIdentityContextResolver({
-      run(plane, work) {
-        const adapter =
-          plane === "studio"
-            ? container.adapters.athyperDatabase
-            : plane === "neon"
-              ? container.adapters.neonDatabase
-              : container.adapters.meshDatabase;
-        if (!adapter)
-          throw new ExactPlaneAuthorizationError(
-            "AUTHZ_PLANE_DATABASE_UNAVAILABLE",
-          );
-        return adapter.withSystemTransaction((transaction) =>
-          work(transaction as unknown as Transaction<Record<string, never>>),
-        );
-      },
-    });
-  const iam = (dependencies.createIam ?? createIamService)({
-    tokenVerifier,
-    audit,
-    config: iamConfig,
-    resolveIdentityContext,
-  });
-  container.platform.iam = iam;
-  const authorizer = createPermissionAuthorizer({
-    // Canonical target reads can have no source allow. Read the source's
-    // current catalog requirements independently of the allow snapshot.
-    readSourceRequirement: async (context, permissionCode) => {
-      const adapter =
-        context.planeKey === "studio"
-          ? container.adapters.athyperDatabase
-          : context.planeKey === "neon"
-            ? container.adapters.neonDatabase
-            : context.planeKey === "mesh"
-              ? container.adapters.meshDatabase
-              : undefined;
-      if (!adapter) return null;
-      return adapter.database.transaction().execute(async (transaction) => {
-        await sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY`.execute(
-          transaction,
-        );
-        await sql`SET LOCAL statement_timeout='1500ms'`.execute(transaction);
-        await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true),set_config('app.current_principal_id',${context.principalId},true)`.execute(
-          transaction,
-        );
-        return readSourcePermissionRequirement(
-          transaction as unknown as Transaction<Record<string, never>>,
-          context.tenantId,
-          permissionCode,
-        );
-      });
-    },
-  });
-  container.platform.authorizer = authorizer;
+  const authority = registerIdentityAuthority(container, config, dependencies);
+  if (!authority) return;
+  const { iam, authorizer, audit, tokenVerifier, iamConfig } = authority;
   container.platform.httpRegistrars.push((application) =>
     registerIdentityContextDiscovery(
       application,
       container,
       tokenVerifier,
       iamConfig.defaultRealmKey,
+      dependencies.servedPlanes,
     ),
   );
   const studioDatabase = container.adapters.athyperDatabase;
@@ -809,264 +704,12 @@ function registerProjectionReconciliationRoutes(
   );
 }
 
-type Row = Record<string, unknown>;
-
-function registerTrustedDeviceRoutes(
-  application: Parameters<Container["platform"]["httpRegistrars"][number]>[0],
-  container: Container,
-  authenticator: ReturnType<typeof createIamService>,
-): void {
-  const authenticate = createIamAuthenticationMiddleware(authenticator);
-  registerContractRoute(
-    application,
-    defineRouteContract({
-      method: "post",
-      path: "/api/iam/trusted-devices",
-      operationId: "iam.registerTrustedDevice",
-      summary: "Register remembered-device evidence after verified step-up",
-      tags: ["IAM"],
-      authenticated: true,
-      request: {
-        body: {
-          type: "object",
-          properties: {
-            deviceTokenHash: { type: "string", pattern: "^[0-9a-f]{64}$" },
-            ttlSeconds: { type: "integer", minimum: 60, maximum: 7_776_000 },
-            userAgent: { type: "string", maxLength: 2048 },
-          },
-          required: ["deviceTokenHash", "ttlSeconds"],
-        },
-      },
-      responses: {
-        201: {
-          description: "Remembered-device evidence registered",
-          body: { type: "object" },
-        },
-        400: { description: "Invalid registration" },
-        401: { description: "Authentication required" },
-        403: { description: "Context rejected" },
-        409: { description: "Token digest collision" },
-        503: { description: "Exact-plane authority unavailable" },
-      },
-    }),
-    authenticate,
-    async (request, response, next) => {
-      try {
-        const context = readVerifiedRequestContext(response);
-        if (!hasSecondFactor(context.authenticationMethods)) {
-          response
-            .status(403)
-            .json(
-              problem(
-                403,
-                "AUTH_STEP_UP_ASSURANCE_REQUIRED",
-                "Trusted-device enrollment requires issuer-proven multi-factor authentication",
-              ),
-            );
-          return;
-        }
-        const hash =
-          typeof request.body?.deviceTokenHash === "string"
-            ? request.body.deviceTokenHash
-            : "";
-        const ttlSeconds = request.body?.ttlSeconds;
-        const userAgent = request.body?.userAgent;
-        if (
-          !/^[0-9a-f]{64}$/.test(hash) ||
-          typeof ttlSeconds !== "number" ||
-          !Number.isInteger(ttlSeconds) ||
-          ttlSeconds < 60 ||
-          ttlSeconds > 7_776_000 ||
-          (userAgent !== undefined &&
-            (typeof userAgent !== "string" || userAgent.length > 2048))
-        ) {
-          response
-            .status(400)
-            .json(
-              problem(
-                400,
-                "AUTH_TRUSTED_DEVICE_REGISTRATION_INVALID",
-                "Trusted-device registration is invalid",
-              ),
-            );
-          return;
-        }
-        const run = tenantContextTransaction(container, context.planeKey);
-        if (!run) {
-          response
-            .status(503)
-            .json(
-              problem(
-                503,
-                "AUTH_TRUSTED_DEVICE_DIRECTORY_UNAVAILABLE",
-                "Exact-plane trusted-device authority is unavailable",
-              ),
-            );
-          return;
-        }
-        const row = await run(async (transaction) => {
-          const created = (
-            await sql<{ id: string; expiresAt: string }>`
-          INSERT INTO authz.trusted_device
-            (tenant_id,principal_id,auth_epoch,device_token_hash,user_agent,expires_at,created_by)
-          VALUES
-            (${context.tenantId}::uuid,${context.principalId}::uuid,${context.authEpoch},${hash},${typeof userAgent === "string" ? userAgent : null},clock_timestamp()+(${ttlSeconds}*interval '1 second'),${context.principalId}::uuid)
-          ON CONFLICT (tenant_id,device_token_hash) DO NOTHING
-          RETURNING id::text,expires_at::text AS "expiresAt"
-        `.execute(transaction)
-          ).rows[0];
-          if (created)
-            await container.platform.audit?.record(
-              {
-                eventCode: "iam.trusted_device.registered",
-                action: "create",
-                outcome: "success",
-                actor: { kind: "user", principalId: context.principalId },
-                tenantId: context.tenantId,
-                entityType: "authz.trusted_device",
-                entityId: created.id,
-                requestId: context.requestId,
-                ...(context.correlationId
-                  ? { correlationId: context.correlationId }
-                  : {}),
-                metadata: {
-                  planeKey: context.planeKey,
-                  expiresAt: created.expiresAt,
-                },
-              },
-              transaction,
-            );
-          return created;
-        });
-        if (!row) {
-          response
-            .status(409)
-            .json(
-              problem(
-                409,
-                "AUTH_TRUSTED_DEVICE_TOKEN_COLLISION",
-                "Trusted-device registration could not allocate unique evidence",
-              ),
-            );
-          return;
-        }
-        response.setHeader("Cache-Control", "private, no-store");
-        response.status(201).json({
-          tenantId: context.tenantId,
-          principalId: context.principalId,
-          expiresAt: row.expiresAt,
-        });
-      } catch (error) {
-        next(error);
-      }
-    },
-  );
-  registerContractRoute(
-    application,
-    defineRouteContract({
-      method: "post",
-      path: "/api/iam/trusted-devices/verify",
-      operationId: "iam.verifyTrustedDevice",
-      summary:
-        "Verify remembered-device evidence in the exact authenticated plane",
-      tags: ["IAM"],
-      authenticated: true,
-      request: {
-        body: {
-          type: "object",
-          properties: {
-            deviceTokenHash: { type: "string", pattern: "^[0-9a-f]{64}$" },
-          },
-          required: ["deviceTokenHash"],
-        },
-      },
-      responses: {
-        200: {
-          description: "Current remembered-device decision",
-          body: { type: "object" },
-        },
-        400: { description: "Invalid token digest" },
-        401: { description: "Authentication required" },
-        403: { description: "Context rejected" },
-        503: { description: "Exact-plane authority unavailable" },
-      },
-    }),
-    authenticate,
-    async (request, response, next) => {
-      try {
-        const context = readVerifiedRequestContext(response);
-        const hash =
-          typeof request.body?.deviceTokenHash === "string"
-            ? request.body.deviceTokenHash
-            : "";
-        if (!/^[0-9a-f]{64}$/.test(hash)) {
-          response
-            .status(400)
-            .json(
-              problem(
-                400,
-                "AUTH_TRUSTED_DEVICE_TOKEN_INVALID",
-                "Trusted-device token digest is invalid",
-              ),
-            );
-          return;
-        }
-        const run = tenantContextTransaction(container, context.planeKey);
-        if (!run) {
-          response
-            .status(503)
-            .json(
-              problem(
-                503,
-                "AUTH_TRUSTED_DEVICE_DIRECTORY_UNAVAILABLE",
-                "Exact-plane trusted-device authority is unavailable",
-              ),
-            );
-          return;
-        }
-        const row = await run(
-          async (transaction) =>
-            (
-              await sql<{ expiresAt: string }>`
-        UPDATE authz.trusted_device
-           SET last_seen_at=clock_timestamp()
-         WHERE tenant_id=${context.tenantId}::uuid
-           AND principal_id=${context.principalId}::uuid
-           AND auth_epoch=${context.authEpoch}
-           AND device_token_hash=${hash}
-           AND revoked_at IS NULL
-           AND expires_at>clock_timestamp()
-         RETURNING expires_at::text AS "expiresAt"
-      `.execute(transaction)
-            ).rows[0],
-        );
-        response.setHeader("Cache-Control", "private, no-store");
-        response.status(200).json(
-          row
-            ? {
-                active: true,
-                tenantId: context.tenantId,
-                principalId: context.principalId,
-                expiresAt: row.expiresAt,
-              }
-            : {
-                active: false,
-                tenantId: context.tenantId,
-                principalId: context.principalId,
-              },
-        );
-      } catch (error) {
-        next(error);
-      }
-    },
-  );
-}
-
 function registerIdentityContextDiscovery(
   application: Parameters<Container["platform"]["httpRegistrars"][number]>[0],
   container: Container,
   verifier: TokenVerifier,
   defaultRealmKey: string,
+  servedPlanes: readonly ("studio" | "neon" | "mesh")[] = ["studio", "neon", "mesh"],
 ): void {
   registerContractRoute(
     application,
@@ -1110,6 +753,10 @@ function registerIdentityContextDiscovery(
                 "Bearer token and exact plane are required",
               ),
             );
+          return;
+        }
+        if (!servedPlanes.includes(plane)) {
+          response.status(403).json(problem(403, "AUTH_ACCESS_DENIED", "The requested plane is not served by this process"));
           return;
         }
         let token;
@@ -1293,27 +940,7 @@ function registerIdentityContextDiscovery(
 type SystemWork = <Result>(
   work: (transaction: Transaction<Record<string, never>>) => Promise<Result>,
 ) => Promise<Result>;
-function tenantContextTransaction(
-  container: Container,
-  plane: "neon" | "mesh" | "studio",
-): SystemWork | undefined {
-  if (plane === "neon" && container.adapters.neonDatabase)
-    return (work) =>
-      container.adapters.neonDatabase!.withTenantTransaction((transaction) =>
-        work(transaction as unknown as Transaction<Record<string, never>>),
-      );
-  if (plane === "mesh" && container.adapters.meshDatabase)
-    return (work) =>
-      container.adapters.meshDatabase!.withTenantTransaction((transaction) =>
-        work(transaction as unknown as Transaction<Record<string, never>>),
-      );
-  if (plane === "studio" && container.adapters.athyperDatabase)
-    return (work) =>
-      container.adapters.athyperDatabase!.withTenantTransaction((transaction) =>
-        work(transaction as unknown as Transaction<Record<string, never>>),
-      );
-  return undefined;
-}
+
 function contextTransaction(
   container: Container,
   plane: "neon" | "mesh" | "studio",
@@ -1399,6 +1026,7 @@ function acceptsPlane(
     clientRoles.includes("AUTHORIZED")
   );
 }
+
 function claim(
   claims: Readonly<Record<string, unknown>>,
   name: string,
@@ -1406,6 +1034,7 @@ function claim(
   const value = claims[name];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
+
 function safeErrorCode(cause: unknown): string | undefined {
   if (!cause || typeof cause !== "object" || !("code" in cause))
     return undefined;
@@ -1414,26 +1043,9 @@ function safeErrorCode(cause: unknown): string | undefined {
     ? code
     : undefined;
 }
-function hasSecondFactor(methods: readonly string[] | undefined): boolean {
-  return (
-    methods?.some((method) =>
-      [
-        "otp",
-        "webauthn",
-        "webauthn-passwordless",
-        "fido",
-        "fido2",
-        "hwk",
-        "mfa",
-      ].includes(method.trim().toLowerCase()),
-    ) === true
-  );
-}
+
 function issuerRealm(issuer: string): string | undefined {
   return issuer.split("/").filter(Boolean).at(-1);
-}
-function problem(status: number, code: string, title: string) {
-  return { type: `https://athyper.dev/problems/${code}`, title, status, code };
 }
 
 function createIamOutboxWriter(): OutboxWriter<
@@ -1458,73 +1070,6 @@ function createIamOutboxWriter(): OutboxWriter<
       `.execute(transaction);
     },
   };
-}
-
-async function insertAuditEvent(
-  event: AuditEvent,
-  transaction: Transaction<Record<string, never>>,
-): Promise<void> {
-  const operation = operationFor(event.action);
-  await sql`
-    SELECT audit.append_event(
-      p_event_code := ${event.eventCode},
-      p_operation := ${operation}::audit.operation_d,
-      p_entity_type := ${event.entityType ?? "platform.audit_event"},
-      p_entity_id := ${event.entityId ?? null}::uuid,
-      p_outcome := ${event.outcome}::audit.outcome_d,
-      p_severity := ${event.severity}::audit.event_severity_d,
-      p_context := ${JSON.stringify({ ...(event.metadata ?? {}), recorderEventId: event.id })}::jsonb,
-      p_correlation_id := ${uuidOrNull(event.correlationId)}::uuid,
-      p_request_id := ${event.requestId ?? null},
-      p_occurred_at := ${event.occurredAt}::timestamptz
-    )
-  `.execute(transaction);
-}
-
-function operationFor(action: string): string {
-  if (action === "patch" || action === "update") return "update";
-  if (action === "transition") return "execute";
-  if (action === "authenticate") return "login";
-  return [
-    "create",
-    "delete",
-    "restore",
-    "execute",
-    "approve",
-    "reject",
-    "grant",
-    "revoke",
-    "import",
-    "export",
-    "login",
-    "logout",
-  ].includes(action)
-    ? action
-    : "execute";
-}
-
-function uuidOrNull(value: string | undefined): string | null {
-  return value &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value,
-    )
-    ? value
-    : null;
-}
-
-function parseRequiredActionMatrix(
-  raw: string,
-): IamConfig["requiredActionsMatrix"] {
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    throw new Error("AUTH_REQUIRED_ACTIONS_MATRIX must be valid JSON");
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("AUTH_REQUIRED_ACTIONS_MATRIX must be a JSON object");
-  }
-  return value as Readonly<Record<string, readonly string[]>>;
 }
 
 function registerCustomerPortalDelivery(container: Container): void {

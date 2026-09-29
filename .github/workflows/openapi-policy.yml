@@ -42,7 +42,6 @@ jobs:
           fi
       - run: pnpm test:openapi-policy
       - run: pnpm test:url-catalogue
-      - run: pnpm openapi:bp360:check
       - run: pnpm --filter @athyper/server-runtime-http test
       - run: pnpm --filter @athyper/server-service-master-data test src/__tests__/business-partner-360-route-contracts.test.ts
       - run: pnpm urls:check

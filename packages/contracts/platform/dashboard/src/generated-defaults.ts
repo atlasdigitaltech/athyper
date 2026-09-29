@@ -275,28 +275,6 @@ export const DEFAULT_EXPERIENCE_SURFACES = Object.freeze([
             }
           }
         ]
-      },
-      {
-        "id": "module.exp",
-        "type": "shortcut",
-        "title": "Experience & Navigation Design",
-        "body": "Open Experience & Navigation Design capabilities and governed work.",
-        "actions": [
-          {
-            "action": "catalog.navigate",
-            "label": "Overview",
-            "input": {
-              "path": "/entity/experiences"
-            }
-          },
-          {
-            "action": "catalog.navigate",
-            "label": "ToDo",
-            "input": {
-              "path": "/inbox?workspace=entity&module=experiences"
-            }
-          }
-        ]
       }
     ]
   },
@@ -411,25 +389,6 @@ export const DEFAULT_EXPERIENCE_SURFACES = Object.freeze([
         "id": "module.summary",
         "type": "text",
         "text": "Content & Object Storage is ready for published entity experiences."
-      }
-    ]
-  },
-  {
-    "schema": "athyper-experience-surface/1",
-    "id": "studio.entity.exp.home",
-    "revision": 1,
-    "scope": {
-      "kind": "module",
-      "plane": "studio",
-      "workspaceCode": "entity",
-      "moduleCode": "exp"
-    },
-    "title": "Experience & Navigation Design",
-    "blocks": [
-      {
-        "id": "module.summary",
-        "type": "text",
-        "text": "Experience & Navigation Design is ready for published entity experiences."
       }
     ]
   },

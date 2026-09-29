@@ -62,12 +62,6 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "routeSlug": "content",
           "name": "Content & Object Storage",
           "entities": []
-        },
-        {
-          "code": "exp",
-          "routeSlug": "experiences",
-          "name": "Experience & Navigation Design",
-          "entities": []
         }
       ]
     },

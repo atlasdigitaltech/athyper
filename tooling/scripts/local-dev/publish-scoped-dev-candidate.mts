@@ -2,7 +2,7 @@
  * on stdin; never put them in argv, logs, candidate artifacts or browser state. */
 import {readFileSync} from 'node:fs';
 import {publishDevelopmentCompiledEntityRuntime} from '../../../server/apps/platform-host/scripts/db-verification/provisioning/publish-development-compiled-entity-runtime.js';
-import {loadDevPublicationConfiguration,verifyDevPublicationCredential} from '../../../server/apps/platform-host/src/composition/dev-publication.js';
+import {loadDevPublicationConfiguration,verifyDevPublicationCredential} from '../../../server/apps/platform-host/src/development/publication.js';
 import {createInfisicalSecretStore} from '../../../server/packages/adapters/secretstore-infisical/src/index.js';
 import {CachedPublicationKeyResolver,Ed25519PublicationSigner,Ed25519PublicationVerifier} from '../../../server/packages/adapters/publication-signing/src/index.js';
 let store: ReturnType<typeof createInfisicalSecretStore> | undefined;

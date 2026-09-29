@@ -296,10 +296,6 @@
       "runner": "test:foundation"
     },
     {
-      "path": "tests/foundation/studio-experience-editor.test.tsx",
-      "runner": "test:foundation"
-    },
-    {
       "path": "tests/foundation/surface-stack.test.ts",
       "runner": "test:foundation"
     },

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createActivityPresentation } from "../activity-presentation.js";
+import { createActivityPresentation } from "../shared/entity-runtime/activity-presentation.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { InAppNotification } from "@athyper/server-contract-notifications";
 import type { WorkItem } from "@athyper/server-contract-workflow";

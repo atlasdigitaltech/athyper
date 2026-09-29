@@ -2,7 +2,7 @@
 
 Date: 2026-09-26.
 
-Follow-up: tests-after-live-collection-preparation.txt records 16/16 passing
+Follow-up: history/tests-after-live-collection-preparation.txt records 16/16 passing
 real PostgreSQL tests of the repository preparation/hash/transition functions
 against minimal fixture tables. Container teardown confirmed. This closes the
 bounded SQL preparation verification gate, not full-schema deployment or activation.

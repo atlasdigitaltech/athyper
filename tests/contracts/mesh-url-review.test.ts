@@ -21,12 +21,12 @@ test("Mesh account selection tolerates disabled browser storage", () => {
 
 test("Mesh required-action bootstrap has a public recovery destination", async () => {
   const result = await readProtectedBootstrap({
-    request: new Request("https://mesh.example/mdg/business-partner"),
+    request: new Request("https://mesh.example/home"),
     readSession: async () => Response.json({ schemaVersion: 1, state: "required_action", plane: "mesh", requiredActions: ["UPDATE_PASSWORD"], allowedNextActions: ["complete_required_action", "logout"] }),
     readExperience: async () => { throw new Error("Must not load a protected workspace"); },
   });
   assert.equal(result.state, "redirect");
-  if (result.state === "redirect") assert.equal(result.location, "/auth/required-action?returnTo=%2Fmdg%2Fbusiness-partner");
+  if (result.state === "redirect") assert.equal(result.location, "/auth/required-action?returnTo=%2Fhome");
   const page = readFileSync(new URL("../../apps/mesh/app/(public)/auth/required-action/page.tsx", import.meta.url), "utf8");
   assert.match(page, /RequiredActionGatePage/);
 });

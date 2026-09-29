@@ -1,3 +1,4 @@
+import { createJobDeploymentBoundary, type JobDeploymentBoundary } from "./deployment-boundary.js";
 import { jobRetention } from "./job-retention.js";
 import { createHash } from "node:crypto";
 import { Queue, UnrecoverableError, Worker, type JobsOptions, type Processor } from "bullmq";
@@ -72,6 +73,7 @@ export interface BullMqJobRuntimeFactories {
 
 export interface BullMqJobRuntimeOptions extends BullMqJobRuntimeFactories {
   readonly redisUrl: string;
+  readonly deployment?: JobDeploymentBoundary;
   readonly concurrency?: number;
   readonly defaultJobOptions?: EnqueueOptions;
   readonly lifecycle?: JobExecutionLifecycle;
@@ -95,6 +97,7 @@ export interface BullMqDeadLetter {
 }
 
 export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRuntime {
+  const boundary = createJobDeploymentBoundary(options.deployment);
   const connection = createBullMqConnectionOptions(options.redisUrl);
   const concurrency = options.concurrency ?? 10;
   if (!Number.isInteger(concurrency) || concurrency < 1) {
@@ -109,7 +112,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
   const workers = new Map<string, BullMqWorkerLike>();
   const shutdown = new AbortController();
   const cancellation = options.cancellationTransport === false ? undefined
-    : options.cancellationTransport ?? createRedisJobCancellationTransport(options.redisUrl);
+    : options.cancellationTransport ?? createRedisJobCancellationTransport(options.redisUrl, { namespace: boundary.namespace });
   const activeJobs = new Map<string, { abort: AbortController; attempt: number; result: Promise<boolean> }>();
   const cancelActive = async (queue: string, jobId: string, attempt?: number): Promise<boolean> => {
     const active = activeJobs.get(handlerKey(queue, jobId));
@@ -124,7 +127,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
     validateName("queue", queue);
     const existing = queues.get(queue);
     if (existing) return existing;
-    const created = createQueue(queue, connection);
+    const created = createQueue(boundary.queue(queue), connection);
     queues.set(queue, created);
     return created;
   };
@@ -154,6 +157,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
           ? { execution: enqueueOptions.execution }
           : inferredExecution ? { execution: inferredExecution } : {}),
       };
+      boundary.assertExecution(effectiveOptions.execution);
       if (effectiveOptions.jobId && effectiveOptions.enqueueKey) {
         throw new Error("enqueue options jobId and enqueueKey are mutually exclusive");
       }
@@ -257,6 +261,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
       const source = await targetQueue.getJob?.(jobId);
       if (!source || !source.id || !source.name || !isPayload(source.data)) return undefined;
       if (source.getState && await source.getState() !== "failed") return undefined;
+      boundary.assertExecution(fromStoredData(source.data)?.execution);
       const replayId = createDeterministicEnqueueId(queue, source.name, `replay:${jobId}:${replayKey}`);
       const replay = await targetQueue.add(source.name, source.data as JobPayload, {
         ...replayableOptions(source.opts),
@@ -278,6 +283,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
           if (!handler) throw new Error(`No job handler registered for ${queue}/${job.name}`);
           const stored = fromStoredData(job.data);
           if (!stored) throw new Error(`Job ${queue}/${job.name} has a non-object payload`);
+          boundary.assertExecution(stored.execution);
           const envelope: JobEnvelope = {
             id: job.id ?? `${queue}:${job.name}:unknown`,
             name: job.name,
@@ -350,7 +356,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
             activeJobs.delete(activeKey);
           }
         };
-        workers.set(queue, createWorker(queue, processor, { connection, concurrency }));
+        workers.set(queue, createWorker(boundary.queue(queue), processor, { connection, concurrency }));
       }
     },
 

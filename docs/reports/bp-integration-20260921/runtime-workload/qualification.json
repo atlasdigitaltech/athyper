@@ -592,7 +592,7 @@
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/create-container.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/kernel/container.ts",
       "sha256": "5795b09a7f064f17eecab0b5d4dfd5241ee698e83b0a71db46f45e601bd95efa"
     },
     {
@@ -602,27 +602,27 @@
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/dev-publication.test.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/publication.test.ts",
       "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/dev-publication.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/publication.ts",
       "sha256": "d145b1796b0a3379259324fb7eaa6a73ee758e4f764192fc12cd898750ed882e"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/dev-runtime-publication.test.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/runtime-publication.test.ts",
       "sha256": "b3e09caae3e89113f3dbedd510cd78228146910910fa0e6ad2aff59eb5d3f6d2"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/dev-runtime-publication.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/runtime-publication.ts",
       "sha256": "3f7f861eef78c3d86c0027fb9ae6ace71c12eca04359d9f1d44fc02a5313f9bd"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entity-case-backend-mapping.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/spaces/neon/entity-case-backend-mapping.ts",
       "sha256": "777c190496553f42da14137fae4ea494e96d4762cf17a667ac9ace9073073f02"
     },
     {
@@ -642,17 +642,17 @@
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/graph-preview-ai-bindings.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/graph-preview-ai-bindings.ts",
       "sha256": "195b8566a2c7b6a3877c4ac8452eedd944b939ca244959b922127333d02c81f5"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/local-graph-preview.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/graph-preview.ts",
       "sha256": "54cf1367f3075d080ce419f7e405570e02209a0995812ded57df840d2e3d75df"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/local-verification-delivery.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/verification-delivery.ts",
       "sha256": "c0b6da0d39a8a8f8faf1603c246edab79a1ee48133889c1108fcfca3b27328ea"
     },
     {
@@ -672,7 +672,7 @@
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/publication-plane.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/publication/plane.ts",
       "sha256": "fd493f6ce2e8ae520a0ce73928a072de84d8d74f16ef1ad20296d89382391315"
     },
     {
@@ -797,7 +797,7 @@
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/tenant-publication-orchestrator.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/publication/tenant-orchestrator.ts",
       "sha256": "9509f9fd09fddb9689ede1a2450ba7f83a404f67666c25b177774583f059ebf5"
     },
     {
@@ -812,7 +812,7 @@
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/config/index.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/config/environment.ts",
       "sha256": "bd1ae33e720461a71021dca7feef2c711e18e0a61d104266200270a9a6ecedf8"
     },
     {
@@ -832,7 +832,7 @@
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/monitoring/__tests__/error-collector.test.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/telemetry/__tests__/error-collector.test.ts",
       "sha256": "e7245189e3939b485fdbdf4c765396d594b2aa5757e8957ce399400884d8f682"
     },
     {
@@ -842,42 +842,42 @@
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/monitoring/error-collector.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/telemetry/error-collector.ts",
       "sha256": "0be91310ca20bd8cc3a8a446a2df5b55cd4c5d1d54fab5bbfe3d6c606a3739a9"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/processes/__tests__/process-heartbeat.test.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/health/__tests__/process-heartbeat.test.ts",
       "sha256": "6ed97f4de5819fbc46543546544b7f67330a9bcfffe39b30e70c59b18860c8de"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/processes/__tests__/process-metrics-endpoint.test.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/telemetry/__tests__/process-metrics-endpoint.test.ts",
       "sha256": "5b2b3f7ceb9549ad95bca82955eedf9957aee734ae7a04d42d5d711291bb9c74"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/processes/api/index.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/runtimes/http.ts",
       "sha256": "f10df519dce2f08e0483db2d89ae753ba76954aa0e3124da0480ba2f6fde2f97"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/processes/process-heartbeat.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/health/process-heartbeat.ts",
       "sha256": "8948aac741b608ea31f7f07ea4e35596ebc5565032c15ab9c902d6361b659017"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/processes/process-metrics-endpoint.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/telemetry/process-metrics-endpoint.ts",
       "sha256": "723ba0a412eb2d3e2b833d8fc32a3edeee172eb77aa25739d62dd33e13ceb3de"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/processes/scheduler/index.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/runtimes/scheduler.ts",
       "sha256": "f00d9bc96480d8b2bb21a02a0b827a0b6c5690994fe8f3452f02961fa4285278"
     },
     {
       "kind": "source",
-      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/processes/worker/index.ts",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/runtimes/workers.ts",
       "sha256": "20fe05929e29ccaefdf143ea0f6221bd955f01fa39a716bbd2976baf11e0e0d6"
     },
     {

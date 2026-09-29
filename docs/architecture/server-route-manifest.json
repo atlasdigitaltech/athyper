@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1229,
+    "identities": 1218,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 361,
+    "currentOnly": 350,
     "legacyOccurrences": 898,
-    "currentOccurrences": 427
+    "currentOccurrences": 416
   },
   "routes": [
     {
@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2635,
+          "line": 2715,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2308,
+          "line": 2388,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -4477,21 +4477,6 @@
       "status": "current-only"
     },
     {
-      "identity": "GET /api/governance/process-tasks/cases/:param/view",
-      "method": "GET",
-      "path": "/api/governance/process-tasks/cases/:param/view",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-task-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/governance/process-tasks/cases/:caseId/view",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/governance/report-packs",
       "method": "GET",
       "path": "/api/governance/report-packs",
@@ -4588,7 +4573,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 1204,
+          "line": 716,
           "declaredPath": "/api/iam/contexts",
           "kind": "contract"
         }
@@ -4633,7 +4618,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 485,
+          "line": 372,
           "declaredPath": "/api/iam/identity-saga-attempts/:attemptId/evidence",
           "kind": "contract"
         }
@@ -4738,7 +4723,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 802,
+          "line": 566,
           "declaredPath": "/api/iam/projection-health",
           "kind": "contract"
         }
@@ -9036,36 +9021,6 @@
       "status": "current-only"
     },
     {
-      "identity": "GET /api/studio/supplier-task-rule-baselines",
-      "method": "GET",
-      "path": "/api/studio/supplier-task-rule-baselines",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/task-edit-policy-authoring.ts",
-          "line": 104,
-          "declaredPath": "/api/studio/supplier-task-rule-baselines",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/studio/task-edit-policies/:param",
-      "method": "GET",
-      "path": "/api/studio/task-edit-policies/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/task-edit-policy-authoring.ts",
-          "line": 105,
-          "declaredPath": "/api/studio/task-edit-policies/:id",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/user/tenant-admin",
       "method": "GET",
       "path": "/api/user/tenant-admin",
@@ -12004,8 +11959,8 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/dev-publication.ts",
-          "line": 312,
+          "source": "server/apps/platform-host/src/development/publication.ts",
+          "line": 311,
           "declaredPath": "/api/dev-publication/publish",
           "kind": "direct"
         }
@@ -13910,96 +13865,6 @@
       "status": "current-only"
     },
     {
-      "identity": "POST /api/governance/process-tasks/cases/:param/cancel",
-      "method": "POST",
-      "path": "/api/governance/process-tasks/cases/:param/cancel",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-task-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/governance/process-tasks/cases/:caseId/cancel",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/governance/process-tasks/cases/:param/decide",
-      "method": "POST",
-      "path": "/api/governance/process-tasks/cases/:param/decide",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-task-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/governance/process-tasks/cases/:caseId/decide",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/governance/process-tasks/cases/:param/edit-preview",
-      "method": "POST",
-      "path": "/api/governance/process-tasks/cases/:param/edit-preview",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-task-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/governance/process-tasks/cases/:caseId/edit-preview",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/governance/process-tasks/cases/:param/escalate",
-      "method": "POST",
-      "path": "/api/governance/process-tasks/cases/:param/escalate",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-task-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/governance/process-tasks/cases/:caseId/escalate",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/governance/process-tasks/cases/:param/information",
-      "method": "POST",
-      "path": "/api/governance/process-tasks/cases/:param/information",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-task-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/governance/process-tasks/cases/:caseId/information",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/governance/process-tasks/cases/:param/start",
-      "method": "POST",
-      "path": "/api/governance/process-tasks/cases/:param/start",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-task-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/governance/process-tasks/cases/:caseId/start",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "POST /api/governance/report-packs",
       "method": "POST",
       "path": "/api/governance/report-packs",
@@ -14224,7 +14089,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 863,
+          "line": 627,
           "declaredPath": "/api/iam/projection-reconciliation-attempts/:attemptId/replay",
           "kind": "contract"
         }
@@ -14260,8 +14125,8 @@
       ],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 953,
+          "source": "server/apps/platform-host/src/composition/shared/identity/trusted-device-routes.ts",
+          "line": 27,
           "declaredPath": "/api/iam/trusted-devices",
           "kind": "contract"
         }
@@ -14282,8 +14147,8 @@
       ],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 1097,
+          "source": "server/apps/platform-host/src/composition/shared/identity/trusted-device-routes.ts",
+          "line": 171,
           "declaredPath": "/api/iam/trusted-devices/verify",
           "kind": "contract"
         }
@@ -17702,36 +17567,6 @@
           "source": "server/apps/platform-host/src/composition/shared/publication/workload-routes.ts",
           "line": 27,
           "declaredPath": "/api/studio/publication-policies/:id/execute",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/studio/task-edit-policies",
-      "method": "POST",
-      "path": "/api/studio/task-edit-policies",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/task-edit-policy-authoring.ts",
-          "line": 105,
-          "declaredPath": "/api/studio/task-edit-policies",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/studio/task-edit-policies/:param/publish",
-      "method": "POST",
-      "path": "/api/studio/task-edit-policies/:param/publish",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/task-edit-policy-authoring.ts",
-          "line": 105,
-          "declaredPath": "/api/studio/task-edit-policies/:id/publish",
           "kind": "contract"
         }
       ],

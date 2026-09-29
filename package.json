@@ -241,7 +241,6 @@
     "candidate:staging-plan": "node --import tsx tooling/scripts/local-dev/candidate.mjs staging-plan",
     "dev:isolated": "node tooling/scripts/local-dev/cli.mjs",
     "dev:preview": "node tooling/scripts/local-dev/preview.mjs",
-    "test:local-graph-browser": "node tooling/scripts/local-dev/graph-preview-browser.mjs",
     "env:dev:legacy": "pnpm athyper up dev --confirm dev --preserve-database",
     "test:dev-workspace": "node tooling/scripts/local-dev/workspace-lifecycle.mjs",
     "qa:session": "node tooling/scripts/local-dev/qa-session.mjs",

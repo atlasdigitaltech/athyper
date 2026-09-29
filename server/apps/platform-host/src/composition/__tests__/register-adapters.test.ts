@@ -4,8 +4,8 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { loadConfig, type HostConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig, type HostConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerAdapters } from "../register-adapters.js";
 
 describe("registerAdapters", () => {

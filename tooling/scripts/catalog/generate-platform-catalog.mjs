@@ -11,7 +11,7 @@ const checkOnly = process.argv.includes("--check");
 const slugPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const codePattern = /^[a-z][a-z0-9_]{1,62}$/;
 const iconKeyPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-const expectedCounts = { studio: [10, 33], neon: [9, 51], mesh: [5, 25] };
+const expectedCounts = { studio: [10, 32], neon: [9, 51], mesh: [5, 25] };
 
 const fail = (message) => { throw new Error(`Invalid platform catalog: ${message}`); };
 const digest = (value) => createHash("sha256").update(value).digest("hex");

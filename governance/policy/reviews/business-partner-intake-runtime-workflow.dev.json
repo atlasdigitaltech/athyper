@@ -187,7 +187,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -398,7 +398,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -503,7 +503,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -714,7 +714,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -819,7 +819,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -1030,7 +1030,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -1135,7 +1135,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -1346,7 +1346,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -1451,7 +1451,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -1662,7 +1662,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -1769,7 +1769,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -1981,7 +1981,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -2086,7 +2086,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -2298,7 +2298,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -2405,7 +2405,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -2618,7 +2618,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -2725,7 +2725,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -2938,7 +2938,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -3045,7 +3045,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -3258,7 +3258,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -3365,7 +3365,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -3578,7 +3578,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -3692,7 +3692,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -3905,7 +3905,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -4012,7 +4012,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -4225,7 +4225,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -4332,7 +4332,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -4545,7 +4545,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -4652,7 +4652,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -4849,7 +4849,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -4959,7 +4959,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -5006,7 +5006,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -5277,7 +5277,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -5489,7 +5489,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -5594,7 +5594,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -5806,7 +5806,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -5911,7 +5911,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -6123,7 +6123,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -6228,7 +6228,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -6440,7 +6440,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -6545,7 +6545,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -6757,7 +6757,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -6862,7 +6862,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -7074,7 +7074,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -7179,7 +7179,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -7391,7 +7391,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -7496,7 +7496,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -7708,7 +7708,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -7820,7 +7820,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -8032,7 +8032,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -8137,7 +8137,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -8349,7 +8349,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -8454,7 +8454,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -8666,7 +8666,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -8778,7 +8778,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -8990,7 +8990,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -9093,7 +9093,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -9304,7 +9304,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -9407,7 +9407,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -9618,7 +9618,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -9724,7 +9724,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -9937,7 +9937,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -10043,7 +10043,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -10256,7 +10256,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -10362,7 +10362,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -10559,7 +10559,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -10665,7 +10665,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -10862,7 +10862,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -10968,7 +10968,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -11165,7 +11165,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -11270,7 +11270,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -11467,7 +11467,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -11572,7 +11572,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -11769,7 +11769,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -11876,7 +11876,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -12089,7 +12089,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -12194,7 +12194,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -12406,7 +12406,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -12513,7 +12513,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -12726,7 +12726,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -12833,7 +12833,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -13046,7 +13046,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -13153,7 +13153,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -13366,7 +13366,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -13473,7 +13473,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -13686,7 +13686,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -13793,7 +13793,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -14006,7 +14006,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -14113,7 +14113,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -14310,7 +14310,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -14418,7 +14418,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -14615,7 +14615,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -14723,7 +14723,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -14920,7 +14920,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -15028,7 +15028,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -15241,7 +15241,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -15356,7 +15356,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -15569,7 +15569,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -15681,7 +15681,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -15893,7 +15893,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {
@@ -16005,7 +16005,7 @@
             "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.test.ts",
+            "path": "server/apps/platform-host/src/development/publication.test.ts",
             "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
           },
           {
@@ -16217,7 +16217,7 @@
             "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
           },
           {
-            "path": "server/apps/platform-host/src/composition/dev-publication.ts",
+            "path": "server/apps/platform-host/src/development/publication.ts",
             "sha256": "64160df57b578d325869de9d17f56c26ca84ae65625fe50f33233bb916eed36b"
           },
           {

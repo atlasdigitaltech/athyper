@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerServices } from "../register-services.js";
 
 describe("runtime control command composition", () => {

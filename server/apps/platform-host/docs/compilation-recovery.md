@@ -9,14 +9,14 @@ host files still fail; run pnpm test at that boundary before preflight persisten
 Latest measured host source status (2026-09-26): **1 diagnostic**, including
 0 in register-services.ts. Command: `pnpm --dir server/apps/platform-host exec
 tsc -p tsconfig.json --noEmit` (exit 2). Full output is captured in
-compiler-after-test-fixture-cleanup.txt. This is a partial checkpoint,
+history/compiler-after-test-fixture-cleanup.txt. This is a partial checkpoint,
 not completion of Phase B.
 
 ## Results
 
 | Check | Result |
 | --- | --- |
-| Initial host source typecheck | 238 diagnostics; captured in compiler-baseline.txt |
+| Initial host source typecheck | 238 diagnostics; captured in history/compiler-baseline.txt |
 | Entity-governance contracts typecheck | Passed (including test-source compilation) |
 | Entity-governance service typecheck | Passed |
 | Mesh plane typecheck | Passed |
@@ -35,7 +35,7 @@ not completion of Phase B.
 
 Live collection preparation checkpoint (2026-09-26): 16/16 tests passed against
 real repository SQL functions and disposable fixture tables; teardown confirmed.
-See tests-after-live-collection-preparation.txt for the exact gate, cases and
+See history/tests-after-live-collection-preparation.txt for the exact gate, cases and
 limits. Fresh host suite is 532 passed/25 skipped (16 newly opt-in tests were
 executed separately); typecheck retains only the preflight error. No production
 DDL deployment, full-schema qualification or runtime activation occurred.
@@ -81,7 +81,7 @@ still accepts a BP packet format, so its generic-looking name does not establish
 generic evidence handling. Only audit tooling/docs changed; publication and
 preflight source remain untouched. No new full-suite/typecheck result is claimed.
 
-Live scope checkpoint (2026-09-26): tests-after-live-scope-bindings.txt records
+Live scope checkpoint (2026-09-26): history/tests-after-live-scope-bindings.txt records
 the separate PostgreSQL fixture and full host runs; source typechecking remains
 at the same single preflight error. Host Studio authoring/publication and worker
 release-review seams were confirmed by source inspection. The initial Phase 4
@@ -96,7 +96,7 @@ the stale transition at construction. Retired BP provider assertions and their
 orphaned import were removed from partner-section-contract.test.ts; still-used
 publication validation and overlay checks remain. No production authorization
 or metadata was changed. The three targeted suites passed (24 tests), followed
-by the full host run recorded in tests-after-test-fixture-cleanup.txt.
+by the full host run recorded in history/tests-after-test-fixture-cleanup.txt.
 Typechecking separately still reports only the deliberately gated preflight
 repository import; Phase B and startup verification are not complete.
 
@@ -113,7 +113,7 @@ and target-plane write-time maker-checker checks remain. The old authorizer/test
 were replaced; preserved and expanded tests pass.
 
 New targeted suites: 19 tests pass. Full run: 507 pass, 1 skip, three previously
-identified suite-loading failures. See tests-after-generic-ownership-bindings.txt.
+identified suite-loading failures. See history/tests-after-generic-ownership-bindings.txt.
 The sole compiler error remains untouched preflight. See generic-ownership-bindings.md
 for configuration requirements and the limits of dummy-driver SQL verification.
 No product binding, BP metadata definition, catalog, DDL or live data was changed.
@@ -136,7 +136,7 @@ Generic Studio authoring/publication and release-review paths are preserved.
 The latest full run has no executed-test failures but still fails to load three
 suites: business-partner-backend-intents and business-partner-backend-mapping lack
 explicit transition fixtures; partner-section-contract imports a deleted provider.
-These are not counted as passes. See tests-after-scope-publication-cleanup.txt.
+These are not counted as passes. See history/tests-after-scope-publication-cleanup.txt.
 Preflight remains the sole compiler error and its source is untouched.
 
 Still pending: BP capability-parent assignment guard, workforce-specific parent
@@ -157,7 +157,7 @@ not fabricate empty successful records. Generic resource provider migration is N
 claimed complete. Reference/record reads continue through existing generic services.
 
 The final host error is the deliberately unresolved preflight repository import.
-Full test results are captured in tests-after-bespoke-runtime-removal.txt: failures
+Full test results are captured in history/tests-after-bespoke-runtime-removal.txt: failures
 include missing transition fixtures, retired section/provider and Master Data tests,
 and a stale readiness source assertion. No failures were hidden or called passes.
 BP publication/authoring wiring, stored-scope/preflight and an assignment guard
@@ -325,7 +325,7 @@ Removed:
   no longer exists. Generic backend enforcement and entity authorization shadow
   support remain unchanged.
 
-That historical checkpoint is captured in compiler-after-pilot-match-removal.txt. Generic
+That historical checkpoint is captured in history/compiler-after-pilot-match-removal.txt. Generic
 record-resource construction still references decision/company-profile providers;
 those cannot be removed as independent blocks without replacing that dependency.
 Case preflight's workflow/validation evidence has not been weakened or renamed away.

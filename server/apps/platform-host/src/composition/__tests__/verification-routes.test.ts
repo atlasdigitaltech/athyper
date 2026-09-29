@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { HostConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import type { HostConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { executeVerification } from "../verification-routes.js";
 
 const context = {
