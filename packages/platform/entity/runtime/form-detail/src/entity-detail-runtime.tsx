@@ -7,15 +7,17 @@ import {
   type EntityRecordV1,
 } from "@athyper/contract-platform-entity-runtime";
 import { entityDescriptorClient } from "@athyper/platform-entity-descriptor-client";
-import { ApiTransportError } from "@athyper/platform-api-client";
-import { localizedEntityError } from "@athyper/platform-i18n/entity-errors";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { PageWorkspace, useRecordPage } from "@athyper/platform-shell";
+import {
+  ErrorSurface,
+} from "@athyper/platform-shell-app-foundation";
+import { classifyAppError } from "@athyper/platform-shell-app-foundation/error-taxonomy";
 import {
   useApiClient,
   useSessionIdentity,
 } from "@athyper/platform-shell-app-foundation";
-import { Button, Card, InlineStatus, SurfaceErrorBoundary } from "@athyper/platform-ui";
+import { Card, InlineStatus, SurfaceErrorBoundary } from "@athyper/platform-ui";
 import { MetadataDetailWorkspace } from "./detail-workspace";
 import { sessionScopeKey } from "./session-scope-key";
 import { useAsyncResource } from "./use-async-resource";
@@ -50,22 +52,23 @@ export function EntityDetailRuntime({
     },
     [client, entityCode, recordId],
   );
-  const notFound = loaded.error instanceof ApiTransportError && loaded.error.status === 404;
   if (!loaded.data)
     return (
       <PageWorkspace
         header={{ level: "collection", title: humanizeIdentifier(entityCode) }}
       >
-        <Card>
-          <InlineStatus tone={loaded.error && !notFound ? "danger" : "neutral"}>
-            {notFound
-              ? intl.message("detail.recordNotFound")
-              : loaded.error
-              ? localizedEntityError(loaded.error, intl)
-              : intl.message("detail.loadingRecord")}
-          </InlineStatus>
-          {loaded.error && !notFound ? <Button variant="secondary" onClick={loaded.reload}>{intl.message("entity.retry")}</Button> : null}
-        </Card>
+        {loaded.error ? (
+          <ErrorSurface
+            model={classifyAppError({ error: loaded.error, applicationName: humanizeIdentifier(entityCode) })}
+            reset={loaded.reload}
+            applicationName={humanizeIdentifier(entityCode)}
+            surface="content"
+          />
+        ) : (
+          <Card>
+            <InlineStatus tone="neutral">{intl.message("detail.loadingRecord")}</InlineStatus>
+          </Card>
+        )}
       </PageWorkspace>
     );
   const { descriptor, record } = loaded.data;

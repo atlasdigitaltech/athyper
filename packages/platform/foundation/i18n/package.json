@@ -14,6 +14,7 @@
     "./entity-catalogs": "./src/entity-catalogs.ts",
     "./entity-labels": "./src/entity-labels.ts",
     "./entity-errors": "./src/entity-errors.ts",
+    "./entity-value": "./src/entity-value.ts",
     "./entity-react": "./src/entity-react.ts"
   },
   "scripts": {

@@ -8,8 +8,9 @@ import { COMMON_REFERENCE_VIEW_PERMISSION } from "../../../server/packages/contr
 import { compileGraph } from "../../../server/packages/planes/studio/meta-entity-authoring/src/deterministic";
 
 export const referenceSource = () => JSON.parse(readFileSync(new URL("../../../metadata/products/shared/entities/country/definition.json", import.meta.url), "utf8"));
+export const referenceLocalization = () => JSON.parse(readFileSync(new URL("../../../metadata/products/shared/entities/country/localization.json", import.meta.url), "utf8"));
 export function compiledReference(input = referenceSource(), plane: "studio" | "neon" | "mesh" = "neon") {
-  const product = parseSharedReferenceProduct(input);
+  const product = parseSharedReferenceProduct(input, undefined, referenceLocalization());
   const compiled = compileSharedReferenceProduct(product, plane);
   // Surface layout JSON is also the persisted authoring representation. Recompile
   // its serialized graph to catch references accidentally kept only in memory.
@@ -35,6 +36,6 @@ function referenceService() {
   const descriptor = compiledReference();
   const context: VerifiedRequestContext = {planeKey:"neon",realmKey:"athyper",tenantId:"tenant-1",principalId:"actor-1",authEpoch:1,profileHash:"profile",requestId:"test",
     permissions:{planeKey:"neon",tenantId:"tenant-1",principalId:"actor-1",principalFingerprint:"fixture",profileHash:"profile",schemaHash:"schema",resolvedAt:1,allowed:[COMMON_REFERENCE_VIEW_PERMISSION],denied:[],planLocked:[],planeExcluded:[],entries:[],authorizationScopes:[]}};
-  const service = createEntityListService({metadata:{getEntityDescriptor:async()=>descriptor},authorizer:{authorize:async()=>({allowed:true})},listExecutor:{} as never});
+  const service = createEntityListService({metadata:{getEntityDescriptor:async()=>descriptor},authorizer:{authorize:async()=>({allowed:true}),entityDescriptorSupported:()=>true},listExecutor:{} as never});
   return {service,context};
 }

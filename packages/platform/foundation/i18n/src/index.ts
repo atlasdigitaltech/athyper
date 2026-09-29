@@ -168,7 +168,7 @@ export function createEffectiveLocalization(input: CreateLocalizationInput = {})
 export interface IntlRuntime {
   readonly localization: EffectiveLocalization;
   /** Published labels are plain text, not user-supplied ICU templates. */
-  text(value: string | { readonly labelKey: string; readonly defaultText: string }): string;
+  text(value: string | { readonly labelKey: string; readonly defaultText: string; readonly defaultLocale?: string; readonly values?: Readonly<Record<string, string>> }): string;
   message(id: string, values?: MessageValues): string;
   number(value: number | bigint, options?: Intl.NumberFormatOptions): string;
   date(value: Date | number | string, options?: Intl.DateTimeFormatOptions): string;
@@ -194,6 +194,8 @@ export function createIntlRuntime(input: { readonly localization: EffectiveLocal
     localization,
     text(value) {
       if (typeof value === "string") return value;
+      const published = resolvePublishedText(value, localization.catalogLocale);
+      if (published) return published;
       const translated = Object.hasOwn(input.messages, value.labelKey) ? input.messages[value.labelKey] : undefined;
       const fallback = input.fallbackMessages && Object.hasOwn(input.fallbackMessages, value.labelKey) ? input.fallbackMessages[value.labelKey] : undefined;
       return translated ?? fallback ?? value.defaultText;
@@ -207,6 +209,21 @@ export function createIntlRuntime(input: { readonly localization: EffectiveLocal
     collator(options) { return new Intl.Collator(localization.formatLocale, options); },
   };
   return Object.freeze(runtime);
+}
+
+function resolvePublishedText(
+  value: { readonly defaultLocale?: string; readonly values?: Readonly<Record<string, string>> },
+  locale: string,
+): string | undefined {
+  if (!value.values || !value.defaultLocale) return undefined;
+  const candidates = localeFallbackChain(locale, value.defaultLocale);
+  for (const candidate of candidates) {
+    const key = Object.keys(value.values).find(
+      (entry) => entry.toLowerCase() === candidate.toLowerCase(),
+    );
+    if (key) return value.values[key];
+  }
+  return value.values[value.defaultLocale];
 }
 
 export function namespaceCatalog(namespace: string, catalog: MessageCatalog): MessageCatalog {

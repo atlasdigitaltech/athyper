@@ -14,6 +14,7 @@ describe("localized entity vertical slice",()=>{
   for(const plane of ["studio","neon","mesh"] as const) it(`preserves Country references through source, compiler, serialization and ${plane} runtime parser`,()=>{
     const descriptor=compiledReference(undefined,plane);
     assert.equal(descriptor.listPresentation?.localizedLabels?.title?.labelKey,"entity.country.title");
+    assert.equal(descriptor.listPresentation?.localizedLabels?.title?.values?.ms,"Negara");
     assert.equal(Object.keys(descriptor.recordPresentation!.localizedLabels!.fields).length,22);
     assert.equal(descriptor.recordPresentation!.sections[0]!.localizedLabel!.labelKey,"entity.country.sections.overview");
   });
@@ -55,8 +56,8 @@ describe("localized entity vertical slice",()=>{
     const source=referenceSource();source.definition.fields[0].localizedLabel={labelKey:"other.name",defaultText:"Other"};
     assert.throws(()=>compiledReference(source));
   });
-  it("uses catalog then English then literal authored fallback; never translates record data",()=>{
-    assert.equal(intl("ms-MY").text({labelKey:"entity.country.fields.name",defaultText:"Name"}),"Nama");
+  it("uses published entity text then literal authored fallback; never translates record data",()=>{
+    assert.equal(intl("ms-MY").text({labelKey:"entity.country.fields.name",defaultText:"Name",defaultLocale:"en",values:{en:"Name",ms:"Nama",ar:"الاسم"}}),"Nama");
     assert.equal(intl("ar").text({labelKey:"missing.label",defaultText:"Literal {name}"}),"Literal {name}");
     assert.equal(intl("ar").text("Afghanistan"),"Afghanistan");
     assert.equal(intl("ar").text({labelKey:"constructor",defaultText:"Literal fallback"}),"Literal fallback");
@@ -74,7 +75,8 @@ describe("localized entity vertical slice",()=>{
   });
   it("all shared catalog templates format in all three locales, including Arabic plural categories",()=>{
     for(const locale of ["en","ms","ar"]) for(const key of Object.keys(collaborationMessages)) for(const count of [0,1,2,3,11,100]) {
-      const output=intl(locale).message(key,{count,revision:2,max:20,loaded:String(count>1),total:count,shown:count,audience:"Public",reason:"Locked",section:"Comments",query:"test",date:"2026",name:"example.pdf",size:5,limit:3,jobId:"test-job"});
+      const values = Object.fromEntries([...collaborationMessages[key]![0].matchAll(/\{([A-Za-z][A-Za-z0-9_]*)/g)].map(([, name]) => [name, name === "count" ? count : 1]));
+      const output=intl(locale).message(key,values);
       assert.ok(output.length,`${locale}:${key}`);
     }
   });

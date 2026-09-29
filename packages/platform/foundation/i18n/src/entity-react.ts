@@ -12,7 +12,7 @@ const runtimes = new WeakMap<EffectiveLocalization, IntlRuntime>();
 export function useEntityI18n() {
   const context = useOptionalI18n();
   const localization = context?.localization ?? fallbackLocalization;
-  return useMemo(() => {
+  const fallback = useMemo(() => {
     let runtime = runtimes.get(localization);
     if (!runtime) {
       runtime = createIntlRuntime({ localization, messages: entityMessages(localization.catalogLocale), fallbackMessages: entityFallbackMessages });
@@ -20,4 +20,7 @@ export function useEntityI18n() {
     }
     return runtime;
   }, [localization]);
+  // The shell already owns the governed locale and shared framework catalog.
+  // Reuse it so shell and entity messages cannot select different languages.
+  return context ?? fallback;
 }

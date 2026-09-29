@@ -57,6 +57,7 @@ import {
   type ListNotice,
 } from "./list-notice";
 import { localizedEntityError } from "@athyper/platform-i18n/entity-errors";
+import { formatEntityValue } from "@athyper/platform-i18n/entity-value";
 import {
   fallbackQuickFields,
   resolveEntityText,
@@ -4160,6 +4161,7 @@ function EntityRows({
   readonly onSort: (field: string, additive: boolean) => void;
 }) {
   const selectionName = useId();
+  const intl = useEntityI18n();
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -4221,7 +4223,7 @@ function EntityRows({
   };
   const pageSelected =
     page.rows.length > 0 && page.rows.every((row) => selectedIds.has(row.id));
-  const groups = groupedRows(page, group, descriptor),
+  const groups = groupedRows(page, group, descriptor, intl),
     cards = (rows: readonly EntityListRowV1[]) => (
       <div className="a-entity-list__cards" aria-busy={loading}>
         {rows.map((row) => {
@@ -4230,6 +4232,7 @@ function EntityRows({
               descriptor.fields.find(
                 (field) => field.key === descriptor.entity.identityField,
               ),
+              intl,
             ),
             href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
           return (
@@ -4281,10 +4284,11 @@ function EntityRows({
                               row.values[field.key],
                               field,
                               query,
+                              intl,
                             )}
                           </a>
                         ) : (
-                          renderFieldValue(row.values[field.key], field, query)
+                          renderFieldValue(row.values[field.key], field, query, intl)
                         )}
                       </dd>
                     </div>
@@ -4317,6 +4321,8 @@ function EntityRows({
       const href = chooser ? recordLink?.(row) : recordHref(descriptor, row),
         identity = formatFieldValue(
           row.values[descriptor.entity.identityField],
+          undefined,
+          intl,
         );
       return (
         <tr
@@ -4359,14 +4365,14 @@ function EntityRows({
             <td
               key={field.key}
               data-label={field.label}
-              title={formatFieldValue(row.values[field.key], field)}
+              title={formatFieldValue(row.values[field.key], field, intl)}
             >
               {href && isRecordLinkField(field, descriptor) ? (
                 <a className="a-entity-list__record-link" href={href}>
-                  {renderFieldValue(row.values[field.key], field, query)}
+                  {renderFieldValue(row.values[field.key], field, query, intl)}
                 </a>
               ) : (
-                renderFieldValue(row.values[field.key], field, query)
+                renderFieldValue(row.values[field.key], field, query, intl)
               )}
             </td>
           ))}
@@ -4381,7 +4387,7 @@ function EntityRows({
             ) : null}
           </td>
           <td className="a-entity-list__row-actions">
-            {!chooser ? <RowMenu descriptor={descriptor} row={row} /> : null}
+            {!chooser ? <RowMenu descriptor={descriptor} row={row} intl={intl} /> : null}
           </td>
         </tr>
       );
@@ -4630,15 +4636,18 @@ function BookmarkButton({
 function RowMenu({
   descriptor,
   row,
+  intl,
 }: {
   readonly descriptor: EntityListDescriptorV1;
   readonly row: EntityListRowV1;
+  readonly intl: ReturnType<typeof useEntityI18n>;
 }) {
   const identity = formatFieldValue(
       row.values[descriptor.entity.identityField],
       descriptor.fields.find(
         (field) => field.key === descriptor.entity.identityField,
       ),
+      intl,
     ),
     href = recordHref(descriptor, row);
   return (
@@ -4973,8 +4982,9 @@ function renderFieldValue(
   value: JsonValue | undefined,
   field: ListFieldDescriptorV1,
   query?: string,
+  intl?: ReturnType<typeof useEntityI18n>,
 ): ReactNode {
-  const display = formatFieldValue(value, field),
+  const display = formatFieldValue(value, field, intl),
     highlighted = highlightText(display, query);
   if (field.semanticRole === "status") {
     const normalized = String(value ?? "").toLowerCase();
@@ -4992,7 +5002,9 @@ function renderFieldValue(
 function formatFieldValue(
   value: JsonValue | undefined,
   field?: ListFieldDescriptorV1,
+  intl?: ReturnType<typeof useEntityI18n>,
 ): string {
+  if (intl) return formatEntityValue(value, field, intl);
   if (value === undefined || value === null || value === "") return "—";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "object") return JSON.stringify(value);
@@ -5104,6 +5116,7 @@ function groupedRows(
   page: EntityListResultV1,
   group: string | undefined,
   descriptor: EntityListDescriptorV1,
+  intl: ReturnType<typeof useEntityI18n>,
 ): readonly {
   readonly label: string;
   readonly count: number;
@@ -5114,13 +5127,13 @@ function groupedRows(
   const field = descriptor.fields.find((candidate) => candidate.key === group),
     authoritativeCounts = new Map(
       (page.groups ?? []).map((bucket) => [
-        formatFieldValue(bucket.value, field),
+        formatFieldValue(bucket.value, field, intl),
         bucket.count ?? 0,
       ]),
     ),
     buckets = new Map<string, EntityListRowV1[]>();
   for (const row of page.rows) {
-    const label = formatFieldValue(row.values[group], field),
+    const label = formatFieldValue(row.values[group], field, intl),
       bucket = buckets.get(label) ?? [];
     bucket.push(row);
     buckets.set(label, bucket);
@@ -5364,20 +5377,10 @@ function ErrorState({
       </span>
       <div>
         <h2>
-          {model.kind === "not-found" || model.kind === "service-unavailable"
-            ? model.title
-            : compact
-              ? "The latest results could not be loaded"
-              : "This list is unavailable"}
+          {model.title}
         </h2>
         <p>
-          {localizedEntityError(
-            error,
-            intl,
-            model.kind === "not-found" || model.kind === "service-unavailable"
-              ? model.description
-              : "We couldn’t load this page. Please try again.",
-          )}
+          {localizedEntityError(error, intl, model.description)}
         </p>
       </div>
       {model.canRetry ? (
@@ -5385,11 +5388,7 @@ function ErrorState({
           Try again
         </Button>
       ) : null}
-      <details className="a-entity-list__error-details">
-        <summary>Technical details</summary>
-        <p>{error.message}</p>
-        {error.requestId ? <small>Request ID: {error.requestId}</small> : null}
-      </details>
+      {error.requestId ? <small>Request ID: {error.requestId}</small> : null}
     </Card>
   );
 }
