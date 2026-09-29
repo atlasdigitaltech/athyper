@@ -51,15 +51,16 @@ function ExportDialog(props: DataOperationsControlProps & { readonly initialScop
   const count = scope === "selected" ? props.selectedRows.length : scope === "page" ? props.page?.rows.length ?? 0 : props.page?.pagination.total;
   const start = async () => {
     setError(""); if (!selectedFields.length) { setError(intl.message("transfer.chooseField")); return; }
-    if (scope === "selected" && !props.selectedRows.length) {
-      setError("Select at least one record on this page.");
+    if ((scope === "selected" && !props.selectedRows.length) ||
+      (scope === "page" && !props.page?.rows.length)) {
+      setError(scope === "selected" ? "Select at least one record on this page." : "There are no records on the current page to export.");
       return;
     }
     setBusy(true);
     try {
       const requestId = crypto.randomUUID();
       const scopedRows=scope==="selected"?props.selectedRows:scope==="page"?props.page?.rows??[]:[];
-      const filter = { filters: scope === "filtered" ? props.state.filters : [], sort: props.state.sort, ...(scope === "filtered" && props.state.query ? { search: props.state.query } : {}), ...(scopedRows.length ? { recordIds: scopedRows.map(row=>row.id) } : {}), ...(props.scopeCoordinate ? { scopeCoordinate: props.scopeCoordinate } : {}), _transfer: { scope, format, fields: selectedFields, headings, rawCodes, isoDates, informationSheet:format!=="csv"&&informationSheet, fileName, activeViewName:props.activeViewName, descriptorHash: props.descriptor.revision.descriptorHash, scopeFingerprint: props.descriptor.scope.fingerprint, queryHash: props.page?.queryHash } };
+      const filter = { filters: scope === "filtered" ? props.state.filters : [], sort: props.state.sort, ...(scope === "filtered" && props.state.query ? { search: props.state.query } : {}), ...(scope === "filtered" && props.state.standardViewKey ? { standardViewKey: props.state.standardViewKey } : {}), ...(scopedRows.length ? { recordIds: scopedRows.map(row=>row.id) } : {}), ...(props.scopeCoordinate ? { scopeCoordinate: props.scopeCoordinate } : {}), _transfer: { scope, format, fields: selectedFields, headings, rawCodes, isoDates, informationSheet:format!=="csv"&&informationSheet, fileName, activeViewName:props.activeViewName, descriptorHash: props.descriptor.revision.descriptorHash, scopeFingerprint: props.descriptor.scope.fingerprint, queryHash: props.page?.queryHash } };
       const receipt = await props.client.request(requestRecordExportOperation, { params: { entityCode: props.descriptor.entity.code }, body: { requestId, filter }, idempotencyKey: `export:${requestId}` });
       props.onStatus(intl.message("transfer.exportQueued", {jobId: receipt.jobId}));
       props.onOpenChange(false);
@@ -79,7 +80,7 @@ function ExportDialog(props: DataOperationsControlProps & { readonly initialScop
 
 function scopeChoices(policy: EntityListDescriptorV1["dataOperations"] extends infer _ ? NonNullable<EntityListDescriptorV1["dataOperations"]>["export"] : never, props: Parameters<typeof DataOperationsControl>[0]) {
   const values: readonly { value: Scope; label: string; count?: number; state: string }[] = [{ value: "selected", label: "Selected records", count: props.selectedRows.length, state: policy.selected.state }, { value: "filtered", label: "All records matching search and filters", count: props.page?.pagination.total, state: policy.filtered.state }, { value: "page", label: "Current page", count: props.page?.rows.length ?? 0, state: policy.currentPage.state }, { value: "all", label: "Entire authorized entity", state: policy.all.state }];
-  return values.filter((item) => item.state !== "hidden").map((item) => ({ ...item, disabled: item.state !== "enabled" || (item.value === "selected" && !item.count) }));
+  return values.filter((item) => item.state !== "hidden").map((item) => ({ ...item, disabled: item.state !== "enabled" || ((item.value === "selected" || item.value === "page") && !item.count) }));
 }
 
 export function ImportWizard({ client, descriptor, scopeCoordinate, open, onOpenChange, onStatus }: { readonly client: HttpClient; readonly descriptor: EntityListDescriptorV1; readonly scopeCoordinate?: EntityListScopeCoordinateV1; readonly open: boolean; readonly onOpenChange: (value: boolean) => void; readonly onStatus: (value: string) => void }) {
