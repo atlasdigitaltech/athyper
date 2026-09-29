@@ -11568,7 +11568,7 @@
       "key": "system-verification",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/shared/verification/routes.ts"
+        "server/apps/platform-host/src/composition/shared/verification.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -11628,7 +11628,7 @@
       "key": "verification.probe",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/shared/verification/routes.ts"
+        "server/apps/platform-host/src/composition/shared/verification.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

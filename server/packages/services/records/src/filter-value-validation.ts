@@ -1,7 +1,8 @@
 import type { RecordFilter } from "@athyper/server-contract-records";
+import { ENTITY_LIST_RELATIVE_DATE_VALUES } from "@athyper/contract-platform-entity-list";
 import { RecordServiceError } from "./errors.js";
 
-const relativeDates = new Set(["today", "yesterday", "tomorrow", "last_7_days", "last_30_days", "last_90_days", "last_365_days", "next_7_days", "next_30_days", "next_90_days", "next_365_days", "this_week", "this_month", "this_quarter", "last_year", "this_year", "next_year"]);
+const relativeDates = new Set<string>(ENTITY_LIST_RELATIVE_DATE_VALUES);
 const scalar = (value: unknown) => typeof value === "string" || typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value));
 export function validateFilterValue(filter: RecordFilter): void {
   const value = filter.value;

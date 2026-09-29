@@ -74,6 +74,10 @@ export function admitDevIntakePrerequisite(
     sha256(graph) === pin.contractHash,
     "DEV_PUBLICATION_PREREQUISITE_CHANGED",
   );
+  requireDev(
+    Array.isArray(graph.surfaces) && graph.surfaces.length > 0,
+    "DEV_PUBLICATION_INTAKE_SURFACES_NOT_PUBLISHED",
+  );
   let proposed = structuredClone(graph);
   // A reviewed restoration carrier is a one-time coordinate. The fresh workload
   // draft must review a new coordinate and the full native intake projection;

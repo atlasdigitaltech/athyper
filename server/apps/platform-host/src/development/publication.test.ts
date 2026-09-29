@@ -128,7 +128,7 @@ describe("DEVFULL workload boundary", () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
-  it("checks live principal revocation, tenant scope, and persists approval evidence with a transaction", async () => {
+  it("checks live principal revocation and keeps an unpinned intake request closed", async () => {
     let revoked = false;
     const query = vi.fn(async (text: string, parameters?: unknown[]) => ({
       rows: text.includes("FROM master.principal")
@@ -212,20 +212,8 @@ describe("DEVFULL workload boundary", () => {
       expect((await post(body)).status).toBe(403);
       expect(record).not.toHaveBeenCalled();
       revoked = false;
-      expect((await post(body)).status).toBe(200);
-      expect(record).toHaveBeenCalledWith(
-        expect.objectContaining({
-          eventCode: "metadata.development_publication.approved",
-          actor: { kind: "service", principalId: config.publisher.principalId },
-          metadata: expect.objectContaining({
-            authorId: config.author.principalId,
-            savedHash: "verified-hash",
-            mode: "development_auto_approval",
-          }),
-        }),
-        expect.objectContaining({ isTransaction: true }),
-      );
-      expect(query.mock.calls.some((c) => c[0] === "commit")).toBe(true);
+      expect((await post(body)).status).toBe(409);
+      expect(record).not.toHaveBeenCalled();
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
       await database.destroy();

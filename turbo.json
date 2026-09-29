@@ -10,20 +10,20 @@
     "build": {
       "dependsOn": ["^build", "codegen"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "inputs": ["src/**", "**/*.ts", "tsconfig.json", "package.json"]
+      "inputs": ["src/**", "**/*.{ts,mts,cts}", "tsconfig.json", "package.json"]
     },
     "dev": { "cache": false, "persistent": true },
     "lint": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "**/*.ts"]
+      "inputs": ["src/**", "**/*.{ts,mts,cts}"]
     },
     "typecheck": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "**/*.ts", "tsconfig.json"]
+      "inputs": ["src/**", "**/*.{ts,mts,cts}", "tsconfig.json"]
     },
     "test": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "**/*.ts", "tests/**", "vitest.config.*"]
+      "inputs": ["src/**", "**/*.{ts,mts,cts}", "tests/**", "vitest.config.*"]
     },
     "contracts:check": {
       "dependsOn": ["^build"],

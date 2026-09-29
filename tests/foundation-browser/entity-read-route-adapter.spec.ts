@@ -11,7 +11,7 @@ const bundle = build({
     contents: `
 import Studio from './apps/studio/app/(shell)/app/entity/[entityCode]/[[...segments]]/page';
 import Mesh from './apps/mesh/app/(shell)/app/entity/[entityCode]/[[...segments]]/page';
-import {renderEntityReadRoute} from './packages/platform/entity/runtime/form-detail/src/routes/entity-read-page';
+import {renderEntityReadRoute} from './packages/platform/entity/runtime/form-detail/src/routes/entity-read-route';
 window.inspectRoute=async(plane,params)=>{try{const view=plane==='studio'?await Studio({params:Promise.resolve(params)}):plane==='mesh'?await Mesh({params:Promise.resolve(params)}):renderEntityReadRoute(params,()=>{throw Error('NOT_FOUND')});return {accepted:true,props:view.props};}catch(error){if(error.message!=='NOT_FOUND')throw error;return {accepted:false};}};
 `,
   },
@@ -29,7 +29,7 @@ window.inspectRoute=async(plane,params)=>{try{const view=plane==='studio'?await 
           path: "navigation",
           namespace: "fixture",
         }));
-        builder.onResolve({ filter: /entity-read-runtime$/ }, () => ({
+        builder.onResolve({ filter: /entity-read-surface$/ }, () => ({
           path: "surface",
           namespace: "fixture",
         }));
@@ -38,7 +38,7 @@ window.inspectRoute=async(plane,params)=>{try{const view=plane==='studio'?await 
           contents:
             args.path === "navigation"
               ? `export const notFound=()=>{throw Error('NOT_FOUND')};`
-              : `export const EntityReadRuntime=()=>null;`,
+              : `export const EntityReadSurface=()=>null;`,
         }));
       },
     },

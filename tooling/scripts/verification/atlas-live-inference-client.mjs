@@ -8,8 +8,8 @@ import {
 import {
   RedisInferenceAdmission,
   ATLAS_INFERENCE_ADMISSION_KEY,
-} from "/app/server/dist/composition/shared/ai/atlas-inference-admission.js";
-import { createAtlasSemanticIndex } from "/app/server/dist/composition/shared/ai/atlas-semantic-index.js";
+} from "/app/server/dist/composition/spaces/neon/ai/atlas-inference-admission.js";
+import { createAtlasSemanticIndex } from "/app/server/dist/composition/spaces/neon/ai/atlas-semantic-index.js";
 const [g, e] = JSON.parse(process.argv[2]),
   mode = process.argv[3],
   cache = createRedisCacheAdapter({

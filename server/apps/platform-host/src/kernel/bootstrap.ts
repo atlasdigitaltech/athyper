@@ -1,7 +1,7 @@
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 import { createRegistrationPlan } from "./registration-plan.js";
 import { loadHostModule } from "./module-registry.js";
-import { selectDeploymentEnvironment } from "../config/deployment-environment.js";
+import { selectDeploymentEnvironment } from "./deployment-environment.js";
 import { selectDatabaseConfiguration } from "../composition/infrastructure/database-selection.js";
 import { assertDeploymentProfileImplemented, readDeploymentProfile, type ProcessRole } from "../config/deployment-profile.js";
 

@@ -30,7 +30,7 @@ export class GeminiModelProvider implements AtlasModelProvider {
         else if (eventType === "interaction.failed" || eventType === "error") { terminal = true; yield { kind: "failed", error: providerFailure(event.error ?? event.interaction?.error) }; return; }
       }
       if (!terminal) yield { kind: "failed", error: protocol("stream_incomplete") };
-    } catch (error) { if (scope.timedOut()) yield { kind: "failed", error: fail("timeout", "provider_timeout", true) }; else if (invocation.signal?.aborted || isAbort(error)) yield { kind: "cancelled" }; else yield { kind: "failed", error: fail("upstream_error", "provider_unavailable", true) }; }
+    } catch (error) { if (error instanceof ProviderProtocolError) yield { kind: "failed", error: protocol(error.code) }; else if (scope.timedOut()) yield { kind: "failed", error: fail("timeout", "provider_timeout", true) }; else if (invocation.signal?.aborted || isAbort(error)) yield { kind: "cancelled" }; else yield { kind: "failed", error: fail("upstream_error", "provider_unavailable", true) }; }
     finally { scope.cleanup(); }
   }
 }
@@ -46,7 +46,21 @@ function validate(invocation: AtlasProviderInvocation, adapter: GeminiModelProvi
 function httpError(status: number): AtlasProviderError { if (status === 400) return fail("invalid_request", "invalid_request", false); if (status === 401) return fail("authentication", "authentication_failed", false); if (status === 403) return fail("permission", "permission_denied", false); if (status === 404) return fail("model_unavailable", "model_unavailable", false); if (status === 429) return fail("rate_limited", "rate_limited", true); if (status >= 500) return fail("overloaded", "provider_overloaded", true); return fail("upstream_error", `provider_http_${status}`, false); }
 function protocol(code: string): AtlasProviderError { return fail(code === "stream_incomplete" ? "stream_incomplete" : "protocol_error", code, false); }
 function fail(errorClass: AtlasProviderError["errorClass"], code: string, retryable: boolean): AtlasProviderError { return { errorClass, code, safeMessage: "The Atlas provider request could not be completed.", retryable }; }
-function normalizeModel(value: unknown): string | null { const result = nonEmpty(value); return result?.replace(/^models\//, "") ?? null; } function required(value: unknown): string { const result = nonEmpty(value); if (!result) throw new Error("missing_provider_identifier"); return result; } function nonEmpty(value: unknown): string | null { return typeof value === "string" && value.trim() ? value : null; } function integer(value: unknown): number { return typeof value === "number" && Number.isInteger(value) ? value : -1; } function finite(value: unknown): number | undefined { return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined; }
-async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<{ event: string; data: string }> { const reader = body.getReader(); const decoder = new TextDecoder(); let buffer = ""; try { while (true) { const read = await reader.read(); buffer += decoder.decode(read.value, { stream: !read.done }); const parts = buffer.split(/\r?\n\r?\n/); buffer = parts.pop() ?? ""; for (const part of parts) { const event = part.split(/\r?\n/).find((line) => line.startsWith("event:"))?.slice(6).trim() ?? ""; const data = part.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n"); yield { event, data }; } if (read.done) break; } } finally { reader.releaseLock(); } }
+function normalizeModel(value: unknown): string | null { const result = nonEmpty(value); return result?.replace(/^models\//, "") ?? null; } function required(value: unknown): string { const result = nonEmpty(value); if (!result) throw new ProviderProtocolError("missing_provider_identifier"); return result; } function nonEmpty(value: unknown): string | null { return typeof value === "string" && value.trim() ? value : null; } function integer(value: unknown): number { return typeof value === "number" && Number.isInteger(value) ? value : -1; } function finite(value: unknown): number | undefined { return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined; }
+async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<{ event: string; data: string }> {
+  const reader = body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+  const frame = (part: string) => { const lines = part.split(/\r?\n/); return { event: lines.find((line) => line.startsWith("event:"))?.slice(6).trim() ?? "", data: lines.filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n") }; };
+  try {
+    while (true) {
+      const read = await reader.read();
+      buffer += decoder.decode(read.value, { stream: !read.done });
+      if (buffer.length > 4_194_304) throw new ProviderProtocolError("stream_frame_too_large");
+      const parts = buffer.split(/\r?\n\r?\n/); buffer = parts.pop() ?? "";
+      for (const part of parts) yield frame(part);
+      if (read.done) { if (buffer.trim()) yield frame(buffer); break; }
+    }
+  } finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
+}
+class ProviderProtocolError extends Error { constructor(readonly code: string) { super(code); } }
 function requestScope(parent: AbortSignal | undefined, timeoutMs: number) { const controller = new AbortController(); let timeout = false; const abort = () => controller.abort(parent?.reason); parent?.addEventListener("abort", abort, { once: true }); const timer = setTimeout(() => { timeout = true; controller.abort(); }, timeoutMs); return { signal: controller.signal, timedOut: () => timeout, cleanup: () => { clearTimeout(timer); parent?.removeEventListener("abort", abort); } }; }
 function isAbort(error: unknown): boolean { return error instanceof DOMException && error.name === "AbortError"; }

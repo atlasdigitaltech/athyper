@@ -19,7 +19,7 @@ import type {
 } from "@athyper/server-contract-object-storage";
 import type { Logger } from "@athyper/server-foundation/observability";
 import { randomUUID } from "node:crypto";
-import { Readable, Transform } from "node:stream";
+import { Readable, Transform, pipeline } from "node:stream";
 
 export interface S3ObjectStorageAdapterConfig {
   readonly region: string;
@@ -246,6 +246,10 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
   async get(key: string): Promise<Buffer> {
     const response = await this.#getObject(key, "s3_get_failed");
     if (!response.Body) throw new Error(`S3 object has no body: ${key}`);
+    if ((response.ContentLength ?? 0) > this.config.maxUploadBytes) {
+      (response.Body as { destroy?: () => void }).destroy?.();
+      throw new RangeError("S3 object exceeds configured maximum size");
+    }
     if (typeof response.Body.transformToByteArray === "function") {
       return Buffer.from(await response.Body.transformToByteArray());
     }
@@ -514,9 +518,11 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     await this.client.send(
       new HeadBucketCommand({ Bucket: this.config.bucket }),
     );
-    await this.client.send(
+    const response = await this.client.send(
       new GetObjectCommand({ Bucket: this.config.bucket, Key: normalizedKey }),
     );
+    // Release the socket: only access is being validated, not the content.
+    (response.Body as { destroy?: () => void } | undefined)?.destroy?.();
   }
 
   close(): void {
@@ -615,8 +621,9 @@ function boundedUploadStream(
     },
   });
   const readable = source instanceof Readable ? source : Readable.from(source);
-  readable.on("error", (error) => counter.destroy(error));
-  return readable.pipe(counter);
+  // pipeline destroys the source when the limit trips, and the counter when the source fails.
+  pipeline(readable, counter, () => undefined);
+  return counter;
 }
 
 function isUploadLimitError(error: unknown): boolean {
@@ -719,12 +726,11 @@ function validateConfig(config: S3ObjectStorageAdapterConfig): ResolvedConfig {
 }
 
 function requireObjectKey(key: string): string {
-  const normalized = key.trim();
-  if (!normalized) throw new TypeError("S3 object key must not be empty");
-  if (Buffer.byteLength(normalized) > 1_024) {
+  if (!key.trim()) throw new TypeError("S3 object key must not be empty");
+  if (Buffer.byteLength(key) > 1_024) {
     throw new TypeError("S3 object key must not exceed 1024 bytes");
   }
-  return normalized;
+  return key;
 }
 
 function toAbortError(signal: AbortSignal, key: string): Error {
@@ -752,5 +758,6 @@ function isPreconditionFailed(error: unknown): boolean {
     metadata && typeof metadata === "object"
       ? Reflect.get(metadata, "httpStatusCode")
       : undefined;
-  return name === "PreconditionFailed" || status === 412;
+  // 409 ConditionalRequestConflict: a concurrent conditional write for the same key is in flight.
+  return name === "PreconditionFailed" || name === "ConditionalRequestConflict" || status === 412 || status === 409;
 }

@@ -9,7 +9,7 @@ it.each([
   expect(() => validateFilterValue({ field: "field", operator, value } as RecordFilter)).toThrowError(expect.objectContaining({ statusCode: 400, code: "INVALID_FILTER_VALUE" }));
 });
 it.each([
-  ["relative", "today"], ["between", [1, 2]], ["in", ["a"]], ["eq", null],
+  ["relative", "today"], ["relative", "this_quarter"], ["relative", "next_year"], ["between", [1, 2]], ["in", ["a"]], ["eq", null],
   ["contains", "text"], ["is_null", undefined], ["eq", false], ["gte", 0],
 ])("accepts valid %s", (operator, value) => {
   expect(() => validateFilterValue({ field: "field", operator, value } as RecordFilter)).not.toThrow();

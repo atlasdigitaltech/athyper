@@ -20,7 +20,8 @@
     "express": "^5.2.1",
     "kysely": "^0.28.17",
     "@athyper/server-contract-integration": "workspace:*",
-    "@athyper/server-platform-policy": "workspace:*"
+    "@athyper/server-platform-policy": "workspace:*",
+    "@athyper/server-platform-features": "workspace:*"
   },
   "devDependencies": {
     "@athyper/server-adapter-experience-postgres": "workspace:*",

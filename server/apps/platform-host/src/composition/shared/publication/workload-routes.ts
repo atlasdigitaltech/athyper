@@ -6,17 +6,17 @@ import { calculateDefinitionHash, createKyselyPolicyRepository } from "@athyper/
 import { canonicalJson } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { parseEnrollablePublicationPolicy } from "./enrollment-contract.js";
 import { defineRouteContract, HttpError, registerContractRoute } from "@athyper/server-runtime-http";
-import { createReferencePublicationWorkload, type ReferencePublicationWorkloadConfiguration, type ReferencePublicationWorkloadDependencies } from "./workload.js";
+import { createDevelopmentPublicationWorkload, type DevelopmentPublicationWorkloadConfiguration, type DevelopmentPublicationWorkloadDependencies } from "../../../development/publication-workload.js";
 import { MACHINE_PUBLICATION_PERMISSION } from "./machine-policy.js";
 import { executeCompilationRecovery } from "./compilation-recovery-execution.js";
 
-type Configuration = Omit<ReferencePublicationWorkloadConfiguration, "policy" | "policyHash" | "machinePolicy">;
+type Configuration = Omit<DevelopmentPublicationWorkloadConfiguration, "policy" | "policyHash" | "machinePolicy">;
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 /** Both mounted workload credentials authenticate execution; neither can enroll
  * policy. Only a hash-pinned persisted, independently activated policy supplies
  * the source and targets. Request bodies cannot supply grants or source graphs. */
 export function registerPublicationWorkloadRoutes(app: Application, options: {
-  configuration: Configuration; dependencies: ReferencePublicationWorkloadDependencies;
+  configuration: Configuration; dependencies: DevelopmentPublicationWorkloadDependencies;
 }) {
   const config = structuredClone(options.configuration);
   if (config.environment !== "local" || config.instance !== "dev" || config.domainSuffix !== "dev.athyper.test") throw Error("PUBLICATION_WORKLOAD_DEV_ONLY");
@@ -69,7 +69,7 @@ export function registerPublicationWorkloadRoutes(app: Application, options: {
       }
       // The workflow independently rechecks current policy status, maker/checker,
       // actual workload IAM and principal revocation before doing authoring work.
-      const workflow = createReferencePublicationWorkload({ ...config, policy, machinePolicy: pin,
+      const workflow = createDevelopmentPublicationWorkload({ ...config, policy, machinePolicy: pin,
         policyHash: createHash("sha256").update(canonicalJson(policy)).digest("hex") }, credentials, options.dependencies);
       res.json(await workflow.run());
     } catch (error) {

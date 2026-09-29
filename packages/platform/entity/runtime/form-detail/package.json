@@ -8,8 +8,8 @@
   "exports": {
     ".": "./src/index.tsx",
     "./record": "./src/record/index.ts",
-    "./read": "./src/entity-read-runtime.tsx",
-    "./read-route": "./src/routes/entity-read-page.tsx",
+    "./read": "./src/entity-read-surface.tsx",
+    "./read-route": "./src/routes/entity-read-route.tsx",
     "./styles.css": "./src/styles.css"
   },
   "scripts": {

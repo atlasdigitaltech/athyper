@@ -244,6 +244,7 @@ export const ObjectSearch = forwardRef<HTMLInputElement, { id: string; value: st
 });
 
 export { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
+export { FormField, InlineStatus } from "./form-field";
 export { PreviewFrame } from "./preview-frame";
 export { ContextSelectionDrawer, type ContextChoice } from "./context-selection-drawer";
 

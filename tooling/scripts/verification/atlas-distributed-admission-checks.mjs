@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createRedisCacheAdapter } from "/app/server/node_modules/@athyper/server-adapter-cache-redis/dist/index.js";
-import { RedisInferenceAdmission } from "/app/server/dist/composition/shared/ai/atlas-inference-admission.js";
+import { RedisInferenceAdmission } from "/app/server/dist/composition/spaces/neon/ai/atlas-inference-admission.js";
 const url =
   "redis://:" +
   encodeURIComponent(
@@ -24,7 +24,7 @@ try {
   );
   checks.push("missing coordination state fails closed");
   await initialize();
-  const source = `import{readFileSync}from'node:fs';import{createRedisCacheAdapter}from'/app/server/node_modules/@athyper/server-adapter-cache-redis/dist/index.js';import{RedisInferenceAdmission}from'/app/server/dist/composition/shared/ai/atlas-inference-admission.js';const cache=createRedisCacheAdapter({url:'redis://:'+encodeURIComponent(readFileSync('/run/secrets/redis-password','utf8').trim())+'@memorycache:6379'});await cache.connect();const q=new RedisInferenceAdmission(cache.client,process.argv[1]);try{const release=await q.acquire(new AbortController().signal,e=>{throw e});process.send({kind:'acquired',at:Date.now(),pid:process.pid});await new Promise(r=>setTimeout(r,150));process.send({kind:'work-finished',at:Date.now(),pid:process.pid});await release();}finally{await cache.close();process.disconnect();}`;
+  const source = `import{readFileSync}from'node:fs';import{createRedisCacheAdapter}from'/app/server/node_modules/@athyper/server-adapter-cache-redis/dist/index.js';import{RedisInferenceAdmission}from'/app/server/dist/composition/spaces/neon/ai/atlas-inference-admission.js';const cache=createRedisCacheAdapter({url:'redis://:'+encodeURIComponent(readFileSync('/run/secrets/redis-password','utf8').trim())+'@memorycache:6379'});await cache.connect();const q=new RedisInferenceAdmission(cache.client,process.argv[1]);try{const release=await q.acquire(new AbortController().signal,e=>{throw e});process.send({kind:'acquired',at:Date.now(),pid:process.pid});await new Promise(r=>setTimeout(r,150));process.send({kind:'work-finished',at:Date.now(),pid:process.pid});await release();}finally{await cache.close();process.disconnect();}`;
   const intervals = [];
   await Promise.all(
     Array.from(

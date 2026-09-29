@@ -809,16 +809,14 @@ export function AttachmentCollection({
                 </span>
               ) : null
             }
-            icon={
-              <SlidersHorizontalIcon size={18} aria-hidden="true" />
-            }
+            icon={<SlidersHorizontalIcon size={18} aria-hidden="true" />}
             aria-expanded={filtersOpen}
             aria-controls="file-browse-filters"
             onClick={() => setFiltersOpen((value) => !value)}
           />
         </span>
       }
-      <RecordPanelToolbarActions omitNew/>
+      <RecordPanelToolbarActions omitNew />
     </div>
   );
   return (
@@ -840,878 +838,921 @@ export function AttachmentCollection({
       }}
     >
       <div className="a-files-scroll-area">
-      {fileLinkNotice ? <p role="status">{fileLinkNotice}</p> : null}
-      <section
-        className="a-files-discovery-controls"
-        aria-label={intl.message("files.searchFilter")}
-      >
-        <div
-          onFocusCapture={() => {
-            if (!contentSearch) rememberBrowse();
-          }}
+        {fileLinkNotice ? <p role="status">{fileLinkNotice}</p> : null}
+        <section
+          className="a-files-discovery-controls"
+          aria-label={intl.message("files.searchFilter")}
         >
-          <FileSearchInput
-            search={search}
-            nameQuery={filter}
-            onNameQuery={setFilter}
-            canSearch={canSearch}
-            onClear={() => {
-              if (contentSearch) clearSearch();
-              else setFilter("");
-            }}
-            actions={fullView ? discoveryActions : undefined}
-          />
-        </div>
-        {items.some((item) =>
-          ["pending", "uploading", "uploaded", "processing"].includes(
-            String(item.processingStatus),
-          ),
-        ) ? (
-          <p className="a-files-processing" role="status">
-            {intl.message("files.processingNote")}
-          </p>
-        ) : null}
-        {downloadError ? <p role="alert">{downloadError}</p> : null}
-        {failedVersion ? (
-          <Button
-            type="button"
-            disabled={pendingIds.has(String(failedVersion.parent.id))}
-            onClick={() => {
-              versionTarget.current = failedVersion.parent;
-              void stageVersion(failedVersion.file);
+          <div
+            onFocusCapture={() => {
+              if (!contentSearch) rememberBrowse();
             }}
           >
-            {intl.message("files.retryVersion")}
-          </Button>
-        ) : null}
-        <input
-          ref={versionInput}
-          type="file"
-          hidden
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
-            event.currentTarget.value = "";
-            if (file) void stageVersion(file);
-          }}
-        />
+            <FileSearchInput
+              search={search}
+              nameQuery={filter}
+              onNameQuery={setFilter}
+              canSearch={canSearch}
+              onClear={() => {
+                if (contentSearch) clearSearch();
+                else setFilter("");
+              }}
+              actions={fullView ? discoveryActions : undefined}
+            />
+          </div>
+          {items.some((item) =>
+            ["pending", "uploading", "uploaded", "processing"].includes(
+              String(item.processingStatus),
+            ),
+          ) ? (
+            <p className="a-files-processing" role="status">
+              {intl.message("files.processingNote")}
+            </p>
+          ) : null}
+          {downloadError ? <p role="alert">{downloadError}</p> : null}
+          {failedVersion ? (
+            <Button
+              type="button"
+              disabled={pendingIds.has(String(failedVersion.parent.id))}
+              onClick={() => {
+                versionTarget.current = failedVersion.parent;
+                void stageVersion(failedVersion.file);
+              }}
+            >
+              {intl.message("files.retryVersion")}
+            </Button>
+          ) : null}
+          <input
+            ref={versionInput}
+            type="file"
+            hidden
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              if (file) void stageVersion(file);
+            }}
+          />
+          <Dialog
+            open={Boolean(
+              folderOpen || renameTarget || categoryTarget || moveTarget,
+            )}
+            onOpenChange={(open) => {
+              if (!open && !pending(dialogPendingId)) {
+                setDialog(undefined);
+                setError(undefined);
+              }
+            }}
+          >
+            <DialogContent
+              portal
+              description={
+                folderOpen
+                  ? intl.message("files.folderHelp")
+                  : `File: ${fileLabel(renameTarget ?? moveTarget ?? items.find((item) => String(item.id) === categoryTarget) ?? {})}`
+              }
+              className="a-comment-action-dialog a-file-action-dialog"
+              title={
+                folderOpen
+                  ? intl.message("files.newFolder")
+                  : renameTarget
+                    ? intl.message("files.renameTitle")
+                    : categoryTarget
+                      ? intl.message("files.setCategory")
+                      : intl.message("files.move")
+              }
+            >
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (folderOpen) void createFolder();
+                  else if (renameTarget) void rename(renameTarget, renameValue);
+                  else if (categoryTarget)
+                    void category(categoryTarget, categoryValue);
+                  else if (moveTarget) void move(moveTarget, moveValue);
+                }}
+              >
+                {folderOpen ? (
+                  <label>
+                    {intl.message("files.folderName")}
+                    <input
+                      autoFocus
+                      value={newFolderName}
+                      maxLength={256}
+                      onChange={(event) =>
+                        setNewFolderName(event.currentTarget.value)
+                      }
+                    />
+                  </label>
+                ) : renameTarget ? (
+                  <label>
+                    {intl.message("files.displayName")}
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      maxLength={1024}
+                      onChange={(event) =>
+                        setRenameValue(event.currentTarget.value)
+                      }
+                    />
+                  </label>
+                ) : categoryTarget ? (
+                  <label>
+                    {intl.message("files.category")}
+                    <Select
+                      value={categoryValue}
+                      onChange={(event) =>
+                        setCategoryValue(
+                          event.currentTarget.value as "general" | "evidence",
+                        )
+                      }
+                    >
+                      <option value="general">
+                        {intl.message("files.general")}
+                      </option>
+                      <option value="evidence">
+                        {intl.message("files.evidence")}
+                      </option>
+                    </Select>
+                  </label>
+                ) : (
+                  <label>
+                    {intl.message("files.folder")}
+                    <Select
+                      value={moveValue}
+                      onChange={(event) =>
+                        setMoveValue(event.currentTarget.value)
+                      }
+                    >
+                      <option value="">{intl.message("files.noFolder")}</option>
+                      {folders.map((folder) => (
+                        <option
+                          key={String(folder.id)}
+                          value={String(folder.id)}
+                        >
+                          {String(folder.name)}
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+                )}
+                {error ? <p role="alert">{error}</p> : null}
+                <div className="a-comment-action-dialog__footer">
+                  <Button
+                    variant="secondary"
+                    type="button"
+                    disabled={pending(dialogPendingId)}
+                    onClick={() => {
+                      setDialog(undefined);
+                      setError(undefined);
+                    }}
+                  >
+                    {intl.message("action.cancel")}
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={
+                      pending(dialogPendingId) ||
+                      (folderOpen
+                        ? !newFolderName.trim()
+                        : renameTarget
+                          ? !renameValue.trim()
+                          : moveTarget
+                            ? moveValue === String(moveTarget.folderId ?? "")
+                            : false)
+                    }
+                  >
+                    {folderOpen ? intl.message("files.createFolder") : "Save"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <div
+            id="file-browse-filters"
+            hidden={!filtersOpen}
+            className="a-attachment-workspace__filters"
+          >
+            <label>
+              {intl.message("files.folder")}
+              <Select
+                value={folderFilter}
+                onChange={(event) => setFolderFilter(event.currentTarget.value)}
+              >
+                <option value="">{intl.message("files.allFolders")}</option>
+                <option value="__unfiled">
+                  {intl.message("files.unfiled")}
+                </option>
+                {folders.map((folder) => (
+                  <option key={String(folder.id)} value={String(folder.id)}>
+                    {String(folder.name)}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <label>
+              {intl.message("files.category")}
+              <Select
+                value={categoryFilter}
+                onChange={(event) =>
+                  setCategoryFilter(event.currentTarget.value)
+                }
+              >
+                <option value="">{intl.message("files.allCategories")}</option>
+                <option value="general">{intl.message("files.general")}</option>
+                <option value="evidence">
+                  {intl.message("files.evidence")}
+                </option>
+              </Select>
+            </label>
+          </div>
+          {categoryFilter ? (
+            <div className="a-file-filter-chips">
+              <button type="button" onClick={() => setCategoryFilter("")}>
+                {intl.message("files.categoryFilter", { name: categoryFilter })}{" "}
+                <CloseIcon aria-hidden="true" size={16} />
+                <span className="a-file-search__label">
+                  {intl.message("files.removeCategory")}
+                </span>
+              </button>
+            </div>
+          ) : null}
+          <div className="a-files-browse-summary">
+            {!fullView ? discoveryActions : null}
+            <nav
+              className="a-file-folders"
+              aria-label={intl.message("files.recordFolders")}
+            >
+              <FilterChipGroup
+                label={intl.message("files.folderFilter")}
+                value={folderFilter}
+                onValueChange={setFolderFilter}
+                items={[
+                  { value: "", label: intl.message("files.all") },
+                  { value: "__unfiled", label: intl.message("files.unfiled") },
+                  ...folders.map((folder) => ({
+                    value: String(folder.id),
+                    label: String(folder.name),
+                    className: "a-file-folder",
+                    icon: <FolderInputIcon size={16} />,
+                    action: canFolder ? (
+                      <CollaborationActions
+                        portal
+                        label={`Actions for folder ${folder.name}`}
+                      >
+                        <button
+                          className="a-menu__item"
+                          type="button"
+                          onClick={() =>
+                            setConfirm({
+                              kind: "folder",
+                              item: folder,
+                              detail:
+                                "Move files to Unfiled or another folder first. Only empty folders can be deleted; this applies to this record only.",
+                            })
+                          }
+                        >
+                          <TrashIcon size={16} aria-hidden="true" />
+                          {intl.message("files.deleteFolder")}
+                        </button>
+                      </CollaborationActions>
+                    ) : undefined,
+                  })),
+                ]}
+              />
+            </nav>
+            <p
+              hidden={contentSearch || !visible.length}
+              className="a-attachment-workspace__count"
+              role="status"
+            >
+              {browseItems
+                ? intl.message("files.matchingCount", {
+                    count: visible.length,
+                    loaded: String(Boolean(browseHasMore)),
+                  })
+                : visible.length !== items.length
+                  ? intl.message("files.filteredCount", {
+                      shown: visible.length,
+                      total: items.length,
+                      loaded: String(Boolean(loadMore)),
+                    })
+                  : intl.message("files.totalCount", {
+                      count: visible.length,
+                      loaded: String(Boolean(loadMore)),
+                    })}
+            </p>
+          </div>
+        </section>
         <Dialog
-          open={Boolean(
-            folderOpen || renameTarget || categoryTarget || moveTarget,
-          )}
+          open={Boolean(confirm)}
           onOpenChange={(open) => {
-            if (!open && !pending(dialogPendingId)) {
-              setDialog(undefined);
+            if (
+              !open &&
+              !pending(confirm ? String(confirm.item.id) : undefined)
+            ) {
+              setConfirm(undefined);
               setError(undefined);
             }
           }}
         >
           <DialogContent
             portal
-            description={
-              folderOpen
-                ? intl.message("files.folderHelp")
-                : `File: ${fileLabel(renameTarget ?? moveTarget ?? items.find((item) => String(item.id) === categoryTarget) ?? {})}`
-            }
-            className="a-comment-action-dialog a-file-action-dialog"
             title={
-              folderOpen
-                ? intl.message("files.newFolder")
-                : renameTarget
-                  ? intl.message("files.renameTitle")
-                  : categoryTarget
-                    ? intl.message("files.setCategory")
-                    : intl.message("files.move")
-            }
-          >
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (folderOpen) void createFolder();
-                else if (renameTarget) void rename(renameTarget, renameValue);
-                else if (categoryTarget)
-                  void category(categoryTarget, categoryValue);
-                else if (moveTarget) void move(moveTarget, moveValue);
-              }}
-            >
-              {folderOpen ? (
-                <label>
-                  {intl.message("files.folderName")}
-                  <input
-                    autoFocus
-                    value={newFolderName}
-                    maxLength={256}
-                    onChange={(event) =>
-                      setNewFolderName(event.currentTarget.value)
-                    }
-                  />
-                </label>
-              ) : renameTarget ? (
-                <label>
-                  {intl.message("files.displayName")}
-                  <input
-                    autoFocus
-                    value={renameValue}
-                    maxLength={1024}
-                    onChange={(event) =>
-                      setRenameValue(event.currentTarget.value)
-                    }
-                  />
-                </label>
-              ) : categoryTarget ? (
-                <label>
-                  {intl.message("files.category")}
-                  <Select
-                    value={categoryValue}
-                    onChange={(event) =>
-                      setCategoryValue(
-                        event.currentTarget.value as "general" | "evidence",
-                      )
-                    }
-                  >
-                    <option value="general">
-                      {intl.message("files.general")}
-                    </option>
-                    <option value="evidence">
-                      {intl.message("files.evidence")}
-                    </option>
-                  </Select>
-                </label>
-              ) : (
-                <label>
-                  {intl.message("files.folder")}
-                  <Select
-                    value={moveValue}
-                    onChange={(event) =>
-                      setMoveValue(event.currentTarget.value)
-                    }
-                  >
-                    <option value="">{intl.message("files.noFolder")}</option>
-                    {folders.map((folder) => (
-                      <option key={String(folder.id)} value={String(folder.id)}>
-                        {String(folder.name)}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
-              )}
-              {error ? <p role="alert">{error}</p> : null}
-              <div className="a-comment-action-dialog__footer">
-                <Button
-                  variant="secondary"
-                  type="button"
-                  disabled={pending(dialogPendingId)}
-                  onClick={() => {
-                    setDialog(undefined);
-                    setError(undefined);
-                  }}
-                >
-                  {intl.message("action.cancel")}
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    pending(dialogPendingId) ||
-                    (folderOpen
-                      ? !newFolderName.trim()
-                      : renameTarget
-                        ? !renameValue.trim()
-                        : moveTarget
-                          ? moveValue === String(moveTarget.folderId ?? "")
-                          : false)
-                  }
-                >
-                  {folderOpen ? intl.message("files.createFolder") : "Save"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-        <div
-          id="file-browse-filters"
-          hidden={!filtersOpen}
-          className="a-attachment-workspace__filters"
-        >
-          <label>
-            {intl.message("files.folder")}
-            <Select
-              value={folderFilter}
-              onChange={(event) => setFolderFilter(event.currentTarget.value)}
-            >
-              <option value="">{intl.message("files.allFolders")}</option>
-              <option value="__unfiled">{intl.message("files.unfiled")}</option>
-              {folders.map((folder) => (
-                <option key={String(folder.id)} value={String(folder.id)}>
-                  {String(folder.name)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label>
-            {intl.message("files.category")}
-            <Select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.currentTarget.value)}
-            >
-              <option value="">{intl.message("files.allCategories")}</option>
-              <option value="general">{intl.message("files.general")}</option>
-              <option value="evidence">{intl.message("files.evidence")}</option>
-            </Select>
-          </label>
-        </div>
-        {categoryFilter ? (
-          <div className="a-file-filter-chips">
-            <button type="button" onClick={() => setCategoryFilter("")}>
-              {intl.message("files.categoryFilter", { name: categoryFilter })} ×
-              <span className="a-file-search__label">
-                {intl.message("files.removeCategory")}
-              </span>
-            </button>
-          </div>
-        ) : null}
-        <div className="a-files-browse-summary">
-          {!fullView ? discoveryActions : null}
-          <nav
-            className="a-file-folders"
-            aria-label={intl.message("files.recordFolders")}
-          >
-            <FilterChipGroup
-              label={intl.message("files.folderFilter")}
-              value={folderFilter}
-              onValueChange={setFolderFilter}
-              items={[
-                { value: "", label: intl.message("files.all") },
-                { value: "__unfiled", label: intl.message("files.unfiled") },
-                ...folders.map((folder) => ({
-                  value: String(folder.id),
-                  label: String(folder.name),
-                  className: "a-file-folder",
-                  icon: <FolderInputIcon size={16} />,
-                  action: canFolder ? (
-                    <CollaborationActions
-                      portal
-                      label={`Actions for folder ${folder.name}`}
-                    >
-                      <button
-                        className="a-menu__item"
-                        type="button"
-                        onClick={() =>
-                          setConfirm({
-                            kind: "folder",
-                            item: folder,
-                            detail:
-                              "Move files to Unfiled or another folder first. Only empty folders can be deleted; this applies to this record only.",
-                          })
-                        }
-                      >
-                        <TrashIcon size={16} aria-hidden="true" />
-                        {intl.message("files.deleteFolder")}
-                      </button>
-                    </CollaborationActions>
-                  ) : undefined,
-                })),
-              ]}
-            />
-          </nav>
-          <p
-            hidden={contentSearch || !visible.length}
-            className="a-attachment-workspace__count"
-            role="status"
-          >
-            {browseItems
-              ? intl.message("files.matchingCount", {
-                  count: visible.length,
-                  loaded: String(Boolean(browseHasMore)),
-                })
-              : visible.length !== items.length
-                ? intl.message("files.filteredCount", {
-                    shown: visible.length,
-                    total: items.length,
-                    loaded: String(Boolean(loadMore)),
-                  })
-                : intl.message("files.totalCount", {
-                    count: visible.length,
-                    loaded: String(Boolean(loadMore)),
-                  })}
-          </p>
-        </div>
-      </section>
-      <Dialog
-        open={Boolean(confirm)}
-        onOpenChange={(open) => {
-          if (
-            !open &&
-            !pending(confirm ? String(confirm.item.id) : undefined)
-          ) {
-            setConfirm(undefined);
-            setError(undefined);
-          }
-        }}
-      >
-        <DialogContent
-          portal
-          title={
-            confirm?.kind === "archive"
-              ? intl.message("files.archive")
-              : confirm?.kind === "folder"
-                ? intl.message("files.deleteFolder")
-                : intl.message("files.unlink")
-          }
-          description={confirm?.detail}
-          className="a-comment-action-dialog a-file-action-dialog"
-        >
-          <p>{confirm ? fileLabel(confirm.item) : ""}</p>
-          {error ? <p role="alert">{error}</p> : null}
-          <div className="a-comment-action-dialog__footer">
-            <Button
-              variant="secondary"
-              type="button"
-              disabled={pending(confirm ? String(confirm.item.id) : undefined)}
-              onClick={() => {
-                setError(undefined);
-                setConfirm(undefined);
-              }}
-            >
-              {intl.message("action.cancel")}
-            </Button>
-            <Button
-              variant="danger"
-              type="button"
-              disabled={pending(confirm ? String(confirm.item.id) : undefined)}
-              onClick={() => {
-                if (!confirm) return;
-                const action = confirm;
-                void (action.kind === "archive"
-                  ? archive(action.item)
-                  : action.kind === "folder"
-                    ? deleteFolder(action.item)
-                    : unlink(action.item));
-              }}
-            >
-              {confirm?.kind === "archive"
-                ? intl.message("files.archiveEverywhere")
+              confirm?.kind === "archive"
+                ? intl.message("files.archive")
                 : confirm?.kind === "folder"
                   ? intl.message("files.deleteFolder")
-                  : intl.message("files.unlink")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog
-        open={Boolean(archiveNotice)}
-        onOpenChange={(open) => {
-          if (!open) setArchiveNotice(undefined);
-        }}
-      >
-        <DialogContent
-          portal
-          title={intl.message("files.archiveUnavailable")}
-          description={intl.message("files.legalHold")}
-          className="a-comment-action-dialog a-file-action-dialog"
-        >
-          <p>{archiveNotice ? fileLabel(archiveNotice) : ""}</p>
-          <div className="a-comment-action-dialog__footer">
-            <Button onClick={() => setArchiveNotice(undefined)}>
-              {intl.message("action.close")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <section
-        className="a-files-results-area"
-        aria-label={
-          contentSearch
-            ? intl.message("files.searchResults")
-            : intl.message("files.recordFiles")
-        }
-      >
-        {!contentSearch && !items.length ? (
-          <EmptySectionState
-            centered
-            title={intl.message("files.emptyTitle")}
-            detail={
-              upload
-                ? intl.message("files.emptyDescription")
-                : intl.message("files.readOnlyEmpty")
+                  : intl.message("files.unlink")
             }
-          />
-        ) : null}
-        <div
-          className="a-files-content-layout"
-          data-preview={Boolean(selected) || undefined}
+            description={confirm?.detail}
+            className="a-comment-action-dialog a-file-action-dialog"
+          >
+            <p>{confirm ? fileLabel(confirm.item) : ""}</p>
+            {error ? <p role="alert">{error}</p> : null}
+            <div className="a-comment-action-dialog__footer">
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={pending(
+                  confirm ? String(confirm.item.id) : undefined,
+                )}
+                onClick={() => {
+                  setError(undefined);
+                  setConfirm(undefined);
+                }}
+              >
+                {intl.message("action.cancel")}
+              </Button>
+              <Button
+                variant="danger"
+                type="button"
+                disabled={pending(
+                  confirm ? String(confirm.item.id) : undefined,
+                )}
+                onClick={() => {
+                  if (!confirm) return;
+                  const action = confirm;
+                  void (action.kind === "archive"
+                    ? archive(action.item)
+                    : action.kind === "folder"
+                      ? deleteFolder(action.item)
+                      : unlink(action.item));
+                }}
+              >
+                {confirm?.kind === "archive"
+                  ? intl.message("files.archiveEverywhere")
+                  : confirm?.kind === "folder"
+                    ? intl.message("files.deleteFolder")
+                    : intl.message("files.unlink")}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <Dialog
+          open={Boolean(archiveNotice)}
+          onOpenChange={(open) => {
+            if (!open) setArchiveNotice(undefined);
+          }}
         >
-          <div className="a-files-results-pane">
-            {!contentSearch && !visible.length && items.length ? (
-              <PanelEmptyState
-                className="a-files-empty-state"
-                role="status"
-                icon={<FileTextIcon size={22} />}
-                title={intl.message("files.noMatches")}
-                description={
-                  filter
-                    ? intl.message("files.noNames")
-                    : intl.message("files.filteredEmpty")
-                }
-                action={
-                  <div className="a-files-empty-state__actions">
-                    {canSearch && filter ? (
+          <DialogContent
+            portal
+            title={intl.message("files.archiveUnavailable")}
+            description={intl.message("files.legalHold")}
+            className="a-comment-action-dialog a-file-action-dialog"
+          >
+            <p>{archiveNotice ? fileLabel(archiveNotice) : ""}</p>
+            <div className="a-comment-action-dialog__footer">
+              <Button onClick={() => setArchiveNotice(undefined)}>
+                {intl.message("action.close")}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <section
+          className="a-files-results-area"
+          aria-label={
+            contentSearch
+              ? intl.message("files.searchResults")
+              : intl.message("files.recordFiles")
+          }
+        >
+          {!contentSearch && !items.length ? (
+            <EmptySectionState
+              centered
+              title={intl.message("files.emptyTitle")}
+              detail={
+                upload
+                  ? intl.message("files.emptyDescription")
+                  : intl.message("files.readOnlyEmpty")
+              }
+            />
+          ) : null}
+          <div
+            className="a-files-content-layout"
+            data-preview={Boolean(selected) || undefined}
+          >
+            <div className="a-files-results-pane">
+              {!contentSearch && !visible.length && items.length ? (
+                <PanelEmptyState
+                  className="a-files-empty-state"
+                  role="status"
+                  icon={<FileTextIcon size={22} />}
+                  title={intl.message("files.noMatches")}
+                  description={
+                    filter
+                      ? intl.message("files.noNames")
+                      : intl.message("files.filteredEmpty")
+                  }
+                  action={
+                    <div className="a-files-empty-state__actions">
+                      {canSearch && filter ? (
+                        <Button
+                          variant="secondary"
+                          type="button"
+                          onClick={() => {
+                            search.setQuery(filter);
+                            search.setScope("contents");
+                          }}
+                        >
+                          {intl.message("files.searchContents")}
+                        </Button>
+                      ) : null}
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         type="button"
                         onClick={() => {
-                          search.setQuery(filter);
-                          search.setScope("contents");
+                          setFilter("");
+                          setFolderFilter("");
+                          setCategoryFilter("");
                         }}
                       >
-                        {intl.message("files.searchContents")}
+                        {intl.message("files.showAll")}
                       </Button>
-                    ) : null}
-                    <Button
-                      variant="ghost"
-                      type="button"
-                      onClick={() => {
-                        setFilter("");
-                        setFolderFilter("");
-                        setCategoryFilter("");
-                      }}
-                    >
-                      {intl.message("files.showAll")}
-                    </Button>
-                  </div>
-                }
-              />
-            ) : null}
-            {contentSearch ? (
-              <FileSearchResults
-                search={search}
-                canPreview={canOpenPreview}
-                canDownload={canDownload}
-                selected={selected}
-                downloading={pendingIds}
-                onPreview={(hit) => openPreview(hit.attachmentId, hit.fileName)}
-                onDownload={(id) => void download(id)}
-              />
-            ) : null}
-            <div
-              hidden={contentSearch}
-              className="a-record-detail-collection a-attachment-workspace__list"
-            >
-              {visible.map((item) => (
-                <Card
-                  key={String(item.id)}
-                  className="a-attachment-card"
-                  role="group"
-                  aria-label={fileLabel(item)}
-                  data-selected={selected === item.id || undefined}
-                >
-                  <header className="a-attachment-card__header">
-                    <AttachmentThumbnail
-                      key={String(item.id)}
-                      attachmentId={String(item.id)}
-                      name={fileLabel(item)}
-                      contentType={String(item.contentType ?? "")}
-                      canPreview={
-                        canOpenPreview && item.processingStatus === "active"
-                      }
-                      onPreview={() =>
-                        openPreview(String(item.id), fileLabel(item))
-                      }
-                    />
-                    <div className="a-attachment-card__identity">
-                      <span className="a-file-name">
-                        <Tooltip
-                          portal
-                          onlyWhenTruncated
-                          label={fileLabel(item)}
-                        >
-                          {canOpenPreview &&
-                          item.processingStatus === "active" ? (
-                            <button
-                              type="button"
-                              className="a-file-name__preview"
-                              onClick={() =>
-                                openPreview(String(item.id), fileLabel(item))
-                              }
-                            >
-                              {fileLabel(item)}
-                            </button>
-                          ) : (
-                            <strong tabIndex={0}>{fileLabel(item)}</strong>
-                          )}
-                        </Tooltip>
-                        <small className="a-file-attribution">
-                          {intl.message("files.addedBy", {
-                            name: String(
-                              item.addedByDisplayName ??
-                                intl.message("files.unavailable"),
-                            ),
-                          })}
-                          {item.addedAt
-                            ? ` · ${collaborationTime(item.addedAt, intl)}`
-                            : ""}
-                        </small>
-                      </span>
-                      <small className="a-file-metadata">
-                        {collaborationFileSize(item.sizeBytes, intl)}
-                        {!item.addedAt ? ` · ${collaborationTime(item.createdAt, intl)}` : ""}
-                      </small>
-                      <small className="a-file-version">
-                        <span className="a-file-version-status">
-                          v{display(item.version)} ·{" "}
-                          <span
-                            className="a-file-status"
-                            data-state={String(item.processingStatus)}
-                          >
-                            {display(
-                              status[String(item.id)] ?? item.processingStatus,
-                            )}
-                          </span>
-                          {item.category ? ` · ${item.category}` : ""}
-                        </span>
-                        {canVersion ? (
-                          <span className="a-file-history-disclosure">
-                            <button
-                              type="button"
-                              aria-expanded={history.has(String(item.id))}
-                              aria-controls={history.has(String(item.id)) ? `file-history-${item.id}` : undefined}
-                              onClick={() => void openHistory(item)}
-                            >
-                              <ChevronDownIcon
-                                size={16}
-                                aria-hidden="true"
-                                style={{
-                                  transform: history.has(String(item.id))
-                                    ? "rotate(180deg)"
-                                    : undefined,
-                                }}
-                              />
-                              {intl.message("files.history")}
-                            </button>
-                            <Tooltip
-                              portal
-                              side="bottom"
-                              label={intl.message("files.historyHelp")}
-                            >
-                              <button
-                                type="button"
-                                aria-label={intl.message("files.aboutHistory")}
-                              >
-                                <InfoIcon size={14} aria-hidden="true" />
-                              </button>
-                            </Tooltip>
-                          </span>
-                        ) : null}
-                      </small>
-                      <small className="a-file-location">
-                        <FolderInputIcon size={14} aria-hidden="true" />
-                        {String(
-                          item.folderName ??
-                            folders.find(
-                              (folder) => folder.id === item.folderId,
-                            )?.name ??
-                            intl.message("files.unfiled"),
-                        )}
-                      </small>
                     </div>
-                  </header>
-                  <div className="a-attachment-card__primary">
-                    {canOpenPreview && item.processingStatus === "active" ? (
-                      <FileAction
-                        label={intl.message("files.previewFile")}
-                        icon={<EyeIcon size={18} aria-hidden="true" />}
-                        aria-pressed={selected === item.id}
-                        onClick={() =>
+                  }
+                />
+              ) : null}
+              {contentSearch ? (
+                <FileSearchResults
+                  search={search}
+                  canPreview={canOpenPreview}
+                  canDownload={canDownload}
+                  selected={selected}
+                  downloading={pendingIds}
+                  onPreview={(hit) =>
+                    openPreview(hit.attachmentId, hit.fileName)
+                  }
+                  onDownload={(id) => void download(id)}
+                />
+              ) : null}
+              <div
+                hidden={contentSearch}
+                className="a-record-detail-collection a-attachment-workspace__list"
+              >
+                {visible.map((item) => (
+                  <Card
+                    key={String(item.id)}
+                    className="a-attachment-card"
+                    role="group"
+                    aria-label={fileLabel(item)}
+                    data-selected={selected === item.id || undefined}
+                  >
+                    <header className="a-attachment-card__header">
+                      <AttachmentThumbnail
+                        key={String(item.id)}
+                        attachmentId={String(item.id)}
+                        name={fileLabel(item)}
+                        contentType={String(item.contentType ?? "")}
+                        canPreview={
+                          canOpenPreview && item.processingStatus === "active"
+                        }
+                        onPreview={() =>
                           openPreview(String(item.id), fileLabel(item))
                         }
-                      >
-                        {intl.message("action.preview")}
-                      </FileAction>
-                    ) : null}
-                    {canDownload ? (
-                      <FileAction
-                        label={intl.message("action.download")}
-                        icon={<DownloadIcon size={18} aria-hidden="true" />}
-                        disabled={pendingIds.has(String(item.id))}
-                        onClick={() => void download(String(item.id))}
                       />
-                    ) : null}
-                    <CollaborationActions
-                      portal
-                      label={intl.message("files.actions")}
-                    >
-                      {canVersion ? (
-                        <>
+                      <div className="a-attachment-card__identity">
+                        <span className="a-file-name">
+                          <Tooltip
+                            portal
+                            onlyWhenTruncated
+                            label={fileLabel(item)}
+                          >
+                            {canOpenPreview &&
+                            item.processingStatus === "active" ? (
+                              <button
+                                type="button"
+                                className="a-file-name__preview"
+                                onClick={() =>
+                                  openPreview(String(item.id), fileLabel(item))
+                                }
+                              >
+                                {fileLabel(item)}
+                              </button>
+                            ) : (
+                              <strong tabIndex={0}>{fileLabel(item)}</strong>
+                            )}
+                          </Tooltip>
+                          <small className="a-file-attribution">
+                            {intl.message("files.addedBy", {
+                              name: String(
+                                item.addedByDisplayName ??
+                                  intl.message("files.unavailable"),
+                              ),
+                            })}
+                            {item.addedAt
+                              ? ` · ${collaborationTime(item.addedAt, intl)}`
+                              : ""}
+                          </small>
+                        </span>
+                        <small className="a-file-metadata">
+                          {collaborationFileSize(item.sizeBytes, intl)}
+                          {!item.addedAt
+                            ? ` · ${collaborationTime(item.createdAt, intl)}`
+                            : ""}
+                        </small>
+                        <small className="a-file-version">
+                          <span className="a-file-version-status">
+                            v{display(item.version)} ·{" "}
+                            <span
+                              className="a-file-status"
+                              data-state={String(item.processingStatus)}
+                            >
+                              {display(
+                                status[String(item.id)] ??
+                                  item.processingStatus,
+                              )}
+                            </span>
+                            {item.category ? ` · ${item.category}` : ""}
+                          </span>
+                          {canVersion ? (
+                            <span className="a-file-history-disclosure">
+                              <button
+                                type="button"
+                                aria-expanded={history.has(String(item.id))}
+                                aria-controls={
+                                  history.has(String(item.id))
+                                    ? `file-history-${item.id}`
+                                    : undefined
+                                }
+                                onClick={() => void openHistory(item)}
+                              >
+                                <ChevronDownIcon
+                                  size={16}
+                                  aria-hidden="true"
+                                  data-expanded={history.has(String(item.id))}
+                                />
+                                {intl.message("files.history")}
+                              </button>
+                              <Tooltip
+                                portal
+                                side="bottom"
+                                label={intl.message("files.historyHelp")}
+                              >
+                                <button
+                                  type="button"
+                                  aria-label={intl.message(
+                                    "files.aboutHistory",
+                                  )}
+                                >
+                                  <InfoIcon size={14} aria-hidden="true" />
+                                </button>
+                              </Tooltip>
+                            </span>
+                          ) : null}
+                        </small>
+                        <small className="a-file-location">
+                          <FolderInputIcon size={14} aria-hidden="true" />
+                          {String(
+                            item.folderName ??
+                              folders.find(
+                                (folder) => folder.id === item.folderId,
+                              )?.name ??
+                              intl.message("files.unfiled"),
+                          )}
+                        </small>
+                      </div>
+                    </header>
+                    <div className="a-attachment-card__primary">
+                      {canOpenPreview && item.processingStatus === "active" ? (
+                        <FileAction
+                          label={intl.message("files.previewFile")}
+                          icon={<EyeIcon size={18} aria-hidden="true" />}
+                          aria-pressed={selected === item.id}
+                          onClick={() =>
+                            openPreview(String(item.id), fileLabel(item))
+                          }
+                        >
+                          {intl.message("action.preview")}
+                        </FileAction>
+                      ) : null}
+                      {canDownload ? (
+                        <FileAction
+                          label={intl.message("action.download")}
+                          icon={<DownloadIcon size={18} aria-hidden="true" />}
+                          disabled={pendingIds.has(String(item.id))}
+                          onClick={() => void download(String(item.id))}
+                        />
+                      ) : null}
+                      <CollaborationActions
+                        portal
+                        label={intl.message("files.actions")}
+                      >
+                        {canVersion ? (
+                          <>
+                            <button
+                              type="button"
+                              disabled={pendingIds.has(String(item.id))}
+                              onClick={() => {
+                                versionTarget.current = item;
+                                versionInput.current?.click();
+                              }}
+                            >
+                              <UploadIcon size={16} aria-hidden="true" />
+                              {intl.message("files.uploadVersion")}
+                            </button>
+                          </>
+                        ) : null}
+                        {canVersion &&
+                        (canRename || canFolder || canCategory) ? (
+                          <hr />
+                        ) : null}
+                        {canRename ? (
                           <button
                             type="button"
                             disabled={pendingIds.has(String(item.id))}
                             onClick={() => {
-                              versionTarget.current = item;
-                              versionInput.current?.click();
+                              setError(undefined);
+                              setDialog({ kind: "rename", target: item });
+                              setRenameValue(fileLabel(item));
                             }}
                           >
-                            <UploadIcon size={16} aria-hidden="true" />
-                            {intl.message("files.uploadVersion")}
+                            <PencilIcon size={16} aria-hidden="true" />
+                            {intl.message("files.rename")}
                           </button>
-                        </>
-                      ) : null}
-                      {canVersion && (canRename || canFolder || canCategory) ? (
-                        <hr />
-                      ) : null}
-                      {canRename ? (
+                        ) : null}
+                        {canFolder ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError(undefined);
+                              setDialog({ kind: "move", target: item });
+                              setMoveValue(String(item.folderId ?? ""));
+                            }}
+                          >
+                            <FolderInputIcon size={16} aria-hidden="true" />
+                            {intl.message("files.move")}
+                          </button>
+                        ) : null}
+                        {canCategory ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError(undefined);
+                              setCategoryValue(
+                                item.category === "evidence"
+                                  ? "evidence"
+                                  : "general",
+                              );
+                              setDialog({
+                                kind: "category",
+                                target: String(item.id),
+                              });
+                            }}
+                          >
+                            <TagIcon size={16} aria-hidden="true" />
+                            {intl.message("files.setCategory")}
+                          </button>
+                        ) : null}
+                        {canVersion || canRename || canFolder || canCategory ? (
+                          <hr />
+                        ) : null}
                         <button
                           type="button"
-                          disabled={pendingIds.has(String(item.id))}
-                          onClick={() => {
-                            setError(undefined);
-                            setDialog({ kind: "rename", target: item });
-                            setRenameValue(fileLabel(item));
-                          }}
+                          onClick={() => void copyLink(String(item.id))}
                         >
-                          <PencilIcon size={16} aria-hidden="true" />
-                          {intl.message("files.rename")}
+                          <LinkIcon size={16} aria-hidden="true" />
+                          {intl.message("files.copyLink")}
                         </button>
-                      ) : null}
-                      {canFolder ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setError(undefined);
-                            setDialog({ kind: "move", target: item });
-                            setMoveValue(String(item.folderId ?? ""));
-                          }}
-                        >
-                          <FolderInputIcon size={16} aria-hidden="true" />
-                          {intl.message("files.move")}
-                        </button>
-                      ) : null}
-                      {canCategory ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setError(undefined);
-                            setCategoryValue(
-                              item.category === "evidence"
-                                ? "evidence"
-                                : "general",
-                            );
-                            setDialog({
-                              kind: "category",
-                              target: String(item.id),
-                            });
-                          }}
-                        >
-                          <TagIcon size={16} aria-hidden="true" />
-                          {intl.message("files.setCategory")}
-                        </button>
-                      ) : null}
-                      {canVersion || canRename || canFolder || canCategory ? (
-                        <hr />
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => void copyLink(String(item.id))}
-                      >
-                        <LinkIcon size={16} aria-hidden="true" />
-                        {intl.message("files.copyLink")}
-                      </button>
-                      {canArchive || canUnlink ? <hr /> : null}
-                      {canArchive ? (
-                        <button
-                          type="button"
-                          className="a-attachment-card__danger"
-                          disabled={pendingIds.has(String(item.id))}
-                          onClick={() => void requestArchive(item)}
-                        >
-                          <ArchiveIcon size={16} aria-hidden="true" />
-                          {intl.message("files.archive")}
-                        </button>
-                      ) : null}
-                      {canUnlink ? (
-                        <button
-                          type="button"
-                          className="a-attachment-card__danger"
-                          disabled={pendingIds.has(String(item.id))}
-                          onClick={() =>
-                            setConfirm({
-                              kind: "unlink",
-                              item,
-                              detail:
-                                "This removes the file from this record. The file remains available wherever else it is linked.",
-                            })
-                          }
-                        >
-                          <UnlinkIcon size={16} aria-hidden="true" />
-                          {intl.message("files.unlink")}
-                        </button>
-                      ) : null}
-                    </CollaborationActions>
-                  </div>
+                        {canArchive || canUnlink ? <hr /> : null}
+                        {canArchive ? (
+                          <button
+                            type="button"
+                            className="a-attachment-card__danger"
+                            disabled={pendingIds.has(String(item.id))}
+                            onClick={() => void requestArchive(item)}
+                          >
+                            <ArchiveIcon size={16} aria-hidden="true" />
+                            {intl.message("files.archive")}
+                          </button>
+                        ) : null}
+                        {canUnlink ? (
+                          <button
+                            type="button"
+                            className="a-attachment-card__danger"
+                            disabled={pendingIds.has(String(item.id))}
+                            onClick={() =>
+                              setConfirm({
+                                kind: "unlink",
+                                item,
+                                detail:
+                                  "This removes the file from this record. The file remains available wherever else it is linked.",
+                              })
+                            }
+                          >
+                            <UnlinkIcon size={16} aria-hidden="true" />
+                            {intl.message("files.unlink")}
+                          </button>
+                        ) : null}
+                      </CollaborationActions>
+                    </div>
 
-                  {history.has(String(item.id)) &&
-                  Array.isArray(item.versionHistory) ? (
-                    <ul
-                      id={`file-history-${item.id}`}
-                      className="a-attachment-card__history"
-                      aria-label={intl.message("files.history")}
-                    >
-                      {item.versionHistory.map((version: any) => (
-                        <li key={String(version.id)}>
-                          <div>
-                            <strong>
-                              v{display(version.version)} ·{" "}
-                              {version.id === item.id
-                                ? item.pinnedAttachmentId
-                                  ? intl.message("files.pinned")
-                                  : version.status === "active"
-                                    ? "Current"
-                                    : intl.message("files.pendingVersion")
-                                : intl.message("files.previousVersion")}
-                            </strong>
-                            <span>{display(version.fileName)}</span>
-                            <small>
-                              {version.status === "active"
-                                ? intl.message("files.retainedVersion")
-                                : display(version.status)}{" "}
-                              · {collaborationTime(version.createdAt, intl)}
-                              <span className="a-file-version-author">
-                                {intl.message("files.uploadedBy", {
-                                  name: String(
-                                    version.uploadedByDisplayName ??
-                                      intl.message("files.unavailable"),
-                                  ),
-                                })}
-                              </span>
-                            </small>
-                          </div>
-                          <div className="a-version-actions">
-                            {version.id === item.id &&
-                            canOpenPreview &&
-                            version.status === "active" ? (
-                              <FileAction
-                                label={`Preview version ${version.version}`}
-                                icon={<EyeIcon size={18} aria-hidden="true" />}
-                                onClick={() =>
-                                  openPreview(
-                                    String(version.id),
-                                    String(version.fileName),
-                                  )
-                                }
-                              >
-                                {intl.message("action.preview")}
-                              </FileAction>
-                            ) : null}
-                            {canDownload && version.status === "active" ? (
-                              <FileAction
-                                label={`Download version ${version.version}`}
-                                icon={
-                                  <DownloadIcon size={18} aria-hidden="true" />
-                                }
-                                disabled={pendingIds.has(String(version.id))}
-                                onClick={() =>
-                                  void download(String(version.id))
-                                }
-                              >
-                                {intl.message("action.download")}
-                              </FileAction>
-                            ) : null}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {history.has(String(item.id)) &&
-                  !Array.isArray(item.versionHistory) ? (
-                    <p
-                      role={historyErrors[String(item.id)] ? "alert" : "status"}
-                    >
-                      {historyErrors[String(item.id)] ||
-                        intl.message("files.loadingHistory")}
-                    </p>
-                  ) : null}
-                </Card>
-              ))}
-            </div>
-            {!contentSearch && browse.error ? (
-              <p role="alert">
-                {browse.error}{" "}
-                <button type="button" onClick={browse.retry}>
-                  {intl.message("action.retry")}
-                </button>
-              </p>
-            ) : null}
-            {!contentSearch && browseItems && browseHasMore ? (
-              <button
-                type="button"
-                disabled={browse.busy}
-                onClick={browse.loadMore}
-              >
-                {browse.busy
-                  ? intl.message("files.loadingMore")
-                  : intl.message("files.moreMatching")}
-              </button>
-            ) : null}
-            {!contentSearch &&
-            !filter.trim() &&
-            !folderFilter &&
-            !categoryFilter
-              ? loadMore
-              : null}
-          </div>
-          {selected && canOpenPreview ? (
-            <aside
-              ref={previewRef}
-              tabIndex={-1}
-              className="a-files-selected-preview"
-              aria-label={intl.message("files.selectedPreview")}
-            >
-              <header>
-                {fullView ? (
-                  <FileAction
-                    label={intl.message("action.closePreview")}
-                    icon={<CloseIcon size={18} aria-hidden="true" />}
-                    onClick={closePreview}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    className="a-file-back"
-                    onClick={closePreview}
-                  >
-                    <ChevronLeftIcon size={18} aria-hidden="true" />
-                    {intl.message("files.back")}
+                    {history.has(String(item.id)) &&
+                    Array.isArray(item.versionHistory) ? (
+                      <ul
+                        id={`file-history-${item.id}`}
+                        className="a-attachment-card__history"
+                        aria-label={intl.message("files.history")}
+                      >
+                        {item.versionHistory.map((version: any) => (
+                          <li key={String(version.id)}>
+                            <div>
+                              <strong>
+                                v{display(version.version)} ·{" "}
+                                {version.id === item.id
+                                  ? item.pinnedAttachmentId
+                                    ? intl.message("files.pinned")
+                                    : version.status === "active"
+                                      ? "Current"
+                                      : intl.message("files.pendingVersion")
+                                  : intl.message("files.previousVersion")}
+                              </strong>
+                              <span>{display(version.fileName)}</span>
+                              <small>
+                                {version.status === "active"
+                                  ? intl.message("files.retainedVersion")
+                                  : display(version.status)}{" "}
+                                · {collaborationTime(version.createdAt, intl)}
+                                <span className="a-file-version-author">
+                                  {intl.message("files.uploadedBy", {
+                                    name: String(
+                                      version.uploadedByDisplayName ??
+                                        intl.message("files.unavailable"),
+                                    ),
+                                  })}
+                                </span>
+                              </small>
+                            </div>
+                            <div className="a-version-actions">
+                              {version.id === item.id &&
+                              canOpenPreview &&
+                              version.status === "active" ? (
+                                <FileAction
+                                  label={`Preview version ${version.version}`}
+                                  icon={
+                                    <EyeIcon size={18} aria-hidden="true" />
+                                  }
+                                  onClick={() =>
+                                    openPreview(
+                                      String(version.id),
+                                      String(version.fileName),
+                                    )
+                                  }
+                                >
+                                  {intl.message("action.preview")}
+                                </FileAction>
+                              ) : null}
+                              {canDownload && version.status === "active" ? (
+                                <FileAction
+                                  label={`Download version ${version.version}`}
+                                  icon={
+                                    <DownloadIcon
+                                      size={18}
+                                      aria-hidden="true"
+                                    />
+                                  }
+                                  disabled={pendingIds.has(String(version.id))}
+                                  onClick={() =>
+                                    void download(String(version.id))
+                                  }
+                                >
+                                  {intl.message("action.download")}
+                                </FileAction>
+                              ) : null}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {history.has(String(item.id)) &&
+                    !Array.isArray(item.versionHistory) ? (
+                      <p
+                        role={
+                          historyErrors[String(item.id)] ? "alert" : "status"
+                        }
+                      >
+                        {historyErrors[String(item.id)] ||
+                          intl.message("files.loadingHistory")}
+                      </p>
+                    ) : null}
+                  </Card>
+                ))}
+              </div>
+              {!contentSearch && browse.error ? (
+                <p role="alert">
+                  {browse.error}{" "}
+                  <button type="button" onClick={browse.retry}>
+                    {intl.message("action.retry")}
                   </button>
-                )}
-                <strong>
-                  {selectedName ||
-                    String(
-                      items.find((item) => item.id === selected)?.displayName ??
-                        items.find((item) => item.id === selected)?.fileName ??
-                        intl.message("files.previewTitle"),
-                    )}
-                </strong>
-              </header>
-              <AttachmentPreview
-                key={selected}
-                attachmentId={selected}
-                document
-              />
-            </aside>
-          ) : null}
-        </div>
-      </section>
-      {errors.workspace ? (
-        <p className="a-attachment-workspace__error" role="alert">
-          {errors.workspace}
-        </p>
-      ) : null}
+                </p>
+              ) : null}
+              {!contentSearch && browseItems && browseHasMore ? (
+                <button
+                  type="button"
+                  disabled={browse.busy}
+                  onClick={browse.loadMore}
+                >
+                  {browse.busy
+                    ? intl.message("files.loadingMore")
+                    : intl.message("files.moreMatching")}
+                </button>
+              ) : null}
+              {!contentSearch &&
+              !filter.trim() &&
+              !folderFilter &&
+              !categoryFilter
+                ? loadMore
+                : null}
+            </div>
+            {selected && canOpenPreview ? (
+              <aside
+                ref={previewRef}
+                tabIndex={-1}
+                className="a-files-selected-preview"
+                aria-label={intl.message("files.selectedPreview")}
+              >
+                <header>
+                  {fullView ? (
+                    <FileAction
+                      label={intl.message("action.closePreview")}
+                      icon={<CloseIcon size={18} aria-hidden="true" />}
+                      onClick={closePreview}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="a-file-back"
+                      onClick={closePreview}
+                    >
+                      <ChevronLeftIcon size={18} aria-hidden="true" />
+                      {intl.message("files.back")}
+                    </button>
+                  )}
+                  <strong>
+                    {selectedName ||
+                      String(
+                        items.find((item) => item.id === selected)
+                          ?.displayName ??
+                          items.find((item) => item.id === selected)
+                            ?.fileName ??
+                          intl.message("files.previewTitle"),
+                      )}
+                  </strong>
+                </header>
+                <AttachmentPreview
+                  key={selected}
+                  attachmentId={selected}
+                  document
+                />
+              </aside>
+            ) : null}
+          </div>
+        </section>
+        {errors.workspace ? (
+          <p className="a-attachment-workspace__error" role="alert">
+            {errors.workspace}
+          </p>
+        ) : null}
       </div>
-      {upload ? <RecordActionDock className="a-files-action-dock">
-        <div id={uploadAreaId} className="a-files-upload-area">
-          <UploadExpandedContext.Provider value={uploadOpen}>
-            {upload}
-          </UploadExpandedContext.Provider>
-        </div>
-        <Button className="a-record-dock-action" variant="secondary" data-action-dock-trigger aria-expanded={uploadOpen} aria-controls={uploadAreaId} onClick={()=>setUploadOpen(!uploadOpen)}><UploadIcon aria-hidden="true"/>{intl.message("files.addButton")}</Button>
-      </RecordActionDock> : null}
+      {upload ? (
+        <RecordActionDock className="a-files-action-dock">
+          <div id={uploadAreaId} className="a-files-upload-area">
+            <UploadExpandedContext.Provider value={uploadOpen}>
+              {upload}
+            </UploadExpandedContext.Provider>
+          </div>
+          <Button
+            className="a-record-dock-action"
+            variant="secondary"
+            data-action-dock-trigger
+            aria-expanded={uploadOpen}
+            aria-controls={uploadAreaId}
+            onClick={() => setUploadOpen(!uploadOpen)}
+          >
+            <UploadIcon aria-hidden="true" />
+            {intl.message("files.addButton")}
+          </Button>
+        </RecordActionDock>
+      ) : null}
     </section>
   );
 }

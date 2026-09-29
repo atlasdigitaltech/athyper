@@ -48,6 +48,28 @@ export const ENTITY_LIST_MAX_VISIBLE_COLUMNS = 100;
 export const ENTITY_LIST_MAX_FILTERS = 20;
 export const ENTITY_LIST_MAX_SORT_LEVELS = 10;
 export const ENTITY_LIST_MAX_URL_LENGTH = 8_192;
+/** Values accepted by every Entity Framework relative-date filter endpoint. */
+export const ENTITY_LIST_RELATIVE_DATE_VALUES = [
+  "today",
+  "yesterday",
+  "tomorrow",
+  "last_7_days",
+  "last_30_days",
+  "last_90_days",
+  "last_365_days",
+  "next_7_days",
+  "next_30_days",
+  "next_90_days",
+  "next_365_days",
+  "this_week",
+  "this_month",
+  "this_quarter",
+  "last_year",
+  "this_year",
+  "next_year",
+] as const;
+export type EntityListRelativeDateValue =
+  (typeof ENTITY_LIST_RELATIVE_DATE_VALUES)[number];
 export type EntityListMaxVisibleColumns = 100;
 export type EntityListMaxFilters = 20;
 export type EntityListMaxSortLevels = 10;

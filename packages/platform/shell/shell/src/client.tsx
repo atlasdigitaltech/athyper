@@ -1,5 +1,8 @@
 "use client";
-import { WorkspaceSidePanelContext, type WorkspaceSidePanelRegistration } from "./workspace-side-panel";
+import {
+  WorkspaceSidePanelContext,
+  type WorkspaceSidePanelRegistration,
+} from "./workspace-side-panel";
 import { useAtlasContextNavigation } from "@athyper/platform-ai-agent-ui";
 import {
   GlobalAppBar,
@@ -38,7 +41,6 @@ import {
   UserIcon,
 } from "@athyper/platform-icons";
 import { localeDefinition, type SupportedLocale } from "@athyper/platform-i18n";
-import * as React from "react";
 import {
   useCallback,
   useEffect,
@@ -201,7 +203,9 @@ export function ShellChrome({
   }, []);
   useEffect(() => {
     if (!atlasWidthReady) return;
-    try { localStorage.setItem("athyper.atlas.panel.width", String(atlasWidth)); } catch {}
+    try {
+      localStorage.setItem("athyper.atlas.panel.width", String(atlasWidth));
+    } catch {}
   }, [atlasWidth, atlasWidthReady]);
   const [collapsed, setCollapsed] = useState(initialCollapsed),
     [observedPath, setPath] = useState("/");
@@ -343,56 +347,189 @@ export function ShellChrome({
     writeShellPreference("athyper.atlas.pinned", next);
   };
   const [sidePanel, setSidePanel] = useState<WorkspaceSidePanelRegistration>();
-  const claimSidePanel = useCallback((panel: WorkspaceSidePanelRegistration) => {
-    if (panel.id !== "activity-center") dismissTransient();
-    setAtlasOpen(false);
-    setSidePanel(panel);
-  }, [setAtlasOpen, dismissTransient]);
-  const releaseSidePanel = useCallback((id: string) => setSidePanel(current => current?.id === id ? undefined : current), []);
-  useEffect(() => { if (atlasOpen) setSidePanel(undefined); }, [atlasOpen]);
+  const shellRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    shell.style.setProperty("--atlas-panel", `${atlasWidth}px`);
+    shell.style.setProperty(
+      "--workspace-panel-width",
+      `${sidePanel?.width ?? 420}px`,
+    );
+  }, [atlasWidth, sidePanel?.width]);
+  const claimSidePanel = useCallback(
+    (panel: WorkspaceSidePanelRegistration) => {
+      if (panel.id !== "activity-center") dismissTransient();
+      setAtlasOpen(false);
+      setSidePanel(panel);
+    },
+    [setAtlasOpen, dismissTransient],
+  );
+  const releaseSidePanel = useCallback(
+    (id: string) =>
+      setSidePanel((current) => (current?.id === id ? undefined : current)),
+    [],
+  );
+  useEffect(() => {
+    if (atlasOpen) setSidePanel(undefined);
+  }, [atlasOpen]);
   const atlasVisible = atlasOpen && !path.startsWith("/atlas");
   return (
-    <WorkspaceSidePanelContext.Provider value={{ owner: atlasOpen ? "atlas" : sidePanel?.id, claim: claimSidePanel, release: releaseSidePanel }}>
-    <ShellSurfaceContext.Provider value={{ surface, setContext }}>
-      <AtlasSurfaceContext.Provider
-        value={{
-          sidebarOpen: atlasVisible,
-          close: closeAtlas,
-          fullscreen: () => {
-            setAtlasFull(true);
-            setAtlasOpen(true);
-          },
-          minimize: () => {
-            setAtlasFull(false);
-            setAtlasOpen(true);
-          },
-        }}
-      >
-        <div
-          className="athyper-shell"
-          data-workspace-panel-pinned={Boolean(sidePanel?.pinned)}
-          style={{ "--atlas-panel": `${atlasWidth}px`, "--workspace-panel-width": `${sidePanel?.width ?? 420}px` } as React.CSSProperties}
-          data-collapsed={collapsed}
-          data-desktop-brand={persistentDesktopBrand}
-          data-home-route={homeRoute}
-          data-drawer-open={drawerOpen}
-          data-quick-access-open={Boolean(quickAccessTab)}
-          data-activity-open={
-            headerAction === "notifications" || headerAction === "inbox"
-          }
-          data-atlas-open={atlasVisible}
-          data-atlas-pinned={
-            atlasVisible && atlasPinned && !atlasFull && !compact
-          }
-          data-atlas-full={atlasVisible && atlasFull}
+    <WorkspaceSidePanelContext.Provider
+      value={{
+        owner: atlasOpen ? "atlas" : sidePanel?.id,
+        claim: claimSidePanel,
+        release: releaseSidePanel,
+      }}
+    >
+      <ShellSurfaceContext.Provider value={{ surface, setContext }}>
+        <AtlasSurfaceContext.Provider
+          value={{
+            sidebarOpen: atlasVisible,
+            close: closeAtlas,
+            fullscreen: () => {
+              setAtlasFull(true);
+              setAtlasOpen(true);
+            },
+            minimize: () => {
+              setAtlasFull(false);
+              setAtlasOpen(true);
+            },
+          }}
         >
-          <SkipToContent label={t("shell.skip")} />
-          <GlobalAppBar
-            desktopBrand={
-              persistentDesktopBrand ? (
-                <div className="athyper-shell__desktop-brand">
+          <div
+            ref={shellRef}
+            className="athyper-shell"
+            data-workspace-panel-pinned={Boolean(sidePanel?.pinned)}
+            data-collapsed={collapsed}
+            data-desktop-brand={persistentDesktopBrand}
+            data-home-route={homeRoute}
+            data-drawer-open={drawerOpen}
+            data-quick-access-open={Boolean(quickAccessTab)}
+            data-activity-open={
+              headerAction === "notifications" || headerAction === "inbox"
+            }
+            data-atlas-open={atlasVisible}
+            data-atlas-pinned={
+              atlasVisible && atlasPinned && !atlasFull && !compact
+            }
+            data-atlas-full={atlasVisible && atlasFull}
+          >
+            <SkipToContent label={t("shell.skip")} />
+            <GlobalAppBar
+              desktopBrand={
+                persistentDesktopBrand ? (
+                  <div className="athyper-shell__desktop-brand">
+                    <button
+                      className="athyper-shell__desktop-brand-toggle"
+                      type="button"
+                      aria-label={t(
+                        collapsed
+                          ? "shell.navigation.expand"
+                          : "shell.navigation.collapse",
+                      )}
+                      aria-expanded={!collapsed}
+                      aria-controls="plane-navigation"
+                      onClick={toggleCollapsed}
+                    >
+                      <MenuIcon size={22} />
+                    </button>
+                    <PlaneHomeLink
+                      className="athyper-shell__desktop-brand-link"
+                      applicationName={applicationName}
+                      planeDescriptor={planeDescriptor}
+                      planeIconSrc={planeIconSrc}
+                      planeWordmarkSrc={planeWordmarkSrc}
+                      landingHref={homeHref}
+                    />
+                  </div>
+                ) : null
+              }
+              navigationToggle={
+                <button
+                  ref={menuButton}
+                  className="athyper-shell__menu-button"
+                  type="button"
+                  aria-label={t("shell.navigation.open")}
+                  aria-expanded={drawerOpen}
+                  aria-controls="plane-navigation"
+                  onClick={openNavigation}
+                >
+                  <MenuIcon size={20} />
+                </button>
+              }
+              mobileBrand={
+                <PlaneHomeLink
+                  className="athyper-shell__mobile-brand"
+                  applicationName={applicationName}
+                  planeDescriptor={planeDescriptor}
+                  planeIconSrc={planeIconSrc}
+                  planeWordmarkSrc={planeWordmarkSrc}
+                  landingHref={homeHref}
+                />
+              }
+              businessContext={
+                <BusinessContext
+                  tenantId={tenantId}
+                  tenantLabel={tenantLabel}
+                  tenantSecondaryLabel={tenantSecondaryLabel}
+                  tenantCountryCode={tenantCountryCode}
+                  tenantLogoAssetRef={tenantLogoAssetRef}
+                  contextLabel={contextLabel}
+                  showOrganizationContext={showOrganizationContext}
+                  workContextControl={workContextControl}
+                  contexts={contexts}
+                  landingHref={homeHref}
+                />
+              }
+              actions={
+                <HeaderActions
+                  navigation={navigation}
+                  activity={activity}
+                  active={headerAction}
+                  atlasOpen={atlasVisible}
+                  onAtlasToggle={(opener) => {
+                    atlasOpener.current = opener;
+                    dismissTransient();
+                    setAtlasFull(false);
+                    setAtlasOpen((value) => !value);
+                  }}
+                  onActiveChange={changeHeaderAction}
+                  applicationName={applicationName}
+                  planeDescriptor={planeDescriptor}
+                  currentLocale={currentLocale}
+                  localePolicy={localePolicy}
+                  onLocaleChange={onLocaleChange}
+                />
+              }
+            />
+            {drawerOpen ? (
+              <button
+                type="button"
+                className="athyper-shell__scrim"
+                aria-label={t("shell.navigation.close")}
+                onClick={closeDrawer}
+              />
+            ) : null}
+            <GlobalSidebar
+              compact={compact}
+              open={drawerOpen}
+              label={t("shell.navigation.application")}
+              brand={
+                <PlaneHomeLink
+                  className="athyper-shell__rail-brand"
+                  applicationName={applicationName}
+                  planeDescriptor={planeDescriptor}
+                  planeIconSrc={planeIconSrc}
+                  planeWordmarkSrc={planeWordmarkSrc}
+                  landingHref={homeHref}
+                  onClick={closeDrawer}
+                />
+              }
+              controls={
+                <>
                   <button
-                    className="athyper-shell__desktop-brand-toggle"
+                    className="athyper-shell__rail-toggle"
                     type="button"
                     aria-label={t(
                       collapsed
@@ -400,284 +537,176 @@ export function ShellChrome({
                         : "shell.navigation.collapse",
                     )}
                     aria-expanded={!collapsed}
-                    aria-controls="plane-navigation"
                     onClick={toggleCollapsed}
                   >
-                    <MenuIcon size={22} />
+                    <span>{planeDescriptor}</span>
+                    <b aria-hidden="true">
+                      {collapsed ? (
+                        <ChevronRightIcon size={14} />
+                      ) : (
+                        <ChevronLeftIcon size={14} />
+                      )}
+                    </b>
                   </button>
-                  <PlaneHomeLink
-                    className="athyper-shell__desktop-brand-link"
-                    applicationName={applicationName}
-                    planeDescriptor={planeDescriptor}
-                    planeIconSrc={planeIconSrc}
-                    planeWordmarkSrc={planeWordmarkSrc}
-                    landingHref={homeHref}
-                  />
-                </div>
-              ) : null
-            }
-            navigationToggle={
-              <button
-                ref={menuButton}
-                className="athyper-shell__menu-button"
-                type="button"
-                aria-label={t("shell.navigation.open")}
-                aria-expanded={drawerOpen}
-                aria-controls="plane-navigation"
-                onClick={openNavigation}
-              >
-                <MenuIcon size={20} />
-              </button>
-            }
-            mobileBrand={
-              <PlaneHomeLink
-                className="athyper-shell__mobile-brand"
-                applicationName={applicationName}
-                planeDescriptor={planeDescriptor}
-                planeIconSrc={planeIconSrc}
-                planeWordmarkSrc={planeWordmarkSrc}
-                landingHref={homeHref}
-              />
-            }
-            businessContext={
-              <BusinessContext
-                tenantId={tenantId}
-                tenantLabel={tenantLabel}
-                tenantSecondaryLabel={tenantSecondaryLabel}
-                tenantCountryCode={tenantCountryCode}
-                tenantLogoAssetRef={tenantLogoAssetRef}
-                contextLabel={contextLabel}
-                showOrganizationContext={showOrganizationContext}
-                workContextControl={workContextControl}
-                contexts={contexts}
-                landingHref={homeHref}
-              />
-            }
-            actions={
-              <HeaderActions
-                navigation={navigation}
-                activity={activity}
-                active={headerAction}
-                atlasOpen={atlasVisible}
-                onAtlasToggle={(opener) => {
-                  atlasOpener.current = opener;
-                  dismissTransient();
-                  setAtlasFull(false);
-                  setAtlasOpen((value) => !value);
-                }}
-                onActiveChange={changeHeaderAction}
-                applicationName={applicationName}
-                planeDescriptor={planeDescriptor}
-                currentLocale={currentLocale}
-                localePolicy={localePolicy}
-                onLocaleChange={onLocaleChange}
-              />
-            }
-          />
-          {drawerOpen ? (
-            <button
-              type="button"
-              className="athyper-shell__scrim"
-              aria-label={t("shell.navigation.close")}
-              onClick={closeDrawer}
+                  <button
+                    className="athyper-shell__close athyper-shell__close--rail"
+                    type="button"
+                    aria-label={t("shell.navigation.close")}
+                    onClick={closeDrawer}
+                  >
+                    <CloseIcon size={20} />
+                  </button>
+                </>
+              }
+              navigation={
+                <NavigationPanel
+                  navigation={navigation}
+                  path={path}
+                  homeHref={homeHref}
+                  firstLink={firstLink}
+                  onNavigate={() => {
+                    setNavigationPeek(undefined);
+                    setQuickAccessTab(undefined);
+                    setHeaderAction(undefined);
+                    closeDrawer();
+                  }}
+                  onPeek={setNavigationPeek}
+                />
+              }
+              peek={
+                collapsed && navigationPeek ? (
+                  <div
+                    className="athyper-shell__navigation-peek"
+                    role="tooltip"
+                    style={{ top: navigationPeek.top }}
+                  >
+                    <small>{navigationPeek.workspace}</small>
+                    <strong>{navigationPeek.label}</strong>
+                  </div>
+                ) : null
+              }
+              quickAccess={
+                <QuickAccessRailActions
+                  activeTab={quickAccessTab}
+                  onOpen={openQuickAccess}
+                  onPeek={setNavigationPeek}
+                />
+              }
+              profile={
+                <SidebarProfile
+                  accountLabel={accountLabel}
+                  accountInitials={accountInitials}
+                  loginId={accountLoginId ?? accountSecondaryLabel}
+                  email={
+                    accountEmail ??
+                    (accountSecondaryLabel?.includes("@")
+                      ? accountSecondaryLabel
+                      : undefined)
+                  }
+                  tenantLabel={tenantLabel}
+                  tenantSecondaryLabel={tenantSecondaryLabel}
+                  transactionContext={transactionContext}
+                  currentLocale={currentLocale}
+                  localePolicy={localePolicy}
+                  onLocaleChange={onLocaleChange}
+                />
+              }
             />
-          ) : null}
-          <GlobalSidebar
-            compact={compact}
-            open={drawerOpen}
-            label={t("shell.navigation.application")}
-            brand={
-              <PlaneHomeLink
-                className="athyper-shell__rail-brand"
-                applicationName={applicationName}
-                planeDescriptor={planeDescriptor}
-                planeIconSrc={planeIconSrc}
-                planeWordmarkSrc={planeWordmarkSrc}
-                landingHref={homeHref}
-                onClick={closeDrawer}
-              />
-            }
-            controls={
-              <>
-                <button
-                  className="athyper-shell__rail-toggle"
-                  type="button"
-                  aria-label={t(
-                    collapsed
-                      ? "shell.navigation.expand"
-                      : "shell.navigation.collapse",
-                  )}
-                  aria-expanded={!collapsed}
-                  onClick={toggleCollapsed}
+            <ShellOverlayHost
+              quickAccess={
+                quickAccessTab
+                  ? {
+                      activeTab: quickAccessTab,
+                      modal: compact,
+                      tenantId,
+                      accountScope: quickAccessScope,
+                      plane: applicationName,
+                      path,
+                      navigation,
+                      dataSource: quickAccess,
+                      onTabChange: setQuickAccessTab,
+                      onClose: closeQuickAccess,
+                    }
+                  : undefined
+              }
+              atlas={
+                atlasVisible
+                  ? {
+                      breadcrumbs: crumbs,
+                      mode: atlasFull ? "fullscreen" : "dock",
+                      width: atlasWidth,
+                      onWidthChange: setAtlasWidth,
+                      planeName: applicationName,
+                      currentPath: path,
+                      pinned: atlasPinned && !compact,
+                      onPinnedChange: changeAtlasPin,
+                      onClose: closeAtlas,
+                      restoreFocusOnUnmount: false,
+                    }
+                  : undefined
+              }
+            />
+            <div className="athyper-shell__body">
+              {homeRoute ? null : atlasRoute ? (
+                <nav
+                  className="athyper-shell__breadcrumbs"
+                  aria-label={t("shell.navigation.breadcrumb")}
                 >
-                  <span>{planeDescriptor}</span>
-                  <b aria-hidden="true">
-                    {collapsed ? (
-                      <ChevronRightIcon size={14} />
-                    ) : (
-                      <ChevronLeftIcon size={14} />
-                    )}
-                  </b>
-                </button>
-                <button
-                  className="athyper-shell__close athyper-shell__close--rail"
-                  type="button"
-                  aria-label={t("shell.navigation.close")}
-                  onClick={closeDrawer}
-                >
-                  <CloseIcon size={20} />
-                </button>
-              </>
-            }
-            navigation={
-              <NavigationPanel
-                navigation={navigation}
-                path={path}
-                homeHref={homeHref}
-                firstLink={firstLink}
-                onNavigate={() => {
-                  setNavigationPeek(undefined);
-                  setQuickAccessTab(undefined);
-                  setHeaderAction(undefined);
-                  closeDrawer();
-                }}
-                onPeek={setNavigationPeek}
-              />
-            }
-            peek={
-              collapsed && navigationPeek ? (
-                <div
-                  className="athyper-shell__navigation-peek"
-                  role="tooltip"
-                  style={{ top: navigationPeek.top }}
-                >
-                  <small>{navigationPeek.workspace}</small>
-                  <strong>{navigationPeek.label}</strong>
-                </div>
-              ) : null
-            }
-            quickAccess={
-              <QuickAccessRailActions
-                activeTab={quickAccessTab}
-                onOpen={openQuickAccess}
-                onPeek={setNavigationPeek}
-              />
-            }
-            profile={
-              <SidebarProfile
-                accountLabel={accountLabel}
-                accountInitials={accountInitials}
-                loginId={accountLoginId ?? accountSecondaryLabel}
-                email={
-                  accountEmail ??
-                  (accountSecondaryLabel?.includes("@")
-                    ? accountSecondaryLabel
-                    : undefined)
-                }
-                tenantLabel={tenantLabel}
-                tenantSecondaryLabel={tenantSecondaryLabel}
-                transactionContext={transactionContext}
-                currentLocale={currentLocale}
-                localePolicy={localePolicy}
-                onLocaleChange={onLocaleChange}
-              />
-            }
-          />
-          <ShellOverlayHost
-            quickAccess={
-              quickAccessTab
-                ? {
-                    activeTab: quickAccessTab,
-                    modal: compact,
-                    tenantId,
-                    accountScope: quickAccessScope,
-                    plane: applicationName,
-                    path,
-                    navigation,
-                    dataSource: quickAccess,
-                    onTabChange: setQuickAccessTab,
-                    onClose: closeQuickAccess,
-                  }
-                : undefined
-            }
-            atlas={
-              atlasVisible
-                ? {
-                    breadcrumbs: crumbs,
-                    mode: atlasFull ? "fullscreen" : "dock",
-                    width: atlasWidth,
-                    onWidthChange: setAtlasWidth,
-                    planeName: applicationName,
-                    currentPath: path,
-                    pinned: atlasPinned && !compact,
-                    onPinnedChange: changeAtlasPin,
-                    onClose: closeAtlas,
-                    restoreFocusOnUnmount: false,
-                  }
-                : undefined
-            }
-          />
-          <div className="athyper-shell__body">
-            {homeRoute ? null : atlasRoute ? (
-              <nav
-                className="athyper-shell__breadcrumbs"
-                aria-label={t("shell.navigation.breadcrumb")}
-              >
-                <ol>
-                  <li>
-                    <a href={homeHref}>Home</a>
-                  </li>
-                  <li>
-                    <span aria-current="page">Atlas AI</span>
-                  </li>
-                </ol>
-              </nav>
-            ) : (
-              <nav
-                className="athyper-shell__breadcrumbs"
-                aria-label={t("shell.navigation.breadcrumb")}
-              >
-                {crumbs.length ? (
                   <ol>
-                    {crumbs.map((crumb, index) => (
-                      <li key={`${crumb.label}-${index}`}>
-                        {crumb.href && index < crumbs.length - 1 ? (
-                          <a href={crumb.href}>{crumb.label}</a>
-                        ) : (
-                          <span
-                            aria-current={
-                              index === crumbs.length - 1 ? "page" : undefined
-                            }
-                          >
-                            {crumb.label}
-                          </span>
-                        )}
-                      </li>
-                    ))}
+                    <li>
+                      <a href={homeHref}>Home</a>
+                    </li>
+                    <li>
+                      <span aria-current="page">Atlas AI</span>
+                    </li>
                   </ol>
-                ) : null}
-              </nav>
-            )}
-            <main
-              id="main-content"
-              tabIndex={-1}
-              className="athyper-shell__main"
-            >
-              {experienceState === "context_not_ready" ? (
-                <ContextNotReady />
-              ) : !navigation.routes.length ? (
-                <EmptyEntitlement />
-              ) : routeAllowed ? (
-                children
+                </nav>
               ) : (
-                <ForbiddenRoute />
+                <nav
+                  className="athyper-shell__breadcrumbs"
+                  aria-label={t("shell.navigation.breadcrumb")}
+                >
+                  {crumbs.length ? (
+                    <ol>
+                      {crumbs.map((crumb, index) => (
+                        <li key={`${crumb.label}-${index}`}>
+                          {crumb.href && index < crumbs.length - 1 ? (
+                            <a href={crumb.href}>{crumb.label}</a>
+                          ) : (
+                            <span
+                              aria-current={
+                                index === crumbs.length - 1 ? "page" : undefined
+                              }
+                            >
+                              {crumb.label}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : null}
+                </nav>
               )}
-            </main>
-            <GlobalFooter />
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className="athyper-shell__main"
+              >
+                {experienceState === "context_not_ready" ? (
+                  <ContextNotReady />
+                ) : !navigation.routes.length ? (
+                  <EmptyEntitlement />
+                ) : routeAllowed ? (
+                  children
+                ) : (
+                  <ForbiddenRoute />
+                )}
+              </main>
+              <GlobalFooter />
+            </div>
           </div>
-        </div>
-      </AtlasSurfaceContext.Provider>
-    </ShellSurfaceContext.Provider>
+        </AtlasSurfaceContext.Provider>
+      </ShellSurfaceContext.Provider>
     </WorkspaceSidePanelContext.Provider>
   );
 }

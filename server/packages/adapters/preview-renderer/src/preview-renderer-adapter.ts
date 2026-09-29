@@ -139,6 +139,9 @@ export function createPreviewRendererAdapter(
         });
       }
 
+      if (typeof body.contentType !== "string" || typeof body.provider !== "string" || typeof body.providerVersion !== "string") {
+        throw new PreviewRendererError("invalid_output", "Preview renderer response is missing required fields", { retryable: false });
+      }
       if (!isAllowedOutputType(body.contentType)) {
         throw new PreviewRendererError(
           "invalid_output",
@@ -194,8 +197,7 @@ function isAllowedOutputType(contentType: string): boolean {
 
 async function buildResponseError(response: Response): Promise<PreviewRendererError> {
   await response.body?.cancel().catch(() => undefined);
-  const body = "";
-  const suffix = body ? `: ${body}` : "";
+  const suffix = "";
   if (response.status === 504) {
     return new PreviewRendererError("timeout", `Preview renderer conversion timed out${suffix}`, {
       retryable: true,

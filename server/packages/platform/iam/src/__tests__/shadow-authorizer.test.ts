@@ -106,7 +106,7 @@ it("delegates source constraints without treating them as an allow or observing 
     }));
   const wrapped = createShadowAuthorizer({
     authority: {
-      authorize: async () => ({ allowed: false }),
+      authorize: async () => ({ allowed: false, reason: "denied" }),
       checkSourceConstraints: check,
     },
     observe,
@@ -119,7 +119,7 @@ it("delegates source constraints without treating them as an allow or observing 
   expect(check).toHaveBeenCalledWith(request);
   expect(observe).not.toHaveBeenCalled();
   const absent = createShadowAuthorizer({
-    authority: { authorize: async () => ({ allowed: false }) },
+    authority: { authorize: async () => ({ allowed: false, reason: "denied" }) },
     observe,
     unavailable: () => {},
   });

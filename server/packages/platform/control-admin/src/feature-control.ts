@@ -9,7 +9,7 @@ import {
   type CacheInvalidator,
   type FeatureFlagRepository,
 } from "@athyper/server-contract-control-admin";
-import { featurePercentageCohort } from "@athyper/server-foundation";
+import { featurePercentageCohort } from "@athyper/server-platform-features/feature-cohort";
 import type { ExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";
 import {
   HttpError,

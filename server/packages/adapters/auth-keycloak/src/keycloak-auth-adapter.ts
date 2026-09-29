@@ -24,6 +24,7 @@ export interface KeycloakAuthAdapterConfig {
   readonly algorithms?: readonly string[];
   readonly clockToleranceSeconds?: number;
   readonly jwksCacheTtlMs?: number;
+  readonly jwksRefetchCooldownMs?: number;
   readonly jwksWarmUpTimeoutMs?: number;
   readonly logger?: Pick<Logger, "info" | "warn" | "error">;
   readonly fetcher?: typeof fetch;
@@ -82,7 +83,13 @@ export function createKeycloakAuthAdapter(
         audience: realm.audience,
         algorithms,
         clockTolerance,
+        requiredClaims: ["exp", "iat", "sub"],
       });
+      // Keycloak access tokens are typ "Bearer"; ID and refresh tokens must not authenticate requests.
+      const type = payload["typ"];
+      if (type !== undefined && type !== "Bearer") {
+        throw new TypeError(`JWT type "${String(type)}" is not an access token`);
+      }
       return toVerifiedToken(payload as JwtClaims);
     },
 
@@ -117,6 +124,7 @@ function createRealm(
     jwks: new KeycloakJwksManager(issuerUrl, {
       jwksUrl: realmConfig.jwksUrl,
       cacheTtlMs: adapterConfig.jwksCacheTtlMs,
+      refetchCooldownMs: adapterConfig.jwksRefetchCooldownMs,
       warmUpTimeoutMs: adapterConfig.jwksWarmUpTimeoutMs,
       logger: adapterConfig.logger,
       fetcher: adapterConfig.fetcher,

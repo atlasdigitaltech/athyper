@@ -1,4 +1,4 @@
-import { featurePercentageCohort } from "@athyper/server-foundation";
+import { featurePercentageCohort } from "@athyper/server-platform-features/feature-cohort";
 import { admitEntityRoutes, type PublishedEntityRouteCandidate } from "./entity-route-admission.js";
 import { createHash } from "node:crypto";
 import {

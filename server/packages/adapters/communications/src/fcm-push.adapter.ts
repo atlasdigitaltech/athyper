@@ -1,5 +1,6 @@
 import { createSign } from "node:crypto";
 import type { PushTransport } from "@athyper/server-contract-notifications";
+import { CommunicationDeliveryError } from "./communication-delivery.error.js";
 
 export interface FcmPushAdapterConfig {
   readonly projectId: string;
@@ -25,9 +26,15 @@ export function createFcmPushAdapter(
   const timeoutMs = config.timeoutMs ?? 10_000;
   const now = dependencies.now ?? Date.now;
   let cachedToken: { value: string; expiresAt: number } | undefined;
+  let inflight: Promise<string> | undefined;
 
-  const accessToken = async (): Promise<string> => {
-    if (cachedToken && cachedToken.expiresAt > now() + 60_000) return cachedToken.value;
+  const accessToken = (): Promise<string> => {
+    if (cachedToken && cachedToken.expiresAt > now() + 60_000) return Promise.resolve(cachedToken.value);
+    inflight ??= exchangeToken().finally(() => { inflight = undefined; });
+    return inflight;
+  };
+
+  const exchangeToken = async (): Promise<string> => {
     const issuedAt = Math.floor(now() / 1_000);
     const assertion = signJwt(
       { alg: "RS256", typ: "JWT" },
@@ -61,6 +68,9 @@ export function createFcmPushAdapter(
     platforms: ["android", "ios"],
     async send(subscription, message) {
       if (!subscription.deviceToken) throw new Error("FCM subscription has no device token");
+      const data = message.data
+        ? Object.fromEntries(Object.entries(message.data).map(([key, value]) => [key, typeof value === "string" ? value : JSON.stringify(value)]))
+        : undefined;
       const response = await dependencies.fetch(
         `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/messages:send`,
         {
@@ -75,7 +85,7 @@ export function createFcmPushAdapter(
               ...(message.title || message.body
                 ? { notification: { title: message.title ?? "", body: message.body ?? "" } }
                 : {}),
-              ...(message.data ? { data: message.data } : {}),
+              ...(data ? { data } : {}),
             },
           }),
           signal: AbortSignal.timeout(timeoutMs),
@@ -89,7 +99,13 @@ export function createFcmPushAdapter(
         if (response.status === 404 || responseBody.error?.status === "UNREGISTERED") {
           return { subscriptionExpired: true };
         }
-        throw new Error(`FCM delivery failed with HTTP ${response.status}`);
+        // A rejected credential must not be reused until its nominal expiry.
+        if (response.status === 401) cachedToken = undefined;
+        throw new CommunicationDeliveryError(`FCM delivery failed with HTTP ${response.status}`, {
+          channel: "push",
+          retryable: response.status === 401 || response.status === 429 || response.status >= 500,
+          statusCode: response.status,
+        });
       }
       return typeof responseBody.name === "string"
         ? { externalId: responseBody.name }

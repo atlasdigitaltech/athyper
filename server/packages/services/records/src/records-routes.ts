@@ -1,4 +1,5 @@
 import { parseEntityListScopeCoordinate } from "./list-scope-coordinate.js";
+import { ENTITY_LIST_RELATIVE_DATE_VALUES } from "@athyper/contract-platform-entity-list";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { ListRecordsQuery, RecordFilter, RecordFilterOperator, RecordMutationResult, RecordMutationService, RecordQueryService, RecordSort } from "@athyper/server-contract-records";
 import { HttpError, defineRouteContract, registerContractRoute } from "@athyper/server-runtime-http";
@@ -50,7 +51,7 @@ const contracts = {
 
 type RecordListParameters = Omit<ListRecordsQuery, "context" | "entityCode">;
 const FILTER_OPERATORS = new Set<RecordFilterOperator>(["eq", "ne", "in", "contains", "starts_with", "gt", "gte", "lt", "lte", "between", "is_null", "is_not_null", "relative"]);
-const RELATIVE_DATE_VALUES = new Set(["today", "yesterday", "tomorrow", "last_7_days", "last_30_days", "next_7_days", "next_30_days", "this_week", "this_month"]);
+const RELATIVE_DATE_VALUES = new Set<string>(ENTITY_LIST_RELATIVE_DATE_VALUES);
 
 export function parseRecordListParameters(query: Readonly<Record<string, unknown>>): RecordListParameters {
   const limit = integerQuery(query["limit"]);

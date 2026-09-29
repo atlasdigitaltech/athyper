@@ -21,6 +21,9 @@ export function createActivityRecordingResolver(
     command: IdempotentRecordCommand,
     descriptor: EntityRuntimeDescriptor,
   ): Promise<RecordHistoryBinding | undefined> => {
+    // Legacy/injected descriptors cannot carry a signed activity release. Do
+    // not probe the compiled-release store merely to discover that absence.
+    if (!descriptor.compiledRelease) return;
     const release = await reader.resolve({
       tenantId: command.context.tenantId,
       principalId: command.context.principalId,
@@ -29,11 +32,7 @@ export function createActivityRecordingResolver(
     });
     // Legacy descriptors have no published Activity. A missing published head is
     // an error for a compiled descriptor rather than an optional recording skip.
-    if (!release) {
-      if (descriptor.compiledRelease)
-        throw Error("RECORD_HISTORY_RELEASE_UNAVAILABLE");
-      return;
-    }
+    if (!release) throw Error("RECORD_HISTORY_RELEASE_UNAVAILABLE");
     const core = await reader.core(release);
     const declaration = (
       core.content.capabilities as

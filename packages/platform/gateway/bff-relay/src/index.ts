@@ -32,6 +32,31 @@ export interface RelaySessionAuthority {
     reason: "context_mismatch",
   ): Promise<readonly string[] | void>;
 }
+/** Session methods an app's auth runtime exposes to the relay. */
+export interface RelayAuthRuntime {
+  resolveRelaySession(request: Request): Promise<RelaySessionContext | undefined>;
+  refreshRelaySession(request: Request): Promise<RelaySessionContext | undefined>;
+  invalidateRelaySession(
+    request: Request,
+    reason: "context_mismatch",
+  ): Promise<readonly string[] | void>;
+}
+/** Adapts an app auth runtime to the relay's session authority. */
+export function relaySessionFromAuth(
+  auth: RelayAuthRuntime,
+): RelaySessionAuthority {
+  return {
+    resolve: (request) => auth.resolveRelaySession(request),
+    refresh: (request) => auth.refreshRelaySession(request),
+    invalidate: (request, reason) => auth.invalidateRelaySession(request, reason),
+  };
+}
+/** Builds an app's relay on first request, so importing the route module reads
+ * no environment. Every plane app shares this bootstrap. */
+export function createLazyRelay(create: () => RelayHandler): RelayHandler {
+  let relay: RelayHandler | undefined;
+  return (request, context) => (relay ??= create())(request, context);
+}
 export interface RelayDiagnostic {
   readonly event: "request" | "failure" | "refresh" | "context_mismatch";
   readonly operationId?: string;
@@ -128,32 +153,99 @@ const DEFAULT_TIMEOUTS: Readonly<Record<RelayRequestClass, number>> = {
 /** Explicit Studio authoring surfaces; upstream owns tenant scope, permissions and independent review. */
 export const STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
-    {id:"studio.collections.providers",method:"GET",path:"/api/meta-entity-authoring/collection-providers",requiresTenant:true,maxBodyBytes:0},
-    ...([["GET",""],["PUT",""],["POST","/validate"],["POST","/preview"]] as const).map(([method,suffix])=>({id:`studio.collections.${method}${suffix}`,method,path:`/api/meta-entity-authoring/change-sets/:id/collection${suffix}` as const,requiresTenant:true,idempotency:"none" as const,maxBodyBytes:method==="GET"?0:128*1024})),
+    {
+      id: "studio.collections.providers",
+      method: "GET",
+      path: "/api/meta-entity-authoring/collection-providers",
+      requiresTenant: true,
+      maxBodyBytes: 0,
+    },
+    ...(
+      [
+        ["GET", ""],
+        ["PUT", ""],
+        ["POST", "/validate"],
+        ["POST", "/preview"],
+      ] as const
+    ).map(([method, suffix]) => ({
+      id: `studio.collections.${method}${suffix}`,
+      method,
+      path: `/api/meta-entity-authoring/change-sets/:id/collection${suffix}` as const,
+      requiresTenant: true,
+      idempotency: "none" as const,
+      maxBodyBytes: method === "GET" ? 0 : 128 * 1024,
+    })),
 
-    {id:"studio.metaEntity.notifications.inspect",method:"GET",path:"/api/meta-entity-authoring/inspection/notifications/:entityCode",requiresTenant:true,idempotency:"none",maxBodyBytes:0},
-    {id:"studio.metaEntity.notifications.list",method:"GET",path:"/api/meta-entity-authoring/change-sets/:id/notifications",requiresTenant:true,maxBodyBytes:0},
-    ...([
-      ["GET", "", "configuration"], ["GET", "/templates", "templates"], ["GET", "/templates/:key", "template"],
-      ["PUT", "/templates/:key", "saveTemplate"], ["PUT", "/policy", "savePolicy"],
-      ["POST", "/validate", "validateNotifications"], ["POST", "/preview", "previewNotifications"],
-    ] as const).map(([method, suffix, name]) => ({
-      id: `studio.metaEntity.notifications.${name}`, method,
+    {
+      id: "studio.metaEntity.notifications.inspect",
+      method: "GET",
+      path: "/api/meta-entity-authoring/inspection/notifications/:entityCode",
+      requiresTenant: true,
+      idempotency: "none",
+      maxBodyBytes: 0,
+    },
+    {
+      id: "studio.metaEntity.notifications.list",
+      method: "GET",
+      path: "/api/meta-entity-authoring/change-sets/:id/notifications",
+      requiresTenant: true,
+      maxBodyBytes: 0,
+    },
+    ...(
+      [
+        ["GET", "", "configuration"],
+        ["GET", "/templates", "templates"],
+        ["GET", "/templates/:key", "template"],
+        ["PUT", "/templates/:key", "saveTemplate"],
+        ["PUT", "/policy", "savePolicy"],
+        ["POST", "/validate", "validateNotifications"],
+        ["POST", "/preview", "previewNotifications"],
+      ] as const
+    ).map(([method, suffix, name]) => ({
+      id: `studio.metaEntity.notifications.${name}`,
+      method,
       path: `/api/meta-entity-authoring/change-sets/:id/notifications/:capability${suffix}` as const,
-      requestClass: "json" as const, requiresTenant: true, idempotency: "none" as const,
-      allowedQuery: ["channel", "locale", "version"], maxBodyBytes: method === "GET" ? 0 : 128 * 1024,
+      requestClass: "json" as const,
+      requiresTenant: true,
+      idempotency: "none" as const,
+      allowedQuery: ["channel", "locale", "version"],
+      maxBodyBytes: method === "GET" ? 0 : 128 * 1024,
     })),
-    ...(["/api/meta-entity-authoring/inspection/releases", "/api/meta-entity-authoring/inspection/releases/:id", "/api/meta-entity-authoring/inspection/releases/:id/activation"] as const).map((path, index) => ({
-      id: `studio.metaEntity.inspection.${index}`, method: "GET" as const, path,
-      requestClass: "json" as const, requiresTenant: true, idempotency: "none" as const, maxBodyBytes: 0,
+    ...(
+      [
+        "/api/meta-entity-authoring/inspection/releases",
+        "/api/meta-entity-authoring/inspection/releases/:id",
+        "/api/meta-entity-authoring/inspection/releases/:id/activation",
+      ] as const
+    ).map((path, index) => ({
+      id: `studio.metaEntity.inspection.${index}`,
+      method: "GET" as const,
+      path,
+      requestClass: "json" as const,
+      requiresTenant: true,
+      idempotency: "none" as const,
+      maxBodyBytes: 0,
     })),
-    ...([
-      ["addressPreviewChoices", "/api/meta-entity-authoring/inspection/address-preview-choices"],
-      ["draftHistory", "/api/meta-entity-authoring/change-sets/:id/history"],
-      ["draftHistoryRevision", "/api/meta-entity-authoring/change-sets/:id/history/:revision"],
-    ] as const).map(([name, path]) => ({
-      id: `studio.metaEntity.${name}`, method: "GET" as const, path,
-      requestClass: "json" as const, requiresTenant: true, idempotency: "none" as const, maxBodyBytes: 0,
+    ...(
+      [
+        [
+          "addressPreviewChoices",
+          "/api/meta-entity-authoring/inspection/address-preview-choices",
+        ],
+        ["draftHistory", "/api/meta-entity-authoring/change-sets/:id/history"],
+        [
+          "draftHistoryRevision",
+          "/api/meta-entity-authoring/change-sets/:id/history/:revision",
+        ],
+      ] as const
+    ).map(([name, path]) => ({
+      id: `studio.metaEntity.${name}`,
+      method: "GET" as const,
+      path,
+      requestClass: "json" as const,
+      requiresTenant: true,
+      idempotency: "none" as const,
+      maxBodyBytes: 0,
     })),
     {
       id: "studio.metaEntity.list",
@@ -212,7 +304,6 @@ export const STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS: readonly RelayOperat
       maxBodyBytes: 4096,
     })),
   ]);
-
 
 export const STUDIO_AUTHORIZATION_MANAGEMENT_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
@@ -454,9 +545,31 @@ export const ATLAS_ANSWER_RELAY_OPERATIONS: readonly RelayOperation[] =
     ATTACHMENT_REMOVE_OPERATION,
     ATTACHMENT_RENAME_OPERATION,
     ATTACHMENT_FOLDER_OPERATION,
-    { id: "attachments.category", method: "POST", path: "/api/attachments/:attachmentId/category", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 4096 },
-    { id: "attachments.archive-outcome", method: "GET", path: "/api/attachments/:attachmentId/archive", requestClass: "json", requiresTenant: true },
-    { id: "attachments.archive", method: "POST", path: "/api/attachments/:attachmentId/archive", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 4096 },
+    {
+      id: "attachments.category",
+      method: "POST",
+      path: "/api/attachments/:attachmentId/category",
+      requestClass: "json",
+      requiresTenant: true,
+      idempotency: "required",
+      maxBodyBytes: 4096,
+    },
+    {
+      id: "attachments.archive-outcome",
+      method: "GET",
+      path: "/api/attachments/:attachmentId/archive",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "attachments.archive",
+      method: "POST",
+      path: "/api/attachments/:attachmentId/archive",
+      requestClass: "json",
+      requiresTenant: true,
+      idempotency: "required",
+      maxBodyBytes: 4096,
+    },
   ]);
 export const ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
@@ -517,13 +630,14 @@ export const NEON_WORK_CONTEXTS_OPERATION: RelayOperation = Object.freeze({
   requestClass: "json",
   requiresTenant: true,
 });
-export const NEON_BUSINESS_CONTEXT_OPTIONS_OPERATION: RelayOperation = Object.freeze({
-  id: "neon.business-context-options",
-  method: "GET",
-  path: "/api/neon/business-context-options",
-  requestClass: "json",
-  requiresTenant: true,
-});
+export const NEON_BUSINESS_CONTEXT_OPTIONS_OPERATION: RelayOperation =
+  Object.freeze({
+    id: "neon.business-context-options",
+    method: "GET",
+    path: "/api/neon/business-context-options",
+    requestClass: "json",
+    requiresTenant: true,
+  });
 export const NEON_OPERATING_ORGANIZATIONS_OPERATION: RelayOperation =
   Object.freeze({
     id: "neon.operating-organizations",
@@ -936,12 +1050,25 @@ export const STUDIO_BP_LOCAL_PREVIEW_OPERATION: RelayOperation = Object.freeze({
 });
 export const STUDIO_BP_DEFINITION_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
-    Object.freeze({ id: "studio.task-rules.baselines", method: "GET" as const, path: "/api/studio/supplier-task-rule-baselines", requestClass: "json" as const, requiresTenant: true }),
-    ...(["author", "read", "publish"] as const).map(action => Object.freeze({
-      id: `studio.task-edit-policy.${action}`, method: action === "read" ? "GET" as const : "POST" as const,
-      path: `/api/studio/task-edit-policies${action === "author" ? "" : "/:id"}${action === "publish" ? "/publish" : ""}`,
-      requestClass: "json" as const, requiresTenant: true, idempotency: action === "read" ? "none" as const : "required" as const, maxBodyBytes: 256 * 1024,
-    })),
+    Object.freeze({
+      id: "studio.task-rules.baselines",
+      method: "GET" as const,
+      path: "/api/studio/supplier-task-rule-baselines",
+      requestClass: "json" as const,
+      requiresTenant: true,
+    }),
+    ...(["author", "read", "publish"] as const).map((action) =>
+      Object.freeze({
+        id: `studio.task-edit-policy.${action}`,
+        method: action === "read" ? ("GET" as const) : ("POST" as const),
+        path: `/api/studio/task-edit-policies${action === "author" ? "" : "/:id"}${action === "publish" ? "/publish" : ""}`,
+        requestClass: "json" as const,
+        requiresTenant: true,
+        idempotency:
+          action === "read" ? ("none" as const) : ("required" as const),
+        maxBodyBytes: 256 * 1024,
+      }),
+    ),
     STUDIO_BP_DEFINITION_AUTHOR_OPERATION,
     STUDIO_BP_DEFINITION_SIMULATE_OPERATION,
     STUDIO_BP_DEFINITION_READ_OPERATION,
@@ -955,10 +1082,24 @@ export const ENTITY_APPLICATION_DESCRIPTOR_OPERATION: RelayOperation =
     requestClass: "json",
     requiresTenant: true,
   });
-export const REFERENCE_HISTORY_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
-  { id: "reference-history.read", method: "GET", path: "/api/entity-runtime/:entityCode/reference-history", requestClass: "json", requiresTenant: true },
-  { id: "reference-history.update", method: "POST", path: "/api/entity-runtime/:entityCode/reference-history", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
-]);
+export const REFERENCE_HISTORY_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    {
+      id: "reference-history.read",
+      method: "GET",
+      path: "/api/entity-runtime/:entityCode/reference-history",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "reference-history.update",
+      method: "POST",
+      path: "/api/entity-runtime/:entityCode/reference-history",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 4096,
+    },
+  ]);
 export const ENTITY_LIST_DESCRIPTOR_OPERATION: RelayOperation = Object.freeze({
   id: "entity-list.descriptor",
   method: "GET",
@@ -1025,13 +1166,15 @@ export const ENTITY_RECORD_TRANSITION_OPERATION: RelayOperation = Object.freeze(
     maxBodyBytes: 64 * 1024,
   },
 );
-export const ENTITY_RUNTIME_BOOTSTRAP_OPERATION: RelayOperation = Object.freeze({
-  id: "entity-runtime.bootstrap",
-  method: "GET",
-  path: "/api/entity-runtime/:entityCode/records/:recordId/bootstrap",
-  requestClass: "json",
-  requiresTenant: true,
-});
+export const ENTITY_RUNTIME_BOOTSTRAP_OPERATION: RelayOperation = Object.freeze(
+  {
+    id: "entity-runtime.bootstrap",
+    method: "GET",
+    path: "/api/entity-runtime/:entityCode/records/:recordId/bootstrap",
+    requestClass: "json",
+    requiresTenant: true,
+  },
+);
 export const ENTITY_RUNTIME_SUMMARY_OPERATION: RelayOperation = Object.freeze({
   id: "entity-runtime.summary",
   method: "GET",
@@ -1046,20 +1189,22 @@ export const ENTITY_RUNTIME_SECTION_OPERATION: RelayOperation = Object.freeze({
   requestClass: "json",
   requiresTenant: true,
 });
-export const ENTITY_RUNTIME_COMMENTS_READ_OPERATION: RelayOperation = Object.freeze({
-  id: "entity-runtime.collaboration.comments.read",
-  method: "GET",
-  path: "/api/entity-runtime/:entityCode/records/:recordId/collaboration/comments",
-  requestClass: "json",
-  requiresTenant: true,
-});
-export const ENTITY_RUNTIME_ATTACHMENTS_READ_OPERATION: RelayOperation = Object.freeze({
-  id: "entity-runtime.collaboration.attachments.read",
-  method: "GET",
-  path: "/api/entity-runtime/:entityCode/records/:recordId/collaboration/attachments",
-  requestClass: "json",
-  requiresTenant: true,
-});
+export const ENTITY_RUNTIME_COMMENTS_READ_OPERATION: RelayOperation =
+  Object.freeze({
+    id: "entity-runtime.collaboration.comments.read",
+    method: "GET",
+    path: "/api/entity-runtime/:entityCode/records/:recordId/collaboration/comments",
+    requestClass: "json",
+    requiresTenant: true,
+  });
+export const ENTITY_RUNTIME_ATTACHMENTS_READ_OPERATION: RelayOperation =
+  Object.freeze({
+    id: "entity-runtime.collaboration.attachments.read",
+    method: "GET",
+    path: "/api/entity-runtime/:entityCode/records/:recordId/collaboration/attachments",
+    requestClass: "json",
+    requiresTenant: true,
+  });
 export const ENTITY_RUNTIME_OPERATION: RelayOperation = Object.freeze({
   id: "entity-runtime.operation",
   method: "POST",
@@ -1070,17 +1215,51 @@ export const ENTITY_RUNTIME_OPERATION: RelayOperation = Object.freeze({
   maxBodyBytes: 256 * 1024,
 });
 /** Closed Activity endpoints shared by Studio, Neon and Mesh. */
-export const ENTITY_ACTIVITY_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
-  ...["", "/timeline", "/audit", "/versions", "/snapshots", "/snapshots/:snapshotId", "/snapshots/:snapshotId/collections/:collectionKey"].map(suffix => ({
-    id: `entity-runtime.activity.read${suffix.replaceAll("/", ".")}`,
-    method: "GET" as const,
-    path: `/api/entity-runtime/:entityCode/records/:recordId/activity${suffix}` as const,
-    requestClass: "json" as const, requiresTenant: true,
-  })),
-  {id:"entity-runtime.activity.capture",method:"POST",path:"/api/entity-runtime/:entityCode/records/:recordId/activity/snapshots",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:1024},
-  {id:"entity-runtime.activity.collection-compare",method:"POST",path:"/api/entity-runtime/:entityCode/records/:recordId/activity/compare/collections/:collectionKey",requestClass:"json",requiresTenant:true,idempotency:"none",maxBodyBytes:8192},
-  {id:"entity-runtime.activity.compare",method:"POST",path:"/api/entity-runtime/:entityCode/records/:recordId/activity/compare",requestClass:"json",requiresTenant:true,idempotency:"none",maxBodyBytes:4096},
-]);
+export const ENTITY_ACTIVITY_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    ...[
+      "",
+      "/timeline",
+      "/audit",
+      "/versions",
+      "/snapshots",
+      "/snapshots/:snapshotId",
+      "/snapshots/:snapshotId/collections/:collectionKey",
+    ].map((suffix) => ({
+      id: `entity-runtime.activity.read${suffix.replaceAll("/", ".")}`,
+      method: "GET" as const,
+      path: `/api/entity-runtime/:entityCode/records/:recordId/activity${suffix}` as const,
+      requestClass: "json" as const,
+      requiresTenant: true,
+    })),
+    {
+      id: "entity-runtime.activity.capture",
+      method: "POST",
+      path: "/api/entity-runtime/:entityCode/records/:recordId/activity/snapshots",
+      requestClass: "json",
+      requiresTenant: true,
+      idempotency: "required",
+      maxBodyBytes: 1024,
+    },
+    {
+      id: "entity-runtime.activity.collection-compare",
+      method: "POST",
+      path: "/api/entity-runtime/:entityCode/records/:recordId/activity/compare/collections/:collectionKey",
+      requestClass: "json",
+      requiresTenant: true,
+      idempotency: "none",
+      maxBodyBytes: 8192,
+    },
+    {
+      id: "entity-runtime.activity.compare",
+      method: "POST",
+      path: "/api/entity-runtime/:entityCode/records/:recordId/activity/compare",
+      requestClass: "json",
+      requiresTenant: true,
+      idempotency: "none",
+      maxBodyBytes: 4096,
+    },
+  ]);
 export const ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     ENTITY_FORM_DESCRIPTOR_OPERATION,
@@ -1444,14 +1623,15 @@ export const BUSINESS_PARTNER_360_TAX_REVEAL_OPERATION: RelayOperation =
     requestClass: "json",
     requiresTenant: true,
   });
-export const BUSINESS_PARTNER_360_IDENTIFIER_REVEAL_OPERATION: RelayOperation = Object.freeze({
-  id: "neon.business-partners.360.identifier-reveal",
-  method: "POST",
-  path: "/api/neon/business-partners/:businessPartnerId/360/identifiers/reveal",
-  requestClass: "json",
-  requiresTenant: true,
-  maxBodyBytes: 4096,
-});
+export const BUSINESS_PARTNER_360_IDENTIFIER_REVEAL_OPERATION: RelayOperation =
+  Object.freeze({
+    id: "neon.business-partners.360.identifier-reveal",
+    method: "POST",
+    path: "/api/neon/business-partners/:businessPartnerId/360/identifiers/reveal",
+    requestClass: "json",
+    requiresTenant: true,
+    maxBodyBytes: 4096,
+  });
 export const BUSINESS_PARTNER_360_BANK_REVEAL_OPERATION: RelayOperation =
   Object.freeze({
     id: "neon.business-partners.360.bank-reveal",
@@ -1600,7 +1780,7 @@ export const BUSINESS_PARTNER_CUSTOMER_DESIGNATION_OPERATIONS: readonly RelayOpe
       path: "/api/neon/business-partners/:businessPartnerId/customer-designations",
       requestClass: "json",
       requiresTenant: true,
-  },
+    },
     {
       id: "neon.business-partners.customer-designations.create",
       method: "POST",
@@ -1721,42 +1901,242 @@ export const NEON_WORKFORCE_READ_RELAY_OPERATIONS: readonly RelayOperation[] =
       requiresTenant: true,
     },
   ]);
-export const NEON_WORKFORCE_SAVED_VIEW_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
-  {id:"neon.workforce.saved-views.list",method:"GET",path:"/api/platform/saved-views/:entity",requestClass:"json",requiresTenant:true},
-  {id:"neon.workforce.saved-views.create",method:"POST",path:"/api/platform/saved-views/:entity",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-]);
-export const NEON_WORKFORCE_PROFILE_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
-  {id:"neon.workforce.profile.mutate",method:"POST",path:"/api/neon/workforce/:employeeId/profile-records",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-]);
-export const NEON_HR_STAGE2_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
-  {id:"neon.hr-setup.policy.simulate",method:"POST",path:"/api/policy/simulate",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.hr-setup.catalog",method:"GET",path:"/api/neon/hr-setup/catalog",requestClass:"json",requiresTenant:true},
-  {id:"neon.hr-setup.position.create",method:"POST",path:"/api/neon/hr-setup/positions",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.hr-setup.drafts.list",method:"GET",path:"/api/neon/hr-setup/drafts",requestClass:"json",requiresTenant:true},
-  {id:"neon.hr-setup.drafts.create",method:"POST",path:"/api/neon/hr-setup/drafts",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.hr-setup.drafts.publish",method:"POST",path:"/api/neon/hr-setup/drafts/:approvalId/publish",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.hr-setup.org-company.list",method:"GET",path:"/api/neon/hr-setup/org-company-assignments",requestClass:"json",requiresTenant:true},
-  {id:"neon.hr-setup.org-candidates",method:"GET",path:"/api/neon/hr-setup/org-candidates",requestClass:"json",requiresTenant:true},
-  {id:"neon.hr-setup.org-company.create",method:"POST",path:"/api/neon/hr-setup/org-company-assignments",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.hr-setup.org-company.publish",method:"POST",path:"/api/neon/hr-setup/org-company-assignments/:assignmentId/publish",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.hr-setup.calendar-day.list",method:"GET",path:"/api/neon/hr-setup/calendar-day-changes",requestClass:"json",requiresTenant:true},
-  {id:"neon.hr-setup.calendar-day.create",method:"POST",path:"/api/neon/hr-setup/calendar-day-changes",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.hr-setup.calendar-day.publish",method:"POST",path:"/api/neon/hr-setup/calendar-day-changes/:changeId/publish",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.hr-setup.policy-assignments.list",method:"GET",path:"/api/neon/hr-setup/policy-assignments",requestClass:"json",requiresTenant:true},
-  {id:"neon.hr-setup.policy-effective",method:"GET",path:"/api/neon/hr-setup/policy-effective",requestClass:"json",requiresTenant:true},
-  {id:"neon.hr-setup.policy-assignments.create",method:"POST",path:"/api/neon/hr-setup/policy-assignments",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.hr-setup.policy-assignments.publish",method:"POST",path:"/api/neon/hr-setup/policy-assignments/:assignmentId/publish",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.users.list",method:"GET",path:"/api/neon/users",requestClass:"json",requiresTenant:true},
-  {id:"neon.users.read",method:"GET",path:"/api/neon/users/:principalId",requestClass:"json",requiresTenant:true},
-  {id:"neon.users.profile-change.list",method:"GET",path:"/api/neon/users/me/profile-change",requestClass:"json",requiresTenant:true},
-  {id:"neon.users.profile-change.create",method:"POST",path:"/api/neon/users/me/profile-change",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.users.profile-change.submit",method:"POST",path:"/api/neon/users/me/profile-change/:requestId/submit",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.users.profile-change.review",method:"GET",path:"/api/neon/users/profile-changes/review",requestClass:"json",requiresTenant:true},
-  {id:"neon.users.profile-change.decide",method:"POST",path:"/api/neon/users/profile-changes/:requestId/decision",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.users.profile.admin",method:"PATCH",path:"/api/neon/users/:principalId/profile",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-  {id:"neon.workforce.authority",method:"GET",path:"/api/neon/workforce/:employeeId/authority",requestClass:"json",requiresTenant:true},
-  {id:"neon.workforce.iam-projection.retry",method:"POST",path:"/api/neon/workforce/:employeeId/iam-projection/retry",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
-]);
+export const NEON_WORKFORCE_SAVED_VIEW_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    {
+      id: "neon.workforce.saved-views.list",
+      method: "GET",
+      path: "/api/platform/saved-views/:entity",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.workforce.saved-views.create",
+      method: "POST",
+      path: "/api/platform/saved-views/:entity",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+  ]);
+export const NEON_WORKFORCE_PROFILE_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    {
+      id: "neon.workforce.profile.mutate",
+      method: "POST",
+      path: "/api/neon/workforce/:employeeId/profile-records",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+  ]);
+export const NEON_HR_STAGE2_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    {
+      id: "neon.hr-setup.policy.simulate",
+      method: "POST",
+      path: "/api/policy/simulate",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.hr-setup.catalog",
+      method: "GET",
+      path: "/api/neon/hr-setup/catalog",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.hr-setup.position.create",
+      method: "POST",
+      path: "/api/neon/hr-setup/positions",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.hr-setup.drafts.list",
+      method: "GET",
+      path: "/api/neon/hr-setup/drafts",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.hr-setup.drafts.create",
+      method: "POST",
+      path: "/api/neon/hr-setup/drafts",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.hr-setup.drafts.publish",
+      method: "POST",
+      path: "/api/neon/hr-setup/drafts/:approvalId/publish",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.hr-setup.org-company.list",
+      method: "GET",
+      path: "/api/neon/hr-setup/org-company-assignments",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.hr-setup.org-candidates",
+      method: "GET",
+      path: "/api/neon/hr-setup/org-candidates",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.hr-setup.org-company.create",
+      method: "POST",
+      path: "/api/neon/hr-setup/org-company-assignments",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.hr-setup.org-company.publish",
+      method: "POST",
+      path: "/api/neon/hr-setup/org-company-assignments/:assignmentId/publish",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.hr-setup.calendar-day.list",
+      method: "GET",
+      path: "/api/neon/hr-setup/calendar-day-changes",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.hr-setup.calendar-day.create",
+      method: "POST",
+      path: "/api/neon/hr-setup/calendar-day-changes",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.hr-setup.calendar-day.publish",
+      method: "POST",
+      path: "/api/neon/hr-setup/calendar-day-changes/:changeId/publish",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.hr-setup.policy-assignments.list",
+      method: "GET",
+      path: "/api/neon/hr-setup/policy-assignments",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.hr-setup.policy-effective",
+      method: "GET",
+      path: "/api/neon/hr-setup/policy-effective",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.hr-setup.policy-assignments.create",
+      method: "POST",
+      path: "/api/neon/hr-setup/policy-assignments",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.hr-setup.policy-assignments.publish",
+      method: "POST",
+      path: "/api/neon/hr-setup/policy-assignments/:assignmentId/publish",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.users.list",
+      method: "GET",
+      path: "/api/neon/users",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.users.read",
+      method: "GET",
+      path: "/api/neon/users/:principalId",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.users.profile-change.list",
+      method: "GET",
+      path: "/api/neon/users/me/profile-change",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.users.profile-change.create",
+      method: "POST",
+      path: "/api/neon/users/me/profile-change",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.users.profile-change.submit",
+      method: "POST",
+      path: "/api/neon/users/me/profile-change/:requestId/submit",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.users.profile-change.review",
+      method: "GET",
+      path: "/api/neon/users/profile-changes/review",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.users.profile-change.decide",
+      method: "POST",
+      path: "/api/neon/users/profile-changes/:requestId/decision",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.users.profile.admin",
+      method: "PATCH",
+      path: "/api/neon/users/:principalId/profile",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+    {
+      id: "neon.workforce.authority",
+      method: "GET",
+      path: "/api/neon/workforce/:employeeId/authority",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.workforce.iam-projection.retry",
+      method: "POST",
+      path: "/api/neon/workforce/:employeeId/iam-projection/retry",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 16 * 1024,
+    },
+  ]);
 export const SUPPLIER_WORKFORCE_REQUISITION_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     {
@@ -1810,20 +2190,93 @@ export const SUPPLIER_WORKFORCE_REQUISITION_OPERATIONS: readonly RelayOperation[
       maxBodyBytes: 16 * 1024,
     },
   ]);
-export const SUPPLIER_PROCESS_SELECTION_PREVIEW_OPERATION: RelayOperation = Object.freeze({
-  id: "supplier.process-selection.preview", method: "GET", path: "/api/governance/process-selection/cases/:caseId/preview",
-  requestClass: "json", requiresTenant: true, allowedQuery: [],
-});
+export const SUPPLIER_PROCESS_SELECTION_PREVIEW_OPERATION: RelayOperation =
+  Object.freeze({
+    id: "supplier.process-selection.preview",
+    method: "GET",
+    path: "/api/governance/process-selection/cases/:caseId/preview",
+    requestClass: "json",
+    requiresTenant: true,
+    allowedQuery: [],
+  });
 export const BUSINESS_PARTNER_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     SUPPLIER_PROCESS_SELECTION_PREVIEW_OPERATION,
-    { id: "notifications.email-consent.record", method: "POST", path: "/api/notifications/preferences/email-consent", requestClass: "json", requiresTenant: true, allowedQuery: [], idempotency: "required", maxBodyBytes: 16384 },
-    ...(["view","request","process","retry","download"] as const).map(action=>({id:`supplier.process-documents.${action}`,method:action==='view'?'GET' as const:'POST' as const,path:`/api/governance/process-documents/${action==='view'||action==='request'?'cases':'jobs'}/:id/${action}` as const,requestClass:'json' as const,requiresTenant:true,allowedQuery:[],...(action!=='view'?{idempotency:'required' as const,maxBodyBytes:16384}:{})})),
-    { id: "supplier.cycle.readiness", method: "GET", path: "/api/governance/supplier-onboarding/runs/:runId/readiness", requestClass: "json", requiresTenant: true, allowedQuery: [] },
-    { id: "supplier.cycle.complete", method: "POST", path: "/api/governance/supplier-onboarding/runs/:runId/completion", requestClass: "json", requiresTenant: true, allowedQuery: [], idempotency: "required", maxBodyBytes: 16384 },
-    ...(["view", "start", "decide", "cancel", "information", "escalate", "edit-preview"] as const).map(action => ({ id: `supplier.process-tasks.${action}`, method: action === "view" ? "GET" as const : "POST" as const, path: `/api/governance/process-tasks/cases/:caseId/${action}` as const, requestClass: "json" as const, requiresTenant: true, allowedQuery: [], ...(action !== "view" ? { idempotency: "required" as const, maxBodyBytes: action === "edit-preview" ? 65536 : 16384 } : {}) })),
+    {
+      id: "notifications.email-consent.record",
+      method: "POST",
+      path: "/api/notifications/preferences/email-consent",
+      requestClass: "json",
+      requiresTenant: true,
+      allowedQuery: [],
+      idempotency: "required",
+      maxBodyBytes: 16384,
+    },
+    ...(["view", "request", "process", "retry", "download"] as const).map(
+      (action) => ({
+        id: `supplier.process-documents.${action}`,
+        method: action === "view" ? ("GET" as const) : ("POST" as const),
+        path: `/api/governance/process-documents/${action === "view" || action === "request" ? "cases" : "jobs"}/:id/${action}` as const,
+        requestClass: "json" as const,
+        requiresTenant: true,
+        allowedQuery: [],
+        ...(action !== "view"
+          ? { idempotency: "required" as const, maxBodyBytes: 16384 }
+          : {}),
+      }),
+    ),
+    {
+      id: "supplier.cycle.readiness",
+      method: "GET",
+      path: "/api/governance/supplier-onboarding/runs/:runId/readiness",
+      requestClass: "json",
+      requiresTenant: true,
+      allowedQuery: [],
+    },
+    {
+      id: "supplier.cycle.complete",
+      method: "POST",
+      path: "/api/governance/supplier-onboarding/runs/:runId/completion",
+      requestClass: "json",
+      requiresTenant: true,
+      allowedQuery: [],
+      idempotency: "required",
+      maxBodyBytes: 16384,
+    },
+    ...(
+      [
+        "view",
+        "start",
+        "decide",
+        "cancel",
+        "information",
+        "escalate",
+        "edit-preview",
+      ] as const
+    ).map((action) => ({
+      id: `supplier.process-tasks.${action}`,
+      method: action === "view" ? ("GET" as const) : ("POST" as const),
+      path: `/api/governance/process-tasks/cases/:caseId/${action}` as const,
+      requestClass: "json" as const,
+      requiresTenant: true,
+      allowedQuery: [],
+      ...(action !== "view"
+        ? {
+            idempotency: "required" as const,
+            maxBodyBytes: action === "edit-preview" ? 65536 : 16384,
+          }
+        : {}),
+    })),
     BUSINESS_PARTNER_GOVERNED_IMPORT_OPERATION,
-    { id: "neon.business-partner-intake.protect", method: "POST", path: "/api/neon/business-partner-intake/protected-values", requestClass: "json", requiresTenant: true, allowedQuery: [], maxBodyBytes: 4096 },
+    {
+      id: "neon.business-partner-intake.protect",
+      method: "POST",
+      path: "/api/neon/business-partner-intake/protected-values",
+      requestClass: "json",
+      requiresTenant: true,
+      allowedQuery: [],
+      maxBodyBytes: 4096,
+    },
     BUSINESS_PARTNER_360_COMMENT_CREATE_OPERATION,
     ...BUSINESS_PARTNER_CASE_RELAY_OPERATIONS,
     BUSINESS_PARTNER_AGGREGATE_READ_OPERATION,
@@ -1834,9 +2287,30 @@ export const BUSINESS_PARTNER_RELAY_OPERATIONS: readonly RelayOperation[] =
     BUSINESS_PARTNER_360_GOVERNANCE_OPERATION,
     PERSON_RESTRICTED_EVIDENCE_REVEAL_OPERATION,
     ATTACHMENT_DOWNLOAD_OPERATION,
-    { id: "attachments.preview", method: "POST", path: "/api/attachments/:attachmentId/preview", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
-    { id: "attachments.extract", method: "POST", path: "/api/attachments/:attachmentId/extract", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
-    { id: "attachments.search", method: "POST", path: "/api/attachments/search", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
+    {
+      id: "attachments.preview",
+      method: "POST",
+      path: "/api/attachments/:attachmentId/preview",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 4096,
+    },
+    {
+      id: "attachments.extract",
+      method: "POST",
+      path: "/api/attachments/:attachmentId/extract",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 4096,
+    },
+    {
+      id: "attachments.search",
+      method: "POST",
+      path: "/api/attachments/search",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 4096,
+    },
     ATTACHMENT_BROWSE_OPERATION,
     ...BUSINESS_PARTNER_360_SECTION_OPERATIONS,
     BUSINESS_PARTNER_ELIGIBILITY_READ_OPERATION,
@@ -2168,12 +2642,48 @@ export const WORKFLOW_ITEM_ACTION_OPERATION: RelayOperation = Object.freeze({
 });
 export const ACTIVITY_CENTER_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
-    ...(["GET","POST"] as const).map(method=>({id:`activity.collection.views.${method}`,method,path:"/api/collections/:entityCode/views" as const,requiresTenant:true,idempotency:"none" as const,maxBodyBytes:method==="GET"?0:65536})),
-    {id:"activity.collection.descriptor",method:"GET",path:"/api/collections/:collectionKey/descriptor",requiresTenant:true,maxBodyBytes:0},
-    {id:"activity.collection.configuration",method:"GET",path:"/api/collections/:collectionKey/configuration",requiresTenant:true,maxBodyBytes:0},
-    {id:"notifications.deliveries.list",method:"GET",path:"/api/operations/notifications/deliveries",requiresTenant:true,allowedQuery:["before"]},
-    {id:"notifications.deliveries.timeline",method:"GET",path:"/api/operations/notifications/deliveries/:id/timeline",requiresTenant:true},
-    {id:"notifications.deliveries.replay",method:"POST",path:"/api/operations/notifications/deliveries/:id/replay",requiresTenant:true,idempotency:"required"},
+    ...(["GET", "POST"] as const).map((method) => ({
+      id: `activity.collection.views.${method}`,
+      method,
+      path: "/api/collections/:entityCode/views" as const,
+      requiresTenant: true,
+      idempotency: "none" as const,
+      maxBodyBytes: method === "GET" ? 0 : 65536,
+    })),
+    {
+      id: "activity.collection.descriptor",
+      method: "GET",
+      path: "/api/collections/:collectionKey/descriptor",
+      requiresTenant: true,
+      maxBodyBytes: 0,
+    },
+    {
+      id: "activity.collection.configuration",
+      method: "GET",
+      path: "/api/collections/:collectionKey/configuration",
+      requiresTenant: true,
+      maxBodyBytes: 0,
+    },
+    {
+      id: "notifications.deliveries.list",
+      method: "GET",
+      path: "/api/operations/notifications/deliveries",
+      requiresTenant: true,
+      allowedQuery: ["before"],
+    },
+    {
+      id: "notifications.deliveries.timeline",
+      method: "GET",
+      path: "/api/operations/notifications/deliveries/:id/timeline",
+      requiresTenant: true,
+    },
+    {
+      id: "notifications.deliveries.replay",
+      method: "POST",
+      path: "/api/operations/notifications/deliveries/:id/replay",
+      requiresTenant: true,
+      idempotency: "required",
+    },
     NOTIFICATION_INBOX_OPERATION,
     NOTIFICATION_COUNTS_OPERATION,
     NOTIFICATION_STREAM_OPERATION,
@@ -2826,12 +3336,25 @@ export const STUDIO_BP_CASE_CONTRACT_RELAY_OPERATIONS: readonly RelayOperation[]
     ),
   );
 
-export const NEON_BP_CLASSIFICATION_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
-  {id: "neon.partner-classification.read", method: "GET", path: "/api/neon/business-partners/:businessPartnerId/commodity-classifications", requestClass: "json", requiresTenant: true},
-  ...(["declare", "verify", "archive"] as const).map(action => ({id: `neon.partner-classification.${action}`, method: "POST" as const,
-    path: `/api/neon/business-partners/:businessPartnerId/commodity-classifications/${action}` as RelayOperation["path"],
-    requestClass: "json" as const, requiresTenant: true, idempotency: "required" as const, maxBodyBytes: 8192})),
-]);
+export const NEON_BP_CLASSIFICATION_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    {
+      id: "neon.partner-classification.read",
+      method: "GET",
+      path: "/api/neon/business-partners/:businessPartnerId/commodity-classifications",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    ...(["declare", "verify", "archive"] as const).map((action) => ({
+      id: `neon.partner-classification.${action}`,
+      method: "POST" as const,
+      path: `/api/neon/business-partners/:businessPartnerId/commodity-classifications/${action}` as RelayOperation["path"],
+      requestClass: "json" as const,
+      requiresTenant: true,
+      idempotency: "required" as const,
+      maxBodyBytes: 8192,
+    })),
+  ]);
 
 export const NEON_BP_BANK_VERIFICATION_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
@@ -2912,16 +3435,115 @@ export const ENTITY_VIEWS_RELAY_OPERATIONS: readonly RelayOperation[] =
     },
   ]);
 
-export const COLLABORATION_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
-  {id:"collaboration.participants",method:"GET",path:"/api/collab/participants",requestClass:"json",requiresTenant:true},
-  {id:"collaboration.history",method:"GET",path:"/api/collab/comments/:id/history",requestClass:"json",requiresTenant:true},
-  {id:"collaboration.create",method:"POST",path:"/api/collab/comments",requestClass:"json",requiresTenant:true,maxBodyBytes:262144,idempotency:"required"},
-  {id:"collaboration.reply",method:"POST",path:"/api/collab/comments/:id/replies",requestClass:"json",requiresTenant:true,maxBodyBytes:262144,idempotency:"required"},
-  {id:"collaboration.edit",method:"PATCH",path:"/api/collab/comments/:id",requestClass:"json",requiresTenant:true,maxBodyBytes:262144},
-  {id:"collaboration.remove",method:"DELETE",path:"/api/collab/comments/:id",requestClass:"json",requiresTenant:true},
-  {id:"collaboration.react",method:"POST",path:"/api/collab/comments/:id/reactions",requestClass:"json",requiresTenant:true,maxBodyBytes:4096},
-  {id:"collaboration.unreact",method:"DELETE",path:"/api/collab/comments/:id/reactions/:code",requestClass:"json",requiresTenant:true},
-  {id:"collaboration.flag",method:"POST",path:"/api/collab/comments/:id/flag",requestClass:"json",requiresTenant:true,maxBodyBytes:8192},
-  {id:"collaboration.draft.save",method:"POST",path:"/api/collab/drafts",requestClass:"json",requiresTenant:true,maxBodyBytes:262144},
-  {id:"collaboration.draft.cancel",method:"DELETE",path:"/api/collab/drafts",requestClass:"json",requiresTenant:true},
-]);
+export const COLLABORATION_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    {
+      id: "collaboration.participants",
+      method: "GET",
+      path: "/api/collab/participants",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "collaboration.history",
+      method: "GET",
+      path: "/api/collab/comments/:id/history",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "collaboration.create",
+      method: "POST",
+      path: "/api/collab/comments",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 262144,
+      idempotency: "required",
+    },
+    {
+      id: "collaboration.reply",
+      method: "POST",
+      path: "/api/collab/comments/:id/replies",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 262144,
+      idempotency: "required",
+    },
+    {
+      id: "collaboration.edit",
+      method: "PATCH",
+      path: "/api/collab/comments/:id",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 262144,
+    },
+    {
+      id: "collaboration.remove",
+      method: "DELETE",
+      path: "/api/collab/comments/:id",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "collaboration.react",
+      method: "POST",
+      path: "/api/collab/comments/:id/reactions",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 4096,
+    },
+    {
+      id: "collaboration.unreact",
+      method: "DELETE",
+      path: "/api/collab/comments/:id/reactions/:code",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "collaboration.flag",
+      method: "POST",
+      path: "/api/collab/comments/:id/flag",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 8192,
+    },
+    {
+      id: "collaboration.draft.save",
+      method: "POST",
+      path: "/api/collab/drafts",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 262144,
+    },
+    {
+      id: "collaboration.draft.cancel",
+      method: "DELETE",
+      path: "/api/collab/drafts",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+  ]);
+
+/** Operations every plane exposes for the shared shell and Entity Framework:
+ * identity, experience runtime, entity views/list/detail/record runtime,
+ * bookmarks, transfers, activity and collaboration. Plane apps spread this and
+ * add only what is plane-specific, so a new shared entity capability is
+ * registered once. Keep it last in this module: it composes the groups above. */
+export const COMMON_PLANE_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    ...COLLABORATION_RELAY_OPERATIONS,
+    IAM_ME_OPERATION,
+    EXPERIENCE_BOOTSTRAP_OPERATION,
+    PRINCIPAL_LOCALE_UPDATE_OPERATION,
+    ...EXPERIENCE_SURFACE_RUNTIME_RELAY_OPERATIONS,
+    ...ATLAS_ANSWER_RELAY_OPERATIONS,
+    ...ENTITY_VIEWS_RELAY_OPERATIONS,
+    ENTITY_APPLICATION_DESCRIPTOR_OPERATION,
+    ...REFERENCE_HISTORY_RELAY_OPERATIONS,
+    ENTITY_LIST_DESCRIPTOR_OPERATION,
+    ENTITY_LIST_QUERY_OPERATION,
+    ...ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS,
+    ...RECORD_BOOKMARK_RELAY_OPERATIONS,
+    ...RECORD_TRANSFER_RELAY_OPERATIONS,
+    ...ACTIVITY_CENTER_RELAY_OPERATIONS,
+  ]);

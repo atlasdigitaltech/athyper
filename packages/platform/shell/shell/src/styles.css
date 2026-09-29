@@ -526,13 +526,13 @@
 .athyper-atlas-workspace--fullscreen { position: relative; height: calc(100dvh - var(--shell-topbar) - var(--shell-crumbs)); min-height: 0; }
 
 .a-management-navigation{overflow:visible;display:flex;align-items:center;gap:var(--a-space-1);padding:var(--a-space-1);min-height:3rem;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface);box-shadow:var(--a-shadow-raised);flex-wrap:wrap}
-.a-management-navigation a,.a-management-navigation summary,.a-management-navigation__step{display:flex;align-items:center;gap:var(--a-space-2);padding:.7rem .85rem;border-radius:var(--a-radius-md);color:var(--a-muted-foreground);font-weight:600;font-size:var(--a-font-size-sm);text-decoration:none;cursor:pointer;white-space:nowrap}
+.a-management-navigation a,.a-management-navigation summary,.a-management-navigation__step{display:flex;align-items:center;gap:var(--a-space-2);padding:.7rem .85rem;border-radius:var(--a-radius-md);color:var(--a-muted-foreground);font-weight:var(--a-font-weight-medium);font-size:var(--a-font-size-sm);text-decoration:none;cursor:pointer;white-space:nowrap}
 .a-management-navigation a[aria-current=page],.a-management-navigation summary.is-current,.a-management-navigation__step[aria-current=step]{background:var(--a-selection-subtle);color:var(--a-selection-subtle-foreground);box-shadow:inset 0 -2px var(--a-primary)}
 .a-management-navigation a:hover,.a-management-navigation summary:hover,.a-management-navigation__step:hover:not(:disabled){background:var(--a-brand-soft)}
 .a-management-navigation a:focus-visible,.a-management-navigation summary:focus-visible,.a-management-navigation__step:focus-visible{outline:2px solid var(--a-brand);outline-offset:2px}
 .a-management-navigation__more{position:relative}.a-management-navigation summary{list-style:none}.a-management-navigation summary::-webkit-details-marker{display:none}
 .a-management-navigation__overflow{position:absolute;z-index:20;right:0;min-width:12rem;padding:var(--a-space-1);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);box-shadow:var(--a-shadow-raised)}
-.a-management-navigation__count{padding:.1rem .4rem;border-radius:999px;background:var(--a-brand);color:var(--a-on-brand,#fff);font-size:.75rem}
+.a-management-navigation__count{padding:.1rem .4rem;border-radius:999px;background:var(--a-brand);color:var(--a-on-brand,#fff);font-size:var(--a-font-size-xs)}
 .a-management-workspace{min-width:0}.a-management-toolbar{display:flex;align-items:center;gap:var(--a-space-2);padding:var(--a-space-2);min-width:0;flex-wrap:wrap}.a-management-toolbar>[data-slot=search]{flex:1;min-width:12rem}.a-management-toolbar>[data-slot=actions]{display:flex;gap:var(--a-space-2);margin-inline-start:auto}
 .a-management-navigation{box-sizing:border-box;max-width:100%}
 

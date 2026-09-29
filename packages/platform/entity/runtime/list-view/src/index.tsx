@@ -3,15 +3,19 @@ import { SurfaceErrorBoundary } from "@athyper/platform-ui";
 import { rollbackBookmarks } from "./bookmark-state";
 import { entityLocationSearch } from "./entity-location";
 import { retryRequiresDescriptor } from "./retry-policy";
-import {CollectionDraftFooter} from "@athyper/platform-collection-controls";
+import { CollectionDraftFooter } from "@athyper/platform-collection-controls";
 import { isListViewAllowed, constrainEmbeddedViewState } from "./view-policy";
 import { lookupInitialState } from "./lookup-directory";
-import { EntityTaskHeaderProvider, useEntityTaskHeader } from "@athyper/platform-shell";
+import {
+  EntityTaskHeaderProvider,
+  useEntityTaskHeader,
+} from "@athyper/platform-shell";
 import { useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
 import { ErrorSurface } from "@athyper/platform-shell-app-foundation";
 import { classifyAppError } from "@athyper/platform-shell-app-foundation/error-taxonomy";
 import { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
 import { RequiredContextStatus } from "./required-context-status";
+import { EntityListPagination } from "./list-pagination";
 import {
   useDirectoryFilters,
   DirectoryFilterEditor,
@@ -45,8 +49,17 @@ export { EntityOverview, type EntityOverviewProps } from "./overview";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { localizeEntityLabels } from "@athyper/platform-i18n/entity-labels";
+import { humanizeIdentifier } from "@athyper/contract-platform-entity-runtime";
+import {
+  isVisibleListNotice,
+  listNotice,
+  type ListNotice,
+} from "./list-notice";
 import { localizedEntityError } from "@athyper/platform-i18n/entity-errors";
-import { resolveEntityText } from "@athyper/contract-platform-entity-list";
+import {
+  fallbackQuickFields,
+  resolveEntityText,
+} from "@athyper/contract-platform-entity-list";
 
 import {
   ENTITY_LIST_MAX_VISIBLE_COLUMNS,
@@ -152,6 +165,7 @@ import {
   readDisplayPreferences,
   readSavedViews,
   saveableViewState,
+  inheritSavedViews,
   savedViewStorageKey,
   writeDisplayPreferences,
   writeSavedViews,
@@ -198,7 +212,9 @@ interface EntityListPageAction {
 }
 
 interface EntityApplicationContextValue {
-  readonly setListInformation: (value: { description?: string; count?: string } | undefined) => void;
+  readonly setListInformation: (
+    value: { description?: string; count?: string } | undefined,
+  ) => void;
   readonly client: HttpClient;
   readonly descriptor: EntityApplicationDescriptorV1;
   readonly scopeCoordinate?: EntityListScopeCoordinateV1;
@@ -337,14 +353,26 @@ export function EntityListRuntime(props: EntityListRuntimeProps) {
     onScopeCoordinateChange: (value: EntityListScopeCoordinateV1 | undefined) =>
       setSelection({ entityCode: props.entityCode, value }),
   };
-  return <SurfaceErrorBoundary resetKey={props.entityCode} message={intl.message("error.unavailable")} retryLabel={intl.message("entity.retry")}>{props.applicationOnly ? (
-    <EntityApplicationRuntime {...effective} />
-  ) : (
-    <EntityCollectionRuntime {...effective} />
-  )}</SurfaceErrorBoundary>;
+  return (
+    <SurfaceErrorBoundary
+      resetKey={props.entityCode}
+      message={intl.message("error.unavailable")}
+      retryLabel={intl.message("entity.retry")}
+    >
+      {props.applicationOnly ? (
+        <EntityApplicationRuntime {...effective} />
+      ) : (
+        <EntityCollectionRuntime {...effective} />
+      )}
+    </SurfaceErrorBoundary>
+  );
 }
 function EntityApplicationRuntime(props: EntityListRuntimeProps) {
-  return <EntityTaskHeaderProvider><EntityApplicationContent {...props}/></EntityTaskHeaderProvider>;
+  return (
+    <EntityTaskHeaderProvider>
+      <EntityApplicationContent {...props} />
+    </EntityTaskHeaderProvider>
+  );
 }
 function EntityApplicationContent({
   client,
@@ -360,11 +388,19 @@ function EntityApplicationContent({
   applicationName,
 }: EntityListRuntimeProps) {
   const taskHeader = useEntityTaskHeader();
-  const [listInformation, setListInformation] = useState<{ description?: string; count?: string }>();
+  const [listInformation, setListInformation] = useState<{
+    description?: string;
+    count?: string;
+  }>();
   const locale = useOptionalI18n()?.localization.uiLocale;
-  const [sourceDescriptor, setDescriptor] = useState<EntityApplicationDescriptorV1>();
+  const [sourceDescriptor, setDescriptor] =
+    useState<EntityApplicationDescriptorV1>();
   const entityIntl = useEntityI18n();
-  const descriptor = useMemo(() => sourceDescriptor && localizeEntityLabels(sourceDescriptor, entityIntl), [sourceDescriptor, entityIntl]);
+  const descriptor = useMemo(
+    () =>
+      sourceDescriptor && localizeEntityLabels(sourceDescriptor, entityIntl),
+    [sourceDescriptor, entityIntl],
+  );
   const [scopeSnapshot, setScopeSnapshot] = useState<{
     entityCode: string;
     scope: EntityListDescriptorV1["scope"];
@@ -372,14 +408,16 @@ function EntityApplicationContent({
   const scopeControl =
     scopeSnapshot?.entityCode === entityCode &&
     renderScopeControl &&
-    onScopeCoordinateChange
-      ? <ScopeControlRenderer
-          render={renderScopeControl}
-          scope={scopeSnapshot.scope}
-          value={scopeCoordinate}
-          onChange={onScopeCoordinateChange}
-        />
-      : providedScopeControl;
+    onScopeCoordinateChange ? (
+      <ScopeControlRenderer
+        render={renderScopeControl}
+        scope={scopeSnapshot.scope}
+        value={scopeCoordinate}
+        onChange={onScopeCoordinateChange}
+      />
+    ) : (
+      providedScopeControl
+    );
   const [error, setError] = useState<ApiTransportError>();
   const [attempt, setAttempt] = useState(0),
     [loadedKey, setLoadedKey] = useState<string>();
@@ -420,9 +458,20 @@ function EntityApplicationContent({
       });
     return () => controller.abort();
   }, [client, authorityKey, scopePending, attempt]);
-  const applicationContext = useMemo(() => descriptor ? {
-    client, descriptor, scopeCoordinate, scopeControl, renderScopeControl, setListInformation,
-  } : undefined, [client, descriptor, scopeCoordinate, scopeControl, renderScopeControl]);
+  const applicationContext = useMemo(
+    () =>
+      descriptor
+        ? {
+            client,
+            descriptor,
+            scopeCoordinate,
+            scopeControl,
+            renderScopeControl,
+            setListInformation,
+          }
+        : undefined,
+    [client, descriptor, scopeCoordinate, scopeControl, renderScopeControl],
+  );
   if (scopePending || !descriptor || loadedKey !== authorityKey)
     return (
       <>
@@ -441,9 +490,11 @@ function EntityApplicationContent({
     );
   const header = descriptor.surface.header,
     Icon = header?.iconKey ? resolveIcon(header.iconKey) : LayoutIcon;
-  const title = descriptor.localizedLabels?.title ? descriptor.surface.title : header
-      ? resolveEntityText(header.title, locale)
-      : descriptor.surface.title,
+  const title = descriptor.localizedLabels?.title
+      ? descriptor.surface.title
+      : header
+        ? resolveEntityText(header.title, locale)
+        : descriptor.surface.title,
     description = header?.description
       ? resolveEntityText(header.description, locale)
       : descriptor.surface.description;
@@ -455,21 +506,28 @@ function EntityApplicationContent({
       action.selection === "none",
   );
   return (
-    <EntityApplicationContext.Provider
-      value={applicationContext!}
-    >
+    <EntityApplicationContext.Provider value={applicationContext!}>
       <ManagementWorkspace
         className="a-entity-application"
         header={
           <PageHeader
             level="collection"
             title={taskHeader?.title ?? title}
-            description={taskHeader ? taskHeader.description : listHeaderInformation(listInformation?.description ?? description, listInformation?.count)}
+            description={
+              taskHeader
+                ? taskHeader.description
+                : listHeaderInformation(
+                    listInformation?.description ?? description,
+                    listInformation?.count,
+                  )
+            }
             supportingRow={taskHeader?.supportingRow}
             metadata={taskHeader?.metadata}
             icon={<Icon />}
             actions={
-              taskHeader ? taskHeader.actions : actions.length ? (
+              taskHeader ? (
+                taskHeader.actions
+              ) : actions.length ? (
                 <>
                   {actions.map((action) => {
                     const label = action.localizedLabel
@@ -521,16 +579,22 @@ function EntityApplicationContent({
           />
         }
         navigation={
-          taskHeader ? taskHeader.navigation : <EntityNavigation
-            sections={descriptor.navigation}
-            onNavigate={onNavigate}
-            activePath={activePath}
-          />
+          taskHeader ? (
+            taskHeader.navigation
+          ) : (
+            <EntityNavigation
+              sections={descriptor.navigation}
+              onNavigate={onNavigate}
+              activePath={activePath}
+            />
+          )
         }
         contextControl={scopeControl}
       >
         {descriptor.scope.status === "context_required" ? (
-          <RequiredContextStatus scopeControlAvailable={Boolean(scopeControl)} />
+          <RequiredContextStatus
+            scopeControlAvailable={Boolean(scopeControl)}
+          />
         ) : (
           children
         )}
@@ -563,7 +627,11 @@ function EntityCollectionRuntime({
   const actionReasonId = useId();
   const [sourceDescriptor, setDescriptor] = useState<EntityListDescriptorV1>();
   const entityIntl = useEntityI18n();
-  const descriptor = useMemo(() => sourceDescriptor && localizeEntityLabels(sourceDescriptor, entityIntl), [sourceDescriptor, entityIntl]);
+  const descriptor = useMemo(
+    () =>
+      sourceDescriptor && localizeEntityLabels(sourceDescriptor, entityIntl),
+    [sourceDescriptor, entityIntl],
+  );
   const [scopeSnapshot, setScopeSnapshot] = useState<{
     entityCode: string;
     scope: EntityListDescriptorV1["scope"];
@@ -571,14 +639,16 @@ function EntityCollectionRuntime({
   const scopeControl =
     scopeSnapshot?.entityCode === entityCode &&
     renderScopeControl &&
-    onScopeCoordinateChange
-      ? <ScopeControlRenderer
-          render={renderScopeControl}
-          scope={scopeSnapshot.scope}
-          value={scopeCoordinate}
-          onChange={onScopeCoordinateChange}
-        />
-      : providedScopeControl;
+    onScopeCoordinateChange ? (
+      <ScopeControlRenderer
+        render={renderScopeControl}
+        scope={scopeSnapshot.scope}
+        value={scopeCoordinate}
+        onChange={onScopeCoordinateChange}
+      />
+    ) : (
+      providedScopeControl
+    );
   const [state, setState] = useState<ListLocationStateV1>();
   const [page, setPage] = useState<EntityListResultV1>();
   const [pageContextKey, setPageContextKey] = useState<string>();
@@ -587,8 +657,8 @@ function EntityCollectionRuntime({
   const [attempt, setAttempt] = useState(0);
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const retryResults = () => {
-    if (retryRequiresDescriptor(error)) setAttempt(value => value + 1);
-    else setRefreshAttempt(value => value + 1);
+    if (retryRequiresDescriptor(error)) setAttempt((value) => value + 1);
+    else setRefreshAttempt((value) => value + 1);
   };
   const [cursorHistory, setCursorHistory] = useState<
     readonly (string | undefined)[]
@@ -600,7 +670,10 @@ function EntityCollectionRuntime({
   bookmarkEpochRef.current = bookmarkEpoch;
   useEffect(() => {
     bookmarkEpochRef.current = bookmarkEpoch;
-    return () => { if (bookmarkEpochRef.current === bookmarkEpoch) bookmarkEpochRef.current = {}; };
+    return () => {
+      if (bookmarkEpochRef.current === bookmarkEpoch)
+        bookmarkEpochRef.current = {};
+    };
   }, [bookmarkEpoch]);
   const bookmarkRequests = useRef(new Map<string, object>());
   const serverQueryKey = JSON.stringify(
@@ -620,13 +693,24 @@ function EntityCollectionRuntime({
   const filterChoiceRequests = useRef(new Map<string, Promise<void>>());
   const filterChoiceControllers = useRef(new Set<AbortController>());
   const activeChoiceScope = useRef("");
-  activeChoiceScope.current = JSON.stringify([authorityKey, descriptor?.scope.fingerprint, descriptor?.revision.descriptorHash]);
-  useEffect(() => () => {
-    for (const controller of filterChoiceControllers.current) controller.abort();
-    filterChoiceControllers.current.clear(); filterChoiceRequests.current.clear();
-  }, [authorityKey]);
+  activeChoiceScope.current = JSON.stringify([
+    authorityKey,
+    descriptor?.scope.fingerprint,
+    descriptor?.revision.descriptorHash,
+  ]);
+  useEffect(
+    () => () => {
+      for (const controller of filterChoiceControllers.current)
+        controller.abort();
+      filterChoiceControllers.current.clear();
+      filterChoiceRequests.current.clear();
+    },
+    [authorityKey],
+  );
   const previousAuthorityKey = useRef<string | undefined>(undefined);
-  const previousEntityLocation = useRef<{entityCode:string;pathname:string} | undefined>(undefined);
+  const previousEntityLocation = useRef<
+    { entityCode: string; pathname: string } | undefined
+  >(undefined);
   const [loadedAuthorityKey, setLoadedAuthorityKey] = useState<string>();
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -634,7 +718,7 @@ function EntityCollectionRuntime({
   const [allMatchingSelected, setAllMatchingSelected] = useState(false);
   const [dataOperationsLaunch, setDataOperationsLaunch] =
     useState<DataOperationLaunch>();
-  const [actionStatus, setActionStatus] = useState("");
+  const [actionNotice, setActionNotice] = useState<ListNotice>();
   const [bookmarkedIds, setBookmarkedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -656,7 +740,7 @@ function EntityCollectionRuntime({
     setSelectedIds(new Set());
     setAllMatchingSelected(false);
     setDataOperationsLaunch(undefined);
-    setActionStatus("");
+    setActionNotice(undefined);
     setBookmarkedIds(new Set());
     setPendingBookmarkIds(new Set());
     if (scopePending) return () => controller.abort();
@@ -685,38 +769,60 @@ function EntityCollectionRuntime({
           inherited?.descriptor.entity.code === entityCode &&
           typeof window !== "undefined"
         ) {
-          const newKey = savedViewStorageKey(next),
-            oldKey = savedViewStorageKey(raw);
-          try {
-            if (
-              !window.localStorage.getItem(newKey) &&
-              window.localStorage.getItem(oldKey)
-            )
-              window.localStorage.setItem(
-                newKey,
-                window.localStorage.getItem(oldKey)!,
-              );
-          } catch {
-            /* Storage is optional. */
-          }
+          inheritSavedViews(
+            savedViewStorageKey(raw),
+            savedViewStorageKey(next),
+          );
         }
         if (controller.signal.aborted) return;
-        if (embedding?.options.recordAccess === "readOnly") next = {...next, actions: [], dataOperations: undefined};
-        const effectiveSearch = entityLocationSearch(previousEntityLocation.current, entityCode, window.location);
-        let nextState = embedding ? lookupInitialState(next, embedding.options, embedding.initialQuery) : readListLocation(next, effectiveSearch);
+        if (embedding?.options.recordAccess === "readOnly")
+          next = { ...next, actions: [], dataOperations: undefined };
+        const effectiveSearch = entityLocationSearch(
+          previousEntityLocation.current,
+          entityCode,
+          window.location,
+        );
+        let nextState = embedding
+          ? lookupInitialState(next, embedding.options, embedding.initialQuery)
+          : readListLocation(next, effectiveSearch);
         if (embedding) {
-          const pref = readDisplayPreferences(next.plane, embedding.options.display.preferenceScope === "surface" ? `${next.entity.code}.${next.scope.fingerprint}.${embedding.preferenceNamespace ?? "lookup"}` : undefined);
-          embedding.onSearchBehaviorChange?.(pref && embedding.options.display.userOverrides.includes("searchBehavior") ? pref.searchBehavior : embedding.options.display.defaults.searchBehavior);
-          if (pref && embedding.options.display.userOverrides.includes("density")) nextState = {...nextState,density:pref.density};
-          if (pref && embedding.options.display.userOverrides.includes("layout") && next.surface.supportedModes.includes(pref.mode)) nextState = {...nextState,mode:pref.mode};
+          const pref = readDisplayPreferences(
+            next.plane,
+            embedding.options.display.preferenceScope === "surface"
+              ? `${next.entity.code}.${next.scope.fingerprint}.${embedding.preferenceNamespace ?? "lookup"}`
+              : undefined,
+          );
+          embedding.onSearchBehaviorChange?.(
+            pref &&
+              embedding.options.display.userOverrides.includes("searchBehavior")
+              ? pref.searchBehavior
+              : embedding.options.display.defaults.searchBehavior,
+          );
+          if (
+            pref &&
+            embedding.options.display.userOverrides.includes("density")
+          )
+            nextState = { ...nextState, density: pref.density };
+          if (
+            pref &&
+            embedding.options.display.userOverrides.includes("layout") &&
+            next.surface.supportedModes.includes(pref.mode)
+          )
+            nextState = { ...nextState, mode: pref.mode };
         }
         if (embedding?.initialState) {
-          const initial = {...nextState,...embedding.initialState};
-          if (isListViewAllowed(initial, embedding.options.views.allowedViewKeys)) nextState = initial;
-          else setActionStatus("The selected view is unavailable. The configured default has been applied.");
+          const initial = { ...nextState, ...embedding.initialState };
+          if (
+            isListViewAllowed(initial, embedding.options.views.allowedViewKeys)
+          )
+            nextState = initial;
+          else
+            setActionNotice(listNotice("list.notice.viewUnavailableConfigured"));
         }
         const requestedView =
-          (embedding ? embedding.options.views.defaultViewKey : new URLSearchParams(effectiveSearch).get("vid")) ??
+          (embedding
+            ? embedding.options.views.defaultViewKey
+            : new URLSearchParams(effectiveSearch).get("vid")) ??
           next.viewCatalog?.personalDefault ??
           next.viewCatalog?.sharedDefault;
         if (
@@ -724,19 +830,22 @@ function EntityCollectionRuntime({
           requestedView !== "system" &&
           nextState.savedViewId === "system"
         )
-          setActionStatus(
-            "The selected view is unavailable. System default has been applied.",
-          );
+          setActionNotice(listNotice("list.notice.viewUnavailableSystem"));
         const parameters = new URLSearchParams(effectiveSearch),
-          preferences = readDisplayPreferences(next.plane, entityDisplayPreferenceNamespace(next));
+          preferences = readDisplayPreferences(
+            next.plane,
+            entityDisplayPreferenceNamespace(next),
+          );
         if (
-          !embedding && !nextState.savedViewId &&
+          !embedding &&
+          !nextState.savedViewId &&
           !parameters.has("density") &&
           preferences?.density
         )
           nextState = { ...nextState, density: preferences.density };
         if (
-          !embedding && !nextState.savedViewId &&
+          !embedding &&
+          !nextState.savedViewId &&
           !parameters.has("view") &&
           preferences?.mode &&
           next.surface.supportedModes.includes(preferences.mode)
@@ -749,7 +858,10 @@ function EntityCollectionRuntime({
         setDescriptor(next);
         setScopeSnapshot({ entityCode, scope: next.scope });
         setState(nextState);
-        previousEntityLocation.current = {entityCode,pathname:window.location.pathname};
+        previousEntityLocation.current = {
+          entityCode,
+          pathname: window.location.pathname,
+        };
         setLoadedAuthorityKey(authorityKey);
       })
       .catch((cause) => {
@@ -785,6 +897,10 @@ function EntityCollectionRuntime({
     embedding?.onResults?.(false);
     setLoading(true);
     setError(undefined);
+    // A cursor belongs to exactly one server query. Do not let a failed refresh
+    // expose its predecessor's rows or allow its cursor to paginate new state.
+    setPage(undefined);
+    setPageContextKey(undefined);
     client
       .request(entityListOperation, {
         params: { entityCode },
@@ -845,9 +961,7 @@ function EntityCollectionRuntime({
       })
       .catch(() => {
         if (!controller.signal.aborted)
-          setActionStatus(
-            "Favourites could not be loaded. List records remain available.",
-          );
+          setActionNotice(listNotice("list.notice.favouritesLoadFailed"));
       });
     return () => controller.abort();
   }, [client, entityCode, pageIdentityKey]);
@@ -857,11 +971,18 @@ function EntityCollectionRuntime({
       if (descriptor) {
         if (embedding) {
           const config = embedding.options;
-          if (state) next = constrainEmbeddedViewState(next, state, config.views);
+          if (state)
+            next = constrainEmbeddedViewState(next, state, config.views);
           if (!isListViewAllowed(next, config.views.allowedViewKeys)) return;
-          next = {...next,
-            density: config.display.userOverrides.includes("density") ? next.density : config.display.defaults.density,
-            mode: config.display.userOverrides.includes("layout") ? next.mode : config.display.defaults.layout};
+          next = {
+            ...next,
+            density: config.display.userOverrides.includes("density")
+              ? next.density
+              : config.display.defaults.density,
+            mode: config.display.userOverrides.includes("layout")
+              ? next.mode
+              : config.display.defaults.layout,
+          };
         }
         setState(next);
         if (!embedding) writeLocation(next, descriptor, history);
@@ -955,14 +1076,33 @@ function EntityCollectionRuntime({
       ? resolveEntityText(descriptor.surface.header.description, locale)
       : undefined
     : descriptor?.surface.description;
-  const availableCount = !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`
-    ? listCountLabel(page) ?? (page && !page.pagination.hasNext && !state?.cursor && !(state?.pageIndex ?? 0) && cursorHistory.length === 0
-      ? new Intl.NumberFormat(locale).format(page.rows.length) : undefined) : undefined;
+  const availableCount =
+    !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`
+      ? (listCountLabel(page) ??
+        (page &&
+        !page.pagination.hasNext &&
+        !state?.cursor &&
+        !(state?.pageIndex ?? 0) &&
+        cursorHistory.length === 0
+          ? new Intl.NumberFormat(locale).format(page.rows.length)
+          : undefined))
+      : undefined;
   useEffect(() => {
-    if (!contentOnly || embedding || navigationOnly || !publishListInformation) return;
-    publishListInformation({ description: listDescription, count: availableCount });
+    if (!contentOnly || embedding || navigationOnly || !publishListInformation)
+      return;
+    publishListInformation({
+      description: listDescription,
+      count: availableCount,
+    });
     return () => publishListInformation(undefined);
-  }, [contentOnly, embedding, navigationOnly, publishListInformation, listDescription, availableCount]);
+  }, [
+    contentOnly,
+    embedding,
+    navigationOnly,
+    publishListInformation,
+    listDescription,
+    availableCount,
+  ]);
 
   if (navigationOnly)
     return scopePending ||
@@ -983,7 +1123,14 @@ function EntityCollectionRuntime({
           headerOnly={applicationOnly}
           density={state?.density ?? initialDensity}
           title="Loading list"
-          entityName={inherited?.descriptor.surface.header ? resolveEntityText(inherited.descriptor.surface.header.title, locale) : inherited?.descriptor.surface.title}
+          entityName={
+            inherited?.descriptor.surface.header
+              ? resolveEntityText(
+                  inherited.descriptor.surface.header.title,
+                  locale,
+                )
+              : inherited?.descriptor.surface.title
+          }
           loading={scopePending || loading}
           error={error}
           retry={() => setAttempt((value) => value + 1)}
@@ -993,9 +1140,11 @@ function EntityCollectionRuntime({
     );
   const header = descriptor.surface.header;
   const HeaderIcon = header?.iconKey ? resolveIcon(header.iconKey) : LayoutIcon;
-  const title = descriptor.localizedLabels?.title ? descriptor.surface.title : header
-    ? resolveEntityText(header.title, locale)
-    : descriptor.surface.title;
+  const title = descriptor.localizedLabels?.title
+    ? descriptor.surface.title
+    : header
+      ? resolveEntityText(header.title, locale)
+      : descriptor.surface.title;
   const description = header
     ? header.description
       ? resolveEntityText(header.description, locale)
@@ -1092,7 +1241,10 @@ function EntityCollectionRuntime({
     setCursorHistory([]);
     update(withoutNavigation({ ...state, ...patch }), history);
   };
-  const selectionEnabled = embedding ? embedding.options.mode === "choose" && embedding.selectionAllowed !== false : true;
+  const selectionEnabled = embedding
+    ? embedding.options.mode === "choose" &&
+      embedding.selectionAllowed !== false
+    : true;
   const selectedRows =
     page?.rows.filter((row) => selectedIds.has(row.id)) ?? [];
   const mutateBookmarks = async (
@@ -1101,11 +1253,12 @@ function EntityCollectionRuntime({
   ) => {
     if (!rows.length || allMatchingSelected) return;
     const epoch = bookmarkEpoch;
-    rows = rows.filter(row => bookmarkRequests.current.get(row.id) !== epoch);
+    rows = rows.filter((row) => bookmarkRequests.current.get(row.id) !== epoch);
     if (!rows.length) return;
-    const ids = rows.map(row => row.id), previous = new Set(bookmarkedIds);
+    const ids = rows.map((row) => row.id),
+      previous = new Set(bookmarkedIds);
     for (const id of ids) bookmarkRequests.current.set(id, epoch);
-    setPendingBookmarkIds(current => new Set([...current, ...ids]));
+    setPendingBookmarkIds((current) => new Set([...current, ...ids]));
     setBookmarkedIds((current) => {
       const next = new Set(current);
       for (const id of ids)
@@ -1137,8 +1290,13 @@ function EntityCollectionRuntime({
         },
       );
       if (bookmarkEpochRef.current !== epoch) return;
-      setActionStatus(
-        `${ids.length} ${ids.length === 1 ? "record" : "records"} ${operation === "add" ? "added to" : "removed from"} favourites.`,
+      setActionNotice(
+        listNotice(
+          operation === "add"
+            ? "list.notice.favouritesAdded"
+            : "list.notice.favouritesRemoved",
+          { count: ids.length },
+        ),
       );
       window.dispatchEvent(
         new CustomEvent("athyper:record-bookmarks-changed", {
@@ -1147,14 +1305,20 @@ function EntityCollectionRuntime({
       );
     } catch (cause) {
       if (bookmarkEpochRef.current !== epoch) return;
-      setBookmarkedIds(current => rollbackBookmarks(current, previous, ids));
-      setActionStatus(
-        cause instanceof Error
-          ? cause.message
-          : "Favourites could not be updated.",
+      setBookmarkedIds((current) => rollbackBookmarks(current, previous, ids));
+      setActionNotice(
+        listNotice("list.notice.text", {
+          text: localizedEntityError(
+            cause,
+            entityIntl,
+            entityIntl.message("list.notice.favouritesUpdateFailed"),
+          ),
+        }),
       );
     } finally {
-      for (const id of ids) if (bookmarkRequests.current.get(id) === epoch) bookmarkRequests.current.delete(id);
+      for (const id of ids)
+        if (bookmarkRequests.current.get(id) === epoch)
+          bookmarkRequests.current.delete(id);
       if (bookmarkEpochRef.current !== epoch) return;
       setPendingBookmarkIds((current) => {
         const next = new Set(current);
@@ -1173,24 +1337,47 @@ function EntityCollectionRuntime({
         if (existing) return existing;
         const controller = new AbortController();
         filterChoiceControllers.current.add(controller);
-        const request = client.request(entityListDescriptorOperation, {
-          params: { entityCode },
-          query: { ...entityListScopeQuery(scopeCoordinate), filterChoiceField: field },
-          signal: controller.signal,
-        }).then(result => {
-          if (controller.signal.aborted || expectedScope !== activeChoiceScope.current) return;
-          setDescriptor(current => current &&
-            current.scope.fingerprint === result.scope.fingerprint &&
-            current.revision.descriptorHash === result.revision.descriptorHash ? {
-              ...current,
-              fields: current.fields.map(item => item.key === field ? {
-                ...item, filterOptions: result.fields.find(candidate => candidate.key === field)?.filterOptions ?? [],
-              } : item),
-            } : current);
-        }).finally(() => {
-          filterChoiceControllers.current.delete(controller);
-          if (filterChoiceRequests.current.get(key) === request) filterChoiceRequests.current.delete(key);
-        });
+        const request = client
+          .request(entityListDescriptorOperation, {
+            params: { entityCode },
+            query: {
+              ...entityListScopeQuery(scopeCoordinate),
+              filterChoiceField: field,
+            },
+            signal: controller.signal,
+          })
+          .then((result) => {
+            if (
+              controller.signal.aborted ||
+              expectedScope !== activeChoiceScope.current
+            )
+              return;
+            setDescriptor((current) =>
+              current &&
+              current.scope.fingerprint === result.scope.fingerprint &&
+              current.revision.descriptorHash === result.revision.descriptorHash
+                ? {
+                    ...current,
+                    fields: current.fields.map((item) =>
+                      item.key === field
+                        ? {
+                            ...item,
+                            filterOptions:
+                              result.fields.find(
+                                (candidate) => candidate.key === field,
+                              )?.filterOptions ?? [],
+                          }
+                        : item,
+                    ),
+                  }
+                : current,
+            );
+          })
+          .finally(() => {
+            filterChoiceControllers.current.delete(controller);
+            if (filterChoiceRequests.current.get(key) === request)
+              filterChoiceRequests.current.delete(key);
+          });
         filterChoiceRequests.current.set(key, request);
         return request;
       }}
@@ -1231,8 +1418,8 @@ function EntityCollectionRuntime({
             scopeControl={scopeControl}
             pageActions={pageActions}
             loading={loading}
-            actionStatus={actionStatus}
-            onActionStatus={setActionStatus}
+            actionNotice={actionNotice}
+            onActionNotice={setActionNotice}
             onOpenDataOperations={() => setDataOperationsLaunch("picker")}
             onRefresh={() => setRefreshAttempt((value) => value + 1)}
             onChange={resetAndUpdate}
@@ -1252,7 +1439,7 @@ function EntityCollectionRuntime({
                 ).find((view) => view.id === state.savedViewId)?.name ??
                 "Default view"
               }
-              onStatus={setActionStatus}
+              onStatus={(text) => setActionNotice(listNotice("list.notice.text", { text }))}
               open
               launch={dataOperationsLaunch}
               onOpenChange={(open) => {
@@ -1290,16 +1477,29 @@ function EntityCollectionRuntime({
                 singleSelection={embedding?.options.selectionMode === "single"}
                 chooser={Boolean(embedding)}
                 selectionEnabled={selectionEnabled}
-                selectedIds={embedding ? new Set(embedding.selectedRows.map(row => row.id)) : selectedIds}
+                selectedIds={
+                  embedding
+                    ? new Set(embedding.selectedRows.map((row) => row.id))
+                    : selectedIds
+                }
                 bookmarkedIds={bookmarkedIds}
                 pendingBookmarkIds={pendingBookmarkIds}
                 onBookmark={(row, favourite) =>
-                  !embedding && void mutateBookmarks(favourite ? "add" : "remove", [row])
+                  !embedding &&
+                  void mutateBookmarks(favourite ? "add" : "remove", [row])
                 }
                 onSelectionChange={(next) => {
                   if (embedding) {
-                    const candidates = new Map([...embedding.selectedRows, ...(page?.rows ?? [])].map(row => [row.id, row]));
-                    embedding.onSelectionChange([...next].flatMap(id => candidates.has(id) ? [candidates.get(id)!] : []));
+                    const candidates = new Map(
+                      [...embedding.selectedRows, ...(page?.rows ?? [])].map(
+                        (row) => [row.id, row],
+                      ),
+                    );
+                    embedding.onSelectionChange(
+                      [...next].flatMap((id) =>
+                        candidates.has(id) ? [candidates.get(id)!] : [],
+                      ),
+                    );
                   } else setSelectedIds(next);
                   setAllMatchingSelected(false);
                 }}
@@ -1320,7 +1520,7 @@ function EntityCollectionRuntime({
             </>
           ) : null}
           {page ? (
-            <ListFooter
+            <EntityListPagination
               descriptor={descriptor}
               state={state}
               page={page}
@@ -1401,8 +1601,8 @@ function ListChrome({
   scopeControl,
   pageActions,
   loading,
-  actionStatus,
-  onActionStatus,
+  actionNotice,
+  onActionNotice,
   onOpenDataOperations,
   onRefresh,
   onChange,
@@ -1417,8 +1617,8 @@ function ListChrome({
   readonly scopeControl?: ReactNode;
   readonly pageActions: readonly EntityListPageAction[];
   readonly loading: boolean;
-  readonly actionStatus: string;
-  readonly onActionStatus: (status: string) => void;
+  readonly actionNotice?: ListNotice;
+  readonly onActionNotice: (notice: ListNotice | undefined) => void;
   readonly onOpenDataOperations: () => void;
   readonly onRefresh: () => void;
   readonly onChange: (
@@ -1428,7 +1628,11 @@ function ListChrome({
 }) {
   const generatedSearchId = useId();
   const searchId = embedding ? generatedSearchId : "entity-list-search";
-  const preferenceNamespace = embedding ? (embedding.options.display.preferenceScope === "surface" ? `${descriptor.entity.code}.${descriptor.scope.fingerprint}.${embedding.preferenceNamespace ?? "lookup"}` : undefined) : entityDisplayPreferenceNamespace(descriptor);
+  const preferenceNamespace = embedding
+    ? embedding.options.display.preferenceScope === "surface"
+      ? `${descriptor.entity.code}.${descriptor.scope.fingerprint}.${embedding.preferenceNamespace ?? "lookup"}`
+      : undefined
+    : entityDisplayPreferenceNamespace(descriptor);
   const [displayVersion, setDisplayVersion] = useState(0);
   const directory = useDirectoryFilters(),
     directoryKinds = descriptor.scope.filterKinds ?? [];
@@ -1444,7 +1648,9 @@ function ListChrome({
       ? (directory?.value.companyCodeIds?.length ?? 0)
       : 0);
   const [query, setQuery] = useState(state.query ?? ""),
-    [activeDrawer, setActiveDrawer] = useState<ListDrawerKey | undefined>(embedding?.initialControl),
+    [activeDrawer, setActiveDrawer] = useState<ListDrawerKey | undefined>(
+      embedding?.initialControl,
+    ),
     [scopeOpen, setScopeOpen] = useState(false),
     [resetOpen, setResetOpen] = useState(false),
     [views, setViews] = useState<readonly SavedListView[]>([]);
@@ -1456,7 +1662,12 @@ function ListChrome({
   const [refreshRequested, setRefreshRequested] = useState(false);
   const search = useRef<HTMLInputElement>(null);
   const refreshStarted = useRef(false);
-  const eligibleViews = views.filter(view => isListViewAllowed({savedViewId: view.id, standardViewKey: view.state.standardViewKey}, embedding?.options.views.allowedViewKeys));
+  const eligibleViews = views.filter((view) =>
+    isListViewAllowed(
+      { savedViewId: view.id, standardViewKey: view.state.standardViewKey },
+      embedding?.options.views.allowedViewKeys,
+    ),
+  );
   const viewKey = savedViewStorageKey(descriptor),
     activeView =
       eligibleViews.find((view) => view.id === state.savedViewId) ??
@@ -1466,12 +1677,32 @@ function ListChrome({
           view.state.standardViewKey === state.standardViewKey &&
           state.standardViewKey,
       ),
-    dirty = useMemo(() =>
-      JSON.stringify({...saveableViewState(state), ...(embedding ? {density:undefined,mode:undefined} : {})}) !==
-      JSON.stringify({...activeView?.state ?? saveableViewState(descriptor.surface.defaultState), ...(embedding ? {density:undefined,mode:undefined} : {})}),
-      [state, activeView?.state, descriptor.surface.defaultState, Boolean(embedding)]),
+    dirty = useMemo(
+      () =>
+        JSON.stringify({
+          ...saveableViewState(state),
+          ...(embedding ? { density: undefined, mode: undefined } : {}),
+        }) !==
+        JSON.stringify({
+          ...(activeView?.state ??
+            saveableViewState(descriptor.surface.defaultState)),
+          ...(embedding ? { density: undefined, mode: undefined } : {}),
+        }),
+      [
+        state,
+        activeView?.state,
+        descriptor.surface.defaultState,
+        Boolean(embedding),
+      ],
+    ),
     searchBehavior =
-      (embedding && !embedding.options.display.userOverrides.includes("searchBehavior") ? embedding.options.display.defaults.searchBehavior : readDisplayPreferences(descriptor.plane, preferenceNamespace)?.searchBehavior) ?? embedding?.options.display.defaults.searchBehavior ?? "instant";
+      (embedding &&
+      !embedding.options.display.userOverrides.includes("searchBehavior")
+        ? embedding.options.display.defaults.searchBehavior
+        : readDisplayPreferences(descriptor.plane, preferenceNamespace)
+            ?.searchBehavior) ??
+      embedding?.options.display.defaults.searchBehavior ??
+      "instant";
   useEffect(() => setQuery(state.query ?? ""), [state.query]);
   useEffect(
     () =>
@@ -1491,15 +1722,15 @@ function ListChrome({
     if (!refreshRequested) return;
     if (loading) {
       refreshStarted.current = true;
-      onActionStatus("Refreshing list");
+      onActionNotice(listNotice("list.notice.refreshing"));
       return;
     }
     if (refreshStarted.current) {
       refreshStarted.current = false;
       setRefreshRequested(false);
-      onActionStatus("List refreshed");
+      onActionNotice(listNotice("list.notice.refreshed"));
     }
-  }, [loading, refreshRequested, onActionStatus]);
+  }, [loading, refreshRequested, onActionNotice]);
   useEffect(() => {
     const normalized = query.trim();
     if (
@@ -1545,8 +1776,10 @@ function ListChrome({
       normalized &&
       normalized.length < descriptor.surface.search.minimumQueryLength
     ) {
-      onActionStatus(
-        `Enter at least ${descriptor.surface.search.minimumQueryLength} characters to search`,
+      onActionNotice(
+        listNotice("list.notice.searchTooShort", {
+          min: descriptor.surface.search.minimumQueryLength,
+        }),
       );
       return;
     }
@@ -1586,17 +1819,27 @@ function ListChrome({
   const copyViewLink = () => {
     const href = portableListHref(state, descriptor);
     if (!href) {
-      onActionStatus("This view has too much configuration to share as a link");
+      onActionNotice(listNotice("list.notice.linkTooLarge"));
       return;
     }
     void copyText(href).then((copied) =>
-      onActionStatus(copied ? "Link copied" : "Unable to copy link"),
+      onActionNotice(
+        listNotice(
+          copied ? "list.notice.linkCopied" : "list.notice.linkCopyFailed",
+        ),
+      ),
     );
   };
   const applyDirectorySelection = (next: DirectorySelection) => {
-    if (directory) directory.apply(reconcileDirectorySelection(
-      descriptor.scope.quickFilters ?? [], directory.value, next, directory,
-    ));
+    if (directory)
+      directory.apply(
+        reconcileDirectorySelection(
+          descriptor.scope.quickFilters ?? [],
+          directory.value,
+          next,
+          directory,
+        ),
+      );
   };
   const appliedChips: AppliedFilterChip[] = [
     ...(directory
@@ -1667,42 +1910,63 @@ function ListChrome({
       ) : null}
       <span
         className={
-          actionStatus.includes("System default has been applied")
+          isVisibleListNotice(actionNotice)
             ? "a-entity-list__view-summary"
             : "a-visually-hidden"
         }
         role="status"
         aria-live="polite"
       >
-        {actionStatus}
+        {actionNotice && entityIntl.message(actionNotice.key, actionNotice.values)}
       </span>
       <ManagementToolbar className="a-entity-list__query-row">
         <form className="a-entity-list__search" role="search" onSubmit={submit}>
-          <ObjectSearch ref={search} id={searchId} label={`Search ${descriptor.entity.pluralLabel}`} value={query} onValueChange={setQuery} placeholder={`Search by ${searchHint(descriptor)}…`} />
+          <ObjectSearch
+            ref={search}
+            id={searchId}
+            label={`Search ${descriptor.entity.pluralLabel}`}
+            value={query}
+            onValueChange={setQuery}
+            placeholder={`Search by ${searchHint(descriptor)}…`}
+          />
         </form>
-        <ViewSelector className="a-entity-list__view-trigger" disabled={embedding?.options.views.allowSwitching === false} name={activeView?.name ?? "System default"} modified={dirty}>
-            {isListViewAllowed({savedViewId: "system"}, embedding?.options.views.allowedViewKeys) ? <MenuItem onClick={reset}>System default</MenuItem> : null}
-            {eligibleViews.map((view) => (
-              <MenuItem
-                key={view.id}
-                onClick={() =>
-                  onChange(
-                    {
-                      standardViewKey: undefined,
-                      group: undefined,
-                      spreadsheet: undefined,
-                      ...view.state,
-                      query: state.query,
-                      savedViewId: view.id,
-                    },
-                    "push",
-                  )
-                }
-              >
-                {view.name}
-              </MenuItem>
-            ))}
-            {!embedding || embedding.options.views.allowSwitching ? <MenuItem onClick={() => setActiveDrawer("views")}>Manage views…</MenuItem> : null}
+        <ViewSelector
+          className="a-entity-list__view-trigger"
+          disabled={embedding?.options.views.allowSwitching === false}
+          name={activeView?.name ?? "System default"}
+          modified={dirty}
+        >
+          {isListViewAllowed(
+            { savedViewId: "system" },
+            embedding?.options.views.allowedViewKeys,
+          ) ? (
+            <MenuItem onClick={reset}>System default</MenuItem>
+          ) : null}
+          {eligibleViews.map((view) => (
+            <MenuItem
+              key={view.id}
+              onClick={() =>
+                onChange(
+                  {
+                    standardViewKey: undefined,
+                    group: undefined,
+                    spreadsheet: undefined,
+                    ...view.state,
+                    query: state.query,
+                    savedViewId: view.id,
+                  },
+                  "push",
+                )
+              }
+            >
+              {view.name}
+            </MenuItem>
+          ))}
+          {!embedding || embedding.options.views.allowSwitching ? (
+            <MenuItem onClick={() => setActiveDrawer("views")}>
+              Manage views…
+            </MenuItem>
+          ) : null}
         </ViewSelector>
         <div className="a-entity-list__toolbar-actions">
           {listDrawer("filters").available(descriptor) ? (
@@ -1785,7 +2049,9 @@ function ListChrome({
               title={entityIntl.message("entity.controls")}
             >
               <SlidersHorizontalIcon size={16} />
-              <span className="a-entity-list__more-label">{entityIntl.message("entity.controls")}</span>
+              <span className="a-entity-list__more-label">
+                {entityIntl.message("entity.controls")}
+              </span>
             </MenuTrigger>
             <MenuContent className="a-entity-list__more-menu">
               {scopeControl ? (
@@ -1797,26 +2063,35 @@ function ListChrome({
                   onClick={() => setScopeOpen(true)}
                 />
               ) : null}
-              {LIST_DRAWERS.filter((item) => item.available(descriptor) && (!embedding || ((item.key !== "views" || embedding.options.views.allowSwitching) && (item.key !== "display" || (embedding.options.display.settingsShowIn.includes("full") || embedding.initialControl === "display"))))).map(
-                (item) => (
-                  <ListMenuItem
-                    key={item.key}
-                    icon={<item.Icon size={16} />}
-                    label={item.label}
-                    value={
-                      {
-                        filters: `${filterCount} active`,
-                        views: activeView?.name ?? "System default",
-                        sort: `${state.sort.length} ${state.sort.length === 1 ? "level" : "levels"}`,
-                        columns: `${state.columns.length} visible`,
-                        group: groupLabel,
-                        display: `${titleCase(state.mode)} · ${titleCase(state.density)}`,
-                      }[item.key]
-                    }
-                    onClick={() => setActiveDrawer(item.key)}
-                  />
-                ),
-              )}
+              {LIST_DRAWERS.filter(
+                (item) =>
+                  item.available(descriptor) &&
+                  (!embedding ||
+                    ((item.key !== "views" ||
+                      embedding.options.views.allowSwitching) &&
+                      (item.key !== "display" ||
+                        embedding.options.display.settingsShowIn.includes(
+                          "full",
+                        ) ||
+                        embedding.initialControl === "display"))),
+              ).map((item) => (
+                <ListMenuItem
+                  key={item.key}
+                  icon={<item.Icon size={16} />}
+                  label={item.label}
+                  value={
+                    {
+                      filters: `${filterCount} active`,
+                      views: activeView?.name ?? "System default",
+                      sort: `${state.sort.length} ${state.sort.length === 1 ? "level" : "levels"}`,
+                      columns: `${state.columns.length} visible`,
+                      group: groupLabel,
+                      display: `${humanizeIdentifier(state.mode)} · ${humanizeIdentifier(state.density)}`,
+                    }[item.key]
+                  }
+                  onClick={() => setActiveDrawer(item.key)}
+                />
+              ))}
               {pageActions.map((action) => (
                 <ListMenuItem
                   className="a-entity-list__small-screen-only"
@@ -1860,7 +2135,7 @@ function ListChrome({
                 label={refreshRequested ? "Refreshing…" : "Refresh"}
                 onClick={() => {
                   setRefreshRequested(true);
-                  onActionStatus("Refreshing list");
+                  onActionNotice(listNotice("list.notice.refreshing"));
                   onRefresh();
                 }}
               />
@@ -1890,7 +2165,20 @@ function ListChrome({
       {activeDrawer ? (
         <ListDrawerHost
           key={descriptor.scope.fingerprint}
-          allowedKeys={embedding ? LIST_DRAWERS.filter(item => (item.key !== "views" || embedding.options.views.allowSwitching) && (item.key !== "display" || (embedding.options.display.settingsShowIn.includes("full") || embedding.initialControl === "display"))).map(item => item.key) : undefined}
+          allowedKeys={
+            embedding
+              ? LIST_DRAWERS.filter(
+                  (item) =>
+                    (item.key !== "views" ||
+                      embedding.options.views.allowSwitching) &&
+                    (item.key !== "display" ||
+                      embedding.options.display.settingsShowIn.includes(
+                        "full",
+                      ) ||
+                      embedding.initialControl === "display"),
+                ).map((item) => item.key)
+              : undefined
+          }
           active={activeDrawer}
           onSelect={setActiveDrawer}
           onOpenChange={closeDrawer}
@@ -1938,7 +2226,16 @@ function ListChrome({
               <DisplaySettingsDialog
                 preferenceNamespace={preferenceNamespace}
                 configuration={embedding?.options.display}
-                onPreferencesChange={() => { setDisplayVersion(v => v + 1); embedding?.onSearchBehaviorChange?.(readDisplayPreferences(descriptor.plane, preferenceNamespace)?.searchBehavior ?? embedding.options.display.defaults.searchBehavior); }}
+                onPreferencesChange={() => {
+                  setDisplayVersion((v) => v + 1);
+                  embedding?.onSearchBehaviorChange?.(
+                    readDisplayPreferences(
+                      descriptor.plane,
+                      preferenceNamespace,
+                    )?.searchBehavior ??
+                      embedding.options.display.defaults.searchBehavior,
+                  );
+                }}
                 open
                 onOpenChange={closeDrawer}
                 descriptor={descriptor}
@@ -2088,9 +2385,16 @@ function FilterDialog({
     directory?.value ?? {},
   );
   const setDirectoryDraft = (next: DirectorySelection) => {
-    commitDirectoryDraft(directory ? reconcileDirectorySelection(
-      descriptor.scope.quickFilters ?? [], directoryDraft, next, directory,
-    ) : next);
+    commitDirectoryDraft(
+      directory
+        ? reconcileDirectorySelection(
+            descriptor.scope.quickFilters ?? [],
+            directoryDraft,
+            next,
+            directory,
+          )
+        : next,
+    );
   };
   useEffect(() => {
     if (open) commitDirectoryDraft(directory?.value ?? {});
@@ -2522,16 +2826,43 @@ function FilterDialog({
             </div>
           </Drawer.TabPanel>
         </Drawer.Body>
-        <CollectionDraftFooter className="a-entity-list__filter-actions" dirty={dirty} applyDisabled={invalid || Boolean(directoryDirty && directory?.unavailable)} resetDisabled={!draft.length && directorySelectionKey(directoryDraft) === directorySelectionKey({})} summary={<><strong>
-              {dirty ? "Changes ready to apply" : `${recordLabel} matching`}
-            </strong>
-            <span>
-              {dirty
-                ? `${recordLabel} in the current list`
-                : `${draft.length + (directoryDraft.operatingOrganizationIds?.length ?? 0) + (directoryDraft.companyCodeIds?.length ?? 0) + (descriptor.scope.quickFilters?.filter((filter) => directoryDraft[filter.key]).length ?? 0)} active filters`}
-            </span>
-          </>} onReset={()=>{setDraft([]);setDirectoryDraft({});}} onApply={apply} resetLabel="Reset filters" applyLabel={<><span className="a-entity-list__apply-desktop">Apply filters</span><span className="a-entity-list__apply-mobile">Show results</span></>}/>
-
+        <CollectionDraftFooter
+          className="a-entity-list__filter-actions"
+          dirty={dirty}
+          applyDisabled={
+            invalid || Boolean(directoryDirty && directory?.unavailable)
+          }
+          resetDisabled={
+            !draft.length &&
+            directorySelectionKey(directoryDraft) === directorySelectionKey({})
+          }
+          summary={
+            <>
+              <strong>
+                {dirty ? "Changes ready to apply" : `${recordLabel} matching`}
+              </strong>
+              <span>
+                {dirty
+                  ? `${recordLabel} in the current list`
+                  : `${draft.length + (directoryDraft.operatingOrganizationIds?.length ?? 0) + (directoryDraft.companyCodeIds?.length ?? 0) + (descriptor.scope.quickFilters?.filter((filter) => directoryDraft[filter.key]).length ?? 0)} active filters`}
+              </span>
+            </>
+          }
+          onReset={() => {
+            setDraft([]);
+            setDirectoryDraft({});
+          }}
+          onApply={apply}
+          resetLabel="Reset filters"
+          applyLabel={
+            <>
+              <span className="a-entity-list__apply-desktop">
+                Apply filters
+              </span>
+              <span className="a-entity-list__apply-mobile">Show results</span>
+            </>
+          }
+        />
       </Drawer.Tabs>
     </>
   );
@@ -2564,52 +2895,12 @@ function resolvedFilterPresentation(
 ): EntityListDescriptorV1["surface"]["filterPresentation"] {
   if (descriptor.surface.filterPresentation)
     return descriptor.surface.filterPresentation;
-  const quickFields = descriptor.fields
-    .filter((field) => field.filterOperators.length)
-    .sort(
-      (left, right) =>
-        legacyQuickFilterPriority(left) - legacyQuickFilterPriority(right) ||
-        left.defaultOrder - right.defaultOrder,
-    )
-    .slice(0, 4)
-    .map((field) =>
-      Object.freeze({
-        field: field.key,
-        defaultOperator: preferredLegacyFilterOperator(field),
-      }),
-    );
+  const quickFields = fallbackQuickFields(descriptor.fields);
   return Object.freeze({
     quickFields: Object.freeze(quickFields),
     source: "fallback",
     allowUserPinning: false,
   });
-}
-
-function legacyQuickFilterPriority(field: ListFieldDescriptorV1): number {
-  const value = `${field.key} ${field.label}`;
-  if (field.semanticRole === "status" || /\bstatus\b/i.test(value)) return 0;
-  if (/category|group|class|kind/i.test(value)) return 1;
-  if (field.semanticRole === "country_code" || /country/i.test(value)) return 2;
-  if (field.semanticRole === "updated_at" || /updated|modified/i.test(value))
-    return 3;
-  return 10;
-}
-
-function preferredLegacyFilterOperator(
-  field: ListFieldDescriptorV1,
-): ListFilterOperator {
-  const preferred: ListFilterOperator =
-    field.valueKind === "date" || field.valueKind === "datetime"
-      ? "relative"
-      : field.filterOptions?.length ||
-          field.valueKind === "enum" ||
-          field.valueKind === "boolean" ||
-          field.valueKind === "reference"
-        ? "eq"
-        : "contains";
-  return field.filterOperators.includes(preferred)
-    ? preferred
-    : field.filterOperators[0]!;
 }
 
 function SortDialog({
@@ -3247,7 +3538,7 @@ function SavedViewsDialog({
     body: Record<string, unknown>,
     applyCreated = false,
   ) => {
-    if(readOnly) return false;
+    if (readOnly) return false;
     setBusy(true);
     setMessage("");
     try {
@@ -3316,7 +3607,12 @@ function SavedViewsDialog({
         ...view,
         state: saveableViewState(descriptor.surface.defaultState),
       })) ?? []),
-  ].filter(view => isListViewAllowed({savedViewId: view.id, standardViewKey: view.state.standardViewKey}, allowedViewKeys));
+  ].filter((view) =>
+    isListViewAllowed(
+      { savedViewId: view.id, standardViewKey: view.state.standardViewKey },
+      allowedViewKeys,
+    ),
+  );
   const activeName =
     rows.find((view) => view.id === (state.savedViewId ?? "system"))?.name ??
     "System default";
@@ -3338,7 +3634,9 @@ function SavedViewsDialog({
       <Drawer.Tabs value={tab} onValueChange={setTab}>
         <Drawer.TabList aria-label="Manage views sections">
           <Drawer.Tab value="available">Available views</Drawer.Tab>
-          {!readOnly ? <Drawer.Tab value="save">Save current configuration</Drawer.Tab> : null}
+          {!readOnly ? (
+            <Drawer.Tab value="save">Save current configuration</Drawer.Tab>
+          ) : null}
         </Drawer.TabList>
         <Drawer.Body className="a-entity-list__view-dialog">
           <div hidden={tab !== "save"} inert={tab !== "save"}>
@@ -3456,7 +3754,11 @@ function SavedViewsDialog({
                                 : ""}
                             </small>
                           </button>
-                          <div className="a-entity-list__view-row-actions" hidden={readOnly} inert={readOnly}>
+                          <div
+                            className="a-entity-list__view-row-actions"
+                            hidden={readOnly}
+                            inert={readOnly}
+                          >
                             {catalog && !local ? (
                               <Button
                                 size="small"
@@ -3670,42 +3972,67 @@ function DisplaySettingsDialog({
 }) {
   const effectivePreferences = () => {
     const saved = readDisplayPreferences(descriptor.plane, preferenceNamespace);
-    return configuration ? {
-      mode: configuration.userOverrides.includes("layout") ? saved?.mode ?? state.mode : configuration.defaults.layout,
-      density: configuration.userOverrides.includes("density") ? saved?.density ?? state.density : configuration.defaults.density,
-      searchBehavior: configuration.userOverrides.includes("searchBehavior") ? saved?.searchBehavior ?? configuration.defaults.searchBehavior : configuration.defaults.searchBehavior,
-    } : saved;
+    return configuration
+      ? {
+          mode: configuration.userOverrides.includes("layout")
+            ? (saved?.mode ?? state.mode)
+            : configuration.defaults.layout,
+          density: configuration.userOverrides.includes("density")
+            ? (saved?.density ?? state.density)
+            : configuration.defaults.density,
+          searchBehavior: configuration.userOverrides.includes("searchBehavior")
+            ? (saved?.searchBehavior ?? configuration.defaults.searchBehavior)
+            : configuration.defaults.searchBehavior,
+        }
+      : saved;
   };
   const preferences = effectivePreferences(),
     [density, setDensity] = useState(state.density),
     [mode, setMode] = useState(state.mode),
     [searchBehavior, setSearchBehavior] = useState<
       DisplayPreferences["searchBehavior"]
-    >(preferences?.searchBehavior ?? configuration?.defaults.searchBehavior ?? "instant");
+    >(
+      preferences?.searchBehavior ??
+        configuration?.defaults.searchBehavior ??
+        "instant",
+    );
   useEffect(() => {
     if (open) {
       const saved = effectivePreferences();
       setDensity(saved?.density ?? state.density);
       setMode(saved?.mode ?? state.mode);
-      setSearchBehavior(saved?.searchBehavior ?? configuration?.defaults.searchBehavior ?? "instant");
+      setSearchBehavior(
+        saved?.searchBehavior ??
+          configuration?.defaults.searchBehavior ??
+          "instant",
+      );
     }
   }, [open, descriptor.plane, state.density, state.mode]);
   const dirty =
     density !== (preferences?.density ?? state.density) ||
     mode !== (preferences?.mode ?? state.mode) ||
-    searchBehavior !== (preferences?.searchBehavior ?? configuration?.defaults.searchBehavior ?? "instant");
+    searchBehavior !==
+      (preferences?.searchBehavior ??
+        configuration?.defaults.searchBehavior ??
+        "instant");
   const reset = () => {
-    if (!configuration) clearDisplayPreferences(descriptor.plane, preferenceNamespace);
-    setDensity(configuration?.defaults.density ?? descriptor.surface.defaultState.density);
-    setMode(configuration?.defaults.layout ?? descriptor.surface.defaultState.mode);
+    if (!configuration)
+      clearDisplayPreferences(descriptor.plane, preferenceNamespace);
+    setDensity(
+      configuration?.defaults.density ??
+        descriptor.surface.defaultState.density,
+    );
+    setMode(
+      configuration?.defaults.layout ?? descriptor.surface.defaultState.mode,
+    );
     setSearchBehavior(configuration?.defaults.searchBehavior ?? "instant");
   };
   return (
     <>
       <Drawer.Toolbar>
         <Drawer.Context aria-label="Display setting context">
-          <Drawer.Metric label="Layout" value={titleCase(mode)} />
-          <Drawer.Metric label="Density" value={titleCase(density)} />
+          <Drawer.Metric label="Layout" value={humanizeIdentifier(mode)} />
+          <Drawer.Metric label="Density" value={humanizeIdentifier(density)} />
           <Drawer.Metric
             label="Search"
             value={searchBehavior === "instant" ? "As you type" : "On Enter"}
@@ -3718,7 +4045,9 @@ function DisplaySettingsDialog({
             <span>Layout</span>
             <Select
               value={mode}
-              disabled={configuration && !configuration.userOverrides.includes("layout")}
+              disabled={
+                configuration && !configuration.userOverrides.includes("layout")
+              }
               onChange={(event) =>
                 setMode(
                   event.currentTarget.value as ListLocationStateV1["mode"],
@@ -3727,7 +4056,7 @@ function DisplaySettingsDialog({
             >
               {descriptor.surface.supportedModes.map((item) => (
                 <option value={item} key={item}>
-                  {titleCase(item)}
+                  {humanizeIdentifier(item)}
                 </option>
               ))}
             </Select>
@@ -3736,7 +4065,10 @@ function DisplaySettingsDialog({
             <span>Density</span>
             <Select
               value={density}
-              disabled={configuration && !configuration.userOverrides.includes("density")}
+              disabled={
+                configuration &&
+                !configuration.userOverrides.includes("density")
+              }
               onChange={(event) =>
                 setDensity(
                   event.currentTarget.value as ListLocationStateV1["density"],
@@ -3752,7 +4084,10 @@ function DisplaySettingsDialog({
             <span>Search behavior</span>
             <Select
               value={searchBehavior}
-              disabled={configuration && !configuration.userOverrides.includes("searchBehavior")}
+              disabled={
+                configuration &&
+                !configuration.userOverrides.includes("searchBehavior")
+              }
               onChange={(event) =>
                 setSearchBehavior(
                   event.currentTarget
@@ -3784,11 +4119,15 @@ function DisplaySettingsDialog({
             size="small"
             disabled={!dirty}
             onClick={() => {
-              writeDisplayPreferences(descriptor.plane, {
-                density,
-                mode,
-                searchBehavior,
-              }, preferenceNamespace);
+              writeDisplayPreferences(
+                descriptor.plane,
+                {
+                  density,
+                  mode,
+                  searchBehavior,
+                },
+                preferenceNamespace,
+              );
               onPreferencesChange?.();
               onApply({ density, mode });
               onOpenChange(false);
@@ -3986,16 +4325,23 @@ function EntityRows({
           <SearchIcon size={22} />
         </span>
         <h2>
-          {(constrained ? emptyContent?.noMatchesTitle : emptyContent?.emptyTitle) ?? (query?.trim()
-            ? `No results for “${query.trim()}”`
-            : constrained
-              ? "No matching records"
-              : `No ${descriptor.surface.title.toLocaleLowerCase()} to display`)}
+          {(constrained
+            ? emptyContent?.noMatchesTitle
+            : emptyContent?.emptyTitle) ??
+            (query?.trim()
+              ? `No results for “${query.trim()}”`
+              : constrained
+                ? "No matching records"
+                : `No ${descriptor.surface.title.toLocaleLowerCase()} to display`)}
         </h2>
         <p>
           {constrained
-            ? emptyContent?.noMatchesDescription ?? "Try another search term or adjust your filters."
-            : emptyAction ? emptyContent?.emptyDescription ?? "You can request a new record below." : "There are no records to display."}
+            ? (emptyContent?.noMatchesDescription ??
+              "Try another search term or adjust your filters.")
+            : emptyAction
+              ? (emptyContent?.emptyDescription ??
+                "You can request a new record below.")
+              : "There are no records to display."}
         </p>
         {emptyAction}
       </Card>
@@ -4019,13 +4365,15 @@ function EntityRows({
                 (field) => field.key === descriptor.entity.identityField,
               ),
             ),
-            href = (chooser ? recordLink?.(row) : recordHref(descriptor, row));
+            href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
           return (
             <Card key={row.id} className="a-entity-list__card">
               <div className="a-entity-list__card-header">
                 {selectionEnabled ? (
                   <Label className="a-entity-list__card-select">
-                    <input name={singleSelection ? selectionName : undefined} type={singleSelection ? "radio" : "checkbox"}
+                    <input
+                      name={singleSelection ? selectionName : undefined}
+                      type={singleSelection ? "radio" : "checkbox"}
                       checked={selectedIds.has(row.id)}
                       onChange={(event) =>
                         toggle(row.id, event.currentTarget.checked)
@@ -4034,12 +4382,14 @@ function EntityRows({
                     Select record
                   </Label>
                 ) : null}
-                {!chooser ? <BookmarkButton
-                  identity={identity}
-                  favourite={bookmarkedIds.has(row.id)}
-                  pending={pendingBookmarkIds.has(row.id)}
-                  onChange={(favourite) => onBookmark(row, favourite)}
-                /> : null}
+                {!chooser ? (
+                  <BookmarkButton
+                    identity={identity}
+                    favourite={bookmarkedIds.has(row.id)}
+                    pending={pendingBookmarkIds.has(row.id)}
+                    onChange={(favourite) => onBookmark(row, favourite)}
+                  />
+                ) : null}
               </div>
               <h2>
                 {href ? (
@@ -4093,12 +4443,12 @@ function EntityRows({
       cards(page.rows)
     );
   const openRecord = (row: EntityListRowV1) => {
-    const href = (chooser ? recordLink?.(row) : recordHref(descriptor, row));
+    const href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
     if (href) window.location.assign(href);
   };
   const tableRows = (rows: readonly EntityListRowV1[]) =>
     rows.map((row) => {
-      const href = (chooser ? recordLink?.(row) : recordHref(descriptor, row)),
+      const href = chooser ? recordLink?.(row) : recordHref(descriptor, row),
         identity = formatFieldValue(
           row.values[descriptor.entity.identityField],
         );
@@ -4128,7 +4478,9 @@ function EntityRows({
         >
           {selectionEnabled ? (
             <td className="a-entity-list__selection-cell" data-label="Select">
-              <input name={singleSelection ? selectionName : undefined} type={singleSelection ? "radio" : "checkbox"}
+              <input
+                name={singleSelection ? selectionName : undefined}
+                type={singleSelection ? "radio" : "checkbox"}
                 aria-label={`Select ${identity}`}
                 checked={selectedIds.has(row.id)}
                 onChange={(event) =>
@@ -4153,12 +4505,14 @@ function EntityRows({
             </td>
           ))}
           <td className="a-entity-list__bookmark-cell" data-label="Favourite">
-            {!chooser ? <BookmarkButton
-              identity={identity}
-              favourite={bookmarkedIds.has(row.id)}
-              pending={pendingBookmarkIds.has(row.id)}
-              onChange={(favourite) => onBookmark(row, favourite)}
-            /> : null}
+            {!chooser ? (
+              <BookmarkButton
+                identity={identity}
+                favourite={bookmarkedIds.has(row.id)}
+                pending={pendingBookmarkIds.has(row.id)}
+                onChange={(favourite) => onBookmark(row, favourite)}
+              />
+            ) : null}
           </td>
           <td className="a-entity-list__row-actions">
             {!chooser ? <RowMenu descriptor={descriptor} row={row} /> : null}
@@ -4177,18 +4531,22 @@ function EntityRows({
           <tr>
             {selectionEnabled ? (
               <th scope="col" className="a-entity-list__selection-cell">
-                {singleSelection ? <span className="a-visually-hidden">Select record</span> : <Checkbox
-                  disabled={singleSelection}
-                  aria-label="Select current page"
-                  checked={pageSelected}
-                  onChange={(event) => {
-                    const next = new Set(singleSelection ? [] : selectedIds);
-                    for (const row of page.rows)
-                      if (event.currentTarget.checked) next.add(row.id);
-                      else next.delete(row.id);
-                    onSelectionChange(next);
-                  }}
-                />}
+                {singleSelection ? (
+                  <span className="a-visually-hidden">Select record</span>
+                ) : (
+                  <Checkbox
+                    disabled={singleSelection}
+                    aria-label="Select current page"
+                    checked={pageSelected}
+                    onChange={(event) => {
+                      const next = new Set(singleSelection ? [] : selectedIds);
+                      for (const row of page.rows)
+                        if (event.currentTarget.checked) next.add(row.id);
+                        else next.delete(row.id);
+                      onSelectionChange(next);
+                    }}
+                  />
+                )}
               </th>
             ) : null}
             {fields.map((field) => {
@@ -4440,87 +4798,6 @@ function RowMenu({
     </Menu>
   );
 }
-function ListFooter({
-  descriptor,
-  state,
-  page,
-  loading,
-  cursorHistory,
-  onPrevious,
-  onNext,
-  onPageSize,
-}: {
-  readonly descriptor: EntityListDescriptorV1;
-  readonly state: ListLocationStateV1;
-  readonly page: EntityListResultV1;
-  readonly loading: boolean;
-  readonly cursorHistory: readonly (string | undefined)[];
-  readonly onPrevious: () => void;
-  readonly onNext: () => void;
-  readonly onPageSize: (value: number) => void;
-}) {
-  if (!page.rows.length) return null;
-  const pageSize = state.pageSize ?? descriptor.limits.defaultPageSize,
-    start = (state.pageIndex ?? cursorHistory.length) * pageSize + 1,
-    end = start + page.rows.length - 1,
-    formattedRange = `${new Intl.NumberFormat().format(start)}–${new Intl.NumberFormat().format(end)}`,
-    total = page.pagination.total,
-    countPrefix = page.pagination.countMode === "approximate" ? "≈" : "",
-    summary =
-      total === undefined
-        ? `Showing ${formattedRange}${page.pagination.hasNext ? " · more available" : ""}`
-        : `Showing ${formattedRange} of ${countPrefix}${new Intl.NumberFormat().format(total)}`;
-  return (
-    <nav className="a-entity-list__pagination" aria-label="List pagination">
-      <span
-        aria-live="polite"
-        title={
-          page.pagination.countMode === "cached"
-            ? "Recently calculated result count"
-            : undefined
-        }
-      >
-        {summary}
-      </span>
-      <div className="a-entity-list__page-controls">
-        <Label>
-          <span>Rows per page</span>
-          <Select
-            value={pageSize}
-            onChange={(event) => onPageSize(Number(event.currentTarget.value))}
-          >
-            {descriptor.limits.allowedPageSizes.map((size) => (
-              <option value={size} key={size}>
-                {size}
-              </option>
-            ))}
-          </Select>
-        </Label>
-        <div className="a-entity-list__page-buttons">
-          <Button
-            size="small"
-            variant="secondary"
-            disabled={!cursorHistory.length || loading}
-            onClick={onPrevious}
-          >
-            Previous
-          </Button>
-          <Button
-            size="small"
-            variant="secondary"
-            disabled={
-              !page.pagination.hasNext || !page.pagination.nextCursor || loading
-            }
-            onClick={onNext}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
-    </nav>
-  );
-}
-
 function LoadingFooter() {
   return (
     <div className="a-entity-list__pagination" aria-hidden="true">
@@ -4877,10 +5154,7 @@ function formatFieldValue(
       return String(value);
     }
   }
-  if (field?.valueKind === "enum")
-    return String(value)
-      .replace(/[_-]+/g, " ")
-      .replace(/\b\w/g, (character) => character.toUpperCase());
+  if (field?.valueKind === "enum") return humanizeIdentifier(String(value));
   return String(value);
 }
 async function copyText(value: string): Promise<boolean> {
@@ -4900,7 +5174,8 @@ async function copyText(value: string): Promise<boolean> {
       document.execCommand("copy");
     control.remove();
     return copied;
-  } catch {
+  } catch (error) {
+    console.debug("Clipboard copy failed", error);
     return false;
   }
 }
@@ -4943,10 +5218,21 @@ function listCountLabel(page?: EntityListResultV1): string | undefined {
     ? undefined
     : `${page?.pagination.countMode === "approximate" ? "≈" : ""}${new Intl.NumberFormat().format(count)}`;
 }
-function listHeaderInformation(description?: string, count?: string): ReactNode {
+function listHeaderInformation(
+  description?: string,
+  count?: string,
+): ReactNode {
   const text = description?.trim();
   if (!text && count === undefined) return undefined;
-  return <>{text ? <span>{text}</span> : null}{text && count !== undefined ? <span aria-hidden="true"> · </span> : null}{count !== undefined ? <span aria-live="polite">{count} records</span> : null}</>;
+  return (
+    <>
+      {text ? <span>{text}</span> : null}
+      {text && count !== undefined ? <span aria-hidden="true"> · </span> : null}
+      {count !== undefined ? (
+        <span aria-live="polite">{count} records</span>
+      ) : null}
+    </>
+  );
 }
 function groupedRows(
   page: EntityListResultV1,
@@ -5003,11 +5289,6 @@ function nextSort(
   return Object.freeze(
     current.filter((_item, itemIndex) => itemIndex !== index),
   );
-}
-function titleCase(value: string): string {
-  return value
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 function moveItem<T>(
   items: readonly T[],
@@ -5145,7 +5426,15 @@ function ListFrame({
         />
       ) : null}
       {error ? (
-        <ErrorState error={error} retry={retry} application={headerOnly} applicationName={applicationName} entityName={entityName ?? (title.startsWith("Loading") ? undefined : title)} />
+        <ErrorState
+          error={error}
+          retry={retry}
+          application={headerOnly}
+          applicationName={applicationName}
+          entityName={
+            entityName ?? (title.startsWith("Loading") ? undefined : title)
+          }
+        />
       ) : loading ? (
         <>
           {!headerOnly ? (
@@ -5182,9 +5471,23 @@ function ErrorState({
   readonly entityName?: string;
 }) {
   const intl = useEntityI18n();
-  const classification = classifyAppError({ error, applicationName: entityName });
-  const model = {...classification, description: localizedEntityError(error, intl, classification.description)};
-  if (application) return <ErrorSurface model={model} reset={retry} surface="content" applicationName={applicationName} />;
+  const classification = classifyAppError({
+    error,
+    applicationName: entityName,
+  });
+  const model = {
+    ...classification,
+    description: localizedEntityError(error, intl, classification.description),
+  };
+  if (application)
+    return (
+      <ErrorSurface
+        model={model}
+        reset={retry}
+        surface="content"
+        applicationName={applicationName}
+      />
+    );
   return (
     <Card
       className={`a-entity-list__state a-entity-list__state--error${compact ? " a-entity-list__state--inline" : " a-entity-list__state--empty"}`}
@@ -5201,7 +5504,15 @@ function ErrorState({
               ? "The latest results could not be loaded"
               : "This list is unavailable"}
         </h2>
-        <p>{localizedEntityError(error, intl, model.kind === "not-found" || model.kind === "service-unavailable" ? model.description : "We couldn’t load this page. Please try again.")}</p>
+        <p>
+          {localizedEntityError(
+            error,
+            intl,
+            model.kind === "not-found" || model.kind === "service-unavailable"
+              ? model.description
+              : "We couldn’t load this page. Please try again.",
+          )}
+        </p>
       </div>
       {model.canRetry ? (
         <Button size="small" variant="secondary" onClick={retry}>
@@ -5272,4 +5583,7 @@ export {
 
 export { StickyListTable } from "./sticky-table";
 
-export { searchLookupDirectory, lookupSearchBehavior } from "./lookup-directory";
+export {
+  searchLookupDirectory,
+  lookupSearchBehavior,
+} from "./lookup-directory";

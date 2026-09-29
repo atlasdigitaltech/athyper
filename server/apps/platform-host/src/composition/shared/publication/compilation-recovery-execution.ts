@@ -9,10 +9,10 @@ import { assertSuccessorTargetHeads } from "./successor-targets.js";
 import { qualifyReferencePublicationTarget } from "./target-qualification.js";
 import type { PublicationWorkloadConfiguration } from "./workload-configuration.js";
 import type { MachinePublicationPolicyPin } from "./machine-policy.js";
-import type { ReferencePublicationWorkloadDependencies } from "./workload.js";
+import type { DevelopmentPublicationWorkloadDependencies } from "../../../development/publication-workload.js";
 
 export async function executeCompilationRecovery(config: PublicationWorkloadConfiguration, policy: CompilationRecoveryPolicy,
-  pin: MachinePublicationPolicyPin, dependencies: ReferencePublicationWorkloadDependencies) {
+  pin: MachinePublicationPolicyPin, dependencies: DevelopmentPublicationWorkloadDependencies) {
   if (!dependencies.jobs) throw Error("COMPILATION_RECOVERY_QUEUE_UNAVAILABLE");
   const jobs = dependencies.jobs;
   const requestId = randomUUID();

@@ -25,15 +25,15 @@ export function createPrometheusMetricsRegistry(delegate: MetricsRegistry): Prom
     samples.set(name, current); return current;
   };
   const registry: PrometheusMetricsRegistry = {
-    counter(name, description): Counter { const otel = delegate.counter(name, description); const metric = instrument("counter", name, description); return { increment: (labels) => { otel.increment(labels); add(metric.values, labels, 1); }, incrementBy: (value, labels) => { otel.incrementBy(value, labels); add(metric.values, labels, value); } }; },
-    gauge(name, description): Gauge { const otel = delegate.gauge(name, description); const metric = instrument("gauge", name, description); return { set: (value, labels) => { otel.set(value, labels); metric.values.set(labelKey(labels), [value]); } }; },
-    histogram(name, description): Histogram { const otel = delegate.histogram(name, description); const metric = instrument("histogram", name, description); return { record: (value, labels) => { otel.record(value, labels); recordHistogram(metric.values,labelKey(labels),value); } }; },
+    counter(name, description): Counter { const otel = delegate.counter(name, description); const metric = instrument("counter", name, description); return { increment: (labels) => { const key = labelKey(labels); otel.increment(labels); add(metric.values, key, 1); }, incrementBy: (value, labels) => { const key = labelKey(labels); otel.incrementBy(value, labels); add(metric.values, key, value); } }; },
+    gauge(name, description): Gauge { const otel = delegate.gauge(name, description); const metric = instrument("gauge", name, description); return { set: (value, labels) => { const key = labelKey(labels); otel.set(value, labels); metric.values.set(key, [value]); } }; },
+    histogram(name, description): Histogram { const otel = delegate.histogram(name, description); const metric = instrument("histogram", name, description); return { record: (value, labels) => { const key = labelKey(labels); if (!Number.isFinite(value)) throw new TypeError("Histogram observations must be finite"); otel.record(value, labels); recordHistogram(metric.values,key,value); } }; },
     render() { return render(samples); },
   };
   return registry;
 }
 
-function add(values: Map<string, number[]>, labels: MetricLabels | undefined, amount: number): void { const key = labelKey(labels); values.set(key, [(values.get(key)?.[0] ?? 0) + amount]); }
+function add(values: Map<string, number[]>, key: string, amount: number): void { values.set(key, [(values.get(key)?.[0] ?? 0) + amount]); }
 function labelKey(labels?: MetricLabels): string {
   const entries = Object.entries(labels ?? {}).sort(([a], [b]) => a.localeCompare(b));
   for (const [name, value] of entries) {

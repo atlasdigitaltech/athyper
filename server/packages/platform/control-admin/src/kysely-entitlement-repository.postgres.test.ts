@@ -26,7 +26,7 @@ import { KyselyExperiencePlaneRepository } from "@athyper/server-adapter-experie
 import { readEntitlementRequirements } from "@athyper/server-platform-iam";
 import { createEntitlementControlService } from "./entitlement-control.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import { featurePercentageCohort } from "@athyper/server-foundation";
+import { featurePercentageCohort } from "@athyper/server-platform-features/feature-cohort";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

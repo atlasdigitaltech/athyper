@@ -10,21 +10,22 @@ import { createIamConfig, createIamService } from "@athyper/server-platform-iam"
 import { createHttpApplication, HttpDrainController } from "@athyper/server-runtime-http";
 import { readControlPlaneConfiguration } from "../config/control-plane.js";
 import { createControlPlaneIdentityResolver } from "../composition/control-plane/identity.js";
-import { registerControlPlane } from "../composition/control-plane/register.js";
+import { registerControlPlane } from "../composition/control-plane/control-plane.js";
+import { launchControlApi } from "../kernel/launch.js";
 
 // Deliberately does not import main.ts, combined configuration, or bootstrap.
 // No workers, scheduler, tenant routes, or customer-plane adapters are loaded.
-async function privateFile(path: string): Promise<Buffer> {
+async function readPrivateFile(path: string): Promise<Buffer> {
   const metadata = await stat(path);
   if (!metadata.isFile() || (metadata.mode & 0o077) !== 0 || metadata.size > 65536)
     throw Error("CONTROL_PLANE_SECRET_FILE_INVALID");
   return readFile(path);
 }
 
-async function start() {
+export async function startControlApi() {
   const config = readControlPlaneConfiguration(process.env);
   const database = new Kysely<Record<string, never>>({ dialect: createPostgresDialect(createPostgresPool({
-    connectionString: (await privateFile(config.databaseUrlFile)).toString("utf8").trim(), max: 4,
+    connectionString: (await readPrivateFile(config.databaseUrlFile)).toString("utf8").trim(), max: 4,
   })) });
   try {
     const role = (await sql<{ safe: boolean }>`SELECT NOT rolsuper AND NOT rolbypassrls AS safe
@@ -32,10 +33,10 @@ async function start() {
     if (role.length !== 1 || !role[0]!.safe) throw Error("CONTROL_PLANE_DATABASE_ROLE_UNSAFE");
     const secretStore = config.secretStore ? createInfisicalSecretStore({ endpoint: config.secretStore.endpoint,
       workspaceId: config.secretStore.workspaceId, environment: "dev",
-      token: (await privateFile(config.secretStore.tokenFile)).toString("utf8").trim() }) : undefined;
+      token: (await readPrivateFile(config.secretStore.tokenFile)).toString("utf8").trim() }) : undefined;
     const keys = new TrustScopedPublicationKeyResolver({ async resolve(reference) {
       if (reference === "control.signing") return secretStore
-        ? secretStore.resolve("PUBLICATION_DEV_SIGNING_PRIVATE_V1") : { bytes: await privateFile(config.privateKeyFile!), version: "mounted" };
+        ? secretStore.resolve("PUBLICATION_DEV_SIGNING_PRIVATE_V1") : { bytes: await readPrivateFile(config.privateKeyFile!), version: "mounted" };
       if (reference === "control.verification") return secretStore
         ? secretStore.resolve("PUBLICATION_DEV_SIGNING_PUBLIC_V1") : { bytes: await readFile(config.publicKeyFile!), version: "mounted" };
       throw Error("CONTROL_PLANE_SECRET_REFERENCE_DENIED");
@@ -90,4 +91,4 @@ async function start() {
   } catch (error) { await database.destroy(); throw error; }
 }
 
-start().catch(() => { console.error("CONTROL_PLANE_STARTUP_FAILED: verify configuration, mounted credentials, database grants and issuer readiness"); process.exitCode = 1; });
+void launchControlApi();

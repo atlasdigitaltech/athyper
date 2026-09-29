@@ -19,7 +19,7 @@ export interface InfisicalSecretStoreConfig {
 export function createInfisicalSecretStore(
   config: InfisicalSecretStoreConfig,
 ): SecretStore {
-  const endpoint = new URL(requireValue(config.endpoint, "endpoint"));
+  const endpoint = new URL(requireValue(config.endpoint, "endpoint").replace(/\/*$/, "/"));
   if (
     endpoint.protocol !== "https:" &&
     endpoint.hostname !== "localhost" &&
@@ -33,7 +33,7 @@ export function createInfisicalSecretStore(
   const request = async (reference: string): Promise<OpaqueSecretValue> => {
     if (closed) throw new Error("SECRET_STORE_CLOSED");
     const url = new URL(
-      `/api/v3/secrets/raw/${encodeURIComponent(infisicalSecretName(reference))}`,
+      `api/v3/secrets/raw/${encodeURIComponent(infisicalSecretName(reference))}`,
       endpoint,
     );
     url.searchParams.set(
@@ -82,7 +82,7 @@ export function createInfisicalSecretStore(
         code: "SECRET_MATERIAL_TOO_SHORT",
       });
     const url = new URL(
-      `/api/v3/secrets/raw/${encodeURIComponent(infisicalSecretName(opaqueReference))}`,
+      `api/v3/secrets/raw/${encodeURIComponent(infisicalSecretName(opaqueReference))}`,
       endpoint,
     );
     const response = await fetcher(url, {
@@ -136,7 +136,7 @@ export function createInfisicalSecretStore(
         });
         if (!current) { discarded = true; return; }
         if (current.version !== receipt.version || receipt.version === "current") throw new Error("SECRET_STORE_COMPENSATION_VERSION_MISMATCH");
-        const response = await fetcher(new URL(`/api/v3/secrets/raw/${encodeURIComponent(infisicalSecretName(reference))}`, endpoint), {
+        const response = await fetcher(new URL(`api/v3/secrets/raw/${encodeURIComponent(infisicalSecretName(reference))}`, endpoint), {
           method: "DELETE",
           headers: {Authorization: `Bearer ${requireValue(config.token, "token")}`, "Content-Type": "application/json"},
           body: JSON.stringify({workspaceId: config.workspaceId, environment: config.environment, secretPath: config.secretPath?.trim() || "/", type: "shared"}),
@@ -147,12 +147,13 @@ export function createInfisicalSecretStore(
       }};
     }} : {}),
     async health() {
+      if (closed) return { healthy: false, message: "closed" };
       try {
-        if (closed) return { healthy: false, message: "closed" };
-        new URL(endpoint);
-        return { healthy: true };
+        const response = await fetcher(new URL("api/status", endpoint), { signal: AbortSignal.timeout(timeoutMs) });
+        await response.body?.cancel().catch(() => undefined);
+        return response.ok ? { healthy: true } : { healthy: false, message: `Infisical status ${response.status}` };
       } catch {
-        return { healthy: false, message: "configuration invalid" };
+        return { healthy: false, message: "Infisical unreachable" };
       }
     },
     close() {

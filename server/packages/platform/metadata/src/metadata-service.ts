@@ -7,7 +7,7 @@ import type {
   MetadataGenerationCheckpoint,
   MetadataGenerationEvent,
 } from "@athyper/server-contract-metadata";
-import { readLocalGraphProjections } from "@athyper/server-foundation";
+import { readLocalGraphProjections } from "./local-graph-preview.js";
 import { parseEntityRuntimeDescriptor } from "./descriptor-parser.js";
 
 export interface MetadataServiceOptions {

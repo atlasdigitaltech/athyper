@@ -13,29 +13,6 @@ type DisplayChoices = NonNullable<
 type Database = Kysely<Record<string, never>>;
 type Choice = Awaited<ReturnType<DisplayChoices>>[number];
 
-// These codes are the published enum/reference contracts served by the generic
-// value directory. Adding a new code is a metadata/publication change, not a
-// new table reader in the Entity Runtime.
-const valueDirectoryCatalogs = new Set([
-  "control.business_partner_block_operation",
-  "control.business_partner_block_reason",
-  "control.business_partner_qualification_type",
-  "master.address_purpose",
-  "master.address_role_qualifier",
-  "master.business_partner",
-  "master.business_partner_commodity_classification",
-  "master.business_partner_identifier_scheme",
-  "master.business_partner_tax_registration_type",
-  "master.certification_type",
-  "master.commodity_category",
-  "master.company_code",
-  "master.contact_role",
-  "master.operating_organization",
-  "master.org_unit",
-  "master.payment_term",
-  "master.tax_jurisdiction",
-]);
-
 export interface PublishedLookupProvider {
   readonly accepts: (catalog: string) => boolean;
   readonly choices: (
@@ -81,9 +58,9 @@ export function createPublishedLookupProviders(): readonly PublishedLookupProvid
       },
     },
     {
-      // Published enum/reference metadata owns these domain codes. The generic
-      // value directory remains the only storage implementation.
-      accepts: (catalog) => valueDirectoryCatalogs.has(catalog),
+      // Admission is performed by the pinned published artifact before this
+      // provider is called. This provider deliberately has no entity catalogue.
+      accepts: () => true,
       async choices(database, catalog, values) {
         const rows = (
           await sql<{ code: string; name: string }>`SELECT DISTINCT ON(code) code,name
@@ -110,7 +87,7 @@ export function createRecordDisplayChoices(
   providers: readonly PublishedLookupProvider[] = createPublishedLookupProviders(),
 ): DisplayChoices {
   return async (context, catalog, values) =>
-    transactions.run("neon", context, async (transaction) => {
+    transactions.run(context.planeKey, context, async (transaction) => {
       const provider = providers.find(({ accepts }) => accepts(catalog));
       if (!provider) throw Error("ENTITY_LOOKUP_PROVIDER_UNREGISTERED");
       return provider.choices(

@@ -64,11 +64,11 @@
 .a-entity-record-summary-view > section {
   border: var(--a-border-width) solid var(--a-border);
   border-radius: 0.75rem;
-  background: var(--a-color-surface, #fff);
+  background: var(--a-surface);
   padding: 1rem;
 }
 .a-entity-record-summary-view h2 {
-  font-size: 1rem;
+  font-size: var(--a-font-size-body);
   margin: 0 0 0.75rem;
 }
 .a-entity-record-summary-view dl {
@@ -130,7 +130,7 @@
 }
 .a-entity-record__view-control > div p {
   margin: 0.4rem 0.5rem;
-  font-weight: 600;
+  font-weight: var(--a-font-weight-medium);
 }
 .a-entity-record__view-control > div button {
   display: flex;
@@ -147,11 +147,16 @@
   background: var(--a-selection-subtle);
 }
 .a-entity-record__view-control > div button[aria-checked="true"]::before {
-  content: "✓";
+  inline-size: var(--a-space-2);
+  block-size: var(--a-space-1);
+  border-block-end: var(--a-border-width) solid currentColor;
+  border-inline-start: var(--a-border-width) solid currentColor;
+  content: "";
+  transform: rotate(-45deg);
 }
 .a-entity-record__view-control > div button span {
   color: var(--a-muted-foreground);
-  font-size: 0.8rem;
+  font-size: var(--a-font-size-sm);
 }
 .a-entity-record-record-body--sections {
   display: grid;
@@ -199,7 +204,7 @@
 }
 .a-runtime-continuous-section > h2 {
   margin: 0 0 0.75rem;
-  font-size: 1.125rem;
+  font-size: var(--a-font-size-lg);
 }
 .a-runtime-continuous-section__placeholder {
   min-block-size: 12rem;
@@ -215,13 +220,13 @@
     > .a-record-page-header
     > .a-entity-record__tabs {
     position: sticky;
-    top: var(--a-page-sticky-top);
+    top: var(--a-page-sticky-top, calc(var(--shell-topbar, 4.5rem) + var(--shell-crumbs, 0px)));
     z-index: 16;
   }
   .a-entity-record-record-body--pinned {
     position: sticky;
-    top: calc(var(--a-page-sticky-top) + 3rem);
-    height: calc(100dvh - var(--a-page-sticky-top) - 3rem - var(--a-space-4));
+    top: calc(var(--a-page-sticky-top, calc(var(--shell-topbar, 4.5rem) + var(--shell-crumbs, 0px))) + 3rem);
+    height: calc(100dvh - var(--a-page-sticky-top, calc(var(--shell-topbar, 4.5rem) + var(--shell-crumbs, 0px))) - 3rem - var(--a-space-4));
     min-height: 0;
     overflow: hidden;
     align-items: stretch;
@@ -310,8 +315,8 @@
 }
 .a-entity-record__view-setting-copy small {
   color: var(--a-muted-foreground);
-  font-size: 0.75rem;
-  font-weight: 400;
+  font-size: var(--a-font-size-xs);
+  font-weight: var(--a-font-weight-normal);
 }
 .a-entity-record__toggle {
   position: relative;
@@ -557,8 +562,20 @@
 .a-runtime-continuous-sections__tail {
   min-block-size: max(18rem, 60dvh);
 }
-.a-entity-record :is(.a-entity-record__tabs button, .a-entity-record__group > summary, .a-entity-record__group > [role="menu"] > button, [role="tab"]),
-.a-metadata-detail :is(.a-entity-record__tabs button, .a-entity-record__group > summary, .a-entity-record__group > [role="menu"] > button, [role="tab"]) {
+.a-entity-record
+  :is(
+    .a-entity-record__tabs button,
+    .a-entity-record__group > summary,
+    .a-entity-record__group > [role="menu"] > button,
+    [role="tab"]
+  ),
+.a-metadata-detail
+  :is(
+    .a-entity-record__tabs button,
+    .a-entity-record__group > summary,
+    .a-entity-record__group > [role="menu"] > button,
+    [role="tab"]
+  ) {
   font-family: var(--a-font-sans);
   font-size: var(--a-font-size-sm);
   font-weight: var(--a-font-weight-regular);
@@ -566,5 +583,11 @@
 }
 
 /* Hidden navigation settings cannot create overflow for long translations. */
-.a-entity-record__view-control:not([open]) > div { display:none; }
-.a-entity-record__view-setting-copy { min-inline-size:0; white-space:normal; overflow-wrap:anywhere; }
+.a-entity-record__view-control:not([open]) > div {
+  display: none;
+}
+.a-entity-record__view-setting-copy {
+  min-inline-size: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

@@ -1,8 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import type { InvocationPlan, TokenCache } from "@athyper/server-contract-integration";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { createServer } from "node:https";
+import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { globalAgent } from "node:https";
 import {
   classifyIntegrationFailure,
   createIntegrationHttpTransport,
+  pinnedFetch,
   validateOutboundUrl,
 } from "./index.js";
 
@@ -139,5 +147,111 @@ describe("integration HTTP boundary", () => {
       expect.stringContaining(":1:"),
       expect.stringContaining(":2:"),
     ]));
+  });
+
+  it.each([
+    "::ffff:7f00:1", "::ffff:127.0.0.1", "64:ff9b::7f00:1", "2002:7f00:1::1", "::1", "fe80::1", "fd00::1",
+    "127.0.0.1", "169.254.169.254", "100.64.0.1", "10.1.2.3",
+  ])("denies %s", async (address) => {
+    await expect(validateOutboundUrl("https://example.test/x", async () => [address]))
+      .rejects.toMatchObject({ code: "INTEGRATION_PRIVATE_NETWORK_DENIED" });
+  });
+
+  it("allows public addresses", async () => {
+    await expect(validateOutboundUrl("https://example.test/x", async () => ["8.8.8.8", "2606:4700:4700::1111"])).resolves.toBeInstanceOf(URL);
+  });
+
+  it("classifies timeouts as transient and caller cancellation as cancelled", async () => {
+    const hang: typeof pinnedFetch = (_url, init) => new Promise((_resolve, reject) => {
+      const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+      if (init.signal?.aborted) fail();
+      else init.signal?.addEventListener("abort", fail);
+    });
+    const transport = createIntegrationHttpTransport({ pinnedFetch: hang, lookup: publicLookup, circuitBreaker: false });
+    const timeout = await transport.invoke({ ...plan, timeoutMs: 10 }, new Uint8Array(), undefined).catch((e) => e);
+    expect(classifyIntegrationFailure(timeout)).toEqual({ kind: "transient" });
+    const caller = new AbortController();
+    const pending = transport.invoke(plan, new Uint8Array(), undefined, caller.signal).catch((e) => e);
+    caller.abort();
+    expect(classifyIntegrationFailure(await pending)).toEqual({ kind: "cancelled" });
+  });
+
+  it("fails closed on missing secrets and bounds the OAuth token call by the plan timeout", async () => {
+    const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+    const transport = createIntegrationHttpTransport({ pinnedFetch: async () => new Response("ok"), lookup: publicLookup, circuitBreaker: false });
+    for (const credential of [{ type: "api_key" }, { type: "bearer" }, { type: "oauth2_client_credentials", tokenUrl: "https://identity.test/t" }]) {
+      await expect(transport.invoke(plan, new Uint8Array(), encode(credential))).rejects.toMatchObject({ code: "INTEGRATION_CREDENTIAL_INVALID" });
+    }
+    const hang: typeof pinnedFetch = (_url, init) => new Promise((_resolve, reject) => {
+      init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+    });
+    const slow = createIntegrationHttpTransport({ pinnedFetch: hang, lookup: publicLookup, circuitBreaker: false });
+    await expect(slow.invoke({ ...plan, timeoutMs: 20 }, new Uint8Array(), encode({
+      type: "oauth2_client_credentials", clientId: "c", clientSecret: "s", tokenUrl: "https://identity.test/t",
+    }))).rejects.toMatchObject({ code: "INTEGRATION_HTTP_TIMEOUT", retryable: true });
+  });
+
+  it("drops a cached OAuth token when the provider answers 401", async () => {
+    const values = new Map<string, string>();
+    const tokenCache: TokenCache = {
+      get: async (key) => values.get(key),
+      set: async (key, value) => { values.set(key, value); },
+      delete: async (key) => { values.delete(key); },
+    };
+    const fetcher = vi.fn(async (input: string | URL | Request) =>
+      String(input).endsWith("/token") ? Response.json({ access_token: "t", expires_in: 3_600 }) : new Response("no", { status: 401 }));
+    const credential = new TextEncoder().encode(JSON.stringify({
+      type: "oauth2_client_credentials", clientId: "c", clientSecret: "s", tokenUrl: "https://identity.test/token",
+    }));
+    const transport = createIntegrationHttpTransport({ pinnedFetch: fetcher, lookup: publicLookup, tokenCache, circuitBreaker: false });
+    expect((await transport.invoke(plan, new Uint8Array(), credential)).status).toBe(401);
+    expect(values.size).toBe(0);
+  });
+
+  it("admits a single half-open probe", async () => {
+    let clock = 0;
+    let release!: () => void;
+    let calls = 0;
+    const fetcher = vi.fn(async () => {
+      calls += 1;
+      if (calls <= 1) return new Response("busy", { status: 503 });
+      await new Promise<void>((resolve) => { release = resolve; });
+      return new Response("ok");
+    });
+    const transport = createIntegrationHttpTransport({
+      pinnedFetch: fetcher, lookup: publicLookup, now: () => clock,
+      circuitBreaker: { failureThreshold: 1, failureWindowMs: 60_000, resetTimeoutMs: 100 },
+    });
+    await transport.invoke(plan, new Uint8Array(), undefined);
+    clock = 200;
+    const probe = transport.invoke(plan, new Uint8Array(), undefined);
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+    await expect(transport.invoke(plan, new Uint8Array(), undefined)).rejects.toMatchObject({ name: "CircuitBreakerOpenError" });
+    release();
+    expect((await probe).status).toBe(200);
+  });
+});
+
+describe("pinnedFetch against a real TLS server", () => {
+  it("connects to the pinned address with hostname verification and Node's lookup contract", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "pinned-"));
+    execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", join(dir, "k.pem"), "-out", join(dir, "c.pem"),
+      "-days", "1", "-subj", "/CN=pinned.test", "-addext", "subjectAltName=DNS:pinned.test"], { stdio: "ignore" });
+    const cert = readFileSync(join(dir, "c.pem"));
+    const server = createServer({ key: readFileSync(join(dir, "k.pem")), cert }, (req, res) => {
+      res.end(`host=${req.headers.host}`);
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const previousCa = globalAgent.options.ca;
+    globalAgent.options.ca = cert;
+    try {
+      const port = (server.address() as AddressInfo).port;
+      const response = await pinnedFetch(new URL(`https://pinned.test:${port}/`), { method: "GET", signal: AbortSignal.timeout(5_000) }, "127.0.0.1");
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain("host=pinned.test");
+    } finally {
+      globalAgent.options.ca = previousCa;
+      server.close();
+    }
   });
 });

@@ -71,7 +71,7 @@ it("enforces the isolated entrypoint import boundary and removes enrollment from
   const allowed = new Set(["node:http", "node:fs/promises", "kysely", "@athyper/server-adapter-db-core", "@athyper/server-adapter-secretstore-infisical",
     "@athyper/server-adapter-auth-keycloak", "@athyper/server-adapter-publication-signing", "@athyper/server-platform-audit",
     "@athyper/server-platform-iam", "@athyper/server-runtime-http", "../config/control-plane.js",
-    "../composition/control-plane/identity.js", "../composition/control-plane/register.js"]);
+    "../composition/control-plane/identity.js", "../composition/control-plane/control-plane.js", "../kernel/launch.js"]);
   function visit(node: ts.Node) {
     if (ts.isImportDeclaration(node)) expect(allowed.has((node.moduleSpecifier as ts.StringLiteral).text)).toBe(true);
     if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || node.expression.getText(source) === "require"))
@@ -82,7 +82,7 @@ it("enforces the isolated entrypoint import boundary and removes enrollment from
   const combined = readFileSync(new URL("../../register-services.ts", import.meta.url), "utf8");
   expect(combined).not.toContain("createPublicationPolicyEnrollment");
   expect(combined).not.toContain("registerPublicationPolicyEnrollmentRoutes");
-  const registration = readFileSync(new URL("../register.ts", import.meta.url), "utf8");
+  const registration = readFileSync(new URL("../control-plane.ts", import.meta.url), "utf8");
   expect(registration).not.toContain("registerServices");
   expect(registration).not.toContain("registerPublicationWorkloadRoutes");
 });

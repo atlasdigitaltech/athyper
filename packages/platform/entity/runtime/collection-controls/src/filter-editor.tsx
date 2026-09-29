@@ -1,5 +1,10 @@
 "use client";
-import { readBrowserStorage, writeBrowserStorage, removeBrowserStorage } from "@athyper/platform-ui";
+import {
+  readBrowserStorage,
+  writeBrowserStorage,
+  removeBrowserStorage,
+} from "@athyper/platform-ui";
+import { CloseIcon } from "@athyper/platform-icons";
 import React, {
   createContext,
   useContext,
@@ -102,7 +107,8 @@ export function rememberFilters(
                 item.operator !== entry.operator || item.value !== entry.value,
             ),
           ].slice(0, 5),
-        ), "session",
+        ),
+        "session",
       );
     } catch {
       /* Storage is optional. */
@@ -436,7 +442,7 @@ function DateSetPicker({
               onChange(dates.filter((_, i) => i !== index).join(","))
             }
           >
-            {date} ×
+            {date} <CloseIcon aria-hidden="true" size={16} />
           </button>
         ))}
       </div>

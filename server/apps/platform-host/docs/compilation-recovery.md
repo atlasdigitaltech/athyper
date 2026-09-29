@@ -205,7 +205,7 @@ entity-case-preflight-ddl-mapping.md. It records sources and unresolved semantic
 not approval to install a persistence reader or a claim of deployed schema parity.
 
 Publication qualification now uses the generic callable authorization registry via
-shared/entity-runtime/publication-qualification.ts. Host composition accepts explicit
+shared/publication/runtime-qualification.ts. Host composition accepts explicit
 entityAuthorizationRuntimeRegistrations; it does not manufacture callable evidence
 from published declarations. The existing injected publication qualifier is retained.
 Without either configured callable coverage or that injected qualifier, declared

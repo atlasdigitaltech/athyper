@@ -1,5 +1,5 @@
 import type { EffectiveOperationBinding } from "@athyper/server-contract-auth";
-import type { LocalGraphProjection } from "@athyper/server-foundation";
+import type { LocalGraphProjection } from "@athyper/server-platform-metadata";
 
 /** Replaces bindings, not grants. Removing an operation from a preview cannot
  * fall through to an older published binding for the same entity. */

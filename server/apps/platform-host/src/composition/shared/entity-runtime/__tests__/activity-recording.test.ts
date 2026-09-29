@@ -49,6 +49,7 @@ function fixture() {
     releaseId: "release",
     contractHash: "hash",
     compiledHash: "compiled",
+    compiledRelease: {},
     storage: {
       schema: "master",
       object: "example_record",

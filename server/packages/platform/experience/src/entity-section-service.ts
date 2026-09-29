@@ -110,7 +110,7 @@ export function createEntityRuntimeResourceService(options: {
         if (typeof lookup.code === "string") {
           if (!options.displayChoices) throw new EntityRuntimeResourceError(503, "ENTITY_ENUM_LABEL_UNAVAILABLE");
           const key = `${lookup.code}:${String(header.values[field.key])}`;
-          if (!headerCatalogs.has(key)) headerCatalogs.set(key, options.displayChoices(input.context, lookup.code, [String(header.values[field.key])]));
+          if (!headerCatalogs.has(key)) headerCatalogs.set(key, publishedDisplayChoices(options.displayChoices, input.context, lookup.code, [model.core], [String(header.values[field.key])]));
           choices = [...await headerCatalogs.get(key)!];
         }
         const option = choices.find(option=>record(option)&&option.value===header.values[field.key as string]);
@@ -153,7 +153,7 @@ export function createEntityRuntimeResourceService(options: {
           const fields = await Promise.all((record(definition)?array(definition.displayFields):[]).map(async field=>{
             if(!record(field)||!record(field.display)||!record(field.display.lookup)||typeof field.display.lookup.code!=="string") return field;
             if(!options.displayChoices) throw new EntityRuntimeResourceError(503,"ENTITY_ENUM_LABEL_UNAVAILABLE");
-            return {...field,dataType:"enum",display:{lookup:{options:await options.displayChoices(input.context,field.display.lookup.code)}}};
+            return {...field,dataType:"enum",display:{lookup:{options:await publishedDisplayChoices(options.displayChoices,input.context,field.display.lookup.code,[model.core,model.surface])}}};
           }));
           const presentation = browserSectionPresentation({...model.core,content:{fields}}, {...model.surface,content:{fieldBindings:fields.filter(record).map(f=>({fieldKey:f.key}))}}, {});
           return Object.freeze({ key: card.key, state: "ready" as const, data: record(data)?{...data,displayFields:presentation.fields}:data });
@@ -214,7 +214,7 @@ export function createEntityRuntimeResourceService(options: {
           const collect=(value:unknown):void=>{if(Array.isArray(value))value.forEach(collect);else if(record(value)){if(typeof field.key==='string'&&typeof value[field.key]==='string')ids.push(value[field.key] as string);Object.values(value).forEach(child=>{if(child&&typeof child==='object')collect(child);});}};
           if(field.dataType==='uuid')collect(result.data);
           const cacheKey=field.dataType==='uuid'?catalog+JSON.stringify(ids):catalog;
-          if(!catalogCache.has(cacheKey)) catalogCache.set(cacheKey,options.displayChoices(input.context,catalog,...(field.dataType==='uuid'?[ids] as const:[])));
+          if(!catalogCache.has(cacheKey)) catalogCache.set(cacheKey,publishedDisplayChoices(options.displayChoices,input.context,catalog,[source,section],...(field.dataType==='uuid'?[ids] as const:[])));
           const choices = await catalogCache.get(cacheKey)!;
           return { ...field, dataType: "enum", display: { ...field.display, ...nested, lookup: { ...field.display.lookup, options: choices } } };
         };
@@ -348,6 +348,25 @@ function fieldVisible(field: Readonly<Record<string, unknown>>, values: Readonly
     if (!Object.hasOwn(values, key)) return false;
     return (values[key] === operands[1] ? facet.valueWhenTrue : facet.valueWhenFalse) === "visible";
   });
+}
+/** A lookup code is executable only when the exact pinned publication exposes it.
+ * The host therefore receives an admitted catalogue, never a client-selected one. */
+function publishedDisplayChoices(
+  resolve: NonNullable<Parameters<typeof createEntityRuntimeResourceService>[0]["displayChoices"]>,
+  context: VerifiedRequestContext,
+  catalog: string,
+  artifacts: readonly CompiledEntityArtifactV2[],
+  values?: readonly string[],
+) {
+  if (!artifacts.some((artifact) => artifactDeclaresLookup(artifact.content, catalog)))
+    throw new EntityRuntimeResourceError(503, "ENTITY_LOOKUP_CATALOG_UNPUBLISHED");
+  return resolve(context, catalog, values);
+}
+function artifactDeclaresLookup(value: unknown, catalog: string): boolean {
+  if (Array.isArray(value)) return value.some((entry) => artifactDeclaresLookup(entry, catalog));
+  if (!record(value)) return false;
+  const lookup = record(value.display) && record(value.display.lookup) ? value.display.lookup : undefined;
+  return lookup?.code === catalog || Object.values(value).some((entry) => artifactDeclaresLookup(entry, catalog));
 }
 function array(value: unknown): readonly unknown[] { return Array.isArray(value) ? value : []; }
 function record(value: unknown): value is Readonly<Record<string, unknown>> { return !!value && typeof value === "object" && !Array.isArray(value); }

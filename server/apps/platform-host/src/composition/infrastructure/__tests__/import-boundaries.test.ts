@@ -114,7 +114,7 @@ it("shared Entity identity authority does not load host routes, Studio administr
   );
 });
 
-it.each(["services", "resources", "http", "transfers", "experience"])(
+it.each(["services", "resources", "http-registrars", "transfers", "experience"])(
   "Entity %s composition stays independent of host and space registrars",
   (name) => {
     const closure = [

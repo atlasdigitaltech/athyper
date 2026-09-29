@@ -28,6 +28,17 @@ it("normalizes malformed URL state but never hides descriptor failures", () => {
   assert.throws(() => decodeListLocationState("density=bad", { ...descriptor, fields: null } as never));
   assert.throws(() => decodeListLocationState("density=bad", descriptor, { baseState: { density: "bad" } as never }));
 });
+it("retains valid URL state when a separate optional parameter is invalid", () => {
+  const descriptor = parseEntityListDescriptor(descriptorPayload);
+  const state = decodeListLocationState(
+    "q=Malaysia&sort=name:asc&density=invalid&page=not-a-number",
+    descriptor,
+  );
+  assert.equal(state.query, "Malaysia");
+  assert.deepEqual(state.sort, [{ field: "name", direction: "asc" }]);
+  assert.equal(state.density, "comfortable");
+  assert.equal(state.pageIndex, undefined);
+});
 const descriptorPayload = {
   schemaVersion: 1,
   plane: "neon",

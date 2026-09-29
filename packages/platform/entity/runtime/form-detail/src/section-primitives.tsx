@@ -2,6 +2,7 @@
 import type { EntityRuntimeSectionResource } from "@athyper/platform-entity-descriptor-client";
 import { FileTextIcon } from "@athyper/platform-icons";
 import { PanelEmptyState, Card } from "@athyper/platform-ui";
+import { humanizeIdentifier } from "@athyper/contract-platform-entity-runtime";
 import { type ReactNode } from "react";
 import { ProtectedValue } from "./protected-value";
 import { AttachmentReference } from "./attachment-reference";
@@ -225,11 +226,7 @@ function MetadataValue({field,value}:{field:EntityRuntimeSectionResource["presen
   if(field.itemFields && Array.isArray(value)) return value.length ? <ul>{value.filter(valueRecord).map((row,index)=><li key={index}>{field.itemFields!.filter(child=>row[child.key]!=null).map(child=><span key={child.key}>{child.label ? intl.text(child.label) : humanize(child.key)}: <MetadataValue field={child} value={row[child.key]} />; </span>)}</li>)}</ul> : "—";
   return typeof value === "number" && Number.isFinite(value) ? intl.number(value, {maximumFractionDigits:20}) : display(value);
 }
-export function humanize(value: string): string {
-  return value
-    .replace(/[_.-]+/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
+export const humanize = humanizeIdentifier;
 export function message(cause: unknown): string {
   return cause instanceof Error && cause.message
     ? cause.message

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readLocalGraphProjections } from "@athyper/server-foundation";
+import { readLocalGraphProjections } from "@athyper/server-platform-metadata";
 import { overlayLocalGraphBindings } from "./local-graph-bindings.js";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type {

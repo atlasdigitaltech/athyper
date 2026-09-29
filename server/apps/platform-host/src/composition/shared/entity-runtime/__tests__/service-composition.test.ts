@@ -16,7 +16,7 @@ import {
 } from "@athyper/server-service-records";
 import { createHttpApplication } from "@athyper/server-runtime-http";
 import { createEntityServices } from "../services.js";
-import { createEntityHttpRegistrars } from "../http.js";
+import { createEntityHttpRegistrars } from "../http-registrars.js";
 
 const tenantId = "11111111-1111-4111-8111-111111111111";
 const first = "22222222-2222-4222-8222-222222222222";

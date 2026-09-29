@@ -172,6 +172,8 @@ export interface SecretResolver {
 export interface TokenCache {
   get(key: string): Promise<string | undefined>;
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
+  /** Drops a token the provider rejected so the next call re-authenticates. */
+  delete?(key: string): Promise<void>;
 }
 export interface ConnectorResponse {
   readonly status: number;

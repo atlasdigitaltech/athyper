@@ -56,7 +56,10 @@
   --a-line-height-none:1;--a-line-height-tight:1.2;--a-line-height-snug:1.35;--a-line-height-body:1.5;--a-line-height-relaxed:1.7;--a-line-height-title:1.25;
   --a-tracking-tighter:-.035em;--a-tracking-tight:-.01em;--a-tracking-normal:0;--a-tracking-wide:.04em;--a-tracking-wider:.09em;
   --a-font-weight-normal:400;--a-font-weight-regular:500;--a-font-weight-medium:600;--a-font-weight-strong:700;
-  --a-radius-sm:.375rem;--a-radius-md:.625rem;--a-radius-lg:.875rem;--a-radius-xl:1rem;--a-radius-round:9999px;
+  --a-radius-sm:.375rem;--a-radius-md:.625rem;--a-radius-lg:.875rem;--a-radius-xl:1rem;--a-radius-round:9999px;--a-radius-full:var(--a-radius-round);
+  /* Public identity surfaces inherit these safe defaults; the showcase scope
+     supplies its dark-story treatment without leaving consumers undefined. */
+  --a-identity-columns:minmax(0,42%) minmax(0,58%);--a-identity-story-display:flex;--a-identity-story-padding:clamp(1.5rem,3vw,3rem);--a-identity-task-padding:clamp(1.5rem,4vw,5rem);--a-identity-form-width:30rem;--a-identity-story-background:var(--a-background);--a-identity-card-surface:var(--a-surface);--a-identity-card-border:var(--a-border);--a-identity-accent:var(--a-primary);--a-identity-interactive:var(--a-focus);--a-identity-focus-shadow:0 0 0 var(--a-focus-width) var(--a-focus);
   --a-shadow-raised:0 1px 3px rgb(15 23 42 / .12);--a-shadow-overlay:0 18px 48px rgb(15 23 42 / .24);--a-shadow-prominent:0 1.5rem 4rem rgb(15 23 42 / .14);
   /* Size-scale elevation companion to the semantic set above (Phase 2). */
   --a-shadow-sm:0 1px 2px rgb(15 23 42 / .08);--a-shadow-md:0 4px 12px rgb(15 23 42 / .1);--a-shadow-card:0 1px 3px rgb(15 23 42 / .1),0 1px 2px rgb(15 23 42 / .06);

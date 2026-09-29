@@ -1,6 +1,7 @@
 import { sql, type Kysely } from "kysely";
+import type { PlaneKey } from "@athyper/server-foundation/context";
 
-export type RuntimePlane = "studio" | "neon" | "mesh";
+export type RuntimePlane = PlaneKey;
 
 export interface PlaneDatabaseIdentity {
   readonly databaseName: string;

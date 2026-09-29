@@ -123,7 +123,6 @@ export class OllamaModelProvider implements AtlasModelProvider {
   readonly adapterId = OLLAMA_ADAPTER_ID;
   readonly adapterVersion = OLLAMA_ADAPTER_VERSION;
   private readonly fetcher: typeof fetch;
-  private readonly queue: InferenceAdmission;
   constructor(private readonly options: OllamaAdapterOptions) {
     if (
       !/^sha256:[a-f0-9]{64}$/.test(options.modelDigest) ||
@@ -138,7 +137,6 @@ export class OllamaModelProvider implements AtlasModelProvider {
       if (value !== undefined && (!Number.isFinite(value) || value <= 0))
         throw new TypeError("Invalid inference time bound");
     this.fetcher = options.fetch ?? fetch;
-    this.queue = options.queue ?? sharedAtlasInferenceQueue;
   }
   async *invoke(
     input: AtlasProviderInvocation,
@@ -236,7 +234,7 @@ export class OllamaModelProvider implements AtlasModelProvider {
       const queued = Date.now();
       waitingSince = queued;
       diagnostic("queued");
-      release = await this.queue.acquire(controller.signal, (error) => {
+      release = await (this.options.queue ?? sharedAtlasInferenceQueue).acquire(controller.signal, (error) => {
         admissionFailure = error;
         controller.abort(error);
       });

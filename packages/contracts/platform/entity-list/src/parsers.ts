@@ -1,5 +1,6 @@
 import { parseEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
 import { parseEntityIntakeFlows } from "@athyper/contract-platform-entity-runtime";
+import { fallbackQuickFields, preferredFilterOperator } from "./filter-defaults";
 import { parseEntityScopeFilters } from "./scope-filters";
 import { parsePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
 import {
@@ -940,50 +941,6 @@ function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
       `fields[${index}].aggregations`,
     ),
   });
-}
-
-function fallbackQuickFields(fields: readonly ListFieldDescriptorV1[]) {
-  return Object.freeze(
-    fields
-      .filter((field) => field.filterOperators.length)
-      .sort((left, right) => filterPriority(left) - filterPriority(right))
-      .slice(0, 4)
-      .map((field) =>
-        Object.freeze({
-          field: field.key,
-          defaultOperator: preferredFilterOperator(field),
-        }),
-      ),
-  );
-}
-
-function filterPriority(field: ListFieldDescriptorV1): number {
-  const value = `${field.key} ${field.label}`;
-  return field.semanticRole === "status" || /\bstatus\b/i.test(value)
-    ? 0
-    : /category|group/i.test(value)
-      ? 1
-      : field.semanticRole === "country_code" || /country/i.test(value)
-        ? 2
-        : field.semanticRole === "updated_at" || /updated|modified/i.test(value)
-          ? 3
-          : 10 + field.defaultOrder;
-}
-function preferredFilterOperator(
-  field: ListFieldDescriptorV1,
-): ListFilterOperator {
-  const preferred =
-    field.valueKind === "date" || field.valueKind === "datetime"
-      ? "relative"
-      : field.filterOptions?.length ||
-          field.valueKind === "enum" ||
-          field.valueKind === "boolean" ||
-          field.valueKind === "reference"
-        ? "eq"
-        : "contains";
-  return field.filterOperators.includes(preferred)
-    ? preferred
-    : field.filterOperators[0]!;
 }
 
 function parseAction(candidate: unknown, index: number): EffectiveListActionV1 {

@@ -40,7 +40,7 @@ new runtime paths without executing the entrypoints.
 3. `register-services.ts` supplies metadata, transactions, authorization, and
    collection scopes to `shared/entity-runtime/read-runtime.ts`. That module
    constructs the standard record list executor, query service, and list service.
-4. `shared/entity-runtime/routes.ts` registers the existing record/list, views,
+4. `shared/entity-runtime/read-bindings.ts` and `http-registrars.ts` register the existing record/list, views,
    references, bookmarks, and snapshot routes with explicit authentication and
    authorization dependencies. Authorization registration and parent admission
    remain server-owned; moving files does not change scope enforcement.

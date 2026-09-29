@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@athyper/platform-i18n": "workspace:*",
+    "@athyper/platform-icons": "workspace:*",
     "@athyper/contract-platform-rich-text": "workspace:*",
     "@athyper/platform-ui": "workspace:*"
   }

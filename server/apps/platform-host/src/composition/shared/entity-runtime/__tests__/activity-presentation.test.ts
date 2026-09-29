@@ -82,11 +82,11 @@ describe("activity destination presentation", () => {
   });
 });
 
-it("replaces technical workflow UUID titles without changing user comment text",async()=>{
+it("preserves published activity copy without applying entity-specific rewrites",async()=>{
  const presenter=createActivityPresentation(async()=>({href:"/records/r",recordLabel:"Supplier A"}));
  const title="New work assigned: Dependency impact review: e83daf1d-637b-43ad-984c-13101b96ae4a";
  const [workflow,comment]=await presenter.notifications(context,[{...notification,title,eventCode:"workflow.task.assigned"},{...notification,title}]);
- expect(workflow?.title).toBe("New work assigned: Review dependency impact");expect(comment?.title).toBe(title);
+ expect(workflow?.title).toBe(title);expect(comment?.title).toBe(title);
 });
 
 it.each(["neon","mesh","studio"] as const)("resolves neutral records in the authenticated %s plane without a Neon fallback",async plane=>{

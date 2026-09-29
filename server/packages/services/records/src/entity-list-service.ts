@@ -2,6 +2,7 @@ import { resolveIntakeFormChoices } from "./intake-form-choices.js";
 import { authorizeListContextDiscovery } from "./list-context-discovery.js";
 import { readablePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
 import {
+  humanizeIdentifier as humanize,
   parseEntityDetailDescriptor,
   parseEntityFormDescriptor,
   parseEntityRecordPresentation,
@@ -22,6 +23,8 @@ import {
   resolveEntityText,
   type EffectiveListActionV1,
   type EffectiveEntitySectionV1,
+  fallbackQuickFields,
+  preferredFilterOperator,
 } from "@athyper/contract-platform-entity-list";
 import { createHash } from "node:crypto";
 import type {
@@ -1408,21 +1411,7 @@ function resolveFilterPresentation(
       return [Object.freeze({ field: field.key, defaultOperator })];
     })
     .slice(0, 4);
-  const quickFields = metadata.length
-    ? metadata
-    : fields
-        .filter((field) => field.filterOperators.length)
-        .sort(
-          (left, right) =>
-            quickFilterPriority(left) - quickFilterPriority(right),
-        )
-        .slice(0, 4)
-        .map((field) =>
-          Object.freeze({
-            field: field.key,
-            defaultOperator: preferredFilterOperator(field),
-          }),
-        );
+  const quickFields = metadata.length ? metadata : fallbackQuickFields(fields);
   return Object.freeze({
     quickFields: Object.freeze(quickFields),
     source: metadata.length ? "metadata" : "fallback",
@@ -1430,35 +1419,6 @@ function resolveFilterPresentation(
       descriptor.listPresentation?.filterPresentation?.allowUserPinning ===
       true,
   });
-}
-
-function quickFilterPriority(field: ListFieldDescriptorV1): number {
-  const value = `${field.key} ${field.label}`;
-  return field.semanticRole === "status" || /\bstatus\b/i.test(value)
-    ? 0
-    : /category|group|class|kind/i.test(value)
-      ? 1
-      : field.semanticRole === "country_code" || /country/i.test(value)
-        ? 2
-        : field.semanticRole === "updated_at" || /updated|modified/i.test(value)
-          ? 3
-          : 10 + field.defaultOrder;
-}
-function preferredFilterOperator(
-  field: ListFieldDescriptorV1,
-): ListFilterOperator {
-  const preferred =
-    field.valueKind === "date" || field.valueKind === "datetime"
-      ? "relative"
-      : field.filterOptions?.length ||
-          field.valueKind === "enum" ||
-          field.valueKind === "boolean" ||
-          field.valueKind === "reference"
-        ? "eq"
-        : "contains";
-  return field.filterOperators.includes(preferred)
-    ? preferred
-    : field.filterOperators[0]!;
 }
 
 function normalizeDefaultFilters(
@@ -1513,11 +1473,6 @@ function jsonValue(value: unknown): JsonValue | undefined {
   return String(value);
 }
 
-function humanize(value: string): string {
-  return value
-    .replace(/[._-]+/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-}
 function pluralize(value: string): string {
   return /[^aeiou]y$/i.test(value)
     ? `${value.slice(0, -1)}ies`

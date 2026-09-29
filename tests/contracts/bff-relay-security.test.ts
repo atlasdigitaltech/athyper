@@ -30,7 +30,26 @@ function registeredOperations(source: string): ReadonlySet<string> {
     ts.forEachChild(node, visit);
   }
   visit(file);
+  // Planes compose the shared group instead of listing each shared operation.
+  if (registered.has("COMMON_PLANE_RELAY_OPERATIONS")) for (const name of commonPlaneOperationNames()) registered.add(name);
   return registered;
+}
+// Names composed by COMMON_PLANE_RELAY_OPERATIONS, read from the group itself.
+function commonPlaneOperationNames(): ReadonlySet<string> {
+  const source = readFileSync(new URL("../../packages/platform/gateway/bff-relay/src/index.ts", import.meta.url), "utf8");
+  const file = ts.createSourceFile("index.ts", source, ts.ScriptTarget.Latest, true);
+  const names = new Set<string>();
+  file.forEachChild(function visit(node) {
+    if (ts.isVariableDeclaration(node) && node.name.getText(file) === "COMMON_PLANE_RELAY_OPERATIONS") {
+      const array = node.getChildren(file).flatMap(function collect(child): ts.Node[] { return ts.isArrayLiteralExpression(child) ? [child] : child.getChildren(file).flatMap(collect); })[0];
+      for (const element of (array as ts.ArrayLiteralExpression).elements) {
+        if (ts.isIdentifier(element)) names.add(element.text);
+        else if (ts.isSpreadElement(element) && ts.isIdentifier(element.expression)) names.add(element.expression.text);
+      }
+    }
+    ts.forEachChild(node, visit);
+  });
+  return names;
 }
 const session = (plane = "neon", tenantId = "tenant-1", token = "server-token"): RelaySessionContext => ({ accessToken: token, plane, realmKey: "athyper", tenantId, principalId: "principal-1", authEpoch: 7, csrfToken: "csrf-proof" });
 function authority(current = session()): RelaySessionAuthority & { invalidated: number; refreshed: number } { return { invalidated: 0, refreshed: 0, resolve: async () => current, refresh: async function () { this.refreshed++; return { ...current, accessToken: "refreshed-token" }; }, invalidate: async function () { this.invalidated++; } }; }
@@ -127,7 +146,6 @@ describe("Phase 4 hardened BFF relay", () => {
   it("registers governed Atlas confirmation, cancellation, and audit history in every plane", async () => {
     for (const plane of ["neon", "mesh", "studio"]) {
       const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
-      assert.match(source, /ATLAS_ANSWER_RELAY_OPERATIONS/);
       assert.ok(registeredOperations(source).has("ATLAS_ANSWER_RELAY_OPERATIONS"), `${plane} must register Atlas operations`);
     }
     const handler = createRelayHandler({ plane: "neon", runtimeApiUrl: "http://platform:4000", appOrigin: "https://neon.example", operations: ATLAS_ANSWER_RELAY_OPERATIONS, session: authority(), fetch: async () => new Response('{"proposalId":"10000000-0000-4000-8000-000000000001","outcome":"completed"}', { headers: { "content-type": "application/json" } }) });
@@ -141,8 +159,6 @@ describe("Phase 4 hardened BFF relay", () => {
   it("registers descriptor and list reads in every plane that hosts the shared List View", () => {
     for (const plane of ["neon", "mesh", "studio"]) {
       const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
-      assert.match(source, /ENTITY_LIST_DESCRIPTOR_OPERATION/);
-      assert.match(source, /ENTITY_LIST_QUERY_OPERATION/);
       const operations = registeredOperations(source);
       assert.ok(operations.has("ENTITY_VIEWS_RELAY_OPERATIONS"), `${plane} must register entity view operations`);
       assert.ok(operations.has("ENTITY_APPLICATION_DESCRIPTOR_OPERATION"), `${plane} must register application descriptor reads`);
@@ -154,7 +170,6 @@ describe("Phase 4 hardened BFF relay", () => {
   it("registers the bounded transfer workspace and governed import relay operations in every plane", async () => {
     for (const plane of ["neon", "mesh", "studio"]) {
       const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
-      assert.match(source, /RECORD_TRANSFER_RELAY_OPERATIONS/);
       assert.ok(registeredOperations(source).has("RECORD_TRANSFER_RELAY_OPERATIONS"), `${plane} must register transfer operations`);
     }
     let upstream = "";

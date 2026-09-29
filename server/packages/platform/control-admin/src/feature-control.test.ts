@@ -4,11 +4,11 @@ import type {
   FeatureFlagOverride,
   FeatureFlagRepository,
 } from "@athyper/server-contract-control-admin";
+import { createExactPlaneRepositoryProvider } from "@athyper/server-foundation";
 import {
-  createExactPlaneRepositoryProvider,
   stablePercentageCohort,
   featurePercentageCohort,
-} from "@athyper/server-foundation";
+} from "@athyper/server-platform-features/feature-cohort";
 import { describe, expect, it, vi } from "vitest";
 import { createFeatureFlagService } from "./feature-control.js";
 const context = {

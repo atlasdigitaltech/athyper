@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from "node:fs";
-import type { ReferencePublicationWorkloadConfiguration } from "./workload.js";
+import type { DevelopmentPublicationWorkloadConfiguration } from "../../../development/publication-workload.js";
 
-export type PublicationWorkloadConfiguration = Omit<ReferencePublicationWorkloadConfiguration, "policy" | "policyHash" | "machinePolicy">;
+export type PublicationWorkloadConfiguration = Omit<DevelopmentPublicationWorkloadConfiguration, "policy" | "policyHash" | "machinePolicy">;
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 function requireValue(value: unknown, code: string): asserts value { if (!value) throw Error(code); }
 

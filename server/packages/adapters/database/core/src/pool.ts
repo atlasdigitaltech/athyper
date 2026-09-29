@@ -9,6 +9,7 @@ export interface PostgresPoolConfig {
   readonly max?: number;
   readonly idleTimeoutMillis?: number;
   readonly connectionTimeoutMillis?: number;
+  readonly applicationName?: string;
 }
 
 export interface PostgresPoolStats {
@@ -44,6 +45,8 @@ export function createPostgresPool(
   const pool = new Pool({
     connectionString: config.connectionString,
     max: config.max ?? DEFAULT_MAX,
+    keepAlive: true,
+    ...(config.applicationName ? { application_name: config.applicationName } : {}),
     idleTimeoutMillis: config.idleTimeoutMillis ?? DEFAULT_IDLE_TIMEOUT_MS,
     connectionTimeoutMillis:
       config.connectionTimeoutMillis ?? DEFAULT_CONNECTION_TIMEOUT_MS,

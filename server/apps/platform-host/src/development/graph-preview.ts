@@ -15,15 +15,15 @@ import {
   compileDocumentCollection,
 } from "@athyper/server-service-publication/shared/collections/compiler";
 import { localPreviewRoot } from "@athyper/server-service-publication/shared/preview/environment";
+import type { PlaneKey } from "@athyper/server-foundation/context";
 
 type Database = Kysely<Record<string, never>>;
-type Plane = "studio" | "neon" | "mesh";
 export function localGraphPreview(options: {
   repository: { get(id: string): Promise<any> };
   authorizer: Authorizer;
   refresh(context: VerifiedRequestContext): Promise<VerifiedRequestContext>;
   run<T>(
-    plane: Plane,
+    plane: PlaneKey,
     actor: { tenantId: string; principalId: string },
     work: (db: Database) => Promise<T>,
   ): Promise<T>;
@@ -82,7 +82,7 @@ export function localGraphPreview(options: {
     },
     async project(input, artifact) {
       const native = artifact.descriptor;
-      const profile = native.authorization as { planeKey?: Plane } | undefined;
+      const profile = native.authorization as { planeKey?: PlaneKey } | undefined;
       const plane = profile?.planeKey;
       if (!plane || !["studio", "neon", "mesh"].includes(plane))
         throw Error("GRAPH_PREVIEW_RUNTIME_PROFILE_REQUIRED");

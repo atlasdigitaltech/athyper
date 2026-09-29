@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { collectionPresentations } from "./collection-section";
 import { useDataValidation, useValidationMessage } from "./data-validation";
 import { validateDataInput } from "@athyper/contract-platform-entity-runtime";
+import { WarningIcon } from "@athyper/platform-icons";
 import {
   ReferenceSelect,
   type ReferenceDirectoryBinding,
@@ -279,7 +280,16 @@ export function EntityDataSurface({
             if (!dataFieldVisible(f, surface, answers)) return null;
             const name = prefix ? `${prefix}.${f.valueKey}` : f.valueKey,
               fieldId = `${id}-${f.key}`,
-              update = (value: unknown, selectedOption?: { readonly value: string; readonly label: string; readonly data?: Readonly<Record<string, string | boolean | readonly string[]>> }) => {
+              update = (
+                value: unknown,
+                selectedOption?: {
+                  readonly value: string;
+                  readonly label: string;
+                  readonly data?: Readonly<
+                    Record<string, string | boolean | readonly string[]>
+                  >;
+                },
+              ) => {
                 if (f.control !== "input") {
                   onChange({ ...answers, [f.valueKey]: value });
                   return;
@@ -309,7 +319,9 @@ export function EntityDataSurface({
                       },
                     }
                   : f;
-                onChange(changedDataInput(optionField, answers, value, surface));
+                onChange(
+                  changedDataInput(optionField, answers, value, surface),
+                );
               };
             const style = {
               "--data-span": Math.min(f.columnSpan, section.columns ?? 12),
@@ -562,17 +574,24 @@ export function EntityDataSurface({
                         value={String(value)}
                         options={f.lookup?.options ?? []}
                         sourceKey={f.lookup?.sourceKey ?? f.key}
-                        directory={referenceDirectory && f.lookup?.sourceKey ? {
-                          ...referenceDirectory,
-                          filters: Object.fromEntries(
-                            (f.lookup.filterBy ?? []).flatMap((binding) => {
-                              const value = answers[binding.field];
-                              return typeof value === "string" && value.trim()
-                                ? [[binding.property, value.trim()]]
-                                : [];
-                            }),
-                          ),
-                        } : undefined}
+                        directory={
+                          referenceDirectory && f.lookup?.sourceKey
+                            ? {
+                                ...referenceDirectory,
+                                filters: Object.fromEntries(
+                                  (f.lookup.filterBy ?? []).flatMap(
+                                    (binding) => {
+                                      const value = answers[binding.field];
+                                      return typeof value === "string" &&
+                                        value.trim()
+                                        ? [[binding.property, value.trim()]]
+                                        : [];
+                                    },
+                                  ),
+                                ),
+                              }
+                            : undefined
+                        }
                         recentScope={referenceChoiceScope}
                         recentPolicy={
                           f.lookup?.sourceKey
@@ -701,7 +720,7 @@ export function EntityDataSurface({
                           className="a-field-error"
                           aria-live="polite"
                         >
-                          <span aria-hidden="true">⚠ </span>
+                          <WarningIcon aria-hidden="true" size={16} />
                           {error}
                         </p>
                       ) : f.helpText ? (
@@ -749,7 +768,12 @@ export function EntityDataSurface({
                   disabled={disabled}
                   onClick={() => {
                     onChange(
-                      changedDataInput(pending.field, answers, pending.value, surface),
+                      changedDataInput(
+                        pending.field,
+                        answers,
+                        pending.value,
+                        surface,
+                      ),
                     );
                     closeChange();
                   }}
@@ -767,7 +791,14 @@ export function EntityDataSurface({
           <Button
             type="button"
             onClick={() => {
-              onChange(changedDataInput(pending.field, answers, pending.value, surface));
+              onChange(
+                changedDataInput(
+                  pending.field,
+                  answers,
+                  pending.value,
+                  surface,
+                ),
+              );
               setPending(undefined);
             }}
           >
@@ -787,7 +818,15 @@ export function EntityDataSurface({
           sections={navigationSections}
           navigationLabel={sectionNavigation.label}
           mode={sectionNavigation.mode}
-          intakeWorkspace={surface.presentation ? { surface, status: sectionNavigation.status, actions: sectionNavigation.actions } : undefined}
+          intakeWorkspace={
+            surface.presentation
+              ? {
+                  surface,
+                  status: sectionNavigation.status,
+                  actions: sectionNavigation.actions,
+                }
+              : undefined
+          }
         >
           {sectionContent}
         </EntityFormLayout>

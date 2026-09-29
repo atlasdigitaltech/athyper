@@ -87,10 +87,11 @@ export function createSesEmailAdapter(
           templateKey: request.templateKey,
           planeKey: request.planeKey,
         });
+        throw permanent("Email has no rendered body");
       }
 
       const text = appendAttachmentLinks(
-        renderedText ?? JSON.stringify(request.payload, null, 2),
+        renderedText ?? "",
         request.attachments,
       );
       const input: SendEmailCommandInput = {

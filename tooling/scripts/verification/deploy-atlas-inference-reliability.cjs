@@ -66,8 +66,8 @@ const files = [
   ],
   [
     "atlas-semantic-index",
-    "server/apps/platform-host/src/composition/shared/ai/atlas-semantic-index.ts",
-    "/app/server/dist/composition/shared/ai/atlas-semantic-index.js",
+    "server/apps/platform-host/src/composition/spaces/neon/ai/atlas-semantic-index.ts",
+    "/app/server/dist/composition/spaces/neon/ai/atlas-semantic-index.js",
   ],
   ...[
     "atlas-inference-admission",

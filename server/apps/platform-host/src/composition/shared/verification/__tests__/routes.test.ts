@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { HostConfig } from "../../../../config/environment.js";
 import { createContainer } from "../../../../kernel/container.js";
-import { executeVerification } from "../routes.js";
+import { executeVerification } from "../../verification.js";
 
 const context = {
   planeKey: "studio",

@@ -1,8 +1,8 @@
 import { sql, type Kysely } from "kysely";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { MetaEntityInspectionRelease } from "@athyper/server-contract-meta-entity-authoring";
+import type { PlaneKey } from "@athyper/server-foundation/context";
 type Db = Kysely<Record<string, never>>;
-type Plane = "studio" | "neon" | "mesh";
 export interface ActivationObservation {
   releaseId: string;
   contractHash: string;
@@ -34,7 +34,7 @@ export function classifyActivation(
 /** Called only after source-tenant lookup and explicit deployment-view authorization. */
 export function createMetaEntityActivationInspector(
   run: <T>(
-    plane: Plane,
+  plane: PlaneKey,
     context: VerifiedRequestContext,
     work: (db: Db) => Promise<T>,
   ) => Promise<T>,

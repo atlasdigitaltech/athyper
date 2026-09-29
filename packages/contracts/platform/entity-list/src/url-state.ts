@@ -1,6 +1,6 @@
 import { ENTITY_LIST_MAX_FILTERS, ENTITY_LIST_MAX_URL_LENGTH, ENTITY_LIST_MAX_VISIBLE_COLUMNS } from "./types";
 import { parseEntityListDescriptor, parseListLocationState, parseSaveableListState } from "./parsers";
-import type { EntityListDescriptorV1, JsonValue, ListFilterOperator, ListLocationStateV1, ListSortV1, SaveableListStateV1, SpreadsheetStateV1 } from "./types";
+import type { EntityListDescriptorV1, JsonValue, ListFilterOperator, ListFilterV1, ListLocationStateV1, ListSortV1, SaveableListStateV1, SpreadsheetStateV1 } from "./types";
 
 export interface ListLocationCodecOptions {
   /** State inherited from a saved view. Only overrides are written to the URL. */
@@ -17,7 +17,7 @@ export function decodeListLocationState(input: URLSearchParams | string, descrip
   const base = normalizedBase(descriptor, options.baseState);
   if (serialized.length > ENTITY_LIST_MAX_URL_LENGTH) return locationFromBase(base, descriptor);
   const parameters = new URLSearchParams(serialized);
-  const filters: { field: string; operator: string; value?: JsonValue }[] = [];
+  const filters: ListFilterV1[] = [];
   let hasFilterParameter = parameters.get("filters") === "none";
   for (const [key, raw] of parameters) {
     if (!key.startsWith("filter.") || filters.length >= ENTITY_LIST_MAX_FILTERS) continue;
@@ -25,32 +25,44 @@ export function decodeListLocationState(input: URLSearchParams | string, descrip
     const field = key.slice("filter.".length);
     try {
       const parsed = JSON.parse(raw) as { operator?: unknown; value?: JsonValue };
-      if (parsed && typeof parsed === "object" && typeof parsed.operator === "string") filters.push({ field, operator: parsed.operator, ...(Object.hasOwn(parsed, "value") ? { value: parsed.value } : {}) });
+      if (parsed && typeof parsed === "object" && typeof parsed.operator === "string") filters.push({ field, operator: parsed.operator as ListFilterOperator, ...(Object.hasOwn(parsed, "value") ? { value: parsed.value } : {}) });
     } catch { /* Malformed optional URL state is normalized away. */ }
   }
-  const sort = parameters.has("sort") ? (parameters.get("sort") === "none" ? [] : parseSort(parameters.get("sort"), descriptor.limits.maxSortLevels)) : [...base.sort];
-  const columns = decodeColumns(parameters, base.columns);
-  const spreadsheet = decodeSpreadsheet(parameters, base.spreadsheet);
-  const group = parameters.get("group.clear") === "1" ? undefined : parameters.has("group") ? parameters.get("group") ?? undefined : base.group;
-  try { return parseListLocationState({
-    standardViewKey: parameters.has("standardView") ? parameters.get("standardView") || undefined : base.standardViewKey,
-    ...(parameters.has("q") ? parameters.get("q") ? { query: parameters.get("q") } : {} : base.query ? { query: base.query } : {}),
-    filters: hasFilterParameter ? filters : [...base.filters],
-    sort,
-    ...(group ? { group } : {}),
-    columns,
-    density: parameters.get("density") ?? base.density,
-    mode: parameters.get("view") ?? base.mode,
-    ...(spreadsheet ? { spreadsheet } : {}),
-    ...(parameters.get("vid") ? { savedViewId: parameters.get("vid") } : {}),
-    ...(parameters.get("bvid") ? { baseSavedViewId: parameters.get("bvid") } : {}),
-    ...(parameters.get("cursor") ? { cursor: parameters.get("cursor") } : {}),
-    ...(parameters.has("page") ? { pageIndex: Number(parameters.get("page")) } : {}),
-    ...(parameters.has("pageSize") ? { pageSize: Number(parameters.get("pageSize")) } : {}),
-  }, descriptor); } catch (error) {
-    if (!(error instanceof TypeError)) throw error;
-    return locationFromBase(base, descriptor);
+  let state = locationFromBase(base, descriptor);
+  const apply = (patch: Partial<ListLocationStateV1>) => {
+    try {
+      state = parseListLocationState({ ...state, ...patch }, descriptor);
+    } catch (error) {
+      // URL input is optional and untrusted. Preserve every independently valid
+      // setting rather than discarding the entire shared link.
+      if (!(error instanceof TypeError)) throw error;
+    }
+  };
+  if (hasFilterParameter) {
+    state = parseListLocationState({ ...state, filters: [] }, descriptor);
+    for (const filter of filters) apply({ filters: [...state.filters, filter] });
   }
+  if (parameters.has("sort")) {
+    try {
+      apply({ sort: parameters.get("sort") === "none" ? [] : parseSort(parameters.get("sort"), descriptor.limits.maxSortLevels) });
+    } catch (error) {
+      if (!(error instanceof TypeError)) throw error;
+    }
+  }
+  if (parameters.has("standardView")) apply({ standardViewKey: parameters.get("standardView") || undefined });
+  if (parameters.has("q")) apply({ query: parameters.get("q") || undefined });
+  if (parameters.has("group") || parameters.get("group.clear") === "1") apply({ ...(parameters.get("group.clear") === "1" ? { group: undefined } : parameters.get("group") ? { group: parameters.get("group")! } : {}) });
+  if (parameters.has("cols") || parameters.has("col.rm") || parameters.has("col.at")) apply({ columns: decodeColumns(parameters, state.columns) });
+  if (parameters.has("density")) apply({ density: parameters.get("density") as ListLocationStateV1["density"] });
+  if (parameters.has("view")) apply({ mode: parameters.get("view") as ListLocationStateV1["mode"] });
+  if (parameters.get("sheet") === "none") apply({ spreadsheet: undefined });
+  else if (parameters.get("sheet") === "custom" || parameters.has("pinned") || [...parameters.keys()].some((key) => key.startsWith("width."))) apply({ spreadsheet: decodeSpreadsheet(parameters, state.spreadsheet) });
+  if (parameters.get("vid")) apply({ savedViewId: parameters.get("vid")! });
+  if (parameters.get("bvid")) apply({ baseSavedViewId: parameters.get("bvid")! });
+  if (parameters.get("cursor")) apply({ cursor: parameters.get("cursor")! });
+  if (parameters.has("page")) apply({ pageIndex: Number(parameters.get("page")) });
+  if (parameters.has("pageSize")) apply({ pageSize: Number(parameters.get("pageSize")) });
+  return state;
 }
 
 export function encodeListLocationState(state: ListLocationStateV1, descriptor: EntityListDescriptorV1, options: ListLocationCodecOptions = {}): URLSearchParams {

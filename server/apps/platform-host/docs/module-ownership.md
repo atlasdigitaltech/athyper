@@ -13,8 +13,8 @@
 | `composition/shared/publication/` | Publication orchestration, qualification, recovery | Explicit publication responsibility |
 | `composition/shared/collaboration/` | Comments and attachment section providers | Capability names |
 | `composition/shared/documents/` | Document attachment admission | Document admission responsibility |
-| `composition/shared/ai/` | Atlas inference admission and document knowledge bindings | Preserve capability names |
-| `composition/shared/verification/` | Shared verification operational routes | Authentication and plane scope remain explicit |
+| `composition/spaces/neon/ai/` | Neon Atlas inference admission and document knowledge bindings | Preserve capability names and the Neon scope |
+| `composition/shared/verification.ts` | Shared verification operational routes | Authentication and plane scope remain explicit |
 | `composition/coordination/` | Cross-plane entity release review | Name the coordinated operation |
 | `composition/control-plane/` | Privileged publication control authority | Separate from product spaces |
 | `composition/spaces/` | Existing space-specific bindings | Preserve truthful domain names |
@@ -45,7 +45,8 @@ new forwarding APIs are needed just to match the proposed tree.
 
 
 Entity construction now lives in `shared/entity-runtime/services.ts` and
-`resources.ts`; mounting the existing routes lives in `http.ts`. Transfer
+`resources.ts`; mounting the existing routes lives in `http-registrars.ts` and
+`read-bindings.ts`. Transfer
 construction and registration live in `transfers.ts`. The combined registrar
 supplies configuration and space-specific providers, assigns the resulting
 services to the host, and retains publication callbacks pointing to those same
@@ -54,7 +55,7 @@ copying their service factories or HTTP bindings.
 
 `shared/entity-runtime/experience.ts` composes Entity experience repositories,
 cache, publication route admission and invalidation through explicit database,
-transaction and late-bound metadata dependencies. `http.ts` mounts its existing
+transaction and late-bound metadata dependencies. `http-registrars.ts` mounts its existing
 bootstrap routes. The combined registrar retains adapter selection, runtime
 parameter policy and host health registration; repository health reports
 availability, not a live database probe.

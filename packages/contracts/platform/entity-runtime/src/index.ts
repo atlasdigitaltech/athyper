@@ -54,6 +54,8 @@ export * from "./presentation-localization";
 export * from "./entity-record-href";
 export * from "./detail-navigation";
 export * from "./validation/entity-code";
+export * from "./validation/record-id";
+export * from "./text/humanize";
 export * from "./validation/values";
 export * from "./routes/entity-read-route";
 

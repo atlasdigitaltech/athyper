@@ -23,7 +23,8 @@
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
     "express": "^5.2.1",
-    "@athyper/server-contract-experience": "workspace:*"
+    "@athyper/server-contract-experience": "workspace:*",
+    "@athyper/server-platform-features": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

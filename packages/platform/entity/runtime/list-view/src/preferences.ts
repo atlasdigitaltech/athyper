@@ -1,4 +1,4 @@
-import { readStorageJson, writeStorageItem, removeStorageItem } from "./browser-storage";
+import { readStorageItem, readStorageJson, writeStorageItem, removeStorageItem } from "./browser-storage";
 import { parseSaveableListState, type EntityListDescriptorV1, type ListLocationStateV1, type SaveableListStateV1 } from "@athyper/contract-platform-entity-list";
 
 export interface SavedListView {
@@ -29,6 +29,14 @@ export function saveableViewState(state: ListLocationStateV1): SaveableListState
 
 export function savedViewStorageKey(descriptor: EntityListDescriptorV1): string {
   return `athyper.entity-list.views.${descriptor.plane}.${descriptor.viewNamespace ?? descriptor.entity.code}`;
+}
+
+/** Copies views saved under a shared-list key into an embedded surface's own key the
+ * first time it opens. Idempotent: an existing destination is never overwritten. */
+export function inheritSavedViews(fromKey: string, toKey: string): void {
+  if (fromKey === toKey || readStorageItem(toKey) !== null) return;
+  const inherited = readStorageItem(fromKey);
+  if (inherited !== null) writeStorageItem(toKey, inherited);
 }
 
 export function readSavedViews(key: string, descriptor: EntityListDescriptorV1): readonly SavedListView[] {

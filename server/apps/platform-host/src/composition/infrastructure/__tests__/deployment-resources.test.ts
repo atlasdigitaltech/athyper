@@ -6,7 +6,7 @@ import {
   type DeploymentPlane,
   type ProcessRole,
 } from "../../../config/deployment-profile.js";
-import { selectDeploymentEnvironment } from "../../../config/deployment-environment.js";
+import { selectDeploymentEnvironment } from "../../../kernel/deployment-environment.js";
 import { createRegistrationPlan } from "../../../kernel/registration-plan.js";
 import { createContainer } from "../../../kernel/container.js";
 import { registerDatabases, registerWorkerDatabases } from "../databases.js";

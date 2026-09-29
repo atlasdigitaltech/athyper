@@ -6,6 +6,7 @@ import type {
 } from "@athyper/contract-platform-entity-runtime";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { Button } from "@athyper/platform-ui";
+import { ChevronRightIcon } from "@athyper/platform-icons";
 import {
   changed,
   comparable,
@@ -145,7 +146,7 @@ export function ActivityComparison({
         <div>
           <h3>{intl.message("activity.comparison")}</h3>
           <p>
-            {before} → {after}
+            {before} <ChevronRightIcon aria-hidden="true" size={16} /> {after}
           </p>
         </div>
         <Button variant="secondary" onClick={onClose}>
@@ -202,7 +203,13 @@ export function ActivityComparison({
           role="status"
           data-limited={limited}
         >
-          <strong>{intl.message(hasCollections ? "activity.collection.noRootDifferences" : "activity.noDifferences")}</strong>
+          <strong>
+            {intl.message(
+              hasCollections
+                ? "activity.collection.noRootDifferences"
+                : "activity.noDifferences",
+            )}
+          </strong>
           {limited ? (
             <p>{intl.message("activity.incompleteComparison")}</p>
           ) : null}

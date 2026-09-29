@@ -1,46 +1,27 @@
-import { COLLABORATION_RELAY_OPERATIONS } from "@athyper/platform-gateway-bff-relay";
 import { readAppEnvironment } from "./environment";
 import {
-  ACTIVITY_CENTER_RELAY_OPERATIONS,
-  ATLAS_ANSWER_RELAY_OPERATIONS,
+  COMMON_PLANE_RELAY_OPERATIONS,
+  createLazyRelay,
   createRelayHandler,
-  ENTITY_VIEWS_RELAY_OPERATIONS,
-  ENTITY_APPLICATION_DESCRIPTOR_OPERATION,
-  REFERENCE_HISTORY_RELAY_OPERATIONS,
-  ENTITY_LIST_DESCRIPTOR_OPERATION,
-  ENTITY_LIST_QUERY_OPERATION,
-  ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS,
-  EXPERIENCE_BOOTSTRAP_OPERATION,
-  EXPERIENCE_SURFACE_RUNTIME_RELAY_OPERATIONS,
-  IAM_ME_OPERATION,
   MESH_BP_BANK_DISCLOSURE_RELAY_OPERATIONS,
   MESH_BP_NETWORK_EXCHANGE_RELAY_OPERATIONS,
   MESH_BP_PROFILE_PUBLICATION_RELAY_OPERATIONS,
   MESH_NETWORK_ACCOUNTS_OPERATION,
-  PRINCIPAL_LOCALE_UPDATE_OPERATION,
-  RECORD_BOOKMARK_RELAY_OPERATIONS,
-  RECORD_TRANSFER_RELAY_OPERATIONS,
+  relaySessionFromAuth,
   type RelayHandler,
 } from "@athyper/platform-gateway-bff-relay";
 import { authRuntime } from "./auth";
 
-let relay: RelayHandler | undefined;
-export const platformRelay: RelayHandler = (request, context) => {
-  relay ??= createAppRelay(
+export const platformRelay: RelayHandler = createLazyRelay(() =>
+  createAppRelay(
     {
       runtimeApiUrl: readAppEnvironment().runtimeApiUrl,
       appOrigin: readAppEnvironment().appOrigin,
-
-      session: {
-        resolve: (input) => authRuntime.resolveRelaySession(input),
-        refresh: (input) => authRuntime.refreshRelaySession(input),
-        invalidate: (input) => authRuntime.invalidateRelaySession(input),
-      },
+      session: relaySessionFromAuth(authRuntime),
     },
     process.env,
-  );
-  return relay(request, context);
-};
+  ),
+);
 
 export function createAppRelay(
   options: Omit<
@@ -53,25 +34,11 @@ export function createAppRelay(
     ...options,
     plane: "mesh",
     operations: [
-      ...COLLABORATION_RELAY_OPERATIONS,
-      IAM_ME_OPERATION,
-      EXPERIENCE_BOOTSTRAP_OPERATION,
-      PRINCIPAL_LOCALE_UPDATE_OPERATION,
-      ...EXPERIENCE_SURFACE_RUNTIME_RELAY_OPERATIONS,
-      ...ATLAS_ANSWER_RELAY_OPERATIONS,
+      ...COMMON_PLANE_RELAY_OPERATIONS,
       MESH_NETWORK_ACCOUNTS_OPERATION,
       ...MESH_BP_PROFILE_PUBLICATION_RELAY_OPERATIONS,
       ...MESH_BP_NETWORK_EXCHANGE_RELAY_OPERATIONS,
       ...MESH_BP_BANK_DISCLOSURE_RELAY_OPERATIONS,
-      ...ENTITY_VIEWS_RELAY_OPERATIONS,
-      ENTITY_APPLICATION_DESCRIPTOR_OPERATION,
-      ...REFERENCE_HISTORY_RELAY_OPERATIONS,
-      ENTITY_LIST_DESCRIPTOR_OPERATION,
-      ENTITY_LIST_QUERY_OPERATION,
-      ...ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS,
-      ...RECORD_BOOKMARK_RELAY_OPERATIONS,
-      ...RECORD_TRANSFER_RELAY_OPERATIONS,
-      ...ACTIVITY_CENTER_RELAY_OPERATIONS,
     ],
   });
 }

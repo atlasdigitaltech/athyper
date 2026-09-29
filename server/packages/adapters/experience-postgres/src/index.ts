@@ -571,15 +571,15 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         const requested = (policy.catalogs ?? []).map(
           ({ localeCode }) => localeCode,
         );
+        const wanted = [...new Set([...requested, ...policy.enabledLocales, policy.defaultLocale, policy.fallbackLocale])];
         const registered = await sql<{ localeCode: string }>`
           SELECT locale_code AS "localeCode" FROM control.ui_locale_catalog
-          WHERE locale_code=ANY(${requested}::text[]) FOR SHARE`.execute(
+          WHERE locale_code=ANY(${wanted}::text[]) FOR SHARE`.execute(
           transaction,
         );
         const available = new Set(registered.rows.map((row) => row.localeCode));
         if (
-          requested.some((code) => !available.has(code)) ||
-          policy.enabledLocales.some((code) => !available.has(code))
+          wanted.some((code) => !available.has(code))
         ) {
           throw new ExperienceAccessError(
             503,
@@ -676,6 +676,7 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     }>,
   ): Promise<ExperienceSurfaceReleaseRecord> {
     return this.withContext(context, async (database) => {
+      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${"experience-surface:" + context.tenantId.toLowerCase() + ":" + input.targetPlane + ":" + input.surfaceKey + ":" + input.layer},0))`.execute(database);
       const existing = await sql<{
         id: string;
         revision: number;
@@ -744,6 +745,7 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         )
       ).rows[0];
       if (!selected) return undefined;
+      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${"experience-surface:" + context.tenantId.toLowerCase() + ":" + selected.targetPlane + ":" + selected.surfaceKey + ":" + selected.layer},0))`.execute(database);
       await sql`UPDATE control.experience_surface_release SET status='retired',updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${selected.targetPlane} AND surface_key=${selected.surfaceKey} AND layer=${selected.layer} AND status='draft'`.execute(
         database,
       );
@@ -795,6 +797,10 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     context: VerifiedRequestContext,
     release: ExperienceSurfaceReleaseRecord,
   ): Promise<void> {
+    if (release.targetPlane !== context.planeKey)
+      throw Object.assign(new Error("Surface release targets a different plane"), {
+        code: "EXPERIENCE_SURFACE_PLANE_MISMATCH",
+      });
     await this.withContext(context, async (database) => {
       const already = await sql<{
         present: boolean;
@@ -905,7 +911,16 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       }>`SELECT EXISTS(SELECT 1 FROM control.route_slug_history WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${input.targetPath} AND target_path=${input.sourcePath} AND status='active') AS present`.execute(
         database,
       );
-      if (reverse.rows[0]?.present)
+      // Follow the existing chain from the new target; reaching the new source means a cycle of any length.
+      let cursor = input.targetPath;
+      for (let hop = 0; hop < 32; hop++) {
+        if (cursor === input.sourcePath) break;
+        const next = await sql<{ targetPath: string }>`SELECT target_path AS "targetPath" FROM control.route_slug_history WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${cursor} AND status='active' LIMIT 1`.execute(database);
+        if (!next.rows[0]) { cursor = ""; break; }
+        cursor = next.rows[0].targetPath;
+        if (hop === 31) cursor = input.sourcePath;
+      }
+      if (reverse.rows[0]?.present || cursor === input.sourcePath)
         throw Object.assign(new Error("Route redirect would create a loop"), {
           code: "EXPERIENCE_ROUTE_REDIRECT_LOOP",
         });

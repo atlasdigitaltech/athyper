@@ -51,47 +51,14 @@ export function createActivityPresentation(
                   recordLabel: undefined,
                 }
               : { ...base, actionLabel: undefined };
-          // Only replace generated supplier copy; never rewrite a user's comment text.
-          const supplier = item.eventCode.startsWith("supplier.");
-          let href = destination.href;
-          if (supplier && typeof p.caseUrl === "string") {
-            try {
-              const old = new URL(p.caseUrl),
-                next = new URL(href, "https://activity.invalid");
-              if (old.pathname === next.pathname) {
-                for (const key of ["attemptId", "workItemId"]) {
-                  const value = old.searchParams.get(key);
-                  if (value && /^[0-9a-f-]{36}$/i.test(value))
-                    next.searchParams.set(key, value);
-                }
-                next.hash = "review";
-                href = next.pathname + next.search + next.hash;
-              }
-            } catch {}
-          }
           return {
             ...base,
             entityType: entityCode,
-            href: commentId ? activityCommentHref(href, commentId) : href,
+            href: commentId ? activityCommentHref(destination.href, commentId) : destination.href,
             recordLabel: destination.recordLabel,
             actionLabel: commentId
               ? "View comment"
               : (destination.actionLabel ?? "View record"),
-            ...(item.eventCode.startsWith("workflow.") ? {
-              title: readableWorkText(item.title),
-              body: item.body ? readableWorkText(item.body) : undefined,
-            } : {}),
-            ...(supplier
-              ? {
-                  title:
-                    item.title.split(" — ")[0] ?? "Supplier request update",
-                  body:
-                    item.body
-                      ?.split("Open the authenticated request:")[0]
-                      ?.trim() ||
-                    "Open the request to view the latest update and any action needed.",
-                }
-              : {}),
           };
         }),
       );
@@ -121,12 +88,8 @@ export function createActivityPresentation(
             recordLabel: destination.recordLabel,
             assignmentLabel: context.principalId && (item.assigneePrincipalId===context.principalId||item.claimantPrincipalId===context.principalId)?"Assigned to you":item.assigneeTeamId?"Assigned to your team":"Available to you",
             actionLabel: destination.actionLabel ?? "Open task",
-            title: item.title.startsWith("INDEPENDENT_APPROVAL:")
-              ? "Review supplier request"
-              : item.title.startsWith("Data stewardship:")
-                ? "Review request information"
-                : item.title.startsWith("Dependency impact review:") ? "Review dependency impact" : item.title,
-            ...(item.description?.startsWith("Dependency impact review:") ? {description:"Review how this request affects related records."} : {}),
+            title: item.title,
+            ...(item.description ? { description: item.description } : {}),
           };
         }),
       );
@@ -135,8 +98,4 @@ export function createActivityPresentation(
 }
 function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
-}
-
-function readableWorkText(value:string):string {
- return value.replace(/(?:Dependency impact review|Data stewardship): [0-9a-f]{8}-[0-9a-f-]{27,}/gi,match=>match.startsWith("Dependency")?"Review dependency impact":"Review request information").replace(/INDEPENDENT_APPROVAL: Review level \d+/g,"Review supplier request");
 }

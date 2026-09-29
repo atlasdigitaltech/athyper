@@ -6,3 +6,4 @@ export * from "./url-state";
 export * from "./standard-views";
 
 export { parseEntityScopeFilters, type EntityScopeFilterV1 } from "./scope-filters";
+export * from "./filter-defaults";

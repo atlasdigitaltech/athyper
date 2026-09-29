@@ -1,5 +1,5 @@
 "use client";
-import {DataValidationProvider,useDataValidation} from "./data-validation";
+import { DataValidationProvider, useDataValidation } from "./data-validation";
 import {
   createContext,
   useContext,
@@ -15,8 +15,12 @@ import {
   intakeConditionMatches,
   type EntityIntakeFlowV1,
 } from "@athyper/contract-platform-entity-runtime";
-import { useRegisterEntityTaskHeader, useContextDepartureGuard } from "@athyper/platform-shell";
+import {
+  useRegisterEntityTaskHeader,
+  useContextDepartureGuard,
+} from "@athyper/platform-shell";
 import { Button } from "@athyper/platform-ui";
+import { CheckIcon } from "@athyper/platform-icons";
 import {
   assertIntakeReadyToSubmit,
   completeIntakeStep,
@@ -52,7 +56,8 @@ export interface EntityIntakeSaveReceipt {
 }
 /** Server edit-policy preview. `message` is the server's policy explanation, not a client-side inference. */
 export interface EntityIntakePolicyPreview {
-  readonly outcome: "unchanged" | "metadata-only" | "reapproval-required" | "denied";
+  readonly outcome:
+    "unchanged" | "metadata-only" | "reapproval-required" | "denied";
   readonly message?: string;
 }
 /** A capability is emitted only after the server has authorized the named operation for this intake. */
@@ -61,7 +66,8 @@ export interface EntityIntakeOperation {
   readonly authorized: boolean;
   readonly label?: string;
   readonly href?: string;
-  readonly execute?: () => void | EntityIntakeSaveReceipt | Promise<void | EntityIntakeSaveReceipt>;
+  readonly execute?: () =>
+    void | EntityIntakeSaveReceipt | Promise<void | EntityIntakeSaveReceipt>;
 }
 export interface EntityIntakeRuntimeState {
   /** Values from the last durable server receipt. */
@@ -86,7 +92,10 @@ interface IntakeController {
   readonly busy: boolean;
   readonly sharedHeader: boolean;
   readonly lockedSteps: readonly string[];
-  readonly workspace: { readonly status?: ReactNode; readonly actions?: ReactNode };
+  readonly workspace: {
+    readonly status?: ReactNode;
+    readonly actions?: ReactNode;
+  };
   next(): void;
   go(key: string): void;
   invalidate(key: string): void;
@@ -98,10 +107,14 @@ interface IntakeController {
 const EMPTY_ANSWERS = Object.freeze({});
 function policyOutcomeLabel(outcome: EntityIntakePolicyPreview["outcome"]) {
   switch (outcome) {
-    case "unchanged": return "No policy-relevant changes";
-    case "metadata-only": return "Changes do not require reapproval";
-    case "reapproval-required": return "Changes require reapproval";
-    case "denied": return "Changes are not permitted";
+    case "unchanged":
+      return "No policy-relevant changes";
+    case "metadata-only":
+      return "Changes do not require reapproval";
+    case "reapproval-required":
+      return "Changes require reapproval";
+    case "denied":
+      return "Changes are not permitted";
   }
 }
 const IntakeContext = createContext<IntakeController | undefined>(undefined);
@@ -134,8 +147,11 @@ export function EntityIntake({
   const [state, setState] = useState(() =>
     initialIntakeCheckpoint(flow, descriptorHash, initialCheckpoint),
   );
-  const [presentation, setPresentation] = useState<IntakePresentation>(initialPresentation ?? {});
-  const [committedReceipt, setCommittedReceipt] = useState<EntityIntakeSaveReceipt>();
+  const [presentation, setPresentation] = useState<IntakePresentation>(
+    initialPresentation ?? {},
+  );
+  const [committedReceipt, setCommittedReceipt] =
+    useState<EntityIntakeSaveReceipt>();
   const [dirty, setDirty] = useState(false);
   const dirtyRef = useRef(false);
   useEffect(() => {
@@ -150,7 +166,10 @@ export function EntityIntake({
   }, [dirty]);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string>();
-  useContextDepartureGuard({ dirty: dirty || presentation.saveState === "unsaved", busy });
+  useContextDepartureGuard({
+    dirty: dirty || presentation.saveState === "unsaved",
+    busy,
+  });
   const step = flow.steps.find((s) => s.key === state.currentStep)!;
   const receipt = runtime?.receipt ?? committedReceipt;
   const mounted = useRef(true);
@@ -219,18 +238,26 @@ export function EntityIntake({
         setDirty(false);
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to complete the intake operation");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Unable to complete the intake operation",
+      );
     } finally {
       if (mounted.current) setBusy(false);
     }
   }
   const navigation = (
-    <nav className="athyper-section-nav a-management-navigation a-intake-progress" aria-label="Request progress">
+    <nav
+      className="athyper-section-nav a-management-navigation a-intake-progress"
+      aria-label="Request progress"
+    >
       <ol>
         {flow.steps
           .filter((s) => intakeConditionMatches(s.entryCondition, answers))
           .map((s, index) => {
-            let disabled = busy || Boolean(presentation.lockedSteps?.includes(s.key));
+            let disabled =
+              busy || Boolean(presentation.lockedSteps?.includes(s.key));
             try {
               navigateIntake(flow, state, s.key, answers);
             } catch {
@@ -251,7 +278,11 @@ export function EntityIntake({
                     className="a-intake-progress__number"
                     aria-hidden="true"
                   >
-                    {state.completed.includes(s.key) ? "✓" : index + 1}
+                    {state.completed.includes(s.key) ? (
+                      <CheckIcon aria-hidden="true" size={16} />
+                    ) : (
+                      index + 1
+                    )}
                   </span>
                   <span>{s.title}</span>
                   {state.completed.includes(s.key) ? (
@@ -271,50 +302,196 @@ export function EntityIntake({
       : receipt
         ? (receipt.statusLabel ?? "Saved")
         : "Not saved";
-  const operationalStatus = runtime || receipt ? (
-    <div className="a-intake-identity" data-slot="intake-status">
-      {receipt?.code ? <span className="a-intake-reference">{receipt.code}</span> : null}
-      {receipt?.recordId ? <span className="a-intake-record-id">{receipt.recordId}</span> : null}
-      <span className="a-intake-save-status" data-state={dirty ? "unsaved" : "saved"} role="status">{saveLabel}</span>
-      {receipt?.version !== undefined ? <span>v{receipt.version}</span> : null}
-      {receipt?.savedAt ? <time dateTime={receipt.savedAt}>Saved {new Date(receipt.savedAt).toLocaleString()}</time> : null}
-      {runtime?.policyPreview ? <span data-policy-outcome={runtime.policyPreview.outcome}>{runtime.policyPreview.message ?? policyOutcomeLabel(runtime.policyPreview.outcome)}</span> : null}
-    </div>
-  ) : undefined;
+  const operationalStatus =
+    runtime || receipt ? (
+      <div className="a-intake-identity" data-slot="intake-status">
+        {receipt?.code ? (
+          <span className="a-intake-reference">{receipt.code}</span>
+        ) : null}
+        {receipt?.recordId ? (
+          <span className="a-intake-record-id">{receipt.recordId}</span>
+        ) : null}
+        <span
+          className="a-intake-save-status"
+          data-state={dirty ? "unsaved" : "saved"}
+          role="status"
+        >
+          {saveLabel}
+        </span>
+        {receipt?.version !== undefined ? (
+          <span>v{receipt.version}</span>
+        ) : null}
+        {receipt?.savedAt ? (
+          <time dateTime={receipt.savedAt}>
+            Saved {new Date(receipt.savedAt).toLocaleString()}
+          </time>
+        ) : null}
+        {runtime?.policyPreview ? (
+          <span data-policy-outcome={runtime.policyPreview.outcome}>
+            {runtime.policyPreview.message ??
+              policyOutcomeLabel(runtime.policyPreview.outcome)}
+          </span>
+        ) : null}
+      </div>
+    ) : undefined;
   const headerOperations = runtime?.operations;
   const isGenericRuntime = Boolean(runtime || receipt);
-  const headerActions = <>
-    {headerOperations?.undo?.authorized ? <Button type="button" variant="secondary" disabled={busy} onClick={() => void execute(headerOperations.undo)}>{headerOperations.undo.label ?? "Undo"}</Button> : null}
-    {headerOperations?.discard?.authorized ? <Button type="button" variant="secondary" disabled={busy} onClick={() => void execute(headerOperations.discard)}>{headerOperations.discard.label ?? "Discard"}</Button> : null}
-    {headerOperations?.exit?.authorized && headerOperations.exit.href ? <a className="a-button a-button--secondary" href={headerOperations.exit.href}>{headerOperations.exit.label ?? "Exit"}</a> : headerOperations?.exit?.authorized && headerOperations.exit.execute ? <Button type="button" variant="secondary" disabled={busy} onClick={() => void execute(headerOperations.exit)}>{headerOperations.exit.label ?? "Exit"}</Button> : !isGenericRuntime ? <a className="a-button a-button--secondary" href={cancelHref} onClick={(event) => { if (busy || (dirty && !window.confirm("Discard the unsaved request details?"))) event.preventDefault(); }}>{presentation.exitLabel ?? "Cancel"}</a> : null}
-  </>;
-  const footerActions = <>
-    {headerOperations?.back?.authorized && flow.steps.findIndex((candidate) => candidate.key === state.currentStep) > 0 ? <Button type="button" variant="secondary" disabled={busy} onClick={() => { const index = flow.steps.findIndex((candidate) => candidate.key === state.currentStep); const previous = flow.steps[index - 1]; if (previous) go(previous.key); }}>{headerOperations.back.label ?? "Back"}</Button> : null}
-    {headerOperations?.saveDraft?.authorized ? <Button type="button" variant="secondary" disabled={busy} onClick={() => void execute(headerOperations.saveDraft)}>{headerOperations.saveDraft.label ?? "Save draft"}</Button> : null}
-    {flow.steps.at(-1)?.key === state.currentStep ? headerOperations?.submit?.authorized ? <Button type="submit" disabled={busy}>{headerOperations.submit.label ?? "Submit"}</Button> : null : headerOperations?.continue?.authorized ? <Button type="button" disabled={busy} onClick={next}>{headerOperations.continue.label ?? "Continue"}</Button> : null}
-  </>;
+  const headerActions = (
+    <>
+      {headerOperations?.undo?.authorized ? (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy}
+          onClick={() => void execute(headerOperations.undo)}
+        >
+          {headerOperations.undo.label ?? "Undo"}
+        </Button>
+      ) : null}
+      {headerOperations?.discard?.authorized ? (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy}
+          onClick={() => void execute(headerOperations.discard)}
+        >
+          {headerOperations.discard.label ?? "Discard"}
+        </Button>
+      ) : null}
+      {headerOperations?.exit?.authorized && headerOperations.exit.href ? (
+        <a
+          className="a-button a-button--secondary"
+          href={headerOperations.exit.href}
+        >
+          {headerOperations.exit.label ?? "Exit"}
+        </a>
+      ) : headerOperations?.exit?.authorized &&
+        headerOperations.exit.execute ? (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy}
+          onClick={() => void execute(headerOperations.exit)}
+        >
+          {headerOperations.exit.label ?? "Exit"}
+        </Button>
+      ) : !isGenericRuntime ? (
+        <a
+          className="a-button a-button--secondary"
+          href={cancelHref}
+          onClick={(event) => {
+            if (
+              busy ||
+              (dirty && !window.confirm("Discard the unsaved request details?"))
+            )
+              event.preventDefault();
+          }}
+        >
+          {presentation.exitLabel ?? "Cancel"}
+        </a>
+      ) : null}
+    </>
+  );
+  const footerActions = (
+    <>
+      {headerOperations?.back?.authorized &&
+      flow.steps.findIndex((candidate) => candidate.key === state.currentStep) >
+        0 ? (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy}
+          onClick={() => {
+            const index = flow.steps.findIndex(
+              (candidate) => candidate.key === state.currentStep,
+            );
+            const previous = flow.steps[index - 1];
+            if (previous) go(previous.key);
+          }}
+        >
+          {headerOperations.back.label ?? "Back"}
+        </Button>
+      ) : null}
+      {headerOperations?.saveDraft?.authorized ? (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy}
+          onClick={() => void execute(headerOperations.saveDraft)}
+        >
+          {headerOperations.saveDraft.label ?? "Save draft"}
+        </Button>
+      ) : null}
+      {flow.steps.at(-1)?.key === state.currentStep ? (
+        headerOperations?.submit?.authorized ? (
+          <Button type="submit" disabled={busy}>
+            {headerOperations.submit.label ?? "Submit"}
+          </Button>
+        ) : null
+      ) : headerOperations?.continue?.authorized ? (
+        <Button type="button" disabled={busy} onClick={next}>
+          {headerOperations.continue.label ?? "Continue"}
+        </Button>
+      ) : null}
+    </>
+  );
   const workspace = useMemo(
-    () => runtime || receipt ? { status: operationalStatus, actions: footerActions } : {},
+    () =>
+      runtime || receipt
+        ? { status: operationalStatus, actions: footerActions }
+        : {},
     [runtime, receipt, operationalStatus, footerActions],
   );
-  const header = useMemo(
-    () => {
-      // Guidance belongs in the workspace. Header Row 2 is reserved for operational state.
-      const legacySupportingRow = presentation.compact && (presentation.context || presentation.saveStatus) ? <><span className="a-intake-identity">{presentation.context}</span><span className="a-intake-save-status" data-state={presentation.saveState} role="status">{presentation.saveStatus}</span></> : undefined;
-      return {
+  const header = useMemo(() => {
+    // Guidance belongs in the workspace. Header Row 2 is reserved for operational state.
+    const legacySupportingRow =
+      presentation.compact &&
+      (presentation.context || presentation.saveStatus) ? (
+        <>
+          <span className="a-intake-identity">{presentation.context}</span>
+          <span
+            className="a-intake-save-status"
+            data-state={presentation.saveState}
+            role="status"
+          >
+            {presentation.saveStatus}
+          </span>
+        </>
+      ) : undefined;
+    return {
       title: presentation.title ?? flow.title,
       description: operationalStatus
         ? undefined
         : presentation.compact
           ? undefined
-          : presentation.description ?? step.description ?? flow.description,
-      supportingRow: operationalStatus ?? (presentation.compact ? legacySupportingRow : undefined),
+          : (presentation.description ?? step.description ?? flow.description),
+      supportingRow:
+        operationalStatus ??
+        (presentation.compact ? legacySupportingRow : undefined),
       actions: headerActions,
-      navigation: <>{!presentation.compact && presentation.context ? <p className="a-intake-context" role="status">{presentation.context}</p> : null}{navigation}</>,
+      navigation: (
+        <>
+          {!presentation.compact && presentation.context ? (
+            <p className="a-intake-context" role="status">
+              {presentation.context}
+            </p>
+          ) : null}
+          {navigation}
+        </>
+      ),
     };
-    },
-    [flow, state, busy, step, cancelHref, answers, dirty, presentation, operationalStatus, headerActions],
-  );
+  }, [
+    flow,
+    state,
+    busy,
+    step,
+    cancelHref,
+    answers,
+    dirty,
+    presentation,
+    operationalStatus,
+    headerActions,
+  ]);
   const sharedHeader = useRegisterEntityTaskHeader(header);
   return (
     <IntakeContext.Provider
@@ -346,7 +523,11 @@ export function EntityIntake({
           <h1>{header.title}</h1>
           <p>{header.description}</p>
           {header.actions}
-          {header.supportingRow ? <div className="athyper-page-header__supporting-row">{header.supportingRow}</div> : null}
+          {header.supportingRow ? (
+            <div className="athyper-page-header__supporting-row">
+              {header.supportingRow}
+            </div>
+          ) : null}
           {header.navigation}
         </header>
       ) : null}
@@ -360,7 +541,15 @@ export interface IntakeReviewValue {
   readonly value: string;
 }
 /** Keeps controls mounted when reviewing, so Back retains values and component state. */
-export function EntityIntakeForm(props: Parameters<typeof ValidatedIntakeForm>[0]) { return <DataValidationProvider><ValidatedIntakeForm {...props}/></DataValidationProvider>; }
+export function EntityIntakeForm(
+  props: Parameters<typeof ValidatedIntakeForm>[0],
+) {
+  return (
+    <DataValidationProvider>
+      <ValidatedIntakeForm {...props} />
+    </DataValidationProvider>
+  );
+}
 function ValidatedIntakeForm({
   detailsStep,
   reviewStep,
@@ -380,14 +569,26 @@ function ValidatedIntakeForm({
   ) => readonly IntakeReviewValue[];
 }) {
   const intake = useEntityIntake();
-  const validation=useDataValidation();
+  const validation = useDataValidation();
   const form = useRef<HTMLFormElement>(null);
   const [review, setReview] = useState<readonly IntakeReviewValue[]>([]);
   const submitting = useRef(false);
   const [submitError, setSubmitError] = useState<string>();
   if (!intake)
     return (
-      <form {...props} noValidate onSubmitCapture={event=>{if(!validation?.validate()){event.preventDefault();event.stopPropagation();return;}props.onSubmitCapture?.(event);}} onSubmit={onSubmit}>
+      <form
+        {...props}
+        noValidate
+        onSubmitCapture={(event) => {
+          if (!validation?.validate()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          props.onSubmitCapture?.(event);
+        }}
+        onSubmit={onSubmit}
+      >
         {children}
       </form>
     );
@@ -431,7 +632,14 @@ function ValidatedIntakeForm({
         {...props}
         ref={form}
         noValidate
-        onSubmitCapture={event=>{if(!validation?.validate()){event.preventDefault();event.stopPropagation();return;}props.onSubmitCapture?.(event);}}
+        onSubmitCapture={(event) => {
+          if (!validation?.validate()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          props.onSubmitCapture?.(event);
+        }}
         onSubmit={submit}
         onChangeCapture={(event) => {
           intake.markDirty();
@@ -442,7 +650,9 @@ function ValidatedIntakeForm({
       >
         <div hidden={reviewing}>{children}</div>
       </form>
-      {!reviewing && detailsBackPlacement === "after-form" ? <EntityIntakeBackButton detailsStep={detailsStep} /> : null}
+      {!reviewing && detailsBackPlacement === "after-form" ? (
+        <EntityIntakeBackButton detailsStep={detailsStep} />
+      ) : null}
       {reviewing ? (
         <section className="a-intake-review" aria-label="Review request">
           <h2>Review your request</h2>
@@ -523,23 +733,52 @@ export function readIntakeFormReview(
 }
 
 /** Save validates supplied fields while leaving submission requiredness intact. */
-export function EntityDraftSaveButton({onSave, children, disabled}: {
-  onSave: () => void; children: ReactNode; disabled?: boolean;
+export function EntityDraftSaveButton({
+  onSave,
+  children,
+  disabled,
+}: {
+  onSave: () => void;
+  children: ReactNode;
+  disabled?: boolean;
 }) {
   const validation = useDataValidation();
-  return <Button type="button" variant="secondary" disabled={disabled} onClick={() => {
-    if (validation?.validate("draft") !== false) onSave();
-  }}>{children}</Button>;
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      disabled={disabled}
+      onClick={() => {
+        if (validation?.validate("draft") !== false) onSave();
+      }}
+    >
+      {children}
+    </Button>
+  );
 }
 
 /** Shared previous-step action, placeable alongside a form's other actions. */
-export function EntityIntakeBackButton({ detailsStep, className }: { readonly detailsStep: string; readonly className?: string }) {
+export function EntityIntakeBackButton({
+  detailsStep,
+  className,
+}: {
+  readonly detailsStep: string;
+  readonly className?: string;
+}) {
   const intake = useEntityIntake();
   if (!intake) return null;
-  const index = intake.flow.steps.findIndex(s => s.key === detailsStep);
+  const index = intake.flow.steps.findIndex((s) => s.key === detailsStep);
   if (index <= 0) return null;
   const previous = intake.flow.steps[index - 1]!;
-  return <Button type="button" variant="secondary" className={className}
-    disabled={intake.busy || intake.lockedSteps.includes(previous.key)}
-    onClick={() => intake.go(previous.key)}>Back</Button>;
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      className={className}
+      disabled={intake.busy || intake.lockedSteps.includes(previous.key)}
+      onClick={() => intake.go(previous.key)}
+    >
+      Back
+    </Button>
+  );
 }

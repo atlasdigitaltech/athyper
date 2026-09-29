@@ -9,7 +9,7 @@ import { createEntityExperienceRuntime } from "./shared/entity-runtime/experienc
 import { createEntityResourceServices } from "./shared/entity-runtime/resources.js";
 import { createEntityTransferRuntime } from "./shared/entity-runtime/transfers.js";
 import { createEntityServices, type EntityServices } from "./shared/entity-runtime/services.js";
-import { createEntityExperienceHttpRegistrar, createEntityHttpRegistrars, createEntityResourceHttpRegistrar } from "./shared/entity-runtime/http.js";
+import { createEntityExperienceHttpRegistrar, createEntityHttpRegistrars, createEntityResourceHttpRegistrar } from "./shared/entity-runtime/http-registrars.js";
 
 import { readCompiledRuntimeContract } from "@athyper/server-platform-metadata";
 import { parseActivityBinding } from "@athyper/server-contract-publication";
@@ -21,8 +21,8 @@ import { collaborationEntityCode, collaborationEntityTypes } from "@athyper/serv
 import { parseCollectionState } from "@athyper/contract-platform-collection";
 import { activityCollectionState, collectionActivityQuery, type ActivityQuery } from "@athyper/contract-platform-activity";
 import { createActivityPresentation } from "./shared/entity-runtime/activity-presentation.js";
-import { createCollaborationSectionProviders } from "./shared/collaboration/index.js";
-import { registerStudioOnboarding } from "./spaces/studio/trustiam/onb/register.js";
+import { createCollaborationSectionProviders } from "./shared/collaboration/section-providers.js";
+import { registerStudioOnboarding } from "./spaces/studio/onboarding/register-studio-onboarding.js";
 import { registerEntityMetadata } from "./shared/entity-runtime/metadata.js";
 
 import { createEntityCollaborationService } from "@athyper/server-platform-experience";
@@ -43,10 +43,10 @@ import { addressFormChoices, bankFormChoices, bankFormSources, createSharedRefer
 import { readPublishedNotificationConfiguration, readPublishedCollectionConfiguration } from "@athyper/server-service-publication";
 import { localGraphPreview } from "../development/graph-preview.js";
 import { prepareDocumentCollectionRelease } from "@athyper/server-plane-studio";
-import { RedisInferenceAdmission } from "./shared/ai/atlas-inference-admission.js";
-import { parseAtlasSemanticConfig } from "./shared/ai/atlas-semantic-index.js";
-import { createAtlasDocumentGrounding } from "./shared/ai/atlas-document-grounding.js";
-import { registerAtlasAttachmentKnowledge } from "./shared/ai/atlas-attachment-knowledge.js";
+import { RedisInferenceAdmission } from "./spaces/neon/ai/atlas-inference-admission.js";
+import { parseAtlasSemanticConfig } from "./spaces/neon/ai/atlas-semantic-index.js";
+import { createAtlasDocumentGrounding } from "./spaces/neon/ai/atlas-document-grounding.js";
+import { registerAtlasAttachmentKnowledge } from "./spaces/neon/ai/atlas-attachment-knowledge.js";
 import { createAuthenticatedEntityReleaseReview } from "@athyper/server-service-publication";
 import { getRequestContext as authoringRequestContext } from "@athyper/server-foundation/context";
 import { createMetaEntityAuthoringAuthorizer, createMetaEntityInspectionAuthorizer } from "./shared/entity-governance/meta-entity-authoring-authorizer.js";
@@ -60,7 +60,7 @@ import { loadPublicationWorkloadConfiguration } from "./shared/publication/workl
 import { createCompiledRuntimePublication } from "./shared/publication/compiled-runtime.js";
 import { createRecordDisplayChoices } from "./shared/entity-runtime/record-display-choices.js";
 import type { EntityAuthorizationRuntimeRegistration } from "@athyper/server-contract-metadata";
-import { createPublicationRuntimeQualification } from "./shared/entity-runtime/publication-qualification.js";
+import { createPublicationRuntimeQualification } from "./shared/publication/runtime-qualification.js";
 import { prepareSystemReferenceRelease } from "@athyper/server-plane-studio-meta-entity-authoring";
 
 import {
@@ -81,6 +81,7 @@ import {
 import { createEntityScopeRegistry, type EntityScopeBinding } from "./shared/entity-runtime/scope-registry.js";
 import { createEntityParentAdmission, type EntityParentScopeBinding } from "./shared/entity-runtime/parent-admission.js";
 import { createEntityCaseBackendMapping } from "./spaces/neon/entity-case-backend-mapping.js";
+import { checkMeshExchangeReadiness } from "./spaces/mesh/exchange-readiness.js";
 import { createKyselyContextRefresh } from "@athyper/server-platform-iam";
 import { createAtlasBusinessContextResolver } from "@athyper/server-platform-ai";
 import { readFileSync } from "node:fs";
@@ -360,7 +361,7 @@ import { APPLY_PUBLICATION_RELEASE_JOB, COMPILE_PUBLICATION_ARTIFACT_JOB, SIGN_P
 
 import type { HostConfig } from "../config/environment.js";
 import type { Container } from "../kernel/container.js";
-import { registerVerification } from "./shared/verification/routes.js";
+import { registerVerification } from "./shared/verification.js";
 import { randomUUID } from "node:crypto";
 
 type RecordTransaction = Transaction<Record<string, never>>;
@@ -523,6 +524,12 @@ export function registerServices(
   const role = config?.mode === "worker" || config?.mode === "scheduler" ? config.mode : "api";
   const capabilityRegistration = createCapabilityRegistration(plan ?? createRegistrationPlan(readDeploymentProfile({ MODE: role }, role)));
   const servedPlanes = capabilityRegistration.planes;
+  if (servedPlanes.includes("mesh") && container.adapters.meshDatabase)
+    container.runtimes.health.register("mesh.exchange", () =>
+      checkMeshExchangeReadiness(
+        container.adapters.meshDatabase!.database as unknown as Kysely<Record<string, never>>,
+      ),
+    );
   const { iam, authorizer: baseAuthorizer, audit } = container.platform;
   if (!iam || !baseAuthorizer || !audit) return;
   const refreshEntityContext = createKyselyContextRefresh({

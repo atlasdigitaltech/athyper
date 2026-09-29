@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createContainer } from "../../kernel/container.js";
-import { registerStudioOnboarding } from "../spaces/studio/trustiam/onb/register.js";
+import { registerStudioOnboarding } from "../spaces/studio/onboarding/register-studio-onboarding.js";
 
 describe("optional capability readiness", () => {
   it("does not fail readiness for routes that composition deliberately leaves disabled", async () => {

@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./feature-cohort": "./src/feature-cohort.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "@types/node": "^25.6.0"
   }
 }

@@ -81,7 +81,7 @@ it("retains denials, tenancy, catalog, assurance and domain constraints", async 
       ...request,
       context: {
         ...context,
-        assurance: "normal",
+        assurance: "baseline",
         permissions: {
           ...context.permissions,
           requirements: [

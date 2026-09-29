@@ -70,7 +70,7 @@ export class TrustScopedPublicationKeyResolver {
   private async resolve(reference: string): Promise<Uint8Array> {
     const result = await this.secrets.resolve(reference);
     if (result.expiresAt !== undefined && (!Number.isFinite(Date.parse(result.expiresAt)) || Date.parse(result.expiresAt) <= this.now())) throw Error("PUBLICATION_TRUST_KEY_EXPIRED");
-    return result.bytes.slice();
+    return Uint8Array.from(result.bytes);
   }
   async signingKey(keyId: string): Promise<Uint8Array> {
     if (!this.canSign) throw Error("PUBLICATION_TRUST_SIGNING_FORBIDDEN");

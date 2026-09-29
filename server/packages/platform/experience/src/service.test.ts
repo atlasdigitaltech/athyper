@@ -1,4 +1,4 @@
-import { stablePercentageCohort, featurePercentageCohort } from "@athyper/server-foundation";
+import { stablePercentageCohort, featurePercentageCohort } from "@athyper/server-platform-features/feature-cohort";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { LOCALE_REGISTRY } from "@athyper/platform-i18n";
 import { createExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";

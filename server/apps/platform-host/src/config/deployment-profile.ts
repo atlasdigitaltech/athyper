@@ -1,5 +1,7 @@
+import type { PlaneKey } from "@athyper/server-foundation/context";
+
 export type ProcessRole = "api" | "worker" | "scheduler";
-export type DeploymentPlane = "studio" | "neon" | "mesh";
+export type DeploymentPlane = PlaneKey;
 
 export interface DeploymentProfile {
   readonly name: "combined" | DeploymentPlane;

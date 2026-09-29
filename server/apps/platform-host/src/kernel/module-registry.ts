@@ -4,8 +4,8 @@ import type { DeploymentProfile } from "../config/deployment-profile.js";
 const loaders = {
   "entity.metadata": () => import("../composition/shared/entity-runtime/metadata.js"),
   "entity.read": () => import("../composition/shared/entity-runtime/read-runtime.js"),
-  "entity.read-http": () => import("../composition/shared/entity-runtime/routes.js"),
-  "coordination.entity-release-review": () => import("../composition/coordination/entity-release-review/register.js"),
+  "entity.read-http": () => import("../composition/shared/entity-runtime/read-bindings.js"),
+  "coordination.entity-release-review": () => import("../composition/coordination/entity-release-review/release-review.js"),
   "compatibility.services": () => import("../composition/register-services.js"),
 } as const;
 

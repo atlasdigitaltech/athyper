@@ -36,6 +36,7 @@ export interface EmailAdapterDependencies {
     host: string;
     port: number;
     secure: boolean;
+    requireTLS?: boolean;
     auth?: { user: string; pass: string };
   }): EmailTransport;
 }
@@ -66,6 +67,8 @@ export function createEmailAdapter(
       host,
       port,
       secure: config.secure ?? false,
+      // Never send credentials over a plaintext session when STARTTLS is not offered.
+      ...(config.user && !config.secure ? { requireTLS: true } : {}),
       ...(config.user && config.password
         ? { auth: { user: config.user, pass: config.password } }
         : {}),
@@ -85,12 +88,14 @@ export function createEmailAdapter(
         "rendered_text",
       );
       if (!html && !renderedText) {
+        // Never fall back to dumping the raw payload into a recipient's mailbox.
         config.logger?.warn("communications.email.missing_rendered_body", {
           templateKey: request.templateKey,
           planeKey: request.planeKey,
         });
+        throw new CommunicationDeliveryError("Email has no rendered body", { channel: "email", retryable: false });
       }
-      const baseText = renderedText ?? JSON.stringify(request.payload, null, 2);
+      const baseText = renderedText ?? "";
       const links = request.attachments
         ?.filter((attachment) => attachment.disposition === "link" && attachment.downloadUrl)
         .map((attachment) => `${attachment.filename}: ${attachment.downloadUrl}`) ?? [];

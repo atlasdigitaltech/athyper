@@ -6,6 +6,8 @@
   "scripts": {
     "inventory:composition": "node scripts/verification/inventory-composition.mjs",
     "inventory:deleted-exports": "node scripts/verification/inventory-deleted-exports.mjs",
+    "inventory:publication-exports": "node scripts/verification/inventory-publication-exports.mjs",
+    "operations:enroll-publication-policy": "node scripts/operations/enroll-publication-policy.mjs",
     "dev": "cross-env MODE=api tsx watch src/main.ts",
     "dev:api": "tsx watch src/entrypoints/api.ts",
     "dev:control-api": "tsx src/entrypoints/control-api.ts",

@@ -10,6 +10,7 @@
     "./errors": "./src/errors/index.ts",
     "./lifecycle": "./src/lifecycle/index.ts",
     "./observability": "./src/observability/index.ts",
+    "./plane": "./src/plane/index.ts",
     "./resilience": "./src/resilience/index.ts",
     "./tenancy": "./src/tenancy/index.ts",
     "./transaction": "./src/transaction/index.ts",

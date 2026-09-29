@@ -3,9 +3,9 @@ import { sql, type Kysely } from "kysely";
 import { createAthyperDatabaseAdapter } from "@athyper/server-adapter-db-athyper";
 import { createNeonDatabaseAdapter } from "@athyper/server-adapter-db-neon";
 import { createMeshDatabaseAdapter } from "@athyper/server-adapter-db-mesh";
+import type { PlaneKey } from "@athyper/server-foundation/context";
 
-type Plane = "studio" | "neon" | "mesh";
-export function createAuthorizationWriterDatabases(path: string, planes?: readonly Plane[]) {
+export function createAuthorizationWriterDatabases(path: string, planes?: readonly PlaneKey[]) {
   if (statSync(path).size > 65536)
     throw new Error("AUTHZ_WRITER_CONNECTIONS_INVALID");
   let input: any;
@@ -44,10 +44,10 @@ export function createAuthorizationWriterDatabases(path: string, planes?: readon
     )
       throw new Error("AUTHZ_WRITER_CONNECTIONS_INVALID");
   }
-  const adapters = Object.entries(input.connections).filter(([plane]) => !planes || planes.includes(plane as Plane)).map(
+  const adapters = Object.entries(input.connections).filter(([plane]) => !planes || planes.includes(plane as PlaneKey)).map(
     ([plane, connectionString]) => ({
-      plane: plane as Plane,
-      adapter: factories[plane as Plane]({
+      plane: plane as PlaneKey,
+      adapter: factories[plane as PlaneKey]({
         connectionString: connectionString as string,
         max: 2,
       }),
@@ -55,7 +55,7 @@ export function createAuthorizationWriterDatabases(path: string, planes?: readon
   );
   const databases = Object.fromEntries(
     adapters.map(({ plane, adapter }) => [plane, adapter.database]),
-  ) as Partial<Record<Plane, Kysely<Record<string, never>>>>;
+  ) as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>;
   return {
     databases,
     async qualify() {

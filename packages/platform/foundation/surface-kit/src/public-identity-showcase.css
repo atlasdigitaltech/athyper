@@ -6,6 +6,6 @@
   --a-identity-card-surface: var(--a-story-surface);
   --a-identity-card-border: var(--a-story-border);
   --a-identity-accent: var(--a-story-wave-bright);
-  --a-identity-interactive: #84caff;
+  --a-identity-interactive: var(--a-focus);
   --a-identity-focus-shadow: 0 0 0 1px var(--a-story-selection-border), 0 0 20px color-mix(in srgb, var(--a-identity-interactive) 12%, transparent);
 }

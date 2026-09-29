@@ -493,7 +493,7 @@
 
 .a-directory-filter .a-input,.a-directory-filter .a-select{font-weight:400}
 
-.a-directory-filter--single{grid-template-columns:minmax(0,1fr)}.a-directory-organizations{border:1px solid var(--a-border);border-radius:.5rem;overflow:hidden}.a-directory-organizations small{display:block}.a-directory-organizations input{accent-color:var(--a-primary,#264f89);width:1.1rem;height:1.1rem}.a-directory-filter .a-company-groups__heading strong{white-space:normal;overflow:visible;text-overflow:clip}
+.a-directory-filter--single{grid-template-columns:minmax(0,1fr)}.a-directory-organizations{border:1px solid var(--a-border);border-radius:.5rem;overflow:hidden}.a-directory-organizations small{display:block}.a-directory-organizations input{accent-color:var(--a-primary);width:1.1rem;height:1.1rem}.a-directory-filter .a-company-groups__heading strong{white-space:normal;overflow:visible;text-overflow:clip}
 
 /* Entity Pulse — the shared collection overview. */
 .a-entity-pulse{display:grid;gap:var(--a-space-5);min-width:0;color:var(--a-foreground)}

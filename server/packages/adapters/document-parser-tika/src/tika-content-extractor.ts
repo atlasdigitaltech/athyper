@@ -134,24 +134,26 @@ export function createTikaContentExtractor(
               `Tika returned ${response.status}${detail ? `: ${detail}` : ""}`,
             );
           }
-          const raw = await readBoundedText(response, maxResponseBytes);
-          const text = raw
+          // Read one byte past the cap so truncation is detectable rather than silent.
+          const raw = await readBoundedText(response, maxResponseBytes + 1);
+          const overCap = Buffer.byteLength(raw) > maxResponseBytes;
+          const cleaned = (overCap ? Buffer.from(raw).subarray(0, maxResponseBytes).toString("utf8") : raw)
             .replace(/\u0000/g, "")
-            .trim()
-            .slice(0, maxTextChars);
+            .trim();
+          const truncated = overCap || cleaned.length > maxTextChars;
+          const text = cleaned.slice(0, maxTextChars);
           const metadata: Record<string, string> = {};
           response.headers.forEach((value, key) => {
-            if (key.startsWith("x-tika-") || key === "content-type")
-              metadata[key] = value;
+            if (key.startsWith("x-tika-")) metadata[key] = value;
           });
+          if (truncated) metadata["x-athyper-truncated"] = "true";
           return {
             text,
             metadata,
             provider: "apache-tika",
             durationMs: Date.now() - started,
-            ...(metadata["content-type"]
-              ? { detectedContentType: metadata["content-type"] }
-              : {}),
+            // The response Content-Type is the requested text/plain, not the document's detected
+            // type, so detectedContentType is deliberately not reported from it.
           };
         },
         input.signal,

@@ -58,6 +58,7 @@ describe("Keycloak auth adapter", () => {
         issuer: ISSUER,
         audience: "athyper-api",
         algorithms: ["RS256"],
+        requiredClaims: ["exp", "iat", "sub"],
         clockTolerance: 30,
       },
     );
@@ -117,6 +118,14 @@ describe("Keycloak auth adapter", () => {
     );
   });
 
+  it("rejects ID and refresh tokens presented as access tokens", async () => {
+    vi.mocked(jose.jwtVerify).mockResolvedValueOnce({
+      payload: { iss: ISSUER, sub: "u", aud: "athyper-api", iat: 1, exp: 2, typ: "ID" },
+      protectedHeader: { alg: "RS256" },
+    } as never);
+    await expect(createKeycloakAuthAdapter(config()).verify("id-token")).rejects.toThrow("not an access token");
+  });
+
   it("can fetch keys privately while preserving the public issuer", () => {
     const privateJwks = "http://iam:8080/realms/athyper/protocol/openid-connect/certs";
     const adapter = createKeycloakAuthAdapter({
@@ -129,7 +138,8 @@ describe("Keycloak auth adapter", () => {
 
     expect(adapter.getIssuerUrl()).toBe(ISSUER);
     expect(jose.createRemoteJWKSet).toHaveBeenCalledWith(new URL(privateJwks), {
-      cooldownDuration: 600_000,
+      cacheMaxAge: 600_000,
+      cooldownDuration: 30_000,
     });
   });
 
