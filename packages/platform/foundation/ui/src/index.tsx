@@ -239,8 +239,8 @@ export { ScopePickerToolbar, CompanyGroups, type CompanyChoice } from "./company
 export { SearchableSelect, searchReferenceOptions, type ReferenceOption, type SearchableSelectMessages } from "./searchable-select";
 
 /** Controlled object search; filtering and keyboard shortcut ownership stay with the host workspace. */
-export const ObjectSearch = forwardRef<HTMLInputElement, { id: string; value: string; onValueChange: (value: string) => void; placeholder?: string; label: string }>(function ObjectSearch({id,value,onValueChange,placeholder,label},ref) {
- return <div className="a-object-search"><SearchIcon size={18} aria-hidden="true" /><Input ref={ref} id={id} type="search" autoComplete="off" enterKeyHint="search" aria-label={label} value={value} placeholder={placeholder} onChange={e=>onValueChange(e.target.value)} />{value ? <Button variant="ghost" size="small" aria-label="Clear search" onClick={()=>onValueChange("")}>Clear</Button> : <kbd aria-hidden="true">/</kbd>}</div>;
+export const ObjectSearch = forwardRef<HTMLInputElement, { id: string; value: string; onValueChange: (value: string) => void; placeholder?: string; label: string; maxLength?: number }>(function ObjectSearch({id,value,onValueChange,placeholder,label,maxLength},ref) {
+ return <div className="a-object-search"><SearchIcon size={18} aria-hidden="true" /><Input ref={ref} id={id} type="search" autoComplete="off" enterKeyHint="search" aria-label={label} value={value} placeholder={placeholder} maxLength={maxLength} onChange={e=>onValueChange(e.target.value)} />{value ? <Button variant="ghost" size="small" aria-label="Clear search" onClick={()=>onValueChange("")}>Clear</Button> : <kbd aria-hidden="true">/</kbd>}</div>;
 });
 
 export { AppliedFilters, type AppliedFilterChip } from "./applied-filters";

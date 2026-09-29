@@ -62,6 +62,7 @@ import {
 } from "@athyper/contract-platform-entity-list";
 
 import {
+  ENTITY_LIST_MAX_SEARCH_LENGTH,
   ENTITY_LIST_MAX_VISIBLE_COLUMNS,
   type EntityViewCatalog,
   type EntityApplicationDescriptorV1,
@@ -1928,6 +1929,7 @@ function ListChrome({
             value={query}
             onValueChange={setQuery}
             placeholder={`Search by ${searchHint(descriptor)}…`}
+            maxLength={ENTITY_LIST_MAX_SEARCH_LENGTH}
           />
         </form>
         <ViewSelector

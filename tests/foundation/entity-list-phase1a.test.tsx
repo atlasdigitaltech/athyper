@@ -8,6 +8,7 @@ import type {
   EntityListDescriptorV1,
   EntityListResultV1,
 } from "@athyper/contract-platform-entity-list";
+import { ENTITY_LIST_MAX_SEARCH_LENGTH } from "../../packages/contracts/platform/entity-list/src/index";
 import {
   entityViewsOperation,
   entityViewCommandOperation,
@@ -488,10 +489,11 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
       dom.window.document.body.textContent ?? "",
       /Unsafe injected view/,
     );
-    assert.ok(
+    assert.equal(
       dom.window.document.querySelector<HTMLInputElement>(
         "#entity-list-search",
-      ),
+      )?.maxLength,
+      ENTITY_LIST_MAX_SEARCH_LENGTH,
     );
     const listRequestsBeforeRefresh = requests.filter(
       (request) => request.kind === "list",
