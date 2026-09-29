@@ -443,11 +443,56 @@ export function usesEntityBackendAuthorization(
     context.planeKey,
     descriptor.entityCode,
   );
-  if (!expected) return false;
+  if (!expected) {
+    if (descriptor.authorization && !isLegacySafeEntityAuthorization(descriptor))
+      throw new Error("ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE");
+    return false;
+  }
   if (
     !descriptor.authorization ||
     entityAuthorizationProfileHash(descriptor.authorization) !== expected
   )
     throw new Error("ENTITY_BACKEND_DESCRIPTOR_PROFILE_MISMATCH");
   return true;
+}
+
+/** A published public, read-only tenant directory can retain its existing
+ * permission and tenant predicates. Every stronger policy needs an installed
+ * enforcing backend; otherwise a signed policy would silently be ignored. */
+export function isLegacySafeEntityAuthorization(descriptor: import("@athyper/server-contract-metadata").EntityRuntimeDescriptor): boolean {
+  const profile = descriptor.authorization;
+  const runtime = descriptor.authorizationRuntime;
+  if (!profile || !runtime || !descriptor.storage) return false;
+  const publicReference = descriptor.referenceCapability === "common.platform.reference.view" &&
+    descriptor.storage.schema === "shared" && !descriptor.storage.tenantField;
+  if (runtime.schemaVersion !== 1 ||
+      (!publicReference && !descriptor.storage.tenantField) || profile.ownership !== "tenant.record.v1" ||
+      profile.directory.population !== "tenant" || profile.directory.operation !== "list" ||
+      profile.recordReadOperation !== "read" || profile.relationships.length ||
+      profile.deferredOperations?.length || profile.operations.length !== 2 ||
+      runtime.bindings.length !== 2 ||
+      descriptor.fields.some(field => field.writableOn.length ||
+        (field.classification !== undefined && field.classification !== "public"))) return false;
+  for (const key of ["list", "read"] as const) {
+    const operation = profile.operations.find(item => item.key === key);
+    const binding = runtime.bindings.find(item => item.operation === key);
+    if (!operation || operation.scope !== "tenant.record.v1" || operation.effect !== "read" ||
+        operation.target !== (key === "list" ? "collection" : "existing") ||
+        operation.requiresParentRead || operation.requiresPreflight ||
+        operation.permissionCode !== descriptor.operations[key]?.permissionCode ||
+        (publicReference && operation.permissionCode !== "common.platform.reference.view") ||
+        !binding || binding.handler !== `entity.record.${key}.v1` ||
+        binding.resolver !== "tenant.record.v1") return false;
+  }
+  const covered = new Set<string>();
+  for (const policy of profile.fieldPolicies) {
+    if (policy.representation !== "plain" || policy.readOperation !== "read" ||
+        policy.revealOperation || policy.writeOperations.length ||
+        policy.queryUses.some(use => !["search", "filter", "sort", "group"].includes(use))) return false;
+    for (const field of policy.fields) covered.add(field);
+  }
+  return descriptor.fields.every(field => covered.has(field.key) &&
+    (!field.searchable || profile.fieldPolicies.some(p => p.fields.includes(field.key) && p.queryUses.includes("search"))) &&
+    (!field.filterable || profile.fieldPolicies.some(p => p.fields.includes(field.key) && p.queryUses.includes("filter"))) &&
+    (!field.sortable || profile.fieldPolicies.some(p => p.fields.includes(field.key) && p.queryUses.includes("sort"))));
 }

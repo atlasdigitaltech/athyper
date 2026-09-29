@@ -420,7 +420,7 @@ it("profiled export download rechecks fields and authority before minting an art
   expect(createDownloadUrl).toHaveBeenCalledTimes(1);
 });
 
-it("publishing a profile alone does not select enforcement", async () => {
+it("fails closed when a published protected profile has no enforcing backend", async () => {
   const { usesEntityBackendAuthorization } =
     await import("../entity-backend-authorizer.js");
   const s = setup(),
@@ -428,9 +428,7 @@ it("publishing a profile alone does not select enforcement", async () => {
       entityCode: "business_partner",
       authorization: profile,
     } as import("@athyper/server-contract-metadata").EntityRuntimeDescriptor;
-  expect(usesEntityBackendAuthorization(s.authority, context, descriptor)).toBe(
-    false,
-  );
+  expect(() => usesEntityBackendAuthorization(s.authority, context, descriptor)).toThrow("ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE");
   expect(usesEntityBackendAuthorization(s.wrapped, context, descriptor)).toBe(
     true,
   );
@@ -440,6 +438,39 @@ it("publishing a profile alone does not select enforcement", async () => {
       authorization: undefined,
     }),
   ).toThrow("PROFILE_MISMATCH");
+});
+
+it("keeps a shared public read-only reference available and rejects masking", async () => {
+  const { isLegacySafeEntityAuthorization, usesEntityBackendAuthorization } =
+    await import("../entity-backend-authorizer.js");
+  const operations = (["list", "read"] as const).map(key => ({ key,
+    permissionCode: "common.platform.reference.view", scope: "tenant.record.v1" as const,
+    target: key === "list" ? "collection" as const : "existing" as const,
+    effect: "read" as const, requiresParentRead: false, requiresPreflight: false }));
+  const descriptor = {
+    entityCode: "example_reference", planeKey: "neon", referenceCapability: "common.platform.reference.view",
+    storage: { schema: "shared", object: "example_reference", idField: "id" },
+    fields: [{ key: "code", storagePath: "code", type: "string", required: true,
+      writableOn: [], classification: "public", searchable: true }],
+    operations: Object.fromEntries(operations.map(operation => [operation.key,
+      { code: operation.key, permissionCode: operation.permissionCode }])),
+    authorization: { schemaVersion: 1, entityCode: "example_reference", planeKey: "neon",
+      ownership: "tenant.record.v1", directory: { operation: "list", population: "tenant" },
+      recordReadOperation: "read", operations,
+      fieldPolicies: [{ key: "public", fields: ["code"], readOperation: "read",
+        representation: "plain", writeOperations: [], queryUses: ["search", "filter", "sort", "group"] }],
+      surfaces: [], relationships: [] },
+    authorizationRuntime: { schemaVersion: 1, runtimeVersion: "entity-authorization.v1",
+      bindings: operations.map(operation => ({ operation: operation.key,
+        handler: `entity.record.${operation.key}.v1`, resolver: "tenant.record.v1" })) },
+  } as unknown as import("@athyper/server-contract-metadata").EntityRuntimeDescriptor;
+  expect(isLegacySafeEntityAuthorization(descriptor)).toBe(true);
+  expect(usesEntityBackendAuthorization({ authorize: async () => ({ allowed: true }) }, context,
+    descriptor)).toBe(false);
+  const masked = { ...descriptor, authorization: { ...descriptor.authorization!,
+    fieldPolicies: [{ ...descriptor.authorization!.fieldPolicies[0]!, representation: "masked" as const }] } };
+  expect(() => usesEntityBackendAuthorization({ authorize: async () => ({ allowed: true }) }, context,
+    masked)).toThrow("ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE");
 });
 
 it("profiled collection reads reject a denied row and do not expose aggregate counts", async () => {

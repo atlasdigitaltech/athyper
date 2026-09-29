@@ -113,7 +113,7 @@ it("does not convert stale grants, missing candidates or unavailable authority i
     ),
   ).toBe(false);
 });
-it("discovers a context-gated destination through ordinary IAM without an enforced backend", async () => {
+it("does not discover a protected destination without an enforcing backend", async () => {
   const auth: Authorizer = {
     authorize: vi.fn<Authorizer["authorize"]>(async ({ resource }) =>
       resource?.operatingOrganizationId === "org"
@@ -121,18 +121,18 @@ it("discovers a context-gated destination through ordinary IAM without an enforc
         : { allowed: false, reason: "scope_not_contained" },
     ),
   };
-  expect(
-    await canDiscoverScopedNavigation(
+  await expect(
+    canDiscoverScopedNavigation(
       auth,
       context,
       descriptor,
       "navigate_review",
       permission,
     ),
-  ).toBe(true);
-  expect(auth.authorize).toHaveBeenCalledTimes(1);
-  expect(
-    await canDiscoverScopedNavigation(
+  ).rejects.toThrow("ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE");
+  expect(auth.authorize).not.toHaveBeenCalled();
+  await expect(
+    canDiscoverScopedNavigation(
       auth,
       {
         ...context,
@@ -150,7 +150,7 @@ it("discovers a context-gated destination through ordinary IAM without an enforc
       "navigate_review",
       permission,
     ),
-  ).toBe(false);
+  ).rejects.toThrow("ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE");
 });
 it("rejects proposed commands and mismatched snapshots", async () => {
   const auth = authority();

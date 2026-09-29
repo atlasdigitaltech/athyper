@@ -11,7 +11,8 @@ import { createEntityTransferRuntime } from "./shared/entity-runtime/transfers.j
 import { createEntityServices, type EntityServices } from "./shared/entity-runtime/services.js";
 import { createEntityExperienceHttpRegistrar, createEntityHttpRegistrars, createEntityResourceHttpRegistrar } from "./shared/entity-runtime/http-registrars.js";
 
-import { readCompiledRuntimeContract } from "@athyper/server-platform-metadata";
+import { assertEntityAuthorizationEnforceable } from "./shared/publication/entity-authorization-activation.js";
+import { readCompiledRuntimeContract, parseCompiledRuntimeContract } from "@athyper/server-platform-metadata";
 import { parseActivityBinding } from "@athyper/server-contract-publication";
 import { qualifyActivityRecordingGraph, resolveRecordHistoryBinding } from "./shared/entity-runtime/activity-recording.js";
 import { qualifyRecordHistoryDescriptor } from "@athyper/server-service-records";
@@ -4567,6 +4568,17 @@ function registerPublication(
       ...(authorizationCompilation ? { authorizationRuntime: authorizationCompilation.runtime } : {}),
     },
     activationGuard: async (deployment, loaded) => {
+      const envelope = loaded.document.envelope;
+      const descriptors = envelope.artifactKind === "entity_runtime" &&
+        envelope.payload.entityDescriptor.descriptorKind === "entity_runtime"
+        ? [envelope.payload.entityDescriptor.descriptor as unknown as import("@athyper/server-contract-metadata").EntityRuntimeDescriptor]
+        : envelope.artifactKind === "compiled_entity_runtime"
+          ? envelope.payload.artifacts.filter(item => item.artifactType === "runtime_contract")
+              .map(item => parseCompiledRuntimeContract(item, {
+                releaseId: envelope.releaseId, releaseNo: envelope.releaseNo,
+              }))
+          : [];
+      assertEntityAuthorizationEnforceable(descriptors, deployment.targetPlane, authorizer);
       if (loaded.document.manifest.evidence?.authorizationReviewMode !== "development_auto_approval") return;
       if (!devRuntime || deployment.targetEnvironment !== "local" || deployment.signingKeyId !== config.publication.signingKeyId)
         throw Error("DEV_RUNTIME_ACTIVATION_DENIED");
