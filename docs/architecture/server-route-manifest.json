@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2757,
+          "line": 2759,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2430,
+          "line": 2432,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
