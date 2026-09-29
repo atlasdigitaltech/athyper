@@ -17,7 +17,7 @@ Dated evidence and review reports. Each records what was observed for one source
 ## Bulk evidence: do not move without checking consumers
 
 - `bp-integration-20260921/` (logs, `native-intake-exact-release.json`, runtime-workload runs) is referenced by `governance/policy/reviews/business-partner-intake-runtime-workflow*.dev.json`, `tooling/scripts/local-dev/qualify-runtime-publication.mts`, `tooling/scripts/metadata/prepare-compiled-review.mts`, `server/db/scripts/operations/upgrades/bp-integration-20260921/README.md`, and the authorization inventory.
-- `attachment-discovery-{baseline,comparison,volume}-20260928.json` (0.7–2.4 MB) have no consumers outside `docs/` in the checked tree; candidates for archival once the linked report is retained.
+- `attachment-discovery-*-20260928.json` were moved to [../archive/attachment-discovery-20260928/](../archive/attachment-discovery-20260928/).
 - `*.log` files are git-ignored local output.
 
 ## Markdown reports

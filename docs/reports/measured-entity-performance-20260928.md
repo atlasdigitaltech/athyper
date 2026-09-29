@@ -90,9 +90,9 @@ concurrency without relying on timing assertions in normal unit tests.
 ## Regression gate and reproduction
 
 ```sh
-pnpm exec tsx tooling/scripts/performance/measure-attachment-discovery.mts --series 10000 --runs 5 --baseline docs/reports/attachment-discovery-baseline-20260928.json --output docs/reports/attachment-discovery-volume-20260928.json
+pnpm exec tsx tooling/scripts/performance/measure-attachment-discovery.mts --series 10000 --runs 5 --baseline docs/archive/attachment-discovery-20260928/attachment-discovery-baseline-20260928.json --output docs/archive/attachment-discovery-20260928/attachment-discovery-volume-20260928.json
 pnpm exec tsx tooling/scripts/performance/measure-detail-hooks.mts docs/reports/detail-hook-candidate-20260928.json
-pnpm exec tsx tooling/scripts/performance/check-performance-budgets.mts docs/reports/attachment-discovery-volume-20260928.json docs/reports/detail-hook-candidate-20260928.json
+pnpm exec tsx tooling/scripts/performance/check-performance-budgets.mts docs/archive/attachment-discovery-20260928/attachment-discovery-volume-20260928.json docs/reports/detail-hook-candidate-20260928.json
 ```
 
 The saved baseline contains the original SQL. Scaling adjusts only its synthetic
