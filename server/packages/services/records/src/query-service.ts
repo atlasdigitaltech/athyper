@@ -1,4 +1,7 @@
-import { prepareRecordOwnerAccess, type RecordOwnerAccessAdapter } from "./record-owner-access.js";
+import {
+  prepareRecordOwnerAccess,
+  type RecordOwnerAccessAdapter,
+} from "./record-owner-access.js";
 import { executeAuthorizedAggregate } from "./authorized-aggregate.js";
 import { MAX_LIST_FILTERS } from "./list-limits.js";
 import { validateFilterValue } from "./filter-value-validation.js";
@@ -151,7 +154,9 @@ export function createRecordListExecutor<Transaction = unknown>(
             entityCode: descriptor.entityCode,
             operationKey: directory.key,
             authorizationFieldUses,
-            authorizationProfileHash: entityAuthorizationProfileHash(descriptor.authorization!),
+            authorizationProfileHash: entityAuthorizationProfileHash(
+              descriptor.authorization!,
+            ),
             authorizationDescriptorHash: descriptor.compiledHash,
           },
         });
@@ -219,6 +224,14 @@ export function createRecordListExecutor<Transaction = unknown>(
           "REFERENCE_HYDRATION_UNAVAILABLE",
           "Reference hydration is not available for this list endpoint",
         );
+      const aggregateAuthorizationCovered =
+        enforced &&
+        Boolean(
+          options.authorizer.aggregateAuthorizationCovered?.(
+            query.context,
+            descriptor,
+          ),
+        );
       const repositoryResult = await options.transactions.run(
         query.context.planeKey,
         {
@@ -226,7 +239,11 @@ export function createRecordListExecutor<Transaction = unknown>(
           principalId: query.context.principalId,
         },
         async (transaction) => {
-          await prepareRecordOwnerAccess(options.ownerAccess,{context:query.context,descriptor,operation:"list"},transaction);
+          await prepareRecordOwnerAccess(
+            options.ownerAccess,
+            { context: query.context, descriptor, operation: "list" },
+            transaction,
+          );
           const input = {
             descriptor: {
               ...descriptor,
@@ -264,40 +281,46 @@ export function createRecordListExecutor<Transaction = unknown>(
               repository: options.repository,
               query: input,
               transaction,
-              authorize: async (recordId) => {
-                const decision = await options.authorizer.authorize({
-                  context: query.context,
-                  permissionCode: descriptor.operations["read"]!.permissionCode,
-                  resource: {
-                    ...collectionScope.authorizationResource,
-                    tenantId: query.context.tenantId,
-                    entityCode: descriptor.entityCode,
-                    resourceCode: descriptor.entityCode,
-                  operationKey: "read",
-                  authorizationProfileHash: entityAuthorizationProfileHash(descriptor.authorization!),
-                  authorizationDescriptorHash: descriptor.compiledHash,
-                    recordId,
+              authorize: aggregateAuthorizationCovered
+                ? async () => true
+                : async (recordId) => {
+                    const decision = await options.authorizer.authorize({
+                      context: query.context,
+                      permissionCode:
+                        descriptor.operations["read"]!.permissionCode,
+                      resource: {
+                        ...collectionScope.authorizationResource,
+                        tenantId: query.context.tenantId,
+                        entityCode: descriptor.entityCode,
+                        resourceCode: descriptor.entityCode,
+                        operationKey: "read",
+                        authorizationProfileHash:
+                          entityAuthorizationProfileHash(
+                            descriptor.authorization!,
+                          ),
+                        authorizationDescriptorHash: descriptor.compiledHash,
+                        recordId,
+                      },
+                    });
+                    if (
+                      !decision.allowed &&
+                      [
+                        "entity_authorization_unavailable",
+                        "entity_authorization_unmapped",
+                      ].includes(decision.reason ?? "")
+                    )
+                      throw new RecordServiceError(
+                        503,
+                        "ENTITY_AGGREGATE_AUTHORIZATION_UNAVAILABLE",
+                        "Aggregate authorization is unavailable",
+                      );
+                    return decision.allowed;
                   },
-                });
-                if (
-                  !decision.allowed &&
-                  [
-                    "entity_authorization_unavailable",
-                    "entity_authorization_unmapped",
-                  ].includes(decision.reason ?? "")
-                )
-                  throw new RecordServiceError(
-                    503,
-                    "ENTITY_AGGREGATE_AUTHORIZATION_UNAVAILABLE",
-                    "Aggregate authorization is unavailable",
-                  );
-                return decision.allowed;
-              },
             });
           return options.repository.list(input, transaction);
         },
       );
-      if (enforced) {
+      if (enforced && !aggregateAuthorizationCovered) {
         for (const row of repositoryResult.data) {
           const id = row[descriptor.storage.idField];
           if (typeof id !== "string" && typeof id !== "number")
@@ -358,9 +381,13 @@ function restrictResponseProjection(
     data: Object.freeze(
       result.data.map((row) =>
         Object.freeze(
-          projectAuthorizedRecordFields(descriptor, Object.fromEntries(
-            Object.entries(row).filter(([key]) => visible.has(key)),
-          ), enforced),
+          projectAuthorizedRecordFields(
+            descriptor,
+            Object.fromEntries(
+              Object.entries(row).filter(([key]) => visible.has(key)),
+            ),
+            enforced,
+          ),
         ),
       ),
     ),
@@ -411,7 +438,14 @@ export function createRecordQueryService<Transaction = unknown>(
           operationKey: "read",
           resourceCode: query.entityCode,
           recordId: query.recordId,
-          ...(descriptor.authorization ? { authorizationProfileHash: entityAuthorizationProfileHash(descriptor.authorization), authorizationDescriptorHash: descriptor.compiledHash } : {}),
+          ...(descriptor.authorization
+            ? {
+                authorizationProfileHash: entityAuthorizationProfileHash(
+                  descriptor.authorization,
+                ),
+                authorizationDescriptorHash: descriptor.compiledHash,
+              }
+            : {}),
         },
       );
       const projection = (
@@ -428,7 +462,11 @@ export function createRecordQueryService<Transaction = unknown>(
           principalId: query.context.principalId,
         },
         async (transaction) => {
-          await prepareRecordOwnerAccess(options.ownerAccess,{context:query.context,descriptor,operation:"read"},transaction);
+          await prepareRecordOwnerAccess(
+            options.ownerAccess,
+            { context: query.context, descriptor, operation: "read" },
+            transaction,
+          );
           return options.repository.get(
             descriptor,
             query.context.tenantId,
@@ -439,7 +477,11 @@ export function createRecordQueryService<Transaction = unknown>(
         },
       );
       if (data && enforced) assertProfiledScalarProjection(data, projection);
-      return { data: data ? projectAuthorizedRecordFields(descriptor, data, enforced) : null };
+      return {
+        data: data
+          ? projectAuthorizedRecordFields(descriptor, data, enforced)
+          : null,
+      };
     },
   };
 }
@@ -468,8 +510,17 @@ async function resolveCollectionScope(
   query: ListRecordsQuery,
   descriptor: Awaited<ReturnType<typeof descriptorFor>>,
 ): Promise<RecordCollectionScopeResolution> {
-  if (!resolver && (query.scopeCoordinate?.parentEntityCode || query.scopeCoordinate?.parentRecordId || query.scopeCoordinate?.relationshipKey))
-    throw new RecordServiceError(403, "ENTITY_PARENT_ACCESS_DENIED", "Related record scope is unavailable");
+  if (
+    !resolver &&
+    (query.scopeCoordinate?.parentEntityCode ||
+      query.scopeCoordinate?.parentRecordId ||
+      query.scopeCoordinate?.relationshipKey)
+  )
+    throw new RecordServiceError(
+      403,
+      "ENTITY_PARENT_ACCESS_DENIED",
+      "Related record scope is unavailable",
+    );
   if (resolver)
     return resolver.resolve({
       context: query.context,

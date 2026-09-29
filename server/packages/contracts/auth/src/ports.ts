@@ -22,6 +22,12 @@ export interface PermissionResolver {
 export interface Authorizer {
   /** Trusted installed backend qualification of a descriptor; never a grant. */
   entityDescriptorSupported?(descriptor: unknown): boolean;
+  /** Trusted backend declaration that collection authorization covers every
+   * identity enumerated by an aggregate query for this descriptor. */
+  aggregateAuthorizationCovered?(
+    context: VerifiedRequestContext,
+    descriptor: unknown,
+  ): boolean;
   /** Server-selected enforcement profile hash. Metadata alone never activates a policy. */
   enforcedEntityProfile?(
     planeKey: PlaneKey,

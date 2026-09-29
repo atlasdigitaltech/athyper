@@ -4,6 +4,12 @@ import type {
 } from "@athyper/server-contract-records";
 import { RecordServiceError } from "./errors.js";
 
+// Aggregate authorization must inspect the complete matching identity set, but
+// individual record decisions are independent. Keep the number of concurrent
+// policy evaluations bounded so a directory-sized exact count does not spend
+// its entire execution budget waiting on serial authorization round trips.
+const AUTHORIZATION_CONCURRENCY = 25;
+
 /** Materialize a bounded authorized identity set before SQL aggregation. No raw
  * caller predicate is accepted. The repository applies the same ID restriction
  * to rows, count and group queries, including FALSE for an empty set. */
@@ -27,6 +33,13 @@ export async function executeAuthorizedAggregate<Transaction>(input: {
         "Aggregate authorization could not complete within its execution budget",
       );
   };
+  const authorizeBatch = async (recordIds: readonly string[]) => {
+    const decisions = await Promise.all(
+      recordIds.map((recordId) => authorize(recordId)),
+    );
+    withinBudget();
+    return decisions;
+  };
   let cursor: string | undefined;
   for (;;) {
     const page = await repository.list(
@@ -40,6 +53,7 @@ export async function executeAuthorizedAggregate<Transaction>(input: {
       },
       transaction,
     );
+    const pageIds: string[] = [];
     for (const row of page.data) {
       withinBudget();
       const id = row[query.descriptor.storage.idField];
@@ -62,7 +76,18 @@ export async function executeAuthorizedAggregate<Transaction>(input: {
           "ENTITY_AGGREGATE_CAPACITY",
           "Aggregate authorization exceeds its bounded capacity",
         );
-      if (await authorize(id)) ids.push(id);
+      pageIds.push(id);
+    }
+    for (
+      let offset = 0;
+      offset < pageIds.length;
+      offset += AUTHORIZATION_CONCURRENCY
+    ) {
+      const batch = pageIds.slice(offset, offset + AUTHORIZATION_CONCURRENCY);
+      const decisions = await authorizeBatch(batch);
+      for (const [index, allowed] of decisions.entries()) {
+        if (allowed) ids.push(batch[index]!);
+      }
     }
     if (!page.pagination.hasMore) break;
     cursor = page.pagination.nextCursor;
@@ -79,9 +104,15 @@ export async function executeAuthorizedAggregate<Transaction>(input: {
     transaction,
   );
   // A revocation during enumeration or SQL execution invalidates the entire result.
-  for (const id of ids) {
-    withinBudget();
-    if (!(await authorize(id)))
+  for (
+    let offset = 0;
+    offset < ids.length;
+    offset += AUTHORIZATION_CONCURRENCY
+  ) {
+    const decisions = await authorizeBatch(
+      ids.slice(offset, offset + AUTHORIZATION_CONCURRENCY),
+    );
+    if (decisions.some((allowed) => !allowed))
       throw new RecordServiceError(
         403,
         "ENTITY_AGGREGATE_AUTHORIZATION_CHANGED",

@@ -99,6 +99,11 @@ function fixture(plane: "studio" | "neon" | "mesh") {
   ]);
   const metadata = { getEntityDescriptor: async () => descriptor };
   const refreshContext = vi.fn(async () => context);
+  const exists = vi.fn(async (c, d, recordId) =>
+    Boolean(
+      await memory.repository.get(d, c.tenantId, recordId, [d.storage.idField]),
+    ),
+  );
   const authorizer = createPublishedTenantRecordAuthorizer({
     authority: {
       authorize: async (r) => ({
@@ -107,16 +112,12 @@ function fixture(plane: "studio" | "neon" | "mesh") {
     },
     metadata,
     refreshContext,
-    exists: async (c, d, recordId) =>
-      Boolean(
-        await memory.repository.get(d, c.tenantId, recordId, [
-          d.storage.idField,
-        ]),
-      ),
+    exists,
   });
   return {
     context,
     authorizer,
+    exists,
     refreshContext,
     descriptor,
     replace: (d: EntityRuntimeDescriptor) => {
@@ -160,6 +161,21 @@ it.each(["studio", "neon", "mesh"] as const)(
     ).rejects.toThrow();
   },
 );
+
+it("uses qualified collection authorization for Country exact aggregates", async () => {
+  const f = fixture("neon");
+  await expect(
+    f.queries.list({
+      context: f.context,
+      entityCode: "country",
+      countMode: "exact",
+    }),
+  ).resolves.toMatchObject({ pagination: { total: 1 } });
+  expect(
+    f.authorizer.aggregateAuthorizationCovered?.(f.context, f.descriptor),
+  ).toBe(true);
+  expect(f.exists).not.toHaveBeenCalled();
+});
 
 it("denies identity changes and removed runtime bindings", async () => {
   const f = fixture("neon");

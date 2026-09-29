@@ -109,6 +109,19 @@ export function createPublishedTenantRecordAuthorizer(options: {
             authority.checkSourceConstraints.bind(authority),
         }
       : {}),
+    aggregateAuthorizationCovered(context, descriptor) {
+      const entity = descriptor as EntityRuntimeDescriptor;
+      // This adapter's qualified tenant-record profile has no record-level
+      // policy beyond existence. Aggregate enumeration occurs in the same
+      // repository that establishes existence, after collection authorization.
+      // Explicit rollout backends retain their own record-level enforcement.
+      return (
+        !authority.enforcedEntityProfile?.(
+          context.planeKey,
+          entity.entityCode,
+        ) && tenantRecordProfileSupported(entity)
+      );
+    },
     entityDescriptorSupported: tenantRecordProfileSupported,
     async authorize(request) {
       const entityCode = request.resource?.entityCode;
