@@ -133,6 +133,7 @@ planes/neon/snapshot/08_triggers.sql
 planes/neon/document/08_triggers.sql
 common/event/08_triggers.sql
 common/governance/08_triggers.sql
+planes/neon/governance/08_triggers.sql
 common/document/08_triggers.sql
 planes/neon/ledger/08_triggers.sql
 common/ai/08_triggers.sql
@@ -199,6 +200,7 @@ common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
 common/authz/16_content_record_acl_reference_seed.sql
 common/authz/17_common_reference_permission.sql
+common/authz/18_common_collaboration_permissions.sql
 common/authz/19_common_activity_permissions.sql
 common/shared/12_reference_seed.sql
 common/control/12_ui_locale_catalog_seed.sql
@@ -264,6 +266,7 @@ planes/neon/authz/25_partner_classification_permissions.sql
 planes/neon/master/31_partner_direct_commodity.sql
 planes/neon/control/18_partner_decision_contract.sql
 planes/neon/authz/26_partner_registration_permission.sql
+planes/neon/authz/27_partner_governed_operation_permissions.sql
 planes/neon/document/31_partner_registration_approvers.sql
 
 planes/neon/master/26_entity_owner_access.sql

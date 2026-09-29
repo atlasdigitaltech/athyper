@@ -14,7 +14,9 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS
    AND cs.status IN ('draft','in_review','approved') AND p.status IN ('approved','published');
 $$;
 REVOKE ALL ON FUNCTION publication.fn_entity_successor_saved_graph(uuid,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_entity_successor_saved_graph(uuid,uuid) TO athyper_runtime;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_entity_successor_saved_graph(uuid,uuid) TO athyper_runtime;
+END IF; END $$;
 
 -- Control API needs the pinned source, not broad reads of metadata, snapshots
 -- and publication tables. Caller tenant/principal remain mandatory.
@@ -48,7 +50,9 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS
      AND principal_type='service_account' AND provisioning_source='internal' AND status='active')=2;
 $$;
 REVOKE ALL ON FUNCTION publication.fn_entity_successor_enrollment_source(jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_entity_successor_enrollment_source(jsonb) TO athyper_runtime;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_entity_successor_enrollment_source(jsonb) TO athyper_runtime;
+END IF; END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_control_api') THEN
   GRANT USAGE ON SCHEMA publication TO athyper_control_api;
   GRANT EXECUTE ON FUNCTION publication.fn_entity_successor_enrollment_source(jsonb) TO athyper_control_api;
@@ -94,7 +98,9 @@ BEGIN
     'Ed25519',p_artifact->>'signingKeyId',p_artifact->>'signature',p_actor) RETURNING *;
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_create_system_entity_successor(uuid,uuid,bigint,uuid,jsonb,text[],uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_create_system_entity_successor(uuid,uuid,bigint,uuid,jsonb,text[],uuid) TO athyper_runtime;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_create_system_entity_successor(uuid,uuid,bigint,uuid,jsonb,text[],uuid) TO athyper_runtime;
+END IF; END $$;
 
 CREATE OR REPLACE FUNCTION publication.fn_system_entity_successor_policy(p_release uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
@@ -107,7 +113,9 @@ BEGIN
   RETURN (authority->'policy')-'productHash'-'targetPlanes';
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_system_entity_successor_policy(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_system_entity_successor_policy(uuid) TO athyper_runtime;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_system_entity_successor_policy(uuid) TO athyper_runtime;
+END IF; END $$;
 
 -- Approved immutable policy coordinates accompany the existing scoped source.
 -- v1/v2 readers and historical signed artifacts are not rewritten.

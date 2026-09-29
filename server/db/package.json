@@ -6,6 +6,7 @@
   "scripts": {
     "test:integration:binding-recovery": "node --test ../../tooling/scripts/verification/isolated-release20/binding-recovery-probe.test.mjs",
     "db:verify:migration-layout": "node scripts/checks/ddl/migration-layout.mjs",
+    "db:verify:ddl-manifest-coverage": "node scripts/checks/ddl/manifest-coverage.mjs",
     "db:verify:atlas-learning": "node scripts/checks/ddl/atlas-learning.mjs",
     "db:generate:atlas-learning": "node scripts/checks/ddl/atlas-learning.mjs --write",
     "test:integration:atlas-f4": "tsx ../apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts",

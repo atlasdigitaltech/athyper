@@ -27,4 +27,10 @@ SET search_path=pg_catalog,control,master,shared AS $$
  );
 $$;
 REVOKE ALL ON FUNCTION control.publication_policy_enrollment_is_active(uuid,text,uuid,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION control.publication_policy_enrollment_is_active(uuid,text,uuid,uuid) TO athyper_runtime,athyper_worker;
+DO $$ DECLARE r text; BEGIN
+ FOREACH r IN ARRAY ARRAY['athyper_runtime','athyper_worker'] LOOP
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname=r) THEN
+   EXECUTE format('GRANT EXECUTE ON FUNCTION control.publication_policy_enrollment_is_active(uuid,text,uuid,uuid) TO %I',r);
+  END IF;
+ END LOOP;
+END $$;
