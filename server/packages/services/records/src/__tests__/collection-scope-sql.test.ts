@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Kysely, PostgresDialect } from "kysely";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
-import { compileRecordCollectionScopeCondition } from "../kysely-record-repository.js";
+import { compileRecordCollectionScopeCondition, searchCondition } from "../kysely-record-repository.js";
 
 const descriptor = {
   schema: "athyper.entity-runtime-descriptor/1.0", entityCode: "business_partner", planeKey: "neon", releaseId: "release-1", releaseNo: 1, contractHash: "a".repeat(64), compiledHash: "b".repeat(64),
@@ -82,4 +82,14 @@ it("filters each commercial capability independently without treating it as elig
   expect(compiled.sql).not.toMatch(/FROM|status/);
  }
  expect(()=>compileRecordCollectionScopeCondition(descriptor,"tenant",{kind:"neon.business_partner.directory.v1",partnerRole:"invalid" as "supplier"})).toThrow("Unsupported partner capability");
+});
+
+describe("list search SQL", () => {
+  it("binds the search term with LIKE wildcards escaped", () => {
+    const database = new Kysely<Record<string, never>>({ dialect: new PostgresDialect({ pool: {} as never }) });
+    const searchable = { ...descriptor, fields: [{ key: "name", storagePath: "name", searchable: true }] } as unknown as EntityRuntimeDescriptor;
+    const compiled = searchCondition(searchable, "50%_off\\").compile(database);
+    expect(compiled.sql).toContain("ESCAPE");
+    expect(compiled.parameters).toEqual(["%50\\%\\_off\\\\%"]);
+  });
 });
