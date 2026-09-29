@@ -4,11 +4,11 @@
   "policyHash": "7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 753,
+    "discoveredTables": 754,
     "externalObjects": 12,
     "exactTableOverrides": 15,
     "exactRuntimeTableOverrides": 1,
-    "schemaDefaultedTables": 737,
+    "schemaDefaultedTables": 738,
     "byDataClass": {
       "ai_governance_and_runtime": 29,
       "audit_log": 17,
@@ -20,7 +20,7 @@
       "business_workflow_transactional": 10,
       "database_backup_object": 1,
       "ddl_catalog_reference": 127,
-      "derived_projection": 23,
+      "derived_projection": 24,
       "derived_runtime_projection": 13,
       "document_metadata": 159,
       "document_object": 2,
@@ -71,7 +71,7 @@
       "migrate_with_referenced_objects": 159,
       "provision_and_migrate_in_mesh_db_only": 43,
       "rebind_or_rotate_never_export": 1,
-      "rebuild_from_authoritative_data": 23,
+      "rebuild_from_authoritative_data": 24,
       "rebuild_from_published_authority": 13,
       "recreate_empty_in_mesh_then_rebuild_from_executed_manifest": 1,
       "recreate_empty_then_rebuild_from_executed_manifest": 1,
@@ -7583,7 +7583,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1146
+          "line": 1148
         }
       ],
       "decisionSource": "schema_default",
@@ -8537,7 +8537,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1012
+          "line": 1014
         }
       ],
       "decisionSource": "schema_default",
@@ -8933,7 +8933,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1180
+          "line": 1182
         }
       ],
       "decisionSource": "schema_default",
@@ -9581,7 +9581,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 731
+          "line": 732
         }
       ],
       "decisionSource": "exact_table_override",
@@ -9599,7 +9599,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 887
+          "line": 888
         }
       ],
       "decisionSource": "schema_default",
@@ -9653,7 +9653,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 854
+          "line": 855
         }
       ],
       "decisionSource": "schema_default",
@@ -9671,7 +9671,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 812
+          "line": 813
         }
       ],
       "decisionSource": "schema_default",
@@ -9689,7 +9689,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1225
+          "line": 1227
         }
       ],
       "decisionSource": "schema_default",
@@ -9815,7 +9815,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 984
+          "line": 986
         }
       ],
       "decisionSource": "schema_default",
@@ -9959,7 +9959,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 921
+          "line": 923
         }
       ],
       "decisionSource": "schema_default",
@@ -10103,7 +10103,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1066
+          "line": 1068
         }
       ],
       "decisionSource": "exact_table_override",
@@ -10121,7 +10121,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1111
+          "line": 1113
         }
       ],
       "decisionSource": "exact_table_override",
@@ -10139,7 +10139,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1258
+          "line": 1260
         }
       ],
       "decisionSource": "schema_default",
@@ -10157,7 +10157,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1292
+          "line": 1294
         }
       ],
       "decisionSource": "schema_default",
@@ -13479,6 +13479,24 @@
         {
           "path": "server/db/ddl/planes/mesh/snapshot/03_tables.sql",
           "line": 64
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "derived_projection",
+      "disposition": "rebuild_from_authoritative_data",
+      "retention": "discard after certified rebuild unless held as evidence",
+      "evidence": "rebuild version and authoritative source-count comparison",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "snapshot.record_version",
+      "schema": "snapshot",
+      "table": "record_version",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/snapshot/12_record_history.sql",
+          "line": 3
         }
       ],
       "decisionSource": "schema_default",

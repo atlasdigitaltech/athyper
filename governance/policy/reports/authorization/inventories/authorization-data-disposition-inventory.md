@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
-- Cataloged database tables: 753
+- Cataloged database tables: 754
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -33,7 +33,7 @@ or multiply classified runtime objects.
 | business_workflow_transactional | 10 |
 | database_backup_object | 1 |
 | ddl_catalog_reference | 127 |
-| derived_projection | 23 |
+| derived_projection | 24 |
 | derived_runtime_projection | 13 |
 | document_metadata | 159 |
 | document_object | 2 |
@@ -802,6 +802,7 @@ or multiply classified runtime objects.
 | `snapshot.mesh_bank_account_disclosure_received` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.mesh_business_partner_profile_received` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.network_account_profile_publication` | derived_projection | rebuild_from_authoritative_data | schema_default |
+| `snapshot.record_version` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.subscription_plan_entitlement` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.template_version` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `trustiam.application_projection` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |

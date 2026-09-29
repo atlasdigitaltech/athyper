@@ -1093,7 +1093,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 46,
+          "line": 47,
           "declaredPath": "/api/records/:entityCode/:recordId",
           "kind": "contract"
         }
@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2593,
+          "line": 2635,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2266,
+          "line": 2308,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -2849,7 +2849,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 37,
+          "line": 39,
           "declaredPath": "/api/entity-runtime/:entityCode/application-descriptor",
           "kind": "contract"
         }
@@ -2864,7 +2864,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 40,
+          "line": 42,
           "declaredPath": "/api/entity-runtime/:entityCode/detail-descriptor",
           "kind": "contract"
         }
@@ -2879,7 +2879,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 39,
+          "line": 41,
           "declaredPath": "/api/entity-runtime/:entityCode/form-descriptor",
           "kind": "contract"
         }
@@ -2894,7 +2894,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 42,
+          "line": 44,
           "declaredPath": "/api/entity-runtime/:entityCode/list",
           "kind": "contract"
         }
@@ -2909,7 +2909,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 38,
+          "line": 40,
           "declaredPath": "/api/entity-runtime/:entityCode/list-descriptor",
           "kind": "contract"
         }
@@ -2924,7 +2924,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 41,
+          "line": 43,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId",
           "kind": "contract"
         }
@@ -5463,7 +5463,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
-          "line": 142,
+          "line": 143,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications",
           "kind": "direct"
         }
@@ -5478,7 +5478,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
-          "line": 179,
+          "line": 180,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/templates",
           "kind": "direct"
         }
@@ -5493,7 +5493,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
-          "line": 192,
+          "line": 193,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/templates/:key",
           "kind": "direct"
         }
@@ -8106,7 +8106,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 42,
+          "line": 43,
           "declaredPath": "/api/records/:entityCode",
           "kind": "contract"
         }
@@ -8143,7 +8143,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 43,
+          "line": 44,
           "declaredPath": "/api/records/:entityCode/:recordId",
           "kind": "contract"
         }
@@ -10415,7 +10415,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 45,
+          "line": 46,
           "declaredPath": "/api/records/:entityCode/:recordId",
           "kind": "contract"
         }
@@ -10940,7 +10940,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 152,
+          "line": 156,
           "declaredPath": "/api/attachments/:attachmentId/extract",
           "kind": "direct"
         }
@@ -10970,7 +10970,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 148,
+          "line": 152,
           "declaredPath": "/api/attachments/:attachmentId/preview",
           "kind": "direct"
         }
@@ -10985,7 +10985,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 160,
+          "line": 164,
           "declaredPath": "/api/attachments/browse",
           "kind": "direct"
         }
@@ -11015,7 +11015,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 156,
+          "line": 160,
           "declaredPath": "/api/attachments/search",
           "kind": "direct"
         }
@@ -14867,7 +14867,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
-          "line": 283,
+          "line": 284,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/preview",
           "kind": "direct"
         }
@@ -14882,7 +14882,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
-          "line": 263,
+          "line": 264,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/validate",
           "kind": "direct"
         }
@@ -16530,7 +16530,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 44,
+          "line": 45,
           "declaredPath": "/api/records/:entityCode",
           "kind": "contract"
         }
@@ -16695,7 +16695,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 47,
+          "line": 48,
           "declaredPath": "/api/records/:entityCode/:recordId/transitions/:transitionCode",
           "kind": "contract"
         }
@@ -18652,7 +18652,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
-          "line": 239,
+          "line": 240,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/policy",
           "kind": "direct"
         }
@@ -18667,7 +18667,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
-          "line": 215,
+          "line": 216,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/templates/:key",
           "kind": "direct"
         }
