@@ -6,7 +6,7 @@ import {
   OllamaModelProvider,
   sharedAtlasInferenceQueue,
 } from "/app/server/node_modules/@athyper/server-adapter-ai-ollama/dist/index.js";
-import { createAtlasSemanticIndex } from "/app/server/dist/composition/atlas-semantic-index.js";
+import { createAtlasSemanticIndex } from "/app/server/dist/composition/shared/ai/atlas-semantic-index.js";
 const [generation, semantic] = JSON.parse(process.argv[2]);
 const diagnostics = [],
   requests = [],

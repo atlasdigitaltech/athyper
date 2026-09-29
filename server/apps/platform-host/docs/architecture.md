@@ -18,8 +18,8 @@ metadata, activate a release, or establish deployment isolation.
 - `src/config/validation.ts`: process-role validation before runtime imports.
 - `src/composition/runtimes/{http,workers,scheduler}.ts`: process startup and shutdown.
 - `src/composition/shared/`: entity runtime, entity governance, identity,
-  publication, collaboration, and document admission bindings.
-- `src/composition/spaces/`: existing Studio bindings and Neon-specific compatibility contracts.
+  publication, collaboration, document admission, AI, and verification bindings.
+- `src/composition/spaces/`: existing Studio and Neon bindings, plus Mesh exchange readiness.
 - `src/diagnostics/health/`: worker and scheduler heartbeat support.
 - `src/diagnostics/telemetry/`: metrics listener and error collector.
 - `src/development/`: development publication, graph preview, and verification delivery.

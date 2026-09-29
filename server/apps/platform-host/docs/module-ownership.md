@@ -13,6 +13,10 @@
 | `composition/shared/publication/` | Publication orchestration, qualification, recovery | Explicit publication responsibility |
 | `composition/shared/collaboration/` | Comments and attachment section providers | Capability names |
 | `composition/shared/documents/` | Document attachment admission | Document admission responsibility |
+| `composition/shared/ai/` | Atlas inference admission and document knowledge bindings | Preserve capability names |
+| `composition/shared/verification/` | Shared verification operational routes | Authentication and plane scope remain explicit |
+| `composition/coordination/` | Cross-plane entity release review | Name the coordinated operation |
+| `composition/control-plane/` | Privileged publication control authority | Separate from product spaces |
 | `composition/spaces/` | Existing space-specific bindings | Preserve truthful domain names |
 | `diagnostics/` | Heartbeat, metrics, error collection | Health or telemetry responsibility |
 | `development/` | Existing local publication and preview support | Responsibility; development scope supplied by directory |
@@ -80,3 +84,33 @@ The jobs runtime and scheduler share `JobDeploymentBoundary`. Physical queue
 names, cancellation channels, scheduler leader locks and durable ownership keys
 use the same deployment namespace; execution coordinates and job-store access
 must belong to served planes. Combined DEV transport names retain compatibility.
+
+## Layout audit resolution
+
+The composition root retains four `register-*` coordinators and the deprecated
+`create-container.ts` compatibility export. Kernel policy and capability readiness
+live under `kernel/`; capability-specific composition lives with its owner.
+`kernel/capability-readiness.ts` evaluates compatibility capability requirements;
+`capability-registration.ts` governs registration and resource eligibility.
+
+`spaces/mesh/exchange-readiness.ts` owns the existing Mesh readiness behavior.
+Neon finance and supplier bindings retain domain names under `spaces/neon/`.
+They are compatibility integrations, not generic Entity Framework behavior.
+
+Control authority is independent of Studio, Neon and Mesh. Its dedicated
+`entrypoints/control-api.ts` and `composition/control-plane/` remain intentional.
+Entity release review coordinates multiple planes and therefore keeps its own
+`composition/coordination/entity-release-review/` boundary.
+
+Configuration files for contact verification, publication policy and control
+serve environment parsing and validation, so remain in `config/`.
+`deployment-profile.ts` selects roles and served planes;
+`deployment-environment.ts` filters environment inputs for those selections.
+They have different responsibilities. The deprecated `config/index.ts` forwards
+to the canonical environment module until operational consumers migrate.
+
+Focused unit tests live in their owners' `__tests__/` folders. Tests exercising
+multiple composition boundaries stay in `composition/__tests__/`. Diagnostics
+already separates health and telemetry; add readiness or kernel lifecycle modules
+only when they own concrete behavior. Empty legacy processes, monitoring and
+entities directories have been removed.

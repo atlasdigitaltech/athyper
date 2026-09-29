@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createScopedMetaEntityAuthoringRepository } from "../../server/apps/platform-host/src/composition/scoped-meta-entity-authoring";
+import { createScopedMetaEntityAuthoringRepository } from "../../server/apps/platform-host/src/composition/shared/entity-governance/scoped-meta-entity-authoring";
 test("release inspection is forwarded through the host's authenticated transaction wrapper", async () => {
   const transaction = {} as never;
   const calls: unknown[] = [];

@@ -825,7 +825,7 @@
       "key": "athyper_activity_ddl_image",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/__tests__/activity-timeline.postgres.test.ts",
+        "server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/activity-timeline.postgres.test.ts",
         "server/db/scripts/__tests__/activity/activity-ddl.test.ts",
         "server/packages/services/records/src/__tests__/activity-snapshot.postgres.test.ts"
       ],
@@ -4115,7 +4115,7 @@
       "key": "entity_scope_postgres_test",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/__tests__/persisted-scopes.postgres.test.ts"
+        "server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/persisted-scopes.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5401,7 +5401,7 @@
       "key": "mesh_readiness_test_docker",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.postgres.test.ts"
+        "server/apps/platform-host/src/composition/spaces/mesh/__tests__/mesh-exchange-readiness.postgres.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -11568,7 +11568,7 @@
       "key": "system-verification",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/verification-routes.ts"
+        "server/apps/platform-host/src/composition/shared/verification/routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -11628,7 +11628,7 @@
       "key": "verification.probe",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/verification-routes.ts"
+        "server/apps/platform-host/src/composition/shared/verification/routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

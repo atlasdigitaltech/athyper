@@ -4573,7 +4573,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 716,
+          "line": 720,
           "declaredPath": "/api/iam/contexts",
           "kind": "contract"
         }
@@ -4618,7 +4618,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 372,
+          "line": 376,
           "declaredPath": "/api/iam/identity-saga-attempts/:attemptId/evidence",
           "kind": "contract"
         }
@@ -4723,7 +4723,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 566,
+          "line": 570,
           "declaredPath": "/api/iam/projection-health",
           "kind": "contract"
         }
@@ -6362,7 +6362,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/finance-routes.ts",
+          "source": "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts",
           "line": 266,
           "declaredPath": "/api/neon/finance/numbering/reconciliation",
           "kind": "contract"
@@ -7816,7 +7816,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/verification-routes.ts",
+          "source": "server/apps/platform-host/src/composition/shared/verification/routes.ts",
           "line": 65,
           "declaredPath": "/api/platform/verification",
           "kind": "contract"
@@ -10714,7 +10714,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts",
+          "source": "server/apps/platform-host/src/composition/shared/ai/atlas-attachment-knowledge.ts",
           "line": 382,
           "declaredPath": "/api/atlas/knowledge/attachments/reindex",
           "kind": "contract"
@@ -10729,7 +10729,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts",
+          "source": "server/apps/platform-host/src/composition/shared/ai/atlas-attachment-knowledge.ts",
           "line": 382,
           "declaredPath": "/api/atlas/knowledge/search",
           "kind": "contract"
@@ -14089,7 +14089,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 627,
+          "line": 631,
           "declaredPath": "/api/iam/projection-reconciliation-attempts/:attemptId/replay",
           "kind": "contract"
         }
@@ -15241,7 +15241,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/finance-routes.ts",
+          "source": "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts",
           "line": 195,
           "declaredPath": "/api/neon/finance/books/:ledgerBookId/periods/:fiscalPeriodId/transitions",
           "kind": "contract"
@@ -15451,7 +15451,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/finance-routes.ts",
+          "source": "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts",
           "line": 249,
           "declaredPath": "/api/neon/finance/numbering/allocations",
           "kind": "contract"
@@ -15481,7 +15481,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/finance-routes.ts",
+          "source": "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts",
           "line": 232,
           "declaredPath": "/api/neon/finance/posting-admissions",
           "kind": "contract"
@@ -15496,7 +15496,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/finance-routes.ts",
+          "source": "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts",
           "line": 216,
           "declaredPath": "/api/neon/finance/rounding/resolve",
           "kind": "contract"
@@ -16170,7 +16170,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/apps/platform-host/src/composition/verification-routes.ts",
+          "source": "server/apps/platform-host/src/composition/shared/verification/routes.ts",
           "line": 80,
           "declaredPath": "/api/platform/verification/runs",
           "kind": "contract"

@@ -9,7 +9,7 @@ import { registerAdapters } from "../composition/register-adapters.js";
 import { registerRuntimes } from "../composition/register-runtimes.js";
 import { registerPlatform } from "../composition/register-platform.js";
 import { registerServices } from "../composition/register-services.js";
-import { loadDeploymentEntityReleaseReview } from "../composition/entity-release-review-deployment.js";
+import { loadDeploymentEntityReleaseReview } from "../composition/coordination/entity-release-review/deployment.js";
 import { loadDevPublicationConfiguration } from "../development/publication.js";
 import { sql, type Kysely } from "kysely";
 import { KyselyPublicationAuthorityRepository } from "@athyper/server-service-publication";

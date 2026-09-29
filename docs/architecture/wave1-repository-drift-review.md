@@ -12,7 +12,7 @@ The corrected inventory adds **75 identities and removes none**. Historical prov
 
 | Source                                                                                | Added identities |
 | ------------------------------------------------------------------------------------- | ---------------: |
-| `server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts`             |                2 |
+| `server/apps/platform-host/src/composition/shared/ai/atlas-attachment-knowledge.ts`             |                2 |
 | `server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts`     |                2 |
 | `server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts`          |                7 |
 | `server/packages/platform/ai/src/atlas-routes.ts`                                     |                2 |

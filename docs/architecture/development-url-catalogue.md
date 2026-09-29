@@ -1032,11 +1032,11 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **GET** [/api/platform/verification](https://api.dev.athyper.test/api/platform/verification)  
   platform.verification.snapshot — Run authenticated read-only platform verification  
-  Source match: [source](../../server/apps/platform-host/src/composition/verification-routes.ts)
+  Source match: [source](../../server/apps/platform-host/src/composition/shared/verification/routes.ts)
 
 - **POST** [/api/platform/verification/runs](https://api.dev.athyper.test/api/platform/verification/runs)  
   platform.verification.run — Run bounded synthetic platform verification  
-  Source match: [source](../../server/apps/platform-host/src/composition/verification-routes.ts)
+  Source match: [source](../../server/apps/platform-host/src/composition/shared/verification/routes.ts)
 
 ### Public Records Transfer V1
 
@@ -1419,10 +1419,10 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Route contract · [source](../../server/packages/platform/ai/src/atlas-routes.ts)
 
 - **POST** [/api/atlas/knowledge/attachments/reindex](https://api.dev.athyper.test/api/atlas/knowledge/attachments/reindex)  
-  Route contract · [source](../../server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts)
+  Route contract · [source](../../server/apps/platform-host/src/composition/shared/ai/atlas-attachment-knowledge.ts)
 
 - **POST** [/api/atlas/knowledge/search](https://api.dev.athyper.test/api/atlas/knowledge/search)  
-  Route contract · [source](../../server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts)
+  Route contract · [source](../../server/apps/platform-host/src/composition/shared/ai/atlas-attachment-knowledge.ts)
 
 - **POST** [/api/atlas/learning-candidates](https://api.dev.athyper.test/api/atlas/learning-candidates)  
   Route contract · [source](../../server/packages/platform/ai/src/atlas-routes.ts)
@@ -1955,13 +1955,13 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 ### Source routes: /api/master
 
 - **PATCH** `/api/master/contacts/{id}/verification`  
-  Raw route · [source](../../server/apps/platform-host/src/composition/register-contact-verification.ts)
+  Raw route · [source](../../server/apps/platform-host/src/composition/shared/identity/contact-verification.ts)
 
 - **POST** `/api/master/contacts/{id}/verification-challenges`  
-  Raw route · [source](../../server/apps/platform-host/src/composition/register-contact-verification.ts)
+  Raw route · [source](../../server/apps/platform-host/src/composition/shared/identity/contact-verification.ts)
 
 - **POST** `/api/master/verification-challenges/{id}/complete`  
-  Raw route · [source](../../server/apps/platform-host/src/composition/register-contact-verification.ts)
+  Raw route · [source](../../server/apps/platform-host/src/composition/shared/identity/contact-verification.ts)
 
 ### Source routes: /api/me
 
@@ -2081,7 +2081,7 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Route contract · [source](../../server/packages/platform/experience/src/routes.ts)
 
 - **POST** `/api/neon/finance/books/{ledgerBookId}/periods/{fiscalPeriodId}/transitions`  
-  Route contract · [source](../../server/apps/platform-host/src/composition/finance-routes.ts)
+  Route contract · [source](../../server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts)
 
 - **GET** [/api/neon/finance/budget/balance](https://api.dev.athyper.test/api/neon/finance/budget/balance)  
   Route contract · [source](../../server/packages/planes/neon/src/register-finance.ts)
@@ -2135,10 +2135,10 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Route contract · [source](../../server/packages/planes/neon/src/register-finance.ts)
 
 - **POST** [/api/neon/finance/numbering/allocations](https://api.dev.athyper.test/api/neon/finance/numbering/allocations)  
-  Route contract · [source](../../server/apps/platform-host/src/composition/finance-routes.ts)
+  Route contract · [source](../../server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts)
 
 - **GET** [/api/neon/finance/numbering/reconciliation](https://api.dev.athyper.test/api/neon/finance/numbering/reconciliation)  
-  Route contract · [source](../../server/apps/platform-host/src/composition/finance-routes.ts)
+  Route contract · [source](../../server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts)
 
 - **GET** [/api/neon/finance/planning/output](https://api.dev.athyper.test/api/neon/finance/planning/output)  
   Route contract · [source](../../server/packages/planes/neon/src/register-finance.ts)
@@ -2147,10 +2147,10 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Route contract · [source](../../server/packages/planes/neon/src/register-finance.ts)
 
 - **POST** [/api/neon/finance/posting-admissions](https://api.dev.athyper.test/api/neon/finance/posting-admissions)  
-  Route contract · [source](../../server/apps/platform-host/src/composition/finance-routes.ts)
+  Route contract · [source](../../server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts)
 
 - **POST** [/api/neon/finance/rounding/resolve](https://api.dev.athyper.test/api/neon/finance/rounding/resolve)  
-  Route contract · [source](../../server/apps/platform-host/src/composition/finance-routes.ts)
+  Route contract · [source](../../server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts)
 
 - **POST** [/api/neon/finance/tax/calculate](https://api.dev.athyper.test/api/neon/finance/tax/calculate)  
   Route contract · [source](../../server/packages/planes/neon/src/register-finance.ts)

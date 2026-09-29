@@ -110,7 +110,7 @@
         "serviceOwner": "@athyper/server-service-finance",
         "featureGate": "WAVE0_FINANCE_ROUTES_ENABLED",
         "repository": ["server/packages/services/finance/src/index.ts"],
-        "entryPoints": ["server/apps/platform-host/src/composition/finance-routes.ts"]
+        "entryPoints": ["server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"]
       }
     },
     {

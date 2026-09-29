@@ -265,7 +265,7 @@ test("current manifests include finance descriptor routes alongside host contrac
   const f = fixture(t);
   for (const path of [
     "server/packages/planes/neon/src/register-finance.ts",
-    "server/apps/platform-host/src/composition/finance-routes.ts",
+    "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts",
   ]) {
     f.write(
       path,

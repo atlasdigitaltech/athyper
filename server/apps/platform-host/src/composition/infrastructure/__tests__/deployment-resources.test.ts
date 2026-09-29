@@ -13,7 +13,7 @@ import { registerDatabases, registerWorkerDatabases } from "../databases.js";
 import { selectDatabaseConfiguration } from "../database-selection.js";
 
 const mocks = vi.hoisted(() => ({ qualify: vi.fn(), writers: vi.fn() }));
-vi.mock("../../database-qualification.js", () => ({
+vi.mock("../database-qualification.js", () => ({
   qualifyRuntimePlaneDatabase: mocks.qualify,
 }));
 vi.mock("../authorization-writer-databases.js", () => ({

@@ -208,7 +208,7 @@ Foundation completion means a reviewed BP correction measurably improves unseen 
 - [Current AI metadata schema](../../server/packages/contracts/metadata/src/entity-ai.ts)
 - [Shared entity section executor](../../server/packages/platform/ai/src/entity-section-tool.ts)
 - [Current BP routing](../../server/packages/platform/ai/src/business-partner-tool-selection.ts)
-- [Host capability assessment](../../server/apps/platform-host/src/composition/capability-registry.ts)
+- [Host capability assessment](../../server/apps/platform-host/src/kernel/capability-readiness.ts)
 - [Knowledge service](../../server/packages/platform/ai/src/knowledge.ts)
 - [Monitoring and feedback persistence](../../server/packages/platform/ai/src/monitoring.ts)
 - [Evidence reuse policy](../../server/packages/platform/ai/src/insight-reuse-policy.ts)

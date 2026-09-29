@@ -90,9 +90,9 @@ const add = (name, destination, bytes) => {
 };
 add(
   "entity-release-review-deployment.js",
-  "/app/server/dist/composition/entity-release-review-deployment.js",
+  "/app/server/dist/composition/coordination/entity-release-review/deployment.js",
   fs.readFileSync(
-    "server/apps/platform-host/dist/composition/entity-release-review-deployment.js",
+    "server/apps/platform-host/dist/composition/coordination/entity-release-review/deployment.js",
   ),
 );
 
@@ -117,7 +117,7 @@ run([
   tag,
   "--input-type=module",
   "-e",
-  `await import('/app/server/dist/composition/entity-release-review-deployment.js');await import('/app/server/dist/composition/register-services.js');`,
+  `await import('/app/server/dist/composition/coordination/entity-release-review/deployment.js');await import('/app/server/dist/composition/register-services.js');`,
 ]);
 const image = run(["image", "inspect", "--format", "{{.Id}}", tag]).trim();
 for (const name of ["api", "worker"]) {

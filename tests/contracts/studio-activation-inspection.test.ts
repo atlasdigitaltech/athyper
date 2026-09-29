@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { classifyActivation } from "../../server/apps/platform-host/src/composition/meta-entity-activation-inspection";
+import { classifyActivation } from "../../server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-activation-inspection";
 const expected = { id: "release", contractHash: "hash" } as never;
 const row = {
   releaseId: "release",

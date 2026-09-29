@@ -8,7 +8,7 @@ import { startProcessMetricsEndpoint } from "../../diagnostics/telemetry/process
 export async function startWorkerRuntime(): Promise<void> {
   const { config, lifecycle, container } = await bootstrap("worker");
   const { startRuntimes } = await import("../register-runtimes.js");
-  const { registerInvalidationWorkers } = await import("../register-invalidation-workers.js");
+  const { registerInvalidationWorkers } = await import("./invalidation-workers.js");
   registerInvalidationWorkers(container, config, lifecycle);
   await startRuntimes(container, config.mode);
   const metrics = container.adapters.processMetrics

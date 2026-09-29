@@ -1,4 +1,4 @@
-import {sweepSupplierInformation} from "../../../server/apps/platform-host/src/composition/supplier-information-sla.js";
+import {sweepSupplierInformation} from "../../../server/apps/platform-host/src/composition/spaces/neon/supplier-information-sla.js";
 /** Real PostgreSQL interaction qualification; every schema/fixture mutation is rolled back. */
 import assert from "node:assert/strict";
 import { createKyselySlaAutomationRepository } from "../../../server/packages/platform/workflow/src/sla-automation.js";

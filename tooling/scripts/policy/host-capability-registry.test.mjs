@@ -10,7 +10,7 @@ const row = {
   featureGate: "FINANCE_ENABLED",
   commands: { decision: "supported", codes: ["finance.period.transition"] },
   repository: ["server/packages/services/finance/src/repository.ts"],
-  entryPoints: ["server/apps/platform-host/src/composition/finance-routes.ts"],
+  entryPoints: ["server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"],
   auditEvent: ["finance.period.transitioned"],
   outboxEvent: ["finance.period.transitioned.v1"],
 };

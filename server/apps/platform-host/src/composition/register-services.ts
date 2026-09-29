@@ -37,20 +37,20 @@ import { createRecordParticipantResolver } from "@athyper/server-platform-experi
 import { createKyselyPermissionResolver } from "@athyper/server-platform-iam";
 import { expireCommentDrafts } from "@athyper/server-platform-collaboration";
 import { createEntityCapabilityPolicy, EntityCapabilityPolicyError, canReplyAtDepth } from "@athyper/server-platform-experience";
-import { createMetaEntityActivationInspector } from "./meta-entity-activation-inspection.js";
+import { createMetaEntityActivationInspector } from "./shared/entity-governance/meta-entity-activation-inspection.js";
 import { HttpError } from "@athyper/server-runtime-http";
 import { addressFormChoices, bankFormChoices, bankFormSources, createSharedReferenceDirectory, isSharedReferenceSourceKey, requiresSharedReferenceDependency } from "@athyper/server-service-records";
 import { readPublishedNotificationConfiguration, readPublishedCollectionConfiguration } from "@athyper/server-service-publication";
 import { localGraphPreview } from "../development/graph-preview.js";
 import { prepareDocumentCollectionRelease } from "@athyper/server-plane-studio";
-import { RedisInferenceAdmission } from "./atlas-inference-admission.js";
-import { parseAtlasSemanticConfig } from "./atlas-semantic-index.js";
-import { createAtlasDocumentGrounding } from "./atlas-document-grounding.js";
-import { registerAtlasAttachmentKnowledge } from "./atlas-attachment-knowledge.js";
+import { RedisInferenceAdmission } from "./shared/ai/atlas-inference-admission.js";
+import { parseAtlasSemanticConfig } from "./shared/ai/atlas-semantic-index.js";
+import { createAtlasDocumentGrounding } from "./shared/ai/atlas-document-grounding.js";
+import { registerAtlasAttachmentKnowledge } from "./shared/ai/atlas-attachment-knowledge.js";
 import { createAuthenticatedEntityReleaseReview } from "@athyper/server-service-publication";
 import { getRequestContext as authoringRequestContext } from "@athyper/server-foundation/context";
-import { createMetaEntityAuthoringAuthorizer, createMetaEntityInspectionAuthorizer } from "./meta-entity-authoring-authorizer.js";
-import { createScopedMetaEntityAuthoringRepository } from "./scoped-meta-entity-authoring.js";
+import { createMetaEntityAuthoringAuthorizer, createMetaEntityInspectionAuthorizer } from "./shared/entity-governance/meta-entity-authoring-authorizer.js";
+import { createScopedMetaEntityAuthoringRepository } from "./shared/entity-governance/scoped-meta-entity-authoring.js";
 import { createDevRuntimePublication } from "../development/runtime-publication.js";
 import { loadDevPublicationConfiguration, registerDevPublicationRoutes } from "../development/publication.js";
 import { registerPublicationWorkloadRoutes } from "./shared/publication/workload-routes.js";
@@ -92,7 +92,7 @@ import {
   createAtlasLocalGenerationServices,
   parseAtlasLocalConfiguration,
 } from "@athyper/server-platform-ai";
-import { registerContactVerification, type ContactVerificationFactory } from "./register-contact-verification.js";
+import { registerContactVerification, type ContactVerificationFactory } from "./shared/identity/contact-verification.js";
 import { createKyselyEntitlementRuntime } from "@athyper/server-platform-entitlements";
 import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
 
@@ -347,7 +347,7 @@ import {
   DefaultNumberingService,
 } from "@athyper/server-service-numbering";
 import { BookPeriodService, CloseReadinessService, FinanceNumberingService, FinancePostingGuard, KyselyBookPeriodRepository, KyselyCloseReadinessRepository, KyselyFinanceFoundationReader, KyselyFinanceNumberingPolicyReader, KyselyFinanceNumberingRepository, KyselyRoundingPolicyReader, RoundingResolver, SnapshotFinanceSourceDocumentReader, financeFoundation, snapshotFinancePermissionChecker } from "@athyper/server-service-finance";
-import { registerFinanceRoutes } from "./finance-routes.js";
+import { registerFinanceRoutes } from "./spaces/neon/finance-routes.js";
 import { createRecordOwnerAccessAdapter, createKyselyRecordRepository, createKyselyCommandExecutionStore, createEntityBackendAuthorizer, GovernedImportAdapterRegistry, MAINTAIN_RECORD_TRANSFERS_JOB, RECORD_TRANSFER_MAINTENANCE_QUEUE, createRecordTransferMaintenanceHandler } from "@athyper/server-service-records";
 import { sql, type Kysely, type Transaction } from "kysely";
 
@@ -360,7 +360,7 @@ import { APPLY_PUBLICATION_RELEASE_JOB, COMPILE_PUBLICATION_ARTIFACT_JOB, SIGN_P
 
 import type { HostConfig } from "../config/environment.js";
 import type { Container } from "../kernel/container.js";
-import { registerVerification } from "./verification-routes.js";
+import { registerVerification } from "./shared/verification/routes.js";
 import { randomUUID } from "node:crypto";
 
 type RecordTransaction = Transaction<Record<string, never>>;

@@ -19,7 +19,7 @@ if (corrected) {
   const { createRedisCacheAdapter } =
     await import("/app/server/node_modules/@athyper/server-adapter-cache-redis/dist/index.js");
   const { RedisInferenceAdmission } =
-    await import("/app/server/dist/composition/atlas-inference-admission.js");
+    await import("/app/server/dist/composition/shared/ai/atlas-inference-admission.js");
   cache = createRedisCacheAdapter({
     url:
       "redis://:" +

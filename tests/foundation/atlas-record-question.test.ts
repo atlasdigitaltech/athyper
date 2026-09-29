@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { atlasRequestsRecordOverview } from "../../server/apps/platform-host/src/composition/atlas-record-question";
+import { atlasRequestsRecordOverview } from "../../server/apps/platform-host/src/composition/shared/ai/atlas-record-question";
 test("record overview bypasses incidental document matches", () => {
   for (const query of [
     "Explain the saved information in overview.",

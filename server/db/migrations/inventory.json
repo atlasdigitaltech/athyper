@@ -239,7 +239,7 @@
       "callers": [
         "server/db/scripts/__tests__/platform/db-review-deployment.test.ts",
         "server/db/scripts/tests/integration/db-review/run.mjs",
-        "server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.postgres.test.ts"
+        "server/apps/platform-host/src/composition/spaces/mesh/__tests__/mesh-exchange-readiness.postgres.test.ts"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
       "legacyPlanes": [

@@ -4,7 +4,7 @@ import type { RegistrationPlan } from "../../kernel/registration-plan.js";
 import { createAthyperDatabaseAdapter } from "@athyper/server-adapter-db-athyper";
 import { createMeshDatabaseAdapter } from "@athyper/server-adapter-db-mesh";
 import { createNeonDatabaseAdapter } from "@athyper/server-adapter-db-neon";
-import { qualifyRuntimePlaneDatabase } from "../database-qualification.js";
+import { qualifyRuntimePlaneDatabase } from "./database-qualification.js";
 import { tryGetRequestContext } from "@athyper/server-foundation/context";
 import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
 import type { HostConfig } from "../../config/environment.js";

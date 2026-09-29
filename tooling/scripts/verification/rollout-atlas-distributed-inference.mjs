@@ -173,7 +173,7 @@ try {
   await healthy(["athyper-dev-atlas-atlas-inference-1"]);
   const provision = isolated(
     build.imageDigest,
-    `import{readFileSync}from'node:fs';import{randomUUID}from'node:crypto';import{createRedisCacheAdapter}from'/app/server/node_modules/@athyper/server-adapter-cache-redis/dist/index.js';import{ATLAS_INFERENCE_ADMISSION_KEY as key}from'/app/server/dist/composition/atlas-inference-admission.js';const c=createRedisCacheAdapter({url:'redis://:'+encodeURIComponent(readFileSync('/run/secrets/redis-password','utf8').trim())+'@memorycache:6379'});await c.connect();try{if(await c.client.hget(key,'owner'))throw Error('Owner is present; explicit recovery required');const created=await c.client.hsetnx(key,'epoch',randomUUID());console.log(JSON.stringify({initialized:true,created:created===1}));}finally{await c.close();}`,
+    `import{readFileSync}from'node:fs';import{randomUUID}from'node:crypto';import{createRedisCacheAdapter}from'/app/server/node_modules/@athyper/server-adapter-cache-redis/dist/index.js';import{ATLAS_INFERENCE_ADMISSION_KEY as key}from'/app/server/dist/composition/shared/ai/atlas-inference-admission.js';const c=createRedisCacheAdapter({url:'redis://:'+encodeURIComponent(readFileSync('/run/secrets/redis-password','utf8').trim())+'@memorycache:6379'});await c.connect();try{if(await c.client.hget(key,'owner'))throw Error('Owner is present; explicit recovery required');const created=await c.client.hsetnx(key,'epoch',randomUUID());console.log(JSON.stringify({initialized:true,created:created===1}));}finally{await c.close();}`,
   );
   assert.ok(provision.initialized);
   report.checks.push(
