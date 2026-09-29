@@ -10895,7 +10895,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 156,
+          "line": 166,
           "declaredPath": "/api/attachments/:attachmentId/extract",
           "kind": "direct"
         }
@@ -10925,7 +10925,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 152,
+          "line": 162,
           "declaredPath": "/api/attachments/:attachmentId/preview",
           "kind": "direct"
         }
@@ -10940,7 +10940,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 164,
+          "line": 175,
           "declaredPath": "/api/attachments/browse",
           "kind": "direct"
         }
@@ -10970,7 +10970,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 160,
+          "line": 170,
           "declaredPath": "/api/attachments/search",
           "kind": "direct"
         }
