@@ -13,7 +13,7 @@ const receipts = [];
 for (const plane of ["studio","neon","mesh"]) {
   const migrations = [...(plane === "studio" ? ["20260928_entity_activity_authoring.sql"] : []),"20260928_entity_activity_permissions.sql","20260928_record_history.sql"];
   for (const file of migrations) {
-    const source = readFileSync(new URL(`../../../migrations/${file}`,import.meta.url),"utf8");
+    const source = readFileSync(new URL(`../upgrades/post-baseline-20260929/${file}`,import.meta.url),"utf8");
     if (file === "20260928_record_history.sql" && run(plane,"SELECT to_regclass('snapshot.record_version') IS NOT NULL;").trim() === "t") {
       // Never mark an unknown pre-existing schema as migrated.
       const check = run(plane,"SELECT count(*) FROM pg_constraint WHERE conrelid='snapshot.record_version'::regclass AND contype='c' AND pg_get_constraintdef(oid) LIKE '%aggregate%' AND pg_get_constraintdef(oid) LIKE '%domain%' AND pg_get_constraintdef(oid) LIKE '%delete%';").trim();

@@ -1,21 +1,23 @@
 # Canonical development baseline and future upgrades
 
-The development baseline has no automatic SQL migrations. Fresh databases install
-`../ddl/planes/<plane>/_manifest.txt`; the three upgrade manifests are intentionally
-comment-only and `runner-transactions.sha256` is empty. Keep these files in Git:
-the startup runner requires them and safely handles an empty sequence.
+Fresh databases install `../ddl/planes/<plane>/_manifest.txt`. The three upgrade
+manifests in `manifests/` are intentionally comment-only and
+`runner-transactions.sha256` is empty. Keep these files in Git: the startup runner
+requires them and safely handles an empty sequence. Local DEV/QA databases are
+rebuilt from the foundation DDL rather than upgraded.
 
 Maintain final tables, constraints, indexes, functions, triggers, RLS, grants and
 reference seeds in their owning canonical DDL files. Do not replay foundation DDL
-on populated DEV/QA databases or reset their migration receipts.
+on populated DEV/QA databases or reset their migration receipts. A future forward upgrade may leave the manifests only after every retained
+environment's `public.athyper_schema_migration_v1` ledger records it.
 
-The reviewed 64-file inventory now records:
+The reviewed inventory now records:
 
 | Disposition                     | Count | Location / purpose                                                                                                          |
 | ------------------------------- | ----: | --------------------------------------------------------------------------------------------------------------------------- |
 | Canonical retirement            |     8 | Redundant copies retired; canonical mappings retained.                                                                      |
-| Legacy upgrade                  |    43 | `../scripts/operations/upgrades/legacy-baseline-20260914/`; exact SQL retained for reviewed legacy upgrade/rehearsal paths. |
-| Operational upgrade             |     5 | `../scripts/operations/upgrades/publication/`; explicit installers.                                                         |
+| Legacy upgrade                  |    66 | `../scripts/operations/upgrades/legacy-baseline-20260914/` (43) and `post-baseline-20260929/` (23); exact SQL retained for rehearsal. |
+| Operational upgrade             |     9 | `../scripts/operations/upgrades/{publication,authoring,bp-integration-20260921,partner-classification}/`; explicit installers. |
 | Historical fixture              |     6 | `../scripts/tests/integration/fixtures/legacy-upgrades/`; staged test schemas.                                              |
 | Operational repair              |     2 | `../scripts/operations/repair/reference-permissions/`.                                                                      |
 | Automatic post-baseline upgrade |     0 | Add only new, reviewed changes here.                                                                                        |

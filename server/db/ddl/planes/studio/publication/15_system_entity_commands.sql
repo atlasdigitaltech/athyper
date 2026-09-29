@@ -134,7 +134,9 @@ BEGIN
     octet_length(publication.fn_successor_canonical_json(p_graph)),outcome::metadata.contract_validation_status_d,p_report->'issues',p_actor);
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_record_system_entity_validation(uuid,bigint,jsonb,jsonb,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_record_system_entity_validation(uuid,bigint,jsonb,jsonb,uuid) TO athyper_runtime;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_record_system_entity_validation(uuid,bigint,jsonb,jsonb,uuid) TO athyper_runtime;
+END IF; END $$;
 
 CREATE OR REPLACE FUNCTION publication.fn_transition_system_entity_change_set(
   p_change_set uuid,p_revision bigint,p_from text,p_to text,p_actor uuid
@@ -153,7 +155,9 @@ BEGIN
     WHERE id=p_change_set AND lock_version=p_revision AND status::text=p_from RETURNING *;
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_transition_system_entity_change_set(uuid,bigint,text,text,uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_transition_system_entity_change_set(uuid,bigint,text,text,uuid) TO athyper_runtime;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_transition_system_entity_change_set(uuid,bigint,text,text,uuid) TO athyper_runtime;
+END IF; END $$;
 
 CREATE OR REPLACE FUNCTION publication.fn_create_system_entity_release(
   p_id uuid,p_change_set uuid,p_revision bigint,p_artifact jsonb,p_targets text[],p_actor uuid
@@ -188,7 +192,9 @@ BEGIN
     'Ed25519',p_artifact->>'signingKeyId',p_artifact->>'signature',p_actor) RETURNING *;
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_create_system_entity_release(uuid,uuid,bigint,jsonb,text[],uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_create_system_entity_release(uuid,uuid,bigint,jsonb,text[],uuid) TO athyper_runtime;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_create_system_entity_release(uuid,uuid,bigint,jsonb,text[],uuid) TO athyper_runtime;
+END IF; END $$;
 
 CREATE OR REPLACE FUNCTION publication.fn_store_system_entity_artifact(p_release uuid,p_plane text,p_descriptor jsonb,p_compliance jsonb)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
@@ -215,7 +221,9 @@ BEGIN
     p_compliance,r.published_by);
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_store_system_entity_artifact(uuid,text,jsonb,jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_store_system_entity_artifact(uuid,text,jsonb,jsonb) TO athyper_runtime;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_store_system_entity_artifact(uuid,text,jsonb,jsonb) TO athyper_runtime;
+END IF; END $$;
 
 -- Tenant content retains same-tenant correspondence. Global system content is
 -- linked only through the private enrolled authority check, not a NULL exception.
@@ -253,4 +261,6 @@ BEGIN
   INSERT INTO publication.entity_release_link(publication_release_id,entity_release_id) VALUES(p_release,p_release);
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_link_system_entity_release(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_link_system_entity_release(uuid) TO athyper_runtime;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_link_system_entity_release(uuid) TO athyper_runtime;
+END IF; END $$;

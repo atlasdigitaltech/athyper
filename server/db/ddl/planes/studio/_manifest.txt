@@ -219,6 +219,7 @@ common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
 common/authz/16_content_record_acl_reference_seed.sql
 common/authz/17_common_reference_permission.sql
+common/authz/18_common_collaboration_permissions.sql
 common/authz/19_common_activity_permissions.sql
 planes/studio/authz/18_publication_policy_permissions.sql
 common/shared/12_reference_seed.sql
@@ -237,6 +238,7 @@ planes/studio/control/12_reference_seed.sql
 planes/studio/control/12_subscription_plan_reference_seed.sql
 planes/studio/control/12_subscription_plan_module_reference_seed.sql
 planes/studio/control/12_bank_format_rule_reference_seed.sql
+planes/studio/control/13_publication_policy_evidence.sql
 planes/studio/trustiam/12_identity_replay_approval.sql
 common/authz/13_management.sql
 common/control/14_admin_integrations.sql
@@ -250,8 +252,13 @@ planes/studio/metadata/19_publication_recovery_successor.sql
 planes/studio/metadata/20_publication_recovery_audit.sql
 common/control/17_process_task_rule_publication.sql
 common/document/12_collaboration_integrity.sql
+planes/studio/publication/12_notification_configuration.sql
 planes/studio/publication/13_collection_configuration.sql
 planes/studio/publication/14_compiled_entity_runtime.sql
+planes/studio/publication/15_system_entity_commands.sql
+planes/studio/publication/16_compiled_entity_source_identity.sql
+planes/studio/publication/17_system_entity_successor.sql
+planes/studio/publication/18_compilation_recovery.sql
 common/shared/99_security_definer_hardening.sql
 
 common/master/21_reference_choice_recent.sql

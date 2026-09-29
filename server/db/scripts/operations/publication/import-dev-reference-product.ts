@@ -46,11 +46,11 @@ async function main() {
       await sql`SELECT set_config('app.database_plane','studio',true),set_config('app.current_plane_key','studio',true),
         set_config('app.current_principal_id',${actor[0]!.id},true)`.execute(tx);
       const missing = (await sql<{ missing: boolean }>`SELECT to_regclass('metadata.entity_change_case_binding') IS NULL AS missing`.execute(tx)).rows[0]!.missing;
-      if (missing) await sql.raw(readFileSync("server/db/migrations/20260926_entity_execution_binding_storage.sql", "utf8")).execute(tx);
+      if (missing) await sql.raw(readFileSync("server/db/scripts/operations/upgrades/post-baseline-20260929/20260926_entity_execution_binding_storage.sql", "utf8")).execute(tx);
       const studioBinding = (await sql<{ supported: boolean }>`SELECT position('studio' in pg_get_constraintdef(oid))>0 AS supported
         FROM pg_constraint WHERE conrelid='metadata.entity_operation_permission'::regclass
           AND conname='entity_operation_permission_plane_chk'`.execute(tx)).rows[0]?.supported;
-      if (!studioBinding) await sql.raw(readFileSync("server/db/migrations/20260926_studio_entity_operation_bindings.sql", "utf8")).execute(tx);
+      if (!studioBinding) await sql.raw(readFileSync("server/db/scripts/operations/upgrades/post-baseline-20260929/20260926_studio_entity_operation_bindings.sql", "utf8")).execute(tx);
       const imported = await importEntityProduct(tx, {
         async assertAuthorized(request) {
           // The connection is authenticated to the guarded DEV administrator

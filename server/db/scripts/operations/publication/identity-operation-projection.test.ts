@@ -45,7 +45,7 @@ test(
     assert.equal(rows.length, 6);
     const migration = readFileSync(
       new URL(
-        "../../../migrations/20260929_identity_operation_projection.sql",
+        "../upgrades/post-baseline-20260929/20260929_identity_operation_projection.sql",
         import.meta.url,
       ),
       "utf8",

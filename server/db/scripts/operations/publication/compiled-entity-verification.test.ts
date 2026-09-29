@@ -36,7 +36,7 @@ test(
   () => {
     const migration = readFileSync(
       new URL(
-        "../../../migrations/20260929_compiled_entity_verification.sql",
+        "../upgrades/post-baseline-20260929/20260929_compiled_entity_verification.sql",
         import.meta.url,
       ),
       "utf8",

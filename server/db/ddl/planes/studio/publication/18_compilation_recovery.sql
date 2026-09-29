@@ -40,7 +40,11 @@ RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS
      AND NOT EXISTS(SELECT 1 FROM publication.artifact a WHERE a.publication_release_id=pr.id)));
 $$;
 REVOKE ALL ON FUNCTION publication.fn_compilation_recovery_source(jsonb,boolean) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION publication.fn_compilation_recovery_source(jsonb,boolean) TO athyper_runtime;
+DO $$ BEGIN
+ IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+  GRANT EXECUTE ON FUNCTION publication.fn_compilation_recovery_source(jsonb,boolean) TO athyper_runtime;
+ END IF;
+END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_control_api') THEN
   GRANT EXECUTE ON FUNCTION publication.fn_compilation_recovery_source(jsonb,boolean) TO athyper_control_api;
 END IF; END $$;
