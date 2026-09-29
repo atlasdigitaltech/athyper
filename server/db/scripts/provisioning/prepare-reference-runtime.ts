@@ -12,6 +12,10 @@ export function loadReferenceProduct(directory: string) {
   const capabilityPath = join(root, "capabilities.json");
   const members = existsSync(capabilityPath) ? JSON.parse(readFileSync(capabilityPath, "utf8")) : [];
   const definition = JSON.parse(readFileSync(join(root, "definition.json"), "utf8"));
+  const localizationPath = join(root, "localization.json");
+  const localization = existsSync(localizationPath)
+    ? JSON.parse(readFileSync(localizationPath, "utf8"))
+    : undefined;
   if (!Array.isArray(members)) throw Error("CAPABILITY_SOURCE_INVALID");
   if (Array.isArray(members)) {
     const lookups = new Map<string, ReturnType<typeof createCapabilityProfileFileResolver>>();
@@ -34,8 +38,7 @@ export function loadReferenceProduct(directory: string) {
     members.push(prepareActivityCapabilityMember(definition.definition?.entityCode, JSON.parse(readFileSync(activityPath, "utf8")), lookup,
       { versionHistoryAvailable: false, automaticCaptureAvailable: false, writableOperations: [] }));
   }
-  return parseSharedReferenceProduct(definition,
-    members);
+  return parseSharedReferenceProduct(definition, members, localization);
 }
 
 /** Offline only. Never fabricates approval, signature or activation evidence. */
