@@ -7,6 +7,7 @@ import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/tra
 import type { AttachmentRouteOptions } from "./attachment-routes.js";
 
 type Tx = Transaction<Record<string, never>>;
+type Timing = (stage: string) => void;
 type Identity = { planeKey: "neon" | "studio" | "mesh"; tenantId: string; principalId: string; attachmentId: string };
 type Row = { draft_id?: string | null; id: string; sha256: string; content_type: string; derivative_content_type: string | null; storage_key: string | null; status: string; last_error_code?: string | null; scan_status: string | null; size_bytes: number; file_name: string; extracted_text: string | null };
 type BrowseRow = { added_at?: Date | string; added_by_display_name?: string; id: string; pinned_attachment_id: string | null; link_kind: string; version_history: unknown; series_id: string; link_id: string; folder_id: string | null; folder_name: string | null; category: string | null; version_no: number; file_name: string; display_name: string | null; content_type: string | null; size_bytes: number | string | null; status: string; created_at: Date | string; series_revision: string };
@@ -72,12 +73,14 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
       return {state:"processing"};
     },
     // Durable extraction allows record search during a temporary external-index outage.
-    async search(context: VerifiedRequestContext, input: {entityType:string;entityId:string;q:string;after?:string;folderId?:string;unfiled?:boolean;category?:string}) {
+    async search(context: VerifiedRequestContext, input: {entityType:string;entityId:string;q:string;after?:string;folderId?:string;unfiled?:boolean;category?:string}, timing: Timing = () => {}) {
       const { entityType, entityId, q, after, folderId, unfiled, category } = input;
       if ((folderId !== undefined && (typeof folderId !== "string" || !uuid.test(folderId))) || (unfiled !== undefined && typeof unfiled !== "boolean") || (folderId && unfiled) || (category !== undefined && !["general","evidence"].includes(category))) throw new DiscoveryError(400,"INVALID_SEARCH_INPUT");
       if (typeof entityType !== "string" || !/^[a-z][a-z0-9_.]{0,127}$/.test(entityType) || typeof entityId !== "string" || !entityId || entityId.length > 128 || typeof q !== "string" || !q.trim() || q.length > 256 || (after !== undefined && !uuid.test(after))) throw new DiscoveryError(400,"INVALID_SEARCH_INPUT");
       if (!await options.authorizeCapability(context,"search",{entityType,entityId})) throw new DiscoveryError(403,"ENTITY_CAPABILITY_DENIED");
+      timing("authorization");
       const rows = await options.transactions.run(context.planeKey, context, async tx => {
+        timing("transaction_acquire");
         await sql`SET LOCAL statement_timeout = '2000ms'`.execute(tx);
         return (await sql<Row>`SELECT DISTINCT a.id,a.file_name,a.content_type,
           substring(a.extracted_text FROM greatest(1,strpos(lower(a.extracted_text),lower(${q.trim()}))-80) FOR 320) extracted_text
@@ -91,6 +94,7 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
           ${category ? sql`AND coalesce(l.metadata->>'category','general')=${category}` : sql``}
           ${after ? sql`AND a.id>${after}::uuid` : sql``} ORDER BY a.id LIMIT 26`.execute(tx)).rows;
       });
+      timing("database");
       const hits = [];
       for (const row of rows.slice(0,25)) {
         try {
@@ -99,13 +103,14 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
         } catch { continue; }
         hits.push({attachmentId:row.id,fileName:row.file_name,contentType:row.content_type,snippet:row.extracted_text});
       }
+      timing("hit_authorization");
       return {hits,...(rows.length>25 ? {nextCursor:rows[24]!.id} : {})};
     },
     /**
      * Record-scoped discovery for names and filters. The predicates are part of
      * the SQL before LIMIT, so a filter never means only the loaded UI page.
      */
-    async browse(context: VerifiedRequestContext, input: {entityType:string;entityId:string;name?:string;exactName?:boolean;folderId?:string;unfiled?:boolean;category?:string;after?:string;attachmentId?:string;includeHistory?:boolean}) {
+    async browse(context: VerifiedRequestContext, input: {entityType:string;entityId:string;name?:string;exactName?:boolean;folderId?:string;unfiled?:boolean;category?:string;after?:string;attachmentId?:string;includeHistory?:boolean}, timing: Timing = () => {}) {
       const { entityType, entityId, name, exactName, folderId, unfiled, category, after, attachmentId, includeHistory } = input;
       if (includeHistory !== undefined && (typeof includeHistory !== "boolean" || !attachmentId)) throw new DiscoveryError(400,"INVALID_BROWSE_INPUT");
       if (attachmentId !== undefined && (typeof attachmentId !== "string" || !uuid.test(attachmentId))) throw new DiscoveryError(400,"INVALID_BROWSE_INPUT");
@@ -119,7 +124,10 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
       // Select one deterministic link/version per series before applying the
       // cursor; otherwise an older pin can reappear on a subsequent page.
       // Materialize the bounded page before principal/history enrichment.
-      const rows = await options.transactions.run(context.planeKey, context, async tx => (await sql<BrowseRow>`WITH visible AS (
+      timing("authorization");
+      const rows = await options.transactions.run(context.planeKey, context, async tx => {
+        timing("transaction_acquire");
+        return (await sql<BrowseRow>`WITH visible AS (
         SELECT DISTINCT ON (a.series_id) a.id::text,a.series_id::text,l.id::text link_id,l.pinned_attachment_id::text,l.link_kind,l.folder_id::text,folder.name folder_name,coalesce(l.metadata->>'category','general') category,a.version_no,a.file_name,s.display_name,a.content_type,a.size_bytes,a.status,a.created_at,l.created_at added_at,l.created_by added_by,s.revision_no::text series_revision
         FROM document.attachment_link l
         JOIN document.attachment_series s ON s.tenant_id=l.tenant_id AND s.id=l.attachment_series_id
@@ -142,7 +150,9 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
         CASE WHEN ${includeHistory === true} THEN COALESCE((SELECT jsonb_agg(jsonb_build_object('id',v.id::text,'version',v.version_no,'fileName',v.file_name,'status',v.status,'createdAt',v.created_at,'uploadedByDisplayName',(SELECT display_name FROM document.collaboration_principal_candidates('',v.uploaded_by))) ORDER BY v.version_no DESC,v.id DESC)
           FROM document.attachment v WHERE v.tenant_id=${context.tenantId}::uuid AND v.series_id=page.series_id::uuid
             AND (v.status='active' OR v.uploaded_by=${context.principalId}::uuid)), '[]'::jsonb) ELSE NULL END version_history
-      FROM page ORDER BY created_at DESC,id::uuid DESC`.execute(tx)).rows);
+      FROM page ORDER BY created_at DESC,id::uuid DESC`.execute(tx)).rows;
+      });
+      timing("database");
       const items = rows.slice(0,50).map(row => ({ id:row.id,...(row.added_at ? {addedAt:new Date(row.added_at).toISOString()}:{}),...(row.added_by_display_name ? {addedByDisplayName:row.added_by_display_name}:{}),seriesId:row.series_id,linkId:row.link_id,linkKind:row.link_kind,...(row.pinned_attachment_id ? {pinnedAttachmentId:row.pinned_attachment_id}:{}),...(includeHistory ? {versionHistory:row.version_history ?? []}:{}),...(row.folder_id ? {folderId:row.folder_id}:{ }),...(row.folder_name ? {folderName:row.folder_name}:{}),category:row.category ?? "general",version:row.version_no,fileName:row.file_name,...(row.display_name ? {displayName:row.display_name}:{}),...(row.content_type ? {contentType:row.content_type}:{}),...(row.size_bytes === null ? {} : {sizeBytes:Number(row.size_bytes)}),processingStatus:row.status,revision:row.series_revision,createdAt:new Date(row.created_at).toISOString() }));
       return {items,...(rows.length>50 ? {nextCursor:rows[49]!.id} : {})};
     },
@@ -159,12 +169,26 @@ export function registerAttachmentDiscoveryRoutes(app: Application, options: Pic
   });
   app.post("/api/attachments/search", options.authenticate, async (req,res,next) => {
     res.setHeader("Cache-Control","private, no-store");
-    try { res.json(await options.service.search(options.readContext(res),req.body ?? {})); } catch(error) { handle(error,res,next); }
+    const timing = responseTiming(res);
+    try { res.json(await options.service.search(options.readContext(res),req.body ?? {}, timing)); } catch(error) { handle(error,res,next); }
   });
   app.post("/api/attachments/browse", options.authenticate, async (req,res,next) => {
     res.setHeader("Cache-Control","private, no-store");
-    try { res.json(await options.service.browse(options.readContext(res),req.body ?? {})); } catch(error) { handle(error,res,next); }
+    const timing = responseTiming(res);
+    try { res.json(await options.service.browse(options.readContext(res),req.body ?? {}, timing)); } catch(error) { handle(error,res,next); }
   });
+}
+// Stage durations contain no record, query or principal data. Transaction acquisition
+// includes pool wait and tenant transaction setup; database includes commit.
+function responseTiming(response: Response): Timing {
+  let previous = performance.now();
+  const stages: string[] = [];
+  return stage => {
+    const now = performance.now();
+    stages.push(`${stage};dur=${(now - previous).toFixed(1)}`);
+    previous = now;
+    response.setHeader("Server-Timing", stages.join(", "));
+  };
 }
 function handle(error: unknown, response: Response, next: NextFunction) {
   if (error instanceof DiscoveryError) response.status(error.status).json({code:error.code});

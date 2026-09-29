@@ -12,8 +12,9 @@ interface ResourceState<T> {
  * so a stale resource is never shown for a new identity. */
 export function useAsyncResource<T>(
   key: string,
-  load: () => Promise<T>,
+  load: (signal: AbortSignal) => Promise<T>,
   deps: DependencyList,
+  enabled = true,
 ): {
   readonly data?: T;
   readonly error?: unknown;
@@ -24,17 +25,23 @@ export function useAsyncResource<T>(
   const [reloadEpoch, setReloadEpoch] = useState(0);
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
     setState(undefined);
-    load().then(
+    // Defer dispatch so React's setup/cleanup probe does not issue duplicate reads.
+    if (enabled) void Promise.resolve().then(() => {
+      if (controller.signal.aborted) return;
+      return Promise.resolve().then(() => load(controller.signal)).then(
       (data) => active && setState({ key, data }),
       (error: unknown) => active && setState({ key, error }),
-    );
+      );
+    });
     return () => {
       active = false;
+      controller.abort();
     };
     // `load` closes over `deps`; the caller lists them explicitly.
-  }, [key, reloadEpoch, ...deps]);
-  const current = state?.key === key ? state : undefined;
+  }, [key, reloadEpoch, enabled, ...deps]);
+  const current = enabled && state?.key === key ? state : undefined;
   return {
     ...(current?.data === undefined ? {} : { data: current.data }),
     ...(current?.error === undefined ? {} : { error: current.error }),

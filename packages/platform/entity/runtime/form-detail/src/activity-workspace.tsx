@@ -4,7 +4,8 @@ import { RecordPanelActionContext, RecordPanelToolbarActions, useRecordPanelNewA
 import { useContext, useEffect, useRef, useState } from "react";
 import { ApiTransportError } from "@athyper/platform-api-client";
 import { entityActivityClient } from "@athyper/platform-entity-descriptor-client";
-import { useApiClient } from "@athyper/platform-shell-app-foundation";
+import { useApiClient, useSessionIdentity, useExperienceRevision, usePermissions } from "@athyper/platform-shell-app-foundation";
+import { sessionScopeKey } from "./session-scope-key";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { PlusIcon, HistoryIcon, RefreshCwIcon, SlidersHorizontalIcon } from "@athyper/platform-icons";
 import { Button, PanelTabs, PanelFooter, Select } from "@athyper/platform-ui";
@@ -43,6 +44,11 @@ export function ActivityWorkspace({
   const client = useApiClient(),
     intl = useEntityI18n(),
     visible = useContext(CollaborationVisibilityContext);
+  const identity = useSessionIdentity();
+  const revision = useExperienceRevision();
+  const permissions = [...usePermissions()].sort();
+  const descriptionKey = JSON.stringify([sessionScopeKey(identity.scope, entityCode, recordId), revision, permissions]);
+  const descriptionCache = useRef<{ key: string; expires: number; value: ActivityDescription } | undefined>(undefined);
   const compact = useContext(CollaborationPresentationContext) !== "content";
   const toolbarFirst = Boolean(useContext(RecordPanelActionContext)?.toolbarFirst);
   const [rangeSelection,setRangeSelection]=useState<ActivityRangeSelection>(readActivityRange);
@@ -126,7 +132,8 @@ export function ActivityWorkspace({
     window.addEventListener("popstate", back);
     return () => window.removeEventListener("popstate", back);
   }, []);
-  async function load(cursor?: string) {
+  async function load(cursor?: string, refresh = false) {
+    if (refresh) descriptionCache.current = undefined;
     request.current?.abort();
     detailRequest.current?.abort();
     setDetailBusy(false);
@@ -136,11 +143,13 @@ export function ActivityWorkspace({
     setError(false);
     setIncompatible(false);
     try {
-      const desc = await entityActivityClient.describe(client, {
+      const cached = descriptionCache.current;
+      const desc = cached?.key === descriptionKey && cached.expires > Date.now() ? cached.value : await entityActivityClient.describe(client, {
         ...coordinates,
         signal: controller.signal,
       });
       if (controller.signal.aborted) return;
+      descriptionCache.current = { key: descriptionKey, expires: cached?.value === desc ? cached.expires : Date.now() + 30000, value: desc };
       defaultView.current = desc.defaultView ?? desc.views[0];
       setDescription(desc);
       const effective =
@@ -173,6 +182,7 @@ export function ActivityWorkspace({
           : next,
       );
       if (page && page.releaseHash !== next.releaseHash) {
+        descriptionCache.current = undefined;
         setSelected([]);
         setSnapshot(undefined);
         setComparison(undefined);
@@ -180,6 +190,7 @@ export function ActivityWorkspace({
       }
     } catch {
       if (!controller.signal.aborted) {
+        descriptionCache.current = undefined;
         setError(true);
         setDescription(undefined);
         setPage(undefined);
@@ -201,7 +212,7 @@ export function ActivityWorkspace({
       request.current?.abort();
       detailRequest.current?.abort();
     };
-  }, [client, entityCode, recordId, visible, view, days, filters, rangeSelection, intl.localization.timeZone]);
+  }, [client, entityCode, recordId, visible, view, days, filters, rangeSelection, intl.localization.timeZone, descriptionKey]);
   useEffect(
     () => () => captureRequest.current?.abort(),
     [client, entityCode, recordId],
@@ -366,7 +377,7 @@ export function ActivityWorkspace({
               title={intl.message("activity.refresh")}
               variant="secondary"
               disabled={busy}
-              onClick={() => void load()}
+              onClick={() => void load(undefined, true)}
             >
               <RefreshCwIcon size={16} aria-hidden="true" />
               {!compact && !toolbarFirst ? intl.message("activity.refresh") : null}
@@ -396,7 +407,7 @@ export function ActivityWorkspace({
       {error ? (
         <div className="a-entity-activity__feedback" role="alert">
           {intl.message("activity.unavailable")}{" "}
-          <Button onClick={() => void load()}>
+          <Button onClick={() => void load(undefined, true)}>
             {intl.message("action.retry")}
           </Button>
         </div>

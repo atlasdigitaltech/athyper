@@ -6,7 +6,6 @@ import {
   type EntityRecordPresentationV1,
   type EntityRecordV1,
 } from "@athyper/contract-platform-entity-runtime";
-import { entityDescriptorClient } from "@athyper/platform-entity-descriptor-client";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { localizeEntityErrorModel, localizedEntityError } from "@athyper/platform-i18n/entity-errors";
 import { PageWorkspace, useRecordPage } from "@athyper/platform-shell";
@@ -22,6 +21,8 @@ import { Card, InlineStatus, SurfaceErrorBoundary } from "@athyper/platform-ui";
 import { MetadataDetailWorkspace } from "./detail-workspace";
 import { sessionScopeKey } from "./session-scope-key";
 import { useAsyncResource } from "./use-async-resource";
+import { requestDetail } from "./detail-requests";
+import { useExperienceRevision, usePermissions } from "@athyper/platform-shell-app-foundation";
 
 interface LoadedDetail {
   readonly descriptor: EntityDetailDescriptorV1;
@@ -41,17 +42,14 @@ export function EntityDetailRuntime({
   useRecordPage();
   const client = useApiClient();
   const identity = useSessionIdentity();
-  const key = sessionScopeKey(identity.scope, entityCode, recordId);
+  const revision = useExperienceRevision();
+  const permissions = [...usePermissions()].sort();
+  const key = JSON.stringify([sessionScopeKey(identity.scope, entityCode, recordId), revision, permissions]);
   const loaded = useAsyncResource<LoadedDetail>(
     key,
-    async () => {
-      const [descriptor, record] = await Promise.all([
-        entityDescriptorClient.detail(client, entityCode, recordId),
-        entityDescriptorClient.record(client, entityCode, recordId),
-      ]);
-      return { descriptor, record };
-    },
+    (signal) => requestDetail(client, key, entityCode, recordId, signal),
     [client, entityCode, recordId],
+    identity.state === "authenticated" && Boolean(identity.scope) && revision.state === "ready",
   );
   const errorModel = loaded.error
     ? localizeEntityErrorModel(classifyAppError({ error: loaded.error, applicationName: humanizeIdentifier(entityCode) }), intl)

@@ -131,6 +131,7 @@ const SAFE_REQUEST_HEADERS = new Set([
 // Fetch decodes compressed bodies but retains their original length header.
 // Let the application server frame the returned body instead of copying it.
 const SAFE_RESPONSE_HEADERS = new Set([
+  "server-timing",
   "content-type",
   "content-disposition",
   "etag",

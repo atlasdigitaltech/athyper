@@ -22,6 +22,14 @@ function fixture(rows: Record<string, unknown>[], allowed=true, commentId?:strin
   return {service,sign,schedule,queries,authorizeCapability};
 }
 describe("qualified attachment discovery",()=>{
+  it("reports authorization, transaction acquisition, SQL and hit checks separately", async () => {
+    const f = fixture([]), stages: string[] = [];
+    await f.service.search(context, {entityType:"business_partner",entityId:"record",q:"match"}, stage => stages.push(stage));
+    expect(stages).toEqual(["authorization", "transaction_acquire", "database", "hit_authorization"]);
+    stages.length = 0;
+    await f.service.browse(context, {entityType:"business_partner",entityId:"record"}, stage => stages.push(stage));
+    expect(stages).toEqual(["authorization", "transaction_acquire", "database"]);
+  });
   it("previews a live owned draft and retries only an earlier missing-source failure",async()=>{
     const f=fixture([{id,draft_id:id,sha256:"hash",content_type:"application/pdf",status:"failed",last_error_code:"source_not_found"}]);
     expect(await f.service.preview(context,{attachmentId:id})).toMatchObject({state:"processing"});
