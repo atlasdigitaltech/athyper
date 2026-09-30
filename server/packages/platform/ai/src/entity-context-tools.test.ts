@@ -285,3 +285,48 @@ it("projects only field declarations admitted by Records, never storage or hidde
   );
   expect(h.read).not.toHaveBeenCalled();
 });
+
+it("selects only relevant admitted capabilities without enabling direct argument-free execution", async () => {
+  const { coordinator, context, request } = fixture();
+  const definitions = await coordinator.definitions(
+    context,
+    { readToolsAllowed: true, mutationToolsAllowed: false },
+    undefined,
+    request.businessContext,
+  );
+  const { selectEntitySectionTools, directEntitySectionRead, providerTools } =
+    await import("./entity-section-tool-selection.js");
+  const question = "Explain the field types and required flags for this record";
+  const selected = selectEntitySectionTools(
+    definitions,
+    question,
+    request.businessContext.page,
+  )!;
+  expect(selected.map((x) => x.name)).toEqual(["entity_explain_fields"]);
+  expect(
+    directEntitySectionRead(selected, question, request.businessContext.page),
+  ).toBeUndefined();
+  expect(providerTools(selected)[0]).not.toHaveProperty("entitySection");
+  const compare = selectEntitySectionTools(
+    definitions,
+    "Compare snapshots of this record",
+    request.businessContext.page,
+  )!;
+  expect(compare.map((x) => x.name).sort()).toEqual([
+    "entity_compare_snapshots",
+    "entity_read_snapshots",
+  ]);
+  expect(
+    directEntitySectionRead(
+      compare,
+      "Compare snapshots of this record",
+      request.businessContext.page,
+    ),
+  ).toBeUndefined();
+  expect(
+    selectEntitySectionTools(definitions, question, {
+      ...request.businessContext.page,
+      entityCode: "other",
+    }),
+  ).toBeUndefined();
+});

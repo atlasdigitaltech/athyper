@@ -38,7 +38,7 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 5194,
+    "filesScanned": 5199,
     "authorizationFiles": 1228,
     "registeredObjects": 470,
     "objectReferences": 1147,
@@ -13491,7 +13491,7 @@
     {
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
-      "sha256": "d762a56bde47dda2a0dfaaad0def00b5b64edcf67e8dc3c6d2b94660c619a6bd"
+      "sha256": "1e21619c196fb9ff15d8cd501aeec6a63db6c858bc928e190dabda06c9618598"
     },
     {
       "path": "server/packages/platform/ai/src/atlas-admin-routes.ts",
@@ -13526,12 +13526,12 @@
     {
       "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
       "artifactClass": "test",
-      "sha256": "c0d9764d7a41cbfdf0e6c67a0712ffa34cea50e7d72cdb48c13d6c16031e8292"
+      "sha256": "8a583ea1c1aec81016a074bd6123ba61da54092c0ad8cdc7cec7d7c040b97a86"
     },
     {
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
-      "sha256": "1402fa7f8d611ff198b17db8528c3527048a1f065184b24955b52a1612c28c71"
+      "sha256": "27e9a29072c47a8116221aeb233aa75a10b07a42db9450174ae3cbc011b75110"
     },
     {
       "path": "server/packages/platform/ai/src/entity-section-tool.ts",
@@ -40070,9 +40070,9 @@
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
       "lines": [
-        320,
-        756,
-        1272
+        321,
+        754,
+        1270
       ]
     },
     {
@@ -47535,7 +47535,7 @@
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "lines": [
-        15
+        32
       ]
     },
     {
@@ -57958,7 +57958,7 @@
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "lines": [
-        58
+        204
       ]
     },
     {
@@ -58772,7 +58772,7 @@
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "lines": [
-        38
+        92
       ]
     },
     {

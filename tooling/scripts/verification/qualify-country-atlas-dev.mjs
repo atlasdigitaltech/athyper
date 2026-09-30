@@ -49,6 +49,7 @@ try {
     readToolsAllowed: admission.readToolsAllowed,
     reasonCode: admission.reasonCode,
   };
+  assert.equal(admissionResponse.status(), 200, "ATLAS_ADMISSION_UNAVAILABLE");
   assert.equal(
     admission.chatAllowed,
     true,
@@ -90,6 +91,10 @@ try {
   );
   assert.equal(snapshotsResponse.status(), 200);
   const snapshots = await snapshotsResponse.json();
+  assert.ok(
+    snapshots.items?.length >= 2,
+    "Two authorized snapshots are required to qualify comparison",
+  );
   if (snapshots.items?.length >= 2)
     questions.push([
       `Compare snapshot ${snapshots.items[1].id} with snapshot ${snapshots.items[0].id} of this record. Report missing capture coverage honestly.`,
@@ -99,7 +104,13 @@ try {
     availableSnapshots: snapshots.items?.length ?? 0,
     qualified: false,
   };
-  for (const [question, expected] of questions) {
+  const capability = process.env.ATHYPER_ATLAS_CAPABILITY;
+  const selected = capability
+    ? questions.filter(([, expected]) => expected === capability)
+    : questions;
+  assert.ok(selected.length, "Unknown requested Country Atlas capability");
+  report.requestedCapabilities = selected.map(([, expected]) => expected);
+  for (const [question, expected] of selected) {
     await workspace.locator('[contenteditable="true"]').fill(question);
     const pending = page.waitForResponse(
       (r) => r.url().endsWith("/runs") && r.request().method() === "POST",
@@ -110,6 +121,10 @@ try {
       .click();
     const response = await pending;
     const raw = await response.text();
+    if (!response.ok())
+      writeFileSync(join(out, `${expected}-http-error.txt`), raw, {
+        mode: 0o600,
+      });
     const events = raw.split(/\r?\n\r?\n/).flatMap((frame) => {
       const data = frame
         .split(/\r?\n/)
@@ -123,7 +138,20 @@ try {
       httpStatus: response.status(),
       completed: events.some((e) => e.event?.type === "run.completed"),
       failed: events.some((e) => e.event?.type === "run.failed"),
-      expectedToolObserved: raw.includes(expected),
+      expectedToolObserved: events.some(
+        (e) =>
+          e.event?.type === "tool.completed" &&
+          e.event.toolCode === expected &&
+          e.event.outcome === "completed",
+      ),
+      scopedCitationObserved: events.some(
+        (e) =>
+          e.event?.type === "source.cited" &&
+          e.event.callId !== "history" &&
+          e.event.toolCode === expected &&
+          e.event.coordinate?.entityCode === "country" &&
+          e.event.coordinate?.recordId === recordId,
+      ),
       citations: events.filter((e) => e.event?.type === "source.cited").length,
     };
     report.checks.push(check);
@@ -139,11 +167,56 @@ try {
     assert.equal(check.httpStatus, 200);
     assert.ok(check.completed);
     assert.ok(!check.failed);
-    assert.ok(check.expectedToolObserved, `Expected ${expected} tool evidence`);
+    assert.ok(
+      check.expectedToolObserved,
+      `Expected successful ${expected} tool evidence`,
+    );
+    assert.ok(
+      check.scopedCitationObserved,
+      `Expected record-scoped ${expected} citation`,
+    );
+    const answer = events
+      .filter((e) => e.event?.type === "message.delta")
+      .map((e) => e.event.text ?? "")
+      .join("");
+    assert.ok(answer.trim(), "Expected a non-empty answer");
+    if (expected === "entity_read_record")
+      assert.match(
+        answer,
+        /Malaysia/,
+        "Expected actual authorized Country details",
+      );
     await workspace
       .locator('[data-role="assistant"][data-status="completed"]')
       .last()
       .waitFor();
+    const rendered = await workspace
+      .locator('[data-role="assistant"][data-status="completed"]')
+      .last()
+      .innerText();
+    writeFileSync(join(out, `${expected}-rendered.txt`), rendered, {
+      mode: 0o600,
+    });
+    if (expected === "entity_read_record") assert.match(rendered, /Malaysia/);
+    if (expected === "entity_explain_fields") {
+      assert.match(rendered, /read-only/);
+      assert.match(rendered, /required/);
+      assert.match(rendered, /not input validation/);
+    }
+    if (expected === "entity_read_comments") {
+      assert.match(rendered, /root comments/);
+      assert.match(rendered, /reply threads separately/);
+    }
+    if (expected === "entity_read_snapshots") {
+      assert.match(rendered, /default date range/);
+      assert.match(rendered, /not all record history/);
+    }
+    if (expected === "entity_compare_snapshots") {
+      assert.match(rendered, /0 changed/);
+      assert.match(rendered, /not the live record/);
+      for (const snapshot of snapshots.items.slice(0, 2))
+        assert.ok(rendered.includes(snapshot.id));
+    }
   }
   await page.screenshot({
     path: join(out, "country-atlas.png"),

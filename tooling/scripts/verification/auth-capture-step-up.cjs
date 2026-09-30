@@ -29,4 +29,20 @@ async function startCaptureStepUp(context, page, origin) {
   await page.goto(authorization.href);
 }
 
-module.exports = { startCaptureStepUp };
+// The BFF assurance projection alone does not prove runtime Atlas admission.
+async function atlasAdmissionAllowed(context, origin) {
+  const response = await context.request.get(
+    new URL("/api/relay/atlas/admission", origin).href,
+  );
+  try {
+    if (!response.ok()) return false;
+    const admission = await response.json();
+    return (
+      admission.chatAllowed === true && admission.readToolsAllowed === true
+    );
+  } finally {
+    await response.dispose();
+  }
+}
+
+module.exports = { startCaptureStepUp, atlasAdmissionAllowed };

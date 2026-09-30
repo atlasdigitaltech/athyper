@@ -34,7 +34,7 @@ Country remains read-only. Metadata enables discovery, never grants access.
 ## Validation
 
 - Metadata contracts: 63 tests passed.
-- Atlas: 248 tests passed, including substitution, stale publication, permission
+- Atlas: 261 tests passed, including substitution, stale publication, permission
   denial, parent/tenant mismatch and changed/revoked replay evidence.
 - Metadata authoring: 238 tests passed, including Country on three planes,
   historical descriptor compatibility, and AI-only successor preservation.
@@ -80,12 +80,51 @@ currently authorized fields and zero changes, as expected. The snapshot IDs and
 comparison response are retained privately in `snapshot-fixture.json` and
 `owner-comparison.json`. No comments, role grants or business records were added.
 
-The live Neon browser can read Country and its Activity snapshot list. Atlas
-correctly denies the currently saved issuer token: runtime reason
-`mfa_required`, baseline assurance, no second-factor authentication method.
-The BFF session projection still reports elevated assurance, so that projection
-alone is not accepted as proof. Positive browser/model qualification awaits a
-fresh interactive Neon MFA capture. No role grant or MFA policy was changed.
+The refreshed Neon MFA capture passes the actual API admission checks. The earlier
+saved token was correctly denied for missing MFA despite an elevated BFF session
+projection. The capture helper now verifies both Atlas chat and read admission
+before saving. Eight capture tests pass; no grants or MFA policies were changed.
+
+The live checks exposed shared runtime issues that unit-only qualification missed:
+
+- The inference container/image and coordination hash were missing. Restored the
+  pinned image and retained model volume using the documented quiescent recovery.
+  A concurrent DEV API recreation later abandoned an active lease; with the user
+  confirming a stable deployment window, stopped both clients, restarted inference,
+  cleared only the abandoned ownership fields and retained the epoch. Private
+  recovery receipts record both actions.
+- The relay's 15-second streaming startup budget could cancel authorized cold
+  document grounding. The registered Atlas run operation now has a bounded
+  75-second response-header budget; explicit deployment overrides, cancellation,
+  CSRF, tenant admission and replay controls remain intact. All 41 relay tests
+  and the relay typecheck pass.
+- The registered summary now includes the overview alias. A trailing registered
+  section reference is recognized without discarding real filters or name queries.
+- Generic context tools use existing section-selection metadata, without a direct
+  read shortcut. Only relevant admitted tools are advertised to the local model;
+  the conservative 4,096-token budget remains unchanged.
+- Successful field-declaration, comment, snapshot-list and comparison results
+  have faithful typed presentation, avoiding a second model pass over oversized evidence. Unknown
+  capture states remain unknown; declared fields do not imply write permission
+  or executable input validation. Multiple successful context-tool results are
+  rendered together, so a model round that lists and compares snapshots retains
+  both results. Bounded batches of four independent disclosure checks preserve
+  order and fresh authorization while reducing repeated serial history latency.
+
+The qualifier requires successful tool-completion events, Country record-scoped
+citations, nonempty rendered answers and actual Malaysia details. It retains
+failed attempts separately. All five journeys now have passing evidence in
+`browser-positive-qualification.json`: record details, 18 authorized field
+declarations, the empty authorized root-comment page, two snapshot headers, and
+comparison of 22 authorized fields with zero changes. The first four checks
+passed in `browser-final`; comparison passed in the targeted
+`browser-comparison-final` rerun after the multi-result formatter fix. This is
+combined per-journey evidence, not a claim that the final full sequential suite
+was rerun without failure. The final comparison screenshot and rendered text
+were inspected. Changed and uncaptured comparison cases are unit-tested; the
+live Country row was not edited. Populated comment/reply journeys and latency
+qualification are not established by this empty-comment pilot. Source hashes
+are recorded in `qualified-source-files.json`.
 
 ## Reproduction
 
@@ -122,8 +161,9 @@ Draft PR: https://github.com/atlasdigitaltech/athyper/pull/9, stacked on platfor
 remediation PR #8; eventual integration target is `stack-v2-foundation`.
 Remote CI passed the Country/Principal framework qualification and the
 three-plane permission stack. Existing OpenAPI and broader platform static
-policy failures still block release integration. The first run also found a
+policy failures still block release integration; the latest pre-follow-up CI also
+reports the internal documentation deployment failing. The first run also found a
 stale generated authorization inventory because local ignored Kysely outputs
 and a Playwright result were present during generation. Regeneration from a
 clean tracked-source export removed that environmental drift; the scanner and
-its authorization gates remain unchanged. Positive Atlas browser evidence remains required.
+its authorization gates remain unchanged. Positive Country Atlas browser evidence is complete at the per-journey scope described above. Release integration still requires passing required remote checks.
