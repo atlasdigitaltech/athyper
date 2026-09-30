@@ -38,10 +38,10 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 5198,
-    "authorizationFiles": 1231,
+    "filesScanned": 5194,
+    "authorizationFiles": 1228,
     "registeredObjects": 470,
-    "objectReferences": 1176,
+    "objectReferences": 1147,
     "writerReferences": 127,
     "securitySymbolReferences": 99,
     "contractFieldReferences": 1891,
@@ -477,7 +477,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_as_non_granting_scope_source",
       "definitionCount": 2,
-      "readerCount": 51,
+      "readerCount": 50,
       "writerCount": 8,
       "executionCount": 0,
       "files": [
@@ -519,7 +519,6 @@
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/reviewed-slices.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/studio-neon-organization-boundary.v1.json",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "tooling/scripts/local-dev/bp-provider-sql.integration.test.mts",
         "tooling/scripts/verification/fixtures/partner-document-reference.sql",
@@ -548,7 +547,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_as_non_granting_scope_source",
       "definitionCount": 1,
-      "readerCount": 25,
+      "readerCount": 24,
       "writerCount": 3,
       "executionCount": 0,
       "files": [
@@ -576,7 +575,6 @@
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/reviewed-slices.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/studio-neon-organization-boundary.v1.json",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts"
       ]
     },
@@ -593,7 +591,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_as_non_granting_scope_source",
       "definitionCount": 2,
-      "readerCount": 32,
+      "readerCount": 31,
       "writerCount": 5,
       "executionCount": 0,
       "files": [
@@ -625,7 +623,6 @@
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/reviewed-slices.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/studio-neon-organization-boundary.v1.json",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "tooling/scripts/local-dev/bp-provider-sql.integration.test.mts",
         "tooling/scripts/verification/setup-local-master-data-authority.mjs",
@@ -687,7 +684,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_non_authorizing",
       "definitionCount": 1,
-      "readerCount": 33,
+      "readerCount": 30,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -720,10 +717,7 @@
         "server/db/prisma/schema.neon.prisma",
         "server/db/prisma/schema.studio.prisma",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
-        "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json"
       ]
     },
     {
@@ -739,7 +733,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_non_authorizing",
       "definitionCount": 2,
-      "readerCount": 28,
+      "readerCount": 25,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -770,9 +764,6 @@
         "server/db/prisma/schema.studio.prisma",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/platform/workflow/src/work-item-eligibility-sql.ts",
         "server/packages/services/records/src/__tests__/standard-views.postgres.test.ts"
       ]
@@ -791,7 +782,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_non_authorizing",
       "definitionCount": 1,
-      "readerCount": 27,
+      "readerCount": 24,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -821,10 +812,7 @@
         "server/db/prisma/schema.neon.prisma",
         "server/db/prisma/schema.studio.prisma",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
-        "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json"
       ]
     },
     {
@@ -1084,7 +1072,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 3,
-      "readerCount": 265,
+      "readerCount": 262,
       "writerCount": 43,
       "executionCount": 0,
       "files": [
@@ -1274,9 +1262,6 @@
         "server/db/seed/contracts/authorization/control/cross-plane-suspension-control.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "server/packages/adapters/experience-postgres/src/localization-all-plane.postgres.test.ts",
@@ -1388,7 +1373,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 1,
-      "readerCount": 54,
+      "readerCount": 51,
       "writerCount": 10,
       "executionCount": 0,
       "files": [
@@ -1439,9 +1424,6 @@
         "server/db/scripts/tests/integration/external-worker-iam-cross-plane.mjs",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "server/packages/platform/iam/src/kysely-identity-saga.ts",
         "tooling/scripts/iam/verify-identity-first.ts",
@@ -1465,7 +1447,7 @@
       "sourceOfTruth": true,
       "disposition": "remove_duplicate_idp_fields",
       "definitionCount": 1,
-      "readerCount": 33,
+      "readerCount": 30,
       "writerCount": 3,
       "executionCount": 0,
       "files": [
@@ -1501,9 +1483,6 @@
         "server/db/scripts/operations/entity-onboarding/verify-dev-owner-access.cjs",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "tooling/scripts/verification/qualify-principal-dev.mjs"
       ]
@@ -1522,7 +1501,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 4,
-      "readerCount": 171,
+      "readerCount": 168,
       "writerCount": 25,
       "executionCount": 0,
       "files": [
@@ -1667,9 +1646,6 @@
         "server/db/seed/contracts/authorization/control/cross-plane-suspension-control.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "server/packages/adapters/experience-postgres/src/localization-all-plane.postgres.test.ts",
@@ -2300,7 +2276,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_mesh_only",
       "definitionCount": 2,
-      "readerCount": 32,
+      "readerCount": 31,
       "writerCount": 12,
       "executionCount": 0,
       "files": [
@@ -2336,7 +2312,6 @@
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/reviewed-slices.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/studio-mesh-network-boundary.v1.json",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts"
       ]
     },
@@ -3043,7 +3018,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_non_authorizing",
       "definitionCount": 1,
-      "readerCount": 38,
+      "readerCount": 37,
       "writerCount": 9,
       "executionCount": 0,
       "files": [
@@ -3077,7 +3052,6 @@
         "server/db/scripts/tests/integration/db-review/run.mjs",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/reviewed-slices.v1.json",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
         "server/packages/contracts/records/src/ports.ts",
         "server/packages/planes/mesh/src/network-relationship-import.test.ts",
         "server/packages/planes/mesh/src/network-relationship-import.ts",
@@ -3997,7 +3971,7 @@
       "sourceOfTruth": false,
       "disposition": "immutable_studio_release_provenance_not_runtime_authority",
       "definitionCount": 2,
-      "readerCount": 5,
+      "readerCount": 4,
       "writerCount": 3,
       "executionCount": 0,
       "files": [
@@ -4006,8 +3980,7 @@
         "server/db/ddl/planes/studio/metadata/13_authorization_successor.sql",
         "server/db/prisma/schema.studio.prisma",
         "server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql",
-        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts"
+        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql"
       ]
     },
     {
@@ -4023,7 +3996,7 @@
       "sourceOfTruth": false,
       "disposition": "immutable_hash_pinned_studio_publication_input_not_runtime_authority",
       "definitionCount": 2,
-      "readerCount": 8,
+      "readerCount": 7,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -4032,7 +4005,6 @@
         "server/db/prisma/schema.studio.prisma",
         "server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql",
         "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/authorization-successor-publication.ts"
       ]
     },
@@ -4094,7 +4066,7 @@
       "sourceOfTruth": false,
       "disposition": "keep_bounded_by_new_evaluator",
       "definitionCount": 0,
-      "readerCount": 5,
+      "readerCount": 4,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -4102,8 +4074,7 @@
         "governance/config/governance/authorization-data-disposition-policy.v1.json",
         "server/db/ddl/planes/studio/ai/06_indexes.sql",
         "server/db/ddl/planes/studio/ai/10_rls.sql",
-        "server/db/prisma/schema.studio.prisma",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts"
+        "server/db/prisma/schema.studio.prisma"
       ]
     },
     {
@@ -12898,21 +12869,6 @@
       "sha256": "9f8f37b39fbfab779f420bdd219d0b10cd07ba73d21faa920300733c307fa576"
     },
     {
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "sha256": "54b1f7c8d043bd08038b945477d2b57e879ceb7d0226500b8be5e4288a1d1198"
-    },
-    {
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "sha256": "3571724c10ef5f12d6b4d56c91acd824a0438839239d90e69903ab7cf85d471e"
-    },
-    {
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "sha256": "9789d5765b8fe5822772c678028ae35c5c80909a62b46177bd3dc4191360cb7a"
-    },
-    {
       "path": "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts",
       "artifactClass": "test",
       "sha256": "e730d8be242bec923fb36824cb9a065325f3321704bfb582d802bb9b8d640c72"
@@ -17494,17 +17450,6 @@
     {
       "objectId": "context.company_code",
       "qualifiedName": "master.company_code",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13388,
-      "lines": [
-        13388
-      ]
-    },
-    {
-      "objectId": "context.company_code",
-      "qualifiedName": "master.company_code",
       "path": "server/packages/adapters/experience-postgres/src/index.ts",
       "artifactClass": "runtime",
       "access": "read",
@@ -18106,17 +18051,6 @@
     {
       "objectId": "context.legal_entity",
       "qualifiedName": "master.legal_entity",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13566,
-      "lines": [
-        13566
-      ]
-    },
-    {
-      "objectId": "context.legal_entity",
-      "qualifiedName": "master.legal_entity",
       "path": "server/packages/adapters/experience-postgres/src/index.ts",
       "artifactClass": "runtime",
       "access": "read",
@@ -18576,17 +18510,6 @@
       "line": 103,
       "lines": [
         103
-      ]
-    },
-    {
-      "objectId": "context.operating_organization",
-      "qualifiedName": "master.operating_organization",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13617,
-      "lines": [
-        13617
       ]
     },
     {
@@ -19093,39 +19016,6 @@
       ]
     },
     {
-      "objectId": "context.team",
-      "qualifiedName": "master.team",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7207,
-      "lines": [
-        7207
-      ]
-    },
-    {
-      "objectId": "context.team",
-      "qualifiedName": "master.team",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6432,
-      "lines": [
-        6432
-      ]
-    },
-    {
-      "objectId": "context.team",
-      "qualifiedName": "master.team",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13812,
-      "lines": [
-        13812
-      ]
-    },
-    {
       "objectId": "context.team_member",
       "qualifiedName": "master.team_member",
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
@@ -19471,39 +19361,6 @@
       "lines": [
         6373,
         7971
-      ]
-    },
-    {
-      "objectId": "context.team_member",
-      "qualifiedName": "master.team_member",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7208,
-      "lines": [
-        7208
-      ]
-    },
-    {
-      "objectId": "context.team_member",
-      "qualifiedName": "master.team_member",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6433,
-      "lines": [
-        6433
-      ]
-    },
-    {
-      "objectId": "context.team_member",
-      "qualifiedName": "master.team_member",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13813,
-      "lines": [
-        13813
       ]
     },
     {
@@ -19862,39 +19719,6 @@
       "lines": [
         6484,
         7976
-      ]
-    },
-    {
-      "objectId": "context.tenant_relationship",
-      "qualifiedName": "master.tenant_relationship",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7217,
-      "lines": [
-        7217
-      ]
-    },
-    {
-      "objectId": "context.tenant_relationship",
-      "qualifiedName": "master.tenant_relationship",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6442,
-      "lines": [
-        6442
-      ]
-    },
-    {
-      "objectId": "context.tenant_relationship",
-      "qualifiedName": "master.tenant_relationship",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13822,
-      "lines": [
-        13822
       ]
     },
     {
@@ -23490,39 +23314,6 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7155,
-      "lines": [
-        7155
-      ]
-    },
-    {
-      "objectId": "identity.principal",
-      "qualifiedName": "master.principal",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6379,
-      "lines": [
-        6379
-      ]
-    },
-    {
-      "objectId": "identity.principal",
-      "qualifiedName": "master.principal",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13687,
-      "lines": [
-        13687
-      ]
-    },
-    {
-      "objectId": "identity.principal",
-      "qualifiedName": "master.principal",
       "path": "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts",
       "artifactClass": "test",
       "access": "read",
@@ -25461,39 +25252,6 @@
     {
       "objectId": "identity.principal_binding",
       "qualifiedName": "master.principal_identity_binding",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7157,
-      "lines": [
-        7157
-      ]
-    },
-    {
-      "objectId": "identity.principal_binding",
-      "qualifiedName": "master.principal_identity_binding",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6381,
-      "lines": [
-        6381
-      ]
-    },
-    {
-      "objectId": "identity.principal_binding",
-      "qualifiedName": "master.principal_identity_binding",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13689,
-      "lines": [
-        13689
-      ]
-    },
-    {
-      "objectId": "identity.principal_binding",
-      "qualifiedName": "master.principal_identity_binding",
       "path": "server/packages/adapters/experience-postgres/src/index.ts",
       "artifactClass": "runtime",
       "access": "read",
@@ -26046,39 +25804,6 @@
       "lines": [
         5848,
         7949
-      ]
-    },
-    {
-      "objectId": "identity.principal_profile",
-      "qualifiedName": "master.principal_profile",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7159,
-      "lines": [
-        7159
-      ]
-    },
-    {
-      "objectId": "identity.principal_profile",
-      "qualifiedName": "master.principal_profile",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6383,
-      "lines": [
-        6383
-      ]
-    },
-    {
-      "objectId": "identity.principal_profile",
-      "qualifiedName": "master.principal_profile",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13691,
-      "lines": [
-        13691
       ]
     },
     {
@@ -28477,39 +28202,6 @@
     {
       "objectId": "identity.tenant",
       "qualifiedName": "master.tenant",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7212,
-      "lines": [
-        7212
-      ]
-    },
-    {
-      "objectId": "identity.tenant",
-      "qualifiedName": "master.tenant",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6437,
-      "lines": [
-        6437
-      ]
-    },
-    {
-      "objectId": "identity.tenant",
-      "qualifiedName": "master.tenant",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13817,
-      "lines": [
-        13817
-      ]
-    },
-    {
-      "objectId": "identity.tenant",
-      "qualifiedName": "master.tenant",
       "path": "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts",
       "artifactClass": "test",
       "access": "read",
@@ -30637,17 +30329,6 @@
     {
       "objectId": "mesh.account",
       "qualifiedName": "mesh.network_account",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6334,
-      "lines": [
-        6334
-      ]
-    },
-    {
-      "objectId": "mesh.account",
-      "qualifiedName": "mesh.network_account",
       "path": "server/packages/adapters/experience-postgres/src/index.ts",
       "artifactClass": "runtime",
       "access": "read",
@@ -31423,17 +31104,6 @@
         33,
         34,
         50
-      ]
-    },
-    {
-      "objectId": "mesh.relationship",
-      "qualifiedName": "mesh.network_relationship",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6347,
-      "lines": [
-        6347
       ]
     },
     {
@@ -32695,17 +32365,6 @@
       ]
     },
     {
-      "objectId": "studio.publication.entity_authorization_successor_link",
-      "qualifiedName": "publication.entity_authorization_successor_link",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7009,
-      "lines": [
-        7009
-      ]
-    },
-    {
       "objectId": "studio.publication.entity_authorization_successor_payload",
       "qualifiedName": "publication.entity_authorization_successor_payload",
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
@@ -32816,17 +32475,6 @@
       "line": 28,
       "lines": [
         28
-      ]
-    },
-    {
-      "objectId": "studio.publication.entity_authorization_successor_payload",
-      "qualifiedName": "publication.entity_authorization_successor_payload",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7010,
-      "lines": [
-        7010
       ]
     },
     {
@@ -33022,17 +32670,6 @@
       "line": 753,
       "lines": [
         753
-      ]
-    },
-    {
-      "objectId": "support.session",
-      "qualifiedName": "ai.atlas_support_session",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6904,
-      "lines": [
-        6904
       ]
     },
     {

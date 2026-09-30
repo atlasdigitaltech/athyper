@@ -33,6 +33,7 @@ Country remains read-only. Metadata enables discovery, never grants access.
 
 ## Validation
 
+- Metadata contracts: 63 tests passed.
 - Atlas: 248 tests passed, including substitution, stale publication, permission
   denial, parent/tenant mismatch and changed/revoked replay evidence.
 - Metadata authoring: 238 tests passed, including Country on three planes,
@@ -73,6 +74,12 @@ the services recreated. The unchanged approved policy then executed successfully
 no capability or prerequisite was bypassed. Private before-config copies are in
 the evidence directory. Source-mode resume retains these saved settings.
 
+Two snapshots were captured through the authorized Country Activity API,
+without changing the Country record. The live owner comparison returned 22
+currently authorized fields and zero changes, as expected. The snapshot IDs and
+comparison response are retained privately in `snapshot-fixture.json` and
+`owner-comparison.json`. No comments, role grants or business records were added.
+
 The live Neon browser can read Country and its Activity snapshot list. Atlas
 correctly denies the currently saved issuer token: runtime reason
 `mfa_required`, baseline assurance, no second-factor authentication method.
@@ -108,3 +115,15 @@ collection diffs, comment author-directory lookup or a live-vs-snapshot
 comparison. Those need their own shared owner contracts and authorization tests.
 The published Country rules are reference data; Atlas must not invent a postal
 validation guarantee from a stored pattern or example.
+
+## Release review
+
+Draft PR: https://github.com/atlasdigitaltech/athyper/pull/9, stacked on platform
+remediation PR #8; eventual integration target is `stack-v2-foundation`.
+Remote CI passed the Country/Principal framework qualification and the
+three-plane permission stack. Existing OpenAPI and broader platform static
+policy failures still block release integration. The first run also found a
+stale generated authorization inventory because local ignored Kysely outputs
+and a Playwright result were present during generation. Regeneration from a
+clean tracked-source export removed that environmental drift; the scanner and
+its authorization gates remain unchanged. Positive Atlas browser evidence remains required.
