@@ -1,3 +1,4 @@
+import type { EntityRuntimeDescriptor, EntityFieldDescriptor } from "@athyper/server-contract-metadata";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 
 export interface RecordListScopeCoordinate {
@@ -73,4 +74,10 @@ export interface RecordListResult {
 
 export interface RecordDetailResult {
   readonly data: Readonly<Record<string, unknown>> | null;
+}
+
+/** Request-local authorized read evidence for shared presentation compilation. */
+export interface AuthorizedRecordDetailResult extends RecordDetailResult {
+  readonly descriptor: EntityRuntimeDescriptor;
+  readonly readableFields: readonly EntityFieldDescriptor[];
 }

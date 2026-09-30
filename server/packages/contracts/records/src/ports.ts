@@ -7,6 +7,7 @@ import type {
   TransitionRecordCommand,
 } from "./mutation.js";
 import type {
+  AuthorizedRecordDetailResult,
   GetRecordQuery,
   ListRecordsQuery,
   RecordDetailResult,
@@ -180,6 +181,8 @@ export interface RecordMutationService {
 export interface RecordQueryService {
   list(query: ListRecordsQuery): Promise<RecordListResult>;
   get(query: GetRecordQuery): Promise<RecordDetailResult>;
+  /** Internal read evidence; callers cannot provide authorization decisions. */
+  getWithProjection?(query: GetRecordQuery): Promise<AuthorizedRecordDetailResult>;
 }
 
 export interface RecordRepositoryListInput {

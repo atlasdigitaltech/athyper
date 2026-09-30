@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1218,
+    "identities": 1219,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 350,
+    "currentOnly": 351,
     "legacyOccurrences": 898,
-    "currentOccurrences": 416
+    "currentOccurrences": 417
   },
   "routes": [
     {
@@ -2849,7 +2849,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 279,
+          "line": 281,
           "declaredPath": "/api/entity-runtime/:entityCode/application-descriptor",
           "kind": "contract"
         }
@@ -2864,7 +2864,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 334,
+          "line": 336,
           "declaredPath": "/api/entity-runtime/:entityCode/detail-descriptor",
           "kind": "contract"
         }
@@ -2879,7 +2879,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 312,
+          "line": 314,
           "declaredPath": "/api/entity-runtime/:entityCode/form-descriptor",
           "kind": "contract"
         }
@@ -2894,7 +2894,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 372,
+          "line": 391,
           "declaredPath": "/api/entity-runtime/:entityCode/list",
           "kind": "contract"
         }
@@ -2909,7 +2909,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 296,
+          "line": 298,
           "declaredPath": "/api/entity-runtime/:entityCode/list-descriptor",
           "kind": "contract"
         }
@@ -2924,7 +2924,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 357,
+          "line": 376,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId",
           "kind": "contract"
         }
@@ -2956,6 +2956,21 @@
           "source": "server/packages/platform/experience/src/entity-runtime-routes.ts",
           "line": 27,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/collaboration/:kind",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/entity-runtime/:param/records/:param/detail",
+      "method": "GET",
+      "path": "/api/entity-runtime/:param/records/:param/detail",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 359,
+          "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/detail",
           "kind": "contract"
         }
       ],

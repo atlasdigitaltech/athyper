@@ -5,7 +5,7 @@ import { gzipSync } from "node:zlib";
 import { clearedAuthSessionCookies } from "../../packages/platform/iam/auth-bff/src/index";
 import { describe, it } from "node:test";
 import ts from "typescript";
-import { REFERENCE_HISTORY_RELAY_OPERATIONS, ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, COMMON_PLANE_RELAY_OPERATIONS, createRelayHandler, ENTITY_APPLICATION_DESCRIPTOR_OPERATION, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
+import { ENTITY_DETAIL_READ_OPERATION, REFERENCE_HISTORY_RELAY_OPERATIONS, ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, COMMON_PLANE_RELAY_OPERATIONS, createRelayHandler, ENTITY_APPLICATION_DESCRIPTOR_OPERATION, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
 
 const context = (...path: string[]) => ({ params: Promise.resolve({ path }) });
 // Inspect the actual relay configuration. Conditional pilot arrays can contain
@@ -190,6 +190,17 @@ describe("Phase 4 hardened BFF relay", () => {
       body: "{}",
     }), context("records", "business_partner", "imports"));
     assert.equal(unsafeWithoutCsrf.status, 403);
+  });
+
+  it("relays the combined detail read on all planes through the tenant-required contract", async () => {
+    for (const plane of ["neon", "mesh", "studio"] as const) {
+      let upstream = "";
+      const handler = createRelayHandler({ plane, runtimeApiUrl: "http://platform-host:4000/api", appOrigin: `https://${plane}.example`, operations: [ENTITY_DETAIL_READ_OPERATION], session: authority(session(plane)), fetch: async url => { upstream = String(url); return new Response("{}", { headers: { "content-type": "application/json" } }); } });
+      const path = "entity-runtime/country/records/00000000-0000-4000-8000-000000000001/detail";
+      const response = await handler(new Request(`https://${plane}.example/api/relay/${path}`), context(...path.split("/")));
+      assert.equal(response.status, 200);
+      assert.equal(upstream, `http://platform-host:4000/api/${path}`);
+    }
   });
 
   it("allowlists only the declared entity-list read paths and preserves bounded query parameters", async () => {

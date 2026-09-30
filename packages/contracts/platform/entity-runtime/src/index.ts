@@ -69,3 +69,17 @@ export * from "./activity-collections";
 export * from "./activity-date-range";
 
 export * from "./entity-relationship";
+
+/** Descriptor and projected record from one authorized server read. */
+export interface EntityDetailReadV1 {
+  readonly descriptor: EntityDetailDescriptorV1;
+  readonly record: EntityRecordV1;
+}
+export function parseEntityDetailRead(value: unknown): EntityDetailReadV1 {
+  const root = object(value, "detail read");
+  const descriptor = parseEntityDetailDescriptor(root.descriptor);
+  const record = parseEntityRecord(root.record);
+  const allowed = new Set(descriptor.fields.map(field => field.key));
+  if (Object.keys(record.values).some(key => !allowed.has(key))) fail("detail read field projection");
+  return Object.freeze({ descriptor, record });
+}

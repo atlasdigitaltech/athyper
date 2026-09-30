@@ -18,6 +18,7 @@ const routes = [
   { name: "list descriptor", method: "descriptor", path: `${base}/list-descriptor` },
   { name: "form descriptor", method: "formDescriptor", path: `${base}/form-descriptor?mode=create` },
   { name: "detail descriptor", method: "detailDescriptor", path: `${base}/detail-descriptor` },
+  { name: "combined detail", method: "detailRead", path: `${base}/records/${recordId}/detail` },
   { name: "record", method: "record", path: `${base}/records/${recordId}` },
   { name: "list", method: "list", path: `${base}/list` },
 ] as const;

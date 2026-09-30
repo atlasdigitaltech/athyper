@@ -7,11 +7,7 @@ const clients = new WeakMap<HttpClient, Map<string, {
   promise: ReturnType<typeof read>;
 }>>();
 async function read(client: HttpClient, entity: string, recordId: string, signal: AbortSignal) {
-  const [descriptor, record] = await Promise.all([
-    entityDescriptorClient.detail(client, entity, recordId, signal),
-    entityDescriptorClient.record(client, entity, recordId, signal),
-  ]);
-  return { descriptor, record };
+  return entityDescriptorClient.detailRead(client, entity, recordId, signal);
 }
 
 /** Share pending reads only within an identical session/context and client. */

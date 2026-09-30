@@ -55,7 +55,7 @@ test("detail consumers share only the same context and cancel abandoned transpor
   const first = requestDetail(f.client, "scope-a", "country", "record", a.signal);
   const rejected = assert.rejects(first);
   const shared = requestDetail(f.client, "scope-a", "country", "record", b.signal);
-  assert.equal(f.calls.length, 2);
+  assert.equal(f.calls.length, 1);
   a.abort();
   await rejected;
   assert.equal(f.calls[0].signal.aborted, false);
@@ -63,9 +63,9 @@ test("detail consumers share only the same context and cancel abandoned transpor
   await shared;
   const next = requestDetail(f.client, "scope-b", "country", "record", b.signal);
   const abandoned = assert.rejects(next);
-  assert.equal(f.calls.length, 4);
+  assert.equal(f.calls.length, 2);
   b.abort();
   await abandoned;
   await tick();
-  assert.equal(f.calls[2].signal.aborted, true);
+  assert.equal(f.calls[1].signal.aborted, true);
 });

@@ -83,6 +83,8 @@ export function registerEntityListRoutes(
           : recordId(request.query["recordId"]),
       ),
   );
+  registerReadRoute(application, options, contracts.detailRead, (request, context) =>
+    options.lists.detailRead(context, entityCodeParameter(request.params["entityCode"]), recordId(request.params["recordId"])));
   registerReadRoute(
     application,
     options,
@@ -352,6 +354,23 @@ const contracts = {
       403: { description: "Forbidden" },
       404: { description: "Descriptor not found" },
       409: { description: "Detail operation unavailable" },
+    },
+  }),
+  detailRead: defineRouteContract({
+    method: "get",
+    path: "/api/entity-runtime/:entityCode/records/:recordId/detail",
+    operationId: "entityDetail.read",
+    summary: "Read an authorized detail descriptor and projected record together",
+    tags: ["Entity runtime"],
+    authenticated: true,
+    request: {},
+    responses: {
+      200: { description: "Authorized detail read", body: { type: "object", additionalProperties: false,
+        required: ["descriptor", "record"], properties: { descriptor: body, record: body } } },
+      403: { description: "Forbidden" },
+      404: { description: "Record not found" },
+      409: { description: "Detail operation unavailable" },
+      503: { description: "Adapter unavailable" },
     },
   }),
   record: defineRouteContract({

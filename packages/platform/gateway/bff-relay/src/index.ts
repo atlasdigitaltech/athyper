@@ -1159,6 +1159,13 @@ export const ENTITY_DETAIL_DESCRIPTOR_OPERATION: RelayOperation = Object.freeze(
     requiresTenant: true,
   },
 );
+export const ENTITY_DETAIL_READ_OPERATION: RelayOperation = Object.freeze({
+  id: "entity-detail.read",
+  method: "GET",
+  path: "/api/entity-runtime/:entityCode/records/:recordId/detail",
+  requestClass: "json",
+  requiresTenant: true,
+});
 export const ENTITY_RECORD_CREATE_OPERATION: RelayOperation = Object.freeze({
   id: "entity-record.create",
   method: "POST",
@@ -1295,6 +1302,7 @@ export const ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS: readonly RelayOperation[] =
     ENTITY_DETAIL_DESCRIPTOR_OPERATION,
     ENTITY_RECORD_CREATE_OPERATION,
     ENTITY_RECORD_READ_OPERATION,
+    ENTITY_DETAIL_READ_OPERATION,
     ENTITY_RECORD_PATCH_OPERATION,
     ENTITY_RECORD_TRANSITION_OPERATION,
     ENTITY_RUNTIME_BOOTSTRAP_OPERATION,

@@ -18,6 +18,8 @@ import type {
   MetadataReader,
 } from "@athyper/server-contract-metadata";
 import type {
+  GetRecordQuery,
+  AuthorizedRecordDetailResult,
   ListRecordsQuery,
   RecordCollectionScopeResolution,
   RecordCollectionScopeResolver,
@@ -398,11 +400,7 @@ export function createRecordQueryService<Transaction = unknown>(
   options: RecordQueryServiceOptions<Transaction>,
   listExecutor: RecordListExecutor = createRecordListExecutor(options),
 ): RecordQueryService {
-  return {
-    async list(query) {
-      return (await listExecutor.execute(query)).result;
-    },
-    async get(query) {
+  const getWithProjection = async (query: GetRecordQuery): Promise<AuthorizedRecordDetailResult> => {
       const descriptor = await descriptorFor(
         options.metadata,
         query.context,
@@ -426,7 +424,7 @@ export function createRecordQueryService<Transaction = unknown>(
           recordIds: [query.recordId],
           limit: 1,
         });
-        return { data: result.result.data[0] ?? null };
+        return { data: result.result.data[0] ?? null, descriptor: result.descriptor, readableFields: result.readableFields };
       }
       await authorize(
         options.authorizer,
@@ -448,13 +446,8 @@ export function createRecordQueryService<Transaction = unknown>(
             : {}),
         },
       );
-      const projection = (
-        await readableRecordFields(
-          options.authorizer,
-          query.context,
-          descriptor,
-        )
-      ).map((field) => field.key);
+      const readableFields = await readableRecordFields(options.authorizer, query.context, descriptor);
+      const projection = readableFields.map(field => field.key);
       const data = await options.transactions.run(
         query.context.planeKey,
         {
@@ -478,11 +471,17 @@ export function createRecordQueryService<Transaction = unknown>(
       );
       if (data && enforced) assertProfiledScalarProjection(data, projection);
       return {
+        descriptor,
+        readableFields,
         data: data
           ? projectAuthorizedRecordFields(descriptor, data, enforced)
           : null,
       };
-    },
+  };
+  return {
+    async list(query) { return (await listExecutor.execute(query)).result; },
+    async get(query) { return { data: (await getWithProjection(query)).data }; },
+    getWithProjection,
   };
 }
 

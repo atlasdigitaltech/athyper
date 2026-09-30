@@ -4,6 +4,7 @@ import {
   BUSINESS_PARTNER_RELAY_OPERATIONS,
   COMMON_PLANE_RELAY_OPERATIONS,
   ENTITY_LIST_QUERY_OPERATION,
+  ENTITY_DETAIL_READ_OPERATION,
   ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS,
   MESH_NETWORK_ACCOUNTS_OPERATION,
   NEON_WORK_CONTEXTS_OPERATION,
@@ -25,6 +26,8 @@ test("common plane relay operations carry the shared entity runtime", () => {
     COMMON_PLANE_RELAY_OPERATIONS.map((operation) => operation.id),
   );
   assert.ok(ids.has(ENTITY_LIST_QUERY_OPERATION.id));
+  assert.ok(ids.has(ENTITY_DETAIL_READ_OPERATION.id));
+  assert.equal(ENTITY_DETAIL_READ_OPERATION.requiresTenant, true);
   for (const operation of ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS)
     assert.ok(ids.has(operation.id), operation.id);
   assert.ok([...ids].some((id) => id.startsWith("collaboration.")));

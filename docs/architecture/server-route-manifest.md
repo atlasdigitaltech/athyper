@@ -10,9 +10,9 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | --- | ---: |
 | Matched identities | 66 |
 | Legacy-only identities | 802 |
-| Current-only identities | 350 |
+| Current-only identities | 351 |
 | Legacy occurrences | 898 |
-| Current occurrences | 416 |
+| Current occurrences | 417 |
 
 | Status | Method | Normalized path | Legacy sources | Current sources |
 | --- | --- | --- | ---: | ---: |
@@ -198,6 +198,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | GET | `/api/entity-runtime/:param/records/:param` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/records/:param/bootstrap` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/records/:param/collaboration/:param` | 0 | 1 |
+| current-only | GET | `/api/entity-runtime/:param/records/:param/detail` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/records/:param/sections/:param` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/records/:param/summary` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/reference-history` | 0 | 1 |
