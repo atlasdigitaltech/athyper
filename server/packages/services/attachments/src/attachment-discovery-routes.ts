@@ -4,6 +4,7 @@ import { sql, type Transaction } from "kysely";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { ObjectStorage } from "@athyper/server-contract-object-storage";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
+import { withReadEvidence } from "@athyper/server-foundation/context";
 import type { AttachmentRouteOptions } from "./attachment-routes.js";
 
 type Tx = Transaction<Record<string, never>>;
@@ -26,11 +27,12 @@ class DiscoveryError extends Error {
 /** Policy admission precedes reads. Every retrieval uses current links, not index visibility. */
 export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOptions) {
   return {
-    async preview(context: VerifiedRequestContext, input: { attachmentId: string; rendition?: string }) {
+    async preview(context: VerifiedRequestContext, input: { attachmentId: string; rendition?: string }, timing: Timing = () => {}) {
       const {attachmentId} = input, rendition = input.rendition ?? "page_preview";
       if (!uuid.test(attachmentId) || !renditions.has(rendition)) throw new DiscoveryError(400,"INVALID_PREVIEW_INPUT");
       const admitted = await options.authorizeCapability(context, "preview", { attachmentId });
       if (!admitted?.entityType || !admitted.entityId) throw new DiscoveryError(403,"ENTITY_CAPABILITY_DENIED");
+      timing("authorization");
       const specification = createHash("sha256").update(`v1:${rendition}`).digest("hex");
       const row = await options.transactions.run(context.planeKey, context, async tx => (await sql<Row>`
         SELECT a.draft_id::text,a.id::text,a.sha256,a.content_type,a.file_name,d.content_type derivative_content_type,d.storage_key,d.status,d.last_error_code,d.scan_status,d.size_bytes
@@ -50,11 +52,13 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
             AND EXISTS (SELECT 1 FROM document.comment_draft draft WHERE draft.tenant_id=a.tenant_id AND draft.id=a.draft_id
               AND draft.principal_id=a.uploaded_by AND draft.entity_id=${admitted.entityId} AND draft.expires_at>clock_timestamp())))
         ORDER BY d.created_at DESC LIMIT 1`.execute(tx)).rows[0]);
+      timing("database");
       if (!row) throw new DiscoveryError(404,"PREVIEW_NOT_AVAILABLE");
       if (!["image/png","image/jpeg","image/webp","application/pdf"].includes(row.content_type)) return { state: "unsupported", detail: "Preview is unavailable for this format. Download the original file." };
       const contentType = rendition === "preview_default" ? "application/pdf" : "image/webp";
       if (row.status === "ready" && row.scan_status === "clean" && row.storage_key && row.derivative_content_type === contentType && Number(row.size_bytes) > 0 && Number(row.size_bytes) <= 10 * 1024 * 1024) {
         const url = await options.storage.createDownloadUrl(row.storage_key, 120, {contentType, contentDisposition: contentType === "application/pdf" ? 'inline; filename="preview.pdf"' : 'inline; filename="preview.webp"'});
+        timing("signing");
         return { state: "ready", url, expiresAt: new Date(Date.now()+120_000).toISOString(), contentType };
       }
       // Recover earlier missing-link failures after verifying a live owned draft or posted-comment link.
@@ -95,14 +99,22 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
           ${after ? sql`AND a.id>${after}::uuid` : sql``} ORDER BY a.id LIMIT 26`.execute(tx)).rows;
       });
       timing("database");
-      const hits = [];
-      for (const row of rows.slice(0,25)) {
+      const candidates = rows.slice(0,25);
+      const visible = new Set<string>();
+      let nextHit = 0;
+      // Bound independent policy reads; preserve database order and keep a
+      // separate live attachment/record admission for every returned hit.
+      await Promise.all(Array.from({length: Math.min(4, candidates.length)}, async () => {
+        while (nextHit < candidates.length) {
+          const row = candidates[nextHit++]!;
         try {
           const permission: {entityType?:string;entityId?:string} | undefined = await options.authorizeCapability(context,"download",{attachmentId:row.id,entityType,entityId});
           if (!permission || permission.entityType !== entityType || permission.entityId !== entityId) continue;
         } catch { continue; }
-        hits.push({attachmentId:row.id,fileName:row.file_name,contentType:row.content_type,snippet:row.extracted_text});
-      }
+        visible.add(row.id);
+        }
+      }));
+      const hits = candidates.filter(row => visible.has(row.id)).map(row => ({attachmentId:row.id,fileName:row.file_name,contentType:row.content_type,snippet:row.extracted_text}));
       timing("hit_authorization");
       return {hits,...(rows.length>25 ? {nextCursor:rows[24]!.id} : {})};
     },
@@ -118,7 +130,9 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
       if (typeof entityType !== "string" || !/^[a-z][a-z0-9_.]{0,127}$/.test(entityType) || typeof entityId !== "string" || !entityId || entityId.length > 128) throw new DiscoveryError(400,"INVALID_BROWSE_INPUT");
       if (!attachmentId && !await options.authorizeCapability(context,"search",{entityType,entityId})) throw new DiscoveryError(403,"ENTITY_CAPABILITY_DENIED");
       if (attachmentId) {
-        const admitted = await options.authorizeCapability(context,includeHistory ? "version" : "preview",{entityType,entityId,attachmentId});
+        // History is a read, not a version-upload command. Keep version
+        // permission and stored association checks, without upload tokens.
+        const admitted = await options.authorizeCapability(context,includeHistory ? "version" : "preview",{entityType,entityId,attachmentId}, {preflight:true});
         if (!admitted || admitted.entityType !== entityType || admitted.entityId !== entityId) throw new DiscoveryError(403,"ENTITY_CAPABILITY_DENIED");
       }
       // Select one deterministic link/version per series before applying the
@@ -161,7 +175,7 @@ export function createAttachmentDiscoveryService(options: AttachmentDiscoveryOpt
 export function registerAttachmentDiscoveryRoutes(app: Application, options: Pick<AttachmentRouteOptions,"authenticate"|"readContext"> & {service:ReturnType<typeof createAttachmentDiscoveryService>}) {
   app.post("/api/attachments/:attachmentId/preview", options.authenticate, async (req,res,next) => {
     res.setHeader("Cache-Control","private, no-store");
-    try { res.json(await options.service.preview(options.readContext(res),{attachmentId:String(req.params.attachmentId),rendition:req.body?.rendition})); } catch(error) { handle(error,res,next); }
+    try { res.json(await withReadEvidence(() => options.service.preview(options.readContext(res),{attachmentId:String(req.params.attachmentId),rendition:req.body?.rendition}, responseTiming(res)))); } catch(error) { handle(error,res,next); }
   });
   app.post("/api/attachments/:attachmentId/extract", options.authenticate, async (req,res,next) => {
     res.setHeader("Cache-Control","private, no-store");
@@ -170,12 +184,12 @@ export function registerAttachmentDiscoveryRoutes(app: Application, options: Pic
   app.post("/api/attachments/search", options.authenticate, async (req,res,next) => {
     res.setHeader("Cache-Control","private, no-store");
     const timing = responseTiming(res);
-    try { res.json(await options.service.search(options.readContext(res),req.body ?? {}, timing)); } catch(error) { handle(error,res,next); }
+    try { res.json(await withReadEvidence(() => options.service.search(options.readContext(res),req.body ?? {}, timing))); } catch(error) { handle(error,res,next); }
   });
   app.post("/api/attachments/browse", options.authenticate, async (req,res,next) => {
     res.setHeader("Cache-Control","private, no-store");
     const timing = responseTiming(res);
-    try { res.json(await options.service.browse(options.readContext(res),req.body ?? {}, timing)); } catch(error) { handle(error,res,next); }
+    try { res.json(await withReadEvidence(() => options.service.browse(options.readContext(res),req.body ?? {}, timing))); } catch(error) { handle(error,res,next); }
   });
 }
 // Stage durations contain no record, query or principal data. Transaction acquisition

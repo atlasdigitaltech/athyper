@@ -320,3 +320,7 @@ export const useShellState = () => required(useContext(ShellContext), "useShellS
 export type { SurfaceKind };
 export type { SanitizedSession } from "@athyper/contract-platform-auth-session";
 export type { ExperienceBootstrap } from "@athyper/platform-api-client";
+
+export { EntityContextProvider, useEntityContext, type EntityContextAdapter } from "./entity-context";
+
+export { changeLocale } from "./change-locale";

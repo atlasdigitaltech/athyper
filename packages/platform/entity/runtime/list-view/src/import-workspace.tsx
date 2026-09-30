@@ -1,7 +1,7 @@
 "use client";
 
 import type { EntityListDescriptorV1, EntityListScopeCoordinateV1 } from "@athyper/contract-platform-entity-list";
-import { entityListDescriptorOperation, type HttpClient } from "@athyper/platform-api-client";
+import { entityListDescriptorOperation, entityListScopeQuery, type HttpClient } from "@athyper/platform-api-client";
 import { Button } from "@athyper/platform-ui";
 import React, { useEffect, useMemo, useState } from "react";
 import { ImportWizard } from "./data-operations";
@@ -18,12 +18,7 @@ export function RecordImportWorkspace({ client, entityCode, scopeCoordinate }: R
   const [descriptor, setDescriptor] = useState<EntityListDescriptorV1>();
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
-  const query = useMemo(() => ({
-    ...(scopeCoordinate?.companyCodeId ? { companyCodeId: scopeCoordinate.companyCodeId } : {}),
-    ...(scopeCoordinate?.legalEntityId ? { legalEntityId: scopeCoordinate.legalEntityId } : {}),
-    ...(scopeCoordinate?.operatingOrganizationId ? { operatingOrganizationId: scopeCoordinate.operatingOrganizationId } : {}),
-    ...(scopeCoordinate?.networkAccountId ? { networkAccountId: scopeCoordinate.networkAccountId } : {}),
-  }), [scopeCoordinate]);
+  const query = useMemo(() => entityListScopeQuery(scopeCoordinate), [scopeCoordinate]);
 
   useEffect(() => {
     let active = true;

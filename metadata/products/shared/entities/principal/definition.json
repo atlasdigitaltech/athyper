@@ -563,6 +563,122 @@
             "administerPermission": "common.identity.principal.administer",
             "createdByField": "created_by",
             "updatedByField": "updated_by"
+          },
+          "localizedLabels": {
+            "entity": {
+              "labelKey": "entity.principal.label",
+              "defaultText": "Principal"
+            },
+            "title": {
+              "labelKey": "entity.principal.title",
+              "defaultText": "Principals"
+            },
+            "fields": {
+              "id": {
+                "labelKey": "entity.principal.fields.id",
+                "defaultText": "Record ID"
+              },
+              "tenant_id": {
+                "labelKey": "entity.principal.fields.tenant_id",
+                "defaultText": "Tenant"
+              },
+              "code": {
+                "labelKey": "entity.principal.fields.code",
+                "defaultText": "Code"
+              },
+              "name": {
+                "labelKey": "entity.principal.fields.name",
+                "defaultText": "Name"
+              },
+              "principal_type": {
+                "labelKey": "entity.principal.fields.principal_type",
+                "defaultText": "Principal type"
+              },
+              "provisioning_source": {
+                "labelKey": "entity.principal.fields.provisioning_source",
+                "defaultText": "Provisioning source"
+              },
+              "status": {
+                "labelKey": "entity.principal.fields.status",
+                "defaultText": "Status"
+              },
+              "created_at": {
+                "labelKey": "entity.principal.fields.created_at",
+                "defaultText": "Created"
+              },
+              "updated_at": {
+                "labelKey": "entity.principal.fields.updated_at",
+                "defaultText": "Updated"
+              },
+              "created_by": {
+                "labelKey": "entity.principal.fields.created_by",
+                "defaultText": "Created by"
+              },
+              "updated_by": {
+                "labelKey": "entity.principal.fields.updated_by",
+                "defaultText": "Updated by"
+              }
+            },
+            "options": {
+              "principal_type": {
+                "user": {
+                  "labelKey": "entity.principal.options.principal_type.user",
+                  "defaultText": "User"
+                },
+                "service_account": {
+                  "labelKey": "entity.principal.options.principal_type.service_account",
+                  "defaultText": "Service account"
+                },
+                "bot": {
+                  "labelKey": "entity.principal.options.principal_type.bot",
+                  "defaultText": "Bot"
+                },
+                "integration": {
+                  "labelKey": "entity.principal.options.principal_type.integration",
+                  "defaultText": "Integration"
+                },
+                "support": {
+                  "labelKey": "entity.principal.options.principal_type.support",
+                  "defaultText": "Support"
+                }
+              },
+              "provisioning_source": {
+                "internal": {
+                  "labelKey": "entity.principal.options.provisioning_source.internal",
+                  "defaultText": "Internal"
+                },
+                "jit": {
+                  "labelKey": "entity.principal.options.provisioning_source.jit",
+                  "defaultText": "JIT"
+                },
+                "sync": {
+                  "labelKey": "entity.principal.options.provisioning_source.sync",
+                  "defaultText": "Sync"
+                },
+                "import": {
+                  "labelKey": "entity.principal.options.provisioning_source.import",
+                  "defaultText": "Import"
+                },
+                "api": {
+                  "labelKey": "entity.principal.options.provisioning_source.api",
+                  "defaultText": "API"
+                }
+              },
+              "status": {
+                "active": {
+                  "labelKey": "entity.principal.options.status.active",
+                  "defaultText": "Active"
+                },
+                "suspended": {
+                  "labelKey": "entity.principal.options.status.suspended",
+                  "defaultText": "Suspended"
+                },
+                "deactivated": {
+                  "labelKey": "entity.principal.options.status.deactivated",
+                  "defaultText": "Deactivated"
+                }
+              }
+            }
           }
         }
       },
@@ -585,19 +701,31 @@
                   "principal_type",
                   "provisioning_source",
                   "status"
-                ]
+                ],
+                "localizedLabel": {
+                  "labelKey": "entity.principal.sections.overview",
+                  "defaultText": "Overview"
+                }
               },
               {
                 "key": "profile",
                 "label": "Profile",
                 "fields": [],
-                "relationshipKey": "profile"
+                "relationshipKey": "profile",
+                "localizedLabel": {
+                  "labelKey": "entity.principal.sections.profile",
+                  "defaultText": "Profile"
+                }
               },
               {
                 "key": "notifications",
                 "label": "Notifications",
                 "fields": [],
-                "relationshipKey": "notifications"
+                "relationshipKey": "notifications",
+                "localizedLabel": {
+                  "labelKey": "entity.principal.sections.notifications",
+                  "defaultText": "Notifications"
+                }
               }
             ],
             "actions": [],
@@ -644,23 +772,151 @@
                   "label": "Overview",
                   "sectionKeys": [
                     "overview"
-                  ]
+                  ],
+                  "localizedLabel": {
+                    "labelKey": "entity.principal.sections.overview",
+                    "defaultText": "Overview"
+                  }
                 },
                 {
                   "key": "profile",
                   "label": "Profile",
                   "sectionKeys": [
                     "profile"
-                  ]
+                  ],
+                  "localizedLabel": {
+                    "labelKey": "entity.principal.sections.profile",
+                    "defaultText": "Profile"
+                  }
                 },
                 {
                   "key": "notifications",
                   "label": "Notifications",
                   "sectionKeys": [
                     "notifications"
-                  ]
+                  ],
+                  "localizedLabel": {
+                    "labelKey": "entity.principal.sections.notifications",
+                    "defaultText": "Notifications"
+                  }
                 }
               ]
+            },
+            "localizedLabels": {
+              "entity": {
+                "labelKey": "entity.principal.label",
+                "defaultText": "Principal"
+              },
+              "title": {
+                "labelKey": "entity.principal.title",
+                "defaultText": "Principals"
+              },
+              "fields": {
+                "id": {
+                  "labelKey": "entity.principal.fields.id",
+                  "defaultText": "Record ID"
+                },
+                "tenant_id": {
+                  "labelKey": "entity.principal.fields.tenant_id",
+                  "defaultText": "Tenant"
+                },
+                "code": {
+                  "labelKey": "entity.principal.fields.code",
+                  "defaultText": "Code"
+                },
+                "name": {
+                  "labelKey": "entity.principal.fields.name",
+                  "defaultText": "Name"
+                },
+                "principal_type": {
+                  "labelKey": "entity.principal.fields.principal_type",
+                  "defaultText": "Principal type"
+                },
+                "provisioning_source": {
+                  "labelKey": "entity.principal.fields.provisioning_source",
+                  "defaultText": "Provisioning source"
+                },
+                "status": {
+                  "labelKey": "entity.principal.fields.status",
+                  "defaultText": "Status"
+                },
+                "created_at": {
+                  "labelKey": "entity.principal.fields.created_at",
+                  "defaultText": "Created"
+                },
+                "updated_at": {
+                  "labelKey": "entity.principal.fields.updated_at",
+                  "defaultText": "Updated"
+                },
+                "created_by": {
+                  "labelKey": "entity.principal.fields.created_by",
+                  "defaultText": "Created by"
+                },
+                "updated_by": {
+                  "labelKey": "entity.principal.fields.updated_by",
+                  "defaultText": "Updated by"
+                }
+              },
+              "options": {
+                "principal_type": {
+                  "user": {
+                    "labelKey": "entity.principal.options.principal_type.user",
+                    "defaultText": "User"
+                  },
+                  "service_account": {
+                    "labelKey": "entity.principal.options.principal_type.service_account",
+                    "defaultText": "Service account"
+                  },
+                  "bot": {
+                    "labelKey": "entity.principal.options.principal_type.bot",
+                    "defaultText": "Bot"
+                  },
+                  "integration": {
+                    "labelKey": "entity.principal.options.principal_type.integration",
+                    "defaultText": "Integration"
+                  },
+                  "support": {
+                    "labelKey": "entity.principal.options.principal_type.support",
+                    "defaultText": "Support"
+                  }
+                },
+                "provisioning_source": {
+                  "internal": {
+                    "labelKey": "entity.principal.options.provisioning_source.internal",
+                    "defaultText": "Internal"
+                  },
+                  "jit": {
+                    "labelKey": "entity.principal.options.provisioning_source.jit",
+                    "defaultText": "JIT"
+                  },
+                  "sync": {
+                    "labelKey": "entity.principal.options.provisioning_source.sync",
+                    "defaultText": "Sync"
+                  },
+                  "import": {
+                    "labelKey": "entity.principal.options.provisioning_source.import",
+                    "defaultText": "Import"
+                  },
+                  "api": {
+                    "labelKey": "entity.principal.options.provisioning_source.api",
+                    "defaultText": "API"
+                  }
+                },
+                "status": {
+                  "active": {
+                    "labelKey": "entity.principal.options.status.active",
+                    "defaultText": "Active"
+                  },
+                  "suspended": {
+                    "labelKey": "entity.principal.options.status.suspended",
+                    "defaultText": "Suspended"
+                  },
+                  "deactivated": {
+                    "labelKey": "entity.principal.options.status.deactivated",
+                    "defaultText": "Deactivated"
+                  }
+                }
+              }
             }
           }
         }
@@ -762,7 +1018,7 @@
               },
               {
                 "value": "jit",
-                "label": "Jit"
+                "label": "JIT"
               },
               {
                 "value": "sync",
@@ -774,7 +1030,7 @@
               },
               {
                 "value": "api",
-                "label": "Api"
+                "label": "API"
               }
             ]
           }
@@ -925,7 +1181,7 @@
               },
               {
                 "value": "jit",
-                "label": "Jit"
+                "label": "JIT"
               },
               {
                 "value": "sync",
@@ -937,7 +1193,7 @@
               },
               {
                 "value": "api",
-                "label": "Api"
+                "label": "API"
               }
             ]
           }

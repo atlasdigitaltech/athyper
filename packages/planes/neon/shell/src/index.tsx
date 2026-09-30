@@ -1,4 +1,7 @@
 "use client";
+import { changeLocale } from "@athyper/platform-shell-app-foundation";
+import { planeDiagnostic } from "@athyper/platform-shell";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import {
   Button,
   CompanyGroups,
@@ -47,7 +50,7 @@ import {
   type NeonWorkContextCompany,
   updatePrincipalLocaleOperation,
 } from "@athyper/platform-api-client";
-import { useApiClient } from "@athyper/platform-shell-app-foundation";
+import { useApiClient, EntityContextProvider, ErrorSurface } from "@athyper/platform-shell-app-foundation";
 import { AtlasBrandIcon, CheckIcon } from "@athyper/platform-icons";
 import {
   ActivityCenterDataProvider,
@@ -229,6 +232,7 @@ export function NeonShell({
       client,
       locale: bootstrap.profile.localeCode,
     });
+  const intl = useEntityI18n(bootstrap.localization);
   const labels = { ...EN, ...messages };
   const navigationDiagnostic = useMemo(
     () => onNavigationDiagnostic ?? planeDiagnostic("neon"),
@@ -272,7 +276,7 @@ export function NeonShell({
             tenantSecondaryLabel={bootstrap.tenant.code.toUpperCase()}
             tenantCountryCode={bootstrap.tenant.countryCode}
             tenantLogoAssetRef={bootstrap.tenant.logoAssetRef}
-            contextLabel="Business context"
+            contextLabel={intl.message("entity.context.label")}
             showOrganizationContext={false}
             accountLabel={bootstrap.identity.displayName}
             accountInitials={bootstrap.identity.initials}
@@ -449,7 +453,7 @@ function NeonWorkContextProvider({
   };
   return (
     <WorkContext.Provider value={value}>
-      {children(value)}
+      <EntityContextProvider value={{ status: value.status, generation: value.generation, gate: children => <NeonEntityContextGate work={value} labels={labels}>{children}</NeonEntityContextGate> }}>{children(value)}</EntityContextProvider>
       <ContextSwitchConfirmation
         request={departureRequest}
         catalog={state.catalog}
@@ -554,6 +558,13 @@ function NeonContextContent({
   );
 }
 
+function NeonEntityContextGate({ work, labels, children }: { work: NeonWorkContextValue; labels: NeonShellMessages; children: ReactNode }) {
+  const intl = useEntityI18n();
+  if (work.status === "loading") return <NeonContextLoadingSurface label={intl.message("entity.context.loading")} />;
+  if (work.status === "error") return <ErrorSurface surface="content" reset={work.retry} retryLabel={intl.message("entity.retry")} model={{kind:"service-unavailable",title:intl.message("entity.context.label"),description:intl.message("entity.context.unavailable"),action:"retry",canRetry:true,preserveInput:false,requiredActions:[]}} />;
+  return <NeonContextContent work={work} labels={labels}>{children}</NeonContextContent>;
+}
+
 /**
  * Opt-in boundary for routes whose UI is invalid until a legal entity is
  * available. List surfaces should not use this: their scopePending contract
@@ -561,15 +572,16 @@ function NeonContextContent({
  */
 export function NeonWorkContextGate({
   children,
-  label = "Loading business context",
+  label,
 }: {
   readonly children: ReactNode;
   readonly label?: string;
 }) {
   const work = useNeonWorkContext();
-  if (work.status === "loading") return <NeonContextLoadingSurface label={label} />;
+  const intl = useEntityI18n();
+  if (work.status === "loading") return <NeonContextLoadingSurface label={label ?? intl.message("entity.context.loading")} />;
   if (work.status === "error")
-    return <p role="alert">Business context is unavailable. Try again.</p>;
+    return <ErrorSurface surface="content" reset={work.retry} retryLabel={intl.message("entity.retry")} model={{ kind: "service-unavailable", title: intl.message("entity.context.label"), description: intl.message("entity.context.unavailable"), action: "retry", canRetry: true, preserveInput: false, requiredActions: [] }} />;
   return <>{children}</>;
 }
 
@@ -619,9 +631,12 @@ function NeonOperatingOrganizationProvider({
       ? work.selection.companyCodeId
       : undefined;
   useEffect(() => {
-    const controller = new AbortController();
     setCatalog(undefined);
     setError(undefined);
+    // The restored legal entity determines the preference key. Avoid issuing
+    // a catalog request under "unresolved" only to cancel it on bootstrap.
+    if (work.status !== "ready") return;
+    const controller = new AbortController();
     client
       .request(neonOperatingOrganizationsOperation, {
         signal: controller.signal,
@@ -697,6 +712,7 @@ function NeonOperatingOrganizationProvider({
     bootstrap.tenantId,
     bootstrap.principalId,
     key,
+    work.status,
     attempt,
     labels.organizationUnavailable,
     onDiagnostic,
@@ -778,7 +794,7 @@ function NeonOperatingOrganizationProvider({
   );
   const value = useMemo<NeonOperatingOrganizationValue>(
     () => ({
-      status: error ? "error" : catalog ? "ready" : "loading",
+      status: error || work.status === "error" ? "error" : catalog ? "ready" : "loading",
       organizations: catalog?.organizations ?? [],
       selections,
       ...(error?.requestId ? { errorRequestId: error.requestId } : {}),
@@ -800,9 +816,9 @@ function NeonOperatingOrganizationProvider({
           commit(capability, organizationId);
       },
       clear: (capability) => commit(capability),
-      retry: () => setAttempt((value) => value + 1),
+      retry: () => work.status === "error" ? work.retry() : setAttempt((value) => value + 1),
     }),
-    [catalog, error, selections, compatible, commit],
+    [catalog, error, selections, compatible, commit, work.status, work.retry],
   );
   return (
     <OperatingOrganizationContext.Provider value={value}>
@@ -1081,17 +1097,7 @@ const CAPABILITIES = Object.freeze([
   "warehouse",
   "projects",
 ] as const satisfies readonly NeonOperatingOrganizationCapability[]);
-function planeDiagnostic(plane: string) {
-  return (event: NavigationDiagnostic) => {
-    const production =
-      (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process?.env
-        ?.NODE_ENV === "production";
-    (production ? console.error : console.warn)(
-      production ? "[navigation-telemetry]" : "[navigation-warning]",
-      { plane, ...event },
-    );
-  };
-}
+
 function developmentWorkContextDiagnostic(event: NeonWorkContextDiagnostic) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
@@ -1127,16 +1133,7 @@ function safeLocale(value: string): string {
     return "en";
   }
 }
-async function changeLocale(
-  client: ReturnType<typeof useApiClient>,
-  localeCode: import("@athyper/platform-i18n").SupportedLocale,
-) {
-  await client.request(updatePrincipalLocaleOperation, {
-    body: { localeCode },
-  });
-  document.cookie = `athyper_locale=${localeCode}; Path=/; Max-Age=31536000; SameSite=Lax`;
-  window.location.reload();
-}
+
 function neonTransactionContext(
   value: NeonWorkContextValue,
   labels: NeonShellMessages,

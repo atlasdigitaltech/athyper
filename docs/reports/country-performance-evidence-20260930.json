@@ -1,0 +1,384 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Country shared Entity Framework DEV validation; no response bodies or credentials",
+  "baseline": {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-29T21:49:10.574Z",
+    "origin": "https://neon.dev.athyper.test",
+    "entity": "country",
+    "samples": [
+      {
+        "name": "detail-1",
+        "status": 200,
+        "durationMs": 3409,
+        "serverTiming": null,
+        "requestId": "c769aa53-ea9c-47ec-8977-e53ef6f47ea0"
+      },
+      {
+        "name": "record-1",
+        "status": 200,
+        "durationMs": 684,
+        "serverTiming": null,
+        "requestId": "a317718b-3eb9-4970-97d2-1f487343a082"
+      },
+      {
+        "name": "detail-2",
+        "status": 200,
+        "durationMs": 3427,
+        "serverTiming": null,
+        "requestId": "c2074969-2c8d-4019-8510-8e20c670762f"
+      },
+      {
+        "name": "record-2",
+        "status": 200,
+        "durationMs": 735,
+        "serverTiming": null,
+        "requestId": "feb87021-c152-414f-a1fb-bc39e077a343"
+      },
+      {
+        "name": "detail-3",
+        "status": 200,
+        "durationMs": 3462,
+        "serverTiming": null,
+        "requestId": "95e43426-b77c-4234-a49b-8cd1b46aed2f"
+      },
+      {
+        "name": "record-3",
+        "status": 200,
+        "durationMs": 675,
+        "serverTiming": null,
+        "requestId": "3f5bf26e-25d8-48cd-b29f-e2aa22650109"
+      },
+      {
+        "name": "list-descriptor",
+        "status": 200,
+        "durationMs": 689,
+        "serverTiming": null,
+        "requestId": "42f6a27c-0d12-448f-b5ea-3053147b04e2"
+      },
+      {
+        "name": "list",
+        "status": 200,
+        "durationMs": 790,
+        "serverTiming": null,
+        "requestId": "a28c46f3-1ef9-4981-b497-fb453445f419"
+      },
+      {
+        "name": "attachments",
+        "status": 200,
+        "durationMs": 760,
+        "serverTiming": null,
+        "requestId": "f84d8664-0eea-4311-95ca-92ef6edb0327"
+      },
+      {
+        "name": "activity",
+        "status": 200,
+        "durationMs": 747,
+        "serverTiming": null,
+        "requestId": "60e45846-d88a-4d99-8a1f-07cea1a5babd"
+      },
+      {
+        "name": "notifications",
+        "status": 404,
+        "durationMs": 60,
+        "serverTiming": null,
+        "requestId": "cd76bb2c-19df-47be-88b0-547166f6bcd7",
+        "code": "COLLECTION_CONFIGURATION_NOT_PUBLISHED"
+      },
+      {
+        "name": "inbox",
+        "status": 404,
+        "durationMs": 55,
+        "serverTiming": null,
+        "requestId": "64bfce11-1ed6-464f-9aeb-6295e7fbac57",
+        "code": "COLLECTION_CONFIGURATION_NOT_PUBLISHED"
+      },
+      {
+        "name": "history",
+        "status": 403,
+        "durationMs": 775,
+        "serverTiming": null,
+        "requestId": "51774252-70ad-4b0b-b230-cd72c8747e80",
+        "code": "ENTITY_CAPABILITY_DENIED"
+      },
+      {
+        "name": "thumbnail",
+        "status": 200,
+        "durationMs": 776,
+        "serverTiming": null,
+        "requestId": "69631e70-7009-4f56-aa6a-fb4c15233068"
+      },
+      {
+        "name": "search",
+        "status": 200,
+        "durationMs": 4282,
+        "serverTiming": "authorization;dur=682.3, transaction_acquire;dur=0.3, database;dur=2.6, hit_authorization;dur=3541.2",
+        "requestId": "fe08d769-2ac3-4bba-8ab6-ed205337e25f"
+      }
+    ]
+  },
+  "afterConcurrentBrowser": {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-29T22:20:04.060Z",
+    "origin": "https://neon.dev.athyper.test",
+    "entity": "country",
+    "samples": [
+      {
+        "name": "detail-1",
+        "status": 200,
+        "durationMs": 274,
+        "serverTiming": "metadata;dur=12.1, authorization;dur=74.4, record;dur=21.1, fields;dur=1.1, actions;dur=0.0, relationships;dur=0.3, summary;dur=9.9, activity;dur=43.7, collaboration;dur=67.0, total;dur=177.6",
+        "requestId": "1f799166-4a82-4505-9a00-8588a49e80ea"
+      },
+      {
+        "name": "record-1",
+        "status": 200,
+        "durationMs": 151,
+        "serverTiming": "total;dur=90.0",
+        "requestId": "6ea7e1bc-c976-4004-ba90-52910b9969bb"
+      },
+      {
+        "name": "detail-2",
+        "status": 200,
+        "durationMs": 441,
+        "serverTiming": "metadata;dur=8.9, authorization;dur=203.7, record;dur=15.0, fields;dur=2.4, actions;dur=0.0, relationships;dur=0.0, summary;dur=11.5, activity;dur=41.6, collaboration;dur=147.0, total;dur=377.4",
+        "requestId": "1c382d4b-3e24-45eb-8693-5e86abf291b1"
+      },
+      {
+        "name": "record-2",
+        "status": 200,
+        "durationMs": 193,
+        "serverTiming": "total;dur=98.1",
+        "requestId": "7cf6e648-718d-4db5-8db6-bf602473788a"
+      },
+      {
+        "name": "detail-3",
+        "status": 200,
+        "durationMs": 1453,
+        "serverTiming": "metadata;dur=310.9, authorization;dur=736.7, record;dur=12.8, fields;dur=1.1, actions;dur=0.0, relationships;dur=0.0, summary;dur=39.2, activity;dur=60.4, collaboration;dur=99.3, total;dur=1161.2",
+        "requestId": "268ea760-534a-4a1a-af9c-3897b2c199ab"
+      },
+      {
+        "name": "record-3",
+        "status": 200,
+        "durationMs": 798,
+        "serverTiming": "total;dur=704.3",
+        "requestId": "dea960d3-20fe-4268-b053-d01c620719b7"
+      },
+      {
+        "name": "list-descriptor",
+        "status": 200,
+        "durationMs": 136,
+        "serverTiming": "total;dur=78.5",
+        "requestId": "d21d7133-5d14-4b86-954e-1cc6002b0bb8"
+      },
+      {
+        "name": "list",
+        "status": 200,
+        "durationMs": 130,
+        "serverTiming": "total;dur=71.8",
+        "requestId": "91f94ac5-77ab-4fc4-a52f-81f0d8f26d0a"
+      },
+      {
+        "name": "attachments",
+        "status": 200,
+        "durationMs": 171,
+        "serverTiming": null,
+        "requestId": "435a6f34-f5ef-42b5-b440-f126a8f9a81c"
+      },
+      {
+        "name": "activity",
+        "status": 200,
+        "durationMs": 142,
+        "serverTiming": null,
+        "requestId": "e2446462-5158-4e8b-af89-e0cba7349a98"
+      },
+      {
+        "name": "notifications",
+        "status": 200,
+        "durationMs": 66,
+        "serverTiming": null,
+        "requestId": "b6e6a9bf-109a-4b24-8c30-49bd3c0f3201"
+      },
+      {
+        "name": "inbox",
+        "status": 200,
+        "durationMs": 155,
+        "serverTiming": null,
+        "requestId": "084b976d-0564-4501-93a8-40f12658fed8"
+      },
+      {
+        "name": "history",
+        "status": 200,
+        "durationMs": 393,
+        "serverTiming": "authorization;dur=208.7, transaction_acquire;dur=0.5, database;dur=3.3",
+        "requestId": "5e6edcef-9038-4ae8-a138-6e5ab5f2974f"
+      },
+      {
+        "name": "thumbnail",
+        "status": 200,
+        "durationMs": 722,
+        "serverTiming": "authorization;dur=644.8, database;dur=2.2, signing;dur=3.3",
+        "requestId": "36db7d78-e048-4ab0-85c3-d5da0412eb9e"
+      },
+      {
+        "name": "search",
+        "status": 200,
+        "durationMs": 707,
+        "serverTiming": "authorization;dur=591.0, transaction_acquire;dur=0.5, database;dur=3.6, hit_authorization;dur=51.3",
+        "requestId": "7db87f4d-f187-4166-9183-265caa90bb75"
+      }
+    ]
+  },
+  "afterSequential": {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-29T22:20:45.458Z",
+    "origin": "https://neon.dev.athyper.test",
+    "entity": "country",
+    "samples": [
+      {
+        "name": "detail-1",
+        "status": 200,
+        "durationMs": 194,
+        "serverTiming": "metadata;dur=8.3, authorization;dur=66.5, record;dur=13.0, fields;dur=1.3, actions;dur=0.0, relationships;dur=0.0, summary;dur=7.7, activity;dur=21.4, collaboration;dur=42.2, total;dur=131.8",
+        "requestId": "c4b145c7-9008-484c-9318-59fce784b5fe"
+      },
+      {
+        "name": "record-1",
+        "status": 200,
+        "durationMs": 146,
+        "serverTiming": "total;dur=87.8",
+        "requestId": "72a419c4-dd6f-4cd7-8a13-6f7869f083e7"
+      },
+      {
+        "name": "detail-2",
+        "status": 200,
+        "durationMs": 196,
+        "serverTiming": "metadata;dur=7.3, authorization;dur=64.9, record;dur=16.8, fields;dur=1.5, actions;dur=0.0, relationships;dur=0.0, summary;dur=7.5, activity;dur=22.1, collaboration;dur=46.7, total;dur=137.7",
+        "requestId": "af5693c8-a69b-4058-b709-b16c755bd4d3"
+      },
+      {
+        "name": "record-2",
+        "status": 200,
+        "durationMs": 145,
+        "serverTiming": "total;dur=79.4",
+        "requestId": "8c81b4f2-37b6-4787-b877-cf2e89421e85"
+      },
+      {
+        "name": "detail-3",
+        "status": 200,
+        "durationMs": 174,
+        "serverTiming": "metadata;dur=7.0, authorization;dur=60.7, record;dur=9.2, fields;dur=0.7, actions;dur=0.0, relationships;dur=0.0, summary;dur=7.7, activity;dur=20.1, collaboration;dur=39.2, total;dur=117.1",
+        "requestId": "c7676bad-4075-449a-9fdf-ab15898f6f3e"
+      },
+      {
+        "name": "record-3",
+        "status": 200,
+        "durationMs": 138,
+        "serverTiming": "total;dur=82.5",
+        "requestId": "24b8d9ca-6215-4e93-89e5-f9385e99aae5"
+      },
+      {
+        "name": "list-descriptor",
+        "status": 200,
+        "durationMs": 133,
+        "serverTiming": "total;dur=72.1",
+        "requestId": "da38c777-81f1-4e79-a7c0-6b353c5470e0"
+      },
+      {
+        "name": "list",
+        "status": 200,
+        "durationMs": 131,
+        "serverTiming": "total;dur=73.6",
+        "requestId": "0eb8ab53-81d7-43ab-bdb3-8d7d39336e2f"
+      },
+      {
+        "name": "attachments",
+        "status": 200,
+        "durationMs": 154,
+        "serverTiming": null,
+        "requestId": "f02a011a-035f-42be-a6cc-662171179ee3"
+      },
+      {
+        "name": "activity",
+        "status": 200,
+        "durationMs": 137,
+        "serverTiming": null,
+        "requestId": "41f42230-2926-4ec4-8a62-f6bcf282967c"
+      },
+      {
+        "name": "notifications",
+        "status": 200,
+        "durationMs": 58,
+        "serverTiming": null,
+        "requestId": "a2977108-3a04-459d-8df5-4c7b66ea183f"
+      },
+      {
+        "name": "inbox",
+        "status": 200,
+        "durationMs": 57,
+        "serverTiming": null,
+        "requestId": "ff2c476e-adee-49df-9786-0ef3458dfeb7"
+      },
+      {
+        "name": "history",
+        "status": 200,
+        "durationMs": 140,
+        "serverTiming": "authorization;dur=78.9, transaction_acquire;dur=0.4, database;dur=3.1",
+        "requestId": "be8abf39-2630-47ab-a827-ee0984f4c253"
+      },
+      {
+        "name": "thumbnail",
+        "status": 200,
+        "durationMs": 140,
+        "serverTiming": "authorization;dur=81.7, database;dur=1.9, signing;dur=1.1",
+        "requestId": "63d1e683-60d7-4719-b5e9-20b5397458ce"
+      },
+      {
+        "name": "search",
+        "status": 200,
+        "durationMs": 183,
+        "serverTiming": "authorization;dur=81.6, transaction_acquire;dur=0.3, database;dur=2.6, hit_authorization;dur=42.3",
+        "requestId": "18871c75-a35d-4d9e-a73e-96713eb27074"
+      }
+    ]
+  },
+  "browser": {
+    "checkedAt": "2026-09-29T22:21:14.102Z",
+    "checks": [
+      "Country list rendered published rows",
+      "Country detail rendered record heading",
+      "Files panel opened",
+      "Comments panel opened",
+      "Activity panel opened",
+      "Notifications shell opened",
+      "Inbox shell opened"
+    ],
+    "pageErrors": [],
+    "httpErrors": [],
+    "passed": true
+  },
+  "publication": {
+    "schemaVersion": 1,
+    "samples": [
+      {
+        "name": "notifications",
+        "changeSetId": "dc7f25be-7bd8-4c9f-a174-1edec63993cf",
+        "status": "verified",
+        "releaseId": "89a2a795-af73-40a0-a093-a71d87078d13"
+      },
+      {
+        "name": "inbox",
+        "changeSetId": "9558760b-6e77-4ede-9fa3-a136e3016ab5",
+        "status": "verified",
+        "releaseId": "ca5146ae-c9a8-4b1b-8542-484ca878f0ea"
+      },
+      {
+        "name": "inbox_updated",
+        "changeSetId": "9ec55363-ce0b-4652-b22c-61f613bd9eab",
+        "status": "verified",
+        "releaseId": "398747c8-5bb0-465d-9981-b6005a45f08d"
+      }
+    ]
+  }
+}

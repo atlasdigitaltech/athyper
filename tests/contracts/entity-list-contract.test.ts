@@ -212,6 +212,15 @@ describe("entity list browser contract", () => {
     );
   });
 
+  it("accepts declared record-card priorities and rejects unknown ones", () => {
+    const withPriority = (cardPriority: string) => ({
+      ...descriptorPayload,
+      fields: descriptorPayload.fields.map((field, index) => index ? field : { ...field, cardPriority }),
+    });
+    assert.equal(parseEntityListDescriptor(withPriority("primary")).fields[0]!.cardPriority, "primary");
+    assert.throws(() => parseEntityListDescriptor(withPriority("top")), /cardPriority/);
+  });
+
   it("normalizes unknown URL fields, unsupported operators, duplicate sorts, and unsupported modes", () => {
     const descriptor = parseEntityListDescriptor(descriptorPayload);
     const state = decodeListLocationState(

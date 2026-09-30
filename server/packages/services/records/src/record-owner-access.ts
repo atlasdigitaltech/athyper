@@ -38,6 +38,8 @@ export function createRecordOwnerAccessAdapter(
           tenantId: context.tenantId,
           entityCode: descriptor.entityCode,
           operationKey: operation,
+          ownerAccessCheck: true,
+          authorizationDescriptorHash: descriptor.compiledHash,
         },
       });
       if (
@@ -66,7 +68,9 @@ export function createRecordOwnerAccessAdapter(
           }
         : operation === "patch"
           ? { [policy.updatedByField]: context.principalId }
-          : {};
+          : !decision.allowed && ["read", "list"].includes(operation)
+            ? { [policy.ownerField]: context.principalId }
+            : {};
     },
   };
 }
@@ -92,4 +96,24 @@ export async function prepareRecordOwnerAccess<Transaction>(
       "Record ownership enforcement is unavailable.",
     );
   return adapter.prepare(input, transaction);
+}
+
+/** Mandatory self predicate also protects against unrelated permissive RLS
+ * policies held by the runtime role. Never merge this into caller filters. */
+export function scopeRecordOwnerRead(
+  descriptor: EntityRuntimeDescriptor,
+  ownerValues: Readonly<Record<string, unknown>>,
+): EntityRuntimeDescriptor {
+  const field = descriptor.ownerAccess?.ownerField;
+  if (!field || ownerValues[field] === undefined) return descriptor;
+  const value = ownerValues[field];
+  if (typeof value !== "string" || !value)
+    throw new RecordServiceError(500, "ENTITY_OWNER_SCOPE_INVALID", "The owner scope is invalid");
+  return {
+    ...descriptor,
+    recordPredicates: [
+      ...(descriptor.recordPredicates ?? []),
+      { field, operator: "eq", value },
+    ],
+  };
 }

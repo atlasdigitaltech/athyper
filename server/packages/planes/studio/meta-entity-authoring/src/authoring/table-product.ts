@@ -3,6 +3,8 @@ import type {
   MetaEntityGraph,
 } from "@athyper/server-contract-meta-entity-authoring";
 import { isCanonicalEntityCode } from "@athyper/contract-platform-entity-runtime";
+import { parseProductLocalization } from "./product-localization.js";
+import { parseEntityRuntimeLocalizedText } from "@athyper/contract-platform-entity-runtime";
 import { compileGraph } from "../deterministic.js";
 
 /** Standard graph authoring for platform-maintained definitions of tenant records.
@@ -14,7 +16,7 @@ export interface TableEntityProduct {
   readonly definition: MetaEntityGraph;
 }
 
-export function parseTableEntityProduct(value: unknown): TableEntityProduct {
+export function parseTableEntityProduct(value: unknown, localization?: unknown): TableEntityProduct {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw Error("TABLE_PRODUCT_OBJECT_REQUIRED");
   const source = value as Record<string, unknown>;
@@ -30,7 +32,14 @@ export function parseTableEntityProduct(value: unknown): TableEntityProduct {
     source.planes.some((plane) => !["studio", "neon", "mesh"].includes(plane))
   )
     throw Error("TABLE_PRODUCT_INVALID");
-  const graph = structuredClone(source.definition) as MetaEntityGraph;
+  const labels = localization === undefined ? undefined : parseProductLocalization(localization);
+  const hydrate = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(hydrate);
+    if (!value || typeof value !== "object") return value;
+    if ("labelKey" in value && "defaultText" in value) return labels ? labels.localize(parseEntityRuntimeLocalizedText(value)) : value;
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, hydrate(child)]));
+  };
+  const graph = hydrate(structuredClone(source.definition)) as MetaEntityGraph;
   if (
     !graph ||
     !isCanonicalEntityCode(graph.entity?.entityCode) ||

@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 /**
  * Compact required-context status strip (business-context-selector-design.md §10.4).
  * Plane-agnostic: replaces the large "Choose a work context" body card. The plane's

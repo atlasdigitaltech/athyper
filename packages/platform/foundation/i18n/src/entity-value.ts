@@ -5,6 +5,7 @@ export interface EntityValueField {
   readonly kind?: string;
   readonly valueKind?: string;
   readonly semanticRole?: string;
+  readonly options?: readonly Readonly<{ readonly value: string; readonly label: string }>[];
   readonly filterOptions?: readonly Readonly<{
     readonly value: string | number | boolean;
     readonly label: string;
@@ -50,26 +51,37 @@ export function formatEntityValue(
   }
   if (kind === "enum")
     return (
-      field?.filterOptions?.find((option) => option.value === value)?.label ??
+      (field?.filterOptions ?? field?.options)?.find((option) => option.value === value)?.label ??
       humanizeIdentifier(value)
     );
   return value;
+}
+
+const decimalFormats = new Map<string, { integer: Intl.NumberFormat; decimal: string; digits: readonly string[] }>();
+function decimalFormat(intl: IntlRuntime) {
+  const { formatLocale, numberingSystem } = intl.localization;
+  const key = JSON.stringify([formatLocale, numberingSystem]);
+  let cached = decimalFormats.get(key);
+  if (!cached) {
+    const integer = new Intl.NumberFormat(formatLocale, { numberingSystem, maximumFractionDigits: 0 });
+    const decimal = new Intl.NumberFormat(formatLocale, { numberingSystem }).formatToParts(1.1).find(part => part.type === "decimal")?.value ?? ".";
+    const digitFormat = new Intl.NumberFormat(formatLocale, { numberingSystem, useGrouping: false });
+    cached = { integer, decimal, digits: Array.from({length: 10}, (_, digit) => digitFormat.format(digit)) };
+    if (decimalFormats.size >= 32) decimalFormats.delete(decimalFormats.keys().next().value!);
+    decimalFormats.set(key, cached);
+  }
+  return cached;
 }
 
 /** PostgreSQL numeric values are strings. Format their digits without a floating-point conversion. */
 export function formatExactDecimal(value: string, intl: IntlRuntime): string {
   const negative = value.startsWith("-");
   const [whole, fraction] = (negative ? value.slice(1) : value).split(".");
-  const formatter = new Intl.NumberFormat(intl.localization.formatLocale, {
-    numberingSystem: intl.localization.numberingSystem,
-    maximumFractionDigits: 0,
-  });
+  const { integer: formatter, decimal, digits } = decimalFormat(intl);
   // Number -0 preserves the locale's sign and bidi literals; BigInt -0 does not.
   const integer = formatter.format(negative && BigInt(whole!) === 0n
     ? -0 : BigInt(`${negative ? "-" : ""}${whole}`));
   if (fraction === undefined) return integer;
-  const decimal = new Intl.NumberFormat(intl.localization.formatLocale, { numberingSystem: intl.localization.numberingSystem }).formatToParts(1.1).find(part => part.type === "decimal")?.value ?? ".";
-  const digits = Array.from({ length: 10 }, (_, digit) => new Intl.NumberFormat(intl.localization.formatLocale, { numberingSystem: intl.localization.numberingSystem, useGrouping: false }).format(digit));
   return integer + decimal + [...fraction].map(digit => digits[Number(digit)]).join("");
 }
 

@@ -714,6 +714,9 @@ importers:
 
   packages/planes/mesh/shell:
     dependencies:
+      '@athyper/contract-platform-navigation':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/navigation
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../../platform/foundation/api-client
@@ -859,6 +862,9 @@ importers:
 
   packages/planes/studio/shell:
     dependencies:
+      '@athyper/contract-platform-navigation':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/navigation
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../../platform/foundation/api-client
@@ -1488,6 +1494,9 @@ importers:
       '@athyper/platform-communications-notifications-client':
         specifier: workspace:*
         version: link:../../communications/notifications-client
+      '@athyper/platform-i18n':
+        specifier: workspace:*
+        version: link:../../foundation/i18n
       '@athyper/platform-icons':
         specifier: workspace:*
         version: link:../../foundation/icons

@@ -37,9 +37,16 @@ export function createEntityActivityPolicy(options: {
       const resource = { tenantId: input.context.tenantId, resourceCode: input.entityCode, resourceId: input.recordId,
         recordId: input.recordId, entityType: input.entityCode, entityId: input.recordId };
       const allowed = new Set<string>();
-      for (const candidate of binding.actions) {
-        if ((await options.authorizer.authorize({ context: input.context, permissionCode: candidate.permissionCode, resource })).allowed) allowed.add(candidate.key);
-      }
+      const permissions = [...new Set(binding.actions.map(candidate => candidate.permissionCode))];
+      const admitted = new Set<string>();
+      let nextPermission = 0;
+      await Promise.all(Array.from({length: Math.min(4, permissions.length)}, async () => {
+        while (nextPermission < permissions.length) {
+          const permissionCode = permissions[nextPermission++]!;
+          if ((await options.authorizer.authorize({ context: input.context, permissionCode, resource })).allowed) admitted.add(permissionCode);
+        }
+      }));
+      for (const candidate of binding.actions) if (admitted.has(candidate.permissionCode)) allowed.add(candidate.key);
       if (!allowed.has(action.key)) return deny();
       const views = binding.views.filter(view => allowed.has(view === "timeline" ? "timeline_query" : view === "auditLog" ? "audit_query" : view === "versions" ? "versions_read" : "snapshots_read"));
       return { binding, action, release, releaseHash: release.release.releaseHash, policyHash: operation.artifactHash,

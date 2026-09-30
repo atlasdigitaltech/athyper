@@ -624,3 +624,8 @@ input:is([type="date"],[type="datetime-local"]):read-only::-webkit-calendar-pick
 .a-form-field__error{margin:0;color:var(--a-danger);font-size:var(--a-font-size-xs)}
 .a-inline-status{margin:0;min-height:1lh;color:var(--a-muted-foreground);font-size:var(--a-font-size-sm)}
 .a-inline-status--danger{color:var(--a-danger)}
+
+/* Shared dialog sizing and the native hidden contract. */
+.a-dialog-layer>.a-dialog.a-dialog--wide{width:min(42rem,calc(100vw - 2rem))}
+.a-dialog-layer>.a-dialog.a-dialog--full{width:min(64rem,calc(100vw - 2rem))}
+[hidden]:not([hidden="until-found"]){display:none!important}

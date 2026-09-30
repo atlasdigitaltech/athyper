@@ -1,4 +1,5 @@
 "use client";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { DataValidationProvider, useDataValidation } from "./data-validation";
 import {
   createContext,
@@ -144,6 +145,7 @@ export function EntityIntake({
   readonly cancelHref: string;
   readonly children: ReactNode;
 }) {
+  const intl = useEntityI18n();
   const [state, setState] = useState(() =>
     initialIntakeCheckpoint(flow, descriptorHash, initialCheckpoint),
   );
@@ -323,7 +325,7 @@ export function EntityIntake({
         ) : null}
         {receipt?.savedAt ? (
           <time dateTime={receipt.savedAt}>
-            Saved {new Date(receipt.savedAt).toLocaleString()}
+            {intl.message("entity.savedAt", { date: intl.date(new Date(receipt.savedAt), { dateStyle: "medium", timeStyle: "short" }) })}
           </time>
         ) : null}
         {runtime?.policyPreview ? (

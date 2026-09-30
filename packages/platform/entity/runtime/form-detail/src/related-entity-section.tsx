@@ -1,6 +1,6 @@
 "use client";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   EntityDetailDescriptorV1,
   EntityRecordV1,
@@ -10,10 +10,12 @@ import {
   entityListOperation,
   entityListScopeQuery,
 } from "@athyper/platform-api-client";
-import { entityDescriptorClient } from "@athyper/platform-entity-descriptor-client";
+import { requestDetail } from "./detail-requests";
+import { useAsyncResource } from "./use-async-resource";
 import { EntityListRuntime } from "@athyper/platform-entity-list-view";
 import {
   useApiClient,
+  useApplicationNavigation,
   useSessionIdentity,
 } from "@athyper/platform-shell-app-foundation";
 import { Button } from "@athyper/platform-ui";
@@ -26,10 +28,12 @@ export function EntityRelatedSection({
   ownerEntityCode,
   ownerRecordId,
   relationship,
+  canCreate = false,
 }: {
   ownerEntityCode: string;
   ownerRecordId: string;
   relationship: EntityRelationshipV1;
+  canCreate?: boolean;
 }) {
   const identity = useSessionIdentity();
   const scope = useMemo(
@@ -50,12 +54,14 @@ export function EntityRelatedSection({
       key={key}
       entityCode={relationship.targetEntity}
       scope={scope}
+      canCreate={canCreate}
     />
   ) : (
     <RelatedSingleRecord
       key={key}
       entityCode={relationship.targetEntity}
       scope={scope}
+      canCreate={canCreate}
     />
   );
 }
@@ -63,9 +69,11 @@ function RelatedSingleRecord({
   entityCode,
   scope,
   recordId,
+  canCreate = false,
 }: {
   entityCode: string;
   recordId?: string;
+  canCreate?: boolean;
   scope: {
     parentEntityCode: string;
     parentRecordId: string;
@@ -74,59 +82,50 @@ function RelatedSingleRecord({
 }) {
   const client = useApiClient(),
     intl = useEntityI18n();
-  const [value, setValue] = useState<{
+  const identity = useSessionIdentity();
+  const [retry, setRetry] = useState(0),
+    [editing, setEditing] = useState(false);
+  const key = JSON.stringify([
+    identity.scope,
+    entityCode,
+    scope,
+    recordId,
+    retry,
+  ]);
+  const loaded = useAsyncResource<{
     descriptor: EntityDetailDescriptorV1;
     record: EntityRecordV1;
-  } | null>();
-  const [error, setError] = useState(false),
-    [retry, setRetry] = useState(0),
-    [editing, setEditing] = useState(false);
-  const [canCreate, setCanCreate] = useState(false);
-  useEffect(() => {
-    let current = true;
-    setValue(undefined);
-    setError(false);
-    (async () => {
-      const list = recordId
-        ? { rows: [{ id: recordId }], pagination: { hasNext: false } }
-        : await client.request(entityListOperation, {
-            params: { entityCode },
-            query: {
-              ...entityListScopeQuery(scope),
-              limit: 2,
-              countMode: "none",
-            },
-          });
+  } | null>(
+    key,
+    async (signal) => {
+      // Even an explicitly opened row must still belong to the locked parent scope.
+      const list = await client.request(entityListOperation, {
+        params: { entityCode },
+        signal,
+        query: {
+          ...entityListScopeQuery(scope),
+          ...(recordId ? { recordIds: [recordId] } : {}),
+          limit: 2,
+          countMode: "none",
+        },
+      });
       if (list.rows.length > 1 || list.pagination.hasNext)
         throw Error("Related entity cardinality mismatch");
       const row = list.rows[0];
-      if (!row) {
-        let allowed = false;
-        try {
-          await entityDescriptorClient.form(client, entityCode, "create");
-          allowed = true;
-        } catch {}
-        if (current) {
-          setValue(null);
-          setCanCreate(allowed);
-        }
-        return;
-      }
-      const [descriptor, record] = await Promise.all([
-        entityDescriptorClient.detail(client, entityCode, row.id),
-        entityDescriptorClient.record(client, entityCode, row.id),
-      ]);
-      if (current) setValue({ descriptor, record });
-    })().catch(() => {
-      if (current) {
-        setValue(undefined);
-        setError(true);
-      }
-    });
-    return () => {
-      current = false;
-    };
-  }, [client, entityCode, scope, retry, recordId]);
+      if (!row) return null;
+      return requestDetail(
+        client,
+        JSON.stringify([identity.scope, entityCode, row.id]),
+        entityCode,
+        row.id,
+        signal,
+      );
+    },
+    [client, entityCode, scope, recordId],
+    identity.state === "authenticated",
+  );
+  const value = loaded.data,
+    error = loaded.error;
   if (error)
     return (
       <div role="alert">
@@ -190,7 +189,9 @@ function RelatedSingleRecord({
 function RelatedRecordList({
   entityCode,
   scope,
+  canCreate = false,
 }: {
+  canCreate?: boolean;
   entityCode: string;
   scope: {
     parentEntityCode: string;
@@ -198,25 +199,11 @@ function RelatedRecordList({
     relationshipKey: string;
   };
 }) {
+  const navigation = useApplicationNavigation();
   const client = useApiClient(),
     intl = useEntityI18n();
   const [editing, setEditing] = useState<string | null>(),
-    [revision, setRevision] = useState(0),
-    [canCreate, setCanCreate] = useState(false);
-  useEffect(() => {
-    let current = true;
-    entityDescriptorClient
-      .form(client, entityCode, "create")
-      .then(() => {
-        if (current) setCanCreate(true);
-      })
-      .catch(() => {
-        if (current) setCanCreate(false);
-      });
-    return () => {
-      current = false;
-    };
-  }, [client, entityCode]);
+    [revision, setRevision] = useState(0);
   if (editing !== undefined)
     return (
       <>
@@ -227,6 +214,7 @@ function RelatedRecordList({
           <RelatedSingleRecord
             entityCode={entityCode}
             scope={scope}
+            canCreate={canCreate}
             recordId={editing}
           />
         ) : (
@@ -258,13 +246,8 @@ function RelatedRecordList({
         scopeCoordinate={scope}
         contentOnly
         viewNamespace={`${scope.parentEntityCode}.${scope.relationshipKey}`}
-        onNavigate={(href) => {
-          const prefix = `/app/entity/${entityCode}/`;
-          if (href.startsWith(prefix)) {
-            const id = href.slice(prefix.length);
-            if (/^[0-9a-f-]{36}$/i.test(id)) setEditing(id);
-          }
-        }}
+        onNavigate={navigation.push}
+        onOpenRecord={(row) => setEditing(row.id)}
       />
     </>
   );

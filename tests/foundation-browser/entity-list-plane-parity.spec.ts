@@ -35,12 +35,12 @@ const script = buildSync({
       revision:{release:1,descriptorHash:'a'.repeat(64),surfaceHash:'b'.repeat(64)},
       surface:{key:'default_list',title:'Records',defaultState:{filters:[],sort:[{field:'name',direction:'asc'}],columns:['code','name'],density:'comfortable',mode:'table'},supportedModes:['table','compact'],search:{minimumQueryLength:1},filterPresentation:{quickFields:[{field:'name',defaultOperator:'contains'}],source:'metadata',allowUserPinning:true}},
       fields:['code','name'].map((key,i)=>({key,label:i?'Name':'Code',valueKind:'string',semanticRole:i?'title':'identity',defaultVisible:true,defaultOrder:i,filterOperators:['contains','eq'],sortable:true,groupable:false,aggregations:[]})),
-      actions:[],scope:{status:'ready',labels:[],fingerprint:'scope'},limits:{defaultPageSize:10,allowedPageSizes:[10,25],maxSortLevels:2,countMode:'none'}
+      actions:[],scope:{status:'ready',labels:[],fingerprint:'c'.repeat(64)},limits:{defaultPageSize:10,allowedPageSizes:[10,25],maxSortLevels:2,countMode:'none'}
     };
     window.listQueries=[];
     const client={request:async(op,input)=>{
       if(op===entityListDescriptorOperation)return descriptor;
-      if(op===entityListOperation){window.listQueries.push(input.query);return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'scope',queryHash:'d'.repeat(64),rows:[{id:'record-1',values:{code:'A1',name:'Alpha'}}],pagination:{pageSize:10,hasNext:false,hasPrevious:false,countMode:'none'}};}
+      if(op===entityListOperation){window.listQueries.push(input.query);return {schemaVersion:1,descriptorHash:'a'.repeat(64),scopeFingerprint:'c'.repeat(64),queryHash:'d'.repeat(64),rows:[{id:'record-1',values:{code:'A1',name:'Alpha'}}],pagination:{pageSize:10,hasNext:false,hasPrevious:false,countMode:'none'}};}
       throw Error('Unexpected fixture operation');
     }};
     createRoot(document.getElementById('root')).render(<EntityListRuntime client={client} entityCode="test_record"/>);

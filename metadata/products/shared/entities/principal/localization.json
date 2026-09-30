@@ -1,0 +1,156 @@
+{
+  "schema": "athyper.meta-entity-localization/1",
+  "defaultLocale": "en",
+  "requiredLocales": [
+    "en",
+    "ms",
+    "ar"
+  ],
+  "values": {
+    "entity.principal.label": {
+      "en": "Principal",
+      "ms": "Prinsipal",
+      "ar": "الهوية"
+    },
+    "entity.principal.title": {
+      "en": "Principals",
+      "ms": "Prinsipal",
+      "ar": "الهويات"
+    },
+    "entity.principal.fields.id": {
+      "en": "Record ID",
+      "ms": "ID rekod",
+      "ar": "معرّف السجل"
+    },
+    "entity.principal.fields.tenant_id": {
+      "en": "Tenant",
+      "ms": "Penyewa",
+      "ar": "المستأجر"
+    },
+    "entity.principal.fields.code": {
+      "en": "Code",
+      "ms": "Kod",
+      "ar": "الرمز"
+    },
+    "entity.principal.fields.name": {
+      "en": "Name",
+      "ms": "Nama",
+      "ar": "الاسم"
+    },
+    "entity.principal.fields.principal_type": {
+      "en": "Principal type",
+      "ms": "Jenis prinsipal",
+      "ar": "نوع الهوية"
+    },
+    "entity.principal.fields.provisioning_source": {
+      "en": "Provisioning source",
+      "ms": "Sumber penyediaan",
+      "ar": "مصدر الإنشاء"
+    },
+    "entity.principal.fields.status": {
+      "en": "Status",
+      "ms": "Status",
+      "ar": "الحالة"
+    },
+    "entity.principal.fields.created_at": {
+      "en": "Created",
+      "ms": "Dicipta",
+      "ar": "تاريخ الإنشاء"
+    },
+    "entity.principal.fields.updated_at": {
+      "en": "Updated",
+      "ms": "Dikemas kini",
+      "ar": "تاريخ التحديث"
+    },
+    "entity.principal.fields.created_by": {
+      "en": "Created by",
+      "ms": "Dicipta oleh",
+      "ar": "أنشأه"
+    },
+    "entity.principal.fields.updated_by": {
+      "en": "Updated by",
+      "ms": "Dikemas kini oleh",
+      "ar": "حدّثه"
+    },
+    "entity.principal.options.principal_type.user": {
+      "en": "User",
+      "ms": "Pengguna",
+      "ar": "مستخدم"
+    },
+    "entity.principal.options.principal_type.service_account": {
+      "en": "Service account",
+      "ms": "Akaun perkhidmatan",
+      "ar": "حساب خدمة"
+    },
+    "entity.principal.options.principal_type.bot": {
+      "en": "Bot",
+      "ms": "Bot",
+      "ar": "روبوت"
+    },
+    "entity.principal.options.principal_type.integration": {
+      "en": "Integration",
+      "ms": "Integrasi",
+      "ar": "تكامل"
+    },
+    "entity.principal.options.principal_type.support": {
+      "en": "Support",
+      "ms": "Sokongan",
+      "ar": "دعم"
+    },
+    "entity.principal.options.provisioning_source.internal": {
+      "en": "Internal",
+      "ms": "Dalaman",
+      "ar": "داخلي"
+    },
+    "entity.principal.options.provisioning_source.jit": {
+      "en": "JIT",
+      "ms": "JIT",
+      "ar": "JIT"
+    },
+    "entity.principal.options.provisioning_source.sync": {
+      "en": "Sync",
+      "ms": "Penyegerakan",
+      "ar": "مزامنة"
+    },
+    "entity.principal.options.provisioning_source.import": {
+      "en": "Import",
+      "ms": "Import",
+      "ar": "استيراد"
+    },
+    "entity.principal.options.provisioning_source.api": {
+      "en": "API",
+      "ms": "API",
+      "ar": "API"
+    },
+    "entity.principal.options.status.active": {
+      "en": "Active",
+      "ms": "Aktif",
+      "ar": "نشط"
+    },
+    "entity.principal.options.status.suspended": {
+      "en": "Suspended",
+      "ms": "Digantung",
+      "ar": "معلّق"
+    },
+    "entity.principal.options.status.deactivated": {
+      "en": "Deactivated",
+      "ms": "Dinyahaktifkan",
+      "ar": "معطّل"
+    },
+    "entity.principal.sections.overview": {
+      "en": "Overview",
+      "ms": "Ikhtisar",
+      "ar": "نظرة عامة"
+    },
+    "entity.principal.sections.profile": {
+      "en": "Profile",
+      "ms": "Profil",
+      "ar": "الملف الشخصي"
+    },
+    "entity.principal.sections.notifications": {
+      "en": "Notifications",
+      "ms": "Pemberitahuan",
+      "ar": "الإشعارات"
+    }
+  }
+}

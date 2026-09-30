@@ -22,14 +22,18 @@ export function registerCollaborationRoutes(
       ) => Promise<{ status?: number; body?: unknown }>,
     ) =>
     async (r: any, s: Response, n: any) => {
+      const started = performance.now();
+      const timing = () => s.setHeader("Server-Timing", `total;dur=${(performance.now() - started).toFixed(1)}`);
       try {
         const out = await work(r, o.readContext(s));
+        timing();
         if (out.status === 204) {
           s.status(204).end();
           return;
         }
         s.status(out.status ?? 200).json(out.body);
       } catch (e) {
+        timing();
         if (e instanceof Error && "code" in e && e.code === "ENTITY_CAPABILITY_DENIED")
           s.status(403).type("application/problem+json").json({status:403,code:"ENTITY_CAPABILITY_DENIED",title:"Entity capability is unavailable or not authorized"});
         else if (e instanceof CollaborationError)

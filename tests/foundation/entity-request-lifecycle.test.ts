@@ -1,10 +1,31 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { HttpClient } from "@athyper/platform-api-client";
-import { requestThumbnail } from "../../packages/platform/entity/runtime/form-detail/src/thumbnail-requests";
+import { requestThumbnail, forgetThumbnail } from "../../packages/platform/entity/runtime/form-detail/src/thumbnail-requests";
 import { requestDetail } from "../../packages/platform/entity/runtime/form-detail/src/detail-requests";
 
 const tick = () => new Promise<void>(resolve => setImmediate(resolve));
+test("ready thumbnails survive remounts only within their record/security scope and signed lifetime", async () => {
+  let calls = 0;
+  let now = Date.now();
+  const clock = Date.now;
+  Date.now = () => now;
+  try {
+    const client = {request: async () => { calls++; return {state:"ready",url:"https://objects.test/preview",expiresAt:new Date(now + 120000).toISOString()}; }} as unknown as HttpClient;
+    const signal = new AbortController().signal;
+    await requestThumbnail(client,"principal-a/record-a/revision-a","file-a",signal);
+    await requestThumbnail(client,"principal-a/record-a/revision-a","file-a",signal);
+    assert.equal(calls,1);
+    for (const scope of ["principal-b/record-a/revision-a","principal-a/record-b/revision-a","principal-a/record-a/revision-b"]) await requestThumbnail(client,scope,"file-a",signal);
+    assert.equal(calls,4);
+    now += 116000;
+    await requestThumbnail(client,"principal-a/record-a/revision-a","file-a",signal);
+    assert.equal(calls,5);
+    forgetThumbnail(client,"principal-a/record-a/revision-a","file-a");
+    await requestThumbnail(client,"principal-a/record-a/revision-a","file-a",signal);
+    assert.equal(calls,6);
+  } finally { Date.now = clock; }
+});
 function fixture() {
   const calls: { signal: AbortSignal; resolve(value: unknown): void }[] = [];
   const client = { request: async (_operation: unknown, input: { signal: AbortSignal }) =>

@@ -339,6 +339,7 @@ export function MetadataDetailWorkspace({
                         {section.label}
                       </h2>
                       {section.relationshipKey ? <EntityRelatedSection ownerEntityCode={entityCode} ownerRecordId={record.id}
+                        canCreate={descriptor.relationshipCapabilities?.[section.relationshipKey]?.create ?? false}
                         relationship={presentation.entityRelationships!.find(relation => relation.key === section.relationshipKey)!} /> :
                         <EntityRecordFields descriptor={descriptor} record={record} fieldKeys={section.fields} />}
                     </Card>

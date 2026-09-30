@@ -9,27 +9,48 @@ import {
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { localizeEntityErrorModel, localizedEntityError } from "@athyper/platform-i18n/entity-errors";
 import { PageWorkspace, useRecordPage } from "@athyper/platform-shell";
-import {
-  ErrorSurface,
-} from "@athyper/platform-shell-app-foundation";
 import { classifyAppError } from "@athyper/platform-shell-app-foundation/error-taxonomy";
 import {
+  ErrorSurface,
   useApiClient,
+  useEntityContext,
+  useExperienceRevision,
+  usePermissions,
   useSessionIdentity,
 } from "@athyper/platform-shell-app-foundation";
 import { Card, InlineStatus, SurfaceErrorBoundary } from "@athyper/platform-ui";
 import { MetadataDetailWorkspace } from "./detail-workspace";
 import { sessionScopeKey } from "./session-scope-key";
 import { useAsyncResource } from "./use-async-resource";
+import { entityApplicationDescriptorOperation } from "@athyper/platform-api-client";
+import { useEntityApplication } from "@athyper/platform-entity-list-view";
 import { requestDetail } from "./detail-requests";
-import { useExperienceRevision, usePermissions } from "@athyper/platform-shell-app-foundation";
+import { ThumbnailRecordScope } from "./thumbnail-scope";
 
 interface LoadedDetail {
   readonly descriptor: EntityDetailDescriptorV1;
   readonly record: EntityRecordV1;
 }
 
-export function EntityDetailRuntime({
+export function EntityDetailRuntime(props: { readonly entityCode: string; readonly recordId: string; readonly editHref?: string }) {
+  const adapter = useEntityContext();
+  const inherited = useEntityApplication();
+  const identity = useSessionIdentity();
+  const revision = useExperienceRevision();
+  const client = useApiClient();
+  const intl = useEntityI18n();
+  const key = JSON.stringify([identity.scope, revision, props.entityCode]);
+  const discovery = useAsyncResource(key, signal => client.request(entityApplicationDescriptorOperation, { params: { entityCode: props.entityCode }, signal }), [client, props.entityCode], Boolean(adapter && inherited?.descriptor.entity.code !== props.entityCode && identity.state === "authenticated" && revision.state === "ready"));
+  const descriptor = inherited?.descriptor.entity.code === props.entityCode ? inherited.descriptor : discovery.data;
+  const discoveryDenied = discovery.error && typeof discovery.error === "object" && "status" in discovery.error && discovery.error.status === 403;
+  if (adapter && !descriptor && !discoveryDenied) return discovery.error
+    ? <ErrorSurface model={localizeEntityErrorModel(classifyAppError({ error: discovery.error }), intl)} retryLabel={intl.message("entity.retry")} reset={discovery.reload} surface="content" />
+    : <InlineStatus tone="neutral">{intl.message("detail.loadingRecord")}</InlineStatus>;
+  const content = <AuthorizedDetailRuntime key={descriptor?.scope.workContext ? adapter?.generation : undefined} {...props} />;
+  return adapter && descriptor?.scope.workContext ? adapter.gate(content) : content;
+}
+
+function AuthorizedDetailRuntime({
   entityCode,
   recordId,
   editHref,
@@ -62,7 +83,7 @@ export function EntityDetailRuntime({
         {loaded.error ? (
           <ErrorSurface
             model={{ ...errorModel!, description: localizedEntityError(loaded.error, intl, errorModel?.description) }}
-            reset={loaded.reload}
+            retryLabel={intl.message("entity.retry")} reset={loaded.reload}
             applicationName={humanizeIdentifier(entityCode)}
             surface="content"
           />
@@ -80,6 +101,7 @@ export function EntityDetailRuntime({
       message={intl.message("error.unavailable")}
       retryLabel={intl.message("entity.retry")}
     >
+      <ThumbnailRecordScope.Provider value={JSON.stringify([entityCode, recordId])}>
       <MetadataDetailWorkspace
         key={key}
         preferenceKey={`athyper.detail-view.${descriptor.plane}:${identity.scope?.tenantId}:${identity.scope?.principalId}:${entityCode}`}
@@ -93,6 +115,7 @@ export function EntityDetailRuntime({
         editHref={editHref}
         status=""
       />
+      </ThumbnailRecordScope.Provider>
     </SurfaceErrorBoundary>
   );
 }

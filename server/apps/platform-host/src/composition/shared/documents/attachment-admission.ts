@@ -33,6 +33,7 @@ export function createEntityAttachmentAdmission(options: {
     action: string;
     input: Readonly<Record<string, unknown>>;
     preflight?: boolean;
+    actionOnly?: boolean;
   }): Promise<{ releaseHash: string; policyHash: string }>;
   authorizeOwner(input: {
     context: VerifiedRequestContext;
@@ -120,6 +121,7 @@ export function createEntityAttachmentAdmission(options: {
       kind: "attachments",
       action,
       input: currentInput,
+      actionOnly: true,
       ...(mode?.preflight ? {preflight:true} : {}),
     });
     if (action === "finalize" && admittedPolicyHash !== resolved.policyHash)

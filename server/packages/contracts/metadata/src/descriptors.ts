@@ -102,6 +102,8 @@ export interface EntityFieldDescriptor {
     /** Human-readable section used to organize large field catalogues. */
     readonly columnGroup?: string;
     readonly semanticRole?: string;
+    /** Ordering hint for narrow record cards; it never widens the authorized projection. */
+    readonly cardPriority?: "primary" | "secondary" | "hidden";
     readonly rendererKey?: string;
     readonly statusTones?: Readonly<Record<string, "neutral" | "success" | "warning" | "danger">>;
     readonly defaultVisible?: boolean;

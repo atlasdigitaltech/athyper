@@ -164,7 +164,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 88,
+          "line": 92,
           "declaredPath": "/api/collab/comments/:id",
           "kind": "direct"
         }
@@ -179,7 +179,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 120,
+          "line": 124,
           "declaredPath": "/api/collab/comments/:id/reactions/:code",
           "kind": "direct"
         }
@@ -201,7 +201,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 141,
+          "line": 145,
           "declaredPath": "/api/collab/drafts",
           "kind": "direct"
         }
@@ -1969,7 +1969,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 49,
+          "line": 53,
           "declaredPath": "/api/collab/comments/:id/history",
           "kind": "direct"
         }
@@ -2095,7 +2095,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 48,
+          "line": 52,
           "declaredPath": "/api/collab/participants",
           "kind": "direct"
         }
@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2759,
+          "line": 2767,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2432,
+          "line": 2440,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -2849,7 +2849,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 281,
+          "line": 293,
           "declaredPath": "/api/entity-runtime/:entityCode/application-descriptor",
           "kind": "contract"
         }
@@ -2864,7 +2864,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 336,
+          "line": 348,
           "declaredPath": "/api/entity-runtime/:entityCode/detail-descriptor",
           "kind": "contract"
         }
@@ -2879,7 +2879,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 314,
+          "line": 326,
           "declaredPath": "/api/entity-runtime/:entityCode/form-descriptor",
           "kind": "contract"
         }
@@ -2894,7 +2894,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 391,
+          "line": 403,
           "declaredPath": "/api/entity-runtime/:entityCode/list",
           "kind": "contract"
         }
@@ -2909,7 +2909,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 298,
+          "line": 310,
           "declaredPath": "/api/entity-runtime/:entityCode/list-descriptor",
           "kind": "contract"
         }
@@ -2924,7 +2924,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 376,
+          "line": 388,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId",
           "kind": "contract"
         }
@@ -2954,7 +2954,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/entity-runtime-routes.ts",
-          "line": 27,
+          "line": 30,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/collaboration/:kind",
           "kind": "contract"
         }
@@ -2969,7 +2969,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 359,
+          "line": 371,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/detail",
           "kind": "contract"
         }
@@ -9705,7 +9705,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 69,
+          "line": 73,
           "declaredPath": "/api/collab/comments/:id",
           "kind": "direct"
         }
@@ -10910,7 +10910,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 166,
+          "line": 180,
           "declaredPath": "/api/attachments/:attachmentId/extract",
           "kind": "direct"
         }
@@ -10940,7 +10940,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 162,
+          "line": 176,
           "declaredPath": "/api/attachments/:attachmentId/preview",
           "kind": "direct"
         }
@@ -10955,7 +10955,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 175,
+          "line": 189,
           "declaredPath": "/api/attachments/browse",
           "kind": "direct"
         }
@@ -10985,7 +10985,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 170,
+          "line": 184,
           "declaredPath": "/api/attachments/search",
           "kind": "direct"
         }
@@ -11169,7 +11169,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 54,
+          "line": 58,
           "declaredPath": "/api/collab/comments",
           "kind": "direct"
         }
@@ -11191,7 +11191,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 170,
+          "line": 174,
           "declaredPath": "/api/collab/comments/:id/flag",
           "kind": "direct"
         }
@@ -11213,7 +11213,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 106,
+          "line": 110,
           "declaredPath": "/api/collab/comments/:id/reactions",
           "kind": "direct"
         }
@@ -11235,7 +11235,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 55,
+          "line": 59,
           "declaredPath": "/api/collab/comments/:id/replies",
           "kind": "direct"
         }
@@ -11257,7 +11257,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 157,
+          "line": 161,
           "declaredPath": "/api/collab/comments/mark-all-read",
           "kind": "direct"
         }
@@ -11279,7 +11279,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 133,
+          "line": 137,
           "declaredPath": "/api/collab/drafts",
           "kind": "direct"
         }

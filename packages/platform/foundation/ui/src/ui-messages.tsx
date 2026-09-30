@@ -18,6 +18,8 @@ export interface UiMessages {
   readonly legalEntity: (code: string) => string;
   readonly companyDetails: (code: string, country: string, currency: string) => string;
   readonly noMatchingCompanies: string;
+  readonly selectView: string;
+  readonly viewName: (name: string, modified: boolean) => string;
 }
 
 export const englishUiMessages: UiMessages = Object.freeze({
@@ -29,6 +31,8 @@ export const englishUiMessages: UiMessages = Object.freeze({
   legalEntity: (code: string) => `Legal entity · ${code}`,
   companyDetails: (code: string, country: string, currency: string) => `${code} · ${country} · ${currency}`,
   noMatchingCompanies: "No permitted companies match your search.",
+  selectView: "Select view",
+  viewName: (name: string, modified: boolean) => `View: ${name}${modified ? " (modified)" : ""}`,
 });
 
 const UiMessagesContext = createContext<UiMessages>(englishUiMessages);

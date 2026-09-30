@@ -1,4 +1,6 @@
 "use client";
+import { createEffectiveLocalization, createIntlRuntime, type IntlRuntime } from "@athyper/platform-i18n";
+import { entityMessages, entityFallbackMessages } from "@athyper/platform-i18n/entity-catalogs";
 
 import {
   activityHref,
@@ -79,6 +81,8 @@ export function useActivityCenterDataSource({
   notificationLimit = 50,
   inboxLimit = 50,
 }: ActivityCenterOptions): ShellActivityDataSource {
+  const intl = useMemo(() => createIntlRuntime({localization: createEffectiveLocalization({uiLocale: locale}), messages: entityMessages(locale), fallbackMessages: entityFallbackMessages}), [locale]);
+  const activityError = (cause: unknown) => localizedActivityError(cause, intl);
   const notificationsClient = useMemo(
       () => createNotificationClient(client),
       [client],
@@ -746,10 +750,16 @@ function dueLabel(value: string, locale: string): string {
     return `Overdue ${relativeTime(value, locale).replace(" ago", "")}`;
   return `Due ${relativeTime(value, locale)}`;
 }
-function activityError(cause: unknown): string {
-  return cause instanceof Error && cause.message
-    ? cause.message
-    : "Activity is temporarily unavailable.";
+function localizedActivityError(cause: unknown, intl: IntlRuntime): string {
+  if (cause instanceof ApiTransportError) {
+    if (cause.problem?.code === "COLLECTION_CONFIGURATION_NOT_PUBLISHED")
+      return intl.message("activity.unpublished");
+    if (cause.status === 403)
+      return intl.message("activity.forbidden");
+    if (cause.status === 404)
+      return intl.message("activity.missing");
+  }
+  return intl.message("activity.unavailable");
 }
 function mergeById<T extends { readonly id: string }>(
   current: readonly T[],

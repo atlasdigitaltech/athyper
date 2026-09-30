@@ -87,7 +87,6 @@
 
 /* Shared Collaboration workspace: semantic theme tokens, one mounted panel. */
 .a-collaboration-panel { display:flex; flex-direction:column; min-inline-size:0; min-block-size:0; color:var(--a-foreground); background:var(--a-surface); font-size:var(--a-font-size-sm); font-weight:var(--a-font-weight-normal); line-height:var(--a-line-height-body,1.5); }
-.a-collaboration-panel[hidden],.a-collaboration-panel [hidden] { display:none!important; }
 .a-collaboration-panel[data-mode=pinned],.a-collaboration-panel[data-mode=drawer] { position:fixed; inset-block:var(--shell-topbar,4rem) 0; inset-inline-end:0; inline-size:min(var(--collaboration-width),100vw); z-index:var(--a-z-drawer); border-inline-start:var(--a-border-width) solid var(--a-border); box-shadow:var(--a-shadow-overlay); }
 .a-collaboration-backdrop { position:fixed; inset:var(--shell-topbar,4rem) 0 0; z-index:calc(var(--a-z-drawer) - 1); border:0; background:var(--a-scrim, var(--a-muted)); opacity:.65; }
 .a-collaboration-panel__resize { position:absolute; inset-block:0; inset-inline-start:-3px; inline-size:6px; cursor:ew-resize; touch-action:none; z-index:2; }
@@ -254,7 +253,6 @@
 
 /* File discovery shares one results surface across dock, overlay and page content. */
 .a-attachment-workspace { min-inline-size:0; container-type:inline-size; }
-.a-attachment-workspace [hidden] { display:none !important; }
 .a-files-discovery-controls { display:grid; gap:var(--a-space-3); min-inline-size:0; }
 .a-file-search { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--a-space-2); }
 .a-file-search > form { grid-column:1 / -1; }
@@ -612,7 +610,6 @@
 /* Creation stays available without consuming the reading area. */
 .a-comment-compose-toggle { flex:none; display:flex; justify-content:flex-start; border-block-start:var(--a-border-width) solid var(--a-border); padding-block-start:var(--a-space-2); }
 .a-comment-compose-placement:has(.a-comment-compose-slot[hidden]) { display:none; }
-.a-attachment-uploader[hidden], .a-attachment-uploader [hidden] { display:none!important; }
 .a-files-upload-area:has(> .a-attachment-uploader[hidden]) { display:none; }
 /* Files controls adapt to the panel width, including a narrow desktop dock. */
 .a-files-discovery-controls { container: files-controls / inline-size; padding:0; border:0; border-radius:0; background:transparent; }
@@ -1059,7 +1056,6 @@
 }
 .a-collaboration-panel:not([data-mode=content]) .a-record-action-dock { position:relative; max-block-size:55%; overflow:auto; }
 .a-record-action-dock.a-comment-compose-dock:has(> .a-comment-compose-placement:empty) { display:flex; }
-.a-record-action-dock[hidden] { display:none !important; }
 .a-record-action-dock .a-comment-composer-card[data-compact=true] {
   display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center;
   gap:var(--a-space-1); padding:var(--a-space-1); border:var(--a-border-width) solid var(--a-input);

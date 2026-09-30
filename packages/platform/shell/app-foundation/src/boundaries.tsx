@@ -44,7 +44,7 @@ export function GlobalAppErrorBoundary(props: AppErrorBoundaryProps) {
   return <html lang="en"><body><AppErrorBoundary {...props} /></body></html>;
 }
 
-export function ErrorSurface({ model, reset, applicationName = "Athyper", onCompare, surface = "page", homeHref, homeLabel = "Return to workspace", tone, icon }: { readonly model: AppErrorModel; readonly reset?: () => void; readonly applicationName?: string; readonly onCompare?: () => void; readonly surface?: "page" | "content"; readonly homeHref?: string; readonly homeLabel?: string; readonly tone?: "danger" | "warning" | "muted"; readonly icon?: ReactNode }) {
+export function ErrorSurface({ model, reset, applicationName = "Athyper", onCompare, surface = "page", homeHref, homeLabel = "Return to workspace", tone, icon, retryLabel = "Try again" }: { readonly model: AppErrorModel; readonly retryLabel?: string; readonly reset?: () => void; readonly applicationName?: string; readonly onCompare?: () => void; readonly surface?: "page" | "content"; readonly homeHref?: string; readonly homeLabel?: string; readonly tone?: "danger" | "warning" | "muted"; readonly icon?: ReactNode }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, [model.kind]);
   const presentation = KIND_PRESENTATION[model.kind];
@@ -59,7 +59,7 @@ export function ErrorSurface({ model, reset, applicationName = "Athyper", onComp
       <p id="app-error-description" className="a-error-surface__description">{model.description}</p>
       {model.kind === "required-action" ? <IdentityActionList actions={model.requiredActions} /> : null}
       {model.requestId ? <p className="a-error-surface__request">Request ID: <code>{model.requestId}</code></p> : null}
-      <div className="a-error-surface__actions">{actions(model, reset, onCompare)}{homeHref ? <ActionLink variant={model.action === "none" ? "primary" : "secondary"} href={homeHref}>{homeLabel}</ActionLink> : null}</div>
+      <div className="a-error-surface__actions">{actions(model, reset, onCompare, retryLabel)}{homeHref ? <ActionLink variant={model.action === "none" ? "primary" : "secondary"} href={homeHref}>{homeLabel}</ActionLink> : null}</div>
     </PresentationCard>
   </>;
   return surface === "content"
@@ -67,12 +67,12 @@ export function ErrorSurface({ model, reset, applicationName = "Athyper", onComp
     : <main className="a-error-surface" data-error-kind={model.kind} data-tone={effectiveTone}>{content}</main>;
 }
 
-function actions(model: AppErrorModel, reset?: () => void, onCompare?: () => void): ReactNode {
+function actions(model: AppErrorModel, reset?: () => void, onCompare?: () => void, retryLabel = "Try again"): ReactNode {
   if (model.action === "none" || model.action === "correct-fields") return null;
   if (model.action === "login") return <ActionLink variant="primary" href={safeLoginLocation("/")}>Sign in</ActionLink>;
   if (model.action === "select-context") return <ActionLink variant="primary" href="/select-context">Choose context</ActionLink>;
   if (model.action === "complete-action") return <ActionLink variant="primary" href="/auth/required-action">Continue identity check</ActionLink>;
-  return <><ActionButton variant="primary" onClick={() => reset?.()} disabled={!reset}>{model.action === "reload-compare" ? "Reload latest" : "Try again"}</ActionButton>{model.action === "reload-compare" && onCompare ? <ActionButton variant="secondary" onClick={onCompare}>Compare changes</ActionButton> : null}</>;
+  return <><ActionButton variant="primary" onClick={() => reset?.()} disabled={!reset}>{model.action === "reload-compare" ? "Reload latest" : retryLabel}</ActionButton>{model.action === "reload-compare" && onCompare ? <ActionButton variant="secondary" onClick={onCompare}>Compare changes</ActionButton> : null}</>;
 }
 
 function IdentityActionList({ actions }: { readonly actions: readonly string[] }) { return actions.length ? <div className="a-error-surface__notice"><p><strong>Required actions</strong></p><ul>{actions.map((action) => <li key={action}>{humanize(action)}</li>)}</ul></div> : null; }

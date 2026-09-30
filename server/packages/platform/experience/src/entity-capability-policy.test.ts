@@ -74,6 +74,38 @@ function fixture(options: {
   };
 }
 describe("shared published capability admission", () => {
+  it("projects unique permissions with bounded concurrency and reuses the admitted action", async () => {
+    const f = fixture();
+    let active=0, peak=0;
+    f.authorizer.authorize.mockImplementation(async () => {
+      active++; peak=Math.max(peak,active);
+      await new Promise(resolve=>setTimeout(resolve,1));
+      active--;
+      return {allowed:true};
+    });
+    const result=await f.policy.resolve({...f.input,action:"read",input:{}});
+    const unique=new Set(result.binding.actions.map(action=>action.permissionCode));
+    expect(f.authorizer.authorize).toHaveBeenCalledTimes(unique.size);
+    expect(peak).toBeLessThanOrEqual(4);
+    expect(peak).toBeGreaterThan(1);
+    expect(result.projection.actions).toHaveLength(result.binding.actions.length);
+  });
+  it("admits a direct read without projecting unrelated actions or weakening denial", async () => {
+    const f = fixture();
+    await f.policy.resolve({...f.input, action:"preview", input:{}, actionOnly:true});
+    expect(f.authorizer.authorize).toHaveBeenCalledTimes(1);
+    expect(f.authorizeParent).toHaveBeenCalledTimes(1);
+    f.authorizer.authorize.mockResolvedValue({allowed:false});
+    await expect(f.policy.resolve({...f.input, action:"preview", input:{}, actionOnly:true})).rejects.toMatchObject({statusCode:403});
+  });
+  it("history preflight retains version permission while an upload still requires command tokens", async () => {
+    const f = fixture();
+    const input = {...f.input, action:"version", input:{}, actionOnly:true};
+    await expect(f.policy.resolve(input)).rejects.toMatchObject({statusCode:403});
+    await expect(f.policy.resolve({...input,preflight:true})).resolves.toBeDefined();
+    f.authorizer.authorize.mockResolvedValue({allowed:false});
+    await expect(f.policy.resolve({...input,preflight:true})).rejects.toMatchObject({statusCode:403});
+  });
   it("allows ordinary comments with an empty normalized mention list when mentions are disabled", async () => {
     const f = fixture();
     f.operation.commentBinding.features.mentions = false;
@@ -278,3 +310,12 @@ it.each([NaN, Infinity, 1.5])("rejects invalid upload byte count %s", async size
   const f = fixture();
   await expect(f.policy.resolve({ ...f.input, input: { ...f.input.input, sizeBytes } })).rejects.toMatchObject({ statusCode: 403 });
 });
+
+ it.each(["history", "update_own"])("action-only %s retains target audience and command concurrency", async action => {
+   const f = fixture({comment:{commentId:"comment",visibility:"private",authorId:"actor",entityCode:"business_partner",recordId:"record"}});
+   const request = {...f.input,kind:"comments" as const,action,actionOnly:true,input:{commentId:"comment",expectedRevision:1}};
+   await expect(f.policy.resolve(request)).resolves.toBeDefined();
+   if (action === "update_own") await expect(f.policy.resolve({...request,input:{commentId:"comment"}})).rejects.toMatchObject({statusCode:403});
+   const other = fixture({comment:{commentId:"comment",visibility:"private",authorId:"other",entityCode:"business_partner",recordId:"record"}});
+   await expect(other.policy.resolve(request)).rejects.toMatchObject({statusCode:403});
+ });

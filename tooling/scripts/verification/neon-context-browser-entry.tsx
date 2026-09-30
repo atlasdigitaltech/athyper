@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import { EntityDetailRuntime } from "../../../packages/platform/entity/runtime/form-detail/src/entity-detail-runtime";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserApplicationProviders } from "../../../packages/platform/shell/app-foundation/src/index";
 import {
   NeonShell,
+  NeonWorkContextGate,
   useNeonWorkContext,
 } from "../../../packages/planes/neon/shell/src/index";
 import { useContextDepartureGuard } from "../../../packages/platform/shell/shell/src/context-departure";
@@ -62,6 +64,9 @@ const bootstrap = parseExperienceBootstrap({
 });
 
 function Content() {
+  useEffect(() => {
+    Reflect.set(window, "contextContentMounts", (Reflect.get(window, "contextContentMounts") ?? 0) + 1);
+  }, []);
   const work = useNeonWorkContext();
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -94,10 +99,11 @@ function Content() {
   );
 }
 
+const entityFixture = new URLSearchParams(window.location.search).get("entityFixture");
 createRoot(document.getElementById("root")!).render(
   <BrowserApplicationProviders session={session} bootstrap={bootstrap}>
-    <NeonShell bootstrap={bootstrap}>
-      <Content />
+    <NeonShell bootstrap={bootstrap} tenantWorkspace={Boolean(entityFixture)}>
+      {entityFixture ? <EntityDetailRuntime entityCode={entityFixture} recordId="11111111-1111-4111-8111-111111111111"/> : <NeonWorkContextGate><Content /></NeonWorkContextGate>}
     </NeonShell>
   </BrowserApplicationProviders>,
 );

@@ -8,6 +8,7 @@ import {
 } from "@athyper/server-service-publication";
 import { sql, type Kysely } from "kysely";
 type Database = Record<string, never>;
+type ActivationGuard = NonNullable<ConstructorParameters<typeof PublicationOrchestrator>[3]>;
 
 /** Preserve tenant RLS on both sides of the existing resumable apply protocol. */
 export class TenantPublicationOrchestrator extends PublicationOrchestrator {
@@ -15,15 +16,14 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
     private readonly authorityDatabase: Kysely<Database>,
     private readonly localDatabase: Kysely<Database>,
     private readonly artifactLoader: PublicationArtifactLoader,
-    private readonly activationGuard?: ConstructorParameters<
-      typeof PublicationOrchestrator
-    >[3],
+    private readonly activationGuard?: (
+      ...args: [...Parameters<ActivationGuard>, Kysely<Database>]
+    ) => ReturnType<ActivationGuard>,
   ) {
     super(
       new KyselyPublicationAuthorityRepository(authorityDatabase),
       new KyselyLocalProjectionRepository(localDatabase),
       artifactLoader,
-      activationGuard,
     );
   }
   override async deploy(deploymentId: string) {
@@ -39,16 +39,23 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
         .transaction()
         .execute(async (authority) => {
           await stamp(authority);
-          return this.localDatabase.transaction().execute(async (local) => {
+          const apply = async (local: Kysely<Database>) => {
             await stamp(local);
             return new PublicationOrchestrator(
               new KyselyPublicationAuthorityRepository(authority),
               new KyselyLocalProjectionRepository(local),
               this.artifactLoader,
-              this.activationGuard,
+              this.activationGuard
+                ? (deployment, loaded) => this.activationGuard!(deployment, loaded, authority)
+                : undefined,
               "after_rollback",
             ).deploy(deploymentId);
-          });
+          };
+          // Studio is both authority and target. Keep its projection and
+          // authority updates atomic without borrowing another connection.
+          return this.localDatabase === this.authorityDatabase
+            ? apply(authority)
+            : this.localDatabase.transaction().execute(apply);
         });
     } catch (error) {
       const failure = classifyPublicationFailure(error, "stage");

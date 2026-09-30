@@ -20,7 +20,7 @@ export function formatFieldValue(
     const date = new Date(String(value));
     if (!Number.isNaN(date.getTime()))
       return new Intl.DateTimeFormat(
-        undefined,
+        "en",
         field.valueKind === "date"
           ? { dateStyle: "medium", timeZone: "UTC" }
           : { dateStyle: "medium", timeStyle: "short" },
@@ -32,7 +32,7 @@ export function formatFieldValue(
   ) {
     try {
       return (
-        new Intl.DisplayNames(undefined, { type: "region" }).of(
+        new Intl.DisplayNames("en", { type: "region" }).of(
           String(value).toUpperCase(),
         ) ?? String(value)
       );

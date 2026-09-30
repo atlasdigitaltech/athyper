@@ -1,4 +1,4 @@
-/** Exact routes only: commercial paths must retain the work-context gate. */
+/** Shared entity routes resolve their context requirement from the descriptor. */
 export function isTenantWorkspaceRoute(pathname: string): boolean {
-  return pathname === "/mdg/business-partner/register";
+  return pathname.startsWith("/app/entity/") || pathname === "/mdg/business-partner/register";
 }

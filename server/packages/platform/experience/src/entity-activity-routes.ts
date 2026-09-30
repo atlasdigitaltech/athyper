@@ -1,4 +1,5 @@
 import type { ActivityDateRange } from "@athyper/contract-platform-entity-runtime";
+import { withReadEvidence } from "@athyper/server-foundation/context";
 import {
   defineRouteContract,
   registerContractRoute,
@@ -53,7 +54,8 @@ export function registerEntityActivityRoutes(
       async (req: Request, res: Response, next: NextFunction) => {
         res.setHeader("Cache-Control", "private, no-store");
         try {
-          const result = await work(req, res);
+          const result = await (method === "get" || suffix === "/compare"
+            ? withReadEvidence(() => work(req, res)) : work(req, res));
           if (result === null) {
             res.status(403).json({ code: "ACTIVITY_DENIED" });
             return;

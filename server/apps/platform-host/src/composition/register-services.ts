@@ -1,3 +1,4 @@
+import { createPublishedOwnerAdministrationAuthorizer } from "./shared/entity-runtime/published-owner-administration.js";
 import { createCapabilityRegistration } from "../kernel/capability-registration.js";
 import { createRegistrationPlan } from "../kernel/registration-plan.js";
 import { readDeploymentProfile } from "../config/deployment-profile.js";
@@ -53,7 +54,7 @@ import { parseAtlasSemanticConfig } from "./spaces/neon/ai/atlas-semantic-index.
 import { createAtlasDocumentGrounding } from "./spaces/neon/ai/atlas-document-grounding.js";
 import { registerAtlasAttachmentKnowledge } from "./spaces/neon/ai/atlas-attachment-knowledge.js";
 import { createAuthenticatedEntityReleaseReview } from "@athyper/server-service-publication";
-import { getRequestContext as authoringRequestContext, tryGetRequestContext } from "@athyper/server-foundation/context";
+import { getRequestContext as authoringRequestContext, tryGetRequestContext, withReadEvidence } from "@athyper/server-foundation/context";
 import { createMetaEntityAuthoringAuthorizer, createMetaEntityInspectionAuthorizer } from "./shared/entity-governance/meta-entity-authoring-authorizer.js";
 import { createScopedMetaEntityAuthoringRepository } from "./shared/entity-governance/scoped-meta-entity-authoring.js";
 import { createDevRuntimePublication } from "../development/runtime-publication.js";
@@ -354,7 +355,7 @@ import {
 } from "@athyper/server-service-numbering";
 import { BookPeriodService, CloseReadinessService, FinanceNumberingService, FinancePostingGuard, KyselyBookPeriodRepository, KyselyCloseReadinessRepository, KyselyFinanceFoundationReader, KyselyFinanceNumberingPolicyReader, KyselyFinanceNumberingRepository, KyselyRoundingPolicyReader, RoundingResolver, SnapshotFinanceSourceDocumentReader, financeFoundation, snapshotFinancePermissionChecker } from "@athyper/server-service-finance";
 import { registerFinanceRoutes } from "./spaces/neon/finance-routes.js";
-import { createRecordOwnerAccessAdapter, createKyselyRecordRepository, createKyselyCommandExecutionStore, createEntityBackendAuthorizer, GovernedImportAdapterRegistry, MAINTAIN_RECORD_TRANSFERS_JOB, RECORD_TRANSFER_MAINTENANCE_QUEUE, createRecordTransferMaintenanceHandler } from "@athyper/server-service-records";
+import { scopeRecordOwnerRead, createRecordOwnerAccessAdapter, createKyselyRecordRepository, createKyselyCommandExecutionStore, createEntityBackendAuthorizer, GovernedImportAdapterRegistry, MAINTAIN_RECORD_TRANSFERS_JOB, RECORD_TRANSFER_MAINTENANCE_QUEUE, createRecordTransferMaintenanceHandler } from "@athyper/server-service-records";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import {
@@ -582,12 +583,17 @@ export function registerServices(
       : selected;
   };
   const authorizer = createPublishedTenantRecordAuthorizer({
+    ownerAccess: true,
+    ownerAuthority: createPublishedOwnerAdministrationAuthorizer({
+      getEntityDescriptor: (context, entityCode) => metadata.getEntityDescriptor(context, entityCode),
+    }),
     authority: observeAuthority(baseAuthorizer),
     metadata: { getEntityDescriptor: (context, entityCode) => metadata.getEntityDescriptor(context, entityCode) },
     refreshContext: refreshEntityContext,
     exists: (context, descriptor, recordId) => transactions.run(context.planeKey, context, async tx => {
       const repository = dependencies.repository ?? createKyselyRecordRepository({ databases: recordDatabases, scopeCompilers: registeredRecordScopeSqlCompilers });
-      return Boolean(await repository.get(descriptor, context.tenantId, recordId, [descriptor.storage.idField], tx));
+      const ownerValues = await createRecordOwnerAccessAdapter(authorizer).prepare({ context, descriptor, operation: "read" }, tx);
+      return Boolean(await repository.get(scopeRecordOwnerRead(descriptor, ownerValues), context.tenantId, recordId, [descriptor.storage.idField], tx));
     }),
   });
   // Filled with the very same service instance mounted by the generic record routes.
@@ -2298,7 +2304,9 @@ export function registerServices(
         if (entityCode) entityCode = collaborationEntityCode(entityCode);
         if(entityCode === "content.item") { if(action === "mention" || action === "history") throw new EntityCapabilityPolicyError(); return; }
         if(!entityCode || !recordId) throw new EntityCapabilityPolicyError();
-        const resolved=await capabilityPolicy.resolve({context:input.context,entityCode,recordId,kind:"comments",action,input:value});
+        // Only the admission reads share evidence. The subsequent command
+        // transaction, revision checks and writes run outside this boundary.
+        const resolved=await withReadEvidence(() => capabilityPolicy.resolve({context:input.context,entityCode:entityCode!,recordId:recordId!,kind:"comments",action,input:value,actionOnly:true}));
         if ("maxDepth" in resolved.binding && typeof value.parentCommentId === "string") {
           const parent = await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{thread_depth:number}>`SELECT thread_depth FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${value.parentCommentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} AND status<>'deleted'`.execute(tx)).rows[0]);
           if(!parent || !canReplyAtDepth("active", parent.thread_depth, resolved.binding.maxDepth)) throw new EntityCapabilityPolicyError();
@@ -4536,14 +4544,13 @@ function registerPublication(
       runtimeVersion: config.publication.runtimeVersion,
       ...(authorizationCompilation ? { authorizationRuntime: authorizationCompilation.runtime } : {}),
     },
-    activationGuard: async (deployment, loaded) => {
+    activationGuard: async (deployment, loaded, authorityTransaction) => {
       const tenantContext = tryGetRequestContext();
       if (!tenantContext?.tenantId) throw new Error("PUBLICATION_APPLIER_TENANT_REQUIRED");
-      const approved = await authorityDatabase.transaction().execute(async tx => {
-        await sql`SELECT set_config('app.current_tenant_id',${tenantContext.tenantId},true)`.execute(tx);
-        return (await sql`SELECT id FROM publication.release WHERE id=${deployment.sourceReleaseId}::uuid
-          AND tenant_id=${tenantContext.tenantId}::uuid AND status IN ('approved','published')`.execute(tx)).rows.length === 1;
-      });
+      // Reuse the stamped authority transaction. Opening another transaction
+      // here exhausts the worker pool during same-plane publication.
+      const approved = (await sql`SELECT id FROM publication.release WHERE id=${deployment.sourceReleaseId}::uuid
+          AND tenant_id=${tenantContext.tenantId}::uuid AND status IN ('approved','published')`.execute(authorityTransaction)).rows.length === 1;
       if (!approved) throw new Error("PUBLICATION_ACTIVATION_APPROVAL_REQUIRED");
       const envelope = loaded.document.envelope;
       const descriptors = envelope.artifactKind === "entity_runtime" &&

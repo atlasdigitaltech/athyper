@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseEntityListDescriptor, parseEntityListResult } from "@athyper/contract-platform-entity-list";
+import { parseEntityRecordPresentation } from "@athyper/contract-platform-entity-runtime";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { EntityRuntimeDescriptor, MetadataReader } from "@athyper/server-contract-metadata";
 import type { RecordCollectionScopeResolver } from "@athyper/server-contract-records";
@@ -70,6 +71,25 @@ describe("safe entity list service", () => {
     expect(compiled.surface.defaultState.sort).toEqual([{ field: "code", direction: "asc" }]);
     expect(compiled.fields.find((field) => field.key === "code")).toMatchObject({ label: "Business Partner Code", semanticRole: "identity" });
     expect(compiled.limits).toMatchObject({ defaultPageSize: 10, allowedPageSizes: [10, 25], maxSortLevels: 3 });
+  });
+
+  it("derives the record-card title role from the published record title and passes card priority", async () => {
+    const presented: EntityRuntimeDescriptor = {
+      ...descriptor,
+      fields: descriptor.fields.map((field) => ({ ...field, ...(field.key === "code" ? { list: { cardPriority: "primary" as const } } : {}), ...(field.key === "tax_id" ? { list: { semanticRole: "tax_reference", cardPriority: "hidden" as const } } : {}) })),
+      listPresentation: { identityField: "code", title: "Business Partners", defaultColumns: ["code", "name"], supportedModes: ["table", "compact"] },
+      recordPresentation: parseEntityRecordPresentation({ schemaVersion: 1, titleField: "name", sections: [{ key: "overview", label: "Overview", fields: ["code", "name"] }] }),
+    };
+    const lists = createTestListService({ metadata: { getEntityDescriptor: async () => presented }, descriptor: presented, authorizer: allowReadOnly() });
+    const compiled = parseEntityListDescriptor(await lists.descriptor(context, presented.entityCode));
+    expect(compiled.fields.find((field) => field.key === "name")).toMatchObject({ semanticRole: "title" });
+    expect(compiled.fields.find((field) => field.key === "code")).toMatchObject({ cardPriority: "primary" });
+    expect(compiled.fields.find((field) => field.key === "code")).not.toHaveProperty("semanticRole");
+    // An identity that is also the record title keeps its identity slot only.
+    const identityTitled = { ...presented, recordPresentation: parseEntityRecordPresentation({ schemaVersion: 1, titleField: "code", sections: [{ key: "overview", label: "Overview", fields: ["code"] }] }) };
+    const identityLists = createTestListService({ metadata: { getEntityDescriptor: async () => identityTitled }, descriptor: identityTitled, authorizer: allowReadOnly() });
+    const identityCompiled = parseEntityListDescriptor(await identityLists.descriptor(context, presented.entityCode));
+    expect(identityCompiled.fields.some((field) => field.semanticRole === "title")).toBe(false);
   });
 
   it("publishes bounded filter options without exposing arbitrary validation metadata", async () => {

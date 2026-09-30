@@ -1,6 +1,7 @@
 import { isEntityRuntimeKey, isEntityRuntimeUuid } from "@athyper/contract-platform-entity-runtime";
 import { EntityCapabilityPolicyError } from "./entity-capability-policy.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import { withReadEvidence } from "@athyper/server-foundation/context";
 import { registerContractRoute } from "@athyper/server-runtime-http";
 import { defineRouteContract } from "@athyper/server-runtime-http";
 import type { createEntityCollaborationService } from "./entity-collaboration-service.js";
@@ -14,7 +15,9 @@ type Operations = ReturnType<typeof createEntityOperationDispatcher>;
 export function registerEntityRuntimeRoutes(app: Application, options: { readonly authenticate: RequestHandler; readonly readContext: (response: Response) => VerifiedRequestContext; readonly service: Service; readonly operations?: Operations; readonly collaboration?: ReturnType<typeof createEntityCollaborationService> }) {
   const run = (work: (request: Request, context: VerifiedRequestContext) => Promise<unknown>) => async (request: Request, response: Response, next: NextFunction) => {
     try {
-      const value = await work(request, options.readContext(response));
+      const value = await (request.method === "GET"
+        ? withReadEvidence(() => work(request, options.readContext(response)))
+        : work(request, options.readContext(response)));
       if (!value) { response.status(404).json(problem(404, "ENTITY_RUNTIME_RESOURCE_NOT_FOUND")); return; }
       response.setHeader("Cache-Control", "private, no-store").status(200).json(value);
     } catch (error) {

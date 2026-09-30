@@ -1,6 +1,6 @@
 "use client";
 
-import { EntityListRuntime } from "@athyper/platform-entity-list-view";
+import { EntityListRuntime, EntityNavigationProvider } from "@athyper/platform-entity-list-view";
 import { useApiClient, useApplicationNavigation } from "@athyper/platform-shell-app-foundation";
 import { EntityDetailRuntime } from "./entity-detail-runtime";
 
@@ -16,9 +16,9 @@ export function EntityReadSurface({
 }) {
   const client = useApiClient();
   const navigation = useApplicationNavigation();
-  return recordId ? (
+  return <EntityNavigationProvider navigate={navigation.push}>{recordId ? (
     <EntityDetailRuntime entityCode={entityCode} recordId={recordId} />
   ) : (
     <EntityListRuntime client={client} entityCode={entityCode} onNavigate={navigation.push} />
-  );
+  )}</EntityNavigationProvider>;
 }

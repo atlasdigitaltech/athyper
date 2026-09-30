@@ -336,6 +336,13 @@ describe("attachment route security regressions", () => {
     expect(f.output).toMatchObject({status:422,body:{code:"MALWARE_DOCUMENT_UNSUPPORTED",detail:expect.stringContaining("inspection service"),inspectionReason:"unsupported_structure"}});
     expect(f.next).not.toHaveBeenCalled();
   });
+  it("preserves encrypted-PDF recovery guidance in the finalization response", async () => {
+    const f = fixture(["neon.collaboration.attachment.finalize"]);
+    f.attachments.finalize.mockRejectedValueOnce(new MalwareDocumentUnsupportedError({ reason: "encrypted" }));
+    await f.invoke("/api/attachments/:attachmentId/finalize", { contentType: "application/pdf" });
+    expect(f.output).toMatchObject({ status: 422, body: { code: "MALWARE_DOCUMENT_UNSUPPORTED", inspectionReason: "encrypted", detail: expect.stringContaining("Export an unencrypted copy") } });
+    expect(f.next).not.toHaveBeenCalled();
+  });
   it("forwards the relay idempotency header into stage and finalize admission", async () => {
     const authorizeCapability = vi.fn(async () => ({admittedReleaseHash:"release-hash",admittedPolicyHash:"policy-hash"}));
     const f=fixture([],undefined,authorizeCapability);

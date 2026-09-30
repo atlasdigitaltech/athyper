@@ -73,6 +73,9 @@ it("preserves declared country semantics and enum choices without copying policy
   expect(projectNativeFieldChoices({ semanticRole: "country_code", defaultVisible: false, writableOn: ["create"] }, "string"))
     .toEqual({ list: { semanticRole: "country_code" } });
   expect(projectNativeFieldChoices({ lookup: { options: [{ value: "active", label: "Active" }, { value: "draft", label: "Draft" }] } }, "enum"))
-    .toEqual({ list: {}, validation: { options: ["active", "draft"] } });
+    .toEqual({ list: {}, validation: { options: ["active", "draft"], optionLabels: { active: "Active", draft: "Draft" } } });
   expect(projectNativeFieldChoices({}, "enum")).toEqual({ list: {} });
+});
+it("projects record-card priority as list presentation metadata", () => {
+  expect(projectNativeFieldChoices({ cardPriority: "hidden" }, "string")).toEqual({ list: { cardPriority: "hidden" } });
 });

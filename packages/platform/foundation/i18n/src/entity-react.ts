@@ -9,9 +9,9 @@ const fallbackLocalization = createEffectiveLocalization({ uiLocale: "en", forma
 // localization, rather than compiling the same ICU messages for every card.
 const runtimes = new WeakMap<EffectiveLocalization, IntlRuntime>();
 /** Uses the shell's governed locale; never reads browser language independently. */
-export function useEntityI18n() {
+export function useEntityI18n(localizationOverride?: EffectiveLocalization) {
   const context = useOptionalI18n();
-  const localization = context?.localization ?? fallbackLocalization;
+  const localization = localizationOverride ?? context?.localization ?? fallbackLocalization;
   const fallback = useMemo(() => {
     let runtime = runtimes.get(localization);
     if (!runtime) {
@@ -22,5 +22,5 @@ export function useEntityI18n() {
   }, [localization]);
   // The shell already owns the governed locale and shared framework catalog.
   // Reuse it so shell and entity messages cannot select different languages.
-  return context ?? fallback;
+  return localizationOverride ? fallback : context ?? fallback;
 }

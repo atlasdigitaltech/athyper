@@ -1,3 +1,4 @@
+import React from "react";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import type {
   EntityListDescriptorV1,
@@ -37,23 +38,22 @@ export function EntityListPagination({
     formattedRange = `${intl.number(start)}–${intl.number(end)}`,
     total = page.pagination.total,
     countPrefix = page.pagination.countMode === "approximate" ? "≈" : "",
-    summary =
-      total === undefined
-        ? `Showing ${formattedRange}${page.pagination.hasNext ? " · more available" : ""}`
-        : `Showing ${formattedRange} of ${countPrefix}${intl.number(total)}`;
+    summary = !page.rows.length ? intl.message("list.pageEmpty") : total === undefined
+      ? intl.message(page.pagination.hasNext ? "list.pageRangeMore" : "list.pageRange", { range: formattedRange })
+      : intl.message("list.pageRangeTotal", { range: formattedRange, total: `${countPrefix}${intl.number(total)}` });
   return (
-    <nav className="a-entity-list__pagination" aria-label="List pagination">
-      <span aria-live="polite" title={page.pagination.countMode === "cached" ? "Recently calculated result count" : undefined}>{summary}</span>
+    <nav className="a-entity-list__pagination" aria-label={intl.message("list.pagination")}>
+      <span aria-live="polite" title={page.pagination.countMode === "cached" ? intl.message("list.cachedCount") : undefined}>{summary}</span>
       <div className="a-entity-list__page-controls">
         <Label>
-          <span>Rows per page</span>
+          <span>{intl.message("list.rowsPerPage")}</span>
           <Select disabled={loading} value={pageSize} onChange={(event) => onPageSize(Number(event.currentTarget.value))}>
-            {descriptor.limits.allowedPageSizes.map((size) => <option value={size} key={size}>{size}</option>)}
+            {descriptor.limits.allowedPageSizes.map((size) => <option value={size} key={size}>{intl.number(size)}</option>)}
           </Select>
         </Label>
         <div className="a-entity-list__page-buttons">
-          {recoverFirst ? <Button size="small" variant="secondary" disabled={loading} onClick={onFirst}>{intl.message("list.firstPage")}</Button> : <Button size="small" variant="secondary" disabled={!cursorHistory.length || loading} onClick={onPrevious}>Previous</Button>}
-          <Button size="small" variant="secondary" disabled={!page.pagination.hasNext || !page.pagination.nextCursor || loading} onClick={onNext}>Next</Button>
+          {recoverFirst ? <Button size="small" variant="secondary" disabled={loading} onClick={onFirst}>{intl.message("list.firstPage")}</Button> : <Button size="small" variant="secondary" disabled={!cursorHistory.length || loading} onClick={onPrevious}>{intl.message("list.previousPage")}</Button>}
+          <Button size="small" variant="secondary" disabled={!page.pagination.hasNext || !page.pagination.nextCursor || loading} onClick={onNext}>{intl.message("list.nextPage")}</Button>
         </div>
       </div>
     </nav>

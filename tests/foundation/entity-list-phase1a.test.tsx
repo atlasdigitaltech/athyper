@@ -156,7 +156,7 @@ function descriptor(scopeFingerprint: string): EntityListDescriptorV1 {
         execution: "navigate",
         state: "disabled",
         disabledReason: {
-          code: "context_required",
+          code: "CONTEXT_REQUIRED",
           messageKey: "entity.action.context_required",
         },
         disabledMessage: {
@@ -168,6 +168,7 @@ function descriptor(scopeFingerprint: string): EntityListDescriptorV1 {
       },
     ],
     dataOperations: {
+      workspaceHref: "/operations/data-transfers",
       export: {
         currentPage: enabled,
         selected: enabled,
@@ -1528,7 +1529,7 @@ test("column filters preserve other fields, synchronize chips and dismiss withou
   const root = createRoot(dom.window.document.getElementById("root")!);
   const click = async (selector: string) =>
     act(async () =>
-      dom.window.document.querySelector<HTMLButtonElement>(selector)!.click(),
+      (() => {const target=dom.window.document.querySelector<HTMLButtonElement>(selector); assert.ok(target, `Missing ${selector}: ${dom.window.document.body.textContent}`); target.click();})(),
     );
   try {
     await act(async () =>

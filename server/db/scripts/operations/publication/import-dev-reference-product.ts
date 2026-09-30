@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { parseTableEntityProduct } from "../../../../packages/planes/studio/meta-entity-authoring/src/authoring/table-product.js";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { resolve, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Kysely, PostgresDialect, sql } from "kysely";
@@ -23,7 +23,7 @@ async function main() {
   const child = relative(root, path);
   if (!child || child.startsWith("..") || child.includes("/")) throw Error("Expected a direct shared metadata product directory");
   const definition = JSON.parse(readFileSync(resolve(path,"definition.json"),"utf8"));
-  const product = definition.schema === "athyper.table-entity-product/1" ? parseTableEntityProduct(definition) : loadReferenceProduct(path);
+  const product = definition.schema === "athyper.table-entity-product/1" ? parseTableEntityProduct(definition, existsSync(resolve(path, "localization.json")) ? JSON.parse(readFileSync(resolve(path, "localization.json"), "utf8")) : undefined) : loadReferenceProduct(path);
   const inspected = JSON.parse(execFileSync("docker", ["inspect", "athyper-dev-db-1"], { encoding: "utf8" }))[0];
   if (inspected.Config.Labels["com.docker.compose.project"] !== "athyper-dev" || !inspected.State.Running)
     throw Error("Running DEV database required");

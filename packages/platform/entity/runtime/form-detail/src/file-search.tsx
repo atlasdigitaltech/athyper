@@ -9,7 +9,7 @@ import { SearchField, Button, Card, PanelEmptyState } from "@athyper/platform-ui
 import { FileTypeIcon } from "./file-type";
 import { FileAction } from "./file-action";
 import { FileTextIcon, EyeIcon, DownloadIcon } from "@athyper/platform-icons";
-import { AttachmentPreview } from "./attachment-preview";
+import { AttachmentThumbnail } from "./attachment-thumbnail";
 
 export type FileSearchHit = {
   attachmentId: string;
@@ -317,7 +317,7 @@ export function FileSearchResults({
           >
             <div className="a-file-search-result__thumbnail">
               {canPreview ? (
-                <AttachmentPreview attachmentId={hit.attachmentId} thumbnail />
+                <AttachmentThumbnail attachmentId={hit.attachmentId} name={hit.fileName} contentType={hit.contentType ?? ""} canPreview={canPreview} onPreview={() => onPreview(hit)} />
               ) : (
                 <FileTypeIcon name={hit.fileName} contentType={hit.contentType}/>
               )}

@@ -196,6 +196,8 @@ The page definition explicitly selects layout and navigation mode. Choose using 
 
 Do not infer layout from fluctuating row counts or entity size. No section navigation field is needed for a content-only page. If a required optional provider is unavailable, omit its empty rail and expand content according to the shared adaptation rules.
 
+Entity lists follow the [Entity List Responsive Presentation Standard](entity-list-responsive-standard.md): width tiers from the list container, metadata-derived record cards on narrow widths, and the shared CSS design rules.
+
 ### 7.2 Page behavior
 
 - Breadcrumbs derive from registered routes and safe resolved identity, not raw URL segments. Ancestors link; current item is non-link current-page text. Intermediate ancestors collapse accessibly on narrow layouts.

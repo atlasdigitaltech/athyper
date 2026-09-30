@@ -1,4 +1,5 @@
 "use client";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import {
   EntityFavourites,
   EntityFavouritesRuntime,
@@ -87,6 +88,7 @@ export function EntityOverview({
   error,
   onRefresh,
 }: EntityOverviewProps) {
+  const intl = useEntityI18n();
   const message = useOverviewMessage();
   const numbered = focus.filter((item) => item.count !== undefined);
   const actionable = numbered.filter((item) => item.count! > 0);
@@ -236,7 +238,7 @@ export function EntityOverview({
                       className="a-entity-pulse__count"
                       data-attention={item.count > 0}
                     >
-                      {item.count.toLocaleString()}
+                      {intl.number(item.count)}
                     </span>
                   ) : null}
                   <ChevronRightIcon size={17} />

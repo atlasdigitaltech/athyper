@@ -11,8 +11,8 @@ const bundle = build({
     contents: `
 import Studio from './apps/studio/app/(shell)/app/entity/[entityCode]/[[...segments]]/page';
 import Mesh from './apps/mesh/app/(shell)/app/entity/[entityCode]/[[...segments]]/page';
-import {renderEntityReadRoute} from './packages/platform/entity/runtime/form-detail/src/routes/entity-read-route';
-window.inspectRoute=async(plane,params)=>{try{const view=plane==='studio'?await Studio({params:Promise.resolve(params)}):plane==='mesh'?await Mesh({params:Promise.resolve(params)}):renderEntityReadRoute(params,()=>{throw Error('NOT_FOUND')});return {accepted:true,props:view.props};}catch(error){if(error.message!=='NOT_FOUND')throw error;return {accepted:false};}};
+import Neon from './apps/neon/app/(shell)/app/entity/[entityCode]/[[...segments]]/page';
+window.inspectRoute=async(plane,params)=>{try{const view=plane==='studio'?await Studio({params:Promise.resolve(params)}):plane==='mesh'?await Mesh({params:Promise.resolve(params)}):await Neon({params:Promise.resolve(params)});return {accepted:true,props:view.props.children?.props ?? view.props,gated:Boolean(view.props.children)};}catch(error){if(error.message!=='NOT_FOUND')throw error;return {accepted:false};}};
 `,
   },
   bundle: true,
@@ -29,6 +29,7 @@ window.inspectRoute=async(plane,params)=>{try{const view=plane==='studio'?await 
           path: "navigation",
           namespace: "fixture",
         }));
+        builder.onResolve({ filter: /^@athyper\/product-neon-shell$/ }, () => ({path:'gate',namespace:'fixture'}));
         builder.onResolve({ filter: /entity-read-surface$/ }, () => ({
           path: "surface",
           namespace: "fixture",
@@ -36,7 +37,7 @@ window.inspectRoute=async(plane,params)=>{try{const view=plane==='studio'?await 
         builder.onLoad({ filter: /.*/, namespace: "fixture" }, (args) => ({
           loader: "js",
           contents:
-            args.path === "navigation"
+            args.path === "gate" ? `export const NeonWorkContextGate=()=>null;` : args.path === "navigation"
               ? `export const notFound=()=>{throw Error('NOT_FOUND')};`
               : `export const EntityReadSurface=()=>null;`,
         }));
@@ -63,6 +64,7 @@ test("three read adapters preserve Country coordinates and identical not-found s
       );
       expect(result).toEqual({
         accepted: true,
+        gated: false,
         props: {
           entityCode: "country",
           ...(segments[0] === recordId ? { recordId } : {}),

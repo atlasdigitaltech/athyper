@@ -22,6 +22,24 @@ function fixture(rows: Record<string, unknown>[], allowed=true, commentId?:strin
   return {service,sign,schedule,queries,authorizeCapability};
 }
 describe("qualified attachment discovery",()=>{
+  it("bounds hit authorization, keeps source order, and excludes denied or mismatched records", async () => {
+    const rows = Array.from({length:8},(_,index)=>({id:String(index),file_name:`file-${index}`,content_type:"text/plain",extracted_text:"match"}));
+    const f = fixture(rows);
+    let active=0, peak=0;
+    const checked: string[]=[];
+    f.authorizeCapability.mockImplementation(async (_context,action,input) => {
+      if(action!=="download") return {entityType:"business_partner",entityId:"record",admittedReleaseHash:"r",admittedPolicyHash:"p"};
+      active++; peak=Math.max(peak,active);
+      await new Promise(resolve=>setTimeout(resolve, Number(input.attachmentId)%2 ? 1 : 5));
+      active--; checked.push(String(input.attachmentId));
+      if(input.attachmentId==="2") throw Error("denied");
+      return {entityType:"business_partner",entityId:input.attachmentId==="5"?"other":"record",admittedReleaseHash:"r",admittedPolicyHash:"p"};
+    });
+    const result=await f.service.search(context,{entityType:"business_partner",entityId:"record",q:"match"});
+    expect(peak).toBe(4);
+    expect(checked).toHaveLength(8);
+    expect(result.hits.map(hit=>hit.attachmentId)).toEqual(["0","1","3","4","6","7"]);
+  });
   it("reports authorization, transaction acquisition, SQL and hit checks separately", async () => {
     const f = fixture([]), stages: string[] = [];
     await f.service.search(context, {entityType:"business_partner",entityId:"record",q:"match"}, stage => stages.push(stage));
@@ -142,7 +160,7 @@ describe("record attachment browsing",()=>{
   it("resolves a file outside the loaded page using record-bound preview admission",async()=>{
     const f=fixture([{id,series_id:id,link_id:id,pinned_attachment_id:id,link_kind:"record",folder_id:null,folder_name:null,category:null,version_no:2,file_name:"proof.pdf",added_by_display_name:"Record Contributor",added_at:"2026-01-01T00:00:00.000Z",display_name:null,content_type:"application/pdf",size_bytes:10,status:"active",created_at:"2026-01-01T00:00:00.000Z",series_revision:"2",version_history:[{id,version:2,fileName:"proof.pdf",status:"active"}]}]);
     const result=await f.service.browse(context,{entityType:"business_partner",entityId:"record",attachmentId:id});
-    expect(f.authorizeCapability).toHaveBeenCalledExactlyOnceWith(context,"preview",{entityType:"business_partner",entityId:"record",attachmentId:id});
+    expect(f.authorizeCapability).toHaveBeenCalledExactlyOnceWith(context,"preview",{entityType:"business_partner",entityId:"record",attachmentId:id},{preflight:true});
     expect(result.items[0]).toMatchObject({pinnedAttachmentId:id,addedByDisplayName:"Record Contributor",addedAt:"2026-01-01T00:00:00.000Z"});
     expect(result.items[0]).not.toHaveProperty("versionHistory");
     expect(f.queries[0]!.sql).toContain("AND a.id=");
@@ -156,7 +174,7 @@ describe("record attachment browsing",()=>{
   it("keeps history and pin metadata in filtered results",async()=>{
     const f=fixture([{id,series_id:id,link_id:id,pinned_attachment_id:id,link_kind:"record",category:"evidence",version_no:2,file_name:"proof.pdf",size_bytes:10,status:"active",created_at:"2026-01-01T00:00:00.000Z",series_revision:"2",version_history:[{id,version:1,status:"active",fileName:"old.pdf"}]}]);
     const result=await f.service.browse(context,{entityType:"business_partner",entityId:"record",attachmentId:id,includeHistory:true});
-    expect(f.authorizeCapability).toHaveBeenCalledWith(context,"version",expect.objectContaining({attachmentId:id,entityId:"record"}));
+    expect(f.authorizeCapability).toHaveBeenCalledWith(context,"version",expect.objectContaining({attachmentId:id,entityId:"record"}),{preflight:true});
     expect(result.items[0]).toMatchObject({pinnedAttachmentId:id,versionHistory:[{fileName:"old.pdf"}]});
     expect(f.queries[0]!.sql).toContain("v.uploaded_by=");
   });

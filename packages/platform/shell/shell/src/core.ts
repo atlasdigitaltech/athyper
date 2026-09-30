@@ -338,3 +338,10 @@ function humanizePathSegment(value: string): string {
         character.toLocaleUpperCase(),
       );
 }
+
+export function planeDiagnostic(plane: string) {
+  return (event: NavigationDiagnostic) => {
+    const production = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process?.env?.NODE_ENV === "production";
+    (production ? console.error : console.warn)(production ? "[navigation-telemetry]" : "[navigation-warning]", { plane, ...event });
+  };
+}

@@ -23,13 +23,14 @@ const routes = [
   { name: "list", method: "list", path: `${base}/list` },
 ] as const;
 
-async function setup(failure?: unknown) {
+async function setup(failure?: unknown, diagnostics = false) {
   const service = Object.fromEntries(routes.map(route => [route.method, vi.fn(async () => {
     if (failure) throw failure;
     return { route: route.method };
   })]));
   const app = express();
   registerEntityListRoutes(app, {
+    diagnostics,
     authenticate: (req, res, next) => { if (req.headers.authorization !== "Bearer test") { res.sendStatus(401); return; } next(); },
     readContext: () => ({ tenantId: "test", principalId: "test", planeKey: "neon" }) as never,
     lists: Object.assign({ applicationDescriptor() { return service["applicationDescriptor"]!(); } }, service) as never,
@@ -48,6 +49,7 @@ describe.each(routes)("$name route", ({ method, path }) => {
     const h = await setup();
     const response = await h.get(path);
     expect(response.status).toBe(200);
+    expect(response.headers.get("server-timing")).toBeNull();
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(await response.json()).toEqual({ route: method });
   });
@@ -100,4 +102,9 @@ describe("request parameter validation", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ code: "INVALID_RECORD_ID" });
   });
+});
+
+it("exposes timings only with explicit diagnostics", async () => {
+ const h = await setup(undefined, true);
+ expect((await h.get(`${base}/detail-descriptor`)).headers.get("server-timing")).toMatch(/total;dur=/);
 });

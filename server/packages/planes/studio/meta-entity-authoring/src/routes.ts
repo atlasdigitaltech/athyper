@@ -210,7 +210,9 @@ export function registerMetaEntityAuthoringRoutes(
     "/api/meta-entity-authoring/releases/:id/rollback",
     o.authenticate,
     handler(async (q, s) => {
-      const c = await allowed(o, s, "metadata.entity.rollback");
+      const c = await allowed(o, s, "metadata.entity.rollback", {
+        changeSetId: uuid(str(q.body, "changeSetId")),
+      });
       if (c) {
         await scoped(o, c, uuid(str(q.body, "changeSetId")));
         s.status(202).json(

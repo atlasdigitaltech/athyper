@@ -69,6 +69,6 @@ export * from "./snapshots/collection-capture.js";
 export * from "./snapshots/collection-comparison.js";
 
 export { createParentCollectionScopeResolver } from "./parent-collection-scope.js";
-export { createRecordOwnerAccessAdapter } from "./record-owner-access.js";
+export { createRecordOwnerAccessAdapter, scopeRecordOwnerRead } from "./record-owner-access.js";
 
 export * from "./record-mutation-policy.js";

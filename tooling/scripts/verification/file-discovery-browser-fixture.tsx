@@ -73,6 +73,7 @@ const client = {
       };
     }
     if (path.endsWith("/finalize")) {
+      if ((window as any).encryptedPdfFailure) throw new ApiTransportError("http", "This PDF is encrypted, so its contents cannot be inspected. Export an unencrypted copy and try again.", 422, { code: "MALWARE_DOCUMENT_UNSUPPORTED" });
       if ((window as any).inspectionFailure) throw new ApiTransportError("http", "This PDF uses an unsupported decoding method. Export a fresh PDF and try again.", 422, { code: "MALWARE_DOCUMENT_UNSUPPORTED" });
       if ((window as any).malwareFailure) throw new ApiTransportError("http", "Attachment was quarantined", 422, { code: "ATTACHMENT_QUARANTINED" });
       return { status: "active" };
@@ -115,6 +116,8 @@ const client = {
 export function useApiClient() {
   return client;
 }
+export const useExperienceRevision = () => ({ state: "ready", revision: "fixture" });
+export const usePermissions = () => ["read", "upload"];
 export function useSessionIdentity() {
   return { scope: { principalId: "owner", tenantId: (window as any).historyTenant ?? "tenant-a" } };
 }

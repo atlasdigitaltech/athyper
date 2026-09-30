@@ -44,6 +44,7 @@ const MODES = [
   "spreadsheet",
 ] as const;
 const DENSITIES = ["compact", "comfortable", "spacious"] as const;
+const CARD_PRIORITIES = ["primary", "secondary", "hidden"] as const;
 const COUNT_MODES = ["none", "cached", "approximate", "exact"] as const;
 const VALUE_KINDS = [
   "string",
@@ -398,6 +399,7 @@ function parseDataOperations(
     "dataOperations.import.importableFields",
   ).filter((key) => fields.has(key));
   return Object.freeze({
+    ...(root.workspaceHref === undefined ? {} : { workspaceHref: (() => { const href = root.workspaceHref; if (typeof href !== "string") throw new TypeError("Invalid transfer workspace href"); if (!/^\/(?!\/)[a-zA-Z0-9/_-]+$/.test(href)) throw new TypeError("Invalid transfer workspace href"); return href; })() }),
     export: Object.freeze({
       currentPage: parseDataOperation(
         exportRecord.currentPage,
@@ -910,6 +912,15 @@ function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
           ),
         }
       : {}),
+    ...(field.cardPriority === undefined
+      ? {}
+      : {
+          cardPriority: oneOf(
+            field.cardPriority,
+            CARD_PRIORITIES,
+            `fields[${index}].cardPriority`,
+          ),
+        }),
     ...(optionalCode(field.rendererKey, `fields[${index}].rendererKey`)
       ? {
           rendererKey: optionalCode(

@@ -88,7 +88,7 @@ export function collaborationTime(value: unknown, intl?: IntlRuntime) {
   const date = new Date(String(value));
   return Number.isNaN(date.getTime())
     ? ""
-    : intl ? intl.date(date, {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : new Intl.DateTimeFormat(undefined, {
+    : intl ? intl.date(date, {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : new Intl.DateTimeFormat("en", {
         month: "short",
         day: "numeric",
         hour: "numeric",

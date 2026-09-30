@@ -1,5 +1,7 @@
+import { isEntityRecordId } from "@athyper/contract-platform-entity-runtime";
 import {
   prepareRecordOwnerAccess,
+  scopeRecordOwnerRead,
   type RecordOwnerAccessAdapter,
 } from "./record-owner-access.js";
 import { executeAuthorizedAggregate } from "./authorized-aggregate.js";
@@ -199,7 +201,7 @@ export function createRecordListExecutor<Transaction = unknown>(
         );
       if (
         (query.recordIds?.length ?? 0) > 100 ||
-        query.recordIds?.some((id) => !UUID.test(id))
+        query.recordIds?.some((id) => !isEntityRecordId(id))
       )
         throw new RecordServiceError(
           400,
@@ -241,14 +243,14 @@ export function createRecordListExecutor<Transaction = unknown>(
           principalId: query.context.principalId,
         },
         async (transaction) => {
-          await prepareRecordOwnerAccess(
+          const ownerValues = await prepareRecordOwnerAccess(
             options.ownerAccess,
             { context: query.context, descriptor, operation: "list" },
             transaction,
           );
           const input = {
             descriptor: {
-              ...descriptor,
+              ...scopeRecordOwnerRead(descriptor, ownerValues),
               // Both SQL and in-memory repositories derive search predicates from this
               // descriptor. Hidden fields must not influence matches or exact counts.
               fields: descriptor.fields.map((field) =>
@@ -357,8 +359,7 @@ export function createRecordListExecutor<Transaction = unknown>(
   });
 }
 
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
 
 function restrictResponseProjection(
   result: RecordListResult,
@@ -455,13 +456,13 @@ export function createRecordQueryService<Transaction = unknown>(
           principalId: query.context.principalId,
         },
         async (transaction) => {
-          await prepareRecordOwnerAccess(
+          const ownerValues = await prepareRecordOwnerAccess(
             options.ownerAccess,
             { context: query.context, descriptor, operation: "read" },
             transaction,
           );
           return options.repository.get(
-            descriptor,
+            scopeRecordOwnerRead(descriptor, ownerValues),
             query.context.tenantId,
             query.recordId,
             projection,

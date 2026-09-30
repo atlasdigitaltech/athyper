@@ -1,7 +1,8 @@
 "use client";
-import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 import { ChevronDownIcon } from "@athyper/platform-icons";
 import { Menu, MenuContent, MenuTrigger } from "./index";
+import { useUiMessages } from "./ui-messages";
 /** Shared list view menu. Hosts own view storage and eligibility. */
 export function ViewSelector({
   name,
@@ -16,16 +17,16 @@ export function ViewSelector({
   className?: string;
   children: ReactNode;
 }) {
+  const messages = useUiMessages();
   return (
     <Menu>
       <MenuTrigger
         variant="secondary"
         className={className}
         disabled={disabled}
-        aria-label="Select view"
+        aria-label={messages.selectView}
       >
-        View: {name}
-        {modified ? " (modified)" : ""}
+        {messages.viewName(name, Boolean(modified))}
         <ChevronDownIcon size={14} />
       </MenuTrigger>
       <MenuContent>{children}</MenuContent>

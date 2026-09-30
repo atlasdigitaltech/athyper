@@ -1414,3 +1414,15 @@ test("upload requirements and early validation use the record capability", async
   await expect(errors).toContainText('“unsupported.txt” cannot be uploaded. Choose PDF, PNG.');
   await expect.poll(() => page.evaluate(() => (window as any).stagedFiles?.map((f: any) => f.fileName))).toEqual(['valid.pdf']);
 });
+
+ test("encrypted PDF explains how to recover without retrying or labelling malware", async ({page}) => {
+   await page.evaluate(() => (window as any).encryptedPdfFailure = true);
+   await page.route('https://storage.test/upload', route => route.fulfill({status:200,headers:{'access-control-allow-origin':'*'}}));
+   await page.getByLabel('Upload files',{exact:true}).setInputFiles({name:'protected.pdf',mimeType:'application/pdf',buffer:Buffer.from('fixture')});
+   const queue=page.getByRole('list',{name:'Upload queue'});
+   await expect(queue).toContainText('Export an unencrypted copy and try again.');
+   await expect(queue).not.toContainText('Malware detected');
+   await expect(queue.getByRole('button',{name:'Retry this file'})).toHaveCount(0);
+   await queue.getByRole('button',{name:'Remove from queue'}).click();
+   await expect(queue).toHaveCount(0);
+ });

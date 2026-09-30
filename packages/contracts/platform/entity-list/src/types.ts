@@ -3,6 +3,9 @@ export type ListPlane = "neon" | "mesh" | "studio";
 export type ListViewMode =
   "table" | "compact" | "board" | "dashboard" | "spreadsheet";
 export type ListDensity = "compact" | "comfortable" | "spacious";
+/** Metadata ordering hint for narrow record cards. It orders fields the user
+ * can already see; it never widens the authorized list projection. */
+export type ListCardPriority = "primary" | "secondary" | "hidden";
 export type ListCountMode = "none" | "cached" | "approximate" | "exact";
 export type DataOperationState = "enabled" | "disabled" | "hidden";
 export type RecordExportFormat = "xlsx" | "csv" | "json" | "ndjson";
@@ -167,6 +170,7 @@ export interface ListFieldDescriptorV1 {
   readonly columnGroup?: string;
   readonly valueKind: ListValueKind;
   readonly semanticRole?: string;
+  readonly cardPriority?: ListCardPriority;
   readonly statusTones?: Readonly<Record<string, "neutral" | "success" | "warning" | "danger">>;
   readonly rendererKey?: string;
   readonly formatting?: Readonly<Record<string, JsonValue>>;
@@ -218,6 +222,7 @@ export interface EffectiveDataOperationV1 {
 /** Server-evaluated transfer policy. The browser may present it, but every
  * mutation endpoint must independently re-evaluate the same authority. */
 export interface EntityListDataOperationsV1 {
+  readonly workspaceHref?: string;
   readonly export: {
     readonly currentPage: EffectiveDataOperationV1;
     readonly selected: EffectiveDataOperationV1;

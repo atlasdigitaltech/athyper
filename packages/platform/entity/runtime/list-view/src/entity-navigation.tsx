@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, type AnchorHTMLAttributes, type ReactNode } from "react";
+import React, { createContext, useContext, type AnchorHTMLAttributes, type ReactNode } from "react";
 
 const NavigationContext = createContext<((href: string) => void) | undefined>(undefined);
 export function EntityNavigationProvider({ navigate, children }: { navigate?: (href: string) => void; children: ReactNode }) {

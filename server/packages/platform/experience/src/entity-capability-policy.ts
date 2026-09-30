@@ -30,6 +30,8 @@ export interface EntityCapabilityRequest {
   readonly input?: Readonly<Record<string, unknown>>;
   /** Trusted route preflight: authorization still applies, command tokens do not. */
   readonly preflight?: boolean;
+  /** Internal admission-only callers do not need the other UI actions projected. */
+  readonly actionOnly?: boolean;
 }
 /**
  * Server-resolved parent admission. Scope resources are derived from the
@@ -255,21 +257,29 @@ export function createEntityCapabilityPolicy(options: {
         )
           return deny();
       }
-      const allowed = new Set<string>();
-      for (const candidate of binding.actions) {
+      // The current action was already authorized above. Reuse that exact
+      // decision within this resolution only; never cache across requests.
+      const allowed = new Set<string>([action.permissionCode]);
+      const permissions = input.actionOnly ? [] : [...new Set(binding.actions.map(candidate => candidate.permissionCode))]
+        .filter(permission => permission !== action.permissionCode);
+      let nextPermission = 0;
+      await Promise.all(Array.from({ length: Math.min(4, permissions.length) }, async () => {
+        while (nextPermission < permissions.length) {
+          const permissionCode = permissions[nextPermission++]!;
         // Each action may be admitted by a different parent scope. The scope
         // which admitted the current action is not a proof for every action.
         for (const scopeResource of scopeResources) {
           if ((await options.authorizer.authorize({
             context: input.context,
-            permissionCode: candidate.permissionCode,
+            permissionCode,
             resource: { ...baseResource, ...scopeResource },
           })).allowed) {
-            allowed.add(candidate.permissionCode);
+            allowed.add(permissionCode);
             break;
           }
         }
-      }
+        }
+      }));
       return {
         binding,
         action,

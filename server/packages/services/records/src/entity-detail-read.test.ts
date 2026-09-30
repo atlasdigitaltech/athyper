@@ -37,6 +37,7 @@ describe("combined authorized entity detail read", () => {
     expect(result.record).toEqual({ id: "one", values: { id: "one", name: "Visible" } });
     expect(result.descriptor.fields.map(field => field.key)).toEqual(["id", "name"]);
     expect(h.get).toHaveBeenCalledOnce();
+    expect(h.authorize.mock.calls.filter(([input]) => input.permissionCode === "record.read")).toHaveLength(1);
     expect(h.metadata.getEntityDescriptor).toHaveBeenCalledOnce();
     expect(h.authorize.mock.calls.filter(([input]) => input.permissionCode.startsWith("field."))).toHaveLength(3);
     expect(JSON.stringify(result)).not.toContain("HIDDEN");
@@ -60,4 +61,23 @@ describe("combined authorized entity detail read", () => {
     await expect(h.lists.detailRead({ ...context, tenantId: "tenant-b" }, descriptor.entityCode, "one")).rejects.toMatchObject({ statusCode: 404 });
     expect(h.collaboration).not.toHaveBeenCalled();
   });
+});
+
+it("retains descriptor-only authorization when no admitted record is present", async () => {
+  const h=setup(true);
+  await expect(h.lists.detailDescriptor(context,descriptor.entityCode)).rejects.toMatchObject({statusCode:403});
+  expect(h.authorize.mock.calls.filter(([input])=>input.permissionCode==="record.read")).toHaveLength(1);
+  expect(h.get).not.toHaveBeenCalled();
+});
+it("does not treat a failed relationship capability evaluation as permission denial", async () => {
+  const {parseEntityRecordPresentation}=await import("@athyper/contract-platform-entity-runtime");
+  const h=setup();
+  const parent={...descriptor,recordPresentation:parseEntityRecordPresentation({schemaVersion:1,titleField:"name",sections:[{key:"overview",label:"Overview",fields:["name"]},{key:"profile",label:"Profile",fields:[],relationshipKey:"profile"}],entityRelationships:[{key:"profile",targetEntity:"child",cardinality:"zero_or_one",fields:[{source:"id",target:"parent_id"}],tenant:{source:"tenant_id",target:"tenant_id"},readOperation:"list"}]})};
+  const child={...descriptor,entityCode:"child",operations:{...descriptor.operations,list:{code:"list",permissionCode:"child.list"},create:{code:"create",permissionCode:"child.create"}}};
+  h.metadata.getEntityDescriptor.mockImplementation(async (...args: unknown[])=>args[1]==="child"?child:parent);
+  h.authorize.mockImplementation(async input=>input.permissionCode==="child.create"?{allowed:false,reason:"denied"}:{allowed:true});
+  const result=await h.lists.detailRead(context,descriptor.entityCode,"one");
+  expect(result.descriptor.relationshipCapabilities).toEqual({profile:{create:false}});
+  h.authorize.mockImplementation(async input=>{if(input.permissionCode==="child.create")throw Error("dependency failed");return {allowed:true};});
+  await expect(h.lists.detailRead(context,descriptor.entityCode,"one")).rejects.toThrow("dependency failed");
 });

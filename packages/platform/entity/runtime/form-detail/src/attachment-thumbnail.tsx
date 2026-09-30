@@ -1,9 +1,9 @@
 "use client";
 import { useContext, useEffect, useRef, useState } from "react";
-import { requestThumbnail } from "./thumbnail-requests";
-import { sessionScopeKey } from "./session-scope-key";
+import { requestThumbnail, forgetThumbnail } from "./thumbnail-requests";
+import { useThumbnailScope } from "./thumbnail-scope";
 import { attachmentCapabilityUrl } from "@athyper/platform-communications-collaboration-ui";
-import { useApiClient, useSessionIdentity, useExperienceRevision, usePermissions } from "@athyper/platform-shell-app-foundation";
+import { useApiClient, useSessionIdentity } from "@athyper/platform-shell-app-foundation";
 import { CollaborationVisibilityContext } from "./collaboration-visibility";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { FileTypeIcon } from "./file-type";
@@ -24,9 +24,7 @@ export function AttachmentThumbnail({
 }) {
   const intl = useEntityI18n();
   const identity = useSessionIdentity();
-  const revision = useExperienceRevision();
-  const permissions = [...usePermissions()].sort();
-  const scope = JSON.stringify([sessionScopeKey(identity.scope, "", ""), revision, permissions]);
+  const scope = useThumbnailScope();
   const coordinate = JSON.stringify([scope, attachmentId, contentType, canPreview]);
   const ready = useRef<{ key: string; url: string; expires: number } | undefined>(undefined);
   const [epoch, setEpoch] = useState(0);
@@ -115,7 +113,7 @@ export function AttachmentThumbnail({
             decoding="async"
             referrerPolicy="no-referrer"
             onLoad={() => setLoading(false)}
-            onError={() => { ready.current = undefined; setValue(undefined); setLoading(false); }}
+            onError={() => { forgetThumbnail(client, scope, attachmentId); ready.current = undefined; setValue(undefined); setLoading(false); }}
           />
           <span className="a-attachment-thumbnail__badge">
             {name.includes(".") ? name.split(".").pop()?.slice(0, 5).toUpperCase() : pdf ? "PDF" : ""}

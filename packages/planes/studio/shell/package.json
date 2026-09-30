@@ -21,7 +21,8 @@
     "@athyper/platform-i18n": "workspace:*",
     "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-shell-activity-center-data": "workspace:*",
-    "@athyper/platform-shell-app-foundation": "workspace:*"
+    "@athyper/platform-shell-app-foundation": "workspace:*",
+    "@athyper/contract-platform-navigation": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

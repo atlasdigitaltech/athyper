@@ -1,4 +1,4 @@
-import { PLATFORM_CATALOG_ROUTES } from "../../../../contracts/platform/navigation/src/generated-catalog";
+import { PLATFORM_CATALOG_ROUTES } from "@athyper/contract-platform-navigation/generated";
 import { definePlaneRoutes } from "@athyper/platform-shell/core";
 
 const catalogRoutes = PLATFORM_CATALOG_ROUTES.studio.flatMap(

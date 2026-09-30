@@ -452,6 +452,14 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/entity-request-lifecycle.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-resource-loading.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/entity-work-context.test.ts",
       "runner": "test:foundation"
     },
@@ -553,6 +561,10 @@
     },
     {
       "path": "tooling/scripts/local-dev/dev-publish.test.mjs",
+      "runner": "test:local-runner"
+    },
+    {
+      "path": "tooling/scripts/local-dev/dev-recovery-config.test.mjs",
       "runner": "test:local-runner"
     },
     {

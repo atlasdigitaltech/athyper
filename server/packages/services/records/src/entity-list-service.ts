@@ -4,6 +4,7 @@ import { readablePresentationLocalization } from "@athyper/contract-platform-ent
 import { fieldWriteAuthorizationResource } from "./field-validation.js";
 import {
   humanizeIdentifier,
+  entityTransferWorkspaces,
   parseEntityDetailDescriptor,
   parseEntityDetailRead,
   type EntityDetailReadV1,
@@ -95,8 +96,10 @@ export interface EntityListService {
     context: VerifiedRequestContext,
     entityCode: string,
     recordId?: string,
+    timing?: (stage: string, durationMs: number) => void,
   ): Promise<EntityDetailDescriptorV1>;
-  detailRead(context: VerifiedRequestContext, entityCode: string, recordId: string): Promise<EntityDetailReadV1>;
+  detailRead(context: VerifiedRequestContext, entityCode: string, recordId: string,
+    timing?: (stage: string, durationMs: number) => void): Promise<EntityDetailReadV1>;
   record(
     context: VerifiedRequestContext,
     entityCode: string,
@@ -138,28 +141,35 @@ export function createEntityListService(options: {
       context: VerifiedRequestContext,
       entityCode: string,
       recordId?: string,
+      timing: (stage: string, durationMs: number) => void = () => {},
     ) {
+      let previous = performance.now();
+      const stage = (name: string) => {
+        const now = performance.now();
+        timing(name, now - previous);
+        previous = now;
+      };
+      const measured = async <T>(name: string, work: () => Promise<T> | T): Promise<T> => {
+        const started = performance.now();
+        try { return await work(); } finally { timing(name, performance.now() - started); }
+      };
       if (recordId && !options.queries)
         throw new RecordServiceError(503, "ENTITY_RECORD_ADAPTER_UNAVAILABLE", "The record adapter is unavailable");
       const admitted = recordId && options.queries?.getWithProjection
         ? await options.queries.getWithProjection({ context, entityCode, recordId }) : undefined;
       const descriptor = admitted?.descriptor ?? await descriptorFor(options.metadata, context, entityCode);
-      await requireOperation(
+      stage(admitted ? "authorized_record" : "metadata");
+      if (!admitted) await requireOperation(
         options.authorizer,
         context,
         descriptor,
         "read",
         recordId,
       );
+      stage("authorization");
       let data = admitted?.data;
       if (recordId) {
-        if (!options.queries)
-          throw new RecordServiceError(
-            503,
-            "ENTITY_RECORD_ADAPTER_UNAVAILABLE",
-            "The record adapter is unavailable",
-          );
-        data = admitted ? admitted.data : (await options.queries.get({ context, entityCode, recordId })).data;
+        data = admitted ? admitted.data : (await options.queries!.get({ context, entityCode, recordId })).data;
         if (!data)
           throw new RecordServiceError(
             404,
@@ -167,11 +177,13 @@ export function createEntityListService(options: {
             "The governed record was not found",
           );
       }
+      stage("record");
       const readable = admitted?.readableFields ?? await readableRecordFields(
         options.authorizer,
         context,
         descriptor,
       );
+      stage("fields");
       if (!readable.length)
         throw new RecordServiceError(
           403,
@@ -214,6 +226,7 @@ export function createEntityListService(options: {
             label: humanizeIdentifier(transition.code),
             kind: "transition",
           });
+      stage("actions");
       const fields = readable.map((field) => surfaceField(field, true));
       const identity = descriptor.listPresentation?.identityField;
       const titleField =
@@ -223,10 +236,17 @@ export function createEntityListService(options: {
               (field) => field.storagePath === descriptor.storage.idField,
             )?.key ?? readable[0]!.key);
       const authorizedRelationships: string[] = [];
+      const relationshipCapabilities: Record<string, { create: boolean }> = {};
       if (recordId) for (const relation of descriptor.recordPresentation?.entityRelationships ?? []) {
         const child = await options.metadata.getEntityDescriptor(context, relation.targetEntity);
-        if (child && await operationAllowed(options.authorizer, context, child, "list")) authorizedRelationships.push(relation.key);
+        if (child && await operationAllowed(options.authorizer, context, child, "list")) {
+          authorizedRelationships.push(relation.key);
+          // Parent admission has succeeded. The mutation endpoint independently
+          // locks relationship fields and rechecks create permission.
+          relationshipCapabilities[relation.key] = { create: await operationAllowed(options.authorizer, context, child, "create") };
+        }
       }
+      stage("relationships");
       const presentation = readableRecordPresentation(
         descriptor.recordPresentation ??
           parseEntityRecordPresentation({
@@ -237,6 +257,7 @@ export function createEntityListService(options: {
               {
                 key: "overview",
                 label: "Overview",
+                localizedLabel: {labelKey: "detail.overview", defaultText: "Overview"},
                 fields: fields.map((field) => field.key),
               },
             ],
@@ -260,14 +281,15 @@ export function createEntityListService(options: {
       // admission and readable-field projection have succeeded. No transaction
       // is passed between these independently scoped read providers.
       const [collaboration, summaryView, activity] = await Promise.all([
-        recordId && options.collaboration ? options.collaboration({ context, entityCode, recordId }) : [],
-        recordId && options.summary ? options.summary({ context, entityCode, recordId, releaseId: descriptor.releaseId }) : undefined,
-        recordId && options.activity ? options.activity({context,entityCode,recordId}) : false,
+        measured("collaboration", () => recordId && options.collaboration ? options.collaboration({ context, entityCode, recordId }) : []),
+        measured("summary", () => recordId && options.summary ? options.summary({ context, entityCode, recordId, releaseId: descriptor.releaseId }) : undefined),
+        measured("activity", () => recordId && options.activity ? options.activity({context,entityCode,recordId}) : false),
       ]);
       const detail = parseEntityDetailDescriptor({
         schema: "athyper.entity-detail-descriptor/1",
         ...(entityLabels(descriptor).localization ? { localizedLabels: readablePresentationLocalization(entityLabels(descriptor).localization, fields.map(field => field.key)) } : {}),
         collaboration,
+        relationshipCapabilities,
         activity,
         presentation: { ...presentation, summaryView },
         plane: descriptor.planeKey,
@@ -766,6 +788,11 @@ async function operationAllowed(
     })
   ).allowed;
 }
+function enumOptionLabel(field: EntityFieldDescriptor, value: string): string {
+  const labels = field.validation?.["optionLabels"];
+  const label = labels && typeof labels === "object" ? Reflect.get(labels, value) : undefined;
+  return typeof label === "string" && label.trim() ? label : humanizeIdentifier(value);
+}
 function surfaceField(
   field: EntityFieldDescriptor,
   readOnly: boolean,
@@ -775,7 +802,7 @@ function surfaceField(
     : [];
   const options = raw.flatMap((candidate) =>
     typeof candidate === "string"
-      ? [{ value: candidate, label: humanizeIdentifier(candidate) }]
+      ? [{ value: candidate, label: enumOptionLabel(field, candidate) }]
       : candidate &&
           typeof candidate === "object" &&
           !Array.isArray(candidate) &&
@@ -840,8 +867,14 @@ export function compileEntityListDescriptor(
     [];
   const configuredColumns = new Set(configuredColumnList);
   const hasConfiguredColumns = configuredColumns.size > 0;
+  // The record title is published once, on the record presentation. Lists
+  // reuse it as the `title` role so record cards need no second declaration.
+  const recordTitleKey = descriptor.recordPresentation?.titleField;
   const fields: ListFieldDescriptorV1[] = readableFields.map((field, index) => {
     const options = filterOptions(field);
+    const semanticRole =
+      field.list?.semanticRole ??
+      (field.key === recordTitleKey && field.key !== identityKey ? "title" : undefined);
     const statusTones = field.list?.statusTones ?? descriptor.recordPresentation?.badges.find(badge => badge.field === field.key)?.tones;
     return Object.freeze({
       key: field.key,
@@ -851,8 +884,9 @@ export function compileEntityListDescriptor(
         : {}),
       valueKind:
         field.list?.semanticRole === "country_code" ? "reference" : field.type,
-      ...(field.list?.semanticRole
-        ? { semanticRole: field.list.semanticRole }
+      ...(semanticRole ? { semanticRole } : {}),
+      ...(field.list?.cardPriority
+        ? { cardPriority: field.list.cardPriority }
         : {}),
       ...(statusTones ? { statusTones } : {}),
       ...(field.list?.rendererKey
@@ -1156,7 +1190,12 @@ async function effectiveDataOperations(
     ? enabled(exportAuthority.permission, exportMax, true)
     : hidden;
   const adapterReady = Boolean(config?.importAdapterKey);
-  const serverImport = !importAuthority?.allowed
+  const parentScoped =
+    collectionScope?.status === "ready" &&
+    (collectionScope.constraints ?? []).some(
+      (constraint) => constraint.kind === "entity.parent.v1",
+    );
+  const serverImport = !importAuthority?.allowed || parentScoped
     ? hidden
     : !adapterReady
       ? disabled(
@@ -1212,6 +1251,7 @@ async function effectiveDataOperations(
       : (["csv", "json"] as const),
   );
   return Object.freeze({
+    ...(entityTransferWorkspaces[descriptor.planeKey] ? { workspaceHref: entityTransferWorkspaces[descriptor.planeKey] } : {}),
     export: Object.freeze({
       currentPage: serverExport,
       selected: serverExport,
@@ -1289,7 +1329,7 @@ function filterOptions(
       return [
         {
           value: candidate as string | number | boolean,
-          label: humanizeIdentifier(String(candidate)),
+          label: enumOptionLabel(field, String(candidate)),
         },
       ];
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))

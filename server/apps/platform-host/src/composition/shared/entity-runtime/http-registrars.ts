@@ -16,6 +16,7 @@ import type { EntityServices } from "./services.js";
 
 type Application = Parameters<typeof registerEntityReadHttp>[0];
 export interface EntityHttpOptions {
+  readonly diagnostics?: boolean;
   readonly authenticate: EntityReadHttpBindings["entity"]["authenticate"];
   readonly readContext: EntityReadHttpBindings["entity"]["readContext"];
   readonly services: EntityServices;
@@ -82,6 +83,7 @@ export function createEntityHttpRegistrars(options: EntityHttpOptions) {
           directory: referenceDirectory,
         },
         entity: {
+          diagnostics: options.diagnostics ?? process.env["ENTITY_READ_DIAGNOSTICS"] === "true",
           authenticate,
           readContext,
           lists,

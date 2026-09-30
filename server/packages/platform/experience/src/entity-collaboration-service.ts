@@ -23,7 +23,7 @@ export function createEntityCollaborationService(options: {
       for (const kind of ["comments", "attachments"] as const) {
         if (!declarations?.[kind]) continue;
         try {
-          const admitted = await options.capabilities.resolve({ ...input, kind, action: "read" }, release);
+          const admitted = await options.capabilities.resolve({ ...input, kind, action: "read", actionOnly: true }, release);
           if (options.providers.getService?.(admitted.binding.serviceKey)) allowed.push(kind);
         } catch (error) {
           if (!(error instanceof EntityCapabilityPolicyError)) throw error;

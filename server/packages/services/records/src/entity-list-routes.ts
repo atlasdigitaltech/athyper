@@ -11,6 +11,7 @@ import {
   registerContractRoute,
 } from "@athyper/server-runtime-http";
 import type { Application, RequestHandler, Response } from "express";
+import { withReadEvidence } from "@athyper/server-foundation/context";
 import type { EntityListService } from "./entity-list-service.js";
 import { RecordServiceError } from "./errors.js";
 import {
@@ -21,6 +22,7 @@ import {
 import { parseRecordListParameters } from "./records-routes.js";
 
 export interface EntityListRouteOptions {
+  readonly diagnostics?: boolean;
   readonly authenticate: RequestHandler;
   readonly readContext: (response: Response) => VerifiedRequestContext;
   readonly lists: EntityListService;
@@ -74,17 +76,18 @@ export function registerEntityListRoutes(
     application,
     options,
     contracts.detailDescriptor,
-    (request, context) =>
+    (request, context, timing) =>
       options.lists.detailDescriptor(
         context,
         entityCodeParameter(request.params["entityCode"]),
         request.query["recordId"] === undefined
           ? undefined
           : recordId(request.query["recordId"]),
+        timing,
       ),
   );
-  registerReadRoute(application, options, contracts.detailRead, (request, context) =>
-    options.lists.detailRead(context, entityCodeParameter(request.params["entityCode"]), recordId(request.params["recordId"])));
+  registerReadRoute(application, options, contracts.detailRead, (request, context, timing) =>
+    options.lists.detailRead(context, entityCodeParameter(request.params["entityCode"]), recordId(request.params["recordId"]), timing));
   registerReadRoute(
     application,
     options,
@@ -131,6 +134,7 @@ function registerReadRoute(
   read: (
     request: ReadRouteRequest,
     context: VerifiedRequestContext,
+    timing: (stage: string, durationMs: number) => void,
   ) => Promise<unknown> | unknown,
 ): void {
   registerContractRoute(
@@ -138,10 +142,19 @@ function registerReadRoute(
     contract,
     options.authenticate,
     async (request, response, next) => {
+      const started = performance.now();
+      const stages: string[] = [];
+      const timing = (stage: string, durationMs: number) => {
+        stages.push(`${stage};dur=${durationMs.toFixed(1)}`);
+        if (options.diagnostics === true) response.setHeader("Server-Timing", stages.join(", "));
+      };
       try {
         response.setHeader("Cache-Control", "private, no-store");
-        response.json(await read(request, options.readContext(response)));
+        const result = await withReadEvidence(() => read(request, options.readContext(response), timing));
+        timing("total", performance.now() - started);
+        response.json(result);
       } catch (error) {
+        timing("total", performance.now() - started);
         next(asHttpError(error));
       }
     },
@@ -270,6 +283,7 @@ const query = {
         },
       ],
     },
+    recordIds: { oneOf: [{ type: "string" }, { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } }] },
     countMode: {
       type: "string",
       enum: ["none", "cached", "approximate", "exact"],

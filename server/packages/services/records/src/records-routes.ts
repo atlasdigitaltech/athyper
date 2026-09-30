@@ -1,3 +1,4 @@
+import { isEntityRecordId } from "@athyper/contract-platform-entity-runtime";
 import { parseEntityListScopeCoordinate } from "./list-scope-coordinate.js";
 import { ENTITY_LIST_RELATIVE_DATE_VALUES } from "@athyper/contract-platform-entity-list";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
@@ -54,6 +55,8 @@ const FILTER_OPERATORS = new Set<RecordFilterOperator>(["eq", "ne", "in", "conta
 const RELATIVE_DATE_VALUES = new Set<string>(ENTITY_LIST_RELATIVE_DATE_VALUES);
 
 export function parseRecordListParameters(query: Readonly<Record<string, unknown>>): RecordListParameters {
+  const recordIds = query["recordIds"] === undefined ? undefined : queryValues(query["recordIds"], "recordIds", 100);
+  if (recordIds && (!recordIds.length || recordIds.some(id => !isEntityRecordId(id)))) throw new RecordServiceError(400, "INVALID_RECORD_IDS", "recordIds must contain valid record identities");
   const limit = integerQuery(query["limit"]);
   const cursor = boundedQueryText(query["cursor"], "cursor", 4096);
   const search = boundedQueryText(query["search"], "search", 512);
@@ -66,6 +69,7 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
   const countMode = query["countMode"] === undefined ? undefined : oneOfQuery(query["countMode"], ["none", "cached", "approximate", "exact"] as const, "countMode");
   const hydrateReferences = query["hydrateReferences"] === undefined ? undefined : oneOfQuery(query["hydrateReferences"], ["true", "false"] as const, "hydrateReferences") === "true";
   return {
+    ...(recordIds ? { recordIds: Object.freeze([...new Set(recordIds)]) } : {}),
     ...(limit !== undefined ? { limit } : {}),
     ...(cursor ? { cursor } : {}),
     ...(search ? { search } : {}),

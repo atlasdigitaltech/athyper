@@ -34,6 +34,8 @@ function LocalizedFoundationUi({ children }: { readonly children: ReactNode }) {
     legalEntity: (code) => intl.message("ui.legalEntity", { code }),
     companyDetails: (code, country, currency) => intl.message("ui.companyDetails", { code, country, currency }),
     noMatchingCompanies: intl.message("ui.noMatchingCompanies"),
+    selectView: intl.message("ui.selectView"),
+    viewName: (name, modified) => intl.message(modified ? "ui.viewNameModified" : "ui.viewName", { name }),
   };
   return <UiMessagesProvider messages={messages}>{children}</UiMessagesProvider>;
 }

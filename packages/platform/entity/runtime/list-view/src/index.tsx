@@ -45,6 +45,9 @@ import {
   type ListDrawerKey,
 } from "./drawer-registry";
 import { StickyListTable } from "./sticky-table";
+import { useListWidthTier, type ListWidthTier } from "./presentation-tier";
+import { revealListStart, useQuickReturnToolbar } from "./list-scroll";
+import { recordCardLayout, type RecordCardLayout } from "./record-card-layout";
 import { EntityNavigation, EntityNavigationSkeleton } from "./navigation";
 import { EntityOverviewRuntime } from "./overview";
 import { GroupDialog } from "./dialogs/group-dialog";
@@ -319,6 +322,7 @@ export interface EntityListRuntimeProps {
   readonly children?: ReactNode;
   readonly activePath?: string;
   readonly onNavigate?: (href: string) => void;
+  readonly onOpenRecord?: (row: EntityListRowV1) => void;
   readonly initialDensity?: "compact" | "comfortable" | "spacious";
   /** Plane brand identity shown on application-tier failure surfaces (e.g. "Athyper Neon"). */
   readonly applicationName?: string;
@@ -613,6 +617,7 @@ function EntityCollectionRuntime({
   viewNamespace,
   children,
   onNavigate,
+  onOpenRecord,
   activePath,
   initialDensity = "comfortable",
   applicationName,
@@ -622,6 +627,10 @@ function EntityCollectionRuntime({
   const actionReasonId = useId();
   const [sourceDescriptor, setDescriptor] = useState<EntityListDescriptorV1>();
   const entityIntl = useEntityI18n();
+  const [panelRef, widthTier, panelElement] = useListWidthTier();
+  useQuickReturnToolbar(panelElement, widthTier === "narrow" && !embedding);
+  // Result-set key captured when the reader changes the list; see revealListStart.
+  const pendingResultsReveal = useRef<string | undefined>(undefined);
   const descriptor = useMemo(
     () =>
       sourceDescriptor && localizeEntityLabels(sourceDescriptor, entityIntl),
@@ -687,6 +696,11 @@ function EntityCollectionRuntime({
         }
       : null,
   );
+  // The rows the reader sees; unlike serverQueryKey it ignores column choice.
+  const resultSetKey = JSON.stringify({
+    ...(JSON.parse(serverQueryKey) ?? {}),
+    columns: undefined,
+  });
   const filterChoiceRequests = useRef(new Map<string, Promise<void>>());
   const filterChoiceControllers = useRef(new Set<AbortController>());
   const activeChoiceScope = useRef("");
@@ -1081,15 +1095,22 @@ function EntityCollectionRuntime({
       : undefined
     : descriptor?.surface.description;
   const resultsCurrent = !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`;
+  useEffect(() => {
+    const pending = pendingResultsReveal.current;
+    if (pending === undefined || !resultsCurrent) return;
+    pendingResultsReveal.current = undefined;
+    if (pending !== resultSetKey && panelElement && !embedding)
+      revealListStart(panelElement);
+  }, [resultsCurrent, resultSetKey, state, panelElement, embedding]);
   const availableCount =
     !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`
-      ? (listCountLabel(page) ??
+      ? (listCountLabel(page, entityIntl) ??
         (page &&
         !page.pagination.hasNext &&
         !state?.cursor &&
         !(state?.pageIndex ?? 0) &&
         cursorHistory.length === 0
-          ? new Intl.NumberFormat(locale).format(page.rows.length)
+          ? entityIntl.number(page.rows.length)
           : undefined))
       : undefined;
   useEffect(() => {
@@ -1243,6 +1264,7 @@ function EntityCollectionRuntime({
     patch: Partial<ListLocationStateV1>,
     history: "replace" | "push" = "replace",
   ) => {
+    pendingResultsReveal.current = resultSetKey;
     setCursorHistory([]);
     setSelectedIds(new Set());
     setAllMatchingSelected(false);
@@ -1409,8 +1431,9 @@ function EntityCollectionRuntime({
             />
           </>
         ) : null}
-        <div className="a-entity-list__panel">
+        <div ref={panelRef} className="a-entity-list__panel">
           <ListChrome
+            widthTier={widthTier}
             embedding={embedding}
             client={client}
             scopeCoordinate={scopeCoordinate}
@@ -1474,16 +1497,18 @@ function EntityCollectionRuntime({
                 page={page}
                 fields={fields}
                 mode={state.mode}
+                widthTier={widthTier}
                 filters={pageState?.filters ?? state.filters}
-                onFilters={(filters) => resetAndUpdate({ filters }, "push")}
+                onFilters={(field, filters) => resetAndUpdate({ filters: [...state.filters.filter(item => item.field !== field), ...filters] }, "push")}
                 sort={pageState?.sort ?? state.sort}
-                group={pageState?.group}
-                query={pageState?.query}
+                group={(pageState ?? state).group}
+                query={(pageState ?? state).query}
                 filtered={(pageState?.filters ?? state.filters).length > 0}
                 loading={loading || (!error && !resultsCurrent)}
                 emptyContent={embedding?.emptyContent}
                 emptyAction={embedding?.emptyAction}
                 recordLink={embedding?.recordHref}
+                onOpenRecord={onOpenRecord}
                 singleSelection={embedding?.options.selectionMode === "single"}
                 chooser={Boolean(embedding)}
                 selectionEnabled={selectionEnabled && resultsCurrent}
@@ -1539,6 +1564,7 @@ function EntityCollectionRuntime({
               cursorHistory={cursorHistory}
               onPrevious={() => {
                 if (!resultsCurrent) return;
+                pendingResultsReveal.current = resultSetKey;
                 const cursor = cursorHistory.at(-1);
                 setCursorHistory(cursorHistory.slice(0, -1));
                 setSelectedIds(new Set());
@@ -1557,6 +1583,7 @@ function EntityCollectionRuntime({
               }}
               onNext={() => {
                 if (!resultsCurrent) return;
+                pendingResultsReveal.current = resultSetKey;
                 setCursorHistory([...cursorHistory, state.cursor]);
                 setSelectedIds(new Set());
                 setAllMatchingSelected(false);
@@ -1624,11 +1651,14 @@ function ListChrome({
   onOpenDataOperations,
   onRefresh,
   onChange,
+  widthTier,
 }: {
   readonly embedding?: EntityDirectoryEmbedding;
   readonly client: HttpClient;
   readonly scopeCoordinate?: EntityListScopeCoordinateV1;
   readonly onCatalogChange: (catalog: EntityViewCatalog) => void;
+  /** Measured list width; narrow lists shorten the search placeholder. */
+  readonly widthTier?: ListWidthTier;
   readonly descriptor: EntityListDescriptorV1;
   readonly state: ListLocationStateV1;
   readonly page?: EntityListResultV1;
@@ -1903,7 +1933,16 @@ function ListChrome({
             label={entityIntl.message("list.searchLabel", { entity: descriptor.entity.pluralLabel })}
             value={query}
             onValueChange={setQuery}
-            placeholder={entityIntl.message("list.searchPlaceholder", { field: searchHint(descriptor) })}
+            placeholder={
+              widthTier === "narrow"
+                ? entityIntl.message("list.searchLabel", { entity: descriptor.entity.pluralLabel })
+                : entityIntl.message("list.searchPlaceholder", { field: searchHint(descriptor) })
+            }
+            description={
+              widthTier === "narrow"
+                ? entityIntl.message("list.searchPlaceholder", { field: searchHint(descriptor) })
+                : undefined
+            }
             maxLength={ENTITY_LIST_MAX_SEARCH_LENGTH}
           />
         </form>
@@ -2131,6 +2170,32 @@ function ListChrome({
             </MenuContent>
           </Menu>
         </div>
+        {activeView && activeView.id !== "system" ? (
+          <div className="a-entity-list__view-status">
+            <button
+              type="button"
+              className="a-entity-list__view-status-open"
+              aria-label={entityIntl.message("list.viewStatusOpen", { name: activeView.name })}
+              disabled={embedding?.options.views.allowSwitching === false}
+              onClick={() => setActiveDrawer("views")}
+            >
+              <span>
+                {entityIntl.message(dirty ? "list.viewStatusModified" : "list.viewStatus", { name: activeView.name })}
+              </span>
+            </button>
+            {!embedding || embedding.options.views.allowSwitching ? (
+              <button
+                type="button"
+                className="a-entity-list__view-status-clear"
+                aria-label={entityIntl.message("list.viewStatusClear")}
+                title={entityIntl.message("list.viewStatusClear")}
+                onClick={reset}
+              >
+                <CloseIcon size={14} />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </ManagementToolbar>
       <AppliedFilters
         chips={appliedChips}
@@ -3488,6 +3553,7 @@ function SavedViewsDialog({
   readonly onViewsChange: (views: readonly SavedListView[]) => void;
   readonly onApply: (patch: Partial<ListLocationStateV1>) => void;
 }) {
+  const entityIntl = useEntityI18n();
   const [tab, setTab] = useState("available"),
     [renaming, setRenaming] = useState<string>(),
     [renameValue, setRenameValue] = useState("");
@@ -3682,7 +3748,7 @@ function SavedViewsDialog({
                 <h3>{section.label}</h3>
                 {!section.items.length ? (
                   <p className="a-entity-list__view-summary">
-                    No {section.label.toLocaleLowerCase()} yet.
+                    {entityIntl.message("list.emptyEntity", { entity: section.label })}
                   </p>
                 ) : (
                   <div className="a-entity-list__saved-views">
@@ -4122,12 +4188,14 @@ function EntityRows({
   emptyContent,
   emptyAction,
   recordLink,
+  onOpenRecord,
   singleSelection = false,
   chooser = false,
   descriptor,
   page,
   fields,
   mode,
+  widthTier,
   filters,
   onFilters,
   sort,
@@ -4146,14 +4214,17 @@ function EntityRows({
   readonly emptyContent?: EntityDirectoryEmbedding["emptyContent"];
   readonly emptyAction?: React.ReactNode;
   readonly recordLink?: (row: EntityListRowV1) => string | undefined;
+  readonly onOpenRecord?: (row: EntityListRowV1) => void;
   readonly singleSelection?: boolean;
   readonly chooser?: boolean;
   readonly descriptor: EntityListDescriptorV1;
   readonly page: EntityListResultV1;
   readonly fields: readonly ListFieldDescriptorV1[];
   readonly mode: ListLocationStateV1["mode"];
+  /** Measured list width; the narrow tier renders a table state as record cards. */
+  readonly widthTier?: ListWidthTier;
   readonly filters: readonly ListFilterV1[];
-  readonly onFilters: (filters: readonly ListFilterV1[]) => void;
+  readonly onFilters: (field: string, filters: readonly ListFilterV1[]) => void;
   readonly sort: readonly ListSortV1[];
   readonly group?: string;
   readonly query?: string;
@@ -4167,6 +4238,12 @@ function EntityRows({
   readonly onSelectionChange: (ids: ReadonlySet<string>) => void;
   readonly onSort: (field: string, additive: boolean) => void;
 }) {
+  const recordClick = (row: EntityListRowV1) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (onOpenRecord && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      onOpenRecord(row);
+    }
+  };
   const navigate = useEntityNavigate();
   const selectionName = useId();
   const intl = useEntityI18n();
@@ -4185,7 +4262,7 @@ function EntityRows({
       type="button"
       className="a-entity-list__group-toggle"
       aria-expanded={!collapsedGroups.has(item.key)}
-      aria-label={`${collapsedGroups.has(item.key) ? "Expand" : "Collapse"} ${item.label} group`}
+      aria-label={intl.message(collapsedGroups.has(item.key) ? "list.group.expand" : "list.group.collapse", { group: item.label })}
       onClick={() => toggleGroup(item.key)}
     >
       <ChevronDownIcon size={16} />
@@ -4208,7 +4285,7 @@ function EntityRows({
               ? intl.message("list.empty.query", { query: query.trim() })
               : constrained
                 ? intl.message("list.empty.matching")
-                : intl.message("list.empty.entity", { entity: descriptor.surface.title.toLocaleLowerCase() }))}
+                : intl.message("list.empty.entity", { entity: descriptor.surface.title }))}
         </h2>
         <p>
           {constrained
@@ -4232,88 +4309,47 @@ function EntityRows({
   const pageSelected =
     page.rows.length > 0 && page.rows.every((row) => selectedIds.has(row.id));
   const groups = groupedRows(page, group, descriptor, intl),
-    cards = (rows: readonly EntityListRowV1[]) => (
+    layout = recordCardLayout(descriptor, fields),
+    cards = (rows: readonly EntityListRowV1[], headingLevel: 2 | 3 = 2) => (
       <div className="a-entity-list__cards" aria-busy={loading}>
-        {rows.map((row) => {
-          const identity = formatFieldValue(
-              row.values[descriptor.entity.identityField],
-              descriptor.fields.find(
-                (field) => field.key === descriptor.entity.identityField,
-              ),
-              intl,
-            ),
-            href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
-          return (
-            <Card key={row.id} className="a-entity-list__card">
-              <div className="a-entity-list__card-header">
-                {selectionEnabled ? (
-                  <Label className="a-entity-list__card-select">
-                    <input
-                      name={singleSelection ? selectionName : undefined}
-                      type={singleSelection ? "radio" : "checkbox"}
-                      checked={selectedIds.has(row.id)}
-                      onChange={(event) =>
-                        toggle(row.id, event.currentTarget.checked)
-                      }
-                    />{" "}
-                    Select record
-                  </Label>
-                ) : null}
-                {!chooser ? (
-                  <BookmarkButton
-                    identity={identity}
-                    favourite={bookmarkedIds.has(row.id)}
-                    pending={pendingBookmarkIds.has(row.id)}
-                    onChange={(favourite) => onBookmark(row, favourite)}
-                  />
-                ) : null}
-              </div>
-              <h2>
-                {href ? (
-                  <EntityLink className="a-entity-list__record-link" href={href}>
-                    {highlightText(identity, query)}
-                  </EntityLink>
-                ) : (
-                  highlightText(identity, query)
-                )}
-              </h2>
-              <dl>
-                {fields
-                  .filter(
-                    (field) => field.key !== descriptor.entity.identityField,
-                  )
-                  .map((field) => (
-                    <div key={field.key}>
-                      <dt>{field.label}</dt>
-                      <dd>
-                        {href && isRecordLinkField(field, descriptor) ? (
-                          <EntityLink className="a-entity-list__record-link" href={href}>
-                            {renderFieldValue(
-                              row.values[field.key],
-                              field,
-                              query,
-                              intl,
-                            )}
-                          </EntityLink>
-                        ) : (
-                          renderFieldValue(row.values[field.key], field, query, intl)
-                        )}
-                      </dd>
-                    </div>
-                  ))}
-              </dl>
-            </Card>
-          );
-        })}
+        {rows.map((row) => (
+          <EntityRecordCard
+            key={row.id}
+            headingLevel={headingLevel}
+            descriptor={descriptor}
+            layout={layout}
+            row={row}
+            query={query}
+            href={chooser ? recordLink?.(row) : recordHref(descriptor, row)}
+            chooser={chooser}
+            selection={
+              selectionEnabled
+                ? {
+                    name: singleSelection ? selectionName : undefined,
+                    type: singleSelection ? "radio" : "checkbox",
+                    checked: selectedIds.has(row.id),
+                    onChange: (checked) => toggle(row.id, checked),
+                  }
+                : undefined
+            }
+            favourite={bookmarkedIds.has(row.id)}
+            favouritePending={pendingBookmarkIds.has(row.id)}
+            onFavourite={(favourite) => onBookmark(row, favourite)}
+            onOpenRecord={onOpenRecord}
+            intl={intl}
+          />
+        ))}
       </div>
     );
-  if (mode === "compact")
+  // Narrow lists present the same rows as record cards: geometry changes,
+  // the saved table state (columns, sort, grouping) does not.
+  if (mode === "compact" || widthTier === "narrow")
     return group ? (
       <div className="a-entity-list__groups">
         {groups.map((item) => (
           <section key={item.key}>
             <h2>{groupHeading(item)}</h2>
-            {collapsedGroups.has(item.key) ? null : cards(item.rows)}
+            {collapsedGroups.has(item.key) ? null : cards(item.rows, 3)}
           </section>
         ))}
       </div>
@@ -4321,6 +4357,7 @@ function EntityRows({
       cards(page.rows)
     );
   const openRecord = (row: EntityListRowV1) => {
+    if (onOpenRecord) { onOpenRecord(row); return; }
     const href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
     if (href) navigate(href);
   };
@@ -4357,11 +4394,11 @@ function EntityRows({
           }}
         >
           {selectionEnabled ? (
-            <td className="a-entity-list__selection-cell" data-label="Select">
+            <td className="a-entity-list__selection-cell" data-label={intl.message("list.row.select")}>
               <input
                 name={singleSelection ? selectionName : undefined}
                 type={singleSelection ? "radio" : "checkbox"}
-                aria-label={`Select ${identity}`}
+                aria-label={intl.message("list.row.selectRecord", { record: identity })}
                 checked={selectedIds.has(row.id)}
                 onChange={(event) =>
                   toggle(row.id, event.currentTarget.checked)
@@ -4376,7 +4413,7 @@ function EntityRows({
               title={formatFieldValue(row.values[field.key], field, intl)}
             >
               {href && isRecordLinkField(field, descriptor) ? (
-                <EntityLink className="a-entity-list__record-link" href={href}>
+                <EntityLink className="a-entity-list__record-link" href={href} onClick={recordClick(row)}>
                   {renderFieldValue(row.values[field.key], field, query, intl)}
                 </EntityLink>
               ) : (
@@ -4384,7 +4421,7 @@ function EntityRows({
               )}
             </td>
           ))}
-          <td className="a-entity-list__bookmark-cell" data-label="Favourite">
+          <td className="a-entity-list__bookmark-cell" data-label={intl.message("list.row.favourite")}>
             {!chooser ? (
               <BookmarkButton
                 identity={identity}
@@ -4412,11 +4449,11 @@ function EntityRows({
             {selectionEnabled ? (
               <th scope="col" className="a-entity-list__selection-cell">
                 {singleSelection ? (
-                  <span className="a-visually-hidden">Select record</span>
+                  <span className="a-visually-hidden">{intl.message("list.row.selectAny")}</span>
                 ) : (
                   <Checkbox
                     disabled={singleSelection}
-                    aria-label="Select current page"
+                    aria-label={intl.message("list.row.selectPage")}
                     checked={pageSelected}
                     onChange={(event) => {
                       const next = new Set(singleSelection ? [] : selectedIds);
@@ -4485,7 +4522,7 @@ function EntityRows({
                         descriptor={descriptor}
                         field={field}
                         filters={filters}
-                        onApply={onFilters}
+                        onApply={(next) => onFilters(field.key, next)}
                       />
                     ) : null}
                   </div>
@@ -4493,10 +4530,10 @@ function EntityRows({
               );
             })}
             <th scope="col" className="a-entity-list__bookmark-heading">
-              <span className="a-visually-hidden">Favourite</span>
+              <span className="a-visually-hidden">{intl.message("list.row.favourite")}</span>
             </th>
             <th scope="col" className="a-entity-list__actions-heading">
-              <span className="a-visually-hidden">Actions</span>
+              <span className="a-visually-hidden">{intl.message("list.row.actions")}</span>
             </th>
           </tr>
         </thead>
@@ -4545,6 +4582,7 @@ function SelectionBar({
   readonly onExport?: () => void;
   readonly onClear: () => void;
 }) {
+  const intl = useEntityI18n();
   const total = page?.pagination.total,
     bookmarkedCount = selectedRows.filter((row) =>
       bookmarkedIds.has(row.id),
@@ -4554,7 +4592,7 @@ function SelectionBar({
     <div className="a-entity-list__selection-bar" role="status">
       <div className="a-entity-list__selection-summary">
         <strong>
-          {new Intl.NumberFormat().format(effectiveCount)}
+          {intl.number(effectiveCount)}
           {allMatching ? " matching records selected" : " selected"}
         </strong>
         <span>
@@ -4570,7 +4608,7 @@ function SelectionBar({
       total > selectedCount &&
       descriptor.dataOperations?.export.filtered.state === "enabled" ? (
         <Button size="small" variant="secondary" onClick={onSelectAllMatching}>
-          Select all {new Intl.NumberFormat().format(total)} matching records
+          Select all {intl.number(total)} matching records
         </Button>
       ) : null}
       <div className="a-entity-list__selection-actions">
@@ -4612,6 +4650,134 @@ function SelectionBar({
     </div>
   );
 }
+/** One record card for compact mode and narrow lists. Slots come from
+ * metadata roles via `recordCardLayout`; there are no entity branches. */
+function EntityRecordCard({
+  descriptor,
+  layout,
+  row,
+  query,
+  href,
+  chooser,
+  selection,
+  favourite,
+  favouritePending,
+  onFavourite,
+  onOpenRecord,
+  headingLevel = 2,
+  intl,
+}: {
+  readonly descriptor: EntityListDescriptorV1;
+  readonly layout: RecordCardLayout;
+  readonly row: EntityListRowV1;
+  readonly query?: string;
+  readonly href?: string;
+  readonly chooser: boolean;
+  readonly selection?: {
+    readonly name?: string;
+    readonly type: "radio" | "checkbox";
+    readonly checked: boolean;
+    readonly onChange: (checked: boolean) => void;
+  };
+  readonly favourite: boolean;
+  readonly favouritePending: boolean;
+  readonly onFavourite: (favourite: boolean) => void;
+  readonly onOpenRecord?: (row: EntityListRowV1) => void;
+  readonly headingLevel?: 2 | 3;
+  readonly intl: ReturnType<typeof useEntityI18n>;
+}) {
+  const identity = formatFieldValue(
+      row.values[descriptor.entity.identityField],
+      layout.identity,
+      intl,
+    ),
+    Heading = headingLevel === 3 ? "h3" : "h2",
+    open = (event: React.MouseEvent<HTMLAnchorElement>) => {
+      if (
+        onOpenRecord &&
+        event.button === 0 &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        onOpenRecord(row);
+      }
+    },
+    value = (field: ListFieldDescriptorV1) =>
+      renderFieldValue(row.values[field.key], field, query, intl),
+    details = (items: readonly ListFieldDescriptorV1[]) => (
+      <dl>
+        {items.map((field) => (
+          <div key={field.key}>
+            <dt>{field.label}</dt>
+            <dd>{value(field)}</dd>
+          </div>
+        ))}
+      </dl>
+    );
+  return (
+    <Card
+      className="a-entity-list__card"
+      data-selected={selection?.checked || undefined}
+    >
+      <div className="a-entity-list__card-header">
+        {selection ? (
+          <input
+            className="a-entity-list__card-select"
+            name={selection.name}
+            type={selection.type}
+            aria-label={intl.message("list.row.selectRecord", { record: identity })}
+            checked={selection.checked}
+            onChange={(event) => selection.onChange(event.currentTarget.checked)}
+          />
+        ) : null}
+        <div className="a-entity-list__card-heading">
+          <Heading>
+            {href ? (
+              <EntityLink
+                className="a-entity-list__record-link"
+                href={href}
+                onClick={open}
+              >
+                {highlightText(identity, query)}
+              </EntityLink>
+            ) : (
+              highlightText(identity, query)
+            )}
+          </Heading>
+          {layout.title ? (
+            <div className="a-entity-list__card-title">{value(layout.title)}</div>
+          ) : null}
+        </div>
+        {!chooser ? (
+          <div className="a-entity-list__card-actions">
+            <BookmarkButton
+              identity={identity}
+              favourite={favourite}
+              pending={favouritePending}
+              onChange={onFavourite}
+            />
+            <RowMenu descriptor={descriptor} row={row} intl={intl} />
+          </div>
+        ) : null}
+      </div>
+      {layout.status ? (
+        <div className="a-entity-list__card-status">{value(layout.status)}</div>
+      ) : null}
+      {layout.body.length ? details(layout.body) : null}
+      {layout.more.length ? (
+        <details className="a-entity-list__card-more">
+          <summary>
+            {intl.message("list.card.moreFields", { count: layout.more.length })}
+          </summary>
+          {details(layout.more)}
+        </details>
+      ) : null}
+    </Card>
+  );
+}
 function BookmarkButton({
   identity,
   favourite,
@@ -4623,9 +4789,11 @@ function BookmarkButton({
   readonly pending: boolean;
   readonly onChange: (favourite: boolean) => void;
 }) {
-  const label = favourite
-    ? `Remove ${identity} from favourites`
-    : `Add ${identity} to favourites`;
+  const intl = useEntityI18n();
+  const label = intl.message(
+    favourite ? "list.row.favouriteRemove" : "list.row.favouriteAdd",
+    { record: identity },
+  );
   return (
     <button
       type="button"
@@ -4662,8 +4830,8 @@ function RowMenu({
   return (
     <Menu>
       <MenuTrigger
-        aria-label={`Actions for ${identity}`}
-        title={`Actions for ${identity}`}
+        aria-label={intl.message("list.row.actionsFor", { record: identity })}
+        title={intl.message("list.row.actionsFor", { record: identity })}
       >
         <MoreVerticalIcon size={18} />
       </MenuTrigger>
@@ -4671,12 +4839,12 @@ function RowMenu({
         {href ? (
           <MenuItem onClick={() => navigate(href)}>
             <EyeIcon size={16} />
-            View
+            {intl.message("list.row.view")}
           </MenuItem>
         ) : null}
         <MenuItem onClick={() => void navigator.clipboard?.writeText(identity)}>
           <CopyIcon size={16} />
-          Copy
+          {intl.message("list.row.copy")}
         </MenuItem>
       </MenuContent>
     </Menu>
@@ -4798,7 +4966,7 @@ function ColumnFilter({
   );
   const apply = (next: readonly ListFilterV1[]) => {
     rememberFilters(recentFilterKey(descriptor), next, descriptor.fields);
-    onApply([...filters.filter((item) => item.field !== field.key), ...next]);
+    onApply(next);
     close();
   };
   return (
@@ -5063,11 +5231,11 @@ function searchHint(descriptor: EntityListDescriptorV1): string {
     )
     .join(", ");
 }
-function listCountLabel(page?: EntityListResultV1): string | undefined {
+function listCountLabel(page: EntityListResultV1 | undefined, intl: ReturnType<typeof useEntityI18n>): string | undefined {
   const count = page?.pagination.total;
   return count === undefined
     ? undefined
-    : `${page?.pagination.countMode === "approximate" ? "≈" : ""}${new Intl.NumberFormat().format(count)}`;
+    : `${page?.pagination.countMode === "approximate" ? "≈" : ""}${intl.number(count)}`;
 }
 function listHeaderInformation(
   description?: string,
@@ -5392,3 +5560,5 @@ export {
   searchLookupDirectory,
   lookupSearchBehavior,
 } from "./lookup-directory";
+
+export { EntityNavigationProvider } from "./entity-navigation";

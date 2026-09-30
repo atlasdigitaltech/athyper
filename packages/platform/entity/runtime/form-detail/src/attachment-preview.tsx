@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { attachmentPreview, type AttachmentPreviewResult as Preview } from "./collaboration-operations";
 import { attachmentCapabilityUrl } from "@athyper/platform-communications-collaboration-ui";
 import { useApiClient } from "@athyper/platform-shell-app-foundation";
+import { requestThumbnail } from "./thumbnail-requests";
+import { useThumbnailScope } from "./thumbnail-scope";
 
 /** Every refresh reauthorizes the derivative; closing cancels polling and delivery.
  * Native PDF viewing uses a separate storage origin and a scanned raster-only PDF.
@@ -21,6 +23,7 @@ export function AttachmentPreview({
   document?: boolean;
 }) {
   const intl = useEntityI18n();
+  const scope = useThumbnailScope();
   const client = useApiClient(),
     [value, setValue] = useState<Preview & {messageKey?: string}>(),
     [attempt, setAttempt] = useState(0);
@@ -31,13 +34,11 @@ export function AttachmentPreview({
     setValue(undefined);
     const read = async () => {
       try {
-        const result = await client.request(
+        const result = thumbnail ? await requestThumbnail(client, scope, attachmentId, controller.signal) : await client.request(
           attachmentPreview(attachmentId),
           {
             body: {
-              rendition: thumbnail
-                ? "thumbnail_sm"
-                : fullDocument
+              rendition: fullDocument
                   ? "preview_default"
                   : "page_preview",
             },
@@ -63,7 +64,7 @@ export function AttachmentPreview({
             () => void read(),
             Math.max(
               1000,
-              new Date(result.expiresAt).getTime() - Date.now() - 15000,
+              new Date(result.expiresAt).getTime() - Date.now() - 5000,
             ),
           );
       } catch {
@@ -80,7 +81,7 @@ export function AttachmentPreview({
       controller.abort();
       if (timer) clearTimeout(timer);
     };
-  }, [attachmentId, client, thumbnail, fullDocument, attempt]);
+  }, [attachmentId, client, thumbnail, fullDocument, attempt, scope]);
   const detail = value?.messageKey ? intl.message(value.messageKey) : value?.detail;
   return (
     <div

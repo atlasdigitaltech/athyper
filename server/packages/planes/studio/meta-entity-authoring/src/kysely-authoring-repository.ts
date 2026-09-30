@@ -1,4 +1,5 @@
 import { normalizeGraphStorageOrder } from "./graph-storage-order.js";
+import { clearExecutionBindings } from "./execution-binding-replacement.js";
 import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type {
@@ -732,19 +733,9 @@ async function replaceGraphInTransaction(
     input.actorId,
     "previous",
   );
-  // Mapping rows inherit their change-set/entity coordinates from the parent;
-  // they deliberately do not duplicate those columns in normalized storage.
-  await sql`DELETE FROM metadata.entity_materialization_field_mapping m
-    USING metadata.entity_materialization_binding b
-    WHERE m.entity_materialization_binding_id=b.id
-      AND m.tenant_id IS NOT DISTINCT FROM b.tenant_id
-      AND b.change_set_id=${input.changeSetId}::uuid`.execute(db);
+  await clearExecutionBindings(db, input.changeSetId);
   for (const table of [
     "entity_contract_test_case",
-    "entity_change_case_binding",
-    "entity_operation_context_requirement",
-    "entity_field_reference_binding",
-    "entity_materialization_binding",
     "entity_operation_scope_binding",
     "entity_numbering_binding",
     "entity_lifecycle_operation_binding",

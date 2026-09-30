@@ -122,3 +122,33 @@ describe("localized entity vertical slice",()=>{
     assert.equal(missing.title,"السجل غير موجود");
   });
 });
+
+it("projects Principal enum translations through the compiler, server descriptors and both renderers", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { parseTableEntityProduct, compileTableEntityProduct } = await import("../../server/packages/planes/studio/meta-entity-authoring/src/authoring/table-product");
+  const { compileNativeRuntimeProjection } = await import("../../server/packages/platform/metadata/src/native-runtime-projection");
+  const { parseEntityRuntimeDescriptor } = await import("../../server/packages/platform/metadata/src/descriptor-parser");
+  const { createEntityListService } = await import("../../server/packages/services/records/src/entity-list-service");
+  const read = (file: string) => JSON.parse(readFileSync(new URL(`../../metadata/products/shared/entities/principal/${file}.json`, import.meta.url), "utf8"));
+  const product = parseTableEntityProduct(read("definition"), read("localization"));
+  for (const plane of ["neon", "mesh", "studio"] as const) {
+    const { graph, artifact } = compileTableEntityProduct(product, plane);
+    const projection = compileNativeRuntimeProjection({ native: artifact.descriptor,
+      registration: {entityCode:"principal",plane,storage:{schema:"master",object:"principal",idField:"id",tenantField:"tenant_id"},columns:graph.fields.map(field=>field.fieldKey)},
+      permissions: [...new Set(graph.operationPermissions!.map(binding=>binding.permissionCode))].map(code=>({code,scopeKinds:["tenant"]})),
+    });
+    const descriptor = parseEntityRuntimeDescriptor({entity_code:"principal",plane_code:plane,release_id:"00000000-0000-4000-8000-000000000001",release_no:1,entity_contract_hash:artifact.contractHash,compiled_hash:artifact.descriptorHash,compiled_json:JSON.parse(JSON.stringify(projection))});
+    const context = {planeKey:plane,tenantId:"tenant",principalId:"actor",permissions:{authorizationScopes:[]}} as any;
+    const service = createEntityListService({metadata:{getEntityDescriptor:async()=>descriptor},authorizer:{authorize:async()=>({allowed:true}),entityDescriptorSupported:()=>true},listExecutor:{} as never});
+    const [list,detail] = await Promise.all([service.descriptor(context,"principal"),service.detailDescriptor(context,"principal")]);
+    for (const [locale, active] of [["en","Active"],["ms","Aktif"],["ar","نشط"]]) {
+      const runtime=intl(locale!);
+      const localizedList=localizeEntityLabels(list,runtime),localizedDetail=localizeEntityLabels(detail,runtime);
+      assert.equal(formatEntityValue("active",localizedList.fields.find(field=>field.key==="status"),runtime),active);
+      assert.equal(formatEntityValue("active",localizedDetail.fields.find(field=>field.key==="status"),runtime),active);
+      assert.equal(formatEntityValue("jit",localizedDetail.fields.find(field=>field.key==="provisioning_source"),runtime),"JIT");
+      assert.equal(formatEntityValue("api",localizedList.fields.find(field=>field.key==="provisioning_source"),runtime),"API");
+    }
+    assert.equal(Boolean(list.dataOperations?.workspaceHref),plane!=="studio");
+  }
+});

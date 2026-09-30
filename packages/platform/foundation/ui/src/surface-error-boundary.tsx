@@ -1,5 +1,5 @@
 "use client";
-import { Component, type ReactNode } from "react";
+import React, { Component, type ReactNode } from "react";
 type Props = { children: ReactNode; resetKey: string; message: string; retryLabel: string };
 /** Contains a render failure without exposing exception text or remounting healthy
  * siblings. Async transport failures remain owned by their request handlers. */

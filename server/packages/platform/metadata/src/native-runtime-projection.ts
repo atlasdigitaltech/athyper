@@ -108,6 +108,7 @@ export function projectNativeFieldChoices(
   const list = Object.fromEntries(
     [
       "semanticRole",
+      "cardPriority",
       "filterOperators",
       "groupable",
       "defaultWidth",
@@ -121,7 +122,7 @@ export function projectNativeFieldChoices(
   return {
     list,
     ...(dataType === "enum" && Array.isArray(options) && options.length
-      ? { validation: { options: options.map((option: Row) => option.value) } }
+      ? { validation: { options: options.map((option: Row) => option.value), optionLabels: Object.fromEntries(options.filter((option: Row) => typeof option.label === "string").map((option: Row) => [String(option.value), option.label])) } }
       : {}),
   };
 }

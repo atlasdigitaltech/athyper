@@ -28,7 +28,8 @@ test("headings follow the toolbar, remain aligned and interactive, and stop at t
   expect(headerCell!.width).toBeCloseTo(dataCell!.width,0);
   await page.evaluate(()=>{const table=document.querySelector('table')!;window.scrollTo(0,window.scrollY+table.getBoundingClientRect().bottom-120);});
   await expect.poll(async()=> {const header=await head.boundingBox(), table=await page.locator('table').boundingBox(); return header!.y+header!.height-table!.y-table!.height;}).toBeCloseTo(0,0);
+  // Narrow lists render record cards in the runtime; CSS never restyles a table into cards.
   await page.setViewportSize({width:600,height:700});
-  await expect.poll(()=>head.evaluate(element=>getComputedStyle(element).position)).toBe('absolute');
-  await expect.poll(()=>head.evaluate(element=>getComputedStyle(element).transform)).toBe('none');
+  await expect.poll(()=>head.evaluate(element=>getComputedStyle(element).position)).not.toBe('absolute');
+  await expect.poll(()=>page.locator('tbody tr').first().evaluate(element=>getComputedStyle(element).display)).toBe('table-row');
 });

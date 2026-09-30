@@ -363,11 +363,13 @@ export function AttachmentCollection({
           historyCache.current.set(key, versions);
           setHistoryRows((current) => ({ ...current, [id]: versions }));
         })
-        .catch(() => {
+        .catch((cause: unknown) => {
           if (!controller.signal.aborted)
             setHistoryErrors((current) => ({
               ...current,
-              [id]: "Version history could not be refreshed. Close and reopen history to retry.",
+              [id]: cause instanceof ApiTransportError && cause.status === 403
+                ? intl.message("error.surface.denied.description")
+                : "Version history could not be refreshed. Close and reopen history to retry.",
             }));
         });
     }
