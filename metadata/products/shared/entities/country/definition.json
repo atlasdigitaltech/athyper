@@ -1,11 +1,7 @@
 {
   "schema": "athyper.shared-reference-product/1",
   "moduleCode": "ent",
-  "planes": [
-    "studio",
-    "neon",
-    "mesh"
-  ],
+  "planes": ["studio", "neon", "mesh"],
   "definition": {
     "runtimeBindings": [
       {
@@ -223,24 +219,14 @@
       "calling_code",
       "status"
     ],
-    "searchFields": [
-      "code",
-      "code3",
-      "name",
-      "official_name"
-    ],
+    "searchFields": ["code", "code3", "name", "official_name"],
     "navigation": {
       "mode": "scroll",
       "tabs": [
         {
           "key": "overview",
           "label": "Overview",
-          "sectionKeys": [
-            "overview",
-            "phone",
-            "address",
-            "audit"
-          ],
+          "sectionKeys": ["overview", "phone", "address", "audit"],
           "localizedLabel": {
             "labelKey": "navigation.overview",
             "defaultText": "Overview"
@@ -301,15 +287,82 @@
           "labelKey": "entity.country.sections.audit",
           "defaultText": "Audit"
         },
-        "fields": [
-          "created_at",
-          "updated_at"
-        ]
+        "fields": ["created_at", "updated_at"]
       }
     ],
     "entityLabel": {
       "labelKey": "entity.country.label",
       "defaultText": "Country"
+    },
+    "ai": {
+      "schemaVersion": 1,
+      "enabled": true,
+      "aliases": [
+        "country",
+        "country details",
+        "postal and address",
+        "phone details"
+      ],
+      "description": "Read published Country reference information. Postal and phone patterns are saved reference data, not proof that an address or phone is valid. Country is read-only. Never infer missing values or claim unsupported history exists.",
+      "summaryFieldKeys": [
+        "code",
+        "name",
+        "code3",
+        "numeric3",
+        "official_name",
+        "region",
+        "subregion",
+        "calling_code",
+        "phone_trunk_prefix",
+        "phone_national_pattern",
+        "phone_example",
+        "has_postal_codes",
+        "postal_code_pattern",
+        "postal_code_label",
+        "postal_code_example",
+        "region_label",
+        "postal_position",
+        "address_format",
+        "status"
+      ],
+      "searchFieldKeys": ["code", "code3", "name", "official_name"],
+      "relationshipKeys": [],
+      "contextKinds": ["record"],
+      "insightProviders": [
+        {
+          "id": "entity_read_record",
+          "version": 1
+        },
+        {
+          "id": "entity_read_comments",
+          "version": 1
+        },
+        {
+          "id": "entity_read_snapshots",
+          "version": 1
+        },
+        {
+          "id": "entity_compare_snapshots",
+          "version": 1
+        },
+        {
+          "id": "entity_explain_fields",
+          "version": 1
+        }
+      ],
+      "actions": [
+        {
+          "id": "open_record",
+          "version": 1,
+          "operationKey": "read"
+        }
+      ],
+      "presentationProfiles": [
+        {
+          "id": "record_brief",
+          "version": 1
+        }
+      ]
     }
   }
 }

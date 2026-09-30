@@ -3,7 +3,10 @@ import type {
   AuthoringPlane,
   MetaEntityGraph,
 } from "@athyper/server-contract-meta-entity-authoring";
-import { COMMON_REFERENCE_VIEW_PERMISSION } from "@athyper/server-contract-metadata";
+import {
+  type EntityAiDescriptorV1,
+  COMMON_REFERENCE_VIEW_PERMISSION,
+} from "@athyper/server-contract-metadata";
 import {
   parseEntityDetailNavigation,
   type EntityDetailNavigationV1,
@@ -17,6 +20,7 @@ import {
 export { COMMON_REFERENCE_VIEW_PERMISSION };
 
 export interface SharedReferenceDefinition {
+  readonly ai?: EntityAiDescriptorV1;
   readonly summaryView?: EntityRecordSummaryViewV1;
   readonly navigation?: EntityDetailNavigationV1;
   /** Declarative keys only. Availability is checked against host-owned callables. */
@@ -264,6 +268,7 @@ export function buildSharedReferenceGraph(
         surfaceKind: "detail",
         title: definition.title,
         layoutConfig: {
+          ...(definition.ai ? { ai: definition.ai } : {}),
           recordPresentation: {
             schemaVersion: 1,
             ...(localizedLabels ? { localizedLabels } : {}),

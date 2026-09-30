@@ -117,6 +117,7 @@ describe("shared reference metadata products", () => {
     (plane, hash) => {
       // Reconstruct the historical shape, rather than rewriting its reviewed hash.
       const historical = source();
+      delete historical.definition.ai;
       delete historical.definition.runtimeBindings;
       delete historical.definition.navigation;
       delete historical.definition.entityLabel;

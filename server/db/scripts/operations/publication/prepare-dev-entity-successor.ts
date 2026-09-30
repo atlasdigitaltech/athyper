@@ -1,3 +1,4 @@
+import { amendSuccessorAi } from "../../../../packages/planes/studio/meta-entity-authoring/src/publication/amend-successor-ai.js";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { Kysely, PostgresDialect, sql } from "kysely";
@@ -20,6 +21,9 @@ import { createCapabilityProfileFileResolver } from "../../../../packages/planes
 
 async function main() {
   const args = process.argv.slice(2);
+  const aiProductPath = args
+    .find((a) => a.startsWith("--ai-product="))
+    ?.slice(13);
   const baselinePath = args.find((a) => a.startsWith("--baseline="))?.slice(11);
   const requestId = args.find((a) => a.startsWith("--request="))?.slice(10);
   const navigationProductPath = args
@@ -42,6 +46,7 @@ async function main() {
     !requestId ||
     args.some(
       (a) =>
+        !a.startsWith("--ai-product=") &&
         !a.startsWith("--baseline=") &&
         !a.startsWith("--request=") &&
         !a.startsWith("--navigation-product=") &&
@@ -53,8 +58,11 @@ async function main() {
     )
   )
     throw Error(
-      "Use --baseline=<captured JSON> --request=<UUID> [--navigation-product=<directory>] [--collaboration-product=<directory>] [--capability-product=<directory>] [--localization-product=<directory>] [--capability-profiles=<directory>] [--check|--confirm=DEV-PREPARE-ENTITY-SUCCESSOR]",
+      "Use --baseline=<captured JSON> --request=<UUID> [--ai-product=<directory>] [--navigation-product=<directory>] [--collaboration-product=<directory>] [--capability-product=<directory>] [--localization-product=<directory>] [--capability-profiles=<directory>] [--check|--confirm=DEV-PREPARE-ENTITY-SUCCESSOR]",
     );
+  const aiProduct = aiProductPath
+    ? loadReferenceProduct(aiProductPath)
+    : undefined;
   const navigationProduct = navigationProductPath
     ? loadReferenceProduct(navigationProductPath)
     : undefined;
@@ -291,6 +299,26 @@ async function main() {
         const amended = capabilityProduct
           ? amendSuccessorCapabilities(graph, capabilityProduct)
           : amendSuccessorCollaboration(graph, collaborationProduct!);
+        if (sha256(amended) !== sha256(graph)) {
+          for (const target of baseline.targets)
+            compileSystemReferenceTarget(amended, target.plane);
+          const changeSet = await repository.replaceGraph({
+            changeSetId: result.changeSet.id,
+            expectedRevision: result.changeSet.revision,
+            actorId: actor.id,
+            graph: amended,
+          });
+          result = {
+            ...result,
+            changeSet,
+            artifact: compileGraph(await repository.loadGraph(changeSet.id)),
+          };
+        }
+      }
+      if (aiProduct) {
+        const repository = new KyselyMetaEntityAuthoringRepository(tx);
+        const graph = await repository.loadGraph(result.changeSet.id);
+        const amended = amendSuccessorAi(graph, aiProduct);
         if (sha256(amended) !== sha256(graph)) {
           for (const target of baseline.targets)
             compileSystemReferenceTarget(amended, target.plane);

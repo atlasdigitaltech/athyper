@@ -38,15 +38,15 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 5189,
-    "authorizationFiles": 1229,
+    "filesScanned": 5198,
+    "authorizationFiles": 1231,
     "registeredObjects": 470,
     "objectReferences": 1176,
     "writerReferences": 127,
     "securitySymbolReferences": 99,
-    "contractFieldReferences": 1885,
+    "contractFieldReferences": 1891,
     "permissionDefinitions": 89,
-    "permissionUses": 588,
+    "permissionUses": 590,
     "routes": 31,
     "keycloakMappings": 145,
     "derivedDatabaseObjects": 330,
@@ -10840,7 +10840,7 @@
     {
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "sha256": "23bd9cbe82787ff793bff1d382210aaa5caf5b25f8ac49c30d9f8351c13c1f05"
+      "sha256": "609726f4061a112d26d210ace39040bac0c7e0b8eea23e19c1d7e85b3d0b654b"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/collaboration/__tests__/collaboration-section-providers.test.ts",
@@ -12285,7 +12285,7 @@
     {
       "path": "server/db/scripts/operations/publication/prepare-dev-entity-successor.ts",
       "artifactClass": "tool",
-      "sha256": "65ca802a1a4121c48358028113419d349c35a42fc2e1d4f2e7a43b42b7b72982"
+      "sha256": "c91ea62cd92fa744d428264d3fa716af1108cd5318daaaafa291598b6cbb0897"
     },
     {
       "path": "server/db/scripts/operations/publication/provision-dev-trust.mjs",
@@ -13275,7 +13275,7 @@
     {
       "path": "server/packages/planes/studio/meta-entity-authoring/src/__tests__/product.test.ts",
       "artifactClass": "test",
-      "sha256": "b98154d46c6a157a5815ea711893696e77ae05ef01482ea9e98b9c71b47c0652"
+      "sha256": "d7673dd4c9597a2509a5356b6a2c06834e0b6df2171d7854f61c4f1c69020da1"
     },
     {
       "path": "server/packages/planes/studio/meta-entity-authoring/src/__tests__/publication-workflow.test.ts",
@@ -13303,9 +13303,14 @@
       "sha256": "4b6a6d0fd5cccdd1afcc19b2bb90a02d73b481d22d04f688a8549b52429773f8"
     },
     {
+      "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/country-ai.test.ts",
+      "artifactClass": "test",
+      "sha256": "02809ebecd0862cbc321831f68ec66b3e9652cbc5a936eb19ff7cd242a9d4ca4"
+    },
+    {
       "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/graph-builder.ts",
       "artifactClass": "runtime",
-      "sha256": "af6e4c7e41f78049312fbf04b62ac92c84958cbd5283286566a84234831968cd"
+      "sha256": "7cb61a013e1df25317b539fed11db0e89dd91e23cf1c685d81409c13852b4980"
     },
     {
       "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/reference-batch.test.ts",
@@ -13563,6 +13568,11 @@
       "sha256": "d489ec7745f14fa7570d07a96334f2c5d6929429171cf39acaf9c0b630b73777"
     },
     {
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "sha256": "c0d9764d7a41cbfdf0e6c67a0712ffa34cea50e7d72cdb48c13d6c16031e8292"
+    },
+    {
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "sha256": "1402fa7f8d611ff198b17db8528c3527048a1f065184b24955b52a1612c28c71"
@@ -13610,7 +13620,7 @@
     {
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
-      "sha256": "45eae97cfecf89c7197b0cf665f8e0bb9147da9707d740517023793a02ad3d34"
+      "sha256": "c6b02454ca6735019b7fc2b2714d09dbeb40283ef475bb630e74f29c41226542"
     },
     {
       "path": "server/packages/platform/ai/src/surface-draft-generation.ts",
@@ -20161,11 +20171,11 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 3272,
+      "line": 3276,
       "lines": [
-        3272,
-        5943,
-        6107
+        3276,
+        5956,
+        6120
       ]
     },
     {
@@ -22807,9 +22817,9 @@
       "path": "server/db/scripts/operations/publication/prepare-dev-entity-successor.ts",
       "artifactClass": "tool",
       "access": "read",
-      "line": 161,
+      "line": 169,
       "lines": [
-        161
+        169
       ]
     },
     {
@@ -33266,8 +33276,8 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        5825,
-        6067
+        5838,
+        6080
       ]
     },
     {
@@ -33315,7 +33325,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4654
+        4660
       ]
     },
     {
@@ -33352,7 +33362,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4923
+        4933
       ]
     },
     {
@@ -33393,7 +33403,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        600
+        604
       ]
     },
     {
@@ -33421,13 +33431,13 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2229,
-        2521,
-        2540,
-        2603,
-        4154,
-        4397,
-        4420
+        2233,
+        2525,
+        2544,
+        2607,
+        4158,
+        4401,
+        4424
       ]
     },
     {
@@ -33447,9 +33457,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2893,
-        4397,
-        4420
+        2897,
+        4401,
+        4424
       ]
     },
     {
@@ -33573,10 +33583,10 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2030,
-        2096,
-        2111,
-        2154
+        2034,
+        2100,
+        2115,
+        2158
       ]
     },
     {
@@ -33615,7 +33625,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3600
+        3604
       ]
     },
     {
@@ -33662,7 +33672,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6066
+        6079
       ]
     },
     {
@@ -33710,7 +33720,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4135
+        4139
       ]
     },
     {
@@ -33779,9 +33789,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3294,
-        3372,
-        3474
+        3298,
+        3376,
+        3478
       ]
     },
     {
@@ -33790,7 +33800,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2252
+        2256
       ]
     },
     {
@@ -33835,9 +33845,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2111,
-        2191,
-        5044
+        2115,
+        2195,
+        5054
       ]
     },
     {
@@ -33962,7 +33972,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3470
+        3474
       ]
     },
     {
@@ -34107,7 +34117,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6162
+        6175
       ]
     },
     {
@@ -34869,14 +34879,13 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1223,
-        3072,
-        4655,
-        4658,
-        4659,
-        4793,
-        4797,
-        4932
+        1227,
+        3076,
+        4661,
+        4664,
+        4665,
+        4807,
+        4942
       ]
     },
     {
@@ -35758,6 +35767,14 @@
       "artifactClass": "runtime",
       "lines": [
         92
+      ]
+    },
+    {
+      "field": "allowed",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        14
       ]
     },
     {
@@ -39953,7 +39970,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4800
+        4810
       ]
     },
     {
@@ -40431,10 +40448,18 @@
     },
     {
       "field": "denied",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        209
+      ]
+    },
+    {
+      "field": "denied",
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        29
+        102
       ]
     },
     {
@@ -45582,11 +45607,11 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        3070,
-        3121,
-        4861,
-        4929,
-        5065
+        3074,
+        3125,
+        4871,
+        4939,
+        5075
       ]
     },
     {
@@ -47635,7 +47660,7 @@
       "path": "server/packages/planes/studio/meta-entity-authoring/src/__tests__/product.test.ts",
       "artifactClass": "test",
       "lines": [
-        270
+        271
       ]
     },
     {
@@ -47660,12 +47685,20 @@
     },
     {
       "field": "permissionCode",
+      "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/country-ai.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        35
+      ]
+    },
+    {
+      "field": "permissionCode",
       "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/graph-builder.ts",
       "artifactClass": "runtime",
       "lines": [
-        80,
-        186,
-        239
+        84,
+        190,
+        243
       ]
     },
     {
@@ -47850,6 +47883,14 @@
       "artifactClass": "route",
       "lines": [
         13
+      ]
+    },
+    {
+      "field": "permissionCode",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        22
       ]
     },
     {
@@ -49908,7 +49949,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1223
+        1227
       ]
     },
     {
@@ -51315,24 +51356,24 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1120,
-        1149,
-        1157,
-        1169,
-        1223,
-        2089,
-        2092,
+        1124,
+        1153,
+        1161,
+        1173,
+        1227,
         2093,
-        3286,
-        3289,
+        2096,
+        2097,
         3290,
-        4655,
-        4658,
-        4659,
-        4797,
-        4800,
-        4803,
-        4806
+        3293,
+        3294,
+        4661,
+        4664,
+        4665,
+        4807,
+        4810,
+        4813,
+        4816
       ]
     },
     {
@@ -52921,6 +52962,17 @@
         23,
         24,
         25
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        12,
+        13,
+        207,
+        208
       ]
     },
     {
@@ -55495,7 +55547,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4806
+        4816
       ]
     },
     {
@@ -56059,7 +56111,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4803
+        4813
       ]
     },
     {
@@ -57910,9 +57962,9 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        2093,
-        3290,
-        4894
+        2097,
+        3294,
+        4904
       ]
     },
     {
@@ -58254,6 +58306,14 @@
       "lines": [
         10,
         16
+      ]
+    },
+    {
+      "field": "profileHash",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        53
       ]
     },
     {
@@ -59091,7 +59151,7 @@
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        46
+        190
       ]
     },
     {
@@ -61014,11 +61074,33 @@
     {
       "code": "common.platform.reference.view",
       "riskLevel": "low",
+      "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/country-ai.test.ts",
+      "artifactClass": "test",
+      "line": 35,
+      "lines": [
+        35
+      ]
+    },
+    {
+      "code": "common.platform.reference.view",
+      "riskLevel": "low",
       "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/reference-batch.test.ts",
       "artifactClass": "test",
       "line": 33,
       "lines": [
         33
+      ]
+    },
+    {
+      "code": "common.platform.reference.view",
+      "riskLevel": "low",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "line": 14,
+      "lines": [
+        14,
+        22,
+        209
       ]
     },
     {
@@ -68343,9 +68425,9 @@
       "riskLevel": "high",
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "line": 4656,
+      "line": 4662,
       "lines": [
-        4656
+        4662
       ]
     },
     {

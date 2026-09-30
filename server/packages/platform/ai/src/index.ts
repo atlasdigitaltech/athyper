@@ -36,8 +36,13 @@ export * from "./redis-insight-cache.js";
 export * from "./business-context.js";
 export { createAtlasEntitySectionTool } from "./entity-section-tool.js";
 
-
 export { createAtlasEntityRecordTool } from "./entity-record-tool.js";
 export * from "./response-feedback.js";
 export * from "./learning-candidates.js";
 export * from "./learning-evaluation.js";
+
+export {
+  createAtlasEntityContextTools,
+  entityContextTool,
+  type AtlasEntityContextReader,
+} from "./entity-context-tools.js";
