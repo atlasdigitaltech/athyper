@@ -1,7 +1,20 @@
 import type { EntityAuthorizationRuntime } from "./entity-authorization-runtime.js";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 
-export const ENTITY_FIELD_TYPES = ["string", "text", "integer", "decimal", "money", "boolean", "date", "datetime", "uuid", "enum", "reference", "json"] as const;
+export const ENTITY_FIELD_TYPES = [
+  "string",
+  "text",
+  "integer",
+  "decimal",
+  "money",
+  "boolean",
+  "date",
+  "datetime",
+  "uuid",
+  "enum",
+  "reference",
+  "json",
+] as const;
 export type EntityFieldType = (typeof ENTITY_FIELD_TYPES)[number];
 /** Stored fields and handler-backed facts are intentionally distinct. A computed
  * field may be queryable only after a registered server projection declares it. */
@@ -69,6 +82,8 @@ export function entityFieldFilterOperators(
 }
 
 export interface EntityFieldDescriptor {
+  /** Published, single UUID reference; resolved through the target Entity owner, never an inferred join. */
+  readonly referenceTargetEntity?: string;
   readonly key: string;
   readonly storagePath: string;
   readonly type: EntityFieldType;
@@ -105,7 +120,9 @@ export interface EntityFieldDescriptor {
     /** Ordering hint for narrow record cards; it never widens the authorized projection. */
     readonly cardPriority?: "primary" | "secondary" | "hidden";
     readonly rendererKey?: string;
-    readonly statusTones?: Readonly<Record<string, "neutral" | "success" | "warning" | "danger">>;
+    readonly statusTones?: Readonly<
+      Record<string, "neutral" | "success" | "warning" | "danger">
+    >;
     readonly defaultVisible?: boolean;
     readonly defaultOrder?: number;
     readonly defaultWidth?: number;

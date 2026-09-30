@@ -1,18 +1,34 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { EntityDescriptorCoordinate, EntityRuntimeDescriptor } from "./descriptors.js";
+import type {
+  EntityDescriptorCoordinate,
+  EntityRuntimeDescriptor,
+} from "./descriptors.js";
 
 export interface MetadataReader {
-  getEntityDescriptor(context: VerifiedRequestContext, entityCode: string): Promise<EntityRuntimeDescriptor | null>;
+  /** Published plane/tenant candidates only; callers must authorize each descriptor before disclosure. */
+  listEntityCodes?(context: VerifiedRequestContext): Promise<readonly string[]>;
+  getEntityDescriptor(
+    context: VerifiedRequestContext,
+    entityCode: string,
+  ): Promise<EntityRuntimeDescriptor | null>;
 }
 
 /** Plane-local projection reader. Implementations must not call Athyper at request time. */
 export interface EntityDescriptorRepository {
-  findActive(coordinate: EntityDescriptorCoordinate): Promise<EntityRuntimeDescriptor | null>;
+  findActive(
+    coordinate: EntityDescriptorCoordinate,
+  ): Promise<EntityRuntimeDescriptor | null>;
 }
 
 export interface EntityDescriptorCache {
-  get(coordinate: EntityDescriptorCoordinate): Promise<EntityRuntimeDescriptor | null | undefined>;
-  set(coordinate: EntityDescriptorCoordinate, descriptor: EntityRuntimeDescriptor | null, ttlMs: number): Promise<void>;
+  get(
+    coordinate: EntityDescriptorCoordinate,
+  ): Promise<EntityRuntimeDescriptor | null | undefined>;
+  set(
+    coordinate: EntityDescriptorCoordinate,
+    descriptor: EntityRuntimeDescriptor | null,
+    ttlMs: number,
+  ): Promise<void>;
   invalidate(coordinate: EntityDescriptorCoordinate): Promise<void>;
 }
 
@@ -28,5 +44,9 @@ export interface MetadataGenerationEvent {
 
 export interface MetadataGenerationCheckpoint {
   get(coordinate: EntityDescriptorCoordinate): Promise<number | undefined>;
-  advance(coordinate: EntityDescriptorCoordinate, generation: number, eventId: string): Promise<boolean>;
+  advance(
+    coordinate: EntityDescriptorCoordinate,
+    generation: number,
+    eventId: string,
+  ): Promise<boolean>;
 }

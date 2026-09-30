@@ -122,7 +122,16 @@ export function projectNativeFieldChoices(
   return {
     list,
     ...(dataType === "enum" && Array.isArray(options) && options.length
-      ? { validation: { options: options.map((option: Row) => option.value), optionLabels: Object.fromEntries(options.filter((option: Row) => typeof option.label === "string").map((option: Row) => [String(option.value), option.label])) } }
+      ? {
+          validation: {
+            options: options.map((option: Row) => option.value),
+            optionLabels: Object.fromEntries(
+              options
+                .filter((option: Row) => typeof option.label === "string")
+                .map((option: Row) => [String(option.value), option.label]),
+            ),
+          },
+        }
       : {}),
   };
 }
@@ -327,7 +336,25 @@ export function compileNativeRuntimeProjection(input: {
             maximum: field.typeConfig?.maximum,
           }).filter(([, value]) => value !== undefined),
         );
+        const references = rows("fieldReferenceBindings").filter(
+          (ref) =>
+            ref.entityFieldId === field.id &&
+            ref.status !== "deprecated" &&
+            ref.referenceKind === "entity_relation",
+        );
+        if (references.length > 1)
+          throw Error("NATIVE_PROJECTION_AMBIGUOUS_REFERENCE");
+        const reference = references[0];
+        if (
+          reference &&
+          (!reference.targetEntityCode ||
+            !["uuid", "reference"].includes(field.dataType))
+        )
+          throw Error("NATIVE_PROJECTION_REFERENCE_ADAPTER_REQUIRED");
         return {
+          ...(reference
+            ? { referenceTargetEntity: reference.targetEntityCode }
+            : {}),
           ...choices,
           ...(Object.keys(constraints).length
             ? { validation: { ...choices.validation, ...constraints } }

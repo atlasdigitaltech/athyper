@@ -327,8 +327,9 @@
       ],
       "searchFieldKeys": ["code", "code3", "name", "official_name"],
       "relationshipKeys": [],
-      "contextKinds": ["record"],
+      "contextKinds": ["record", "manage"],
       "insightProviders": [
+        { "id": "entity_lookup", "version": 1 },
         {
           "id": "entity_read_record",
           "version": 1

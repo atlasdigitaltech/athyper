@@ -1,4 +1,9 @@
 import {
+  entityLookupTool,
+  ENTITY_FOLLOW_REFERENCE,
+  ENTITY_LOOKUP,
+} from "./entity-lookup-tools.js";
+import {
   entityContextTool,
   discoverEntityContextTool,
 } from "./entity-context-tools.js";
@@ -79,6 +84,16 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
     scope: AtlasResolvedBusinessContext | undefined,
     admitted: readonly AtlasProviderToolDefinition[],
   ): AtlasIntentV1 {
+    // Explicitly named records may differ from the current page. Let the model
+    // resolve that distinction against generic, server-authorized metadata tools.
+    if (admitted.some((tool) => tool.name === ENTITY_LOOKUP))
+      return parseAtlasIntent({
+        schemaVersion: 1,
+        kind: "delegate",
+        strategy: "model",
+        reason: "unsupported",
+        capabilityIds: [],
+      });
     const intent = resolveAtlasIntent(admitted, text, scope?.page);
     if (intent.kind !== "delegate" || !scope) return intent;
     // Registered aliases can identify a denied section without disclosing its existence or fields.
@@ -138,7 +153,41 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
             businessContext.page.entityCode,
           )
         : undefined;
+    const catalogue = this.metadata?.listEntityCodes
+      ? await this.metadata.listEntityCodes(context)
+      : [];
+    let crossEntityPublished = false;
+    for (const code of catalogue.slice(0, 256)) {
+      if (context.permissions.localGraphPreview?.[code]) continue;
+      const candidate = await this.metadata!.getEntityDescriptor(context, code);
+      if (
+        candidate?.planeKey === context.planeKey &&
+        candidate.ai?.enabled &&
+        candidate.ai.insightProviders.some(
+          (p) => p.id === ENTITY_LOOKUP && p.version === 1,
+        ) &&
+        candidate.operations.read &&
+        hasPermission(context, candidate.operations.read.permissionCode)
+      ) {
+        crossEntityPublished = true;
+        break;
+      }
+    }
     const published = (tool: ReturnType<AtlasToolRegistry["list"]>[number]) => {
+      if (entityLookupTool(tool.manifest.toolCode)) {
+        if (!crossEntityPublished) return false;
+        if (tool.manifest.toolCode !== ENTITY_FOLLOW_REFERENCE) return true;
+        return (
+          businessContext?.page.kind === "record" &&
+          Boolean(
+            descriptor?.ai?.enabled &&
+            descriptor.ai.insightProviders.some(
+              (p) => p.id === ENTITY_FOLLOW_REFERENCE && p.version === 1,
+            ) &&
+            descriptor.ai.relationshipKeys.length,
+          )
+        );
+      }
       if (!this.metadata || !businessContext) return true;
       if (
         !descriptor ||
@@ -192,18 +241,39 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
           ),
       )
       .map((tool) =>
-        entityContextTool(tool.manifest.toolCode)
-          ? contextDefinitions.get(tool.manifest.toolCode)!
-          : tool.manifest.toolCode === ENTITY_RECORD_TOOL
-            ? entityRecord!
-            : {
-                name: tool.manifest.toolCode,
-                description: tool.manifest.description,
-                inputSchema: tool.manifest.inputSchema,
-                ...(tool.entitySection
-                  ? { entitySection: tool.entitySection }
-                  : {}),
+        tool.manifest.toolCode === ENTITY_FOLLOW_REFERENCE
+          ? {
+              name: tool.manifest.toolCode,
+              description:
+                tool.manifest.description +
+                " First discover the current Entity metadata to get authorized relationship keys and the target fields.",
+              inputSchema: {
+                type: "object",
+                additionalProperties: false,
+                required: ["relationshipKey", "fields"],
+                properties: {
+                  relationshipKey: { type: "string" },
+                  fields: {
+                    type: "array",
+                    minItems: 1,
+                    maxItems: 8,
+                    items: { type: "string" },
+                  },
+                },
               },
+            }
+          : entityContextTool(tool.manifest.toolCode)
+            ? contextDefinitions.get(tool.manifest.toolCode)!
+            : tool.manifest.toolCode === ENTITY_RECORD_TOOL
+              ? entityRecord!
+              : {
+                  name: tool.manifest.toolCode,
+                  description: tool.manifest.description,
+                  inputSchema: tool.manifest.inputSchema,
+                  ...(tool.entitySection
+                    ? { entitySection: tool.entitySection }
+                    : {}),
+                },
       )
       .map((tool) => {
         const vocabulary = descriptor?.ai?.vocabulary;
@@ -260,6 +330,29 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
           "TOOL_DENIED",
           "The capability is not published for the current context.",
         );
+    }
+    if (registration.manifest.toolCode === ENTITY_FOLLOW_REFERENCE) {
+      if (
+        page?.kind !== "record" ||
+        Object.keys(input.arguments).some(
+          (key) => !["relationshipKey", "fields"].includes(key),
+        )
+      )
+        throw new AtlasServiceError(
+          "TOOL_DENIED",
+          "A current authorized record is required to follow its published reference.",
+        );
+      input = {
+        ...input,
+        arguments: {
+          ...input.arguments,
+          sourceEntityCode: page.entityCode,
+          sourceRecordId: page.recordId,
+          sourceDescriptorHash:
+            input.businessContext!.entityDescriptorHash ??
+            input.businessContext!.descriptorHash,
+        },
+      };
     }
     if (entityContextTool(registration.manifest.toolCode)) {
       const definition = this.metadata

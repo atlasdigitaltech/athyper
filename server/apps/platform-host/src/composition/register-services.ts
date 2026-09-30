@@ -348,8 +348,10 @@ import {
   AtlasResponseFeedbackService,
   KyselyAtlasResponseFeedbackStore,
   createAtlasEntityRecordTool,
+  createAtlasEntityLookupTools,
   createAtlasEntityContextTools,
   entityContextTool,
+  entityLookupTool,
   type AtlasEntityContextReader,
   AtlasSurfaceDraftGenerator,
   AtlasThreadService,
@@ -4700,6 +4702,9 @@ export function registerAtlas(
     return;
   }
   const atlasMetadata = {
+    listEntityCodes: (context: VerifiedRequestContext) =>
+      container.platform.metadata?.listEntityCodes?.(context) ??
+      Promise.resolve([]),
     getEntityDescriptor: (
       context: VerifiedRequestContext,
       entityCode: string,
@@ -4781,6 +4786,12 @@ export function registerAtlas(
         : undefined;
     const localRegistry = new AtlasToolRegistry([
       createAtlasEntityRecordTool(atlasMetadata),
+      ...(container.platform.authorizer
+        ? createAtlasEntityLookupTools(
+            atlasMetadata,
+            container.platform.authorizer,
+          )
+        : []),
       ...(entityContextReader
         ? createAtlasEntityContextTools(atlasMetadata, entityContextReader)
         : []),
@@ -4802,7 +4813,8 @@ export function registerAtlas(
               const allowed =
                 (context.planeKey === "neon" ||
                   manifest.toolCode === "entity_read_record" ||
-                  entityContextTool(manifest.toolCode)) &&
+                  entityContextTool(manifest.toolCode) ||
+                  entityLookupTool(manifest.toolCode)) &&
                 localAvailable(manifest.access) &&
                 context.permissions.allowed.includes(
                   `${context.planeKey}.ai.agent.use`,
@@ -4833,8 +4845,8 @@ export function registerAtlas(
               return createAtlasRecordDataGateway({
                 metadata,
                 records: records.queries,
-                maxRows: 1,
-                maxResponseBytes: 2048,
+                maxRows: 3,
+                maxResponseBytes: 8192,
                 allowProjectedContentRevision: true,
                 // Records already enforces field permissions and collection scope. This only narrows its projection.
                 fieldSecurity: {
@@ -5117,6 +5129,12 @@ export function registerAtlas(
   for (const binding of dependencies.bindings) providers.resolve(binding);
   const registry = new AtlasToolRegistry([
     createAtlasEntityRecordTool(atlasMetadata),
+    ...(container.platform.authorizer
+      ? createAtlasEntityLookupTools(
+          atlasMetadata,
+          container.platform.authorizer,
+        )
+      : []),
     ...(entityContextReader
       ? createAtlasEntityContextTools(atlasMetadata, entityContextReader)
       : []),

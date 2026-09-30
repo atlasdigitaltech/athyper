@@ -38,13 +38,13 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 5204,
-    "authorizationFiles": 1231,
+    "filesScanned": 5209,
+    "authorizationFiles": 1234,
     "registeredObjects": 470,
     "objectReferences": 1147,
     "writerReferences": 127,
     "securitySymbolReferences": 99,
-    "contractFieldReferences": 1902,
+    "contractFieldReferences": 1924,
     "permissionDefinitions": 89,
     "permissionUses": 590,
     "routes": 31,
@@ -10816,7 +10816,12 @@
     {
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "sha256": "609726f4061a112d26d210ace39040bac0c7e0b8eea23e19c1d7e85b3d0b654b"
+      "sha256": "3c56b444dbd6b8a84a0d3f5ef6681e224776f6bbe08950ef7c976e44e05bfc0d"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "sha256": "22e5bc0d3eaeb5aca2936bed2d5642b722f87ef0096fb10b89b274d75124700b"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/collaboration/__tests__/collaboration-section-providers.test.ts",
@@ -13001,7 +13006,7 @@
     {
       "path": "server/packages/contracts/metadata/src/descriptors.ts",
       "artifactClass": "runtime",
-      "sha256": "5cf244935dbc2eff12021b60e127a76676082b9a0b47acebbd9d601760128c8e"
+      "sha256": "75dae08168a397f8bb8e198fdf414c7601e48c4f6bd8a8b2edc8b2ba9023170f"
     },
     {
       "path": "server/packages/contracts/metadata/src/entity-authorization.ts",
@@ -13496,7 +13501,7 @@
     {
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
-      "sha256": "1e21619c196fb9ff15d8cd501aeec6a63db6c858bc928e190dabda06c9618598"
+      "sha256": "17cc02ce8c36e1f8dd30a7d7065f5a2ca28184836ae31d4435ca5671ff0f3805"
     },
     {
       "path": "server/packages/platform/ai/src/atlas-admin-routes.ts",
@@ -13534,6 +13539,16 @@
       "sha256": "8a583ea1c1aec81016a074bd6123ba61da54092c0ad8cdc7cec7d7c040b97a86"
     },
     {
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "sha256": "2f4de9c3e8ef1ccd63296cefe815af54b57d001e2d987ec56351f7c0612f83b1"
+    },
+    {
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "sha256": "daf27fb4a5e0a2b892b46c86fc58aee3205e0360e2d818053d2153e97db199a6"
+    },
+    {
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "sha256": "27e9a29072c47a8116221aeb233aa75a10b07a42db9450174ae3cbc011b75110"
@@ -13566,7 +13581,7 @@
     {
       "path": "server/packages/platform/ai/src/local-generation-composition.ts",
       "artifactClass": "runtime",
-      "sha256": "2d7b1f4dc97e15d7ebf6748597c5155e5868a48cd82b882798fe0ad46380a43b"
+      "sha256": "b66f9297610a870cb99e520815de29d6ae485994ac90c19e032107d71ba27efb"
     },
     {
       "path": "server/packages/platform/ai/src/message-lineage.ts",
@@ -13581,7 +13596,7 @@
     {
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
-      "sha256": "c6b02454ca6735019b7fc2b2714d09dbeb40283ef475bb630e74f29c41226542"
+      "sha256": "94387cb4fac8bf310e81bca32307d9ae81cbcd324b4c70a770c248b6723685db"
     },
     {
       "path": "server/packages/platform/ai/src/surface-draft-generation.ts",
@@ -14106,12 +14121,12 @@
     {
       "path": "server/packages/platform/metadata/src/descriptor-parser.test.ts",
       "artifactClass": "test",
-      "sha256": "6fb4f5570e047119c8d9686ff93297c6744f542a8fe3fa59d64a708a51936bf2"
+      "sha256": "8445d424cfaa847630183d1c2b162cd4a09a5a201d8ebbbc2ea34c630eafb2f7"
     },
     {
       "path": "server/packages/platform/metadata/src/descriptor-parser.ts",
       "artifactClass": "runtime",
-      "sha256": "3abdea22278de786560e58e00333c82ba6c1c8d45e2195c41845769a61b43bcb"
+      "sha256": "0313908f7c686346d92a2b245c1a8a4bd803452a982798a94c836bcbc9825f89"
     },
     {
       "path": "server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts",
@@ -14131,7 +14146,7 @@
     {
       "path": "server/packages/platform/metadata/src/native-runtime-projection.ts",
       "artifactClass": "runtime",
-      "sha256": "1e37f3e502bec24ec2915e50087122b6946967977961f82c94f008ec0e813c23"
+      "sha256": "2306b09cbe11bdcabac7607bb85d67f9b196c3fb5480249e409c39cc8f4740a4"
     },
     {
       "path": "server/packages/platform/notifications/src/__tests__/durable-notification-jobs.test.ts",
@@ -20010,11 +20025,11 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 3276,
+      "line": 3278,
       "lines": [
-        3276,
-        5956,
-        6120
+        3278,
+        5974,
+        6138
       ]
     },
     {
@@ -32928,8 +32943,8 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        5838,
-        6080
+        5856,
+        6098
       ]
     },
     {
@@ -32977,7 +32992,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4660
+        4662
       ]
     },
     {
@@ -33014,7 +33029,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4933
+        4945
       ]
     },
     {
@@ -33043,10 +33058,12 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        31,
-        34,
-        38,
-        41
+        60,
+        90,
+        129,
+        130,
+        196,
+        197
       ]
     },
     {
@@ -33055,7 +33072,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        604
+        606
       ]
     },
     {
@@ -33083,13 +33100,13 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2233,
-        2525,
-        2544,
-        2607,
-        4158,
-        4401,
-        4424
+        2235,
+        2527,
+        2546,
+        2609,
+        4160,
+        4403,
+        4426
       ]
     },
     {
@@ -33109,9 +33126,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2897,
-        4401,
-        4424
+        2899,
+        4403,
+        4426
       ]
     },
     {
@@ -33235,10 +33252,10 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2034,
-        2100,
-        2115,
-        2158
+        2036,
+        2102,
+        2117,
+        2160
       ]
     },
     {
@@ -33277,7 +33294,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3604
+        3606
       ]
     },
     {
@@ -33324,7 +33341,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6079
+        6097
       ]
     },
     {
@@ -33372,7 +33389,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4139
+        4141
       ]
     },
     {
@@ -33441,9 +33458,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3298,
-        3376,
-        3478
+        3300,
+        3378,
+        3480
       ]
     },
     {
@@ -33452,7 +33469,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2256
+        2258
       ]
     },
     {
@@ -33497,9 +33514,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2115,
-        2195,
-        5054
+        2117,
+        2197,
+        5066
       ]
     },
     {
@@ -33624,7 +33641,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3474
+        3476
       ]
     },
     {
@@ -33769,7 +33786,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6175
+        6193
       ]
     },
     {
@@ -34533,13 +34550,21 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1227,
-        3076,
-        4661,
-        4664,
-        4665,
-        4807,
-        4942
+        1229,
+        3078,
+        4663,
+        4666,
+        4667,
+        4819,
+        4954
+      ]
+    },
+    {
+      "field": "allowed",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        111
       ]
     },
     {
@@ -35433,6 +35458,25 @@
     },
     {
       "field": "allowed",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        16,
+        103,
+        104
+      ]
+    },
+    {
+      "field": "allowed",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        71,
+        102
+      ]
+    },
+    {
+      "field": "allowed",
       "path": "server/packages/platform/ai/src/experience-configuration.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -35457,7 +35501,9 @@
       "path": "server/packages/platform/ai/src/local-generation-composition.ts",
       "artifactClass": "runtime",
       "lines": [
-        38
+        148,
+        149,
+        151
       ]
     },
     {
@@ -37189,6 +37235,14 @@
       "artifactClass": "test",
       "lines": [
         54
+      ]
+    },
+    {
+      "field": "authorizationScopes",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        116
       ]
     },
     {
@@ -39646,7 +39700,16 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4810
+        4822
+      ]
+    },
+    {
+      "field": "denied",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        112,
+        175
       ]
     },
     {
@@ -40109,9 +40172,9 @@
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
       "lines": [
-        321,
-        754,
-        1270
+        338,
+        780,
+        1296
       ]
     },
     {
@@ -40132,10 +40195,31 @@
     },
     {
       "field": "denied",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        99,
+        102,
+        103
+      ]
+    },
+    {
+      "field": "denied",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        49,
+        58,
+        73,
+        512
+      ]
+    },
+    {
+      "field": "denied",
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        102
+        117
       ]
     },
     {
@@ -45292,11 +45376,19 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        3074,
-        3125,
-        4871,
-        4939,
-        5075
+        3076,
+        3127,
+        4883,
+        4951,
+        5087
+      ]
+    },
+    {
+      "field": "permissionCode",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        80
       ]
     },
     {
@@ -47077,9 +47169,9 @@
       "path": "server/packages/contracts/metadata/src/descriptors.ts",
       "artifactClass": "runtime",
       "lines": [
-        258,
-        264,
-        274
+        275,
+        281,
+        291
       ]
     },
     {
@@ -47580,6 +47672,25 @@
     },
     {
       "field": "permissionCode",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        77,
+        101,
+        102
+      ]
+    },
+    {
+      "field": "permissionCode",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        63,
+        99
+      ]
+    },
+    {
+      "field": "permissionCode",
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -47606,6 +47717,14 @@
         278,
         284,
         516
+      ]
+    },
+    {
+      "field": "permissionCode",
+      "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        170
       ]
     },
     {
@@ -48233,7 +48352,7 @@
       "path": "server/packages/platform/metadata/src/descriptor-parser.test.ts",
       "artifactClass": "test",
       "lines": [
-        7
+        30
       ]
     },
     {
@@ -48241,10 +48360,15 @@
       "path": "server/packages/platform/metadata/src/descriptor-parser.ts",
       "artifactClass": "runtime",
       "lines": [
-        33,
-        44,
-        48,
-        111
+        75,
+        100,
+        101,
+        102,
+        126,
+        127,
+        334,
+        335,
+        336
       ]
     },
     {
@@ -48260,10 +48384,10 @@
       "path": "server/packages/platform/metadata/src/native-runtime-projection.ts",
       "artifactClass": "runtime",
       "lines": [
-        168,
-        226,
-        230,
-        248
+        177,
+        235,
+        239,
+        257
       ]
     },
     {
@@ -49651,7 +49775,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1227
+        1229
       ]
     },
     {
@@ -51067,24 +51191,35 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1124,
-        1153,
-        1161,
-        1173,
-        1227,
-        2093,
-        2096,
-        2097,
-        3290,
-        3293,
-        3294,
-        4661,
-        4664,
-        4665,
-        4807,
-        4810,
-        4813,
-        4816
+        1126,
+        1155,
+        1163,
+        1175,
+        1229,
+        2095,
+        2098,
+        2099,
+        3292,
+        3295,
+        3296,
+        4663,
+        4666,
+        4667,
+        4819,
+        4822,
+        4825,
+        4828
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        103,
+        175,
+        181,
+        191
       ]
     },
     {
@@ -52688,6 +52823,23 @@
     },
     {
       "field": "permissions",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        14,
+        15
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        49
+      ]
+    },
+    {
+      "field": "permissions",
       "path": "server/packages/platform/ai/src/experience-configuration.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -52695,6 +52847,14 @@
         20,
         29,
         87
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        161
       ]
     },
     {
@@ -53203,7 +53363,7 @@
       "path": "server/packages/platform/metadata/src/descriptor-parser.ts",
       "artifactClass": "runtime",
       "lines": [
-        47
+        121
       ]
     },
     {
@@ -53219,8 +53379,8 @@
       "path": "server/packages/platform/metadata/src/native-runtime-projection.ts",
       "artifactClass": "runtime",
       "lines": [
-        161,
-        225
+        170,
+        234
       ]
     },
     {
@@ -55277,7 +55437,15 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4816
+        4828
+      ]
+    },
+    {
+      "field": "planeExcluded",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        114
       ]
     },
     {
@@ -55850,7 +56018,15 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4813
+        4825
+      ]
+    },
+    {
+      "field": "planLocked",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        113
       ]
     },
     {
@@ -56404,6 +56580,14 @@
       "artifactClass": "test",
       "lines": [
         50
+      ]
+    },
+    {
+      "field": "principalFingerprint",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        108
       ]
     },
     {
@@ -57719,9 +57903,18 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        2097,
-        3294,
-        4904
+        2099,
+        3296,
+        4916
+      ]
+    },
+    {
+      "field": "profileHash",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        100,
+        107
       ]
     },
     {
@@ -58071,6 +58264,26 @@
       "artifactClass": "test",
       "lines": [
         53
+      ]
+    },
+    {
+      "field": "profileHash",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        125,
+        227,
+        381
+      ]
+    },
+    {
+      "field": "profileHash",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        378,
+        510,
+        544
       ]
     },
     {
@@ -58898,6 +59111,14 @@
     },
     {
       "field": "requiredPermissions",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        126
+      ]
+    },
+    {
+      "field": "requiredPermissions",
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -58917,7 +59138,7 @@
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        190
+        239
       ]
     },
     {
@@ -60780,9 +61001,9 @@
       "riskLevel": "low",
       "path": "server/packages/contracts/metadata/src/descriptors.ts",
       "artifactClass": "runtime",
-      "line": 299,
+      "line": 316,
       "lines": [
-        299
+        316
       ]
     },
     {
@@ -68191,9 +68412,9 @@
       "riskLevel": "high",
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "line": 4662,
+      "line": 4664,
       "lines": [
-        4662
+        4664
       ]
     },
     {

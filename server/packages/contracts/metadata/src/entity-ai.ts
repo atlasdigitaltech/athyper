@@ -38,6 +38,12 @@ export interface EntityAiReferenceContext {
 // Versioned publication vocabulary. Entries do not install/enable runtime tools.
 // New owner capabilities must extend this catalogue together with conformance tests.
 const providers = Object.freeze({
+  entity_lookup: { entityCode: "*", planeKey: "*", contextKind: "manage" },
+  entity_follow_reference: {
+    entityCode: "*",
+    planeKey: "*",
+    contextKind: "record",
+  },
   entity_explain_fields: {
     entityCode: "*",
     planeKey: "*",

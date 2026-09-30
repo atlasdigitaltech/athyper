@@ -46,3 +46,8 @@ export {
   entityContextTool,
   type AtlasEntityContextReader,
 } from "./entity-context-tools.js";
+
+export {
+  createAtlasEntityLookupTools,
+  entityLookupTool,
+} from "./entity-lookup-tools.js";
