@@ -15945,7 +15945,7 @@
     {
       "path": "tooling/scripts/verification/shell-browser-entry.tsx",
       "artifactClass": "ui",
-      "sha256": "8877062692bb0db23dbb58715093b1b2d410c95cc03b661f8ccf93a71a801395"
+      "sha256": "ddabcf773d1816adad2d50c404f03c07be04f9e48ebd9f8710605a0b3e44b14d"
     },
     {
       "path": "tooling/scripts/verification/verify-atlas-browser-quota.mts",
@@ -59222,7 +59222,7 @@
       "path": "tooling/scripts/verification/shell-browser-entry.tsx",
       "artifactClass": "ui",
       "lines": [
-        8
+        31
       ]
     },
     {

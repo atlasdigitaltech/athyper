@@ -24,7 +24,7 @@ The owner authorized a separate scope for Atlas and broader platform CI failures
 - BFF composition/security/common-operation contracts: 51 tests passed.
 - Temporal: three tests passed, including explicit PostgreSQL offsets and ambiguous-input rejection.
 - Form-detail, UI, temporal, publication and shell package typechecks passed.
-- Thumbnail/reference browser checks: six passed. Expanded shell/footer/thumbnail run: 29 passed; four Activity Center/Atlas failures also reproduce after restoring the four changed shell modules to their pre-change 3a20dd77c versions. Those baseline modules were restored only for comparison, then the remediation changes were restored.
+- Thumbnail/reference browser checks: six passed. The initial expanded shell/footer/thumbnail run had 29 passes and four baseline failures. Follow-up repair aligned panel accessible names and connected the controlled query fixture; the complete shared-shell suite now passes 30/30, including all four former failures. See `atlas-meta-entity-rules-review-20260930.md`.
 - Targeted checks passed: authorization inventory, temporal ratchet, Docker toolchain, BFF relay, DDL coverage, deployment profiles.
 
 The full CI gate is still open. Targeted success is not release approval. No merge, deployment change, database mutation, policy-budget increase, undocumented-route exception expansion, or test disabling is part of this batch.
@@ -34,7 +34,6 @@ The full CI gate is still open. Targeted success is not release approval. No mer
 1. Server boundaries: retire or relocate the orphan HR policy fixture that imports a deleted service; replace cross-package source imports with supported interfaces. Resolve the host bootstrap namespace and missing Entity governance contract ownership under the existing architecture rules.
 2. Frontend boundaries: resolve actual shell dependency-budget excess, API-client localization/temporal layering, and foundation CSS/token ownership and size. Do not raise budgets to clear the gate.
 3. OpenAPI: register request/response contracts for uncovered authoring, preference, attachment and host routes; do not expand the undocumented-route baseline.
-4. Repair the four baseline shell browser failures: mobile Activity Center viewport, Atlas expanded-transition selector, Activity Center shared chrome and access/error recovery.
-5. Rerun full static policy, typechecks, root/browser tests, remote CI and infrastructure/service PostgreSQL workflows. Close the original release only when required checks pass.
+4. Rerun full static policy, typechecks, root/browser tests, remote CI and infrastructure/service PostgreSQL workflows. Close the original release only when required checks pass.
 
 DEV continues to use the original checkout. This isolated branch preserves concurrent UI/layout work there and does not claim that the new remediation commit is deployed.

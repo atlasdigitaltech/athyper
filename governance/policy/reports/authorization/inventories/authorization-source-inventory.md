@@ -3128,7 +3128,7 @@ Capture DDLs:
 | `requiredPermissions` | tool | tooling/scripts/verification/capture-atlas-foundation-baseline.mjs | 101 |
 | `requiredPermissions` | test | tooling/scripts/verification/entity-route-admission.test.ts | 4 |
 | `requiredPermissions` | tool | tooling/scripts/verification/prepare-bp-ai-release.mjs | 35 |
-| `requiredPermissions` | ui | tooling/scripts/verification/shell-browser-entry.tsx | 8 |
+| `requiredPermissions` | ui | tooling/scripts/verification/shell-browser-entry.tsx | 31 |
 | `roleIds` | test | server/db/scripts/__tests__/provisioning/three-plane-provision.test.ts | 217, 227, 231 |
 | `roleIds` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 121, 126 |
 | `roleIds` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 111, 117, 196, 198 |
