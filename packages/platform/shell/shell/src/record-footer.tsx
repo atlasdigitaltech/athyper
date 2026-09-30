@@ -76,11 +76,13 @@ export function RecordFooterProvider({
       );
   }, []);
   // Scope changes hide the previous record synchronously without remounting page input.
-  const sources =
-    registration?.scopeKey === scopeKey ? registration.sources : [];
   const value = useMemo(
-    () => ({ sources, scopeKey, register }),
-    [sources, scopeKey, register],
+    () => ({
+      sources: registration?.scopeKey === scopeKey ? registration.sources : [],
+      scopeKey,
+      register,
+    }),
+    [registration, scopeKey, register],
   );
   return (
     <Context.Provider value={value}>

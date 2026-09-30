@@ -1088,6 +1088,9 @@ importers:
       '@athyper/platform-shell-app-foundation':
         specifier: workspace:*
         version: link:../../../shell/app-foundation
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../foundation/temporal
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../../foundation/ui
@@ -4587,6 +4590,9 @@ importers:
       '@athyper/contract-platform-collection':
         specifier: workspace:*
         version: link:../../../../packages/contracts/platform/collection
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-audit':
         specifier: workspace:*
         version: link:../../contracts/audit

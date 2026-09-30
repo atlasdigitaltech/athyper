@@ -45,19 +45,22 @@ export function useShellSurfaces() {
   );
   const setDrawerOpen = useCallback(
     (value: SetStateAction<boolean>) => dispatch({ type: "navigation", value }),
-    [],
+    [dispatch],
   );
   const setHeaderAction = useCallback(
     (value: SetStateAction<HeaderActionKind | undefined>) =>
       dispatch({ type: "header", value }),
-    [],
+    [dispatch],
   );
   const setQuickAccessTab = useCallback(
     (value: SetStateAction<ShellQuickAccessTab | undefined>) =>
       dispatch({ type: "quick-access", value }),
-    [],
+    [dispatch],
   );
-  const dismissTransient = useCallback(() => dispatch({ type: "dismiss" }), []);
+  const dismissTransient = useCallback(
+    () => dispatch({ type: "dismiss" }),
+    [dispatch],
+  );
   return {
     surface,
     setContext,

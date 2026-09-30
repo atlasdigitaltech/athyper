@@ -274,16 +274,6 @@
       }
     },
     {
-      "path": "packages/planes/neon/business-partner",
-      "name": "@athyper/product-neon-business-partner",
-      "owner": "Neon",
-      "classification": "Product-specific",
-      "dependencyBudget": {
-        "runtime": 11,
-        "workspace": 11
-      }
-    },
-    {
       "path": "packages/planes/neon/navigation",
       "name": "@athyper/product-neon-navigation",
       "owner": "Neon",
@@ -304,16 +294,6 @@
       }
     },
     {
-      "path": "packages/planes/mesh/business-partner",
-      "name": "@athyper/product-mesh-business-partner",
-      "owner": "Mesh",
-      "classification": "Product-specific",
-      "dependencyBudget": {
-        "runtime": 7,
-        "workspace": 7
-      }
-    },
-    {
       "path": "packages/planes/mesh/shell",
       "name": "@athyper/product-mesh-shell",
       "owner": "Mesh",
@@ -324,16 +304,6 @@
       }
     },
     {
-      "path": "packages/planes/studio/business-partner",
-      "name": "@athyper/product-studio-business-partner",
-      "owner": "Studio",
-      "classification": "Product-specific",
-      "dependencyBudget": {
-        "runtime": 8,
-        "workspace": 8
-      }
-    },
-    {
       "path": "packages/planes/studio/shell",
       "name": "@athyper/product-studio-shell",
       "owner": "Studio",
@@ -341,16 +311,6 @@
       "dependencyBudget": {
         "runtime": 5,
         "workspace": 5
-      }
-    },
-    {
-      "path": "packages/platform/iam/governance-review",
-      "name": "@athyper/platform-iam-governance-review",
-      "owner": "Platform IAM",
-      "classification": "Server-only governance review",
-      "dependencyBudget": {
-        "runtime": 0,
-        "workspace": 0
       }
     },
     {

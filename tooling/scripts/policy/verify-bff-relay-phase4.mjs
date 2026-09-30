@@ -59,7 +59,10 @@ for (const plane of ["neon", "mesh", "studio"]) {
     // requiredEnvironment("RUNTIME_API_URL") helper no longer exists.
     if (
       !route.includes("@/lib/relay") ||
-      !config.includes("IAM_ME_OPERATION") ||
+      !config.includes("...COMMON_PLANE_RELAY_OPERATIONS") ||
+      !relay
+        .slice(relay.indexOf("export const COMMON_PLANE_RELAY_OPERATIONS"))
+        .includes("IAM_ME_OPERATION") ||
       !config.includes("readAppEnvironment().runtimeApiUrl")
     )
       failures.push(
@@ -72,14 +75,15 @@ for (const plane of ["neon", "mesh", "studio"]) {
   }
 }
 
-const apps = ["apps/neon", "apps/mesh", "apps/studio"]
-  .flatMap((directory) =>
-    ["lib/auth.ts", "lib/relay.ts"].map((file) => read(`${directory}/${file}`)),
-  )
-  .join("\n");
 if (
-  !apps.includes("resolveRelaySession") ||
-  !apps.includes("invalidateRelaySession")
+  !["neon", "mesh", "studio"].every((plane) =>
+    read(`apps/${plane}/lib/relay.ts`).includes(
+      "relaySessionFromAuth(authRuntime)",
+    ),
+  ) ||
+  !relay.includes("auth.resolveRelaySession(request)") ||
+  !relay.includes("auth.refreshRelaySession(request)") ||
+  !relay.includes("auth.invalidateRelaySession(request, reason)")
 )
   failures.push(
     "Application relays must resolve and invalidate through the shared server auth runtime",

@@ -34,11 +34,25 @@ const render = (env) =>
     ],
     { encoding: "utf8", env, maxBuffer: 16 * 1024 * 1024 },
   );
-test("unprovisioned cloud storage fails rendering without local fallback", () => {
-  const result = render(environment);
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /pending provisioning/);
-});
+const provisioned = {
+  ...environment,
+  S3_REGION: "eu-west-1",
+  S3_BUCKET_DOCUMENTS: "fixture-documents",
+  S3_BUCKET_ARTIFACTS: "fixture-artifacts",
+  S3_BUCKET_TRANSFERS: "fixture-transfers",
+  APP_S3_PROFILE: "fixture-app",
+  ARTIFACTS_WRITER_S3_PROFILE: "fixture-writer",
+  ATHYPER_AWS_AUTH_ROOT: "/tmp/athyper-storage-auth-fixture",
+};
+for (const key of keys) {
+  test(`cloud storage rejects missing ${key} without local fallback`, () => {
+    const incomplete = { ...provisioned };
+    delete incomplete[key];
+    const result = render(incomplete);
+    assert.notEqual(result.status, 0);
+    assert.ok(result.stderr.includes(key), result.stderr);
+  });
+}
 test("cloud overlay disables local storage and separates workload profiles", () => {
   const result = render({
     ...environment,

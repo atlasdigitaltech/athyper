@@ -46,7 +46,9 @@ export function HeaderActions({
   readonly applicationName: string;
   readonly planeDescriptor?: string;
   readonly currentLocale?: string;
-  readonly localePolicy?: Readonly<{ enabledLocales: readonly SupportedLocale[] }>;
+  readonly localePolicy?: Readonly<{
+    enabledLocales: readonly SupportedLocale[];
+  }>;
   readonly onLocaleChange?: (localeCode: SupportedLocale) => Promise<void>;
 }) {
   const t = useShellI18n().message;
@@ -67,7 +69,10 @@ export function HeaderActions({
     const shortcut = (event: KeyboardEvent) => {
       if (
         event.key === "Escape" &&
-        (active === "search" || active === "agent" || active === "utilities" || active === "more")
+        (active === "search" ||
+          active === "agent" ||
+          active === "utilities" ||
+          active === "more")
       )
         closeAction();
     };
@@ -80,7 +85,12 @@ export function HeaderActions({
         target.closest(".athyper-activity-center__scrim")
       )
         return;
-      if (active === "search" || active === "agent" || active === "utilities" || active === "more")
+      if (
+        active === "search" ||
+        active === "agent" ||
+        active === "utilities" ||
+        active === "more"
+      )
         onActiveChange();
     };
     window.addEventListener("keydown", shortcut);
@@ -92,11 +102,21 @@ export function HeaderActions({
   }, [active, closeAction, onActiveChange]);
   useEffect(() => {
     const closeForRecordCollaboration = (event: Event) => {
-      const detail = event instanceof CustomEvent ? event.detail as { open?: unknown } : undefined;
+      const detail =
+        event instanceof CustomEvent
+          ? (event.detail as { open?: unknown })
+          : undefined;
       if (detail?.open === true) closeAction();
     };
-    window.addEventListener("athyper:record-collaboration-surface", closeForRecordCollaboration);
-    return () => window.removeEventListener("athyper:record-collaboration-surface", closeForRecordCollaboration);
+    window.addEventListener(
+      "athyper:record-collaboration-surface",
+      closeForRecordCollaboration,
+    );
+    return () =>
+      window.removeEventListener(
+        "athyper:record-collaboration-surface",
+        closeForRecordCollaboration,
+      );
   }, [closeAction]);
   useEffect(() => {
     if (active === "more")
@@ -239,7 +259,7 @@ export function HeaderActions({
           onClose={closeAction}
         >
           <ShellActivityCenter
-            headerActions={() => root.current ? [root.current] : []}
+            headerActions={() => (root.current ? [root.current] : [])}
             activeTab={active}
             dataSource={activity}
             onTabChange={onActiveChange}
@@ -269,6 +289,7 @@ export function HeaderActions({
                   <input
                     ref={search}
                     type="search"
+                    aria-label={t("shell.search.title")}
                     value={query}
                     onChange={(event) => setQuery(event.currentTarget.value)}
                     placeholder={t("shell.search.placeholder")}

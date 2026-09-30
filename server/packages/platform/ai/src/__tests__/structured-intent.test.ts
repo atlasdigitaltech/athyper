@@ -2,6 +2,7 @@ import { expect, it, vi } from "vitest";
 import { resolveAtlasIntent } from "../structured-intent.js";
 import { parseAtlasIntent, atlasGuidance } from "@athyper/server-contract-ai";
 import { AtlasAgentRuntime } from "../agent-runtime.js";
+import type { AtlasRuntimeToolCoordinator } from "../runtime-tool-coordinator.js";
 import {
   AtlasServiceError,
   AtlasScopeSelectionRequiredError,
@@ -173,16 +174,22 @@ it.each([
       },
       quota: { reserve },
       tools: {
-        definitions: async () =>
+        // Scope decisions come from the owner/coordinator, not legacy BP tool names.
+        resolveIntent: (
+          ...[_context, text, scope, admitted]: Parameters<
+            NonNullable<AtlasRuntimeToolCoordinator["resolveIntent"]>
+          >
+        ) =>
           code === "assessment_scope"
-            ? [
-                {
-                  name: "bp_check_eligibility",
-                  description: "eligibility",
-                  inputSchema: { type: "object" },
-                },
-              ]
-            : tools,
+            ? {
+                schemaVersion: 1,
+                kind: "clarify",
+                strategy: "owner_scope",
+                reason: "missing_scope",
+                capabilityIds: [],
+              }
+            : resolveAtlasIntent(admitted, text, scope?.page),
+        definitions: async () => tools,
         handle,
       },
       maxInputCharacters: 1000,

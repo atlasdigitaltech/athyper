@@ -11,30 +11,30 @@
     ]
   },
   "summary": {
-    "tableDeclarations": 1270,
-    "classifiedAndOwned": 1270,
+    "tableDeclarations": 1288,
+    "classifiedAndOwned": 1288,
     "coveragePercent": 100,
     "byPlane": {
-      "mesh": 316,
-      "neon": 604,
-      "studio": 350
+      "mesh": 320,
+      "neon": 608,
+      "studio": 360
     },
     "byAuthority": {
-      "common_plane_local": 766,
+      "common_plane_local": 778,
       "mesh": 60,
       "neon": 348,
-      "studio": 96
+      "studio": 102
     },
     "byClassification": {
       "catalog_seed_managed": 39,
-      "evidence": 195,
+      "evidence": 197,
       "projection": 24,
       "read_only": 3,
-      "runtime_mutable": 1009
+      "runtime_mutable": 1025
     },
     "byOwner": {
       "@athyper/server-plane-mesh": 43,
-      "@athyper/server-plane-studio-meta-entity-authoring": 32,
+      "@athyper/server-plane-studio-meta-entity-authoring": 40,
       "@athyper/server-plane-studio-onboarding": 10,
       "@athyper/server-platform-ai": 84,
       "@athyper/server-platform-audit": 51,
@@ -46,14 +46,14 @@
       "@athyper/server-platform-iam": 74,
       "@athyper/server-platform-jobs": 58,
       "@athyper/server-platform-metadata": 37,
-      "@athyper/server-service-documents": 216,
+      "@athyper/server-service-documents": 209,
       "@athyper/server-service-finance": 16,
-      "@athyper/server-service-master-data": 223,
+      "@athyper/server-service-master-data": 237,
       "@athyper/server-service-publication": 13,
-      "@athyper/server-service-records": 33
+      "@athyper/server-service-records": 36
     },
     "byRolloutStatus": {
-      "code_complete": 1270
+      "code_complete": 1288
     },
     "reviewRequired": 0
   },
@@ -4659,6 +4659,42 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
+      "sourceKey": "studio:document.attachment_workspace:server/db/ddl/common/document/03_foundation_tables.sql",
+      "plane": "studio",
+      "tableKey": "document.attachment_workspace",
+      "ddlPath": "server/db/ddl/common/document/03_foundation_tables.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-documents",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
       "sourceKey": "studio:document.comment:server/db/ddl/common/document/03_foundation_tables.sql",
       "plane": "studio",
       "tableKey": "document.comment",
@@ -4803,40 +4839,6 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
-      "sourceKey": "studio:document.comment_moderation_flag:server/db/ddl/planes/studio/document/03_tables.sql",
-      "plane": "studio",
-      "tableKey": "document.comment_moderation_flag",
-      "ddlPath": "server/db/ddl/planes/studio/document/03_tables.sql",
-      "installedPlanes": [
-        "studio"
-      ],
-      "physicalAuthority": "studio",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
       "sourceKey": "studio:document.comment_reaction:server/db/ddl/common/document/03_foundation_tables.sql",
       "plane": "studio",
       "tableKey": "document.comment_reaction",
@@ -4873,14 +4875,16 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
-      "sourceKey": "studio:document.comment_revision:server/db/ddl/planes/studio/document/03_tables.sql",
+      "sourceKey": "studio:document.comment_revision:server/db/ddl/common/document/03_foundation_tables.sql",
       "plane": "studio",
       "tableKey": "document.comment_revision",
-      "ddlPath": "server/db/ddl/planes/studio/document/03_tables.sql",
+      "ddlPath": "server/db/ddl/common/document/03_foundation_tables.sql",
       "installedPlanes": [
-        "studio"
+        "studio",
+        "neon",
+        "mesh"
       ],
-      "physicalAuthority": "studio",
+      "physicalAuthority": "common_plane_local",
       "classification": "runtime_mutable",
       "serviceOwner": "@athyper/server-service-documents",
       "commands": {
@@ -7411,6 +7415,42 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
+      "sourceKey": "studio:master.principal_surface_arrangement:server/db/ddl/common/master/22_principal_surface_arrangement.sql",
+      "plane": "studio",
+      "tableKey": "master.principal_surface_arrangement",
+      "ddlPath": "server/db/ddl/common/master/22_principal_surface_arrangement.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
       "sourceKey": "studio:master.principal_ui_preference:server/db/ddl/common/master/03_platform_tables.sql",
       "plane": "studio",
       "tableKey": "master.principal_ui_preference",
@@ -8101,6 +8141,82 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
+      "sourceKey": "studio:metadata.entity_capability:server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "plane": "studio",
+      "tableKey": "metadata.entity_capability",
+      "ddlPath": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "installedPlanes": [
+        "studio"
+      ],
+      "physicalAuthority": "studio",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [
+        "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts"
+      ],
+      "entryPoints": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "studio:metadata.entity_change_case_binding:server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "plane": "studio",
+      "tableKey": "metadata.entity_change_case_binding",
+      "ddlPath": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "installedPlanes": [
+        "studio"
+      ],
+      "physicalAuthority": "studio",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [
+        "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts"
+      ],
+      "entryPoints": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
       "sourceKey": "studio:metadata.entity_change_set:server/db/ddl/planes/studio/metadata/03_tables.sql",
       "plane": "studio",
       "tableKey": "metadata.entity_change_set",
@@ -8256,6 +8372,44 @@
       "sourceKey": "studio:metadata.entity_field_policy_binding:server/db/ddl/planes/studio/metadata/03_tables.sql",
       "plane": "studio",
       "tableKey": "metadata.entity_field_policy_binding",
+      "ddlPath": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "installedPlanes": [
+        "studio"
+      ],
+      "physicalAuthority": "studio",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [
+        "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts"
+      ],
+      "entryPoints": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "studio:metadata.entity_field_reference_binding:server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "plane": "studio",
+      "tableKey": "metadata.entity_field_reference_binding",
       "ddlPath": "server/db/ddl/planes/studio/metadata/03_tables.sql",
       "installedPlanes": [
         "studio"
@@ -8519,6 +8673,82 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
+      "sourceKey": "studio:metadata.entity_materialization_binding:server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "plane": "studio",
+      "tableKey": "metadata.entity_materialization_binding",
+      "ddlPath": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "installedPlanes": [
+        "studio"
+      ],
+      "physicalAuthority": "studio",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [
+        "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts"
+      ],
+      "entryPoints": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "studio:metadata.entity_materialization_field_mapping:server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "plane": "studio",
+      "tableKey": "metadata.entity_materialization_field_mapping",
+      "ddlPath": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "installedPlanes": [
+        "studio"
+      ],
+      "physicalAuthority": "studio",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [
+        "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts"
+      ],
+      "entryPoints": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
       "sourceKey": "studio:metadata.entity_numbering_binding:server/db/ddl/planes/studio/metadata/03_tables.sql",
       "plane": "studio",
       "tableKey": "metadata.entity_numbering_binding",
@@ -8560,6 +8790,44 @@
       "sourceKey": "studio:metadata.entity_operation:server/db/ddl/planes/studio/metadata/03_tables.sql",
       "plane": "studio",
       "tableKey": "metadata.entity_operation",
+      "ddlPath": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "installedPlanes": [
+        "studio"
+      ],
+      "physicalAuthority": "studio",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [
+        "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts"
+      ],
+      "entryPoints": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "studio:metadata.entity_operation_context_requirement:server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "plane": "studio",
+      "tableKey": "metadata.entity_operation_context_requirement",
       "ddlPath": "server/db/ddl/planes/studio/metadata/03_tables.sql",
       "installedPlanes": [
         "studio"
@@ -9169,6 +9437,82 @@
       "plane": "studio",
       "tableKey": "metadata.entity_surface_section",
       "ddlPath": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+      "installedPlanes": [
+        "studio"
+      ],
+      "physicalAuthority": "studio",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [
+        "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts"
+      ],
+      "entryPoints": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "studio:metadata.publication_recovery_archive:server/db/ddl/planes/studio/metadata/18_publication_recovery.sql",
+      "plane": "studio",
+      "tableKey": "metadata.publication_recovery_archive",
+      "ddlPath": "server/db/ddl/planes/studio/metadata/18_publication_recovery.sql",
+      "installedPlanes": [
+        "studio"
+      ],
+      "physicalAuthority": "studio",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [
+        "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts"
+      ],
+      "entryPoints": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "studio:metadata.publication_recovery_revocation:server/db/ddl/planes/studio/metadata/18_publication_recovery.sql",
+      "plane": "studio",
+      "tableKey": "metadata.publication_recovery_revocation",
+      "ddlPath": "server/db/ddl/planes/studio/metadata/18_publication_recovery.sql",
       "installedPlanes": [
         "studio"
       ],
@@ -12179,6 +12523,42 @@
       "plane": "studio",
       "tableKey": "snapshot.entity_snapshot_identity",
       "ddlPath": "server/db/ddl/common/snapshot/03_tables.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
+      "classification": "evidence",
+      "serviceOwner": "@athyper/server-service-records",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": "WAVE0_RECORD_SNAPSHOT_ROUTES_ENABLED",
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "studio:snapshot.record_version:server/db/ddl/common/snapshot/12_record_history.sql",
+      "plane": "studio",
+      "tableKey": "snapshot.record_version",
+      "ddlPath": "server/db/ddl/common/snapshot/12_record_history.sql",
       "installedPlanes": [
         "studio",
         "neon",
@@ -19039,6 +19419,42 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
+      "sourceKey": "neon:document.attachment_workspace:server/db/ddl/common/document/03_foundation_tables.sql",
+      "plane": "neon",
+      "tableKey": "document.attachment_workspace",
+      "ddlPath": "server/db/ddl/common/document/03_foundation_tables.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-documents",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
       "sourceKey": "neon:document.attendance_adjustment_request:server/db/ddl/planes/neon/document/03_tables.sql",
       "plane": "neon",
       "tableKey": "document.attendance_adjustment_request",
@@ -19311,40 +19727,6 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
-      "sourceKey": "neon:document.business_partner_bank_verification:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_bank_verification",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
       "sourceKey": "neon:document.business_partner_duplicate_resolution:server/db/ddl/planes/neon/document/03_tables.sql",
       "plane": "neon",
       "tableKey": "document.business_partner_duplicate_resolution",
@@ -19416,380 +19798,6 @@
       "sourceKey": "neon:document.business_partner_invitation_recovery:server/db/ddl/planes/neon/document/03_tables.sql",
       "plane": "neon",
       "tableKey": "document.business_partner_invitation_recovery",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_address:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_address",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_certification:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_certification",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_classification:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_classification",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_contact_channel:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_contact_channel",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_contact_person:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_contact_person",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_evidence:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_evidence",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "evidence",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_identifier:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_identifier",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_materialization_item:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_materialization_item",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_tax_registration:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_tax_registration",
-      "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-documents",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:document.business_partner_request_validation:server/db/ddl/planes/neon/document/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "document.business_partner_request_validation",
       "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
       "installedPlanes": [
         "neon"
@@ -20036,6 +20044,42 @@
       "sourceKey": "neon:document.comment_reaction:server/db/ddl/common/document/03_foundation_tables.sql",
       "plane": "neon",
       "tableKey": "document.comment_reaction",
+      "ddlPath": "server/db/ddl/common/document/03_foundation_tables.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-documents",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:document.comment_revision:server/db/ddl/common/document/03_foundation_tables.sql",
+      "plane": "neon",
+      "tableKey": "document.comment_revision",
       "ddlPath": "server/db/ddl/common/document/03_foundation_tables.sql",
       "installedPlanes": [
         "studio",
@@ -22333,6 +22377,40 @@
       "plane": "neon",
       "tableKey": "document.people_request",
       "ddlPath": "server/db/ddl/planes/neon/document/03_tables.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-documents",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:document.person_sensitive_access_audit:server/db/ddl/planes/neon/document/15_person_evidence_access_audit.sql",
+      "plane": "neon",
+      "tableKey": "document.person_sensitive_access_audit",
+      "ddlPath": "server/db/ddl/planes/neon/document/15_person_evidence_access_audit.sql",
       "installedPlanes": [
         "neon"
       ],
@@ -25756,7 +25834,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -25794,7 +25872,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -25832,7 +25910,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -25874,7 +25952,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -25912,7 +25990,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -25950,7 +26028,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -25988,7 +26066,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26026,7 +26104,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26068,7 +26146,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26106,7 +26184,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26148,7 +26226,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26186,7 +26264,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26224,7 +26302,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26262,7 +26340,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26300,7 +26378,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26338,7 +26416,7 @@
         "server/packages/services/finance/src/index.ts"
       ],
       "entryPoints": [
-        "server/apps/platform-host/src/composition/finance-routes.ts"
+        "server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts"
       ],
       "auditEvent": [],
       "outboxEvent": [],
@@ -26919,40 +26997,6 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
-      "sourceKey": "neon:master.bank_account_company_usage:server/db/ddl/planes/neon/master/15_bank_account_company_usage.sql",
-      "plane": "neon",
-      "tableKey": "master.bank_account_company_usage",
-      "ddlPath": "server/db/ddl/planes/neon/master/15_bank_account_company_usage.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-master-data",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
       "sourceKey": "neon:master.bank_account_house_config:server/db/ddl/planes/neon/master/03_tables.sql",
       "plane": "neon",
       "tableKey": "master.bank_account_house_config",
@@ -26991,74 +27035,6 @@
       "plane": "neon",
       "tableKey": "master.bank_account_house_payment_method",
       "ddlPath": "server/db/ddl/planes/neon/master/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-master-data",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:master.bank_account_link:server/db/ddl/planes/neon/master/03_tables.sql",
-      "plane": "neon",
-      "tableKey": "master.bank_account_link",
-      "ddlPath": "server/db/ddl/planes/neon/master/03_tables.sql",
-      "installedPlanes": [
-        "neon"
-      ],
-      "physicalAuthority": "neon",
-      "classification": "runtime_mutable",
-      "serviceOwner": "@athyper/server-service-master-data",
-      "commands": {
-        "decision": "not_exposed",
-        "codes": [],
-        "reason": "No runtime command is approved by the baseline ownership rules."
-      },
-      "repository": [],
-      "entryPoints": [],
-      "auditEvent": [],
-      "outboxEvent": [],
-      "replayEvidence": [],
-      "immutabilityEvidence": [],
-      "reversalEvidence": [],
-      "concurrencyEvidence": [],
-      "rebuildEvidence": [],
-      "reconciliationEvidence": [],
-      "mutationComposition": "not_applicable",
-      "unitTests": [],
-      "postgresTests": [],
-      "featureGate": null,
-      "rolloutStatus": "code_complete",
-      "reviewStatus": "reviewed",
-      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
-    },
-    {
-      "sourceKey": "neon:master.bank_account_usage:server/db/ddl/planes/neon/master/15_bank_account_company_usage.sql",
-      "plane": "neon",
-      "tableKey": "master.bank_account_usage",
-      "ddlPath": "server/db/ddl/planes/neon/master/15_bank_account_company_usage.sql",
       "installedPlanes": [
         "neon"
       ],
@@ -27329,10 +27305,44 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
-      "sourceKey": "neon:master.business_partner_commodity_capability:server/db/ddl/planes/neon/master/03_tables.sql",
+      "sourceKey": "neon:master.business_partner_classification_command:server/db/ddl/planes/neon/master/29_partner_commodity_classification.sql",
       "plane": "neon",
-      "tableKey": "master.business_partner_commodity_capability",
-      "ddlPath": "server/db/ddl/planes/neon/master/03_tables.sql",
+      "tableKey": "master.business_partner_classification_command",
+      "ddlPath": "server/db/ddl/planes/neon/master/29_partner_commodity_classification.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.business_partner_commodity_classification:server/db/ddl/planes/neon/master/29_partner_commodity_classification.sql",
+      "plane": "neon",
+      "tableKey": "master.business_partner_commodity_classification",
+      "ddlPath": "server/db/ddl/planes/neon/master/29_partner_commodity_classification.sql",
       "installedPlanes": [
         "neon"
       ],
@@ -27469,6 +27479,40 @@
       "plane": "neon",
       "tableKey": "master.business_partner_operating_organization_assignment",
       "ddlPath": "server/db/ddl/planes/neon/master/03_tables.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.business_partner_organization_identity:server/db/ddl/planes/neon/master/33_partner_organization_identity.sql",
+      "plane": "neon",
+      "tableKey": "master.business_partner_organization_identity",
+      "ddlPath": "server/db/ddl/planes/neon/master/33_partner_organization_identity.sql",
       "installedPlanes": [
         "neon"
       ],
@@ -29039,6 +29083,142 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
+      "sourceKey": "neon:master.hr_calendar_day_change:server/db/ddl/planes/neon/master/27_hr_setup_effective_refs.sql",
+      "plane": "neon",
+      "tableKey": "master.hr_calendar_day_change",
+      "ddlPath": "server/db/ddl/planes/neon/master/27_hr_setup_effective_refs.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.hr_org_company_assignment:server/db/ddl/planes/neon/master/27_hr_setup_effective_refs.sql",
+      "plane": "neon",
+      "tableKey": "master.hr_org_company_assignment",
+      "ddlPath": "server/db/ddl/planes/neon/master/27_hr_setup_effective_refs.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.hr_policy_assignment:server/db/ddl/planes/neon/master/24_hr_policy_applicability.sql",
+      "plane": "neon",
+      "tableKey": "master.hr_policy_assignment",
+      "ddlPath": "server/db/ddl/planes/neon/master/24_hr_policy_applicability.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.hr_setup_publication:server/db/ddl/planes/neon/master/26_hr_setup_publication.sql",
+      "plane": "neon",
+      "tableKey": "master.hr_setup_publication",
+      "ddlPath": "server/db/ddl/planes/neon/master/26_hr_setup_publication.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
       "sourceKey": "neon:master.intercompany_trading_pair:server/db/ddl/planes/neon/master/03_tables.sql",
       "plane": "neon",
       "tableKey": "master.intercompany_trading_pair",
@@ -30063,6 +30243,74 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
+      "sourceKey": "neon:master.payment_instrument:server/db/ddl/planes/neon/master/03_tables.sql",
+      "plane": "neon",
+      "tableKey": "master.payment_instrument",
+      "ddlPath": "server/db/ddl/planes/neon/master/03_tables.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.payment_instrument_link:server/db/ddl/planes/neon/master/03_tables.sql",
+      "plane": "neon",
+      "tableKey": "master.payment_instrument_link",
+      "ddlPath": "server/db/ddl/planes/neon/master/03_tables.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
       "sourceKey": "neon:master.payment_method:server/db/ddl/planes/neon/master/03_tables.sql",
       "plane": "neon",
       "tableKey": "master.payment_method",
@@ -30203,6 +30451,210 @@
       "plane": "neon",
       "tableKey": "master.person",
       "ddlPath": "server/db/ddl/planes/neon/master/03_tables.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.person_address_use:server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "plane": "neon",
+      "tableKey": "master.person_address_use",
+      "ddlPath": "server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.person_education:server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "plane": "neon",
+      "tableKey": "master.person_education",
+      "ddlPath": "server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.person_emergency_contact:server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "plane": "neon",
+      "tableKey": "master.person_emergency_contact",
+      "ddlPath": "server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.person_health_profile:server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "plane": "neon",
+      "tableKey": "master.person_health_profile",
+      "ddlPath": "server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.person_identity_document:server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "plane": "neon",
+      "tableKey": "master.person_identity_document",
+      "ddlPath": "server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "installedPlanes": [
+        "neon"
+      ],
+      "physicalAuthority": "neon",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.person_prior_employment:server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
+      "plane": "neon",
+      "tableKey": "master.person_prior_employment",
+      "ddlPath": "server/db/ddl/planes/neon/master/22_employee_personal_profile.sql",
       "installedPlanes": [
         "neon"
       ],
@@ -30413,6 +30865,42 @@
       "plane": "neon",
       "tableKey": "master.principal_profile",
       "ddlPath": "server/db/ddl/common/master/03_platform_tables.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:master.principal_surface_arrangement:server/db/ddl/common/master/22_principal_surface_arrangement.sql",
+      "plane": "neon",
+      "tableKey": "master.principal_surface_arrangement",
+      "ddlPath": "server/db/ddl/common/master/22_principal_surface_arrangement.sql",
       "installedPlanes": [
         "studio",
         "neon",
@@ -33721,6 +34209,42 @@
         "neon"
       ],
       "physicalAuthority": "neon",
+      "classification": "evidence",
+      "serviceOwner": "@athyper/server-service-records",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": "WAVE0_RECORD_SNAPSHOT_ROUTES_ENABLED",
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "neon:snapshot.record_version:server/db/ddl/common/snapshot/12_record_history.sql",
+      "plane": "neon",
+      "tableKey": "snapshot.record_version",
+      "ddlPath": "server/db/ddl/common/snapshot/12_record_history.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
       "classification": "evidence",
       "serviceOwner": "@athyper/server-service-records",
       "commands": {
@@ -38417,6 +38941,42 @@
       "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
     },
     {
+      "sourceKey": "mesh:document.attachment_workspace:server/db/ddl/common/document/03_foundation_tables.sql",
+      "plane": "mesh",
+      "tableKey": "document.attachment_workspace",
+      "ddlPath": "server/db/ddl/common/document/03_foundation_tables.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-documents",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
       "sourceKey": "mesh:document.comment:server/db/ddl/common/document/03_foundation_tables.sql",
       "plane": "mesh",
       "tableKey": "document.comment",
@@ -38564,6 +39124,42 @@
       "sourceKey": "mesh:document.comment_reaction:server/db/ddl/common/document/03_foundation_tables.sql",
       "plane": "mesh",
       "tableKey": "document.comment_reaction",
+      "ddlPath": "server/db/ddl/common/document/03_foundation_tables.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-documents",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "mesh:document.comment_revision:server/db/ddl/common/document/03_foundation_tables.sql",
+      "plane": "mesh",
+      "tableKey": "document.comment_revision",
       "ddlPath": "server/db/ddl/common/document/03_foundation_tables.sql",
       "installedPlanes": [
         "studio",
@@ -41003,6 +41599,42 @@
       "plane": "mesh",
       "tableKey": "master.principal_profile",
       "ddlPath": "server/db/ddl/common/master/03_platform_tables.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
+      "classification": "runtime_mutable",
+      "serviceOwner": "@athyper/server-service-master-data",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": null,
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "mesh:master.principal_surface_arrangement:server/db/ddl/common/master/22_principal_surface_arrangement.sql",
+      "plane": "mesh",
+      "tableKey": "master.principal_surface_arrangement",
+      "ddlPath": "server/db/ddl/common/master/22_principal_surface_arrangement.sql",
       "installedPlanes": [
         "studio",
         "neon",
@@ -44999,6 +45631,42 @@
         "mesh"
       ],
       "physicalAuthority": "mesh",
+      "classification": "evidence",
+      "serviceOwner": "@athyper/server-service-records",
+      "commands": {
+        "decision": "not_exposed",
+        "codes": [],
+        "reason": "No runtime command is approved by the baseline ownership rules."
+      },
+      "repository": [],
+      "entryPoints": [],
+      "auditEvent": [],
+      "outboxEvent": [],
+      "replayEvidence": [],
+      "immutabilityEvidence": [],
+      "reversalEvidence": [],
+      "concurrencyEvidence": [],
+      "rebuildEvidence": [],
+      "reconciliationEvidence": [],
+      "mutationComposition": "not_applicable",
+      "unitTests": [],
+      "postgresTests": [],
+      "featureGate": "WAVE0_RECORD_SNAPSHOT_ROUTES_ENABLED",
+      "rolloutStatus": "code_complete",
+      "reviewStatus": "reviewed",
+      "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
+    },
+    {
+      "sourceKey": "mesh:snapshot.record_version:server/db/ddl/common/snapshot/12_record_history.sql",
+      "plane": "mesh",
+      "tableKey": "snapshot.record_version",
+      "ddlPath": "server/db/ddl/common/snapshot/12_record_history.sql",
+      "installedPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "physicalAuthority": "common_plane_local",
       "classification": "evidence",
       "serviceOwner": "@athyper/server-service-records",
       "commands": {

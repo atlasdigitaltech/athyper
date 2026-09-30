@@ -26,7 +26,8 @@
     "@athyper/platform-entity-list-view": "workspace:*",
     "@athyper/platform-api-client": "workspace:*",
     "@athyper/platform-communications-collaboration-ui": "workspace:*",
-    "@athyper/contract-platform-entity-list": "workspace:*"
+    "@athyper/contract-platform-entity-list": "workspace:*",
+    "@athyper/platform-temporal": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"
