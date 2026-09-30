@@ -6,7 +6,7 @@
     {
       "target": "studio",
       "path": "seed/packs/authorization-v2/studio/seed-pack.v1.json",
-      "contentSha256": "8b2788f64b5d3acc9de40e5b5bad42baec6289e1b6059433383ac20bdbb47449",
+      "contentSha256": "ae8f1d6fb0d10570899c9a55cd9cc98f5552f3c985151f4d4138b8a313ed6f6f",
       "permissionCount": 31,
       "roleCount": 0,
       "groupCount": 1,
@@ -19,7 +19,7 @@
     {
       "target": "neon",
       "path": "seed/packs/authorization-v2/neon/seed-pack.v1.json",
-      "contentSha256": "dea6e512a2d7e7356e7d6542ec9dd8f5fcc4c82ec2d56e6b83a062478e3f56e2",
+      "contentSha256": "74d08a4dcae6dfca21e474a5b06b1b8458fdf931efd6e5207acbe6db202fc94e",
       "permissionCount": 25,
       "roleCount": 0,
       "groupCount": 1,
@@ -32,7 +32,7 @@
     {
       "target": "mesh",
       "path": "seed/packs/authorization-v2/mesh/seed-pack.v1.json",
-      "contentSha256": "ce72d262c871694722d5383ef8e616b07687dd42b14971a650b41beb015afcdd",
+      "contentSha256": "056f46a1a3f6c8445eb7ead6fef5b136962ab4097a6f348d02fe2ba8368f45eb",
       "permissionCount": 35,
       "roleCount": 0,
       "groupCount": 1,
@@ -43,5 +43,5 @@
       "assignmentRowCount": 111
     }
   ],
-  "ledgerSha256": "c753946e46590fdac285a0e03aefe30b113e9970739f2dfbc7693f4a0995c219"
+  "ledgerSha256": "1187a29d6b0ddec053dfe44e3d361fc74ec5169c6784a956a52bbd0d64254613"
 }

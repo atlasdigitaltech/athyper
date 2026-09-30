@@ -3,11 +3,11 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `1ced6c94f9db03f5129141d6f1d6306096b39254851a8ec8517bf1348431e9fc`
-Files scanned / authorization-bearing: 5199 / 1228
+Files scanned / authorization-bearing: 5202 / 1231
 Registered authorization objects: 470
 Aggregated object references: 1147
 Writer references: 127
-Contract/UI field references: 1891
+Contract/UI field references: 1902
 Permission definitions / uses: 89 / 590
 Authorization-bearing routes: 31
 Keycloak mappers: 145
@@ -1280,7 +1280,7 @@ Capture DDLs:
 | `allowed` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 135 |
 | `allowed` | tool | server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs | 593, 594 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 79, 84 |
-| `allowed` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16, 25 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 54, 121, 122, 123 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 11, 28, 36, 44, 45 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 46, 163 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/native-runtime-lowering.test.ts | 43, 45 |
@@ -1438,6 +1438,7 @@ Capture DDLs:
 | `allowed` | test | server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts | 6, 22, 49, 53, 58, 65, 76, 84, 109, 122 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 14, 43, 100 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6, 16 |
+| `allowed` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 41, 74, 81, 87, 93, 95, 108 |
 | `allowed` | runtime | server/packages/platform/iam/src/external-worker-identity-intent.ts | 206, 229 |
 | `allowed` | route | server/packages/platform/iam/src/iam-routes.ts | 36 |
 | `allowed` | runtime | server/packages/platform/iam/src/iam-service.ts | 173, 174, 180, 183, 225 |
@@ -1545,7 +1546,7 @@ Capture DDLs:
 | `authorizationScopes` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 155 |
 | `authorizationScopes` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 170 |
 | `authorizationScopes` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 140 |
-| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 59 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 12 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 54 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 39 |
@@ -1582,6 +1583,7 @@ Capture DDLs:
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 18 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `authorizationScopes` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 46 |
 | `authorizationScopes` | runtime | server/packages/platform/iam/src/iam-service.ts | 188 |
 | `authorizationScopes` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 384 |
 | `authorizationScopes` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 143 |
@@ -1638,7 +1640,7 @@ Capture DDLs:
 | `denied` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 136 |
 | `denied` | tool | server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs | 594 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 79 |
-| `denied` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 55 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 11, 35 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 50 |
 | `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4810 |
@@ -1722,6 +1724,7 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts | 104, 109, 116, 122 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 15, 59, 63, 73, 95, 103 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `denied` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 42, 96 |
 | `denied` | runtime | server/packages/platform/iam/src/iam-service.ts | 73, 77, 84, 96, 101, 118, 184, 217, 239 |
 | `denied` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 337, 344, 380 |
 | `denied` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 74, 260, 264, 266, 274, 276, 278, 286, 288, 290, 295, 305, 309 |
@@ -1839,7 +1842,7 @@ Capture DDLs:
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/business-partner.v1.json | 14, 23, 32, 41, 50, 59, 68, 78, 88, 98, 108, 118, 128, 138, 148, 158, 168, 178, 188, 198, 208, 218, 228, 238, 248, 258, 268, 278, 288, 297, 306, 316, 326, 335, 344, 353, 362, 371, 381, 391, 401, 411, 421, 431, 441, 451, 461, 471, 481, 491, 501 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/company-invoice.v1.json | 14, 23, 33, 43 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/independent-document.v1.json | 14, 23, 32 |
-| `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 138, 1328, 1329 |
+| `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 138, 1330, 1331 |
 | `permissionCode` | runtime | packages/platform/foundation/api-client/src/bootstrap.ts | 35, 43 |
 | `permissionCode` | runtime | packages/platform/shell/shell/src/core.ts | 71, 235 |
 | `permissionCode` | runtime | packages/platform/shell/work-inbox/src/index.ts | 8, 15 |
@@ -1849,7 +1852,7 @@ Capture DDLs:
 | `permissionCode` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval-qualification.mts | 63, 89, 133 |
 | `permissionCode` | tool | server/apps/platform-host/scripts/qualification/masked-export-product.mjs | 41, 58, 61, 103 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 81, 82, 89, 93 |
-| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 21, 25 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 93, 121 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/collection-preparation.postgres.test.ts | 98, 159 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 110 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 6, 11, 13, 15, 17, 21, 35 |
@@ -2073,6 +2076,7 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 80, 89 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts | 4 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 22, 34 |
+| `permissionCode` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 18, 21, 41, 49, 57, 70, 85, 96, 97, 98 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/identity-provisioning-service.ts | 24 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/identity-replay-approval.ts | 66 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 318, 325, 327, 333, 357, 395, 409, 417, 436, 440, 453, 472, 483, 524, 527 |
@@ -2316,7 +2320,8 @@ Capture DDLs:
 | `permissions` | test | packages/contracts/platform/ai/src/__tests__/protocol.test.ts | 21, 72 |
 | `permissions` | runtime | packages/contracts/platform/ai/src/intent.ts | 16 |
 | `permissions` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 21, 213, 220, 221, 222, 303 |
-| `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 120, 1278, 1279, 1281, 1287 |
+| `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 120, 1280, 1281, 1283, 1289 |
+| `permissions` | runtime | packages/platform/ai/agent-ui/src/index.ts | 857, 861 |
 | `permissions` | ui | packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx | 49, 50 |
 | `permissions` | ui | packages/platform/entity/runtime/form-detail/src/entity-detail-runtime.tsx | 67, 68 |
 | `permissions` | runtime | packages/platform/entity/runtime/form-detail/src/thumbnail-scope.ts | 14, 19 |
@@ -2338,7 +2343,7 @@ Capture DDLs:
 | `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 127 |
 | `permissions` | tool | server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs | 198, 469, 500, 592, 593, 594, 652 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 69, 79 |
-| `permissions` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16, 25, 51 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 46, 121, 237 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/authorization-management-api.test.ts | 35 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 46 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 9, 33, 35, 36, 37, 39 |
@@ -2402,7 +2407,7 @@ Capture DDLs:
 | `permissions` | runtime | server/db/migrations/20260924_publication_provenance_recovery.sql | 77 |
 | `permissions` | runtime | server/db/migrations/20260928_entity_activity_permissions.sql | 25 |
 | `permissions` | runtime | server/db/migrations/20260929_entity_owner_access.sql | 82 |
-| `permissions` | runtime | server/db/migrations/inventory.json | 773, 941 |
+| `permissions` | runtime | server/db/migrations/inventory.json | 787, 955 |
 | `permissions` | test | server/db/scripts/__tests__/activity/activity-permissions.test.ts | 7, 9, 11, 12, 13, 14, 16, 17 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/authorization-clean-slate.test.ts | 21, 23, 41, 46, 152, 166 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts | 37, 49, 54, 63 |
@@ -2551,6 +2556,7 @@ Capture DDLs:
 | `permissions` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10, 80, 83 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 10, 49, 55, 85, 86, 88, 110, 115 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `permissions` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 33, 105 |
 | `permissions` | route | server/packages/platform/iam/src/iam-routes.ts | 36 |
 | `permissions` | runtime | server/packages/platform/iam/src/iam-service.ts | 46, 105, 106, 108, 110, 113, 114, 173, 175, 201, 202 |
 | `permissions` | runtime | server/packages/platform/iam/src/kysely-context-refresh.ts | 33, 38, 42, 43 |
@@ -2642,6 +2648,7 @@ Capture DDLs:
 | `permissions` | test | tests/contracts/studio-publication-navigation.test.ts | 10, 24 |
 | `permissions` | test | tests/foundation-browser/entity-thumbnail-performance.spec.ts | 16, 55, 87 |
 | `permissions` | test | tests/foundation/access-gates-phase9.test.tsx | 6 |
+| `permissions` | test | tests/foundation/atlas-answer.test.tsx | 208, 322 |
 | `permissions` | test | tests/foundation/country-detail-read.test.ts | 13 |
 | `permissions` | test | tests/foundation/entity-localization.test.ts | 138, 141 |
 | `permissions` | tool | tooling/scripts/local-dev/align-catl-partner-preview.mts | 46 |
@@ -2754,7 +2761,7 @@ Capture DDLs:
 | `planeExcluded` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 168 |
 | `planeExcluded` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 138 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 79 |
-| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 57 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 11 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 52 |
 | `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4816 |
@@ -2794,6 +2801,7 @@ Capture DDLs:
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 17, 61 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `planeExcluded` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 44, 98 |
 | `planeExcluded` | runtime | server/packages/platform/iam/src/iam-service.ts | 186 |
 | `planeExcluded` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 382 |
 | `planeExcluded` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 80, 277 |
@@ -2824,7 +2832,7 @@ Capture DDLs:
 | `planLocked` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 167 |
 | `planLocked` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 137 |
 | `planLocked` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 79 |
-| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 56 |
 | `planLocked` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 11 |
 | `planLocked` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 51 |
 | `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4813 |
@@ -2864,6 +2872,7 @@ Capture DDLs:
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 16, 60 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `planLocked` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 43, 97 |
 | `planLocked` | runtime | server/packages/platform/iam/src/iam-service.ts | 185 |
 | `planLocked` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 336, 349, 381 |
 | `planLocked` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 77, 275 |
@@ -2894,7 +2903,7 @@ Capture DDLs:
 | `principalFingerprint` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 146 |
 | `principalFingerprint` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 161 |
 | `principalFingerprint` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 131 |
-| `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 50 |
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 30 |
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/service-composition.test.ts | 36 |
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/shared/entity-runtime/published-owner-authorizer.test.ts | 120 |
@@ -2925,6 +2934,7 @@ Capture DDLs:
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 9 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `principalFingerprint` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 38 |
 | `principalFingerprint` | runtime | server/packages/platform/iam/src/iam-service.ts | 179 |
 | `principalFingerprint` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 375 |
 | `principalFingerprint` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
@@ -2982,7 +2992,7 @@ Capture DDLs:
 | `profileHash` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 126, 132 |
 | `profileHash` | tool | server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs | 595 |
 | `profileHash` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 69, 79 |
-| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 45, 51 |
 | `profileHash` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 41 |
 | `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 2097, 3294, 4904 |
 | `profileHash` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 23, 31 |
@@ -3045,6 +3055,7 @@ Capture DDLs:
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 7, 10 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 9, 10 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `profileHash` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 30, 37 |
 | `profileHash` | runtime | server/packages/platform/iam/src/iam-service.ts | 106, 114, 180, 202 |
 | `profileHash` | runtime | server/packages/platform/iam/src/kysely-context-refresh.ts | 43 |
 | `profileHash` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 299, 300, 364, 376 |

@@ -557,7 +557,9 @@ export function createAtlasAnswerClient(
       if (!admission.chatAllowed || !admission.persistenceAllowed)
         throw new AtlasClientError(
           "ATLAS_NOT_ADMITTED",
-          "Atlas answers are not enabled for this account or plane.",
+          admission.reasonCode === "permission_denied"
+            ? "Your account is not authorized to use Atlas in this workspace."
+            : "Atlas answers are not enabled in this workspace.",
         );
       const publicModelId =
           answerOptions.agent?.publicModelId ??

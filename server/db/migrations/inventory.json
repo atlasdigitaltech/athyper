@@ -3,6 +3,20 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20260930_atlas_authenticated_session.sql",
+      "path": "migrations/20260930_atlas_authenticated_session.sql",
+      "sha256": "3abe5f23d4f8b45c5772c71273cb3e4cd688ff13c04a81142708e0ff99b035bc",
+      "planes": ["studio", "neon", "mesh"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Use the existing authenticated session for Atlas admission; retain all underlying operation policies and grants.",
+      "canonicalPaths": [
+        "seed/contracts/authorization/catalog/studio/catalog.v2.json",
+        "seed/contracts/authorization/catalog/neon/catalog.v2.json",
+        "seed/contracts/authorization/catalog/mesh/catalog.v2.json"
+      ]
+    },
+    {
       "originalPath": "migrations/20260930_publication_ack_recovery.sql",
       "path": "migrations/20260930_publication_ack_recovery.sql",
       "sha256": "b58ba0f553da0a8e26c284391d25c0b7c28dd68c89aac6de16d41b18c49170e7",

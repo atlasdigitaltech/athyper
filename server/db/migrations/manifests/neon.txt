@@ -13,3 +13,4 @@
 20260929_compiled_entity_verification.sql
 20260930_entity_record_audit_contracts.sql
 20260930_entity_export_audit_contracts.sql
+20260930_atlas_authenticated_session.sql

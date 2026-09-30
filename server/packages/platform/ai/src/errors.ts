@@ -1,4 +1,7 @@
 export type AtlasServiceErrorCode =
+  | "BUSINESS_CONTEXT_UNAVAILABLE"
+  | "BUSINESS_CONTEXT_NOT_ENABLED"
+  | "BUSINESS_CONTEXT_SERVICE_UNAVAILABLE"
   | "INVALID_CONTEXT"
   | "INVALID_ARGUMENT"
   | "ADMISSION_DENIED"
@@ -27,10 +30,20 @@ export type AtlasServiceErrorCode =
 
 export class AtlasServiceError extends Error {
   override readonly name = "AtlasServiceError";
-  constructor(readonly code: AtlasServiceErrorCode, message: string) { super(message); }
+  constructor(
+    readonly code: AtlasServiceErrorCode,
+    message: string,
+  ) {
+    super(message);
+  }
 }
 
 /** A model-supplied scope cannot replace a selection in the verified page. */
 export class AtlasScopeSelectionRequiredError extends AtlasServiceError {
-  constructor() { super("TOOL_DENIED", "Select and apply the transaction context on the record."); }
+  constructor() {
+    super(
+      "TOOL_DENIED",
+      "Select and apply the transaction context on the record.",
+    );
+  }
 }

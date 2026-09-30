@@ -38,13 +38,13 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 5199,
-    "authorizationFiles": 1228,
+    "filesScanned": 5202,
+    "authorizationFiles": 1231,
     "registeredObjects": 470,
     "objectReferences": 1147,
     "writerReferences": 127,
     "securitySymbolReferences": 99,
-    "contractFieldReferences": 1891,
+    "contractFieldReferences": 1902,
     "permissionDefinitions": 89,
     "permissionUses": 590,
     "routes": 31,
@@ -10531,7 +10531,12 @@
     {
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
-      "sha256": "66d4ff6307374131ad4f67165ee5dc81c9a7df1f5b958d0dea6c86fadb93c688"
+      "sha256": "053d1ff49e524529666ad23e1e99242aa1ebf96352ee5b6f491fe230dba51be6"
+    },
+    {
+      "path": "packages/platform/ai/agent-ui/src/index.ts",
+      "artifactClass": "runtime",
+      "sha256": "3e7a969e3df683f4a1f80091eb67a5b40b442bd8929b37041960939ebc119e2d"
     },
     {
       "path": "packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx",
@@ -10716,7 +10721,7 @@
     {
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
-      "sha256": "44e0b109449b040c17e831bcc665afdfc52a6cd9941f0344c0a4c1ceb62de824"
+      "sha256": "9ac54cbc1a2d7baef3d4a68acebf19ca16eb2eb4db35251182826b81e86cce81"
     },
     {
       "path": "server/apps/platform-host/src/composition/__tests__/authorization-management-api.test.ts",
@@ -12016,7 +12021,7 @@
     {
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
-      "sha256": "9550f9fb8d9d16b239de15c35b10f7fbc67f2468f921922ac84364dd8f195930"
+      "sha256": "e7a29f802c03b896c10547078899fb5ff11eaac5ec2e6a8df11a3a685e7e43f9"
     },
     {
       "path": "server/db/prisma/schema.mesh.prisma",
@@ -12736,7 +12741,7 @@
     {
       "path": "server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json",
       "artifactClass": "runtime",
-      "sha256": "ba9eb7f2dc34d86acd31a84c3ca4ea3987fb3651c5138517719ca4c345bdeeaa"
+      "sha256": "ef6991e471ab4bce5c5cefc6ad29e00d04554c444e734d41f7585a6a735c063c"
     },
     {
       "path": "server/db/seed/contracts/authorization/catalog/mesh/scope-compatibility.v1.json",
@@ -12746,7 +12751,7 @@
     {
       "path": "server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json",
       "artifactClass": "runtime",
-      "sha256": "e32ea83426a64f48ea6b23256a07e8f02b682567e75cafe0d09f70a15ef74ea1"
+      "sha256": "91be49effec4035905a73a769ff96d553218112891460c3b91383450a76b742b"
     },
     {
       "path": "server/db/seed/contracts/authorization/catalog/neon/scope-compatibility.v1.json",
@@ -12756,7 +12761,7 @@
     {
       "path": "server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json",
       "artifactClass": "runtime",
-      "sha256": "637e22ee00eb8b3cf27ff141e2e541bb548a9457ac37e1f745095abe681a4d60"
+      "sha256": "c984f1a7476bbf5f531375c93fc7ff15ade45b74db11e699ce50d7e339877a4d"
     },
     {
       "path": "server/db/seed/contracts/authorization/catalog/studio/scope-compatibility.v1.json",
@@ -12851,17 +12856,17 @@
     {
       "path": "server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json",
       "artifactClass": "runtime",
-      "sha256": "d0e5a641904c0a8edf989934967a028c46db22562439fe75cbe96b4979314005"
+      "sha256": "8606c14eed1671c7b1cb778c63d9e150e457641ea6e6a0e214d64f5d443a80e4"
     },
     {
       "path": "server/db/seed/packs/authorization-v2/neon/seed-pack.v1.json",
       "artifactClass": "runtime",
-      "sha256": "efd7e9c93d32df500f74dff5b8d149ae59cea498cf4a5ebb2b21fb3eb6b204b0"
+      "sha256": "3cdcde692f2282f220dabc1164f83b5b2f6acefc8a2c334f6b014f3d42110aaa"
     },
     {
       "path": "server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json",
       "artifactClass": "runtime",
-      "sha256": "bc6a380702a3790b9b7b9f6cc5cf8c631e59632c01da5c1675a0180c99ddd9d8"
+      "sha256": "828c2159de67be1dc38d5c8c3540ecd39342bfb2094679042537c41aae5964f7"
     },
     {
       "path": "server/packages/adapters/ai-ollama/src/index.ts",
@@ -13506,7 +13511,7 @@
     {
       "path": "server/packages/platform/ai/src/atlas-routes.ts",
       "artifactClass": "route",
-      "sha256": "6f2b48f022da4cadc5ef3f4849fda5f7f20ef944e2b2b04e1da2cb36f8edf40b"
+      "sha256": "6e07b8103464d9a3b6606616f60c134ecf77e091e9f4b2a038de962fa75a7cbb"
     },
     {
       "path": "server/packages/platform/ai/src/atlas-surface-draft-routes.ts",
@@ -13982,6 +13987,11 @@
       "path": "server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts",
       "artifactClass": "test",
       "sha256": "5e868cab71608cc0fad84e818fe7046548cbe7d1e552aad0168677fec108369a"
+    },
+    {
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "sha256": "82a22bd264061ef39f54a91b146eb149851ee80bed0d5eaa0f3b6cc1bb7229f5"
     },
     {
       "path": "server/packages/platform/iam/src/external-worker-identity-intent.ts",
@@ -14932,6 +14942,11 @@
       "path": "tests/foundation/activity-center-interactions.test.tsx",
       "artifactClass": "test",
       "sha256": "b050b5f66520f501df311ea275800d2f8fc148adf4be4b70763e743f1c5e367b"
+    },
+    {
+      "path": "tests/foundation/atlas-answer.test.tsx",
+      "artifactClass": "test",
+      "sha256": "f96d8254ff57fef5e7f9539f94c5140292f1e80b48bf496d068e606822d054d9"
     },
     {
       "path": "tests/foundation/country-detail-read.test.ts",
@@ -34452,8 +34467,10 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16,
-        25
+        54,
+        121,
+        122,
+        123
       ]
     },
     {
@@ -36002,6 +36019,20 @@
     },
     {
       "field": "allowed",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        41,
+        74,
+        81,
+        87,
+        93,
+        95,
+        108
+      ]
+    },
+    {
+      "field": "allowed",
       "path": "server/packages/platform/iam/src/external-worker-identity-intent.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -37141,7 +37172,7 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        59
       ]
     },
     {
@@ -37448,6 +37479,14 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "authorizationScopes",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        46
       ]
     },
     {
@@ -39582,7 +39621,7 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        55
       ]
     },
     {
@@ -40304,6 +40343,15 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "denied",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        42,
+        96
       ]
     },
     {
@@ -45051,8 +45099,8 @@
       "artifactClass": "runtime",
       "lines": [
         138,
-        1328,
-        1329
+        1330,
+        1331
       ]
     },
     {
@@ -45145,8 +45193,8 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        21,
-        25
+        93,
+        121
       ]
     },
     {
@@ -48004,6 +48052,23 @@
     },
     {
       "field": "permissionCode",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        18,
+        21,
+        41,
+        49,
+        57,
+        70,
+        85,
+        96,
+        97,
+        98
+      ]
+    },
+    {
+      "field": "permissionCode",
       "path": "server/packages/platform/iam/src/identity-provisioning-service.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -50644,10 +50709,19 @@
       "artifactClass": "runtime",
       "lines": [
         120,
-        1278,
-        1279,
+        1280,
         1281,
-        1287
+        1283,
+        1289
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "packages/platform/ai/agent-ui/src/index.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        857,
+        861
       ]
     },
     {
@@ -50857,9 +50931,9 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16,
-        25,
-        51
+        46,
+        121,
+        237
       ]
     },
     {
@@ -51537,8 +51611,8 @@
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
       "lines": [
-        773,
-        941
+        787,
+        955
       ]
     },
     {
@@ -53016,6 +53090,15 @@
     },
     {
       "field": "permissions",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        33,
+        105
+      ]
+    },
+    {
+      "field": "permissions",
       "path": "server/packages/platform/iam/src/iam-routes.ts",
       "artifactClass": "route",
       "lines": [
@@ -53888,6 +53971,15 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "tests/foundation/atlas-answer.test.tsx",
+      "artifactClass": "test",
+      "lines": [
+        208,
+        322
       ]
     },
     {
@@ -55160,7 +55252,7 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        57
       ]
     },
     {
@@ -55480,6 +55572,15 @@
     },
     {
       "field": "planeExcluded",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        44,
+        98
+      ]
+    },
+    {
+      "field": "planeExcluded",
       "path": "server/packages/platform/iam/src/iam-service.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -55724,7 +55825,7 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        56
       ]
     },
     {
@@ -56046,6 +56147,15 @@
     },
     {
       "field": "planLocked",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        43,
+        97
+      ]
+    },
+    {
+      "field": "planLocked",
       "path": "server/packages/platform/iam/src/iam-service.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -56292,7 +56402,7 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        50
       ]
     },
     {
@@ -56533,6 +56643,14 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "principalFingerprint",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        38
       ]
     },
     {
@@ -57583,7 +57701,8 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        45,
+        51
       ]
     },
     {
@@ -58125,6 +58244,15 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "profileHash",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        30,
+        37
       ]
     },
     {
@@ -62771,9 +62899,9 @@
       "riskLevel": "medium",
       "path": "server/packages/platform/ai/src/atlas-routes.ts",
       "artifactClass": "route",
-      "line": 207,
+      "line": 471,
       "lines": [
-        207
+        471
       ]
     },
     {

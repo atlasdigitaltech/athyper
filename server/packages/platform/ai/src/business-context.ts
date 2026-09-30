@@ -46,7 +46,7 @@ export function createAtlasBusinessContextResolver(options: {
       const page = readAtlasBusinessContext(value);
       const deny = (): never => {
         throw new AtlasServiceError(
-          "PERMISSION_DENIED",
+          "BUSINESS_CONTEXT_UNAVAILABLE",
           "The requested Atlas business context is unavailable.",
         );
       };
@@ -61,13 +61,13 @@ export function createAtlasBusinessContextResolver(options: {
       )
         return deny();
       if (
-        descriptor.ai &&
-        (!descriptor.ai.enabled ||
-          !descriptor.ai.contextKinds.includes(page.kind))
+        !descriptor.ai?.enabled ||
+        !descriptor.ai.contextKinds.includes(page.kind)
       )
-        return deny();
-      if (!descriptor.ai)
-        return deny();
+        throw new AtlasServiceError(
+          "BUSINESS_CONTEXT_NOT_ENABLED",
+          "Atlas is not enabled for this published Entity context.",
+        );
       if (
         page.workContext?.networkAccountId &&
         !descriptor.ai?.insightProviders.some(
@@ -82,8 +82,8 @@ export function createAtlasBusinessContextResolver(options: {
             context,
             requestId: page.caseId,
           });
-        } catch {
-          return deny();
+        } catch (error) {
+          throwContextFailure(error);
         }
       }
       try {
@@ -204,10 +204,28 @@ export function createAtlasBusinessContextResolver(options: {
           error.code === "RECORD_LIST_SCOPE_REQUIRED"
         )
           throw new AtlasScopeSelectionRequiredError();
-        return deny();
+        throwContextFailure(error);
       }
     },
   };
+}
+
+/** Access failures stay opaque; dependency failures must not masquerade as missing scope. */
+function throwContextFailure(error: unknown): never {
+  if (error instanceof AtlasServiceError) throw error;
+  const status =
+    error && typeof error === "object" && "statusCode" in error
+      ? error.statusCode
+      : undefined;
+  if (status === 403 || status === 404)
+    throw new AtlasServiceError(
+      "BUSINESS_CONTEXT_UNAVAILABLE",
+      "The requested Atlas business context is unavailable.",
+    );
+  throw new AtlasServiceError(
+    "BUSINESS_CONTEXT_SERVICE_UNAVAILABLE",
+    "Atlas could not verify the Entity context.",
+  );
 }
 function fingerprint(scope: string, page: AtlasBusinessContextV1) {
   const { generationId: _, ...coordinates } = page;

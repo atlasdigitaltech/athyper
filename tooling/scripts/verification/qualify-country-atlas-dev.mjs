@@ -10,9 +10,14 @@ assert.match(
   /^[0-9a-f-]{36}$/i,
   "Supply the existing Country record UUID",
 );
+const plane = process.env.ATHYPER_ATLAS_PLANE ?? "neon";
+assert.ok(["neon", "studio", "mesh"].includes(plane), "Unknown plane");
+const origin = `https://${plane}.dev.athyper.test`;
+const recordLabel = process.env.ATHYPER_ATLAS_RECORD_LABEL ?? "Malaysia";
+const capability = process.env.ATHYPER_ATLAS_CAPABILITY;
 const state =
   process.env.ATHYPER_BROWSER_STATE ??
-  "tests/e2e/.auth/dev/neon/catl.admin.json";
+  `tests/e2e/.auth/dev/${plane}/catl.admin.json`;
 const out = process.argv[3]
   ? resolve(process.argv[3])
   : artifactDirectory("country-atlas");
@@ -25,22 +30,27 @@ const context = await browser.newContext({
 });
 const report = {
   entityCode: "country",
+  plane,
   recordId,
+  recordLabel,
+  atlasStepUpRequested: false,
   startedAt: new Date().toISOString(),
   passed: false,
   checks: [],
 };
+context.on("request", (request) => {
+  if (request.url().startsWith(origin + "/api/auth/step-up/"))
+    report.atlasStepUpRequested = true;
+});
 try {
-  const session = await context.request.get(
-    "https://neon.dev.athyper.test/api/auth/session",
-  );
+  const session = await context.request.get(`${origin}/api/auth/session`);
   assert.equal(
     (await session.json()).state,
     "authenticated",
     "DEV_SESSION_NOT_AUTHENTICATED",
   );
   const admissionResponse = await context.request.get(
-    "https://neon.dev.athyper.test/api/relay/atlas/admission",
+    `${origin}/api/relay/atlas/admission`,
   );
   const admission = await admissionResponse.json();
   report.admission = {
@@ -53,16 +63,14 @@ try {
   assert.equal(
     admission.chatAllowed,
     true,
-    "ATLAS_ADMISSION_DENIED: refresh the issuer-authenticated MFA session; do not weaken policy",
+    "ATLAS_ADMISSION_DENIED: check the current Atlas permission; ordinary authenticated sessions are supported",
   );
   assert.equal(admission.readToolsAllowed, true, "ATLAS_READ_TOOLS_DENIED");
   const page = await context.newPage();
-  await page.goto(
-    `https://neon.dev.athyper.test/app/entity/country/${recordId}`,
-  );
+  await page.goto(`${origin}/app/entity/country/${recordId}`);
   // Wait for the record-scoped composer context before creating a conversation.
   await page
-    .getByRole("heading", { name: "Malaysia", exact: true })
+    .getByRole("heading", { name: recordLabel, exact: true })
     .first()
     .waitFor();
   await page.getByRole("button", { name: "Atlas", exact: true }).click();
@@ -86,25 +94,26 @@ try {
       "entity_read_snapshots",
     ],
   ];
-  const snapshotsResponse = await context.request.get(
-    `https://neon.dev.athyper.test/api/relay/entity-runtime/country/records/${recordId}/activity/snapshots`,
-  );
-  assert.equal(snapshotsResponse.status(), 200);
-  const snapshots = await snapshotsResponse.json();
-  assert.ok(
-    snapshots.items?.length >= 2,
-    "Two authorized snapshots are required to qualify comparison",
-  );
-  if (snapshots.items?.length >= 2)
+  let snapshots = { items: [] };
+  if (!capability || capability === "entity_compare_snapshots") {
+    const snapshotsResponse = await context.request.get(
+      `${origin}/api/relay/entity-runtime/country/records/${recordId}/activity/snapshots`,
+    );
+    assert.equal(snapshotsResponse.status(), 200);
+    snapshots = await snapshotsResponse.json();
+    assert.ok(
+      snapshots.items?.length >= 2,
+      "Two authorized snapshots are required to qualify comparison",
+    );
     questions.push([
       `Compare snapshot ${snapshots.items[1].id} with snapshot ${snapshots.items[0].id} of this record. Report missing capture coverage honestly.`,
       "entity_compare_snapshots",
     ]);
+  }
   report.comparison = {
     availableSnapshots: snapshots.items?.length ?? 0,
     qualified: false,
   };
-  const capability = process.env.ATHYPER_ATLAS_CAPABILITY;
   const selected = capability
     ? questions.filter(([, expected]) => expected === capability)
     : questions;
@@ -181,9 +190,8 @@ try {
       .join("");
     assert.ok(answer.trim(), "Expected a non-empty answer");
     if (expected === "entity_read_record")
-      assert.match(
-        answer,
-        /Malaysia/,
+      assert.ok(
+        answer.includes(recordLabel),
         "Expected actual authorized Country details",
       );
     await workspace
@@ -197,7 +205,8 @@ try {
     writeFileSync(join(out, `${expected}-rendered.txt`), rendered, {
       mode: 0o600,
     });
-    if (expected === "entity_read_record") assert.match(rendered, /Malaysia/);
+    if (expected === "entity_read_record")
+      assert.ok(rendered.includes(recordLabel));
     if (expected === "entity_explain_fields") {
       assert.match(rendered, /read-only/);
       assert.match(rendered, /required/);
@@ -222,6 +231,11 @@ try {
     path: join(out, "country-atlas.png"),
     fullPage: true,
   });
+  assert.equal(
+    report.atlasStepUpRequested,
+    false,
+    "Atlas must use the existing authenticated session",
+  );
   report.passed = true;
 } finally {
   writeFileSync(join(out, "browser.json"), JSON.stringify(report, null, 2), {
