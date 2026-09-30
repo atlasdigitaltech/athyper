@@ -440,3 +440,20 @@ it("reuses MFA inside the 24-hour window and caps it at the original authenticat
   assert.equal(stored.elevationExpiresAt, authenticatedAt + 24 * 60 * 60_000);
   assert.ok(stored.elevationExpiresAt! <= stored.absoluteExpiresAt);
 });
+
+ it("session inspection repairs stale CSRF cookies without bypassing unsafe-request verification", async()=>{
+  const {handlers,cookie}=await authenticate();
+  for(const suffix of ["", "; __Host-athyper-csrf=stale"]){
+   const result=await handlers.session(new Request("https://neon.example/api/auth/session",{headers:{cookie:cookie+suffix}}));
+   assert.equal(result.status,200);
+   assert.deepEqual(result.headers.getSetCookie(),["__Host-athyper-csrf=csrf-safe; Path=/; SameSite=Strict; Secure"]);
+   assert.equal(result.headers.get("cache-control"),"no-store");
+  }
+  const valid=await handlers.session(new Request("https://neon.example/api/auth/session",{headers:{cookie:cookie+"; __Host-athyper-csrf=csrf-safe"}}));
+  assert.equal(valid.headers.has("set-cookie"),false);
+  const invalid=await handlers.touch(new Request("https://neon.example/api/auth/session/touch",{method:"POST",headers:{cookie,origin:"https://neon.example","x-csrf-token":"stale"}}));
+  assert.equal(invalid.status,403);
+  const anonymous=await handlers.session(new Request("https://neon.example/api/auth/session",{headers:{cookie:"__Host-athyper-session=unknown"}}));
+  assert.equal(anonymous.headers.has("set-cookie"),false);
+  assert.equal((await anonymous.json()).state,"anonymous");
+ });

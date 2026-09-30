@@ -9,7 +9,10 @@ const {
   rmSync,
 } = require("node:fs");
 const { parseArgs } = require("node:util");
-const { startCaptureStepUp } = require("./auth-capture-step-up.cjs");
+const {
+  startCaptureStepUp,
+  atlasAdmissionAllowed,
+} = require("./auth-capture-step-up.cjs");
 
 let capturePhase = "arguments";
 async function main() {
@@ -80,18 +83,26 @@ async function main() {
                 "Wrong actor or tenant. Existing saved state was not replaced.",
               );
             }
-            if (!elevated || s.assurance === "elevated") return s;
+            if (!elevated) return s;
+            if (
+              s.assurance === "elevated" &&
+              (await atlasAdmissionAllowed(context, origin))
+            )
+              return s;
           }
         }
         await new Promise((r) => setTimeout(r, 1000));
       }
       throw Error(
-        "Timed out waiting for authenticated elevated assurance. Existing saved state was not replaced.",
+        "Timed out waiting for authenticated elevated assurance and Atlas admission. Existing saved state was not replaced.",
       );
     }
     capturePhase = "session-verification";
     const session = await waitSession(false);
-    if (session.assurance !== "elevated") {
+    if (
+      session.assurance !== "elevated" ||
+      !(await atlasAdmissionAllowed(context, origin))
+    ) {
       capturePhase = "interactive-step-up";
       await startCaptureStepUp(context, page, origin);
     }
@@ -102,7 +113,7 @@ async function main() {
     chmodSync(pending, 0o600);
     renameSync(pending, output);
     console.log(
-      `Verified ${plane}/${actor}: ${tenant.label}, elevated. Saved session successfully.`,
+      `Verified ${plane}/${actor}: ${tenant.label}, elevated with Atlas chat and read tools admitted. Saved session successfully.`,
     );
   } finally {
     rmSync(pending, { force: true });

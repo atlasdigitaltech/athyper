@@ -120,6 +120,7 @@ export function parseSharedReferenceProduct(
       "sections",
     ],
     [
+      "ai",
       "runtimeBindings",
       "navigation",
       "summaryView",
@@ -196,6 +197,9 @@ export function parseSharedReferenceProduct(
           sections.map((section) => section.key),
         );
   const definition: SharedReferenceDefinition = {
+    ...(row.ai === undefined
+      ? {}
+      : { ai: structuredClone(row.ai) as SharedReferenceDefinition["ai"] }),
     entityCode: text(row.entityCode, true),
     title: title.label,
     ...(title.localizedLabel ? { localizedTitle: title.localizedLabel } : {}),

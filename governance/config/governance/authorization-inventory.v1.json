@@ -38,15 +38,15 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 5189,
-    "authorizationFiles": 1229,
+    "filesScanned": 5213,
+    "authorizationFiles": 1234,
     "registeredObjects": 470,
-    "objectReferences": 1176,
+    "objectReferences": 1147,
     "writerReferences": 127,
     "securitySymbolReferences": 99,
-    "contractFieldReferences": 1885,
+    "contractFieldReferences": 1924,
     "permissionDefinitions": 89,
-    "permissionUses": 588,
+    "permissionUses": 590,
     "routes": 31,
     "keycloakMappings": 145,
     "derivedDatabaseObjects": 330,
@@ -477,7 +477,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_as_non_granting_scope_source",
       "definitionCount": 2,
-      "readerCount": 51,
+      "readerCount": 50,
       "writerCount": 8,
       "executionCount": 0,
       "files": [
@@ -519,7 +519,6 @@
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/reviewed-slices.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/studio-neon-organization-boundary.v1.json",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "tooling/scripts/local-dev/bp-provider-sql.integration.test.mts",
         "tooling/scripts/verification/fixtures/partner-document-reference.sql",
@@ -548,7 +547,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_as_non_granting_scope_source",
       "definitionCount": 1,
-      "readerCount": 25,
+      "readerCount": 24,
       "writerCount": 3,
       "executionCount": 0,
       "files": [
@@ -576,7 +575,6 @@
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/reviewed-slices.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/studio-neon-organization-boundary.v1.json",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts"
       ]
     },
@@ -593,7 +591,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_as_non_granting_scope_source",
       "definitionCount": 2,
-      "readerCount": 32,
+      "readerCount": 31,
       "writerCount": 5,
       "executionCount": 0,
       "files": [
@@ -625,7 +623,6 @@
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/reviewed-slices.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/studio-neon-organization-boundary.v1.json",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "tooling/scripts/local-dev/bp-provider-sql.integration.test.mts",
         "tooling/scripts/verification/setup-local-master-data-authority.mjs",
@@ -687,7 +684,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_non_authorizing",
       "definitionCount": 1,
-      "readerCount": 33,
+      "readerCount": 30,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -720,10 +717,7 @@
         "server/db/prisma/schema.neon.prisma",
         "server/db/prisma/schema.studio.prisma",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
-        "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json"
       ]
     },
     {
@@ -739,7 +733,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_non_authorizing",
       "definitionCount": 2,
-      "readerCount": 28,
+      "readerCount": 25,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -770,9 +764,6 @@
         "server/db/prisma/schema.studio.prisma",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/platform/workflow/src/work-item-eligibility-sql.ts",
         "server/packages/services/records/src/__tests__/standard-views.postgres.test.ts"
       ]
@@ -791,7 +782,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_non_authorizing",
       "definitionCount": 1,
-      "readerCount": 27,
+      "readerCount": 24,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -821,10 +812,7 @@
         "server/db/prisma/schema.neon.prisma",
         "server/db/prisma/schema.studio.prisma",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
-        "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json"
       ]
     },
     {
@@ -1084,7 +1072,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 3,
-      "readerCount": 265,
+      "readerCount": 262,
       "writerCount": 43,
       "executionCount": 0,
       "files": [
@@ -1274,9 +1262,6 @@
         "server/db/seed/contracts/authorization/control/cross-plane-suspension-control.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "server/packages/adapters/experience-postgres/src/localization-all-plane.postgres.test.ts",
@@ -1388,7 +1373,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 1,
-      "readerCount": 54,
+      "readerCount": 51,
       "writerCount": 10,
       "executionCount": 0,
       "files": [
@@ -1439,9 +1424,6 @@
         "server/db/scripts/tests/integration/external-worker-iam-cross-plane.mjs",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "server/packages/platform/iam/src/kysely-identity-saga.ts",
         "tooling/scripts/iam/verify-identity-first.ts",
@@ -1465,7 +1447,7 @@
       "sourceOfTruth": true,
       "disposition": "remove_duplicate_idp_fields",
       "definitionCount": 1,
-      "readerCount": 33,
+      "readerCount": 30,
       "writerCount": 3,
       "executionCount": 0,
       "files": [
@@ -1501,9 +1483,6 @@
         "server/db/scripts/operations/entity-onboarding/verify-dev-owner-access.cjs",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "tooling/scripts/verification/qualify-principal-dev.mjs"
       ]
@@ -1522,7 +1501,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 4,
-      "readerCount": 171,
+      "readerCount": 168,
       "writerCount": 25,
       "executionCount": 0,
       "files": [
@@ -1667,9 +1646,6 @@
         "server/db/seed/contracts/authorization/control/cross-plane-suspension-control.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
         "server/packages/adapters/experience-postgres/src/localization-all-plane.postgres.test.ts",
@@ -2300,7 +2276,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_mesh_only",
       "definitionCount": 2,
-      "readerCount": 32,
+      "readerCount": 31,
       "writerCount": 12,
       "executionCount": 0,
       "files": [
@@ -2336,7 +2312,6 @@
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/reviewed-slices.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/studio-mesh-network-boundary.v1.json",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts"
       ]
     },
@@ -3043,7 +3018,7 @@
       "sourceOfTruth": true,
       "disposition": "keep_non_authorizing",
       "definitionCount": 1,
-      "readerCount": 38,
+      "readerCount": 37,
       "writerCount": 9,
       "executionCount": 0,
       "files": [
@@ -3077,7 +3052,6 @@
         "server/db/scripts/tests/integration/db-review/run.mjs",
         "server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json",
         "server/db/seed/contracts/authorization/inventory/mesh/reviewed-slices.v1.json",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
         "server/packages/contracts/records/src/ports.ts",
         "server/packages/planes/mesh/src/network-relationship-import.test.ts",
         "server/packages/planes/mesh/src/network-relationship-import.ts",
@@ -3997,7 +3971,7 @@
       "sourceOfTruth": false,
       "disposition": "immutable_studio_release_provenance_not_runtime_authority",
       "definitionCount": 2,
-      "readerCount": 5,
+      "readerCount": 4,
       "writerCount": 3,
       "executionCount": 0,
       "files": [
@@ -4006,8 +3980,7 @@
         "server/db/ddl/planes/studio/metadata/13_authorization_successor.sql",
         "server/db/prisma/schema.studio.prisma",
         "server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql",
-        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts"
+        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql"
       ]
     },
     {
@@ -4023,7 +3996,7 @@
       "sourceOfTruth": false,
       "disposition": "immutable_hash_pinned_studio_publication_input_not_runtime_authority",
       "definitionCount": 2,
-      "readerCount": 8,
+      "readerCount": 7,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -4032,7 +4005,6 @@
         "server/db/prisma/schema.studio.prisma",
         "server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql",
         "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
         "server/packages/planes/studio/meta-entity-authoring/src/authorization-successor-publication.ts"
       ]
     },
@@ -4094,7 +4066,7 @@
       "sourceOfTruth": false,
       "disposition": "keep_bounded_by_new_evaluator",
       "definitionCount": 0,
-      "readerCount": 5,
+      "readerCount": 4,
       "writerCount": 0,
       "executionCount": 0,
       "files": [
@@ -4102,8 +4074,7 @@
         "governance/config/governance/authorization-data-disposition-policy.v1.json",
         "server/db/ddl/planes/studio/ai/06_indexes.sql",
         "server/db/ddl/planes/studio/ai/10_rls.sql",
-        "server/db/prisma/schema.studio.prisma",
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts"
+        "server/db/prisma/schema.studio.prisma"
       ]
     },
     {
@@ -10560,7 +10531,12 @@
     {
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
-      "sha256": "66d4ff6307374131ad4f67165ee5dc81c9a7df1f5b958d0dea6c86fadb93c688"
+      "sha256": "4c7f2f04d55823980b7e5459b9d43b9f1eed435f5835bf4c3a4e7884ed3cd6bf"
+    },
+    {
+      "path": "packages/platform/ai/agent-ui/src/index.ts",
+      "artifactClass": "runtime",
+      "sha256": "16161346a038610e3dd887a0d01cdb60c553094fedb2d05e2d9cc669fe34f53f"
     },
     {
       "path": "packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx",
@@ -10605,7 +10581,7 @@
     {
       "path": "packages/platform/iam/auth-bff/src/index.ts",
       "artifactClass": "runtime",
-      "sha256": "5d53381b14aee4a8c9eb950d0d616ad67c0f8ffad85568dbc9af630e3a352c6c"
+      "sha256": "723441b95bc5d309ad3e4adfa02c02e4e0b1591686b1bfbe13ee9c1b57fbe2a4"
     },
     {
       "path": "packages/platform/iam/identity-gate/src/workspace-showcase-data.ts",
@@ -10745,7 +10721,7 @@
     {
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
-      "sha256": "44e0b109449b040c17e831bcc665afdfc52a6cd9941f0344c0a4c1ceb62de824"
+      "sha256": "9ac54cbc1a2d7baef3d4a68acebf19ca16eb2eb4db35251182826b81e86cce81"
     },
     {
       "path": "server/apps/platform-host/src/composition/__tests__/authorization-management-api.test.ts",
@@ -10840,7 +10816,12 @@
     {
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "sha256": "23bd9cbe82787ff793bff1d382210aaa5caf5b25f8ac49c30d9f8351c13c1f05"
+      "sha256": "3c56b444dbd6b8a84a0d3f5ef6681e224776f6bbe08950ef7c976e44e05bfc0d"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "sha256": "22e5bc0d3eaeb5aca2936bed2d5642b722f87ef0096fb10b89b274d75124700b"
     },
     {
       "path": "server/apps/platform-host/src/composition/shared/collaboration/__tests__/collaboration-section-providers.test.ts",
@@ -12045,7 +12026,7 @@
     {
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
-      "sha256": "9550f9fb8d9d16b239de15c35b10f7fbc67f2468f921922ac84364dd8f195930"
+      "sha256": "e7a29f802c03b896c10547078899fb5ff11eaac5ec2e6a8df11a3a685e7e43f9"
     },
     {
       "path": "server/db/prisma/schema.mesh.prisma",
@@ -12285,7 +12266,7 @@
     {
       "path": "server/db/scripts/operations/publication/prepare-dev-entity-successor.ts",
       "artifactClass": "tool",
-      "sha256": "65ca802a1a4121c48358028113419d349c35a42fc2e1d4f2e7a43b42b7b72982"
+      "sha256": "c91ea62cd92fa744d428264d3fa716af1108cd5318daaaafa291598b6cbb0897"
     },
     {
       "path": "server/db/scripts/operations/publication/provision-dev-trust.mjs",
@@ -12765,7 +12746,7 @@
     {
       "path": "server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json",
       "artifactClass": "runtime",
-      "sha256": "ba9eb7f2dc34d86acd31a84c3ca4ea3987fb3651c5138517719ca4c345bdeeaa"
+      "sha256": "ef6991e471ab4bce5c5cefc6ad29e00d04554c444e734d41f7585a6a735c063c"
     },
     {
       "path": "server/db/seed/contracts/authorization/catalog/mesh/scope-compatibility.v1.json",
@@ -12775,7 +12756,7 @@
     {
       "path": "server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json",
       "artifactClass": "runtime",
-      "sha256": "e32ea83426a64f48ea6b23256a07e8f02b682567e75cafe0d09f70a15ef74ea1"
+      "sha256": "91be49effec4035905a73a769ff96d553218112891460c3b91383450a76b742b"
     },
     {
       "path": "server/db/seed/contracts/authorization/catalog/neon/scope-compatibility.v1.json",
@@ -12785,7 +12766,7 @@
     {
       "path": "server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json",
       "artifactClass": "runtime",
-      "sha256": "637e22ee00eb8b3cf27ff141e2e541bb548a9457ac37e1f745095abe681a4d60"
+      "sha256": "c984f1a7476bbf5f531375c93fc7ff15ade45b74db11e699ce50d7e339877a4d"
     },
     {
       "path": "server/db/seed/contracts/authorization/catalog/studio/scope-compatibility.v1.json",
@@ -12880,37 +12861,22 @@
     {
       "path": "server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json",
       "artifactClass": "runtime",
-      "sha256": "d0e5a641904c0a8edf989934967a028c46db22562439fe75cbe96b4979314005"
+      "sha256": "8606c14eed1671c7b1cb778c63d9e150e457641ea6e6a0e214d64f5d443a80e4"
     },
     {
       "path": "server/db/seed/packs/authorization-v2/neon/seed-pack.v1.json",
       "artifactClass": "runtime",
-      "sha256": "efd7e9c93d32df500f74dff5b8d149ae59cea498cf4a5ebb2b21fb3eb6b204b0"
+      "sha256": "3cdcde692f2282f220dabc1164f83b5b2f6acefc8a2c334f6b014f3d42110aaa"
     },
     {
       "path": "server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json",
       "artifactClass": "runtime",
-      "sha256": "bc6a380702a3790b9b7b9f6cc5cf8c631e59632c01da5c1675a0180c99ddd9d8"
+      "sha256": "828c2159de67be1dc38d5c8c3540ecd39342bfb2094679042537c41aae5964f7"
     },
     {
       "path": "server/packages/adapters/ai-ollama/src/index.ts",
       "artifactClass": "runtime",
       "sha256": "9f8f37b39fbfab779f420bdd219d0b10cd07ba73d21faa920300733c307fa576"
-    },
-    {
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "sha256": "54b1f7c8d043bd08038b945477d2b57e879ceb7d0226500b8be5e4288a1d1198"
-    },
-    {
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "sha256": "3571724c10ef5f12d6b4d56c91acd824a0438839239d90e69903ab7cf85d471e"
-    },
-    {
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "sha256": "9789d5765b8fe5822772c678028ae35c5c80909a62b46177bd3dc4191360cb7a"
     },
     {
       "path": "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts",
@@ -13040,7 +13006,7 @@
     {
       "path": "server/packages/contracts/metadata/src/descriptors.ts",
       "artifactClass": "runtime",
-      "sha256": "5cf244935dbc2eff12021b60e127a76676082b9a0b47acebbd9d601760128c8e"
+      "sha256": "75dae08168a397f8bb8e198fdf414c7601e48c4f6bd8a8b2edc8b2ba9023170f"
     },
     {
       "path": "server/packages/contracts/metadata/src/entity-authorization.ts",
@@ -13275,7 +13241,7 @@
     {
       "path": "server/packages/planes/studio/meta-entity-authoring/src/__tests__/product.test.ts",
       "artifactClass": "test",
-      "sha256": "b98154d46c6a157a5815ea711893696e77ae05ef01482ea9e98b9c71b47c0652"
+      "sha256": "d7673dd4c9597a2509a5356b6a2c06834e0b6df2171d7854f61c4f1c69020da1"
     },
     {
       "path": "server/packages/planes/studio/meta-entity-authoring/src/__tests__/publication-workflow.test.ts",
@@ -13303,9 +13269,14 @@
       "sha256": "4b6a6d0fd5cccdd1afcc19b2bb90a02d73b481d22d04f688a8549b52429773f8"
     },
     {
+      "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/country-ai.test.ts",
+      "artifactClass": "test",
+      "sha256": "02809ebecd0862cbc321831f68ec66b3e9652cbc5a936eb19ff7cd242a9d4ca4"
+    },
+    {
       "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/graph-builder.ts",
       "artifactClass": "runtime",
-      "sha256": "af6e4c7e41f78049312fbf04b62ac92c84958cbd5283286566a84234831968cd"
+      "sha256": "7cb61a013e1df25317b539fed11db0e89dd91e23cf1c685d81409c13852b4980"
     },
     {
       "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/reference-batch.test.ts",
@@ -13530,7 +13501,7 @@
     {
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
-      "sha256": "d762a56bde47dda2a0dfaaad0def00b5b64edcf67e8dc3c6d2b94660c619a6bd"
+      "sha256": "0ded575fb86f61dae00774819a6956f9d60e76330f2f57bd5f98829c8010c760"
     },
     {
       "path": "server/packages/platform/ai/src/atlas-admin-routes.ts",
@@ -13545,7 +13516,7 @@
     {
       "path": "server/packages/platform/ai/src/atlas-routes.ts",
       "artifactClass": "route",
-      "sha256": "6f2b48f022da4cadc5ef3f4849fda5f7f20ef944e2b2b04e1da2cb36f8edf40b"
+      "sha256": "6e07b8103464d9a3b6606616f60c134ecf77e091e9f4b2a038de962fa75a7cbb"
     },
     {
       "path": "server/packages/platform/ai/src/atlas-surface-draft-routes.ts",
@@ -13563,9 +13534,24 @@
       "sha256": "d489ec7745f14fa7570d07a96334f2c5d6929429171cf39acaf9c0b630b73777"
     },
     {
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "sha256": "8a583ea1c1aec81016a074bd6123ba61da54092c0ad8cdc7cec7d7c040b97a86"
+    },
+    {
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "sha256": "516d01f11f23a582f1909e107b56a5b00edc07376084a844a5761fbb82638388"
+    },
+    {
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "sha256": "7b6cf1f10f1f06e97ed41e26dab2d992f2b26621ced3b24c09aeaa5b8dd9795e"
+    },
+    {
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
-      "sha256": "1402fa7f8d611ff198b17db8528c3527048a1f065184b24955b52a1612c28c71"
+      "sha256": "27e9a29072c47a8116221aeb233aa75a10b07a42db9450174ae3cbc011b75110"
     },
     {
       "path": "server/packages/platform/ai/src/entity-section-tool.ts",
@@ -13595,7 +13581,7 @@
     {
       "path": "server/packages/platform/ai/src/local-generation-composition.ts",
       "artifactClass": "runtime",
-      "sha256": "2d7b1f4dc97e15d7ebf6748597c5155e5868a48cd82b882798fe0ad46380a43b"
+      "sha256": "6e62ec2f071aee4ebbd9ee7927236e6f5bf55f6286e839102bfb00cd402f24ea"
     },
     {
       "path": "server/packages/platform/ai/src/message-lineage.ts",
@@ -13610,7 +13596,7 @@
     {
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
-      "sha256": "45eae97cfecf89c7197b0cf665f8e0bb9147da9707d740517023793a02ad3d34"
+      "sha256": "6c153f222ebae70c004beb2044a6dab308beaba512fec186b35e3f0bd2c428c9"
     },
     {
       "path": "server/packages/platform/ai/src/surface-draft-generation.ts",
@@ -14018,6 +14004,11 @@
       "sha256": "5e868cab71608cc0fad84e818fe7046548cbe7d1e552aad0168677fec108369a"
     },
     {
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "sha256": "82a22bd264061ef39f54a91b146eb149851ee80bed0d5eaa0f3b6cc1bb7229f5"
+    },
+    {
       "path": "server/packages/platform/iam/src/external-worker-identity-intent.ts",
       "artifactClass": "runtime",
       "sha256": "b6bee5d9203120267142af6712ef5b69fecd34fa10765ca17ffc66f09efb45c7"
@@ -14130,12 +14121,12 @@
     {
       "path": "server/packages/platform/metadata/src/descriptor-parser.test.ts",
       "artifactClass": "test",
-      "sha256": "6fb4f5570e047119c8d9686ff93297c6744f542a8fe3fa59d64a708a51936bf2"
+      "sha256": "8445d424cfaa847630183d1c2b162cd4a09a5a201d8ebbbc2ea34c630eafb2f7"
     },
     {
       "path": "server/packages/platform/metadata/src/descriptor-parser.ts",
       "artifactClass": "runtime",
-      "sha256": "3abdea22278de786560e58e00333c82ba6c1c8d45e2195c41845769a61b43bcb"
+      "sha256": "0313908f7c686346d92a2b245c1a8a4bd803452a982798a94c836bcbc9825f89"
     },
     {
       "path": "server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts",
@@ -14155,7 +14146,7 @@
     {
       "path": "server/packages/platform/metadata/src/native-runtime-projection.ts",
       "artifactClass": "runtime",
-      "sha256": "1e37f3e502bec24ec2915e50087122b6946967977961f82c94f008ec0e813c23"
+      "sha256": "2306b09cbe11bdcabac7607bb85d67f9b196c3fb5480249e409c39cc8f4740a4"
     },
     {
       "path": "server/packages/platform/notifications/src/__tests__/durable-notification-jobs.test.ts",
@@ -14880,7 +14871,7 @@
     {
       "path": "tests/contracts/auth-session-foundation.test.ts",
       "artifactClass": "test",
-      "sha256": "f4cccf9c85f3eaf5a25f405f18e3e8e9463c97ee9757ec9e53653e602e8f43b7"
+      "sha256": "146df791a5c7823d45848ba19fe875845de7ee0b0cb0e45ec80b15c69b2021e9"
     },
     {
       "path": "tests/contracts/entity-list-contract.test.ts",
@@ -14966,6 +14957,11 @@
       "path": "tests/foundation/activity-center-interactions.test.tsx",
       "artifactClass": "test",
       "sha256": "b050b5f66520f501df311ea275800d2f8fc148adf4be4b70763e743f1c5e367b"
+    },
+    {
+      "path": "tests/foundation/atlas-answer.test.tsx",
+      "artifactClass": "test",
+      "sha256": "37484ed4a93bcc6691b846b15dfe31903f3a7221a28cebc2d41d727d61e449fa"
     },
     {
       "path": "tests/foundation/country-detail-read.test.ts",
@@ -17484,17 +17480,6 @@
     {
       "objectId": "context.company_code",
       "qualifiedName": "master.company_code",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13388,
-      "lines": [
-        13388
-      ]
-    },
-    {
-      "objectId": "context.company_code",
-      "qualifiedName": "master.company_code",
       "path": "server/packages/adapters/experience-postgres/src/index.ts",
       "artifactClass": "runtime",
       "access": "read",
@@ -18096,17 +18081,6 @@
     {
       "objectId": "context.legal_entity",
       "qualifiedName": "master.legal_entity",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13566,
-      "lines": [
-        13566
-      ]
-    },
-    {
-      "objectId": "context.legal_entity",
-      "qualifiedName": "master.legal_entity",
       "path": "server/packages/adapters/experience-postgres/src/index.ts",
       "artifactClass": "runtime",
       "access": "read",
@@ -18566,17 +18540,6 @@
       "line": 103,
       "lines": [
         103
-      ]
-    },
-    {
-      "objectId": "context.operating_organization",
-      "qualifiedName": "master.operating_organization",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13617,
-      "lines": [
-        13617
       ]
     },
     {
@@ -19083,39 +19046,6 @@
       ]
     },
     {
-      "objectId": "context.team",
-      "qualifiedName": "master.team",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7207,
-      "lines": [
-        7207
-      ]
-    },
-    {
-      "objectId": "context.team",
-      "qualifiedName": "master.team",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6432,
-      "lines": [
-        6432
-      ]
-    },
-    {
-      "objectId": "context.team",
-      "qualifiedName": "master.team",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13812,
-      "lines": [
-        13812
-      ]
-    },
-    {
       "objectId": "context.team_member",
       "qualifiedName": "master.team_member",
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
@@ -19461,39 +19391,6 @@
       "lines": [
         6373,
         7971
-      ]
-    },
-    {
-      "objectId": "context.team_member",
-      "qualifiedName": "master.team_member",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7208,
-      "lines": [
-        7208
-      ]
-    },
-    {
-      "objectId": "context.team_member",
-      "qualifiedName": "master.team_member",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6433,
-      "lines": [
-        6433
-      ]
-    },
-    {
-      "objectId": "context.team_member",
-      "qualifiedName": "master.team_member",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13813,
-      "lines": [
-        13813
       ]
     },
     {
@@ -19855,39 +19752,6 @@
       ]
     },
     {
-      "objectId": "context.tenant_relationship",
-      "qualifiedName": "master.tenant_relationship",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7217,
-      "lines": [
-        7217
-      ]
-    },
-    {
-      "objectId": "context.tenant_relationship",
-      "qualifiedName": "master.tenant_relationship",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6442,
-      "lines": [
-        6442
-      ]
-    },
-    {
-      "objectId": "context.tenant_relationship",
-      "qualifiedName": "master.tenant_relationship",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13822,
-      "lines": [
-        13822
-      ]
-    },
-    {
       "objectId": "identity.legal_entity_binding",
       "qualifiedName": "master.legal_entity_identity_binding",
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
@@ -20161,11 +20025,11 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 3272,
+      "line": 3278,
       "lines": [
-        3272,
-        5943,
-        6107
+        3278,
+        5974,
+        6138
       ]
     },
     {
@@ -22807,9 +22671,9 @@
       "path": "server/db/scripts/operations/publication/prepare-dev-entity-successor.ts",
       "artifactClass": "tool",
       "access": "read",
-      "line": 161,
+      "line": 169,
       "lines": [
-        161
+        169
       ]
     },
     {
@@ -23475,39 +23339,6 @@
       "lines": [
         5765,
         7946
-      ]
-    },
-    {
-      "objectId": "identity.principal",
-      "qualifiedName": "master.principal",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7155,
-      "lines": [
-        7155
-      ]
-    },
-    {
-      "objectId": "identity.principal",
-      "qualifiedName": "master.principal",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6379,
-      "lines": [
-        6379
-      ]
-    },
-    {
-      "objectId": "identity.principal",
-      "qualifiedName": "master.principal",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13687,
-      "lines": [
-        13687
       ]
     },
     {
@@ -25451,39 +25282,6 @@
     {
       "objectId": "identity.principal_binding",
       "qualifiedName": "master.principal_identity_binding",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7157,
-      "lines": [
-        7157
-      ]
-    },
-    {
-      "objectId": "identity.principal_binding",
-      "qualifiedName": "master.principal_identity_binding",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6381,
-      "lines": [
-        6381
-      ]
-    },
-    {
-      "objectId": "identity.principal_binding",
-      "qualifiedName": "master.principal_identity_binding",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13689,
-      "lines": [
-        13689
-      ]
-    },
-    {
-      "objectId": "identity.principal_binding",
-      "qualifiedName": "master.principal_identity_binding",
       "path": "server/packages/adapters/experience-postgres/src/index.ts",
       "artifactClass": "runtime",
       "access": "read",
@@ -26036,39 +25834,6 @@
       "lines": [
         5848,
         7949
-      ]
-    },
-    {
-      "objectId": "identity.principal_profile",
-      "qualifiedName": "master.principal_profile",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7159,
-      "lines": [
-        7159
-      ]
-    },
-    {
-      "objectId": "identity.principal_profile",
-      "qualifiedName": "master.principal_profile",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6383,
-      "lines": [
-        6383
-      ]
-    },
-    {
-      "objectId": "identity.principal_profile",
-      "qualifiedName": "master.principal_profile",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13691,
-      "lines": [
-        13691
       ]
     },
     {
@@ -28467,39 +28232,6 @@
     {
       "objectId": "identity.tenant",
       "qualifiedName": "master.tenant",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7212,
-      "lines": [
-        7212
-      ]
-    },
-    {
-      "objectId": "identity.tenant",
-      "qualifiedName": "master.tenant",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6437,
-      "lines": [
-        6437
-      ]
-    },
-    {
-      "objectId": "identity.tenant",
-      "qualifiedName": "master.tenant",
-      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 13817,
-      "lines": [
-        13817
-      ]
-    },
-    {
-      "objectId": "identity.tenant",
-      "qualifiedName": "master.tenant",
       "path": "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts",
       "artifactClass": "test",
       "access": "read",
@@ -30627,17 +30359,6 @@
     {
       "objectId": "mesh.account",
       "qualifiedName": "mesh.network_account",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6334,
-      "lines": [
-        6334
-      ]
-    },
-    {
-      "objectId": "mesh.account",
-      "qualifiedName": "mesh.network_account",
       "path": "server/packages/adapters/experience-postgres/src/index.ts",
       "artifactClass": "runtime",
       "access": "read",
@@ -31413,17 +31134,6 @@
         33,
         34,
         50
-      ]
-    },
-    {
-      "objectId": "mesh.relationship",
-      "qualifiedName": "mesh.network_relationship",
-      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6347,
-      "lines": [
-        6347
       ]
     },
     {
@@ -32685,17 +32395,6 @@
       ]
     },
     {
-      "objectId": "studio.publication.entity_authorization_successor_link",
-      "qualifiedName": "publication.entity_authorization_successor_link",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7009,
-      "lines": [
-        7009
-      ]
-    },
-    {
       "objectId": "studio.publication.entity_authorization_successor_payload",
       "qualifiedName": "publication.entity_authorization_successor_payload",
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
@@ -32806,17 +32505,6 @@
       "line": 28,
       "lines": [
         28
-      ]
-    },
-    {
-      "objectId": "studio.publication.entity_authorization_successor_payload",
-      "qualifiedName": "publication.entity_authorization_successor_payload",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 7010,
-      "lines": [
-        7010
       ]
     },
     {
@@ -33012,17 +32700,6 @@
       "line": 753,
       "lines": [
         753
-      ]
-    },
-    {
-      "objectId": "support.session",
-      "qualifiedName": "ai.atlas_support_session",
-      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-      "artifactClass": "generated",
-      "access": "read",
-      "line": 6904,
-      "lines": [
-        6904
       ]
     },
     {
@@ -33266,8 +32943,8 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        5825,
-        6067
+        5856,
+        6098
       ]
     },
     {
@@ -33315,7 +32992,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4654
+        4662
       ]
     },
     {
@@ -33352,7 +33029,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4923
+        4945
       ]
     },
     {
@@ -33381,10 +33058,12 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        31,
-        34,
-        38,
-        41
+        60,
+        90,
+        129,
+        130,
+        196,
+        197
       ]
     },
     {
@@ -33393,7 +33072,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        600
+        606
       ]
     },
     {
@@ -33421,13 +33100,13 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2229,
-        2521,
-        2540,
-        2603,
-        4154,
-        4397,
-        4420
+        2235,
+        2527,
+        2546,
+        2609,
+        4160,
+        4403,
+        4426
       ]
     },
     {
@@ -33447,9 +33126,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2893,
-        4397,
-        4420
+        2899,
+        4403,
+        4426
       ]
     },
     {
@@ -33573,10 +33252,10 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2030,
-        2096,
-        2111,
-        2154
+        2036,
+        2102,
+        2117,
+        2160
       ]
     },
     {
@@ -33615,7 +33294,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3600
+        3606
       ]
     },
     {
@@ -33662,7 +33341,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6066
+        6097
       ]
     },
     {
@@ -33710,7 +33389,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4135
+        4141
       ]
     },
     {
@@ -33779,9 +33458,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3294,
-        3372,
-        3474
+        3300,
+        3378,
+        3480
       ]
     },
     {
@@ -33790,7 +33469,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2252
+        2258
       ]
     },
     {
@@ -33835,9 +33514,9 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        2111,
-        2191,
-        5044
+        2117,
+        2197,
+        5066
       ]
     },
     {
@@ -33962,7 +33641,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        3470
+        3476
       ]
     },
     {
@@ -34107,7 +33786,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        6162
+        6193
       ]
     },
     {
@@ -34805,8 +34484,10 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16,
-        25
+        54,
+        121,
+        122,
+        123
       ]
     },
     {
@@ -34869,14 +34550,21 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1223,
-        3072,
-        4655,
-        4658,
-        4659,
-        4793,
-        4797,
-        4932
+        1229,
+        3078,
+        4663,
+        4666,
+        4667,
+        4819,
+        4954
+      ]
+    },
+    {
+      "field": "allowed",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        111
       ]
     },
     {
@@ -35762,6 +35450,33 @@
     },
     {
       "field": "allowed",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        14
+      ]
+    },
+    {
+      "field": "allowed",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        16,
+        103,
+        104
+      ]
+    },
+    {
+      "field": "allowed",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        71,
+        102
+      ]
+    },
+    {
+      "field": "allowed",
       "path": "server/packages/platform/ai/src/experience-configuration.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -35786,7 +35501,9 @@
       "path": "server/packages/platform/ai/src/local-generation-composition.ts",
       "artifactClass": "runtime",
       "lines": [
-        38
+        148,
+        149,
+        151
       ]
     },
     {
@@ -36344,6 +36061,20 @@
       "lines": [
         6,
         16
+      ]
+    },
+    {
+      "field": "allowed",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        41,
+        74,
+        81,
+        87,
+        93,
+        95,
+        108
       ]
     },
     {
@@ -37487,7 +37218,7 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        59
       ]
     },
     {
@@ -37504,6 +37235,14 @@
       "artifactClass": "test",
       "lines": [
         54
+      ]
+    },
+    {
+      "field": "authorizationScopes",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        116
       ]
     },
     {
@@ -37794,6 +37533,14 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "authorizationScopes",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        46
       ]
     },
     {
@@ -39789,7 +39536,7 @@
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        114
+        115
       ]
     },
     {
@@ -39835,7 +39582,7 @@
       "path": "packages/platform/iam/auth-bff/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        351
+        363
       ]
     },
     {
@@ -39928,7 +39675,7 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        55
       ]
     },
     {
@@ -39953,7 +39700,16 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4800
+        4822
+      ]
+    },
+    {
+      "field": "denied",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        112,
+        175
       ]
     },
     {
@@ -40416,9 +40172,9 @@
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
       "lines": [
-        320,
-        756,
-        1272
+        343,
+        813,
+        1427
       ]
     },
     {
@@ -40431,10 +40187,39 @@
     },
     {
       "field": "denied",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        209
+      ]
+    },
+    {
+      "field": "denied",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        99,
+        102,
+        103
+      ]
+    },
+    {
+      "field": "denied",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        49,
+        58,
+        73,
+        557
+      ]
+    },
+    {
+      "field": "denied",
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        29
+        128
       ]
     },
     {
@@ -40642,6 +40427,15 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "denied",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        42,
+        96
       ]
     },
     {
@@ -45388,9 +45182,9 @@
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        138,
-        1328,
-        1329
+        139,
+        1333,
+        1334
       ]
     },
     {
@@ -45483,8 +45277,8 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        21,
-        25
+        93,
+        121
       ]
     },
     {
@@ -45582,11 +45376,19 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        3070,
-        3121,
-        4861,
-        4929,
-        5065
+        3076,
+        3127,
+        4883,
+        4951,
+        5087
+      ]
+    },
+    {
+      "field": "permissionCode",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        80
       ]
     },
     {
@@ -47367,9 +47169,9 @@
       "path": "server/packages/contracts/metadata/src/descriptors.ts",
       "artifactClass": "runtime",
       "lines": [
-        258,
-        264,
-        274
+        275,
+        281,
+        291
       ]
     },
     {
@@ -47635,7 +47437,7 @@
       "path": "server/packages/planes/studio/meta-entity-authoring/src/__tests__/product.test.ts",
       "artifactClass": "test",
       "lines": [
-        270
+        271
       ]
     },
     {
@@ -47660,12 +47462,20 @@
     },
     {
       "field": "permissionCode",
+      "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/country-ai.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        35
+      ]
+    },
+    {
+      "field": "permissionCode",
       "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/graph-builder.ts",
       "artifactClass": "runtime",
       "lines": [
-        80,
-        186,
-        239
+        84,
+        190,
+        243
       ]
     },
     {
@@ -47854,10 +47664,37 @@
     },
     {
       "field": "permissionCode",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        22
+      ]
+    },
+    {
+      "field": "permissionCode",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        77,
+        101,
+        102
+      ]
+    },
+    {
+      "field": "permissionCode",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        63,
+        99
+      ]
+    },
+    {
+      "field": "permissionCode",
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "lines": [
-        15
+        32
       ]
     },
     {
@@ -47880,6 +47717,14 @@
         278,
         284,
         516
+      ]
+    },
+    {
+      "field": "permissionCode",
+      "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        181
       ]
     },
     {
@@ -48326,6 +48171,23 @@
     },
     {
       "field": "permissionCode",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        18,
+        21,
+        41,
+        49,
+        57,
+        70,
+        85,
+        96,
+        97,
+        98
+      ]
+    },
+    {
+      "field": "permissionCode",
       "path": "server/packages/platform/iam/src/identity-provisioning-service.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -48490,7 +48352,7 @@
       "path": "server/packages/platform/metadata/src/descriptor-parser.test.ts",
       "artifactClass": "test",
       "lines": [
-        7
+        30
       ]
     },
     {
@@ -48498,10 +48360,15 @@
       "path": "server/packages/platform/metadata/src/descriptor-parser.ts",
       "artifactClass": "runtime",
       "lines": [
-        33,
-        44,
-        48,
-        111
+        75,
+        100,
+        101,
+        102,
+        126,
+        127,
+        334,
+        335,
+        336
       ]
     },
     {
@@ -48517,10 +48384,10 @@
       "path": "server/packages/platform/metadata/src/native-runtime-projection.ts",
       "artifactClass": "runtime",
       "lines": [
-        168,
-        226,
-        230,
-        248
+        177,
+        235,
+        239,
+        257
       ]
     },
     {
@@ -49908,7 +49775,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1223
+        1229
       ]
     },
     {
@@ -50965,11 +50832,20 @@
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        120,
-        1278,
-        1279,
-        1281,
-        1287
+        121,
+        1283,
+        1284,
+        1286,
+        1292
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "packages/platform/ai/agent-ui/src/index.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        861,
+        865
       ]
     },
     {
@@ -51179,9 +51055,9 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16,
-        25,
-        51
+        46,
+        121,
+        237
       ]
     },
     {
@@ -51315,24 +51191,35 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        1120,
-        1149,
-        1157,
-        1169,
-        1223,
-        2089,
-        2092,
-        2093,
-        3286,
-        3289,
-        3290,
-        4655,
-        4658,
-        4659,
-        4797,
-        4800,
-        4803,
-        4806
+        1126,
+        1155,
+        1163,
+        1175,
+        1229,
+        2095,
+        2098,
+        2099,
+        3292,
+        3295,
+        3296,
+        4663,
+        4666,
+        4667,
+        4819,
+        4822,
+        4825,
+        4828
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        103,
+        175,
+        181,
+        191
       ]
     },
     {
@@ -51859,8 +51746,8 @@
       "path": "server/db/migrations/inventory.json",
       "artifactClass": "runtime",
       "lines": [
-        773,
-        941
+        787,
+        955
       ]
     },
     {
@@ -52925,6 +52812,34 @@
     },
     {
       "field": "permissions",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        12,
+        13,
+        207,
+        208
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        14,
+        15
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        49
+      ]
+    },
+    {
+      "field": "permissions",
       "path": "server/packages/platform/ai/src/experience-configuration.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -52932,6 +52847,14 @@
         20,
         29,
         87
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        172
       ]
     },
     {
@@ -53327,6 +53250,15 @@
     },
     {
       "field": "permissions",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        33,
+        105
+      ]
+    },
+    {
+      "field": "permissions",
       "path": "server/packages/platform/iam/src/iam-routes.ts",
       "artifactClass": "route",
       "lines": [
@@ -53431,7 +53363,7 @@
       "path": "server/packages/platform/metadata/src/descriptor-parser.ts",
       "artifactClass": "runtime",
       "lines": [
-        47
+        121
       ]
     },
     {
@@ -53447,8 +53379,8 @@
       "path": "server/packages/platform/metadata/src/native-runtime-projection.ts",
       "artifactClass": "runtime",
       "lines": [
-        161,
-        225
+        170,
+        234
       ]
     },
     {
@@ -54199,6 +54131,16 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "tests/foundation/atlas-answer.test.tsx",
+      "artifactClass": "test",
+      "lines": [
+        208,
+        322,
+        352
       ]
     },
     {
@@ -55471,7 +55413,7 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        57
       ]
     },
     {
@@ -55495,7 +55437,15 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4806
+        4828
+      ]
+    },
+    {
+      "field": "planeExcluded",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        114
       ]
     },
     {
@@ -55791,6 +55741,15 @@
     },
     {
       "field": "planeExcluded",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        44,
+        98
+      ]
+    },
+    {
+      "field": "planeExcluded",
       "path": "server/packages/platform/iam/src/iam-service.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -56035,7 +55994,7 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        56
       ]
     },
     {
@@ -56059,7 +56018,15 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4803
+        4825
+      ]
+    },
+    {
+      "field": "planLocked",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        113
       ]
     },
     {
@@ -56357,6 +56324,15 @@
     },
     {
       "field": "planLocked",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        43,
+        97
+      ]
+    },
+    {
+      "field": "planLocked",
       "path": "server/packages/platform/iam/src/iam-service.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -56603,7 +56579,15 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        50
+      ]
+    },
+    {
+      "field": "principalFingerprint",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        108
       ]
     },
     {
@@ -56844,6 +56828,14 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "principalFingerprint",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        38
       ]
     },
     {
@@ -57894,7 +57886,8 @@
       "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
       "artifactClass": "test",
       "lines": [
-        16
+        45,
+        51
       ]
     },
     {
@@ -57910,9 +57903,18 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        2093,
-        3290,
-        4894
+        2099,
+        3296,
+        4916
+      ]
+    },
+    {
+      "field": "profileHash",
+      "path": "server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        100,
+        107
       ]
     },
     {
@@ -58258,10 +58260,40 @@
     },
     {
       "field": "profileHash",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        53
+      ]
+    },
+    {
+      "field": "profileHash",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        125,
+        227,
+        412,
+        462,
+        521
+      ]
+    },
+    {
+      "field": "profileHash",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        416,
+        555,
+        589
+      ]
+    },
+    {
+      "field": "profileHash",
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "lines": [
-        58
+        204
       ]
     },
     {
@@ -58428,6 +58460,15 @@
       "artifactClass": "test",
       "lines": [
         6
+      ]
+    },
+    {
+      "field": "profileHash",
+      "path": "server/packages/platform/iam/src/atlas-session-policy.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        30,
+        37
       ]
     },
     {
@@ -59072,10 +59113,18 @@
     },
     {
       "field": "requiredPermissions",
+      "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        126
+      ]
+    },
+    {
+      "field": "requiredPermissions",
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
       "artifactClass": "runtime",
       "lines": [
-        38
+        92
       ]
     },
     {
@@ -59091,7 +59140,7 @@
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        46
+        250
       ]
     },
     {
@@ -60954,9 +61003,9 @@
       "riskLevel": "low",
       "path": "server/packages/contracts/metadata/src/descriptors.ts",
       "artifactClass": "runtime",
-      "line": 299,
+      "line": 316,
       "lines": [
-        299
+        316
       ]
     },
     {
@@ -61014,11 +61063,33 @@
     {
       "code": "common.platform.reference.view",
       "riskLevel": "low",
+      "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/country-ai.test.ts",
+      "artifactClass": "test",
+      "line": 35,
+      "lines": [
+        35
+      ]
+    },
+    {
+      "code": "common.platform.reference.view",
+      "riskLevel": "low",
       "path": "server/packages/planes/studio/meta-entity-authoring/src/authoring/reference-batch.test.ts",
       "artifactClass": "test",
       "line": 33,
       "lines": [
         33
+      ]
+    },
+    {
+      "code": "common.platform.reference.view",
+      "riskLevel": "low",
+      "path": "server/packages/platform/ai/src/entity-context-tools.test.ts",
+      "artifactClass": "test",
+      "line": 14,
+      "lines": [
+        14,
+        22,
+        209
       ]
     },
     {
@@ -63052,9 +63123,9 @@
       "riskLevel": "medium",
       "path": "server/packages/platform/ai/src/atlas-routes.ts",
       "artifactClass": "route",
-      "line": 207,
+      "line": 471,
       "lines": [
-        207
+        471
       ]
     },
     {
@@ -68343,9 +68414,9 @@
       "riskLevel": "high",
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "line": 4656,
+      "line": 4664,
       "lines": [
-        4656
+        4664
       ]
     },
     {

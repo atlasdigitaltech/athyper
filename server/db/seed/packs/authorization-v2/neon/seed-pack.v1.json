@@ -250,11 +250,11 @@
         "operationCode": "use",
         "operationKind": "mutation",
         "riskTier": "medium",
-        "requiresMfa": true,
+        "requiresMfa": false,
         "requiresSod": false,
         "shareable": false,
         "delegable": false,
-        "definitionSha256": "c393e8db1e65b216c8c07045fb7bc909910ab6d4098131100fbf46ab0c9c882a",
+        "definitionSha256": "ffd9a73c49fdefb90ae23489662b0f7aee3ec5ce081767c457b4359bfd434908",
         "permissionKind": "capability",
         "moduleCode": "fnd"
       },

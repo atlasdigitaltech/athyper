@@ -1,3 +1,4 @@
+import { createAtlasEntityContextReader } from "./shared/atlas-entity-context.js";
 import { createPublishedOwnerAdministrationAuthorizer } from "./shared/entity-runtime/published-owner-administration.js";
 import { createCapabilityRegistration } from "../kernel/capability-registration.js";
 import { createRegistrationPlan } from "../kernel/registration-plan.js";
@@ -347,6 +348,11 @@ import {
   AtlasResponseFeedbackService,
   KyselyAtlasResponseFeedbackStore,
   createAtlasEntityRecordTool,
+  createAtlasEntityLookupTools,
+  createAtlasEntityContextTools,
+  entityContextTool,
+  entityLookupTool,
+  type AtlasEntityContextReader,
   AtlasSurfaceDraftGenerator,
   AtlasThreadService,
   AtlasToolRegistry,
@@ -4630,6 +4636,7 @@ export function registerServices(
     metadataDatabases,
     transactions,
     iam,
+    createAtlasEntityContextReader(entityCollaboration, entityActivity),
   );
   if (config) registerVerification(container, config);
 }
@@ -4641,6 +4648,7 @@ export function registerAtlas(
   databases: Partial<Record<PlaneKey, Kysely<Record<string, never>>>>,
   transactions: PlaneTransactionCoordinator<RecordTransaction>,
   iam: NonNullable<Container["platform"]["iam"]>,
+  entityContextReader?: AtlasEntityContextReader,
 ): void {
   if (Object.keys(databases).length === 0) return;
   const ledger = new KyselyAtlasToolProposalStore({ transactions, databases });
@@ -4694,6 +4702,9 @@ export function registerAtlas(
     return;
   }
   const atlasMetadata = {
+    listEntityCodes: (context: VerifiedRequestContext) =>
+      container.platform.metadata?.listEntityCodes?.(context) ??
+      Promise.resolve([]),
     getEntityDescriptor: (
       context: VerifiedRequestContext,
       entityCode: string,
@@ -4775,8 +4786,17 @@ export function registerAtlas(
         : undefined;
     const localRegistry = new AtlasToolRegistry([
       createAtlasEntityRecordTool(atlasMetadata),
+      ...(container.platform.authorizer
+        ? createAtlasEntityLookupTools(
+            atlasMetadata,
+            container.platform.authorizer,
+          )
+        : []),
+      ...(entityContextReader
+        ? createAtlasEntityContextTools(atlasMetadata, entityContextReader)
+        : []),
     ]);
-    // Local registry contains only the generic read tool; mutations require an
+    // Local registry contains only generic Entity read tools; mutations require an
     // explicitly configured tool registry and authority.
     const localAvailable = (access: "read" | "mutation" = "read") =>
       Boolean(
@@ -4792,7 +4812,9 @@ export function registerAtlas(
             async authorize({ context, manifest }) {
               const allowed =
                 (context.planeKey === "neon" ||
-                  manifest.toolCode === "entity_read_record") &&
+                  manifest.toolCode === "entity_read_record" ||
+                  entityContextTool(manifest.toolCode) ||
+                  entityLookupTool(manifest.toolCode)) &&
                 localAvailable(manifest.access) &&
                 context.permissions.allowed.includes(
                   `${context.planeKey}.ai.agent.use`,
@@ -4823,8 +4845,8 @@ export function registerAtlas(
               return createAtlasRecordDataGateway({
                 metadata,
                 records: records.queries,
-                maxRows: 1,
-                maxResponseBytes: 2048,
+                maxRows: 3,
+                maxResponseBytes: 8192,
                 allowProjectedContentRevision: true,
                 // Records already enforces field permissions and collection scope. This only narrows its projection.
                 fieldSecurity: {
@@ -5107,6 +5129,15 @@ export function registerAtlas(
   for (const binding of dependencies.bindings) providers.resolve(binding);
   const registry = new AtlasToolRegistry([
     createAtlasEntityRecordTool(atlasMetadata),
+    ...(container.platform.authorizer
+      ? createAtlasEntityLookupTools(
+          atlasMetadata,
+          container.platform.authorizer,
+        )
+      : []),
+    ...(entityContextReader
+      ? createAtlasEntityContextTools(atlasMetadata, entityContextReader)
+      : []),
     ...dependencies.registeredTools,
   ]);
   const tools = new AtlasToolService({

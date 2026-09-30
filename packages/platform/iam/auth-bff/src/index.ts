@@ -237,7 +237,19 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
     const destination = new URL("/sign-in?reason=signed-out-everywhere", config.postLogoutRedirectUri ?? request.url);
     return new Response(null, { status: 303, headers: { location: destination.toString(), "cache-control": "no-store" } });
   });
-  const session = run(async (request) => json(toSafe(await readSession(request))));
+  const session = run(async (request) => {
+    const stored = await readSession(request);
+    const response = json(toSafe(stored));
+    const rawId = readCookie(request.headers.get("cookie"), cookieName);
+    // Repair stale/missing CSRF state only for a validated, current session.
+    // This never changes session identity or retries an unsafe request.
+    if (stored && rawId && config.deriveCsrfToken) {
+      const token = config.deriveCsrfToken(rawId);
+      if (readCookie(request.headers.get("cookie"), csrfCookieName) !== token)
+        response.headers.append("set-cookie", csrfCookie(csrfCookieName, token, config.production));
+    }
+    return response;
+  });
   const contexts = run(async (request) => { const current = await readSession(request); if (!current) throw new AuthFlowError("auth.unauthenticated", 401, "No session"); return json({ schemaVersion: 1, plane: config.plane, contexts: current.availableContexts ?? [] }); });
   const touch = run(async (request) => { const rawId = readCookie(request.headers.get("cookie"), cookieName); if (!rawId) throw new AuthFlowError("auth.unauthenticated", 401, "No session"); if (config.deriveCsrfToken) validateUnsafeSessionRequest(request, new URL(config.redirectUri).origin, csrfExpectations(config, rawId)); const id = hashOpaqueSessionId(rawId); if (!await currentById(id)) throw new AuthFlowError("auth.unauthenticated", 401, "Session expired"); return json(toSafe(await config.store.touch(binding, id, idleTtl))); });
   const context = run(async (request) => {

@@ -91,3 +91,55 @@ test("missing CSRF cookie fails before making a request", async () => {
     /CSRF cookie unavailable/,
   );
 });
+
+for (const [label, status, body, expected] of [
+  [
+    "runtime denial despite elevated BFF",
+    200,
+    { chatAllowed: false, readToolsAllowed: false },
+    false,
+  ],
+  [
+    "chat without read admission",
+    200,
+    { chatAllowed: true, readToolsAllowed: false },
+    false,
+  ],
+  ["unauthenticated", 401, {}, false],
+  ["missing admission flags", 200, {}, false],
+  [
+    "admitted chat and reads",
+    200,
+    { chatAllowed: true, readToolsAllowed: true },
+    true,
+  ],
+]) {
+  test(`Atlas capture checks runtime admission: ${label}`, async () => {
+    let disposed = false;
+    const context = {
+      request: {
+        get: async (url) => {
+          assert.equal(
+            url,
+            "https://neon.dev.athyper.test/api/relay/atlas/admission",
+          );
+          return {
+            ok: () => status === 200,
+            json: async () => body,
+            dispose: async () => {
+              disposed = true;
+            },
+          };
+        },
+      },
+    };
+    assert.equal(
+      await capture.atlasAdmissionAllowed(
+        context,
+        "https://neon.dev.athyper.test",
+      ),
+      expected,
+    );
+    assert.equal(disposed, true);
+  });
+}

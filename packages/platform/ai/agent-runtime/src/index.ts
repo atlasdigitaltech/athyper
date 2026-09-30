@@ -29,6 +29,7 @@ export {
 } from "@athyper/contract-platform-ai/business-context";
 import {
   createHttpClient,
+  readBrowserCsrfToken,
   createOperation,
   encodePathSegment,
   type HttpClient,
@@ -477,7 +478,8 @@ const experiencePublishOperation = createOperation<
 export function createAtlasAnswerClient(
   options: AtlasAnswerClientOptions = {},
 ): AtlasAnswerClient {
-  const client = options.client ?? createHttpClient({ csrfToken: browserCsrf });
+  const client =
+    options.client ?? createHttpClient({ csrfToken: readBrowserCsrfToken });
   const createId = options.createId ?? (() => globalThis.crypto.randomUUID());
   return Object.freeze({
     proposeVocabulary: async (body: AtlasVocabularyCorrection) => {
@@ -557,7 +559,9 @@ export function createAtlasAnswerClient(
       if (!admission.chatAllowed || !admission.persistenceAllowed)
         throw new AtlasClientError(
           "ATLAS_NOT_ADMITTED",
-          "Atlas answers are not enabled for this account or plane.",
+          admission.reasonCode === "permission_denied"
+            ? "Your account is not authorized to use Atlas in this workspace."
+            : "Atlas answers are not enabled in this workspace.",
         );
       const publicModelId =
           answerOptions.agent?.publicModelId ??
@@ -663,7 +667,8 @@ export function createAtlasAnswerClient(
 export function createAtlasExperienceAdminClient(
   options: AtlasAnswerClientOptions = {},
 ): AtlasExperienceAdminClient {
-  const client = options.client ?? createHttpClient({ csrfToken: browserCsrf }),
+  const client =
+      options.client ?? createHttpClient({ csrfToken: readBrowserCsrfToken }),
     createId = options.createId ?? (() => globalThis.crypto.randomUUID());
   return Object.freeze({
     draft: (signal?: AbortSignal) =>
@@ -1421,23 +1426,6 @@ function enumValue<const Values extends readonly string[]>(
     throw new TypeError(`Atlas ${label} is invalid`);
   return value as Values[number];
 }
-function browserCsrf(): string | undefined {
-  if (typeof document === "undefined") return undefined;
-  const values = document.cookie.split(";").map((part) => part.trim());
-  return (
-    values
-      .find((part) => part.startsWith("__Host-athyper-csrf="))
-      ?.split("=")
-      .slice(1)
-      .join("=") ??
-    values
-      .find((part) => part.startsWith("athyper-csrf="))
-      ?.split("=")
-      .slice(1)
-      .join("=")
-  );
-}
-
 // Token boundaries may contain only spaces, newlines, or an empty string.
 function streamText(value: unknown): string {
   if (typeof value !== "string")

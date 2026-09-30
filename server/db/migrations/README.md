@@ -8,7 +8,7 @@ Maintain final tables, constraints, indexes, functions, triggers, RLS, grants an
 reference seeds in their owning canonical DDL files. Do not replay foundation DDL
 on populated DEV/QA databases or reset their migration receipts.
 
-The current 95-entry inventory records:
+The current 96-entry inventory records:
 
 | Disposition                     | Count | Purpose                                              |
 | ------------------------------- | ----: | ---------------------------------------------------- |
@@ -17,7 +17,7 @@ The current 95-entry inventory records:
 | Operational upgrade             |    11 | Explicit installation; not automatic startup replay. |
 | Historical fixture              |     6 | Staged test schemas.                                 |
 | Operational repair              |     2 | Explicit reference-permission repairs.               |
-| Automatic post-baseline upgrade |    25 | Reviewed entries in applicable plane manifests.      |
+| Automatic post-baseline upgrade |    26 | Reviewed entries in applicable plane manifests.      |
 
 Compiled runtime publication source and capability-profile authoring upgrades remain
 operational because they are absent from the automatic manifests. Their original
@@ -48,3 +48,8 @@ Existing databases needing pre-baseline changes require a reviewed legacy upgrad
 plan. A successful automatic upgrade sequence is not proof that an existing database
 has every canonical schema capability. The archive is not a standalone alphabetical upgrade sequence.
 See [consolidation and recovery](../../../docs/runbooks/sql-ddl-consolidation.md).
+
+The Atlas authenticated-session upgrade changes only the plane-local
+`<plane>.ai.agent.use` MFA requirement. It preserves grants, permission identity,
+status, login policy, and underlying operation requirements. Fresh databases use
+the matching canonical catalogs and compiled authorization seed packs.

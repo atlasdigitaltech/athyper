@@ -3,12 +3,12 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `1ced6c94f9db03f5129141d6f1d6306096b39254851a8ec8517bf1348431e9fc`
-Files scanned / authorization-bearing: 5189 / 1229
+Files scanned / authorization-bearing: 5213 / 1234
 Registered authorization objects: 470
-Aggregated object references: 1176
+Aggregated object references: 1147
 Writer references: 127
-Contract/UI field references: 1885
-Permission definitions / uses: 89 / 588
+Contract/UI field references: 1924
+Permission definitions / uses: 89 / 590
 Authorization-bearing routes: 31
 Keycloak mappers: 145
 Canonical capture sources: 0 ()
@@ -59,14 +59,14 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | catalog.subscription_plan_version | `shared.subscription_plan_version` | neon_and_mesh_legacy | entitlement_catalog | commercial-platform | neon | keep_neon | 0 | 2 | 0 |
 | catalog.workspace | `shared.workspace` | neon_and_mesh_legacy | entitlement_catalog | platform-catalog | studio, neon, mesh | keep_neon_reference_only_in_mesh | 0 | 3 | 1 |
 | compiled.entity | `snapshot.entity_compiled` | neon | authorization_projection | metadata-platform | studio, neon | regenerate | 0 | 1 | 0 |
-| context.company_code | `master.company_code` | neon | authorization_scope | finance-platform | neon | keep_as_non_granting_scope_source | 2 | 51 | 8 |
-| context.legal_entity | `master.legal_entity` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 25 | 3 |
-| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 2 | 32 | 5 |
+| context.company_code | `master.company_code` | neon | authorization_scope | finance-platform | neon | keep_as_non_granting_scope_source | 2 | 50 | 8 |
+| context.legal_entity | `master.legal_entity` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 24 | 3 |
+| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 2 | 31 | 5 |
 | context.operating_organization_company | `master.operating_organization_company` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_membership | 0 | 1 | 0 |
 | context.principal_relationship | `master.principal_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 0 | 2 | 0 |
-| context.team | `master.team` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 33 | 0 |
-| context.team_member | `master.team_member` | neon | context_only | organization-platform | neon | keep_non_authorizing | 2 | 28 | 0 |
-| context.tenant_relationship | `master.tenant_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 1 | 27 | 0 |
+| context.team | `master.team` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 30 | 0 |
+| context.team_member | `master.team_member` | neon | context_only | organization-platform | neon | keep_non_authorizing | 2 | 25 | 0 |
+| context.tenant_relationship | `master.tenant_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 1 | 24 | 0 |
 | function.access_grant_status_changed | `master.trg_access_grant_status_changed` | neon | authorization_change_capture | platform-iam | neon | remove_with_legacy_access_grant | 0 | 0 | 0 |
 | function.bump_auth_epoch | `master.fn_bump_auth_epoch` | neon | authorization_change_capture | platform-iam | studio, neon | replace_with_durable_change_watermark | 0 | 0 | 0 |
 | function.check_permission | `master.check_permission` | neon | legacy_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
@@ -80,10 +80,10 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function.validate_delegation_permissions | `master.trg_validate_delegation_permissions` | neon | legacy_authorization_invariant | platform-iam | neon | remove_with_legacy_delegation | 0 | 0 | 0 |
 | function.visibility_scope | `master.get_effective_visibility_scope` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
 | identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 2 | 0 |
-| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 3 | 265 | 43 |
-| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 54 | 10 |
-| identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 33 | 3 |
-| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 4 | 171 | 25 |
+| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 3 | 262 | 43 |
+| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 51 | 10 |
+| identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 30 | 3 |
+| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 4 | 168 | 25 |
 | identity.tenant_domain | `master.tenant_identity_domain` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
 | identity.tenant_provider | `master.tenant_identity_provider` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
 | legacy.access_grant | `master.access_grant` | neon | legacy_authorization | platform-iam | studio, neon, mesh | split_into_role_scope_override_acl | 0 | 2 | 0 |
@@ -110,7 +110,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | legacy.tenant_feature_entitlement | `master.tenant_feature_entitlement` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 3 | 0 |
 | legacy.tenant_module_subscription | `master.tenant_module_subscription` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 4 | 0 |
 | legacy.tenant_permission_override | `master.tenant_permission_override` | neon | entitlement_override | commercial-platform | neon | replace_with_feature_entitlement_override | 0 | 2 | 0 |
-| mesh.account | `mesh.network_account` | mesh | plane_membership_context | mesh-platform | mesh | keep_mesh_only | 2 | 32 | 12 |
+| mesh.account | `mesh.network_account` | mesh | plane_membership_context | mesh-platform | mesh | keep_mesh_only | 2 | 31 | 12 |
 | mesh.account_grant | `mesh.account_grant` | mesh | legacy_authorization | mesh-platform | mesh | replace_with_mesh_local_role_group_model | 0 | 2 | 0 |
 | mesh.attachment_acl | `mesh.attachment_acl` | mesh | record_acl | mesh-platform | mesh | normalize_mesh_locally | 0 | 1 | 0 |
 | mesh.audit.access_decision | `mesh_log.access_decision_log` | mesh | decision_evidence | mesh-platform | mesh | retain | 0 | 0 | 0 |
@@ -148,7 +148,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | mesh.function.grant_revoke | `mesh.fn_account_grant_revoke_hook` | mesh | authorization_change_hook | mesh-platform | mesh | replace_with_mesh_local_change_capture | 0 | 0 | 0 |
 | mesh.identity.binding | `mesh.principal_identity_binding` | mesh | identity_binding | mesh-platform | mesh | keep_mesh_only | 0 | 2 | 0 |
 | mesh.identity.principal | `mesh.principal` | mesh | identity | mesh-platform | mesh | keep_mesh_only | 0 | 2 | 0 |
-| mesh.relationship | `mesh.network_relationship` | mesh | context_only | mesh-platform | mesh | keep_non_authorizing | 1 | 38 | 9 |
+| mesh.relationship | `mesh.network_relationship` | mesh | context_only | mesh-platform | mesh | keep_non_authorizing | 1 | 37 | 9 |
 | mesh.rollout.feature_flag | `mesh_control.feature_flag` | mesh | rollout_control | mesh-platform | mesh | keep_mesh_only | 0 | 0 | 0 |
 | metadata.entity | `control.entity` | neon | authorization_metadata | metadata-platform | studio, neon | keep_canonical_entity_identity | 0 | 2 | 0 |
 | metadata.entity_action_rule | `control.entity_action_rule` | neon | authorization_metadata | metadata-platform | studio, neon | replace_permission_code_with_permission_id | 0 | 1 | 0 |
@@ -192,11 +192,11 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | migration.telemetry_view | `event.v_authorization_legacy_write_telemetry` | neon_and_mesh_migration | migration_telemetry | platform-iam | studio, neon, mesh | retain_through_post_cutover_observation | 0 | 0 | 0 |
 | migration.writer_registry | `control.authorization_writer_registry` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_through_authorization_cutover_and_observation | 0 | 1 | 0 |
 | rollout.feature_flag | `control.feature_flag` | neon | rollout_control | platform-runtime | studio, neon | keep | 0 | 1 | 0 |
-| studio.publication.entity_authorization_successor_link | `publication.entity_authorization_successor_link` | studio | authorization_publication | publication | studio | immutable_studio_release_provenance_not_runtime_authority | 2 | 5 | 3 |
-| studio.publication.entity_authorization_successor_payload | `publication.entity_authorization_successor_payload` | studio | authorization_publication | publication | studio | immutable_hash_pinned_studio_publication_input_not_runtime_authority | 2 | 8 | 0 |
+| studio.publication.entity_authorization_successor_link | `publication.entity_authorization_successor_link` | studio | authorization_publication | publication | studio | immutable_studio_release_provenance_not_runtime_authority | 2 | 4 | 3 |
+| studio.publication.entity_authorization_successor_payload | `publication.entity_authorization_successor_payload` | studio | authorization_publication | publication | studio | immutable_hash_pinned_studio_publication_input_not_runtime_authority | 2 | 7 | 0 |
 | studio.publication.fn_authorization_successor_compilation_source | `publication.fn_authorization_successor_compilation_source` | studio | authorization_publication | publication | studio | studio_compilation_reader_for_hash_pinned_approved_release | 2 | 0 | 0 |
 | studio.publication.fn_prepare_authorization_successor | `publication.fn_prepare_authorization_successor` | studio | authorization_publication | publication | studio | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | 3 | 0 | 0 |
-| support.session | `ai.atlas_support_session` | neon | delegated_support_access | ai-platform | studio | keep_bounded_by_new_evaluator | 0 | 5 | 0 |
+| support.session | `ai.atlas_support_session` | neon | delegated_support_access | ai-platform | studio | keep_bounded_by_new_evaluator | 0 | 4 | 0 |
 | support.session_audit | `ai.atlas_support_session_audit` | neon | audit | ai-platform | studio | retain | 0 | 0 | 0 |
 | wave1.mesh.function.mesh_control.authorization_v2_is_effective | `mesh_control.authorization_v2_is_effective` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.function.mesh_control.authorization_v2_owner_aligned | `mesh_control.authorization_v2_owner_aligned` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
@@ -850,25 +850,25 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 
 | Symbol | Classification | Artifact class | Path | Lines |
 |---|---|---|---|---|
-| `authorizeActivation` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 5825, 6067 |
+| `authorizeActivation` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 5856, 6098 |
 | `authorizeActivation` | reviewed | test | server/apps/platform-host/src/composition/shared/publication/tenant-orchestrator.test.ts | 108 |
 | `authorizeActivation` | reviewed | test | server/apps/platform-host/src/development/runtime-publication.test.ts | 146, 195 |
 | `authorizeActivation` | reviewed | runtime | server/apps/platform-host/src/development/runtime-publication.ts | 275 |
 | `authorizeActivation` | reviewed | runtime | server/packages/services/publication/src/publication-orchestrator.ts | 92, 179, 181 |
-| `authorizeAdmin` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4654 |
+| `authorizeAdmin` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4662 |
 | `authorizeAdmin` | reviewed | test | server/packages/platform/ai/src/__tests__/atlas-experience-runtime-review.test.ts | 13 |
 | `authorizeAdmin` | reviewed | test | server/packages/platform/ai/src/__tests__/experience-routes.test.ts | 6 |
 | `authorizeAdmin` | reviewed | route | server/packages/platform/ai/src/atlas-experience-routes.ts | 8, 10 |
-| `authorizeAdmission` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4923 |
+| `authorizeAdmission` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4945 |
 | `authorizeAdmission` | reviewed | test | server/packages/platform/ai/src/__tests__/local-generation.test.ts | 31 |
 | `authorizeAdmission` | reviewed | runtime | server/packages/platform/ai/src/conversation-composition.ts | 20, 25, 80 |
-| `authorizeAdmission` | reviewed | runtime | server/packages/platform/ai/src/local-generation-composition.ts | 31, 34, 38, 41 |
-| `authorizeArtifact` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 600 |
+| `authorizeAdmission` | reviewed | runtime | server/packages/platform/ai/src/local-generation-composition.ts | 60, 90, 129, 130, 196, 197 |
+| `authorizeArtifact` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 606 |
 | `authorizeArtifact` | reviewed | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 169 |
 | `authorizeArtifact` | reviewed | runtime | server/packages/services/documents/src/document-service.ts | 19, 102 |
-| `authorizeAttachmentCapability` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2229, 2521, 2540, 2603, 4154, 4397, 4420 |
+| `authorizeAttachmentCapability` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2235, 2527, 2546, 2609, 4160, 4403, 4426 |
 | `authorizeBatch` | reviewed | runtime | server/packages/services/records/src/authorized-aggregate.ts | 36, 87, 112 |
-| `authorizeCapability` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2893, 4397, 4420 |
+| `authorizeCapability` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2899, 4403, 4426 |
 | `authorizeCapability` | reviewed | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 390, 399, 400, 444, 452 |
 | `authorizeCapability` | reviewed | test | server/packages/platform/collaboration/src/__tests__/history-admission.test.ts | 16, 27, 29, 46, 61 |
 | `authorizeCapability` | reviewed | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 36, 57, 58, 64, 66, 75, 169, 226, 251, 279, 298, 315, 339, 361 |
@@ -876,31 +876,31 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `authorizeCapability` | reviewed | test | server/packages/services/attachments/src/attachment-discovery.test.ts | 16, 21, 22, 30, 163, 177 |
 | `authorizeCapability` | reviewed | test | server/packages/services/attachments/src/attachment-routes.test.ts | 228, 286, 347, 348, 350, 352, 355, 361, 384, 390, 400, 425, 431, 434, 446, 449, 454, 469, 470, 474 |
 | `authorizeCapability` | reviewed | route | server/packages/services/attachments/src/attachment-routes.ts | 16, 501 |
-| `authorizeCapabilityParent` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2030, 2096, 2111, 2154 |
+| `authorizeCapabilityParent` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2036, 2102, 2117, 2160 |
 | `authorizeCompilationRecovery` | reviewed | test | server/apps/platform-host/src/composition/shared/publication/__tests__/compilation-recovery-execution.test.ts | 13 |
 | `authorizeCompilationRecovery` | reviewed | runtime | server/apps/platform-host/src/composition/shared/publication/compilation-recovery-authority.ts | 11, 58 |
 | `authorizeCompilationRecovery` | reviewed | runtime | server/apps/platform-host/src/composition/shared/publication/compilation-recovery-execution.ts | 7, 25, 29 |
-| `authorizeDelivery` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3600 |
+| `authorizeDelivery` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3606 |
 | `authorizeDelivery` | reviewed | test | server/packages/platform/notifications/src/__tests__/durable-notification-jobs.test.ts | 130 |
 | `authorizeDelivery` | reviewed | runtime | server/packages/platform/notifications/src/durable-delivery.ts | 24 |
 | `authorizeDescriptorOperation` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 363, 462, 535, 660, 826, 917, 1233, 1339, 1374, 1596, 1730, 1924 |
-| `authorizeEntityActivation` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 6066 |
+| `authorizeEntityActivation` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 6097 |
 | `authorizeEntityActivation` | reviewed | test | server/packages/services/publication/src/__tests__/authorization-activation-hold.test.ts | 14 |
 | `authorizeEntityActivation` | reviewed | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 60, 688, 690 |
 | `authorizeEntityRelationship` | reviewed | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 17, 250 |
 | `authorizeEntityRelationship` | reviewed | runtime | server/packages/services/records/src/entity-authorization.ts | 355 |
-| `authorizeHit` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4135 |
+| `authorizeHit` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4141 |
 | `authorizeHit` | reviewed | runtime | server/packages/platform/search/src/document-search-service.ts | 14, 64 |
 | `authorizeImportMode` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 370, 469, 542, 833, 924, 1240, 1346, 1960 |
 | `authorizeListContextDiscovery` | reviewed | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 7, 96, 109, 116, 129, 146, 161 |
 | `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 4, 559 |
 | `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/list-context-discovery.ts | 16 |
-| `authorizeNotificationRecipient` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3294, 3372, 3474 |
-| `authorizeOwner` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2252 |
+| `authorizeNotificationRecipient` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3300, 3378, 3480 |
+| `authorizeOwner` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2258 |
 | `authorizeOwner` | reviewed | test | server/apps/platform-host/src/composition/shared/documents/__tests__/entity-attachment-admission.test.ts | 27, 32, 33, 40, 42 |
 | `authorizeOwner` | reviewed | test | server/apps/platform-host/src/composition/shared/documents/attachment-admission.test.ts | 13, 28, 36, 44, 52 |
 | `authorizeOwner` | reviewed | runtime | server/apps/platform-host/src/composition/shared/documents/attachment-admission.ts | 38, 100 |
-| `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2111, 2191, 5044 |
+| `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2117, 2197, 5066 |
 | `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/spaces/neon/ai/atlas-attachment-knowledge.ts | 118, 146, 157 |
 | `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/spaces/neon/ai/atlas-document-grounding.ts | 51, 88, 97 |
 | `authorizeParent` | reviewed | test | server/packages/platform/experience/src/effective-collaboration-controls.test.ts | 39 |
@@ -911,7 +911,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `authorizeParent` | reviewed | test | server/packages/platform/experience/src/entity-collaboration-service.test.ts | 20 |
 | `authorizeParent` | reviewed | test | server/packages/services/attachments/src/retrieval-admission.test.ts | 57, 62, 64, 70, 99, 103, 107 |
 | `authorizeParent` | reviewed | runtime | server/packages/services/attachments/src/retrieval-admission.ts | 32, 94 |
-| `authorizeRecipient` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3470 |
+| `authorizeRecipient` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3476 |
 | `authorizeRecipient` | reviewed | test | server/packages/platform/notifications/src/__tests__/entity-notification-delivery.test.ts | 64 |
 | `authorizeRecipient` | reviewed | test | server/packages/platform/notifications/src/__tests__/entity-notification-planner.test.ts | 76 |
 | `authorizeRecipient` | reviewed | runtime | server/packages/platform/notifications/src/collaboration-notification-policy.ts | 98, 100 |
@@ -925,7 +925,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 74, 462, 566 |
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/query-service.ts | 36, 101, 336, 416 |
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/record-read-access.ts | 7 |
-| `authorizeRollbackTarget` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 6162 |
+| `authorizeRollbackTarget` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 6193 |
 | `authorizeRollbackTarget` | reviewed | test | server/packages/services/publication/src/__tests__/publication-runtime-review.test.ts | 21, 22, 27, 67, 73 |
 | `authorizeRollbackTarget` | reviewed | route | server/packages/services/publication/src/publication-routes.ts | 19, 130 |
 | `authorizeRun` | reviewed | test | server/packages/platform/governance/src/cycles/cycle-execution-services.test.ts | 26, 35 |
@@ -1280,14 +1280,15 @@ Capture DDLs:
 | `allowed` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 135 |
 | `allowed` | tool | server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs | 593, 594 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 79, 84 |
-| `allowed` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16, 25 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 54, 121, 122, 123 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 11, 28, 36, 44, 45 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 46, 163 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/native-runtime-lowering.test.ts | 43, 45 |
 | `allowed` | test | server/apps/platform-host/src/composition/control-plane/__tests__/control-session.test.ts | 10 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/control-plane/session.ts | 20 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 416, 601 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1223, 3072, 4655, 4658, 4659, 4793, 4797, 4932 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1229, 3078, 4663, 4666, 4667, 4819, 4954 |
+| `allowed` | test | server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts | 111 |
 | `allowed` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 34, 61, 71, 88, 96, 111, 136, 142, 152, 164, 168, 182, 189, 212, 214, 222, 225, 231, 242, 263, 297, 318, 324, 326 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.ts | 43, 55, 64, 76, 91, 116, 119 |
 | `allowed` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/entity-activity-provider.test.ts | 96, 97 |
@@ -1377,9 +1378,12 @@ Capture DDLs:
 | `allowed` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `allowed` | runtime | server/packages/platform/ai/src/context.ts | 22 |
 | `allowed` | runtime | server/packages/platform/ai/src/conversation-composition.ts | 92 |
+| `allowed` | test | server/packages/platform/ai/src/entity-context-tools.test.ts | 14 |
+| `allowed` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 16, 103, 104 |
+| `allowed` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 71, 102 |
 | `allowed` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 19, 20, 28, 29, 30 |
 | `allowed` | runtime | server/packages/platform/ai/src/knowledge.ts | 247, 249 |
-| `allowed` | runtime | server/packages/platform/ai/src/local-generation-composition.ts | 38 |
+| `allowed` | runtime | server/packages/platform/ai/src/local-generation-composition.ts | 148, 149, 151 |
 | `allowed` | runtime | server/packages/platform/ai/src/surface-draft-generation.ts | 109 |
 | `allowed` | runtime | server/packages/platform/ai/src/tool-service.ts | 61, 62, 84, 91, 134, 245 |
 | `allowed` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
@@ -1437,6 +1441,7 @@ Capture DDLs:
 | `allowed` | test | server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts | 6, 22, 49, 53, 58, 65, 76, 84, 109, 122 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 14, 43, 100 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6, 16 |
+| `allowed` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 41, 74, 81, 87, 93, 95, 108 |
 | `allowed` | runtime | server/packages/platform/iam/src/external-worker-identity-intent.ts | 206, 229 |
 | `allowed` | route | server/packages/platform/iam/src/iam-routes.ts | 36 |
 | `allowed` | runtime | server/packages/platform/iam/src/iam-service.ts | 173, 174, 180, 183, 225 |
@@ -1544,9 +1549,10 @@ Capture DDLs:
 | `authorizationScopes` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 155 |
 | `authorizationScopes` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 170 |
 | `authorizationScopes` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 140 |
-| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 59 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 12 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 54 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts | 116 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 39 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/revision-authorizer-context.test.ts | 7 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/service-composition.test.ts | 45 |
@@ -1581,6 +1587,7 @@ Capture DDLs:
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 18 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `authorizationScopes` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 46 |
 | `authorizationScopes` | runtime | server/packages/platform/iam/src/iam-service.ts | 188 |
 | `authorizationScopes` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 384 |
 | `authorizationScopes` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 143 |
@@ -1621,12 +1628,12 @@ Capture DDLs:
 | `denied` | runtime | governance/policy/reviews/entity-authorization-differences.dev.json | 161, 185, 521, 545, 569, 593, 617, 641, 665, 689 |
 | `denied` | runtime | packages/contracts/platform/ai/src/intent.ts | 4, 36, 64 |
 | `denied` | runtime | packages/contracts/platform/entity-runtime/src/access-decision.ts | 8 |
-| `denied` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 114 |
+| `denied` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 115 |
 | `denied` | ui | packages/platform/entity/runtime/form-detail/src/protected-value.tsx | 14 |
 | `denied` | runtime | packages/platform/foundation/i18n/src/catalogs/entity-runtime.ts | 72, 73 |
 | `denied` | runtime | packages/platform/foundation/i18n/src/entity-errors.ts | 19 |
 | `denied` | runtime | packages/platform/iam/auth-bff/package.json | 12, 13, 18, 19, 24, 25 |
-| `denied` | runtime | packages/platform/iam/auth-bff/src/index.ts | 351 |
+| `denied` | runtime | packages/platform/iam/auth-bff/src/index.ts | 363 |
 | `denied` | runtime | packages/platform/iam/session-store/package.json | 12, 13 |
 | `denied` | runtime | packages/platform/shell/activity-center-data/src/index.ts | 349, 350, 501, 552 |
 | `denied` | ui | packages/platform/shell/app-foundation/src/boundaries.tsx | 98 |
@@ -1637,10 +1644,11 @@ Capture DDLs:
 | `denied` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 136 |
 | `denied` | tool | server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs | 594 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 79 |
-| `denied` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 55 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 11, 35 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 50 |
-| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4800 |
+| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4822 |
+| `denied` | test | server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts | 112, 175 |
 | `denied` | runtime | server/apps/platform-host/src/composition/shared/entity-governance/authorization-management-config.ts | 8, 99, 101 |
 | `denied` | runtime | server/apps/platform-host/src/composition/shared/entity-governance/authorization-management.ts | 134 |
 | `denied` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 35, 101, 173, 215, 298, 299, 300 |
@@ -1693,9 +1701,12 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/ai/src/__tests__/structured-intent.test.ts | 295 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15, 57 |
-| `denied` | runtime | server/packages/platform/ai/src/agent-runtime.ts | 320, 756, 1272 |
+| `denied` | runtime | server/packages/platform/ai/src/agent-runtime.ts | 343, 813, 1427 |
 | `denied` | runtime | server/packages/platform/ai/src/context.ts | 23 |
-| `denied` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 29 |
+| `denied` | test | server/packages/platform/ai/src/entity-context-tools.test.ts | 209 |
+| `denied` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 99, 102, 103 |
+| `denied` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 49, 58, 73, 557 |
+| `denied` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 128 |
 | `denied` | runtime | server/packages/platform/ai/src/tool-service.ts | 93, 136, 245 |
 | `denied` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
 | `denied` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 377 |
@@ -1720,6 +1731,7 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts | 104, 109, 116, 122 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 15, 59, 63, 73, 95, 103 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `denied` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 42, 96 |
 | `denied` | runtime | server/packages/platform/iam/src/iam-service.ts | 73, 77, 84, 96, 101, 118, 184, 217, 239 |
 | `denied` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 337, 344, 380 |
 | `denied` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 74, 260, 264, 266, 274, 276, 278, 286, 288, 290, 295, 305, 309 |
@@ -1837,7 +1849,7 @@ Capture DDLs:
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/business-partner.v1.json | 14, 23, 32, 41, 50, 59, 68, 78, 88, 98, 108, 118, 128, 138, 148, 158, 168, 178, 188, 198, 208, 218, 228, 238, 248, 258, 268, 278, 288, 297, 306, 316, 326, 335, 344, 353, 362, 371, 381, 391, 401, 411, 421, 431, 441, 451, 461, 471, 481, 491, 501 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/company-invoice.v1.json | 14, 23, 33, 43 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/independent-document.v1.json | 14, 23, 32 |
-| `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 138, 1328, 1329 |
+| `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 139, 1333, 1334 |
 | `permissionCode` | runtime | packages/platform/foundation/api-client/src/bootstrap.ts | 35, 43 |
 | `permissionCode` | runtime | packages/platform/shell/shell/src/core.ts | 71, 235 |
 | `permissionCode` | runtime | packages/platform/shell/work-inbox/src/index.ts | 8, 15 |
@@ -1847,7 +1859,7 @@ Capture DDLs:
 | `permissionCode` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval-qualification.mts | 63, 89, 133 |
 | `permissionCode` | tool | server/apps/platform-host/scripts/qualification/masked-export-product.mjs | 41, 58, 61, 103 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 81, 82, 89, 93 |
-| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 21, 25 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 93, 121 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/collection-preparation.postgres.test.ts | 98, 159 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 110 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 6, 11, 13, 15, 17, 21, 35 |
@@ -1857,7 +1869,8 @@ Capture DDLs:
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/studio-collection-compilation.test.ts | 15, 19, 20, 32 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 22 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 413, 598, 665 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 3070, 3121, 4861, 4929, 5065 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 3076, 3127, 4883, 4951, 5087 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts | 80 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 42, 68, 85, 108, 126, 149, 161, 180, 188, 209, 260, 315 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.ts | 36, 38, 53, 57, 80, 97, 108, 114, 120, 128, 132 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/entity-activity-provider.test.ts | 95 |
@@ -1971,7 +1984,7 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/contracts/metadata/src/__tests__/entity-canonical-read-admission.test.ts | 9, 10, 76, 115, 124 |
 | `permissionCode` | runtime | server/packages/contracts/metadata/src/collection-compilation.ts | 8, 16, 22, 26 |
 | `permissionCode` | runtime | server/packages/contracts/metadata/src/common-reference-permission.ts | 37, 54, 58 |
-| `permissionCode` | runtime | server/packages/contracts/metadata/src/descriptors.ts | 258, 264, 274 |
+| `permissionCode` | runtime | server/packages/contracts/metadata/src/descriptors.ts | 275, 281, 291 |
 | `permissionCode` | runtime | server/packages/contracts/metadata/src/entity-authorization.ts | 19, 69, 144, 154, 332 |
 | `permissionCode` | runtime | server/packages/contracts/metadata/src/entity-canonical-read-admission.ts | 84 |
 | `permissionCode` | test | server/packages/contracts/publication/src/__tests__/activity-binding.test.ts | 16, 21 |
@@ -1999,10 +2012,11 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-route-scope.test.ts | 11 |
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/list-experience.test.ts | 55, 84 |
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/notification-inspection-routes.test.ts | 34 |
-| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/product.test.ts | 270 |
+| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/product.test.ts | 271 |
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/release-inspection-routes.test.ts | 31, 32, 81, 82 |
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/reviewer-read-routes.test.ts | 26, 27 |
-| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/authoring/graph-builder.ts | 80, 186, 239 |
+| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/authoring/country-ai.test.ts | 35 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/authoring/graph-builder.ts | 84, 190, 243 |
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/authoring/reference-batch.test.ts | 33 |
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/authoring/table-product-permissions.test.ts | 19, 23, 31, 37, 44, 56 |
 | `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/authoring/table-product.ts | 151, 176, 180 |
@@ -2024,9 +2038,13 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts | 27, 33, 143, 149 |
 | `permissionCode` | test | server/packages/platform/ai/src/__tests__/route-review.test.ts | 191 |
 | `permissionCode` | route | server/packages/platform/ai/src/atlas-admin-routes.ts | 13 |
-| `permissionCode` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 15 |
+| `permissionCode` | test | server/packages/platform/ai/src/entity-context-tools.test.ts | 22 |
+| `permissionCode` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 77, 101, 102 |
+| `permissionCode` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 63, 99 |
+| `permissionCode` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 32 |
 | `permissionCode` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 29, 84 |
 | `permissionCode` | runtime | server/packages/platform/ai/src/knowledge.ts | 96, 224, 243, 278, 284, 516 |
+| `permissionCode` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 181 |
 | `permissionCode` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
 | `permissionCode` | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 526, 528, 532 |
 | `permissionCode` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 160, 355 |
@@ -2069,6 +2087,7 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 80, 89 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts | 4 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 22, 34 |
+| `permissionCode` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 18, 21, 41, 49, 57, 70, 85, 96, 97, 98 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/identity-provisioning-service.ts | 24 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/identity-replay-approval.ts | 66 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 318, 325, 327, 333, 357, 395, 409, 417, 436, 440, 453, 472, 483, 524, 527 |
@@ -2083,10 +2102,10 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 5 |
 | `permissionCode` | test | server/packages/platform/metadata/src/__tests__/native-list-application.test.ts | 14, 23 |
 | `permissionCode` | runtime | server/packages/platform/metadata/src/compiled-runtime-contract.ts | 104 |
-| `permissionCode` | test | server/packages/platform/metadata/src/descriptor-parser.test.ts | 7 |
-| `permissionCode` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 33, 44, 48, 111 |
+| `permissionCode` | test | server/packages/platform/metadata/src/descriptor-parser.test.ts | 30 |
+| `permissionCode` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 75, 100, 101, 102, 126, 127, 334, 335, 336 |
 | `permissionCode` | test | server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts | 16 |
-| `permissionCode` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 168, 226, 230, 248 |
+| `permissionCode` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 177, 235, 239, 257 |
 | `permissionCode` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 242, 244, 248 |
 | `permissionCode` | test | server/packages/platform/policy/src/__tests__/policy-routes.test.ts | 130 |
 | `permissionCode` | route | server/packages/platform/policy/src/policy-routes.ts | 39, 79 |
@@ -2218,7 +2237,7 @@ Capture DDLs:
 | `permissionCode` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 58, 94, 170, 172, 175, 188 |
 | `permissionCode` | tool | tooling/scripts/verification/setup-local-master-data-authority.mjs | 18, 20, 22 |
 | `permissionCode` | tool | tooling/scripts/verification/verify-partner-cutover-main-dev.mts | 35 |
-| `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1223 |
+| `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1229 |
 | `permissionCodes` | test | server/apps/platform-host/src/composition/spaces/neon/__tests__/finance-routes.test.ts | 515 |
 | `permissionCodes` | route | server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts | 295 |
 | `permissionCodes` | test | server/db/scripts/__tests__/activity/activity-permissions.test.ts | 12, 14 |
@@ -2312,7 +2331,8 @@ Capture DDLs:
 | `permissions` | test | packages/contracts/platform/ai/src/__tests__/protocol.test.ts | 21, 72 |
 | `permissions` | runtime | packages/contracts/platform/ai/src/intent.ts | 16 |
 | `permissions` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 21, 213, 220, 221, 222, 303 |
-| `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 120, 1278, 1279, 1281, 1287 |
+| `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 121, 1283, 1284, 1286, 1292 |
+| `permissions` | runtime | packages/platform/ai/agent-ui/src/index.ts | 861, 865 |
 | `permissions` | ui | packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx | 49, 50 |
 | `permissions` | ui | packages/platform/entity/runtime/form-detail/src/entity-detail-runtime.tsx | 67, 68 |
 | `permissions` | runtime | packages/platform/entity/runtime/form-detail/src/thumbnail-scope.ts | 14, 19 |
@@ -2334,7 +2354,7 @@ Capture DDLs:
 | `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 127 |
 | `permissions` | tool | server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs | 198, 469, 500, 592, 593, 594, 652 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 69, 79 |
-| `permissions` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16, 25, 51 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 46, 121, 237 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/authorization-management-api.test.ts | 35 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 46 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 9, 33, 35, 36, 37, 39 |
@@ -2348,7 +2368,8 @@ Capture DDLs:
 | `permissions` | runtime | server/apps/platform-host/src/composition/control-plane/control-plane.ts | 25 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/control-plane/identity.ts | 44, 45 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/control-plane/session.ts | 20 |
-| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1120, 1149, 1157, 1169, 1223, 2089, 2092, 2093, 3286, 3289, 3290, 4655, 4658, 4659, 4797, 4800, 4803, 4806 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1126, 1155, 1163, 1175, 1229, 2095, 2098, 2099, 3292, 3295, 3296, 4663, 4666, 4667, 4819, 4822, 4825, 4828 |
+| `permissions` | test | server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts | 103, 175, 181, 191 |
 | `permissions` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 26, 90, 96, 99, 100, 168, 171, 172, 201, 205, 213, 214, 215, 216, 217, 218, 221, 239, 249, 250, 251, 270, 271, 272, 297 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.ts | 16, 36, 132 |
 | `permissions` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/published-parent-admission.test.ts | 27, 28 |
@@ -2398,7 +2419,7 @@ Capture DDLs:
 | `permissions` | runtime | server/db/migrations/20260924_publication_provenance_recovery.sql | 77 |
 | `permissions` | runtime | server/db/migrations/20260928_entity_activity_permissions.sql | 25 |
 | `permissions` | runtime | server/db/migrations/20260929_entity_owner_access.sql | 82 |
-| `permissions` | runtime | server/db/migrations/inventory.json | 773, 941 |
+| `permissions` | runtime | server/db/migrations/inventory.json | 787, 955 |
 | `permissions` | test | server/db/scripts/__tests__/activity/activity-permissions.test.ts | 7, 9, 11, 12, 13, 14, 16, 17 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/authorization-clean-slate.test.ts | 21, 23, 41, 46, 152, 166 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts | 37, 49, 54, 63 |
@@ -2508,7 +2529,11 @@ Capture DDLs:
 | `permissions` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7, 37 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `permissions` | runtime | server/packages/platform/ai/src/context.ts | 13, 14, 15, 16, 22, 23, 24, 25 |
+| `permissions` | test | server/packages/platform/ai/src/entity-context-tools.test.ts | 12, 13, 207, 208 |
+| `permissions` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 14, 15 |
+| `permissions` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 49 |
 | `permissions` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 19, 20, 29, 87 |
+| `permissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 172 |
 | `permissions` | runtime | server/packages/platform/ai/src/surface-draft-generation.ts | 109 |
 | `permissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 85, 245 |
 | `permissions` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 368 |
@@ -2546,6 +2571,7 @@ Capture DDLs:
 | `permissions` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10, 80, 83 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 10, 49, 55, 85, 86, 88, 110, 115 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `permissions` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 33, 105 |
 | `permissions` | route | server/packages/platform/iam/src/iam-routes.ts | 36 |
 | `permissions` | runtime | server/packages/platform/iam/src/iam-service.ts | 46, 105, 106, 108, 110, 113, 114, 173, 175, 201, 202 |
 | `permissions` | runtime | server/packages/platform/iam/src/kysely-context-refresh.ts | 33, 38, 42, 43 |
@@ -2555,9 +2581,9 @@ Capture DDLs:
 | `permissions` | test | server/packages/platform/metadata/src/__tests__/entity-ai.test.ts | 12 |
 | `permissions` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `permissions` | test | server/packages/platform/metadata/src/__tests__/native-list-application.test.ts | 14 |
-| `permissions` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 47 |
+| `permissions` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 121 |
 | `permissions` | runtime | server/packages/platform/metadata/src/metadata-service.ts | 33 |
-| `permissions` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 161, 225 |
+| `permissions` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 170, 234 |
 | `permissions` | test | server/packages/platform/notifications/src/__tests__/notification-operations.test.ts | 44 |
 | `permissions` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
 | `permissions` | test | server/packages/platform/preferences/src/entity-views.test.ts | 8 |
@@ -2637,6 +2663,7 @@ Capture DDLs:
 | `permissions` | test | tests/contracts/studio-publication-navigation.test.ts | 10, 24 |
 | `permissions` | test | tests/foundation-browser/entity-thumbnail-performance.spec.ts | 16, 55, 87 |
 | `permissions` | test | tests/foundation/access-gates-phase9.test.tsx | 6 |
+| `permissions` | test | tests/foundation/atlas-answer.test.tsx | 208, 322, 352 |
 | `permissions` | test | tests/foundation/country-detail-read.test.ts | 13 |
 | `permissions` | test | tests/foundation/entity-localization.test.ts | 138, 141 |
 | `permissions` | tool | tooling/scripts/local-dev/align-catl-partner-preview.mts | 46 |
@@ -2749,10 +2776,11 @@ Capture DDLs:
 | `planeExcluded` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 168 |
 | `planeExcluded` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 138 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 79 |
-| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 57 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 11 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 52 |
-| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4806 |
+| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4828 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts | 114 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 37, 217 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/revision-authorizer-context.test.ts | 7 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/service-composition.test.ts | 43 |
@@ -2789,6 +2817,7 @@ Capture DDLs:
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 17, 61 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `planeExcluded` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 44, 98 |
 | `planeExcluded` | runtime | server/packages/platform/iam/src/iam-service.ts | 186 |
 | `planeExcluded` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 382 |
 | `planeExcluded` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 80, 277 |
@@ -2819,10 +2848,11 @@ Capture DDLs:
 | `planLocked` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 167 |
 | `planLocked` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 137 |
 | `planLocked` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 79 |
-| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 56 |
 | `planLocked` | test | server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts | 11 |
 | `planLocked` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 51 |
-| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4803 |
+| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4825 |
+| `planLocked` | test | server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts | 113 |
 | `planLocked` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 36, 216 |
 | `planLocked` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/revision-authorizer-context.test.ts | 7 |
 | `planLocked` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/service-composition.test.ts | 42 |
@@ -2859,6 +2889,7 @@ Capture DDLs:
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 16, 60 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `planLocked` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 43, 97 |
 | `planLocked` | runtime | server/packages/platform/iam/src/iam-service.ts | 185 |
 | `planLocked` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 336, 349, 381 |
 | `planLocked` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 77, 275 |
@@ -2889,7 +2920,8 @@ Capture DDLs:
 | `principalFingerprint` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 146 |
 | `principalFingerprint` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 161 |
 | `principalFingerprint` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 131 |
-| `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 50 |
+| `principalFingerprint` | test | server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts | 108 |
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 30 |
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/service-composition.test.ts | 36 |
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/shared/entity-runtime/published-owner-authorizer.test.ts | 120 |
@@ -2920,6 +2952,7 @@ Capture DDLs:
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 9 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `principalFingerprint` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 38 |
 | `principalFingerprint` | runtime | server/packages/platform/iam/src/iam-service.ts | 179 |
 | `principalFingerprint` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 375 |
 | `principalFingerprint` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
@@ -2977,9 +3010,10 @@ Capture DDLs:
 | `profileHash` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 126, 132 |
 | `profileHash` | tool | server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs | 595 |
 | `profileHash` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 69, 79 |
-| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 45, 51 |
 | `profileHash` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 41 |
-| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 2093, 3290, 4894 |
+| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 2099, 3296, 4916 |
+| `profileHash` | test | server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts | 100, 107 |
 | `profileHash` | test | server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts | 23, 31 |
 | `profileHash` | test | server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/service-composition.test.ts | 31, 37 |
 | `profileHash` | test | server/apps/platform-host/src/composition/shared/entity-runtime/revision-authorizer.test.ts | 9, 11 |
@@ -3019,7 +3053,10 @@ Capture DDLs:
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 6, 7 |
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 14, 15 |
 | `profileHash` | runtime | server/packages/platform/ai/src/context.ts | 10, 16 |
-| `profileHash` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 58 |
+| `profileHash` | test | server/packages/platform/ai/src/entity-context-tools.test.ts | 53 |
+| `profileHash` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 125, 227, 412, 462, 521 |
+| `profileHash` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 416, 555, 589 |
+| `profileHash` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 204 |
 | `profileHash` | runtime | server/packages/platform/ai/src/entity-section-tool.ts | 25 |
 | `profileHash` | runtime | server/packages/platform/ai/src/insight-reuse-policy.ts | 45 |
 | `profileHash` | runtime | server/packages/platform/ai/src/knowledge.ts | 194 |
@@ -3039,6 +3076,7 @@ Capture DDLs:
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 7, 10 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 9, 10 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
+| `profileHash` | test | server/packages/platform/iam/src/atlas-session-policy.test.ts | 30, 37 |
 | `profileHash` | runtime | server/packages/platform/iam/src/iam-service.ts | 106, 114, 180, 202 |
 | `profileHash` | runtime | server/packages/platform/iam/src/kysely-context-refresh.ts | 43 |
 | `profileHash` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 299, 300, 364, 376 |
@@ -3112,9 +3150,10 @@ Capture DDLs:
 | `requiredPermissions` | runtime | server/packages/contracts/publication/src/activity-enrollment.ts | 44 |
 | `requiredPermissions` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 24, 33, 41 |
 | `requiredPermissions` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 17 |
-| `requiredPermissions` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 38 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 126 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 92 |
 | `requiredPermissions` | runtime | server/packages/platform/ai/src/entity-section-tool.ts | 16 |
-| `requiredPermissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 46 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 250 |
 | `requiredPermissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 60, 83, 106, 130, 190, 245 |
 | `requiredPermissions` | test | tests/contracts/access-consumption-phase9.test.ts | 5, 31, 32 |
 | `requiredPermissions` | test | tests/contracts/app-composition-phase10.test.ts | 24 |

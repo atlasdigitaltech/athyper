@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 334,
+    "operational-scripts:new": 335,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -16717,6 +16717,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/publication/prepare-dev-entity-successor.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:prepare-dev-entity-successor-policy",
+      "category": "operational-scripts",
+      "key": "prepare-dev-entity-successor-policy",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/prepare-dev-entity-successor-policy.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

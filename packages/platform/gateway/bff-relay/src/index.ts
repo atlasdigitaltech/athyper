@@ -8,6 +8,8 @@ export interface RelayOperation {
   readonly method: RelayMethod;
   readonly path: `/api/${string}`;
   readonly requestClass?: RelayRequestClass;
+  /** Trusted operation-specific preflight budget; never supplied by the browser. */
+  readonly responseHeaderTimeoutMs?: number;
   readonly requiresTenant?: boolean;
   readonly tenantParam?: string;
   readonly idempotency?: "none" | "optional" | "required";
@@ -34,8 +36,12 @@ export interface RelaySessionAuthority {
 }
 /** Session methods an app's auth runtime exposes to the relay. */
 export interface RelayAuthRuntime {
-  resolveRelaySession(request: Request): Promise<RelaySessionContext | undefined>;
-  refreshRelaySession(request: Request): Promise<RelaySessionContext | undefined>;
+  resolveRelaySession(
+    request: Request,
+  ): Promise<RelaySessionContext | undefined>;
+  refreshRelaySession(
+    request: Request,
+  ): Promise<RelaySessionContext | undefined>;
   invalidateRelaySession(
     request: Request,
     reason: "context_mismatch",
@@ -48,7 +54,8 @@ export function relaySessionFromAuth(
   return {
     resolve: (request) => auth.resolveRelaySession(request),
     refresh: (request) => auth.refreshRelaySession(request),
-    invalidate: (request, reason) => auth.invalidateRelaySession(request, reason),
+    invalidate: (request, reason) =>
+      auth.invalidateRelaySession(request, reason),
   };
 }
 /** Builds an app's relay on first request, so importing the route module reads
@@ -404,6 +411,8 @@ export const ATLAS_THREAD_ARCHIVE_OPERATION: RelayOperation = Object.freeze({
 });
 export const ATLAS_THREAD_RUN_OPERATION: RelayOperation = Object.freeze({
   id: "atlas.threads.run",
+  // Authorized document grounding can require a cold embedding before SSE starts.
+  responseHeaderTimeoutMs: 75_000,
   method: "POST",
   path: "/api/atlas/threads/:threadId/runs",
   requestClass: "stream",
@@ -2884,7 +2893,11 @@ export function createRelayHandler(options: RelayOptions): RelayHandler {
         headers.set("x-auth-epoch", String(authority.authEpoch));
         if (authority.tenantId) headers.set("x-tenant-id", authority.tenantId);
         const controller = new AbortController();
-        const timeoutMs = timeouts[operation.requestClass ?? "json"];
+        const requestClass = operation.requestClass ?? "json";
+        const timeoutMs =
+          options.timeouts?.[requestClass] ??
+          operation.responseHeaderTimeoutMs ??
+          timeouts[requestClass];
         const timer = setTimeout(
           () =>
             controller.abort(
@@ -2964,6 +2977,13 @@ interface CompiledOperation {
   readonly segments: readonly string[];
 }
 function compileOperation(operation: RelayOperation): CompiledOperation {
+  if (
+    operation.responseHeaderTimeoutMs !== undefined &&
+    (!Number.isInteger(operation.responseHeaderTimeoutMs) ||
+      operation.responseHeaderTimeoutMs < 1 ||
+      operation.responseHeaderTimeoutMs > 120_000)
+  )
+    throw new TypeError("Invalid relay response header timeout");
   if (
     !operation.path.startsWith("/api/") ||
     operation.path.includes("?") ||
