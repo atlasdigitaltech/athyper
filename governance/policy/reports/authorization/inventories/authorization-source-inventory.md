@@ -3,7 +3,7 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `1ced6c94f9db03f5129141d6f1d6306096b39254851a8ec8517bf1348431e9fc`
-Files scanned / authorization-bearing: 5202 / 1231
+Files scanned / authorization-bearing: 5204 / 1231
 Registered authorization objects: 470
 Aggregated object references: 1147
 Writer references: 127
@@ -1624,12 +1624,12 @@ Capture DDLs:
 | `denied` | runtime | governance/policy/reviews/entity-authorization-differences.dev.json | 161, 185, 521, 545, 569, 593, 617, 641, 665, 689 |
 | `denied` | runtime | packages/contracts/platform/ai/src/intent.ts | 4, 36, 64 |
 | `denied` | runtime | packages/contracts/platform/entity-runtime/src/access-decision.ts | 8 |
-| `denied` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 114 |
+| `denied` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 115 |
 | `denied` | ui | packages/platform/entity/runtime/form-detail/src/protected-value.tsx | 14 |
 | `denied` | runtime | packages/platform/foundation/i18n/src/catalogs/entity-runtime.ts | 72, 73 |
 | `denied` | runtime | packages/platform/foundation/i18n/src/entity-errors.ts | 19 |
 | `denied` | runtime | packages/platform/iam/auth-bff/package.json | 12, 13, 18, 19, 24, 25 |
-| `denied` | runtime | packages/platform/iam/auth-bff/src/index.ts | 351 |
+| `denied` | runtime | packages/platform/iam/auth-bff/src/index.ts | 363 |
 | `denied` | runtime | packages/platform/iam/session-store/package.json | 12, 13 |
 | `denied` | runtime | packages/platform/shell/activity-center-data/src/index.ts | 349, 350, 501, 552 |
 | `denied` | ui | packages/platform/shell/app-foundation/src/boundaries.tsx | 98 |
@@ -1842,7 +1842,7 @@ Capture DDLs:
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/business-partner.v1.json | 14, 23, 32, 41, 50, 59, 68, 78, 88, 98, 108, 118, 128, 138, 148, 158, 168, 178, 188, 198, 208, 218, 228, 238, 248, 258, 268, 278, 288, 297, 306, 316, 326, 335, 344, 353, 362, 371, 381, 391, 401, 411, 421, 431, 441, 451, 461, 471, 481, 491, 501 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/company-invoice.v1.json | 14, 23, 33, 43 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/independent-document.v1.json | 14, 23, 32 |
-| `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 138, 1330, 1331 |
+| `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 139, 1333, 1334 |
 | `permissionCode` | runtime | packages/platform/foundation/api-client/src/bootstrap.ts | 35, 43 |
 | `permissionCode` | runtime | packages/platform/shell/shell/src/core.ts | 71, 235 |
 | `permissionCode` | runtime | packages/platform/shell/work-inbox/src/index.ts | 8, 15 |
@@ -2320,8 +2320,8 @@ Capture DDLs:
 | `permissions` | test | packages/contracts/platform/ai/src/__tests__/protocol.test.ts | 21, 72 |
 | `permissions` | runtime | packages/contracts/platform/ai/src/intent.ts | 16 |
 | `permissions` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 21, 213, 220, 221, 222, 303 |
-| `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 120, 1280, 1281, 1283, 1289 |
-| `permissions` | runtime | packages/platform/ai/agent-ui/src/index.ts | 857, 861 |
+| `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 121, 1283, 1284, 1286, 1292 |
+| `permissions` | runtime | packages/platform/ai/agent-ui/src/index.ts | 861, 865 |
 | `permissions` | ui | packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx | 49, 50 |
 | `permissions` | ui | packages/platform/entity/runtime/form-detail/src/entity-detail-runtime.tsx | 67, 68 |
 | `permissions` | runtime | packages/platform/entity/runtime/form-detail/src/thumbnail-scope.ts | 14, 19 |
@@ -2648,7 +2648,7 @@ Capture DDLs:
 | `permissions` | test | tests/contracts/studio-publication-navigation.test.ts | 10, 24 |
 | `permissions` | test | tests/foundation-browser/entity-thumbnail-performance.spec.ts | 16, 55, 87 |
 | `permissions` | test | tests/foundation/access-gates-phase9.test.tsx | 6 |
-| `permissions` | test | tests/foundation/atlas-answer.test.tsx | 208, 322 |
+| `permissions` | test | tests/foundation/atlas-answer.test.tsx | 208, 322, 352 |
 | `permissions` | test | tests/foundation/country-detail-read.test.ts | 13 |
 | `permissions` | test | tests/foundation/entity-localization.test.ts | 138, 141 |
 | `permissions` | tool | tooling/scripts/local-dev/align-catl-partner-preview.mts | 46 |

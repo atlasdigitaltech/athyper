@@ -338,3 +338,17 @@ test("Atlas distinguishes session, Entity eligibility and dependency failures wi
       /organization|company|MFA|role/,
     );
 });
+
+test("Atlas CSRF failures are session-security errors, not permission or business-context denials", async () => {
+  const { atlasAnswerErrorMessage: message } =
+    await import("../../packages/platform/ai/agent-ui/src/index");
+  const text = message({
+    status: 403,
+    problem: { code: "RELAY_CSRF_INVALID" },
+  });
+  assert.match(text, /session security token/);
+  assert.doesNotMatch(
+    text,
+    /permissions|administrator|company|organization|MFA/,
+  );
+});

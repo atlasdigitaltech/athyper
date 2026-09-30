@@ -849,6 +849,10 @@ export function atlasAnswerErrorMessage(error: unknown): string {
     "code" in error.problem
       ? error.problem.code
       : undefined;
+  if (code === "RELAY_CSRF_INVALID")
+    return "Your session security token could not be verified. Refresh this page and try again. If this continues, sign out and sign in again.";
+  if (code === "RELAY_CROSS_ORIGIN")
+    return "This request was blocked by browser security checks. Open Atlas from the application page and try again.";
   if (statusOf(error) === 401)
     return "Your session has expired. Sign in again to continue with Atlas.";
   if (code === "BUSINESS_CONTEXT_NOT_ENABLED")

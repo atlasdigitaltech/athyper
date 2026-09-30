@@ -38,7 +38,7 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 5202,
+    "filesScanned": 5204,
     "authorizationFiles": 1231,
     "registeredObjects": 470,
     "objectReferences": 1147,
@@ -10531,12 +10531,12 @@
     {
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
-      "sha256": "053d1ff49e524529666ad23e1e99242aa1ebf96352ee5b6f491fe230dba51be6"
+      "sha256": "4c7f2f04d55823980b7e5459b9d43b9f1eed435f5835bf4c3a4e7884ed3cd6bf"
     },
     {
       "path": "packages/platform/ai/agent-ui/src/index.ts",
       "artifactClass": "runtime",
-      "sha256": "3e7a969e3df683f4a1f80091eb67a5b40b442bd8929b37041960939ebc119e2d"
+      "sha256": "16161346a038610e3dd887a0d01cdb60c553094fedb2d05e2d9cc669fe34f53f"
     },
     {
       "path": "packages/platform/entity/runtime/form-detail/src/activity-workspace.tsx",
@@ -10581,7 +10581,7 @@
     {
       "path": "packages/platform/iam/auth-bff/src/index.ts",
       "artifactClass": "runtime",
-      "sha256": "5d53381b14aee4a8c9eb950d0d616ad67c0f8ffad85568dbc9af630e3a352c6c"
+      "sha256": "723441b95bc5d309ad3e4adfa02c02e4e0b1591686b1bfbe13ee9c1b57fbe2a4"
     },
     {
       "path": "packages/platform/iam/identity-gate/src/workspace-showcase-data.ts",
@@ -14856,7 +14856,7 @@
     {
       "path": "tests/contracts/auth-session-foundation.test.ts",
       "artifactClass": "test",
-      "sha256": "f4cccf9c85f3eaf5a25f405f18e3e8e9463c97ee9757ec9e53653e602e8f43b7"
+      "sha256": "146df791a5c7823d45848ba19fe875845de7ee0b0cb0e45ec80b15c69b2021e9"
     },
     {
       "path": "tests/contracts/entity-list-contract.test.ts",
@@ -14946,7 +14946,7 @@
     {
       "path": "tests/foundation/atlas-answer.test.tsx",
       "artifactClass": "test",
-      "sha256": "f96d8254ff57fef5e7f9539f94c5140292f1e80b48bf496d068e606822d054d9"
+      "sha256": "37484ed4a93bcc6691b846b15dfe31903f3a7221a28cebc2d41d727d61e449fa"
     },
     {
       "path": "tests/foundation/country-detail-read.test.ts",
@@ -39482,7 +39482,7 @@
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        114
+        115
       ]
     },
     {
@@ -39528,7 +39528,7 @@
       "path": "packages/platform/iam/auth-bff/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        351
+        363
       ]
     },
     {
@@ -45098,9 +45098,9 @@
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        138,
-        1330,
-        1331
+        139,
+        1333,
+        1334
       ]
     },
     {
@@ -50708,11 +50708,11 @@
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        120,
-        1280,
-        1281,
+        121,
         1283,
-        1289
+        1284,
+        1286,
+        1292
       ]
     },
     {
@@ -50720,8 +50720,8 @@
       "path": "packages/platform/ai/agent-ui/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        857,
-        861
+        861,
+        865
       ]
     },
     {
@@ -53979,7 +53979,8 @@
       "artifactClass": "test",
       "lines": [
         208,
-        322
+        322,
+        352
       ]
     },
     {
