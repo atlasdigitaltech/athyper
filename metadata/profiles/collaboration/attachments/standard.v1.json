@@ -6,12 +6,7 @@
   "defaults": {
     "maxFileBytes": 5242880,
     "maxBatchCount": 3,
-    "allowedContentTypes": [
-      "application/pdf",
-      "image/png",
-      "image/jpeg",
-      "text/plain"
-    ],
+    "allowedContentTypes": ["application/pdf", "image/png", "image/jpeg", "text/plain"],
     "categories": [],
     "folders": true,
     "versioning": true,
@@ -26,13 +21,6 @@
   "permittedOverrides": {
     "maxFileBytes": { "minimum": 1, "maximum": 5242880 },
     "maxBatchCount": { "minimum": 1, "maximum": 3 },
-    "allowedContentTypes": {
-      "allowedSubset": [
-        "application/pdf",
-        "image/png",
-        "image/jpeg",
-        "text/plain"
-      ]
-    }
+    "allowedContentTypes": { "allowedSubset": ["application/pdf", "image/png", "image/jpeg", "text/plain"] }
   }
 }

@@ -8,11 +8,13 @@ import {
   statSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { defaultRepoRoot } from "../src/io.mjs";
 
-const provision = resolve(
+const provision = join(
+  defaultRepoRoot,
   "deploy/bootstrap/provision-dev-artifacts-writer.mjs",
 );
 test("existing DEV writer provisioning preserves secrets and refuses partial pairs", () => {

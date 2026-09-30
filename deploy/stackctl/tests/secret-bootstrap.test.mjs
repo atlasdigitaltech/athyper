@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { defaultRepoRoot } from "../src/io.mjs";
 
 for (const [instance, preserveVapid] of [
   ["dev", false],
@@ -41,6 +42,7 @@ for (const [instance, preserveVapid] of [
       const run = () =>
         spawnSync("bash", args, {
           encoding: "utf8",
+          cwd: defaultRepoRoot,
           env: {
             ...process.env,
             ATHYPER_RUNTIME_ROOT: root,
@@ -105,6 +107,7 @@ test("STG installer accepts optional secrets and rejects unknown names without a
         ["deploy/bootstrap/install-stg-secret.sh", name, "--from-file", path],
         {
           encoding: "utf8",
+          cwd: defaultRepoRoot,
           env: { ...process.env, ATHYPER_RUNTIME_ROOT: root },
         },
       );
