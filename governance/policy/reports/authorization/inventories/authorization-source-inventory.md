@@ -3,7 +3,7 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `1ced6c94f9db03f5129141d6f1d6306096b39254851a8ec8517bf1348431e9fc`
-Files scanned / authorization-bearing: 5209 / 1234
+Files scanned / authorization-bearing: 5213 / 1234
 Registered authorization objects: 470
 Aggregated object references: 1147
 Writer references: 127
@@ -1701,12 +1701,12 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/ai/src/__tests__/structured-intent.test.ts | 295 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15, 57 |
-| `denied` | runtime | server/packages/platform/ai/src/agent-runtime.ts | 338, 780, 1296 |
+| `denied` | runtime | server/packages/platform/ai/src/agent-runtime.ts | 339, 807, 1375 |
 | `denied` | runtime | server/packages/platform/ai/src/context.ts | 23 |
 | `denied` | test | server/packages/platform/ai/src/entity-context-tools.test.ts | 209 |
 | `denied` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 99, 102, 103 |
-| `denied` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 49, 58, 73, 512 |
-| `denied` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 117 |
+| `denied` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 49, 58, 73, 527 |
+| `denied` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 128 |
 | `denied` | runtime | server/packages/platform/ai/src/tool-service.ts | 93, 136, 245 |
 | `denied` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
 | `denied` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 377 |
@@ -2044,7 +2044,7 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 32 |
 | `permissionCode` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 29, 84 |
 | `permissionCode` | runtime | server/packages/platform/ai/src/knowledge.ts | 96, 224, 243, 278, 284, 516 |
-| `permissionCode` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 170 |
+| `permissionCode` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 181 |
 | `permissionCode` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
 | `permissionCode` | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 526, 528, 532 |
 | `permissionCode` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 160, 355 |
@@ -2533,7 +2533,7 @@ Capture DDLs:
 | `permissions` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 14, 15 |
 | `permissions` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 49 |
 | `permissions` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 19, 20, 29, 87 |
-| `permissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 161 |
+| `permissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 172 |
 | `permissions` | runtime | server/packages/platform/ai/src/surface-draft-generation.ts | 109 |
 | `permissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 85, 245 |
 | `permissions` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 368 |
@@ -3054,8 +3054,8 @@ Capture DDLs:
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 14, 15 |
 | `profileHash` | runtime | server/packages/platform/ai/src/context.ts | 10, 16 |
 | `profileHash` | test | server/packages/platform/ai/src/entity-context-tools.test.ts | 53 |
-| `profileHash` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 125, 227, 381 |
-| `profileHash` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 378, 510, 544 |
+| `profileHash` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 125, 227, 412 |
+| `profileHash` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 393, 525, 559 |
 | `profileHash` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 204 |
 | `profileHash` | runtime | server/packages/platform/ai/src/entity-section-tool.ts | 25 |
 | `profileHash` | runtime | server/packages/platform/ai/src/insight-reuse-policy.ts | 45 |
@@ -3153,7 +3153,7 @@ Capture DDLs:
 | `requiredPermissions` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 126 |
 | `requiredPermissions` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 92 |
 | `requiredPermissions` | runtime | server/packages/platform/ai/src/entity-section-tool.ts | 16 |
-| `requiredPermissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 239 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 250 |
 | `requiredPermissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 60, 83, 106, 130, 190, 245 |
 | `requiredPermissions` | test | tests/contracts/access-consumption-phase9.test.ts | 5, 31, 32 |
 | `requiredPermissions` | test | tests/contracts/app-composition-phase10.test.ts | 24 |

@@ -86,6 +86,17 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
   ): AtlasIntentV1 {
     // Explicitly named records may differ from the current page. Let the model
     // resolve that distinction against generic, server-authorized metadata tools.
+    const currentIntent = resolveAtlasIntent(admitted, text, scope?.page);
+    // Preserve the existing exact overview/summary command. The anchored shape
+    // cannot contain a named alternative record; all data still comes from its
+    // published current-record capability. Other questions use discovery.
+    if (
+      currentIntent.kind === "read" &&
+      /^(?:explain|show|summarize|summarise|read|display)\s+(?:(?:the|this|current)\s+)?(?:saved\s+)?(?:information\s+(?:in|on)\s+(?:the\s+)?overview|(?:record\s+)?(?:overview|summary))[.!?]?$/i.test(
+        text.trim(),
+      )
+    )
+      return currentIntent;
     if (admitted.some((tool) => tool.name === ENTITY_LOOKUP))
       return parseAtlasIntent({
         schemaVersion: 1,
@@ -94,7 +105,7 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
         reason: "unsupported",
         capabilityIds: [],
       });
-    const intent = resolveAtlasIntent(admitted, text, scope?.page);
+    const intent = currentIntent;
     if (intent.kind !== "delegate" || !scope) return intent;
     // Registered aliases can identify a denied section without disclosing its existence or fields.
     const candidates = this.registry

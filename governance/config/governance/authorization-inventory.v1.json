@@ -38,7 +38,7 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 5209,
+    "filesScanned": 5213,
     "authorizationFiles": 1234,
     "registeredObjects": 470,
     "objectReferences": 1147,
@@ -13501,7 +13501,7 @@
     {
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
-      "sha256": "17cc02ce8c36e1f8dd30a7d7065f5a2ca28184836ae31d4435ca5671ff0f3805"
+      "sha256": "9ba49bf19013b0be23a127ca98dbead225eaa3886c8d9a009dc98a9ce145661c"
     },
     {
       "path": "server/packages/platform/ai/src/atlas-admin-routes.ts",
@@ -13541,12 +13541,12 @@
     {
       "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
       "artifactClass": "test",
-      "sha256": "2f4de9c3e8ef1ccd63296cefe815af54b57d001e2d987ec56351f7c0612f83b1"
+      "sha256": "add08131f888a90a03ac016edcc7e7c7241d28a4eabeb9983d28bb3cc21c397a"
     },
     {
       "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
       "artifactClass": "runtime",
-      "sha256": "daf27fb4a5e0a2b892b46c86fc58aee3205e0360e2d818053d2153e97db199a6"
+      "sha256": "bd1288241a2d96709343da124c2300667bbd90e48e8c6e32a7227344d16b5e6f"
     },
     {
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
@@ -13581,7 +13581,7 @@
     {
       "path": "server/packages/platform/ai/src/local-generation-composition.ts",
       "artifactClass": "runtime",
-      "sha256": "b66f9297610a870cb99e520815de29d6ae485994ac90c19e032107d71ba27efb"
+      "sha256": "6e62ec2f071aee4ebbd9ee7927236e6f5bf55f6286e839102bfb00cd402f24ea"
     },
     {
       "path": "server/packages/platform/ai/src/message-lineage.ts",
@@ -13596,7 +13596,7 @@
     {
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
-      "sha256": "94387cb4fac8bf310e81bca32307d9ae81cbcd324b4c70a770c248b6723685db"
+      "sha256": "6c153f222ebae70c004beb2044a6dab308beaba512fec186b35e3f0bd2c428c9"
     },
     {
       "path": "server/packages/platform/ai/src/surface-draft-generation.ts",
@@ -40172,9 +40172,9 @@
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
       "lines": [
-        338,
-        780,
-        1296
+        339,
+        807,
+        1375
       ]
     },
     {
@@ -40211,7 +40211,7 @@
         49,
         58,
         73,
-        512
+        527
       ]
     },
     {
@@ -40219,7 +40219,7 @@
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        117
+        128
       ]
     },
     {
@@ -47724,7 +47724,7 @@
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        170
+        181
       ]
     },
     {
@@ -52854,7 +52854,7 @@
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        161
+        172
       ]
     },
     {
@@ -58273,7 +58273,7 @@
       "lines": [
         125,
         227,
-        381
+        412
       ]
     },
     {
@@ -58281,9 +58281,9 @@
       "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
       "artifactClass": "runtime",
       "lines": [
-        378,
-        510,
-        544
+        393,
+        525,
+        559
       ]
     },
     {
@@ -59138,7 +59138,7 @@
       "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
       "artifactClass": "runtime",
       "lines": [
-        239
+        250
       ]
     },
     {

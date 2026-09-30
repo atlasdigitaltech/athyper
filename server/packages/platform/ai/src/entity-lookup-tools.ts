@@ -146,7 +146,7 @@ export function createAtlasEntityLookupTools(
   const discover: AtlasRegisteredTool = {
     manifest: manifest(
       ENTITY_DISCOVER,
-      "Discover authorized published Entity metadata by business terms. No record data; use the returned field keys for lookup. Current page is only a default context.",
+      "Find published Entity fields/relationships by business terms. Metadata only; use returned keys/hash for reads.",
       { query: { type: "string", minLength: 1, maxLength: 200 } },
       ["query"],
     ),
@@ -163,10 +163,11 @@ export function createAtlasEntityLookupTools(
       async execute({ context, arguments: args }) {
         const candidates =
           (await metadata.listEntityCodes?.(context.context)) ?? [];
-        const words =
+        const words = (
           String(args.query)
             .toLowerCase()
-            .match(/[\p{L}\p{N}_]+/gu) ?? [];
+            .match(/[\p{L}\p{N}_]+/gu) ?? []
+        ).filter((word) => word.length >= 3);
         const items = [];
         for (const code of candidates.slice(0, 256)) {
           let d: EntityRuntimeDescriptor;
@@ -232,7 +233,6 @@ export function createAtlasEntityLookupTools(
             return {
               key,
               label: f.list?.label ?? key,
-              type: f.type,
               searchable: search.includes(key),
             };
           });
@@ -245,15 +245,19 @@ export function createAtlasEntityLookupTools(
             .toLowerCase();
           const score = words.filter((w) => terms.includes(w)).length;
           if (!score) continue;
+          const fieldScores = projected.map(
+            (f) =>
+              words.filter((w) =>
+                (f.key + " " + f.label).toLowerCase().includes(w),
+              ).length,
+          );
+          const bestFieldScore = Math.max(1, ...fieldScores);
           const selected = projected
             .filter(
-              (f) =>
-                f.searchable ||
-                words.some((w) =>
-                  (f.key + " " + f.label).toLowerCase().includes(w),
-                ),
+              (f, index) =>
+                f.searchable || fieldScores[index] === bestFieldScore,
             )
-            .slice(0, 16);
+            .slice(0, 8);
           items.push({
             entityCode: d.entityCode,
             descriptorHash: d.compiledHash,
@@ -271,16 +275,27 @@ export function createAtlasEntityLookupTools(
           (a, b) =>
             b.score - a.score || a.entityCode.localeCompare(b.entityCode),
         );
+        const selectedItems: Omit<(typeof items)[number], "score">[] = [];
+        for (const { score: _score, ...item } of items) {
+          if (selectedItems.length === 3) break;
+          if (
+            Buffer.byteLength(
+              JSON.stringify([...selectedItems, item]),
+              "utf8",
+            ) <= 1000
+          )
+            selectedItems.push(item);
+        }
         return {
           data: {
             kind: "entity_catalogue",
-            items: items.slice(0, 6).map(({ score: _, ...item }) => item),
+            items: selectedItems,
             coverage:
-              candidates.length > 256 || items.length > 6
+              candidates.length > 256 || items.length > selectedItems.length
                 ? "partial"
-                : "matching published eligible metadata",
+                : "matching metadata",
             guidance:
-              "Only these fields are discoverable here. No record data has been read. Absence is not proof that an Entity or record does not exist.",
+              "Metadata only. Refine query if partial. Absence does not prove nonexistence.",
           },
           sources: [],
         };
@@ -290,7 +305,7 @@ export function createAtlasEntityLookupTools(
   const lookup: AtlasRegisteredTool = {
     manifest: manifest(
       ENTITY_LOOKUP,
-      "Look up a named record using discovered Entity metadata and return selected authorized fields. Prefer exact matches. Multiple matches require clarification; never choose the first.",
+      "Read named records using discovered keys/hash. Prefer exact match. Clarify multiple matches.",
       {
         entityCode: string,
         descriptorHash: string,
@@ -419,7 +434,7 @@ export function createAtlasEntityLookupTools(
   const follow: AtlasRegisteredTool = {
     manifest: manifest(
       ENTITY_FOLLOW_REFERENCE,
-      "Read a declared reference from the current record. The server binds the source record; do not guess a relationship. Missing or multiple relationships require clarification.",
+      "Follow a published current-record reference. Clarify ambiguous relationships.",
       {
         relationshipKey: string,
         fields: requestedFields,

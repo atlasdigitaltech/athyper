@@ -320,6 +320,37 @@ it("keeps explicit named lookup available across pages and binds relative lookup
       definitions,
     ).kind,
   ).toBe("delegate");
+  const summaryDefinitions = [
+    ...definitions,
+    {
+      name: "entity_read_record",
+      description: "Read current record",
+      inputSchema: {},
+      entitySection: {
+        entityCode: "partner",
+        sectionKey: "record_summary",
+        aliases: ["summary", "overview"],
+        resultKey: "items",
+        label: "Record summary",
+      },
+    },
+  ];
+  expect(
+    coordinator.resolveIntent(
+      context,
+      "Explain the saved information in overview.",
+      businessContext,
+      summaryDefinitions,
+    ).kind,
+  ).toBe("read");
+  expect(
+    coordinator.resolveIntent(
+      context,
+      "Show this record summary for Example nation",
+      businessContext,
+      summaryDefinitions,
+    ).kind,
+  ).toBe("delegate");
   const request = {
     context,
     runId: id,
@@ -381,4 +412,31 @@ it("rejects mismatched evidence and never sends confidential or masked fields to
     authorizationProfileHash: context.profileHash,
   });
   await expect(f.execute("entity_lookup", args)).rejects.toThrow();
+});
+
+it("keeps natural-language grammar from flooding the bounded catalogue with unrelated fields", async () => {
+  const f = fixture();
+  const d = f.descriptors.get("nation")!;
+  const extra = Array.from({ length: 20 }, (_, i) => ({
+    key: `iso_format_${i}`,
+    storagePath: `iso_format_${i}`,
+    type: "string" as const,
+    required: false,
+    writableOn: [],
+    classification: "public" as const,
+    list: { label: `ISO format ${i}` },
+  }));
+  f.descriptors.set("nation", {
+    ...d,
+    fields: [...d.fields, ...extra],
+    ai: {
+      ...d.ai!,
+      summaryFieldKeys: [...d.ai!.summaryFieldKeys, ...extra.map((x) => x.key)],
+    },
+  });
+  const result = await f.execute("entity_discover", {
+    query: "What is Example nation's calling code?",
+  });
+  expect(JSON.stringify(result.data)).toContain("Calling code");
+  expect(JSON.stringify(result.data)).not.toContain("iso_format_");
 });
