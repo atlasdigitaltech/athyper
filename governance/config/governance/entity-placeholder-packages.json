@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "scope": "Verified entity runtime placeholders; not a runtime capability registry",
+  "packages": [
+    {"path":"packages/platform/entity/runtime/content-ui","name":"@athyper/platform-entity-content-ui","status":"reserved-placeholder","entry":"src/index.ts","expectedImplementation":"export {};","runtimeConsumersFound":false,"disposition":"Retain pending explicit retirement; no implemented capability"},
+    {"path":"packages/platform/entity/runtime/workflow-ui","name":"@athyper/platform-entity-workflow-ui","status":"reserved-placeholder","entry":"src/index.ts","expectedImplementation":"export {};","runtimeConsumersFound":false,"disposition":"Retain; frontend spine membership records ownership/budget, not activation"},
+    {"path":"packages/platform/entity/runtime/cascade","name":"@athyper/platform-entity-cascade","status":"reserved-placeholder","entry":"src/index.ts","expectedImplementation":"export {};","runtimeConsumersFound":false,"disposition":"Retain pending explicit retirement; no implemented capability"}
+  ]
+}

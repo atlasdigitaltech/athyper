@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-11T02:36:13.215Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "exactMessage": "approved",
+    "revision": "7533ccd4ea28e43c245be83427220f8fd172eb0be1bef727466c7163fdcdd760"
+  },
+  "revision": "7533ccd4ea28e43c245be83427220f8fd172eb0be1bef727466c7163fdcdd760",
+  "amendmentSha256": "e08e333014c2c5c131fdb54f0170c8886cb2c5b87fd1cd8726e3a3e4297ddecd",
+  "accepted": true,
+  "executable": false,
+  "reason": "This response refers to the image amendment withdrawn after startup failure. It does not authorize a different image.",
+  "activationAuthorized": false
+}

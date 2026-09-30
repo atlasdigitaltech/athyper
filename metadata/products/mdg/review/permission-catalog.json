@@ -1,0 +1,278 @@
+{
+  "runtimeArtifact": false,
+  "source": {
+    "database": "athyper_neon",
+    "method": "authz.permission canonical_code/status",
+    "scope": "local_read_only_snapshot"
+  },
+  "permissions": [
+    {
+      "code": "neon.address.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.address_link.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_banking.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_commodity_capability.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_governance_relation.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_identifier.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_industry_classification.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_operating_organization_assignment.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_qualification.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_request.approve",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_request.create_draft",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_request.materialize",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_request.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_request.reject",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_request.return",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_request.save_draft",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_request.submit",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_tax_registration.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.certification.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.collaboration.attachment.archive",
+      "status": "published"
+    },
+    {
+      "code": "neon.collaboration.attachment.create",
+      "status": "published"
+    },
+    {
+      "code": "neon.collaboration.attachment.download",
+      "status": "published"
+    },
+    {
+      "code": "neon.collaboration.attachment.finalize",
+      "status": "published"
+    },
+    {
+      "code": "neon.collaboration.attachment.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.collaboration.comment.archive_own",
+      "status": "published"
+    },
+    {
+      "code": "neon.collaboration.comment.create",
+      "status": "published"
+    },
+    {
+      "code": "neon.collaboration.comment.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.collaboration.comment.update_own",
+      "status": "published"
+    },
+    {
+      "code": "neon.contact_person.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.customer.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.customer_company_profile.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner.mesh_publish",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner.print",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_activity.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_address.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_amend.create",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_bank.read_masked",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_bank.reveal",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_certificate.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_contact.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_credit.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_identifier.read_masked",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_identity.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_network.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.bp_target.network_read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_person.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_qualification.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_tax.read_masked",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_tax.reveal",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_identifier.reveal",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_workforce.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.entity_case.create",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.entity_case.materialize",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.entity_case.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.entity_case.submit",
+      "status": "published"
+    },
+    {
+      "code": "neon.supplier.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.supplier_company_profile.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.workforce.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_classification.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_classification.declare",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_classification.verify",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_classification.archive",
+      "status": "published"
+    }
+  ],
+  "capabilityContractEvidence": {
+    "version": 1,
+    "method": "Checked typed binding permissions against this existing published local catalog snapshot; no new permission codes or grants inferred.",
+    "source": "business_partner/operation.json",
+    "operations": [
+      "comments.read",
+      "comments.create",
+      "comments.update_own",
+      "comments.archive_own",
+      "attachments.read",
+      "attachments.create",
+      "attachments.finalize",
+      "attachments.status",
+      "attachments.download"
+    ]
+  }
+}

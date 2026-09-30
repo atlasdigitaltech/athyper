@@ -1,0 +1,36 @@
+{
+  "schema": "athyper.development-publication-save-repair/1",
+  "observedAt": "2026-09-05T04:22:05.032434+00:00",
+  "environment": "dev",
+  "tenantCode": "cirrusatlantic",
+  "failedRequestId": "f18f2003-1888-4a96-b71d-b490c47a876a",
+  "observedError": "permission denied for table business_partner_definition_revision",
+  "repairs": [
+    "Assign existing publication service role to runtime and worker, projection applier to worker",
+    "Grant publication service schema usage and tenant helper execution",
+    "Execute definition author, get and publish with transaction-local tenant and principal settings"
+  ],
+  "apiImage": "sha256:2f2983ae330f78d32d0d23c0cb7cfc6e1aeeb9d82708ddc0fd269831c7bede91",
+  "apiContainerHealth": "healthy",
+  "validation": {
+    "publicationTestsPassed": 60,
+    "composeTestsPassed": 18,
+    "typecheck": "passed",
+    "runtimeBuild": "passed",
+    "nativeServiceSave": "passed_and_rolled_back",
+    "crossTenantRead": "denied",
+    "tenantContextLeak": false,
+    "humanApprovalPerformed": false,
+    "publicationDatabaseHealth": "healthy",
+    "unauthenticatedRelayPostStatus": 401,
+    "authenticatedBrowserRetry": "pending",
+    "overallReadiness": "unhealthy",
+    "otherReadinessFailures": [
+      "business-partner-network-exchange.mesh",
+      "business-partner-case-age.neon"
+    ]
+  },
+  "nativeApproval": null,
+  "signedRelease": null,
+  "consumerActivationReceipts": []
+}

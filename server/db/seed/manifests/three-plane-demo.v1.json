@@ -1,9 +1,9 @@
 {
   "contractVersion": "athyper.three-plane-provision.v1",
-  "manifestVersion": "2.0.0",
+  "manifestVersion": "2.0.2",
   "realmKey": "athyper",
   "systemPrincipalId": "00000000-0000-0000-0000-000000000000",
-  "identitySource": "../../../../stack/config/iam/realm-athyper-demosetup.json",
+  "identitySource": "../../../../deploy/config/iam/realm-athyper-demosetup.json",
   "planes": {
     "studio": {
       "databaseName": "athyper_studio",

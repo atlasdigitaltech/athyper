@@ -1,0 +1,2 @@
+import {notFound} from "next/navigation";import {meshCatalogRoutes} from "@/lib/catalog-routes";import {MeshExperienceSurface} from "@/lib/experience-runtime";
+export default async function Page({params}:{readonly params:Promise<{workspaceSlug:string}>}){const{workspaceSlug}=await params,workspace=meshCatalogRoutes.find(item=>item.routeSlug===workspaceSlug);if(!workspace)notFound();return <MeshExperienceSurface surfaceKey={`mesh.${workspace.code}.home`} workspaceCode={workspace.code} context={{workspaceCode:workspace.code,moduleCount:String(workspace.modules.length)}}/>;}

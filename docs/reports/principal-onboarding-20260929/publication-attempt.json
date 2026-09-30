@@ -1,0 +1,49 @@
+{
+  "checkedAt": "2026-09-29T05:59:53.856Z",
+  "status": "awaiting_authenticated_enrollment",
+  "drafts": 3,
+  "enrolledPolicies": 0,
+  "releases": 0,
+  "sessionChecks": [
+    {
+      "actor": "platform.admin",
+      "httpStatus": 401,
+      "code": "AUTH_TOKEN_INVALID"
+    },
+    {
+      "actor": "platform.owner",
+      "httpStatus": 401,
+      "code": "AUTH_TOKEN_INVALID"
+    }
+  ],
+  "health": [
+    {
+      "service": "athyper-dev-source-api-1",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "athyper-dev-source-worker-1",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "athyper-dev-source-scheduler-1",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "athyper-dev-control-control-api-1",
+      "state": "running",
+      "health": "healthy"
+    }
+  ],
+  "readinessHttpStatus": 200,
+  "publicationOrder": [
+    "principal_profile",
+    "principal_notification_preference",
+    "principal"
+  ],
+  "loginPending": "platform.admin",
+  "approvalBypassed": false
+}

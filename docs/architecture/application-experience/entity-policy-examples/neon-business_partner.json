@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "kind": "neon.business-context.entity-policy",
+  "status": "draft_for_analysis",
+  "plane": "neon",
+  "entity": {
+    "code": "business_partner",
+    "class": "master_data",
+    "displayName": "Business Partner"
+  },
+  "scope": {
+    "kind": "tenant",
+    "globalLegalEntityEffect": "none_on_base_identity",
+    "recordOwnership": {
+      "tenantId": "required",
+      "legalEntityId": "not_applicable",
+      "companyCodeId": "not_applicable",
+      "operatingOrganizationId": "not_applicable"
+    },
+    "extensionScopes": [
+      {
+        "extension": "supplier_participation",
+        "companyCodeId": "optional",
+        "operatingOrganizationId": "required",
+        "requiredCapability": "procurement"
+      },
+      {
+        "extension": "customer_participation",
+        "companyCodeId": "optional",
+        "operatingOrganizationId": "required",
+        "requiredCapability": "sales"
+      },
+      {
+        "extension": "banking_and_finance",
+        "companyCodeId": "required",
+        "operatingOrganizationId": "optional",
+        "requiredCapability": "finance"
+      }
+    ]
+  },
+  "workspace": {
+    "globalSelector": "legal_entity_lens_only",
+    "workspaceContext": {
+      "companyCode": "not_applicable_to_base_identity",
+      "operatingOrganization": "not_applicable_to_base_identity"
+    },
+    "standardView": "all_accessible",
+    "supportedViews": ["my_documents", "my_team", "shared_with_me", "all_accessible"],
+    "aggregateMode": {
+      "supported": true,
+      "meaning": "tenant_wide_base_identity_only",
+      "creationAllowed": false
+    }
+  },
+  "actions": {
+    "read": {
+      "permission": "neon.business_partner.read",
+      "requiredCoordinates": [],
+      "contextValidation": "tenant_and_record_authorization"
+    },
+    "create": {
+      "permission": "neon.business_partner.create",
+      "requiredCoordinates": [],
+      "contextValidation": "tenant_authorization"
+    },
+    "maintainSupplierParticipation": {
+      "permission": "neon.business_partner.supplier.update",
+      "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"],
+      "requiredCapability": "procurement",
+      "contextValidation": "validateNeonBusinessContext"
+    },
+    "maintainCustomerParticipation": {
+      "permission": "neon.business_partner.customer.update",
+      "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"],
+      "requiredCapability": "sales",
+      "contextValidation": "validateNeonBusinessContext"
+    }
+  },
+  "draftContextChanges": {
+    "allowed": false,
+    "reason": "The base identity is tenant-wide; extension ownership changes use their own governed commands."
+  },
+  "authorization": {
+    "clientMetadataMayGrantAccess": false,
+    "serverIsAuthoritative": true,
+    "recordAndExtensionAuthorizationAreSeparate": true
+  }
+}

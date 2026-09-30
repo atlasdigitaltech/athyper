@@ -1,0 +1,448 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "flow",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "draftEntityCode": "business_partner_request",
+  "materializesEntityCode": "business_partner",
+  "persistence": {
+    "saveOperation": "save_draft",
+    "resume": "persisted_draft_and_pinned_release",
+    "releaseChange": "explicit_compatible_migration_or_finish_pinned",
+    "contextChange": "invalidate_validation_and_approval"
+  },
+  "serverValidation": {
+    "onSave": "partial_draft",
+    "onSubmit": "complete_schema_and_policy",
+    "onMaterialize": "revalidate_full_authority_and_context"
+  },
+  "artifactKey": "business_partner_request/flow.base",
+  "flowKind": "base",
+  "dependencies": [
+    "business_partner_request/core",
+    "business_partner_request/operation",
+    "business_partner_request/presentation.review",
+    "business_partner_request/presentation.section.evidence"
+  ],
+  "steps": [
+    {
+      "stepKey": "capture",
+      "presentationSlot": "capture"
+    },
+    {
+      "stepKey": "evidence",
+      "presentationRef": "business_partner_request/presentation.section.evidence.json"
+    },
+    {
+      "stepKey": "review",
+      "presentationRef": "business_partner_request/presentation.review.json",
+      "operationKey": "submit"
+    }
+  ],
+  "sourceMappingCatalog": {
+    "internal": {
+      "allowedJourneys": [
+        "supplier",
+        "customer",
+        "workforce"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "principalId"
+      ],
+      "snapshotPinned": false,
+      "source": "internal",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0"
+    },
+    "portal": {
+      "allowedJourneys": [
+        "supplier",
+        "customer",
+        "workforce"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "invitationId",
+        "applicantPrincipalId"
+      ],
+      "snapshotPinned": false,
+      "source": "portal",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0"
+    },
+    "mesh": {
+      "allowedJourneys": [
+        "supplier",
+        "customer"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "projectionId",
+        "snapshotId",
+        "acceptedFieldPaths"
+      ],
+      "snapshotPinned": true,
+      "source": "mesh",
+      "strategy": "selective_acceptance",
+      "version": "2.0.0"
+    },
+    "import": {
+      "allowedJourneys": [
+        "supplier",
+        "customer",
+        "workforce"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "systemCode",
+        "entityId",
+        "payloadHash"
+      ],
+      "snapshotPinned": false,
+      "source": "import",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0"
+    },
+    "api": {
+      "allowedJourneys": [
+        "supplier",
+        "customer",
+        "workforce"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "systemCode",
+        "entityId",
+        "payloadHash"
+      ],
+      "snapshotPinned": false,
+      "source": "api",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0"
+    },
+    "internal.governance": {
+      "allowedJourneys": [
+        "governance"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "principalId"
+      ],
+      "snapshotPinned": false,
+      "source": "internal",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0",
+      "reviewDecision": "explicit_governance_scope_for_this_flow"
+    },
+    "api.governance": {
+      "allowedJourneys": [
+        "governance"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "systemCode",
+        "entityId",
+        "payloadHash"
+      ],
+      "snapshotPinned": false,
+      "source": "api",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0",
+      "reviewDecision": "explicit_governance_scope_for_this_flow"
+    }
+  },
+  "artifactHash": "sha256:f90a6c76f91763c37dfa461fdb9296150b2c9997792116876c085c6ea26ed2e0",
+  "workflowDefinitions": {
+    "customer": {
+      "escalation": [
+        "stage_owner",
+        "sales_organization_owner",
+        "data_governance_owner"
+      ],
+      "sod": {
+        "applicantCannotDecide": true,
+        "makerCannotDecide": true,
+        "mfaAtDecision": true
+      },
+      "stages": [
+        {
+          "code": "stewardship",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.customer.stages.stewardship.label",
+            "defaultText": "Data stewardship"
+          }
+        },
+        {
+          "code": "compliance_consent",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "all"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.customer.stages.compliance_consent.label",
+            "defaultText": "Compliance and consent"
+          }
+        },
+        {
+          "code": "sales_owner",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.customer.stages.sales_owner.label",
+            "defaultText": "Sales owner"
+          }
+        },
+        {
+          "code": "credit_review",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "percentage",
+            "value": 50
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.customer.stages.credit_review.label",
+            "defaultText": "Credit review"
+          }
+        }
+      ],
+      "version": "3.0.1"
+    },
+    "governance": {
+      "escalation": [
+        "data_governance_owner"
+      ],
+      "sod": {
+        "makerCannotDecide": true,
+        "mfaAtDecision": true
+      },
+      "stages": [
+        {
+          "code": "dependency_impact_review",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "all"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.governance.stages.dependency_impact_review.label",
+            "defaultText": "Dependency impact review"
+          }
+        },
+        {
+          "code": "data_stewardship",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.governance.stages.data_stewardship.label",
+            "defaultText": "Data stewardship"
+          }
+        }
+      ],
+      "version": "3.0.1"
+    },
+    "supplier": {
+      "escalation": [
+        "stage_owner",
+        "operating_organization_owner",
+        "data_governance_owner"
+      ],
+      "sod": {
+        "applicantCannotDecide": true,
+        "makerCannotDecide": true,
+        "mfaAtDecision": true
+      },
+      "stages": [
+        {
+          "code": "stewardship",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.supplier.stages.stewardship.label",
+            "defaultText": "Data stewardship"
+          }
+        },
+        {
+          "code": "compliance_tax",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "when": {
+            "operator": "not_equals",
+            "path": "ownershipClass",
+            "value": "internal"
+          },
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.supplier.stages.compliance_tax.label",
+            "defaultText": "Compliance and tax"
+          }
+        },
+        {
+          "code": "procurement_owner",
+          "escalateAtMinutes": 240,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "percentage",
+            "value": 25
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.supplier.stages.procurement_owner.label",
+            "defaultText": "Procurement owner"
+          }
+        }
+      ],
+      "version": "3.0.1"
+    },
+    "workforce": {
+      "escalation": [
+        "stage_owner",
+        "hr_business_partner",
+        "privacy_officer"
+      ],
+      "sod": {
+        "applicantCannotDecide": true,
+        "makerCannotDecide": true,
+        "mfaAtDecision": true,
+        "restrictedEvidencePurposeRequired": true
+      },
+      "stages": [
+        {
+          "code": "hr_review",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.workforce.stages.hr_review.label",
+            "defaultText": "HR review"
+          }
+        },
+        {
+          "code": "hiring_manager",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.workforce.stages.hiring_manager.label",
+            "defaultText": "Hiring manager"
+          }
+        },
+        {
+          "code": "compliance_privacy",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "all"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.workforce.stages.compliance_privacy.label",
+            "defaultText": "Privacy compliance"
+          }
+        }
+      ],
+      "version": "3.0.1"
+    }
+  }
+}

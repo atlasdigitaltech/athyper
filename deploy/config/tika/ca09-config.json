@@ -1,0 +1,75 @@
+{
+  "server": {
+    "allowPipes": false,
+    "allowPerRequestConfig": false,
+    "endpoints": [
+      "tika",
+      "status"
+    ],
+    "maxRequestSizeBytes": 20971520
+  },
+  "pipes": {
+    "numClients": 1,
+    "forkedJvmArgs": [
+      "-Xmx384m",
+      "-XX:ActiveProcessorCount=2"
+    ],
+    "maxWaitForClientMillis": 1000
+  },
+  "parsers": [
+    {
+      "pdf-parser": {
+        "maxPages": 20,
+        "maxMainMemoryBytes": 67108864,
+        "extractInlineImages": false,
+        "extractActions": false,
+        "throwOnEncryptedPayload": true,
+        "ocr": {
+          "strategy": "AUTO",
+          "dpi": 150,
+          "maxPagesToOcr": 3,
+          "maxImagePixels": 4000000
+        }
+      }
+    },
+    {
+      "tesseract-ocr-parser": {
+        "language": "eng",
+        "timeoutMillis": 10000
+      }
+    },
+    {
+      "default-parser": {}
+    }
+  ],
+  "parse-context": {
+    "embedded-limits": {
+      "maxCount": 0
+    },
+    "timeout-limits": {
+      "totalTaskTimeoutMillis": 30000,
+      "progressTimeoutMillis": 15000,
+      "throwOnDeadline": true
+    },
+    "output-limits": {
+      "writeLimit": 200000,
+      "throwOnWriteLimit": false,
+      "maxXmlDepth": 100,
+      "maxPackageEntryDepth": 10,
+      "zipBombThreshold": 1000000,
+      "zipBombRatio": 100
+    },
+    "standard-metadata-limiter-factory": {
+      "maxTotalBytes": 1048576,
+      "maxFieldSize": 102400,
+      "maxKeySize": 1024,
+      "maxValuesPerField": 100
+    }
+  },
+  "content-handler-factory": {
+    "basic-content-handler-factory": {
+      "writeLimit": 200000,
+      "type": "TEXT"
+    }
+  }
+}

@@ -10,3 +10,4 @@ export const neonPlaneComposition = Object.freeze({
 export * from "./register-finance.js";
 export * from "./finance-http.js";
 export * from "./finance-jobs.js";
+export * from "./record-collection-scope.js";

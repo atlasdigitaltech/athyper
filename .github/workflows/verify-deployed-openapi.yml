@@ -1,0 +1,60 @@
+name: Verify deployed OpenAPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_run_id:
+        description: Workflow run containing the candidate OpenAPI artifact
+        required: true
+        type: string
+      artifact_name:
+        description: Release artifact containing openapi.json for this capability configuration
+        required: true
+        type: string
+      api_url:
+        description: Deployed OpenAPI JSON URL
+        required: true
+        type: string
+      runner:
+        description: Use self-hosted for private development DNS and its trusted CA
+        type: choice
+        options: [ubuntu-latest, self-hosted]
+        default: ubuntu-latest
+  workflow_call:
+    inputs:
+      release_run_id:
+        required: true
+        type: string
+      artifact_name:
+        required: true
+        type: string
+      api_url:
+        required: true
+        type: string
+      runner:
+        type: string
+        default: ubuntu-latest
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify:
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+      - name: Download expected specification from the candidate build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.release_run_id }}
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        run: gh run download "$RUN_ID" --name "$ARTIFACT_NAME" --dir release-openapi
+      - name: Compare the deployed specification with the release artifact
+        env:
+          API_URL: ${{ inputs.api_url }}
+        run: node tooling/tools/scripts/verify-deployed-openapi.mjs --expected release-openapi/openapi.json --url "$API_URL"

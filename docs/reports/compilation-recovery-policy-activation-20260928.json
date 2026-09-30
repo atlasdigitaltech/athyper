@@ -1,0 +1,11 @@
+{
+  "actor": "platform.owner",
+  "sessionVerifiedAt": "2026-09-27T16:23:55.556Z",
+  "httpStatus": 200,
+  "result": {
+    "id": "a9953bc3-f508-414a-8b7c-2920074052c0",
+    "version": 1,
+    "hash": "d0d40bc857eb66694ac2ca84665476df367fb5ae37bfcc9cca7ce2c816512336",
+    "status": "active"
+  }
+}

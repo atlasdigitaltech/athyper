@@ -1,0 +1,28 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    { "id": 1, "type": "stat", "title": "Oldest open request (seconds)", "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 }, "targets": [{ "refId": "A", "expr": "max(athyper_business_partner_request_oldest_open_seconds)" }] },
+    { "id": 2, "type": "timeseries", "title": "Request failure rate", "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 }, "targets": [{ "refId": "A", "expr": "sum(rate(athyper_business_partner_request_http_total{outcome=\"error\"}[5m])) / clamp_min(sum(rate(athyper_business_partner_request_http_total[5m])), 0.001)" }] },
+    { "id": 3, "type": "timeseries", "title": "Workflow SLA schedule and DLQ", "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 }, "targets": [{ "refId": "A", "expr": "max(athyper_schedule_lag_seconds{queue=\"maintenance\"})" }, { "refId": "B", "expr": "sum(increase(athyper_job_dlq_total{queue=\"maintenance\"}[5m]))" }] },
+    { "id": 4, "type": "timeseries", "title": "Materialization failures", "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 }, "targets": [{ "refId": "A", "expr": "sum(increase(athyper_business_partner_request_http_total{operation=\"apply\",outcome=\"error\"}[5m]))" }] },
+    { "id": 5, "type": "timeseries", "title": "Invitation abuse rejections", "gridPos": { "h": 6, "w": 6, "x": 0, "y": 6 }, "targets": [{ "refId": "A", "expr": "sum by (outcome) (increase(athyper_business_partner_invitation_http_total{operation=\"external_guard\"}[5m]))" }] },
+    { "id": 6, "type": "timeseries", "title": "Outbox lag (seconds)", "gridPos": { "h": 6, "w": 6, "x": 6, "y": 6 }, "targets": [{ "refId": "A", "expr": "max(athyper_outbox_lag_seconds)" }] },
+    { "id": 7, "type": "timeseries", "title": "Quarantine and poison messages", "gridPos": { "h": 6, "w": 6, "x": 12, "y": 6 }, "targets": [{ "refId": "A", "expr": "sum(increase(athyper_business_partner_mesh_delivery_total{outcome=~\"dead_letter|quarantined\"}[5m]))" }, { "refId": "B", "expr": "sum(increase(athyper_job_dlq_total[5m]))" }] },
+    { "id": 8, "type": "timeseries", "title": "IAM drift and fencing", "gridPos": { "h": 6, "w": 6, "x": 18, "y": 6 }, "targets": [{ "refId": "A", "expr": "sum by (outcome) (increase(trustiam_projection_reconciliation_total{outcome=~\"drift|failed|fenced\"}[15m]))" }] },
+    { "id": 9, "type": "timeseries", "title": "MESH reconciliation drift", "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 }, "targets": [{ "refId": "A", "expr": "sum by (outcome) (increase(athyper_business_partner_mesh_delivery_total{operation=\"reconciliation\"}[15m]))" }] },
+    { "id": 10, "type": "stat", "title": "Runtime readiness failures", "gridPos": { "h": 6, "w": 12, "x": 12, "y": 12 }, "targets": [{ "refId": "A", "expr": "count(up{job=\"athyper-runtime-processes\"} == 0)" }] }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["business-partner", "p9", "release-gate"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "Business Partner P9 Release",
+  "uid": "business-partner-p9",
+  "version": 1
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "scope": "server/packages/services/records/src",
+  "counts": {
+    "verifyBearer": 0,
+    "resolveTenantId": 0,
+    "directOrgHeader": 0,
+    "principalResolution": 0
+  },
+  "total": 0,
+  "files": 37
+}

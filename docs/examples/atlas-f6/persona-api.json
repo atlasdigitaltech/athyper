@@ -1,0 +1,7 @@
+{
+  "observedAt": "2026-09-10T07:04:36.139Z",
+  "applied": true,
+  "baseImage": "sha256:05e05356fd0606a82b0330f8f3ffc2148c0d0301468385c50ad76b5bf2d51b35",
+  "image": "athyper-runtime-server:f6-persona-20260910",
+  "moduleImportPassed": true
+}

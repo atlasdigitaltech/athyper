@@ -1,0 +1,62 @@
+{
+  "$schema": "athyper.business-partner-r5-fixture/1",
+  "scenarios": [
+    {
+      "id": "BP-CUS-001",
+      "authority": "governed_customer_materialization",
+      "status": "local_materialization_verified_target_e2e_required"
+    },
+    {
+      "id": "BP-CUS-002",
+      "authority": "existing_partner_customer_extension",
+      "status": "local_verified"
+    },
+    {
+      "id": "BP-CUS-003",
+      "authority": "dual_role_customer_extension",
+      "status": "local_verified"
+    },
+    {
+      "id": "BP-CUS-004",
+      "authority": "scoped_customer_credit_decision",
+      "status": "local_verified_target_e2e_required"
+    },
+    {
+      "id": "BP-CUS-005",
+      "authority": "scoped_customer_designation_decision",
+      "status": "local_verified_target_e2e_required"
+    },
+    {
+      "id": "BP-CUS-006",
+      "authority": "deterministic_customer_readiness",
+      "status": "ui_drivable_target_e2e_required"
+    },
+    {
+      "id": "BP-CUS-007",
+      "authority": "five_action_customer_lifecycle",
+      "status": "local_verified"
+    },
+    {
+      "id": "BP-CUS-008",
+      "authority": "independent_credit_designation_reconciliation",
+      "status": "local_verified_target_e2e_required"
+    }
+  ],
+  "invariants": {
+    "oneBusinessPartnerIdentity": true,
+    "creditAndDesignationIndependent": true,
+    "readinessIsNotAuthority": true,
+    "lifecycleUsesExpectedVersion": true,
+    "lifecycleActions": [
+      "activate",
+      "suspend",
+      "reactivate",
+      "deactivate",
+      "archive"
+    ],
+    "designationScopes": ["operating_organization", "company_code", "country", "channel"],
+    "geographyAndChannelScopeAvailable": true,
+    "changeHistoryWorkspaceAvailable": true,
+    "targetEnvironmentEvidenceRetained": false
+  }
+}

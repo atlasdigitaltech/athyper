@@ -25,3 +25,5 @@ CREATE INDEX legal_hold_manifest_resource_idx
     ON governance.legal_hold_manifest (tenant_id, resource_kind, resource_id);
 CREATE INDEX report_pack_source_idx
     ON governance.report_pack (tenant_id, source_entity_code, source_entity_id);
+CREATE UNIQUE INDEX cycle_subject_primary_uq ON governance.cycle_subject(tenant_id,cycle_run_id) WHERE is_primary;
+CREATE INDEX cycle_subject_case_idx ON governance.cycle_subject(tenant_id,entity_case_id) WHERE entity_case_id IS NOT NULL;

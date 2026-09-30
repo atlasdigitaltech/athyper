@@ -1,1 +1,1 @@
-{"name":"Athyper Admin","short_name":"Admin","description":"Platform Control and Governance","start_url":"/","display":"standalone","background_color":"#fafafa","theme_color":"#151515","icons":[{"src":"/brand/studio/app-icon.png","sizes":"64x64","type":"image/png"}]}
+{"name":"Athyper Studio","short_name":"Studio","description":"Business Technology Platform","start_url":"/","display":"standalone","background_color":"#f8fafc","theme_color":"#234B84","icons":[{"src":"/brand/studio/app-icon.png","sizes":"2048x2048","type":"image/png","purpose":"any"}]}

@@ -5,6 +5,28 @@
   "defaultScopeBehavior": "deny_undeclared",
   "permissions": [
     {
+      "permissionCode": "common.platform.reference.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.ai.agent.use",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "mesh.catalog.attachment.create",
       "scopes": [
         {
@@ -456,6 +478,23 @@
       ]
     },
     {
+      "permissionCode": "mesh.catalog.network_relationship.request",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_relationship",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "mesh.catalog.network_relationship.suspend",
       "scopes": [
         {
@@ -541,5 +580,5 @@
       ]
     }
   ],
-  "sha256": "6d25ef074944c14117b44819de953d21e705daa94916349b9120cce00b94871c"
+  "sha256": "99769eb22aa1bf929629407795ac778ca64eda16233e7cee0408a018289e2869"
 }

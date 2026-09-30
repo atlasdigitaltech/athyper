@@ -1,0 +1,9 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0", "contractStatus": "proposed_for_review", "planeKey": "neon", "entityCode": "business_partner_risk", "descriptorKind": "protected_child_collection",
+  "aggregate": { "key": "business_partner", "rootEntityCode": "business_partner" }, "ownership": { "ownerEntityCode": "business_partner", "ownerIdSource": "business_partner_id", "cardinality": "one_to_many" },
+  "storage": { "sourceObjects": ["master.party_risk_assessment", "master.party_risk_dimension_score", "master.party_risk_evidence", "master.party_risk_driver", "master.party_risk_mitigation", "master.party_risk_review_event"], "tenantField": "tenant_id" },
+  "fields": [{ "key": "assessmentType", "type": "reference" }, { "key": "overallScore", "type": "decimal", "readOnly": true }, { "key": "riskLevel", "type": "enum", "readOnly": true }, { "key": "assessmentDate", "type": "date" }, { "key": "reviewDueDate", "type": "date" }, { "key": "evidence", "type": "collection", "sensitive": true }],
+  "businessContext": { "scopeKind": "company_optional", "requiredCoordinatesForCompanyDecision": ["legalEntityId", "companyCodeId"], "aggregateMode": "prohibited" },
+  "operations": [{ "key": "read", "permission": "neon.business_partner.risk.read", "scope": "company_optional" }, { "key": "manage", "permission": "neon.business_partner.risk.update", "scope": "company_optional" }, { "key": "review", "permission": "neon.business_partner.risk.review", "scope": "company_optional" }],
+  "handlers": { "read": "neon.business_partner.risk.read.v1", "write": "neon.business_partner.risk.write.v1" }, "presentation": { "section": "Credit and risk", "component": "business-partner-credit-risk.v1", "sensitive": true }, "serverPolicies": ["risk_policy", "evidence_access", "decision_scope", "review_lifecycle", "audit"]
+}

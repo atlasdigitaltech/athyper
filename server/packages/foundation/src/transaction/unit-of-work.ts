@@ -1,6 +1,6 @@
 import type { TransactionActor } from "./transaction-context.js";
 import type { TransactionRunner } from "./transaction-runner.js";
-import type { PlaneKey } from "../context/execution-context.js";
+import type { PlaneKey } from "../plane/plane-key.js";
 
 export interface UnitOfWork<Transaction = unknown> {
   readonly runner: TransactionRunner<Transaction>;
@@ -14,5 +14,6 @@ export interface PlaneTransactionCoordinator<Transaction = unknown> {
     actor: TransactionActor,
     work: (transaction: Transaction, signal?: AbortSignal) => Promise<Result>,
     signal?: AbortSignal,
+    options?: { readonly isolationLevel: "repeatable read" },
   ): Promise<Result>;
 }

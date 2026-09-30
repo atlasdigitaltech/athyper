@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "decision": "approved",
+  "proposalRevision": "a75351aca620ebc70d1619c4fffb98127e1ebed537ff03da3fbd93e14e66f4fb",
+  "source": "User reply in this conversation to the exact Studio access proposal",
+  "userReply": "approved",
+  "recordedAt": "2026-09-12T02:53:55.081337+00:00",
+  "scope": "Isolated Studio grants only; release review and NEON/Mesh execution are separate"
+}

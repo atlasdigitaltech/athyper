@@ -1,0 +1,111 @@
+{
+  "schema": "athyper.business-partner-r5-development-deployment/1",
+  "observedAt": "2026-09-05T02:49:23.256885+00:00",
+  "environment": "development",
+  "productionQualified": false,
+  "containers": [
+    {
+      "service": "api",
+      "name": "athyper-dev-api-1",
+      "imageId": "sha256:0699be554ab44d74be8d26b330c7dbc086c98d0a63a4cdf5a8f2d79600ad0efb",
+      "status": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "worker",
+      "name": "athyper-dev-worker-1",
+      "imageId": "sha256:0699be554ab44d74be8d26b330c7dbc086c98d0a63a4cdf5a8f2d79600ad0efb",
+      "status": "running",
+      "health": "healthy"
+    },
+    {
+      "service": "scheduler",
+      "name": "athyper-dev-scheduler-1",
+      "imageId": "sha256:0699be554ab44d74be8d26b330c7dbc086c98d0a63a4cdf5a8f2d79600ad0efb",
+      "status": "running",
+      "health": "healthy"
+    }
+  ],
+  "builtFinalImage": "sha256:0699be554ab44d74be8d26b330c7dbc086c98d0a63a4cdf5a8f2d79600ad0efb",
+  "finalImageReplacement": "deployed and healthy",
+  "sourceHashes": {
+    "server/apps/platform-host/src/composition/register-platform.ts": "a38b62ad427cc57dc08bcba5b46279b39d5788896a1fac8c62d55df47d443a38",
+    "server/apps/platform-host/src/composition/register-services.ts": "1cd8df646f40f81885fc18aacb11a80b3c91b0be1493e1ed94c66f9941a3d156",
+    "server/apps/platform-host/src/composition/__tests__/customer-portal-scheduler.test.ts": "319be7bb4ee19cb0110deb2b6594349b01ec2a0aac8ea98ab81d8f3c06b5b899",
+    "tests/e2e/business-partner/bp-r5.spec.ts": "bf6345b2cf75b2f87998bce3d6eae770b8b176e5f3e526e62072f53a0eb05be4",
+    "server/db/ddl/common/audit/12_reference_seed.sql": "3390d33d5726afa712434475029cc81f2f1543e4ade0a5b935166835bf3fb1fe",
+    "tests/e2e/business-partner/bp-v1-009.fixture.ts": "b85f6516b20a42039826e38ce313510b72cbe76733e63a9768794c5144134665"
+  },
+  "databaseChanges": [
+    "Customer/Supplier shared profile trigger fix",
+    "Studio canonical-party shared-record graph trigger fix",
+    "five Customer lifecycle notification templates and routes",
+    "R5.NET30 synthetic payment term and scoped synthetic Customer fixture",
+    "normalized Business Partner decision creation command with declared grants",
+    "Customer credit operating-organization/company columns and tenant-qualified foreign keys",
+    "Business Partner audit contract schema version 7 permits exact Customer credit, designation and lifecycle events"
+  ],
+  "customerId": "c976420c-3a6c-5095-bbbf-dadd5960b07e",
+  "queue": {
+    "name": "iam.customer-portal.delivery",
+    "scheduleRegistered": true,
+    "everyMs": 15000,
+    "executionPrincipal": "00000000-0000-0000-0000-000000000000",
+    "paused": true,
+    "latestFailure": "permission denied for schema event",
+    "successfulConsumption": false
+  },
+  "observations": {
+    "customerLifecycleEvents": 0,
+    "consumedCustomerPortalReceipts": 0,
+    "neonContactProjections": 0
+  },
+  "publication": {
+    "author": "athyper.admin",
+    "checker": "athyper.owner",
+    "bothRequireMfaEnrollment": true,
+    "compileEnabled": false,
+    "dispatchEnabled": false,
+    "applyEnabled": false,
+    "signingAndInfisicalReferencesConfigured": false,
+    "publishedDefinitionRevisions": 0
+  },
+  "checks": {
+    "schedulerRegressionTests": 1,
+    "schedulerRegressionResult": "passed",
+    "qualificationVerifier": "six gates pending",
+    "hostTypecheck": "passed",
+    "qualificationVerifierTests": {
+      "passed": 12,
+      "failed": 0
+    }
+  },
+  "productApproval": {
+    "decisionId": "BP-Q002",
+    "owner": "NEON Master Data",
+    "status": "pending",
+    "namedReviewer": null
+  },
+  "imageTag": "athyper/runtime-server:local-r5-20260905-r3",
+  "controlJourney": {
+    "creation": "succeeded",
+    "pendingReviewRetained": true,
+    "reviewId": "01a06f75-cf06-70d0-a94b-68d3f1cf1840",
+    "checker": "athyper.owner",
+    "decisionHttpStatus": 403,
+    "missingPermission": "neon.customer.credit.decide",
+    "complete": false
+  },
+  "onboardingJourney": {
+    "complete": false,
+    "observations": [
+      {
+        "path": "/api/relay/neon/business-partner-cases",
+        "httpStatus": 503,
+        "code": "BUSINESS_PARTNER_REQUEST_SCHEMA_UNAVAILABLE",
+        "detail": "BUSINESS_PARTNER_DEFINITION_LOCAL_ACTIVE_REQUIRED",
+        "title": "BUSINESS_PARTNER_REQUEST_SCHEMA_UNAVAILABLE"
+      }
+    ]
+  }
+}

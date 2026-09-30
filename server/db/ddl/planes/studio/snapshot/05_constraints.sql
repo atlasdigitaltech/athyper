@@ -94,3 +94,13 @@ ALTER TABLE snapshot.entity_release_artifact
         FOREIGN KEY (entity_id) REFERENCES metadata.entity (id) ON DELETE RESTRICT,
     ADD CONSTRAINT entity_release_artifact_created_by_fk
         FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+ALTER TABLE snapshot.business_partner_definition_revision
+  ADD CONSTRAINT business_partner_definition_revision_tenant_fk
+  FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT;
+
+ALTER TABLE snapshot.business_partner_case_contract_revision
+    ADD CONSTRAINT business_partner_case_contract_revision_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id),
+    ADD CONSTRAINT business_partner_case_contract_revision_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id);

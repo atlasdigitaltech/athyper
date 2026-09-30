@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "proposalSha256": "d5f80eb1fe0b7f4e048fbeddaa308e4bf9201f2c9719bc5ed123529c6120c702",
+  "proposalRevision": "9036305ffb91b11c7f71f8ea2bcef8263283986a0e84dc6bcabfc1ab2de5d83f",
+  "isolatedGrantsApproved": true,
+  "sharedDevGrantChangesAuthorized": false,
+  "activationAuthorized": false,
+  "recordedAt": "2026-09-11T06:37:24.376397+00:00",
+  "source": "Explicit user answer to call_LZgfedLUPBXh35MYFXrelS0I",
+  "userResponse": "approved"
+}

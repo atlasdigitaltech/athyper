@@ -263,6 +263,15 @@ ALTER TABLE metadata.entity_surface_field_binding
     ADD CONSTRAINT entity_surface_field_binding_created_by_fk FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT,
     ADD CONSTRAINT entity_surface_field_binding_updated_by_fk FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
 
+ALTER TABLE metadata.entity_surface_component_binding
+    ADD CONSTRAINT entity_surface_component_binding_entity_fk FOREIGN KEY(entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_surface_component_binding_change_set_fk FOREIGN KEY(change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_surface_component_binding_surface_fk FOREIGN KEY(entity_surface_id) REFERENCES metadata.entity_surface(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_surface_component_binding_section_fk FOREIGN KEY(entity_surface_section_id) REFERENCES metadata.entity_surface_section(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_surface_component_binding_component_fk FOREIGN KEY(component_surface_id) REFERENCES metadata.entity_surface(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_surface_component_binding_created_by_fk FOREIGN KEY(created_by) REFERENCES master.principal(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_surface_component_binding_updated_by_fk FOREIGN KEY(updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+
 ALTER TABLE metadata.entity_operation
     ADD CONSTRAINT entity_operation_entity_fk FOREIGN KEY (entity_id) REFERENCES metadata.entity (id) ON DELETE RESTRICT,
     ADD CONSTRAINT entity_operation_change_set_fk FOREIGN KEY (change_set_id) REFERENCES metadata.entity_change_set (id) ON DELETE CASCADE,
@@ -374,3 +383,40 @@ ALTER TABLE metadata.entity_operation_scope_binding
         FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT,
     ADD CONSTRAINT entity_operation_scope_binding_updated_by_fk
         FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+
+ALTER TABLE metadata.entity_change_case_binding
+    ADD CONSTRAINT entity_change_case_binding_entity_fk FOREIGN KEY(entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_change_case_binding_change_set_fk FOREIGN KEY(change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_change_case_binding_operation_fk FOREIGN KEY(entity_operation_id) REFERENCES metadata.entity_operation(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_change_case_binding_created_by_fk FOREIGN KEY(created_by) REFERENCES master.principal(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_change_case_binding_updated_by_fk FOREIGN KEY(updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+
+ALTER TABLE metadata.entity_operation_context_requirement
+    ADD CONSTRAINT entity_operation_context_requirement_entity_fk FOREIGN KEY(entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_operation_context_requirement_change_set_fk FOREIGN KEY(change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_operation_context_requirement_operation_fk FOREIGN KEY(entity_operation_id) REFERENCES metadata.entity_operation(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_operation_context_requirement_created_by_fk FOREIGN KEY(created_by) REFERENCES master.principal(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_operation_context_requirement_updated_by_fk FOREIGN KEY(updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+
+ALTER TABLE metadata.entity_field_reference_binding
+    ADD CONSTRAINT entity_field_reference_binding_entity_fk FOREIGN KEY(entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_field_reference_binding_change_set_fk FOREIGN KEY(change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_field_reference_binding_field_fk FOREIGN KEY(entity_field_id) REFERENCES metadata.entity_field(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_field_reference_binding_created_by_fk FOREIGN KEY(created_by) REFERENCES master.principal(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_field_reference_binding_updated_by_fk FOREIGN KEY(updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+
+ALTER TABLE metadata.entity_materialization_binding
+    ADD CONSTRAINT entity_materialization_binding_entity_fk FOREIGN KEY(entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_materialization_binding_change_set_fk FOREIGN KEY(change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_materialization_binding_created_by_fk FOREIGN KEY(created_by) REFERENCES master.principal(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_materialization_binding_updated_by_fk FOREIGN KEY(updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+
+ALTER TABLE metadata.entity_materialization_field_mapping
+    ADD CONSTRAINT entity_materialization_field_mapping_binding_fk FOREIGN KEY(entity_materialization_binding_id) REFERENCES metadata.entity_materialization_binding(id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_materialization_field_mapping_created_by_fk FOREIGN KEY(created_by) REFERENCES master.principal(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_materialization_field_mapping_updated_by_fk FOREIGN KEY(updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+ALTER TABLE metadata.entity_capability
+ ADD CONSTRAINT entity_capability_entity_fk FOREIGN KEY(entity_id) REFERENCES metadata.entity(id),
+ ADD CONSTRAINT entity_capability_changeset_fk FOREIGN KEY(change_set_id) REFERENCES metadata.entity_change_set(id),
+ ADD CONSTRAINT entity_capability_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id),
+ ADD CONSTRAINT entity_capability_actor_fk FOREIGN KEY(created_by) REFERENCES master.principal(id);

@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: Business Partner release
+    orgId: 1
+    folder: ATHYPER
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /tmp/grafana-provisioning/dashboards/json

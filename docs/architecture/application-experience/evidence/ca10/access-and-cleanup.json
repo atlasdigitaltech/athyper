@@ -1,0 +1,21 @@
+{
+  "foldersRemoved": [
+    "CA10 folder 1790050257015",
+    "CA10 folder 1790050667787"
+  ],
+  "denial": [
+    {
+      "plane": "studio",
+      "status": 503
+    },
+    {
+      "plane": "mesh",
+      "status": 503
+    },
+    {
+      "plane": "neon-anonymous",
+      "status": 401
+    }
+  ],
+  "revokedPreview": 404
+}

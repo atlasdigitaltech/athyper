@@ -70,6 +70,8 @@ ALTER TABLE master.address ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.address FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.address_link ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.address_link FORCE ROW LEVEL SECURITY;
+ALTER TABLE master.address_event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.address_event FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.contact_link ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.contact_link FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.contact_email ENABLE ROW LEVEL SECURITY;
@@ -95,6 +97,13 @@ CREATE POLICY tenant_access ON master.address_link
     USING (tenant_id = shared.current_tenant_id_soft())
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON master.address_link
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+CREATE POLICY tenant_access ON master.address_event
+    FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON master.address_event
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 CREATE POLICY tenant_access ON master.contact_link
@@ -392,3 +401,8 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- Publication resolves configured tenant-local service identities for target jobs.
+CREATE POLICY publication_service_principal_read ON master.principal
+  FOR SELECT TO athyper_publication_service
+  USING (tenant_id=shared.current_tenant_id_soft() AND principal_type='service_account');

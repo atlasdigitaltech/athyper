@@ -10,6 +10,7 @@ export class AnthropicModelProvider implements AtlasModelProvider {
   private readonly fetcher: typeof fetch; private readonly endpoint: string; private readonly timeoutMs: number; private readonly version: string;
   constructor(options: AnthropicAdapterOptions = {}) { this.fetcher = options.fetch ?? fetch; this.endpoint = options.endpoint ?? DEFAULT_URL; this.timeoutMs = options.timeoutMs ?? 120_000; this.version = options.anthropicVersion ?? "2023-06-01"; }
   async *invoke(invocation: AtlasProviderInvocation): AsyncIterable<AtlasProviderEvent> {
+    if (invocation.credential.authMode === "local_transport") { yield { kind: "failed", error: fail("authentication", "local_transport_not_supported", false) }; return; }
     const mismatch = validate(invocation, this); if (mismatch) { yield { kind: "failed", error: mismatch }; return; }
     const scope = requestScope(invocation.signal, this.timeoutMs);
     try {
@@ -29,7 +30,7 @@ export class AnthropicModelProvider implements AtlasModelProvider {
         else if (event.type === "error") { terminal = true; yield { kind: "failed", error: anthropicError(event.error?.type) }; return; }
       }
       if (!terminal) yield { kind: "failed", error: protocol("stream_incomplete") };
-    } catch (error) { if (scope.timedOut()) yield { kind: "failed", error: fail("timeout", "provider_timeout", true) }; else if (invocation.signal?.aborted || isAbort(error)) yield { kind: "cancelled" }; else yield { kind: "failed", error: fail("upstream_error", "provider_unavailable", true) }; }
+    } catch (error) { if (error instanceof ProviderProtocolError) yield { kind: "failed", error: protocol(error.code) }; else if (scope.timedOut()) yield { kind: "failed", error: fail("timeout", "provider_timeout", true) }; else if (invocation.signal?.aborted || isAbort(error)) yield { kind: "cancelled" }; else yield { kind: "failed", error: fail("upstream_error", "provider_unavailable", true) }; }
     finally { scope.cleanup(); }
   }
 }
@@ -40,11 +41,25 @@ function textBlocks(content: readonly AtlasContentBlock[]): string[] { return co
 function anthropicUsage(value: any): AtlasProviderUsage | null { if (!value || typeof value !== "object") return null; return { inputTokens: finite(value.input_tokens), outputTokens: finite(value.output_tokens), cacheReadTokens: finite(value.cache_read_input_tokens), cacheWriteTokens: finite(value.cache_creation_input_tokens) }; }
 function finishReason(value: unknown): AtlasFinishReason { return value === "max_tokens" ? "length" : value === "tool_use" ? "tool_call" : value === "refusal" ? "refusal" : "stop"; }
 function anthropicError(value: unknown): AtlasProviderError { if (value === "authentication_error") return fail("authentication", "authentication_failed", false); if (value === "permission_error") return fail("permission", "permission_denied", false); if (value === "rate_limit_error") return fail("rate_limited", "rate_limited", true); if (value === "overloaded_error") return fail("overloaded", "provider_overloaded", true); return fail("upstream_error", "provider_error", true); }
-function validate(invocation: AtlasProviderInvocation, adapter: AnthropicModelProvider): AtlasProviderError | null { const b = invocation.binding; if (b.providerId !== adapter.providerId || b.adapterId !== adapter.adapterId || b.adapterVersion !== adapter.adapterVersion || b.status !== "available" || !b.capabilities.streaming) return fail("invalid_request", "binding_adapter_mismatch", false); if (invocation.credential.ownerId !== b.credentialOwnerId || !invocation.credential.secret.trim()) return fail("authentication", "credential_binding_mismatch", false); return null; }
+function validate(invocation: AtlasProviderInvocation, adapter: AnthropicModelProvider): AtlasProviderError | null { const b = invocation.binding; if (b.providerId !== adapter.providerId || b.adapterId !== adapter.adapterId || b.adapterVersion !== adapter.adapterVersion || b.status !== "available" || !b.capabilities.streaming) return fail("invalid_request", "binding_adapter_mismatch", false); if (invocation.credential.ownerId !== b.credentialOwnerId || invocation.credential.authMode === "local_transport" || !invocation.credential.secret?.trim()) return fail("authentication", "credential_binding_mismatch", false); return null; }
 function httpError(status: number): AtlasProviderError { if (status === 401) return fail("authentication", "authentication_failed", false); if (status === 403) return fail("permission", "permission_denied", false); if (status === 429) return fail("rate_limited", "rate_limited", true); if (status === 529 || status >= 500) return fail("overloaded", "provider_overloaded", true); return fail("invalid_request", `provider_http_${status}`, false); }
 function protocol(code: string): AtlasProviderError { return fail(code === "stream_incomplete" ? "stream_incomplete" : "protocol_error", code, false); }
 function fail(errorClass: AtlasProviderError["errorClass"], code: string, retryable: boolean): AtlasProviderError { return { errorClass, code, safeMessage: "The Atlas provider request could not be completed.", retryable }; }
-function requiredString(value: unknown, code: string): string { const result = string(value); if (!result) throw new Error(code); return result; } function string(value: unknown): string | null { return typeof value === "string" && value.trim() ? value : null; } function number(value: unknown): number { return typeof value === "number" && Number.isInteger(value) ? value : -1; } function finite(value: unknown): number | undefined { return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined; }
-async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<{ event: string; data: string }> { const reader = body.getReader(); const decoder = new TextDecoder(); let buffer = ""; try { while (true) { const read = await reader.read(); buffer += decoder.decode(read.value, { stream: !read.done }); const parts = buffer.split(/\r?\n\r?\n/); buffer = parts.pop() ?? ""; for (const part of parts) { const event = part.split(/\r?\n/).find((line) => line.startsWith("event:"))?.slice(6).trim() ?? ""; const data = part.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n"); yield { event, data }; } if (read.done) break; } } finally { reader.releaseLock(); } }
+function requiredString(value: unknown, code: string): string { const result = string(value); if (!result) throw new ProviderProtocolError(code); return result; } function string(value: unknown): string | null { return typeof value === "string" && value.trim() ? value : null; } function number(value: unknown): number { return typeof value === "number" && Number.isInteger(value) ? value : -1; } function finite(value: unknown): number | undefined { return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined; }
+async function* readSse(body: ReadableStream<Uint8Array>): AsyncGenerator<{ event: string; data: string }> {
+  const reader = body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+  const frame = (part: string) => { const lines = part.split(/\r?\n/); return { event: lines.find((line) => line.startsWith("event:"))?.slice(6).trim() ?? "", data: lines.filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n") }; };
+  try {
+    while (true) {
+      const read = await reader.read();
+      buffer += decoder.decode(read.value, { stream: !read.done });
+      if (buffer.length > 4_194_304) throw new ProviderProtocolError("stream_frame_too_large");
+      const parts = buffer.split(/\r?\n\r?\n/); buffer = parts.pop() ?? "";
+      for (const part of parts) yield frame(part);
+      if (read.done) { if (buffer.trim()) yield frame(buffer); break; }
+    }
+  } finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
+}
+class ProviderProtocolError extends Error { constructor(readonly code: string) { super(code); } }
 function requestScope(parent: AbortSignal | undefined, timeoutMs: number) { const controller = new AbortController(); let timeout = false; const abort = () => controller.abort(parent?.reason); parent?.addEventListener("abort", abort, { once: true }); const timer = setTimeout(() => { timeout = true; controller.abort(); }, timeoutMs); return { signal: controller.signal, timedOut: () => timeout, cleanup: () => { clearTimeout(timer); parent?.removeEventListener("abort", abort); } }; }
 function isAbort(error: unknown): boolean { return error instanceof DOMException && error.name === "AbortError"; }

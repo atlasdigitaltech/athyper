@@ -1,0 +1,29 @@
+[
+  {
+    "plane": "studio",
+    "ledgerRead": true,
+    "ledgerAppend": true,
+    "auditRead": true,
+    "snapshotRead": true,
+    "snapshotIdentityRead": true,
+    "captureExecute": true
+  },
+  {
+    "plane": "neon",
+    "ledgerRead": true,
+    "ledgerAppend": true,
+    "auditRead": true,
+    "snapshotRead": true,
+    "snapshotIdentityRead": true,
+    "captureExecute": true
+  },
+  {
+    "plane": "mesh",
+    "ledgerRead": true,
+    "ledgerAppend": true,
+    "auditRead": true,
+    "snapshotRead": true,
+    "snapshotIdentityRead": true,
+    "captureExecute": true
+  }
+]

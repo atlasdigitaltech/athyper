@@ -6,6 +6,7 @@ export interface AdapterCircuitBreakerConfig {
   readonly resetTimeoutMs: number;
   readonly successThreshold: number;
   readonly shouldTrigger?: (error: Error) => boolean;
+  readonly now?: () => number;
 }
 
 export class AdapterCircuitOpenError extends Error {
@@ -29,6 +30,7 @@ export class AdapterCircuitBreaker {
   #failures: number[] = [];
   #openedAt?: number;
   #halfOpenSuccesses = 0;
+  #probeInFlight = false;
 
   constructor(readonly name: string, config: Partial<AdapterCircuitBreakerConfig> = {}) {
     this.#config = { ...defaults, ...config };
@@ -42,12 +44,20 @@ export class AdapterCircuitBreaker {
   }
 
   async execute<Result>(work: () => Promise<Result>): Promise<Result> {
-    const now = Date.now();
+    const now = this.#now();
     if (this.#state === "OPEN") {
       const nextAttemptAt = (this.#openedAt ?? now) + this.#config.resetTimeoutMs;
       if (now < nextAttemptAt) throw new AdapterCircuitOpenError(this.name, nextAttemptAt);
       this.#state = "HALF_OPEN";
       this.#halfOpenSuccesses = 0;
+    }
+    // Half-open admits one probe at a time; the rest are rejected until it settles.
+    const probe = this.#state === "HALF_OPEN";
+    if (probe) {
+      if (this.#probeInFlight) {
+        throw new AdapterCircuitOpenError(this.name, (this.#openedAt ?? now) + this.#config.resetTimeoutMs);
+      }
+      this.#probeInFlight = true;
     }
     try {
       const result = await work();
@@ -60,11 +70,17 @@ export class AdapterCircuitBreaker {
       const normalized = error instanceof Error ? error : new Error(String(error));
       if (!this.#config.shouldTrigger || this.#config.shouldTrigger(normalized)) this.#recordFailure();
       throw error;
+    } finally {
+      if (probe) this.#probeInFlight = false;
     }
   }
 
+  #now(): number {
+    return (this.#config.now ?? Date.now)();
+  }
+
   #recordFailure(): void {
-    const now = Date.now();
+    const now = this.#now();
     if (this.#state === "HALF_OPEN") {
       this.#open(now);
       return;

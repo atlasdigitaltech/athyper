@@ -37,10 +37,17 @@ FROM master.module m WHERE m.status='active'
 ON CONFLICT (workspace_id,module_id) DO UPDATE SET is_primary=true,sort_order=excluded.sort_order,metadata=excluded.metadata,status='active',updated_at=now(),updated_by=excluded.created_by
 WHERE (control.workspace_module.is_primary,control.workspace_module.sort_order,control.workspace_module.metadata,control.workspace_module.status) IS DISTINCT FROM (excluded.is_primary,excluded.sort_order,excluded.metadata,excluded.status);
 
+UPDATE control.workspace_module wm SET status='deprecated',updated_at=now(),updated_by='00000000-0000-0000-0000-000000000000'::uuid
+WHERE wm.status='active' AND wm.metadata #>> '{_seed,pack}'='neon.control-platform-catalog'
+  AND NOT EXISTS (
+    SELECT 1 FROM master.module m
+    WHERE m.id=wm.module_id AND m.workspace_id=wm.workspace_id AND m.status='active'
+  );
+
 DO $assertions$ BEGIN
-  IF (SELECT count(*) FROM control.workspace WHERE status='active') <> 8
-     OR (SELECT count(*) FROM control.module WHERE status='active') <> 39
-     OR (SELECT count(*) FROM control.workspace_module WHERE status='active' AND is_primary) <> 39 THEN
+  IF (SELECT count(*) FROM control.workspace WHERE status='active') <> 9
+     OR (SELECT count(*) FROM control.module WHERE status='active') <> 51
+     OR (SELECT count(*) FROM control.workspace_module WHERE status='active' AND is_primary) <> 51 THEN
     RAISE EXCEPTION 'neon control catalog backfill count mismatch'; END IF;
   IF EXISTS (SELECT 1 FROM master.workspace m JOIN control.workspace c USING(id) WHERE m.code<>c.code)
      OR EXISTS (SELECT 1 FROM master.module m JOIN control.module c USING(id) WHERE m.code<>c.code) THEN

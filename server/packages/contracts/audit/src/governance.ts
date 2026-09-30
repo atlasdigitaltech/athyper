@@ -26,7 +26,8 @@ export interface AuditEventPage {
 }
 
 export type AuditExportFormat = "csv" | "json" | "ndjson";
-export type AuditExportStatus = "queued" | "running" | "completed" | "failed" | "expired";
+export type AuditExportStatus =
+  "queued" | "running" | "completed" | "failed" | "expired";
 
 export interface AuditExportRequest {
   readonly id: string;
@@ -82,7 +83,7 @@ export interface AuditHashAnchor {
   readonly createdAt: string;
 }
 
-export interface LegalHold {
+export interface AuditLegalHold {
   readonly id: string;
   readonly tenantId: string;
   readonly matterCode: string;
@@ -105,3 +106,6 @@ export interface RetentionPolicy {
   readonly retainDays: number;
   readonly status: "active" | "inactive";
 }
+
+/** Compatibility alias; the domain-specific declaration is canonical. */
+export type { AuditLegalHold as LegalHold };

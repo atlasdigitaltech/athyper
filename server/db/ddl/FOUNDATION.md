@@ -93,11 +93,15 @@ The shared reference-seed phase loads approximately 84,000 classification
 codes and 74,000 crosswalk mappings. It is intentionally visible as its own
 manifest step and may take about one minute on the local Docker database.
 
-## Reset recommendation
+## Development baseline policy
 
-Do not reset `athyper_neon` or `athyper_mesh` while the new tree contains only
-the foundation slice. First complete and validate each plane manifest against a
-separate empty database. Immediately before a later reset, take schema-only and
-data backups, verify the disposable-local guard, reset one plane at a time, and
-validate it before touching the other plane. Reset Mesh first, then Neon, because
-Neon currently carries the broader runtime and tenant-data blast radius.
+The DDL manifests are the canonical baseline for all three application planes.
+The pre-baseline migration lineage was retired after its final state was folded
+into this tree. Fresh local databases must be created from these manifests;
+existing local databases must be reset instead of replaying retired migrations.
+
+Migration manifests intentionally start empty at the baseline boundary. Add a
+new immutable forward migration only for a schema change made after this
+baseline, and apply the same final definition to the appropriate canonical DDL
+file. Shared definitions belong under `common`; plane-specific definitions
+belong under the matching `planes/<plane>` directory.

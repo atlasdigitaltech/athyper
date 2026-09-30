@@ -1,0 +1,666 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Relocation baseline of the current working tree, including uncommitted work; not a publication receipt",
+  "files": [
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/CONTRACT.md",
+      "to": "metadata/products/mdg/CONTRACT.md",
+      "sha256": "e24d46cf07593f7773b5cf9b64418d11be81efbbd0622786c6d0b5271772ead5"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/README.md",
+      "to": "metadata/products/mdg/README.md",
+      "sha256": "ecbdbfed856bfa414e6c3a19c3a4eafee8a2c544ac445980d6cf63c8696d3405"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/address/core.json",
+      "to": "metadata/products/mdg/entities/address/core.json",
+      "sha256": "f1d381ba747c3c7eb1787f36222860492e75573335d86b369c56e602156e93b1"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/address/operation.json",
+      "to": "metadata/products/mdg/entities/address/operation.json",
+      "sha256": "9f0bb2521df10576eb1938ffeba73294b6d130e72f0d3498e63848848a53baad"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/address/presentation.section.json",
+      "to": "metadata/products/mdg/entities/address/presentation.section.json",
+      "sha256": "5455383e5c77cf50a96d9bec105c093cf8615c207f42a054fb5608aaee0e3697"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/address_link/core.json",
+      "to": "metadata/products/mdg/entities/address_link/core.json",
+      "sha256": "79c984e2076c300ed2b2fb73cf6f7e0775cde678c138c487f2baa90d3ae7ea7d"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/address_link/operation.json",
+      "to": "metadata/products/mdg/entities/address_link/operation.json",
+      "sha256": "f8e3ba1e199068e6299a38abad19aaa1f167a22482da40c5447ca99cd53ff0c5"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/bank_branch/core.json",
+      "to": "metadata/products/mdg/entities/bank_branch/core.json",
+      "sha256": "f6fb18037f7e44503562ee7fb3236b336a4207c831c239cda5a3d39681d7c1af"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/bank_identifier/core.json",
+      "to": "metadata/products/mdg/entities/bank_identifier/core.json",
+      "sha256": "5647177457dc8bf6b82c48e4638900f6931cdc01b7717645e2d00185917b5f7f"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/bank_institution/core.json",
+      "to": "metadata/products/mdg/entities/bank_institution/core.json",
+      "sha256": "9c5f8dbb5d302aeeb7c0408863bafc04aa9cc50535be1d89e5916535bd466753"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/core.json",
+      "to": "metadata/products/mdg/entities/business_partner/core.json",
+      "sha256": "6ac6f7e65e2c209be97decb534e886a1caef292093ce50e0a748e2e3dcfd76ae"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/flow.intake.json",
+      "to": "metadata/products/mdg/entities/business_partner/flow.intake.json",
+      "sha256": "ee4c60539d92d4a1d10c0a3699d1ba9a7387832dceffa9719edaedc561bfd627"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner/operation.json",
+      "sha256": "3711e719ba907031a435f125e680af43b8a9f9d4e2be405fc2ccc2975ca5870d"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.detail.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.detail.json",
+      "sha256": "6c62ac38573ef1169a61d268849f63938a24b6e6a3aa9a3cbe0e980eb795c71e"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.list.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.list.json",
+      "sha256": "a6504ec9201100031a87caf15636743d1a5183bb92c6fbdd986c0e421b586ddd"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.activity.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.activity.json",
+      "sha256": "22135227a068253a6fde17185a9ee342b89314732d822f756fd15f41d743d9e3"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.addresses.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.addresses.json",
+      "sha256": "da7530d71a357ae945917457c59ac0d57e44e3e4e67aac79532857c3b5a9ede7"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.attachments.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.attachments.json",
+      "sha256": "84d72a68abeb6213db6bd88996f41427a0aa7c0e7f9e6133decebd3c43806e71"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.banking.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.banking.json",
+      "sha256": "edf5994d9ef234b1ae6163f134f4631657f328ace3aa5654145291e8585793f8"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.business-activity.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.business-activity.json",
+      "sha256": "cd55eacdfdb0298d77cf2fa3956c1c908c323ff7a7f963b9e641b7c248c770be"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.comments.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.comments.json",
+      "sha256": "8314ffe63c63ec92b4baa8f250061ff12dd2e3b92034888aa119d3ad01b0771d"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.contacts.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.contacts.json",
+      "sha256": "5d5c39ed042e5a610315b7433f73a1e82371fd4f237e98b1bb4c6f0da51820ab"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.credit.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.credit.json",
+      "sha256": "b31ee0adbd12f67ed76fae1593e8e596f56a1dc38ed1ba4f1a7cfa39c5132383"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.customer-company.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.customer-company.json",
+      "sha256": "ee91db44d11fc651a6ca2d161903c686774a2eb3098f861ce0f06a3c80425200"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.identifiers-tax.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.identifiers-tax.json",
+      "sha256": "27ef7516a6528e35d1f2b0a1e89a89912568b64d2cee54b001604b315f389ef8"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.identity.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.identity.json",
+      "sha256": "98ebb780954dfd48771a61bb6692a44b2269d4b41ad55c624cd76e9948d0e052"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.network.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.network.json",
+      "sha256": "7230e3edf5e5a66307443743f651e5059be623ad38e4d1f7ae55aa79b5afedbd"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.overview.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.overview.json",
+      "sha256": "9f636b252b8e752f05f220eeeff7fcbf63ee6e48461432529b3d52e49ad2e68c"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.qualifications-certificates.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.qualifications-certificates.json",
+      "sha256": "1684dfbbda9d39ac99c272f0551054e0d501371c45fc5d7d7b5608da195ca7ef"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.requests.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.requests.json",
+      "sha256": "95be11aa0ae96c311d35b80169277e4a16d145d061616ec6ab7848d257913921"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.roles-scope.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.roles-scope.json",
+      "sha256": "5db061fc7af307d56ced9970a82d55e11e46ee4489a529873c299e17aa4ec4da"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.supplier-company.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.supplier-company.json",
+      "sha256": "436eeb150fc3ca3f47f4a746036ef865cca0bbc23ccd40dec97bdad8764f1ef6"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/presentation.section.workforce.json",
+      "to": "metadata/products/mdg/entities/business_partner/presentation.section.workforce.json",
+      "sha256": "0a053afede455f965257299981debeb4d730934f5b991cb70c0e706f5dd7b2a7"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner/release.json",
+      "to": "metadata/products/mdg/entities/business_partner/release.json",
+      "sha256": "cda258bba90463009bd9f793dce6e73e3b8929303e636d1a51697be74d1e2c88"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_banking/core.json",
+      "to": "metadata/products/mdg/entities/business_partner_banking/core.json",
+      "sha256": "cc159300e04cee8a263dbcdd74a6892285b267eec3fbfefc128c9f5ce1c484e1"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_banking/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner_banking/operation.json",
+      "sha256": "bf659ea919ad377f0bd5d58ff2b30cffb47539e81703cf2baaf6605e9c30ca88"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_commodity_capability/core.json",
+      "to": "metadata/products/mdg/entities/business_partner_commodity_capability/core.json",
+      "sha256": "2b3338d00bad1fe6c4a21e8ab417f8e619f548abf510fbf29c795681eb6a881b"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_commodity_capability/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner_commodity_capability/operation.json",
+      "sha256": "f01135b1409f20fe1d86185b551bdcbb795803574899fd4b14e0a28ab2dca40f"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_governance_relation/core.json",
+      "to": "metadata/products/mdg/entities/business_partner_governance_relation/core.json",
+      "sha256": "d74f1eececb08f85683517b59eccd516d89e65b54b24db60c4fd763ff05fecbe"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_governance_relation/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner_governance_relation/operation.json",
+      "sha256": "acaa5b9161b49b72ed6cd1bc0b2b976015c811f016f18602ef650b643e8f0fa6"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_identifier/core.json",
+      "to": "metadata/products/mdg/entities/business_partner_identifier/core.json",
+      "sha256": "dc24fb2cc709ffb2a4345937518096b6c78561c63c4272cb62c0dc034c88cf75"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_identifier/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner_identifier/operation.json",
+      "sha256": "bf5e0448186a473c0958ea9ba05c9988e9c67f7cc89774a071266a306ccd576b"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_industry_classification/core.json",
+      "to": "metadata/products/mdg/entities/business_partner_industry_classification/core.json",
+      "sha256": "3c5174dbe2ee67b4e9a4451c7e0d85d3757d001903ea867e3cc4fe6b2ccdbc69"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_industry_classification/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner_industry_classification/operation.json",
+      "sha256": "489872b9f2af176ffc686cc100f02263f5470a591799a4f428794c947471b856"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_operating_organization_assignment/core.json",
+      "to": "metadata/products/mdg/entities/business_partner_operating_organization_assignment/core.json",
+      "sha256": "14ef9b2acb0f7371889818da69a9f8d1658a6022a3112a35f0da4c37c1f52080"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_operating_organization_assignment/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner_operating_organization_assignment/operation.json",
+      "sha256": "961a24d691166be22723913636e215416a401df16db681f11a6d4e3c832f41c1"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_qualification/core.json",
+      "to": "metadata/products/mdg/entities/business_partner_qualification/core.json",
+      "sha256": "3979b7999282783ca5c84c3734f42f6629e1af9cd9733b101a4a3e037de6aea3"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_qualification/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner_qualification/operation.json",
+      "sha256": "bfb7e3eb30d7b69e37a698c30f2b36e6fafd8b35865ab5e5d57a88d02c20b255"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/core.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/core.json",
+      "sha256": "f9cf70e152c21701329f57cea7b279e1c2ddb6f9a77429f5540b3b43e8595140"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.base.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.base.json",
+      "sha256": "7bae7a773ba9f1048b69e913c0832ff3ae58c753f29b8380856a7958f8983cf7"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.customer.add.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.customer.add.json",
+      "sha256": "27b638600e1525521d4b224c97b49a8133fad195b90dae925015bfc2d79fa7ee"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.customer.company.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.customer.company.json",
+      "sha256": "86f41fe70a37730a1fd7382e12e0ceb6975661fd06271ae30ab346592cb17466"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.customer.credit.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.customer.credit.json",
+      "sha256": "4f0aa70e12197418f450521f919b08b8a78cd1e19b33444ce0bc9f018041820c"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.customer.new.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.customer.new.json",
+      "sha256": "789d4162c1c63cfc67eb1f7226ac8002a9ac85ef865a22e7a91bb2065fb4b591"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.partner.amend.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.partner.amend.json",
+      "sha256": "a0856aa45aaa21f8feaac7dc2f3d036a6ffde977a4cc9989123cfcd3ce146e5a"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.partner.archive.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.partner.archive.json",
+      "sha256": "6da1dd63380bc0624eca765634f119135921d8eb7bea462ef31b8a2a0d5b255f"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.partner.assign.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.partner.assign.json",
+      "sha256": "61c9e3b9d41604b85963123e9d4360385df8197809c8310b5d66b420c536d827"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.partner.deactivate.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.partner.deactivate.json",
+      "sha256": "975c9c39836a22703f782451a20e9f9f285c6fb35153f05d67feb84cbdba7927"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.partner.reactivate.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.partner.reactivate.json",
+      "sha256": "b63e0eac328781bea9d0c3e042dc1761a98da05168bb40a3a7c93727f8c84ea1"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.supplier.activate.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.supplier.activate.json",
+      "sha256": "5c729617bfaf783cb953c19ac9fe24e0de97c4b546add7960bd5c58999a026e0"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.supplier.add.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.supplier.add.json",
+      "sha256": "e40ab12ae4ca81a38e37383405c6327cd5c07eb49ada658b46b37d9464eb51db"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.supplier.bank.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.supplier.bank.json",
+      "sha256": "3dd2f75e7837fc8df56cf7ec698e19ef03254319119e096e12494f86f49f2d55"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.supplier.company.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.supplier.company.json",
+      "sha256": "bdf8172d49b7c34eb54a366743c2c358388c3d1ee8467f38fbee51a2690a1fac"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.supplier.new.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.supplier.new.json",
+      "sha256": "1c734f54141c7b897596a5948d76fadbf1e03a40cdae5960ecf3c0135ca03b4d"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.supplier.qualify.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.supplier.qualify.json",
+      "sha256": "15079d14036b0fdef458c770c21d289dfdfcb29fda9825b0fed3ac4c91eb5800"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.workforce.add.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.workforce.add.json",
+      "sha256": "64a0385dcb05a44116996204a5b0ebebe4fc6c532f5af05be668d1ee53a49c04"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.workforce.change.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.workforce.change.json",
+      "sha256": "fd0e4b9d099c325bec683bb24528c362d34d66f20a928e2f0ac35b35d8666ec9"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.workforce.new.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.workforce.new.json",
+      "sha256": "b50e4637c6ae9fda8b57f58745f22a4020b3177e8d93b3545a62f31c0ad02dd4"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/flow.workforce.offboard.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/flow.workforce.offboard.json",
+      "sha256": "c9491681c5d74c1f13a9821c18e0ee181612f658f5a97fba489feaec72c8b6b3"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/operation.json",
+      "sha256": "998da105eb7dde27c8273338a358016bfb14e24c0b0f69803b87390d5dc4ad53"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.detail.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.detail.json",
+      "sha256": "a55d5c2fe4dc9f525233464d1fef99621a92f3dfe931bc11c22c6258373bfa86"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.list.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.list.json",
+      "sha256": "796c28f6ecffbd2fa943b2c588229299cecddd96f79739c314c45d1558f5049c"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.review.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.review.json",
+      "sha256": "1ae6b639558921030690cdd423f8773a080b031179c34d537e326f5bd8794b24"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.section.capture.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.section.capture.json",
+      "sha256": "c6a0a062082589af52fcf84f3ee688d2bbd64085395040bed0efe9baaa6b9fe6"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.section.evidence.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.section.evidence.json",
+      "sha256": "710eb625dd3d0f1d1cfa90f5b4c1e4dd030e0d1f1aef4e30888952836f8872ff"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.section.form.customerCredit.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.customerCredit.json",
+      "sha256": "14cf4b2222f88269ba3f120745d41143d9103faaed519eeda37fe12b480a770c"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.section.form.request.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.request.json",
+      "sha256": "375bc94e9f2eaafca90a6292aa966d713161923214c5c1995c64ff1125475fc3"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.section.form.supplierQualification.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.supplierQualification.json",
+      "sha256": "3fe075fe4cc2bf5beaed384bde1f504b0b57b7d6e33053835baeb9a656f31b12"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.section.form.supplierRequest.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.supplierRequest.json",
+      "sha256": "bddb4df69d77a58f4a4a7d38b9633cb6e1c9170deecf6b146e86977a41cfb62c"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_request/presentation.section.form.workforceReview.json",
+      "to": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.workforceReview.json",
+      "sha256": "6937c03151f3034481618569eb7707f813246ddc372fa950d57ef1a834f5889d"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_tax_registration/core.json",
+      "to": "metadata/products/mdg/entities/business_partner_tax_registration/core.json",
+      "sha256": "6b33fe0bca7869c6b2f63a7c2750ee9d419a1df0c3bed15655cc7f976bf02512"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/business_partner_tax_registration/operation.json",
+      "to": "metadata/products/mdg/entities/business_partner_tax_registration/operation.json",
+      "sha256": "ae7f0b920252a592256358902af25059890fbc32660b5d96f1b0d887ad126f4f"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/certification/core.json",
+      "to": "metadata/products/mdg/entities/certification/core.json",
+      "sha256": "005b66ecb2d409d73f211a3ecc5e107e05f84b92affd0bb875adf2ce7cc9f47a"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/certification/operation.json",
+      "to": "metadata/products/mdg/entities/certification/operation.json",
+      "sha256": "145630adc1b2402d86dcd411d5e0d0a2624fa1040a023fb341b8c4217382f83a"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/classification_scheme/core.json",
+      "to": "metadata/products/mdg/entities/classification_scheme/core.json",
+      "sha256": "9ef036ef6b1e828e7b28b86bea2befcc60462c97542883809c9e042b26adc2b0"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/commodity_code/core.json",
+      "to": "metadata/products/mdg/entities/commodity_code/core.json",
+      "sha256": "ab4ac5bec21bccec01ac676e02fd0dd8b747695fa3fd2902d7ca9dc5c4e92196"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/commodity_crosswalk/core.json",
+      "to": "metadata/products/mdg/entities/commodity_crosswalk/core.json",
+      "sha256": "a73a6051a71f51cf39e25067375504da5d9f9c9d6621d2afece32ffd178b6b3b"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/contact_person/core.json",
+      "to": "metadata/products/mdg/entities/contact_person/core.json",
+      "sha256": "d122b6667dc9720a810011d7e3e04fbf3514a09e21871a841c5f346d3306d32c"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/contact_person/operation.json",
+      "to": "metadata/products/mdg/entities/contact_person/operation.json",
+      "sha256": "9fab4adcb4f64d8124072f0053ae3db830afb0706293fe6e6ae0dcd58c36a123"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/country/core.json",
+      "to": "metadata/products/mdg/entities/country/core.json",
+      "sha256": "37c04e51d7f82fad4a648d9d21f540fcba95e8e1c599ffceaf58a1756fe3e376"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/currency/core.json",
+      "to": "metadata/products/mdg/entities/currency/core.json",
+      "sha256": "9225be3aa2415ec840b7f8d1a4bdc1105e735bcce08d16972542f95b6ebad5d6"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/customer/core.json",
+      "to": "metadata/products/mdg/entities/customer/core.json",
+      "sha256": "5a0b36012d2d0696a4a28bfb35d98db1a9382827d19cc5f13c9cf07185372207"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/customer/operation.json",
+      "to": "metadata/products/mdg/entities/customer/operation.json",
+      "sha256": "168666b91e0de086daa97429b9334f41bed534ba20d8b92bf0e9326ac65f7cfd"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/customer_company_profile/core.json",
+      "to": "metadata/products/mdg/entities/customer_company_profile/core.json",
+      "sha256": "95ec937f2f70d86c6856dad93fb5ee1475aabf0c266cacaed166960babaf128c"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/customer_company_profile/operation.json",
+      "to": "metadata/products/mdg/entities/customer_company_profile/operation.json",
+      "sha256": "f2ac3e99470be357b101feeb83de28679881245332d2f4a56481174ba0da6f73"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/industry_code/core.json",
+      "to": "metadata/products/mdg/entities/industry_code/core.json",
+      "sha256": "81bb6e646e65fcc360e2be653c6c3c672e0f3191a2446a1365126a3cacf3af4b"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/industry_crosswalk/core.json",
+      "to": "metadata/products/mdg/entities/industry_crosswalk/core.json",
+      "sha256": "f7da7768b635a60363c67a1841aa20eb3b8d77ecb2d80b4d9987c1fd5d24ce43"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/language/core.json",
+      "to": "metadata/products/mdg/entities/language/core.json",
+      "sha256": "2e589cce5b8d506bcc07cb3b1b80bf8b9fab421ab8caf64c2e89310d756fa9e1"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/locale/core.json",
+      "to": "metadata/products/mdg/entities/locale/core.json",
+      "sha256": "9f6963e7fce7d3d590fe6253abaec22432068d76529ef2e5ed961ead43f48945"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/platform/core-field-defaults.v1.json",
+      "to": "metadata/products/mdg/entities/platform/core-field-defaults.v1.json",
+      "sha256": "51c24147b77dcbccd6dccd8676a2798664d74657c853b3713ee2c9db0568aa6b"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/platform/governed-child-operation.v1.json",
+      "to": "metadata/products/mdg/entities/platform/governed-child-operation.v1.json",
+      "sha256": "eaa1bd00c2463ccd716b9098288054e3276b1a3e4c1604136ee57535c90a6152"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/requirements.txt",
+      "to": "tooling/scripts/metadata/requirements.txt",
+      "sha256": "24b4647db6d42c951e570cdabf3ed20adc184ba943de364593ae365b32a9497d"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/field-catalogue.json",
+      "to": "metadata/products/mdg/review/field-catalogue.json",
+      "sha256": "23f74cdd245f120ec07522b707d56116d143940e0693e4a6e8eedff6546e7bb7"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/index-catalog.json",
+      "to": "metadata/products/mdg/review/index-catalog.json",
+      "sha256": "cb63fe89f452b81563ba95f8bd23fbb31515cd9ab3cd7ee49f82365364bd842d"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/legacy-retirement.json",
+      "to": "metadata/products/mdg/review/legacy-retirement.json",
+      "sha256": "7deb1902c8ca12cf6c8f48307dd8b4722b4701ff7ed404b5e9d38ca6cd034c3e"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/owner-profile.purchase_order.json",
+      "to": "metadata/products/mdg/review/owner-profile.purchase_order.json",
+      "sha256": "d78d4de616e94e32b294c70c4127a5cf5f4a23b41998266b05b06c472c614e1d"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/permission-catalog.json",
+      "to": "metadata/products/mdg/review/permission-catalog.json",
+      "sha256": "3061bdca42001b50191b1d94bfc68031d805c29dd4753d6d1f81d9b24f726f4e"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/registry-catalog.json",
+      "to": "metadata/products/mdg/review/registry-catalog.json",
+      "sha256": "e6f1a9aaeb8f4bcaf194b0e6f9fa0009cefb3b1e15b1fd49f42b51c7c41cc4ce"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/shape-catalog.json",
+      "to": "metadata/products/mdg/review/shape-catalog.json",
+      "sha256": "63916545a85800af216e38bd70750c8d3f0b0ed554fb2cc0e9fb67dee811b39a"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/source-coverage.json",
+      "to": "metadata/products/mdg/review/source-coverage.json",
+      "sha256": "fdc3f311d2f6734b01f9e6506591ca3fa1d2b151fe8d2f2ec09050b5a7cd8f56"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/storage-catalog.json",
+      "to": "metadata/products/mdg/review/storage-catalog.json",
+      "sha256": "5b87a7725757ae2bf0bb4b2a7867ebf36f0c28634c43889e38961f8c73288d7d"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/review/workflow-policy-fixtures.json",
+      "to": "metadata/products/mdg/review/workflow-policy-fixtures.json",
+      "sha256": "64dffdf237ed1f187c248a3b7f30187940ed8ec0b94214459c5808b1c82a9026"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/schemas/core.schema.json",
+      "to": "metadata/schemas/entity-artifacts-v2/core.schema.json",
+      "sha256": "0bc7a939abe536fe3c02f0a099b3c89375b4fe132c1f21c20019a38f8a674ad7"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/schemas/flow.schema.json",
+      "to": "metadata/schemas/entity-artifacts-v2/flow.schema.json",
+      "sha256": "1e75d78070a4d2c4b4856d9947528700a032d9cebba49128a3ee42f9ef7a664f"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/schemas/operation.schema.json",
+      "to": "metadata/schemas/entity-artifacts-v2/operation.schema.json",
+      "sha256": "94d92eb2b37702c8b14f8bd27f4682a00b42d0f65ea4c9211b42568afe377034"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/schemas/presentation_section.schema.json",
+      "to": "metadata/schemas/entity-artifacts-v2/presentation_section.schema.json",
+      "sha256": "f5b66e4f8521ea2e398942cc73ad9ed716244f217e76074892c79cd95572954f"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/schemas/presentation_surface.schema.json",
+      "to": "metadata/schemas/entity-artifacts-v2/presentation_surface.schema.json",
+      "sha256": "7ffaccbbb8601378da704a826d93600e29588161996c693bfee608e3a980e2ce"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/schemas/release.schema.json",
+      "to": "metadata/schemas/entity-artifacts-v2/release.schema.json",
+      "sha256": "bff203a46c24317399e1b2965c6d25e307000515458abf4b37430072fc351fb9"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/schemas/release_envelope.schema.json",
+      "to": "metadata/schemas/entity-artifacts-v2/release_envelope.schema.json",
+      "sha256": "f707765c7a807a7dd9c0f1375af3cb615a767e5401f3d077972e17c5fbf91d8e"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/state_region/core.json",
+      "to": "metadata/products/mdg/entities/state_region/core.json",
+      "sha256": "857449204012f211c17d8d282252454bf8715e0a6e8a99cecb79fa0c5265a547"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/supplier/core.json",
+      "to": "metadata/products/mdg/entities/supplier/core.json",
+      "sha256": "b8ba988489fa237dde366315202c29f2212452298b27ec86008ecf64698ef3e3"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/supplier/operation.json",
+      "to": "metadata/products/mdg/entities/supplier/operation.json",
+      "sha256": "91c5af9b5bce5cfae2bd6e5d65195d3fa605ec4e4ca3dffb4c79d75d90c4baa8"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/supplier_company_profile/core.json",
+      "to": "metadata/products/mdg/entities/supplier_company_profile/core.json",
+      "sha256": "99b26c9c040cd6d9b01aa8729e67ffe95195b302f0f28dededd29e3d4e147cbe"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/supplier_company_profile/operation.json",
+      "to": "metadata/products/mdg/entities/supplier_company_profile/operation.json",
+      "sha256": "daa50b842970c222d5b8772e44cfda4632022f6c9d89ffa006b712770bb31f90"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/test_validate.py",
+      "to": "tooling/scripts/metadata/test_validate.py",
+      "sha256": "39a62a4efde8029fa655b5279bb8fe353770c66965512a87a21ce5353231b4f7"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/timezone/core.json",
+      "to": "metadata/products/mdg/entities/timezone/core.json",
+      "sha256": "11b4703d16757d08cf13f923eead9e4fa9f18c28b3730002c97d620a992b63d1"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/uom/core.json",
+      "to": "metadata/products/mdg/entities/uom/core.json",
+      "sha256": "369762f328e113766a47bbef64f71d6a4c9cac140f22aedcab43c1de2c205eb3"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/validate.py",
+      "to": "tooling/scripts/metadata/validate.py",
+      "sha256": "8564180f05eb312c30fad1803eb2df62f148390c7c3a0d294866d0123ca1c725"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/verify_live_schema.py",
+      "to": "tooling/scripts/metadata/verify_live_schema.py",
+      "sha256": "a79b60542876612521cda9bd659419c952777cddd6d6436ed963da5a89f57611"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/verify_permission_catalog.py",
+      "to": "tooling/scripts/metadata/verify_permission_catalog.py",
+      "sha256": "470c558cdd162ced008dbb58df5d705da41437456e75ca474a7e1ad1a145e3db"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/workforce/core.json",
+      "to": "metadata/products/mdg/entities/workforce/core.json",
+      "sha256": "093547464b651f9db25fc2ba6cc911a20ebfb03b976dc3e8d36352bcf9b246e8"
+    },
+    {
+      "from": "docs/architecture/application-experience/entity-policy-examples/New_Entity/workforce/operation.json",
+      "to": "metadata/products/mdg/entities/workforce/operation.json",
+      "sha256": "887eebbc76533cbb3f6bb857c9d7fc3e179c307aaf0e6a28a0ad5a68a4fc5bdb"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_runtime_dependency_amendment_approval",
+  "decision": "approved",
+  "proposalRevision": "5c4316658e4dc8205ca620e4f008a7ef2e360c4dc603eaec06c951fe8a213c57",
+  "approvedAt": "2026-09-12T06:23:15.124Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "Protected reveal amendment: corrected adapter, two audit event codes, one synthetic protected bank fixture and dev Infisical secret"
+  },
+  "effectiveUntil": "2026-09-12T08:00:00.000Z",
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "compatibilityRetirementAuthorized": false,
+  "dispositionAcceptance": false
+}

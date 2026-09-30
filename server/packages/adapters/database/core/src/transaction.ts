@@ -14,6 +14,9 @@ export type TransactionActorStamper<Database> = (
 export function createTransactionActorStampQuery(
   actor: TransactionActor,
 ): RawBuilder<unknown> {
+  if (!actor || typeof actor.tenantId !== "string" || !actor.tenantId.trim() ||
+      typeof actor.principalId !== "string" || !actor.principalId.trim())
+    throw new Error("TRANSACTION_ACTOR_REQUIRED");
   return sql`
     select set_config('app.current_tenant_id', ${actor.tenantId}, true),
            set_config('app.current_principal_id', ${actor.principalId}, true)

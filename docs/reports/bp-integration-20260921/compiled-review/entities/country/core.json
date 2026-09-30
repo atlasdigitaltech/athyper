@@ -1,0 +1,94 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "country/core",
+  "entityCode": "country",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "primaryObject": "shared.country",
+    "sourceObjects": [
+      "shared.country"
+    ],
+    "idField": "code",
+    "tenantField": null,
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "code",
+      "binding": {
+        "sourceObject": "shared.country",
+        "column": "code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.country.core.fields.code.label",
+        "defaultText": "Code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "character(2)"
+    },
+    {
+      "key": "name",
+      "binding": {
+        "sourceObject": "shared.country",
+        "column": "name"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.country.core.fields.name.label",
+        "defaultText": "Name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "shared_reference"
+  },
+  "referencePicker": {
+    "valueField": "code",
+    "labelField": "name",
+    "displayFormat": "{name} ({code})",
+    "allowedTokens": [
+      "name",
+      "code"
+    ],
+    "load": "bounded_lookup"
+  },
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "shared.country",
+      "column": "code",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:d7ec514519bf56c39fad43c9d12effc114c1de33cb1a534231ba9af004292a16"
+}

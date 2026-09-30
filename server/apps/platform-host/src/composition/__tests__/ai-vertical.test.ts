@@ -1,7 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { AtlasModelBinding, AtlasModelProvider } from "@athyper/server-contract-ai";
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerAtlas, type ServiceRegistrationDependencies } from "../register-services.js";
 
 const binding: AtlasModelBinding = { bindingId: "binding-1", bindingRevision: "1", publicModelId: "atlas-fast", providerId: "openai", upstreamModelId: "gpt-exact", adapterId: "openai-responses", adapterVersion: "1", displayTier: "fast", exposure: "product", status: "available", capabilities: { streaming: true, tools: true, vision: false, structuredOutput: true, maxContextTokens: 1000, maxOutputTokens: 100 }, credentialPolicy: "platform", credentialOwnerId: "platform-openai", providerRegion: "global", dataHandlingProfileId: "no-store", routingPolicyId: "no-fallback-v1", allowedDataClasses: ["internal"], priceVersion: "1", inputPricePerMtokUsd: 1, outputPricePerMtokUsd: 1 };
@@ -30,15 +31,68 @@ describe("Atlas host composition", () => {
   it("always composes the durable ledger but leaves routes disabled by default", () => {
     const container = createContainer(); const config = loadConfig();
     registerAtlas(container, { ...config, atlas: { enabled: false, persistenceEnabled: false, toolsEnabled: false } }, undefined, { neon: fakeDatabase }, transactions, iam);
-    expect(container.platform.ai).toMatchObject({ routesEnabled: false, toolsEnabled: false }); expect(container.runtimes.health.list()).toContain("atlas.tool-invocation-ledger");
+    expect(container.platform.ai).toMatchObject({ routesEnabled: false, toolsEnabled: false }); expect(container.platform.httpRegistrars).toHaveLength(1); expect(container.runtimes.health.list()).toContain("atlas.tool-invocation-ledger");
   });
-  it("fails closed when routes are enabled without the full repository/provider composition", () => {
+  it("composes durable history independently of provider readiness", () => {
     const container = createContainer(); const config = loadConfig();
-    expect(() => registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: false } }, undefined, { neon: fakeDatabase }, transactions, iam)).toThrow(/not composed/);
+    registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: false } }, undefined, { neon: fakeDatabase }, transactions, iam);
+    expect(container.platform.ai).toMatchObject({ routesEnabled: true, toolsEnabled: false });
+    expect(container.platform.ai?.threads).toBeDefined();
+    expect(container.platform.ai?.runtime).toBeUndefined();
+    expect(container.platform.httpRegistrars).toHaveLength(2);
+    expect(container.runtimes.health.list()).toContain("atlas.conversation-persistence");
+  });
+  it("fails closed when tools are enabled without a local runtime or full provider composition", () => {
+    const container = createContainer(); const config = loadConfig();
+    expect(() => registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: true } }, undefined, { neon: fakeDatabase }, transactions, iam)).toThrow("Atlas tools require a configured local runtime or full provider composition.");
   });
   it("composes repositories, provider registry, runtime, tools, routes, and readiness together", () => {
     const container = createContainer(); const config = loadConfig();
     registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: true } }, dependencies(), { neon: fakeDatabase }, transactions, iam);
-    expect(container.platform.ai).toMatchObject({ routesEnabled: true, toolsEnabled: true }); expect(container.platform.ai?.runtime).toBeDefined(); expect(container.platform.ai?.tools).toBeDefined(); expect(container.platform.ai?.operations).toBeDefined(); expect(container.platform.httpRegistrars).toHaveLength(2); expect(container.runtimes.health.list()).toEqual(expect.arrayContaining(["atlas.tool-invocation-ledger", "atlas.runtime-composition", "atlas.a2-operations"]));
+    expect(container.platform.ai).toMatchObject({ routesEnabled: true, toolsEnabled: true }); expect(container.platform.ai?.runtime).toBeDefined(); expect(container.platform.ai?.tools).toBeDefined(); expect(container.platform.ai?.operations).toBeDefined(); expect(container.platform.httpRegistrars).toHaveLength(3); expect(container.runtimes.health.list()).toEqual(expect.arrayContaining(["atlas.tool-invocation-ledger", "atlas.runtime-composition", "atlas.a2-operations"]));
   });
+});
+
+it("initializes Atlas only after Records are composed", () => {
+  const source = readFileSync(new URL("../register-services.ts", import.meta.url), "utf8");
+  const composition = source.slice(source.indexOf("export function registerServices("), source.indexOf("export function registerAtlas("));
+  const call = composition.indexOf("  registerAtlas(");
+  expect(composition.indexOf("container.services.records =")).toBeGreaterThan(-1);
+  expect(call).toBeGreaterThan(composition.indexOf("container.services.records ="));
+  expect(composition.match(/  registerAtlas\(/g)).toHaveLength(1);
+});
+it("does not register retired BP owner tools", async () => {
+  const container = createContainer(), config = loadConfig();
+  registerAtlas(container, {...config, atlas: {enabled: true, persistenceEnabled: true, toolsEnabled: true}}, dependencies(), {neon: fakeDatabase}, transactions, iam);
+  for (const toolCode of ["bp_read_contacts", "bp_read_addresses", "bp_read_brief", "bp_explain_readiness", "bp_check_eligibility"]) {
+    // Retired owner tools must remain unregistered, not resolve to a no-op.
+    await expect(container.platform.ai!.tools!.preview({context: {tenantId: "t", principalId: "p", realmKey: "neon", planeKey: "neon", requestId: "r", profileHash: "h", authEpoch: 1, permissions: {tenantId: "t", principalId: "p", planeKey: "neon", profileHash: "h"}} as never, threadId: "t", runId: "r", callId: "c", toolCode, toolVersion: "1", arguments: {recordId: "invalid"}, summary: "test"})).rejects.toMatchObject({code: "TOOL_DENIED"});
+  }
+});
+
+it("wires default attachment retrieval to live metadata, parent authorization and Records", async () => {
+  const { KyselyAtlasKnowledgeRepository } = await import("@athyper/server-platform-ai");
+  const { createHash } = await import("node:crypto");
+  const container = createContainer(), config = loadConfig(), input = dependencies();
+  const id = "10000000-0000-4000-8000-000000000011", parentId = "10000000-0000-4000-8000-000000000012";
+  const permission = "neon.collaboration.attachment.read";
+  const context = { tenantId: "10000000-0000-4000-8000-000000000001", principalId: "10000000-0000-4000-8000-000000000002", planeKey: "neon", realmKey: "neon", profileHash: "p", authEpoch: 1, requestId: "r", permissions: { tenantId: "10000000-0000-4000-8000-000000000001", principalId: "10000000-0000-4000-8000-000000000002", planeKey: "neon", profileHash: "p", allowed: [permission], denied: [], planLocked: [], planeExcluded: [] } } as never;
+  const citation = { sourceId: id, sourceVersionId: "version", revisionId: id, chunkId: id, contentHash: createHash("sha256").update("fixture").digest("hex"), characterStart: 0, characterEnd: 7 };
+  const canonical = vi.spyOn(KyselyAtlasKnowledgeRepository.prototype, "admitCandidates").mockResolvedValue([{ citation, source: { id, tenantId: "10000000-0000-4000-8000-000000000001", sourceId: id, sourceKind: "attachment", entityCode: "business_partner", permissionCode: permission, status: "active", createdAt: new Date().toISOString() } }]);
+  const getEntityDescriptor = vi.fn(async () => ({ planeKey: "neon", entityCode: "business_partner", ai: { enabled: true }, storage: { idField: "id" }, operations: { read: { permissionCode: "neon.relationship.business_partner.read" } } }));
+  const list = vi.fn(async () => ({ data: [{ id: parentId }] }));
+  const authorize = vi.fn(async () => ({ allowed: true }));
+  container.platform.authorizer = { authorize } as never;
+  container.platform.metadata = { getEntityDescriptor } as never;
+  container.services.records = { queries: { list } } as never;
+  try {
+    registerAtlas(container, {...config, atlas: {enabled: true, persistenceEnabled: true, toolsEnabled: true}}, { ...input, knowledgeIndex: { ...input.knowledgeIndex, search: async () => [{ citation, permissionCode: permission, score: 1 }] } }, { neon: fakeDatabase }, { run: async () => [{ entity_id: parentId, text: "fixture" }] } as never, iam);
+    const search = () => container.platform.ai!.operations!.knowledge.search({ context, query: "fixture" });
+    expect(await search()).toEqual([{ citation, score: 1 }]);
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ entityCode: "business_partner", recordIds: [parentId], fields: ["id"], limit: 1 }));
+    expect(authorize).toHaveBeenCalledWith(expect.objectContaining({ permissionCode: "neon.relationship.business_partner.read", resource: expect.objectContaining({ recordId: parentId }) }));
+    list.mockRejectedValue(new Error("scope revoked"));
+    expect(await search()).toEqual([]);
+    expect(canonical).toHaveBeenCalledTimes(2);
+  } finally { canonical.mockRestore(); }
 });

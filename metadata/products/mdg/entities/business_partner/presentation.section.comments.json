@@ -1,0 +1,131 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.comments",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "sectionKey": "comments",
+  "rendererKey": "platform.comments.v1",
+  "dataBinding": {
+    "serviceKey": "platform.comments.v1",
+    "ownerEntityCode": "business_partner",
+    "includeInAggregate": false
+  },
+  "authorization": {
+    "viewPermission": "neon.collaboration.comment.read",
+    "permissionStatus": "proposed_requires_catalog_verification",
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "load": "on_visible",
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "dependencies": [
+    "business_partner/core",
+    "business_partner/operation"
+  ],
+  "availableOperations": [
+    {
+      "key": "create",
+      "permissionCode": "neon.collaboration.comment.create",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.comments.create.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "update_own",
+      "permissionCode": "neon.collaboration.comment.update_own",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.comments.update_own.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "archive_own",
+      "permissionCode": "neon.collaboration.comment.archive_own",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.comments.archive_own.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "reply",
+      "permissionCode": "neon.collaboration.comment.create",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.comments.reply.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "react",
+      "permissionCode": "neon.collaboration.comment.create",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.comments.react.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "draft",
+      "permissionCode": "neon.collaboration.comment.create",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.comments.draft.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "flag",
+      "permissionCode": "neon.collaboration.comment.read",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.comments.flag.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "mention",
+      "permissionCode": "neon.collaboration.comment.read",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.comments.mention.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "history",
+      "permissionCode": "neon.collaboration.comment.read",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.comments.history.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    }
+  ],
+  "artifactHash": "sha256:a3e936290e132cc0ca8165d72126b325c2a411defca4b841e063cb5d086e769c"
+}

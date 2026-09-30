@@ -16,10 +16,10 @@ type Capability = {
   profiles: Record<string, boolean>;
 };
 
-const profiles = (JSON.parse(readFileSync("config/deployment/profiles.json", "utf8")) as {
+const profiles = (JSON.parse(readFileSync("governance/config/deployment/profiles.json", "utf8")) as {
   profiles: Record<string, DeploymentProfile>;
 }).profiles;
-const capabilities = (JSON.parse(readFileSync("config/deployment/server-capabilities.json", "utf8")) as {
+const capabilities = (JSON.parse(readFileSync("governance/config/deployment/server-capabilities.json", "utf8")) as {
   capabilities: Capability[];
 }).capabilities;
 const hostManifest = JSON.parse(readFileSync("server/apps/platform-host/package.json", "utf8")) as {

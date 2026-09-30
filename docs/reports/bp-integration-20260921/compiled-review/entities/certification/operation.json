@@ -1,0 +1,56 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "operation",
+  "artifactKey": "certification/operation",
+  "entityCode": "certification",
+  "plane": "neon",
+  "operations": [
+    {
+      "key": "read",
+      "permissionCode": "neon.certification.read",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.certification.read.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "not_applicable"
+    },
+    {
+      "key": "request_change",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "permissionStatus": "requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.bp.governed-request.create.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required",
+      "draftEntityCode": "business_partner_request",
+      "targetBinding": {
+        "targetEntityCode": "certification",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
+    }
+  ],
+  "policyBindings": [],
+  "dependencies": [
+    "certification/core",
+    "platform/governed-child-operation.v1"
+  ],
+  "operationDefaultsProfile": "platform.governed-child-operation.v1",
+  "operationDefaultsProfileRef": "platform/governed-child-operation.v1.json",
+  "artifactHash": "sha256:84c2e0954f699ce07e8d109cfc39751d162b4349c98ec28164fe24f4632a096a"
+}

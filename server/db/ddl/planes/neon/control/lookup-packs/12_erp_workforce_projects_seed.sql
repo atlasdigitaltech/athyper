@@ -24,12 +24,12 @@ INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
   ('master.employee_count_band', 'Employee Count Band', 'Standardised headcount bands for supplier business profile.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('master.employment_type', 'Employment type', 'Type of employment relationship (full_time, part_time, contract, etc.). is_extensible=true ??? tenants may add custom types.', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('master.pay_component_type', 'Pay Component Type', 'Classification of pay component (earning, deduction, employer_contribution, information). is_extensible=false ??? type drives processing rules in the payroll engine.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('master.pay_component_value_type', 'Pay Component Value Type', 'How the component amount is expressed (fixed, percentage, formula, rate_table, system). is_extensible=false ??? value type drives calculation method.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('master.pay_frequency', 'Pay Frequency', 'How often payroll is run (weekly, biweekly, semi_monthly, monthly, quarterly, annually). is_extensible=false ??? pay frequency drives payroll engine scheduling.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('master.employment_type', 'Employment type', 'Type of employment relationship (full_time, part_time, contract, etc.). is_extensible=true — tenants may add custom types.', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('master.pay_component_type', 'Pay Component Type', 'Classification of pay component (earning, deduction, employer_contribution, information). is_extensible=false — type drives processing rules in the payroll engine.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('master.pay_component_value_type', 'Pay Component Value Type', 'How the component amount is expressed (fixed, percentage, formula, rate_table, system). is_extensible=false — value type drives calculation method.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('master.pay_frequency', 'Pay Frequency', 'How often payroll is run (weekly, biweekly, semi_monthly, monthly, quarterly, annually). is_extensible=false — pay frequency drives payroll engine scheduling.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('master.project_settlement_type', 'Settlement type', 'Where project costs settle (cost_center, asset, gl_account, order).', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('master.team_type', 'Team Type', 'Classification of a team by purpose and membership mode (functional, project, virtual, cross_functional, committee). is_extensible=true ??? tenants may add custom team types.', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('master.team_type', 'Team Type', 'Classification of a team by purpose and membership mode (functional, project, virtual, cross_functional, committee). is_extensible=true — tenants may add custom team types.', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,
@@ -45,12 +45,12 @@ WHERE (control.lookup_domain.name, control.lookup_domain.description,
 INSERT INTO control.lookup_value
   (code, name, domain_code, description, category, sort_order, is_system, metadata, status, created_by)
 VALUES
-  ('e1_10', '1 ??? 10', 'master.employee_count_band', 'Micro enterprise', NULL, 10, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('e11_50', '11 ??? 50', 'master.employee_count_band', 'Small enterprise', NULL, 20, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('e51_200', '51 ??? 200', 'master.employee_count_band', 'Small-medium enterprise', NULL, 30, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('e201_500', '201 ??? 500', 'master.employee_count_band', 'Medium enterprise', NULL, 40, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('e501_1000', '501 ??? 1,000', 'master.employee_count_band', 'Upper medium enterprise', NULL, 50, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('e1001_5000', '1,001 ??? 5,000', 'master.employee_count_band', 'Large enterprise', NULL, 60, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('e1_10', '1 — 10', 'master.employee_count_band', 'Micro enterprise', NULL, 10, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('e11_50', '11 — 50', 'master.employee_count_band', 'Small enterprise', NULL, 20, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('e51_200', '51 — 200', 'master.employee_count_band', 'Small-medium enterprise', NULL, 30, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('e201_500', '201 — 500', 'master.employee_count_band', 'Medium enterprise', NULL, 40, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('e501_1000', '501 — 1,000', 'master.employee_count_band', 'Upper medium enterprise', NULL, 50, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('e1001_5000', '1,001 — 5,000', 'master.employee_count_band', 'Large enterprise', NULL, 60, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('e5001_plus', '5,001+', 'master.employee_count_band', 'Very large / multinational', NULL, 70, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('full_time', 'Full-time', 'master.employment_type', 'Full-time permanent', NULL, 10, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('part_time', 'Part-time', 'master.employment_type', 'Part-time permanent', NULL, 20, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
@@ -62,10 +62,10 @@ VALUES
   ('statutory', 'Statutory', 'master.pay_component_type', 'Regulatory contribution borne by employer (PF employer share, ESI, gratuity)', NULL, 30, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('memo', 'Memo', 'master.pay_component_type', 'Computed summary figure, not posted to GL (gross, net, CTC)', NULL, 40, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('employer_contribution', 'Employer Contribution', 'master.pay_component_type', 'Voluntary employer benefit cost (group insurance, NPS employer share)', NULL, 50, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('amount', 'Fixed Amount', 'master.pay_component_value_type', 'Static monetary amount (e.g., ???1,600/month transport allowance)', NULL, 10, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('amount', 'Fixed Amount', 'master.pay_component_value_type', 'Static monetary amount (e.g., 1,600 currency units/month transport allowance)', NULL, 10, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('rate', 'Rate / Percentage', 'master.pay_component_value_type', 'Percentage of another component (e.g., 40% of basic as HRA)', NULL, 20, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('formula', 'Formula', 'master.pay_component_value_type', 'Computed by a linked formula_expression (for complex payroll rules)', NULL, 30, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('units', 'Units ?? Rate', 'master.pay_component_value_type', 'Quantity ?? unit rate (e.g., overtime hours ?? hourly rate)', NULL, 40, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('units', 'Units × Rate', 'master.pay_component_value_type', 'Quantity × unit rate (e.g., overtime hours × hourly rate)', NULL, 40, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('flat', 'Flat Per Period', 'master.pay_component_value_type', 'Fixed amount that does not change unless manually overridden per pay period', NULL, 50, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('daily', 'Daily', 'master.pay_frequency', 'Paid every working day', NULL, 10, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('weekly', 'Weekly', 'master.pay_frequency', 'Paid once per week', NULL, 20, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

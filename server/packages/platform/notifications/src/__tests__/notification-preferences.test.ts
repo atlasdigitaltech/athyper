@@ -1,2 +1,106 @@
-import{describe,expect,it}from"vitest";import{createNotificationPreferenceService,PreferenceVersionConflict,type NotificationPreference}from"../notification-preferences.js";
-describe("notification preferences",()=>{it("validates capability and consent, uses versions, and invalidates",async()=>{let rows:readonly NotificationPreference[]=[{tenantId:"t",principalId:"p",eventCode:"invoice.approved",channels:["in_app"],version:2}],currentVersion=2;const events:unknown[]=[];const service=createNotificationPreferenceService({store:{get:async()=>({preferences:rows,version:currentVersion}),replace:async(scope,prefs,version)=>{if(version!==currentVersion)return undefined;currentVersion++;rows=prefs.map(x=>({...x,...scope,version:currentVersion}));return{preferences:rows,version:currentVersion};}},capabilities:{supports:async(_s,c)=>c!=="sms",hasConsent:async(_s,c)=>c!=="whatsapp"},events:{publish:async e=>{events.push(e);}},now:()=>"2026-08-10T00:00:00Z"}),scope={tenantId:"t",principalId:"p",planeKey:"neon" as const};await expect(service.patch(scope,1,[])).rejects.toBeInstanceOf(PreferenceVersionConflict);await expect(service.patch(scope,2,[{eventCode:"invoice.approved",channels:["sms"]}])).rejects.toThrow("not supported");const empty=await service.patch(scope,2,[]);expect(empty).toEqual({preferences:[],version:3});expect(await service.get(scope)).toEqual({preferences:[],version:3});expect(events).toEqual([{type:"notification.preferences.invalidated",tenantId:"t",principalId:"p",planeKey:"neon",version:3,occurredAt:"2026-08-10T00:00:00Z"}]);});});
+import { describe, expect, it, vi } from "vitest";
+import {
+  createNotificationPreferenceService,
+  PreferenceVersionConflict,
+  type NotificationPreference,
+} from "../notification-preferences.js";
+describe("notification preferences", () => {
+  it("validates capability and consent, uses versions, and invalidates", async () => {
+    let rows: readonly NotificationPreference[] = [
+        {
+          tenantId: "t",
+          principalId: "p",
+          eventCode: "invoice.approved",
+          channels: ["in_app"],
+          version: 2,
+        },
+      ],
+      currentVersion = 2;
+    const events: unknown[] = [];
+    const service = createNotificationPreferenceService({
+        store: {
+          get: async () => ({ preferences: rows, version: currentVersion }),
+          replace: async (scope, prefs, version) => {
+            if (version !== currentVersion) return undefined;
+            currentVersion++;
+            rows = prefs.map((x) => ({
+              ...x,
+              ...scope,
+              version: currentVersion,
+            }));
+            return { preferences: rows, version: currentVersion };
+          },
+        },
+        capabilities: {
+          supports: async (_s, c) => c !== "sms",
+          hasConsent: async (_s, c) => c !== "whatsapp",
+        },
+        events: {
+          publish: async (e) => {
+            events.push(e);
+          },
+        },
+        now: () => "2026-08-10T00:00:00Z",
+      }),
+      scope = { tenantId: "t", principalId: "p", planeKey: "neon" as const };
+    await expect(service.patch(scope, 1, [])).rejects.toBeInstanceOf(
+      PreferenceVersionConflict,
+    );
+    await expect(
+      service.patch(scope, 2, [
+        { eventCode: "invoice.approved", channels: ["sms"] },
+      ]),
+    ).rejects.toThrow("not supported");
+    const empty = await service.patch(scope, 2, []);
+    expect(empty).toEqual({ preferences: [], version: 3 });
+    expect(await service.get(scope)).toEqual({ preferences: [], version: 3 });
+    expect(events).toEqual([
+      {
+        type: "notification.preferences.invalidated",
+        tenantId: "t",
+        principalId: "p",
+        planeKey: "neon",
+        version: 3,
+        occurredAt: "2026-08-10T00:00:00Z",
+      },
+    ]);
+  });
+});
+
+describe("committed preference updates", () => {
+  it.each(["reject", "stall", "throw"])(
+    "returns the committed snapshot when optional publication %s",
+    async (failure) => {
+      const warn = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
+      try {
+        const snapshot = { preferences: [], version: 3 };
+        const service = createNotificationPreferenceService({
+          store: { get: async () => snapshot, replace: async () => snapshot },
+          capabilities: {
+            supports: async () => true,
+            hasConsent: async () => true,
+          },
+          events: {
+            publish: () => {
+              if (failure === "throw") throw new Error("offline");
+              if (failure === "reject")
+                return Promise.reject(new Error("offline"));
+              return new Promise<void>(() => undefined);
+            },
+          },
+        });
+        await expect(
+          service.patch(
+            { tenantId: "t", principalId: "p", planeKey: "neon" },
+            2,
+            [],
+          ),
+        ).resolves.toEqual(snapshot);
+      } finally {
+        warn.mockRestore();
+      }
+    },
+  );
+});

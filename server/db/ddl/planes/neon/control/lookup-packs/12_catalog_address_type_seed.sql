@@ -23,7 +23,7 @@ END $guard$;
 INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
-  ('master.address_type', 'Address Type', 'Physical classification of the address location. Describes what the place physically is (commercial, warehouse, residential, po_box, ???). Independent of address_link.purpose (how it is used).', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('master.address_type', 'Address Type', 'Physical classification of the address location. Describes what the place physically is (commercial, warehouse, residential, po_box, —). Independent of address_link.purpose (how it is used).', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,
@@ -47,7 +47,7 @@ VALUES
   ('warehouse', 'Warehouse', 'master.address_type', 'Storage or distribution facility.', 'commercial', 23, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('coworking', 'Co-working Space', 'master.address_type', 'Shared or serviced office with no dedicated tenancy.', 'commercial', 24, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('virtual_office', 'Virtual Office', 'master.address_type', 'Registered address service with no physical occupancy.', 'commercial', 25, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('po_box', 'PO Box', 'master.address_type', 'Post Office Box. Mail only ??? no physical delivery possible.', 'logistics', 30, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('po_box', 'PO Box', 'master.address_type', 'Post Office Box. Mail only — no physical delivery possible.', 'logistics', 30, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('freight_depot', 'Freight Depot', 'master.address_type', 'Freight terminal or depot for large consignments.', 'logistics', 31, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('customs_zone', 'Customs / FTZ', 'master.address_type', 'Bonded warehouse or Free Trade Zone facility.', 'logistics', 32, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('parcel_locker', 'Parcel Locker', 'master.address_type', 'Self-service parcel collection point.', 'logistics', 33, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

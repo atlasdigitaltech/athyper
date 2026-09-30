@@ -1,0 +1,19 @@
+{
+  "schema": "athyper.business-partner-r8-evidence-artifact/1",
+  "gate": "target_evidence_lifecycle",
+  "result": "pending",
+  "environment": "production",
+  "targetRef": null,
+  "sourceRevision": null,
+  "startedAt": null,
+  "completedAt": null,
+  "evidence": {
+    "immutable": null,
+    "locationRef": null,
+    "retainedUntil": null,
+    "objectVersionRef": null,
+    "retentionAttestationRef": null,
+    "retentionMode": null,
+    "retentionVerified": null
+  }
+}

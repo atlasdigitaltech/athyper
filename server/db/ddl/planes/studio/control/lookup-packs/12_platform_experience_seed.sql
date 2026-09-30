@@ -23,7 +23,7 @@ END $guard$;
 INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
-  ('master.template_kind', 'Template Kind', 'Functional category of a template ??? determines which entities can bind it. is_extensible=true ??? tenants can add domain-specific template kinds.', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('master.template_kind', 'Template Kind', 'Functional category of a template — determines which entities can bind it. is_extensible=true — tenants can add domain-specific template kinds.', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,

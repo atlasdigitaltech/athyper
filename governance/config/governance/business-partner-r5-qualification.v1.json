@@ -1,0 +1,234 @@
+{
+  "$schema": "athyper.business-partner-r5-qualification/1",
+  "asOf": "2026-09-05",
+  "slice": "R5 Customer complete",
+  "scenarios": [
+    "BP-CUS-001",
+    "BP-CUS-002",
+    "BP-CUS-003",
+    "BP-CUS-004",
+    "BP-CUS-005",
+    "BP-CUS-006",
+    "BP-CUS-007",
+    "BP-CUS-008"
+  ],
+  "implementationStatus": "local_verified",
+  "productionQualification": "blocked",
+  "productionQualified": false,
+  "commands": [
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data test",
+      "result": "passed",
+      "tests": 130,
+      "files": 21
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner test",
+      "result": "passed",
+      "tests": 71,
+      "files": 16
+    },
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm exec tsx --test tests/contracts/business-partner-r5-contracts.test.ts",
+      "result": "passed",
+      "tests": 3
+    },
+    {
+      "command": "pnpm exec tsx --test server/db/scripts/__tests__/business-partner-foundation/business-partner-r5-customer-controls.test.ts",
+      "result": "passed",
+      "tests": 4
+    },
+    {
+      "command": "pnpm test:e2e:bp-r5 --list",
+      "result": "passed",
+      "tests": 2,
+      "optionalSkip": false
+    },
+    {
+      "command": "pnpm preflight:e2e:bp-r5",
+      "result": "environment_required",
+      "exitCode": 2,
+      "missingValues": 10
+    },
+    {
+      "command": "pnpm test:e2e:bp-r5",
+      "result": "environment_required",
+      "tests": 2,
+      "optionalSkip": false
+    },
+    {
+      "command": "node --test tooling/scripts/verification/business-partner-r5-qualification.test.mjs tooling/scripts/verification/preflight-business-partner-environment.test.mjs",
+      "result": "passed",
+      "tests": 18
+    },
+    {
+      "command": "pnpm exec tsx --test server/db/scripts/__tests__/provisioning/business-partner-r5-fixtures.test.ts",
+      "result": "passed",
+      "tests": 2
+    },
+    {
+      "command": "pnpm qualify:business-partner-r5 --require-qualified",
+      "result": "blocked_as_expected",
+      "exitCode": 2,
+      "pendingGates": 6
+    },
+    {
+      "command": "R5 fixture provisioner against isolated PostgreSQL 16.13",
+      "result": "passed"
+    },
+    {
+      "command": "R5 fixture repeat provisioning",
+      "result": "refused_as_expected"
+    },
+    {
+      "command": "psql -v ON_ERROR_STOP=1 < server/db/scripts/tests/integration/business-partner-r5-customer-controls.sql",
+      "result": "passed",
+      "transaction": "rolled_back"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-iam test",
+      "result": "passed",
+      "tests": 89,
+      "files": 14
+    },
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data test",
+      "result": "passed",
+      "tests": 131,
+      "files": 21
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-iam typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-host typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "customer downstream collector typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "customer-downstream-evidence.test.ts",
+      "result": "passed",
+      "tests": 3
+    },
+    {
+      "command": "customer-portal-consumer-probe.ts against isolated Studio PostgreSQL",
+      "result": "passed",
+      "synthetic": true,
+      "transaction": "rolled_back",
+      "includes": "staging replay, unchanged grants, hierarchy-cycle denial, stale/conflicting event denial, pending versus successful saga linkage"
+    },
+    {
+      "command": "customer-portal-source-probe.ts against isolated NEON PostgreSQL",
+      "result": "passed",
+      "synthetic": true,
+      "transaction": "rolled_back",
+      "includes": "authoritative contact scope, lease fencing, atomic receipt and duplicate completion denial"
+    },
+    {
+      "command": "Customer notification seed against isolated NEON PostgreSQL",
+      "result": "passed",
+      "templates": 5,
+      "routes": 5
+    },
+    {
+      "command": "pnpm test:e2e:bp-r5 --grep=BP-CUS-001 --workers=1 --retries=0",
+      "result": "failed",
+      "httpStatus": 503,
+      "code": "BUSINESS_PARTNER_REQUEST_SCHEMA_UNAVAILABLE",
+      "authenticatedActors": 3
+    }
+  ],
+  "evidence": [
+    "packages/contracts/platform/fixtures/business-partner-r5-customer-complete.v1.json",
+    "packages/planes/neon/business-partner/src/customer-controls.tsx",
+    "server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts",
+    "server/db/scripts/__tests__/business-partner-foundation/business-partner-r5-customer-controls.test.ts",
+    "tests/e2e/business-partner/bp-r5.spec.ts",
+    "server/packages/services/master-data/src/__tests__/customer-readiness-repository.test.ts",
+    "governance/policy/reports/business-partner-customer-state-review.md",
+    "governance/evidence/business-partner/r5-local-review-2026-09-05.json",
+    "server/db/scripts/provisioning/provision-business-partner-r5-fixtures.ts",
+    "server/db/scripts/tests/integration/business-partner-r5-customer-controls.sql",
+    "tooling/scripts/verification/verify-business-partner-r5-qualification.mjs",
+    "docs/runbooks/business-partner-r5-qualification.md",
+    "governance/evidence/business-partner/r5-qualification-build-2026-09-05.json",
+    "server/packages/platform/iam/src/customer-portal-delivery.ts",
+    "server/apps/platform-host/src/composition/register-platform.ts",
+    "server/db/ddl/planes/studio/master/07_functions.sql",
+    "server/db/ddl/planes/neon/control/12_notification_reference_seed.sql",
+    "server/db/scripts/business-partner-360/collect-customer-downstream-evidence.ts",
+    "governance/evidence/business-partner/r5-authenticated-target-2026-09-05.json",
+    "governance/evidence/business-partner/r5-downstream-build-2026-09-05.json",
+    "governance/evidence/business-partner/r5-development-deployment-2026-09-05.json"
+  ],
+  "environmentBlockers": [
+    "Available Studio author/checker accounts require MFA enrollment; no active Business Partner definition is published locally.",
+    "Publication compile/dispatch/apply are disabled; signing-key and Infisical references are unconfigured.",
+    "Customer runtime and synthetic control fixtures are deployed in development. Customer queue is paused after worker schema-event permission failures; service grants and tenant access need verification under athyper_worker.",
+    "Approved NEON Customer-contact Studio identity projections and real portal/notification delivery receipts are absent.",
+    "Target readiness still reports incomplete role-extension/MESH exchange contracts and a missing tenant context in notification-age health.",
+    "Authenticated credit review creation succeeds; the checker is denied neon.customer.credit.decide (HTTP 403). Pending review retained."
+  ],
+  "productApproval": {
+    "decisionId": "BP-Q002",
+    "status": "pending",
+    "accountableOwner": "NEON Master Data",
+    "reviewPacket": "governance/policy/reports/business-partner-customer-state-review.md",
+    "approvalEvidence": null
+  },
+  "outstandingEvidence": [
+    "Execute and retain the new BP-CUS-001 create/approve/materialize browser journey with lineage.",
+    "R2 BP-CUS-002 and BP-CUS-003 target journey receipts.",
+    "R5 credit/designation/readiness/five-button lifecycle and reconciliation target receipt.",
+    "Lifecycle replay, wrong-tenant, authorization-denial and invalid-transition target evidence.",
+    "Retain real provider saga and operator in-app delivery receipts using the new read-only collector; the consumer is locally implemented and SQL-probed but not deployed by this build."
+  ],
+  "gates": [
+    {
+      "id": "onboarding",
+      "status": "pending",
+      "receipt": null
+    },
+    {
+      "id": "role_extensions",
+      "status": "pending",
+      "receipt": null
+    },
+    {
+      "id": "controls",
+      "status": "pending",
+      "receipt": null
+    },
+    {
+      "id": "lifecycle_negative",
+      "status": "pending",
+      "receipt": null
+    },
+    {
+      "id": "downstream",
+      "status": "pending",
+      "receipt": null
+    },
+    {
+      "id": "product_approval",
+      "status": "pending",
+      "receipt": null
+    }
+  ]
+}

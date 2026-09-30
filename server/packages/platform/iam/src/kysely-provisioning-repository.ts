@@ -44,7 +44,9 @@ export function createKyselyProvisioningRepository(): ProvisioningCreateReposito
       `.execute(transaction);
       const row = existing.rows[0];
       if (!row) throw new Error("Provisioning request disappeared after uniqueness conflict");
-      if (row.request_fingerprint !== input.requestFingerprint) return { kind: "conflict" };
+      // A subject collision must not acknowledge an idempotency key we never stored.
+      // Otherwise that key could later create a different request after a successful replay.
+      if (row.idempotency_key !== input.idempotencyKey || row.request_fingerprint !== input.requestFingerprint) return { kind: "conflict" };
       return { kind: "replay", request: fromRow(row) };
     },
   };

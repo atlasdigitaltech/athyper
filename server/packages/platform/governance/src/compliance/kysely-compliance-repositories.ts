@@ -7,6 +7,12 @@ type Row = Record<string, unknown>;
 
 export class KyselyLegalHoldRepository implements LegalHoldRepository {
   constructor(private readonly db: Kysely<Database>) {}
+  async withHoldLock<T>(tenantId: string, holdId: string, work: (repository: LegalHoldRepository) => Promise<T>): Promise<T> {
+    return this.db.transaction().execute(async (transaction) => {
+      await sql`SELECT id FROM governance.legal_hold WHERE tenant_id=${tenantId}::uuid AND id=${holdId}::uuid FOR UPDATE`.execute(transaction);
+      return work(new KyselyLegalHoldRepository(transaction));
+    });
+  }
   async createDraft(input: Omit<LegalHold, "resources">): Promise<LegalHold> {
     await sql`INSERT INTO governance.legal_hold(id,tenant_id,code,name,description,legal_authority,issued_at,owner_principal_id,status,created_at,created_by) VALUES(${input.id}::uuid,${input.tenantId}::uuid,${input.code},${input.name},${input.description ?? null},${input.legalAuthority ?? null},${input.issuedAt ?? null}::timestamptz,${input.ownerPrincipalId ?? null}::uuid,'draft',${input.createdAt}::timestamptz,${input.createdBy}::uuid)`.execute(this.db);
     return (await this.get(input.tenantId, input.id))!;
@@ -19,7 +25,8 @@ export class KyselyLegalHoldRepository implements LegalHoldRepository {
   async removeDraftResource(tenantId: string, holdId: string, resourceId: string): Promise<boolean> { const result = await sql`DELETE FROM governance.legal_hold_manifest manifest USING governance.legal_hold hold WHERE manifest.tenant_id=${tenantId}::uuid AND manifest.id=${resourceId}::uuid AND manifest.legal_hold_id=${holdId}::uuid AND hold.tenant_id=manifest.tenant_id AND hold.id=manifest.legal_hold_id AND hold.status='draft'`.execute(this.db); return Number(result.numAffectedRows ?? 0) === 1; }
   async activate(tenantId: string, holdId: string, principalId: string, effectiveAt: string): Promise<LegalHold | undefined> { const result = await sql`UPDATE governance.legal_hold SET status='active',effective_at=${effectiveAt}::timestamptz,updated_by=${principalId}::uuid WHERE tenant_id=${tenantId}::uuid AND id=${holdId}::uuid AND status='draft'`.execute(this.db); return Number(result.numAffectedRows ?? 0) === 1 ? this.read(tenantId, holdId, this.db) : undefined; }
   async release(tenantId: string, holdId: string, principalId: string, releasedAt: string): Promise<LegalHold | undefined> {
-    return this.db.transaction().execute(async (transaction) => { const result = await sql`UPDATE governance.legal_hold SET status='released',released_at=${releasedAt}::timestamptz,updated_by=${principalId}::uuid WHERE tenant_id=${tenantId}::uuid AND id=${holdId}::uuid AND status='active'`.execute(transaction); if (Number(result.numAffectedRows ?? 0) !== 1) return undefined; await sql`UPDATE governance.legal_hold_manifest SET released_at=${releasedAt}::timestamptz WHERE tenant_id=${tenantId}::uuid AND legal_hold_id=${holdId}::uuid AND released_at IS NULL`.execute(transaction); return this.read(tenantId, holdId, transaction); });
+    const work = async (transaction: Executor) => { const result = await sql`UPDATE governance.legal_hold SET status='released',released_at=${releasedAt}::timestamptz,updated_by=${principalId}::uuid WHERE tenant_id=${tenantId}::uuid AND id=${holdId}::uuid AND status='active'`.execute(transaction); if (Number(result.numAffectedRows ?? 0) !== 1) return undefined; await sql`UPDATE governance.legal_hold_manifest SET released_at=${releasedAt}::timestamptz WHERE tenant_id=${tenantId}::uuid AND legal_hold_id=${holdId}::uuid AND released_at IS NULL`.execute(transaction); return this.read(tenantId, holdId, transaction); };
+    return this.db.isTransaction ? work(this.db) : this.db.transaction().execute(work);
   }
   private async read(tenantId: string, holdId: string, executor: Executor): Promise<LegalHold | undefined> { const hold = (await sql<Row>`SELECT * FROM governance.legal_hold WHERE tenant_id=${tenantId}::uuid AND id=${holdId}::uuid`.execute(executor)).rows[0]; if (!hold) return undefined; const resources = (await sql<Row>`SELECT * FROM governance.legal_hold_manifest WHERE tenant_id=${tenantId}::uuid AND legal_hold_id=${holdId}::uuid ORDER BY captured_at,id`.execute(executor)).rows.map(resourceRow); return holdRow(hold, resources); }
 }

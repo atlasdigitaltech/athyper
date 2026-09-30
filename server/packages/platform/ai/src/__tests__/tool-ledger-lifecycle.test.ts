@@ -32,6 +32,7 @@ describe("durable Atlas tool invocation lifecycle", () => {
     expect(first).toMatchObject({ outcome: "completed", commandId: ids.command, resultRevision: "8" }); expect(replay).toMatchObject({ outcome: "completed", replayed: true, commandId: ids.command, resultRevision: "8" }); expect(commands).toHaveBeenCalledOnce();
     const row = store.rows.get(ids.proposal)!; expect(row.status).toBe("completed"); expect(row.argumentHash).toMatch(/^[0-9a-f]{64}$/); expect(row.resultHash).toMatch(/^[0-9a-f]{64}$/);
     const persisted = JSON.stringify(row); expect(persisted).not.toContain("must-not-persist"); expect(persisted).not.toContain("server-signed-confirmation"); expect(persisted).not.toContain('"posted":true');
+    const history = await service.history({ context: context() }); expect(history.items).toHaveLength(1); expect(history.items[0]).toMatchObject({ proposalId: ids.proposal, status: "completed", businessTransactionId: ids.command, policyRevision: "policy-1", confirmationRequired: true }); expect(JSON.stringify(history)).not.toContain("must-not-persist"); expect(JSON.stringify(history)).not.toContain("server-signed-confirmation");
     await expect(store.fail({ context: context(), proposalId: row.proposalId, expectedStatuses: ["executing"], errorClass: "late_failure", terminalAt: "2026-08-11T00:01:00Z", durationMs: 60_000 })).resolves.toMatchObject({ kind: "conflict", proposal: { status: "completed" } });
   });
 
@@ -66,4 +67,21 @@ describe("durable Atlas tool invocation lifecycle", () => {
     const { store, service } = harness({ authority: async () => ({ allowed: true, policyRevision: "policy-1", policySnapshot: { api_key: "forbidden" } } as never) });
     await expect(preview(service)).rejects.toMatchObject({ code: "TOOL_INVALID" }); expect(store.rows.size).toBe(0);
   });
+});
+
+it("rejects cancellation during command execution and preserves its completion receipt", async () => {
+  let release!: () => void;
+  let started!: () => void;
+  const running = new Promise<void>(resolve => { started = resolve; });
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const { service, store } = harness({ commands: async () => { started(); await gate; return { commandId: ids.command, revision: "8" }; } });
+  const proposal = await preview(service);
+  const execution = service.run({ context: context(), proposalId: proposal.proposalId, arguments: { invoiceId: "inv-1", secret: "must-not-persist" }, confirmationToken: proposal.confirmationToken });
+  await running;
+  try {
+    await expect(service.cancel({ context: context(), proposalId: proposal.proposalId })).rejects.toMatchObject({ code: "TOOL_IN_PROGRESS" });
+    expect(store.rows.get(ids.proposal)?.status).toBe("executing");
+  } finally { release(); }
+  await expect(execution).resolves.toMatchObject({ outcome: "completed", commandId: ids.command });
+  expect(store.rows.get(ids.proposal)?.status).toBe("completed");
 });

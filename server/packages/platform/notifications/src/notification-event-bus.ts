@@ -6,8 +6,7 @@ import type {
 } from "@athyper/server-contract-notifications";
 
 export interface NotificationEventBus
-  extends NotificationEventPublisher,
-    NotificationEventSubscriber {
+  extends NotificationEventPublisher, NotificationEventSubscriber {
   close(): void;
 }
 
@@ -20,7 +19,11 @@ export function createNotificationEventBus(): NotificationEventBus {
       if (closed) return;
       const scoped = listeners.get(key(event.tenantId, event.principalId));
       if (!scoped) return;
-      await Promise.allSettled([...scoped].map((listener) => Promise.resolve().then(() => listener(event))));
+      await Promise.allSettled(
+        [...scoped].map((listener) =>
+          Promise.resolve().then(() => listener(event)),
+        ),
+      );
     },
     subscribe(scope, listener) {
       if (closed) throw new Error("Notification event bus is closed");
@@ -43,8 +46,10 @@ export function createNotificationEventBus(): NotificationEventBus {
   };
 }
 
-export function serializeNotificationSseEvent(event: NotificationStreamEvent): string {
-  return `event: ${event.type}\nid: ${event.notificationId}\ndata: ${JSON.stringify(event)}\n\n`;
+export function serializeNotificationSseEvent(
+  event: NotificationStreamEvent,
+): string {
+  return `event: ${event.type}\nid: ${event.notificationId ?? event.occurredAt}\ndata: ${JSON.stringify(event)}\n\n`;
 }
 
 /** Streams an already-authorized tenant/principal scope to an HTTP-compatible writer. */
@@ -69,19 +74,33 @@ export function openNotificationSseStream(input: {
   };
   const write = (chunk: string): void => {
     if (!open) return;
-    try { input.write(chunk); } catch { close(); }
+    try {
+      input.write(chunk);
+    } catch {
+      close();
+    }
   };
+  input.signal.addEventListener("abort", close, { once: true });
   write(": connected\n\n");
   if (!open) return close;
-  unsubscribe = input.subscriber.subscribe(
-    { tenantId: input.tenantId, principalId: input.principalId },
-    (event) => write(serializeNotificationSseEvent(event)),
-  );
+  try {
+    unsubscribe = input.subscriber.subscribe(
+      { tenantId: input.tenantId, principalId: input.principalId },
+      (event) => write(serializeNotificationSseEvent(event)),
+    );
+  } catch (error) {
+    close();
+    throw error;
+  }
+  // A subscriber may deliver synchronously, closing the writer before it returns.
+  if (!open) {
+    unsubscribe();
+    return close;
+  }
   heartbeat = setInterval(
     () => write(`: heartbeat ${Date.now()}\n\n`),
     input.heartbeatMs ?? 15_000,
   );
-  input.signal.addEventListener("abort", close, { once: true });
   return close;
 }
 

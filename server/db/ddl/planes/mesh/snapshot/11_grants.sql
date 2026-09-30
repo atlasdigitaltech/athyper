@@ -6,7 +6,7 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         GRANT USAGE ON SCHEMA snapshot TO athyperapp;
-        GRANT SELECT, INSERT ON snapshot.template_version TO athyperapp;
+        GRANT SELECT, INSERT ON snapshot.template_version,snapshot.network_account_profile_publication,snapshot.bank_account_disclosure TO athyperapp;
     END IF;
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN

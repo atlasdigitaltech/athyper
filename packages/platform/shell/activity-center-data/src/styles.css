@@ -1,0 +1,21 @@
+.athyper-activity-page{width:min(72rem,100%);margin:0 auto;color:var(--a-foreground)}
+.athyper-activity-page>.athyper-content-header{padding-bottom:var(--a-space-4)}
+.athyper-activity-page__toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3);padding-block:var(--a-space-3);flex-wrap:wrap}
+.athyper-activity-page__toolbar-actions{display:flex;align-items:center;gap:var(--a-space-2);flex-wrap:wrap}
+.athyper-activity-page__group>h2{font-size:var(--a-font-size-xs);color:var(--a-muted-foreground);margin:var(--a-space-4) 0 var(--a-space-2)}
+.athyper-activity-feed{padding:0;margin:0;list-style:none;border:1px solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface-raised)}
+.athyper-activity-feed>li+li{border-top:1px solid var(--a-border)}
+.athyper-activity-feed>li:first-child{border-start-start-radius:inherit;border-start-end-radius:inherit}
+.athyper-activity-page__more{display:flex;justify-content:center;align-items:center;gap:var(--a-space-3);padding:var(--a-space-4);color:var(--a-muted-foreground)}
+.athyper-notification-controls{display:grid;gap:var(--a-space-3);margin-block:var(--a-space-3)}
+.athyper-notification-controls details{border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);padding:var(--a-space-4);background:var(--a-surface)}
+.athyper-notification-controls summary{cursor:pointer;font-weight:var(--a-font-weight-strong)}
+.athyper-notification-controls section{padding-block-start:var(--a-space-3)}
+.athyper-notification-controls fieldset{display:flex;flex-wrap:wrap;gap:var(--a-space-4);border:0;padding:var(--a-space-3) 0}
+.athyper-notification-controls label,.athyper-notification-controls__actions{display:flex;align-items:center;gap:var(--a-space-2)}
+.athyper-notification-controls__actions{flex-wrap:wrap;justify-content:space-between}
+.athyper-notification-controls ul{list-style:none;padding:0}.athyper-notification-controls li{display:grid;gap:var(--a-space-2);padding:var(--a-space-3);border-bottom:var(--a-border-width) solid var(--a-border);overflow-wrap:anywhere}
+.athyper-notification-controls p,.athyper-notification-controls li>span{color:var(--a-muted-foreground)}
+
+.athyper-activity-page__title { display:inline-flex; align-items:center; gap:var(--a-space-2); }
+.athyper-activity-page__title > svg { flex-shrink:0; }

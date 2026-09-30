@@ -7,6 +7,8 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         GRANT USAGE ON SCHEMA shared TO athyperapp;
         GRANT SELECT ON
+            shared.bank_institution, shared.bank_branch, shared.bank_identifier,
+            shared.v_bank_institution, shared.v_bank_branch, shared.v_bank_directory,
             shared.country,
             shared.currency,
             shared.language,
@@ -30,6 +32,13 @@ BEGIN
         GRANT EXECUTE ON FUNCTION shared.fn_resolve_calling_code(text) TO athyperapp;
     END IF;
 
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_jobs_service') THEN
+        GRANT USAGE ON SCHEMA shared TO athyper_jobs_service;
+        GRANT EXECUTE ON FUNCTION shared.uuidv7() TO athyper_jobs_service;
+        GRANT EXECUTE ON FUNCTION shared.current_tenant_id() TO athyper_jobs_service;
+        GRANT EXECUTE ON FUNCTION shared.current_tenant_id_soft() TO athyper_jobs_service;
+    END IF;
+
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT USAGE ON SCHEMA shared TO athyperadmin;
         GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA shared TO athyperadmin;
@@ -37,3 +46,6 @@ BEGIN
     END IF;
 END;
 $$;
+
+GRANT USAGE ON SCHEMA shared TO athyper_publication_service,athyper_projection_applier;
+GRANT SELECT ON shared.country TO athyper_publication_service,athyper_projection_applier;

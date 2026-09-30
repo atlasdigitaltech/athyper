@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-09-04",
+  "controls": [
+    {
+      "control": "relationship_capability_authority",
+      "status": "landed",
+      "owner": "MESH Relationships",
+      "evidence": "Dedicated effective-dated capability episodes have bounded codes/routing, bilateral approval, command guards, forced RLS and no runtime direct-write grant.",
+      "exitGate": "Canonical and supported-upgrade construction plus lifecycle probes pass."
+    },
+    {
+      "control": "relationship_kind_catalog",
+      "status": "landed",
+      "owner": "MESH Relationships",
+      "evidence": "Relationship, identity, registration and capability construction reference the governed relationship-kind catalog; the migration seeds reviewed values before adding FKs.",
+      "exitGate": "Clean and supported-upgrade catalogs construct successfully."
+    },
+    {
+      "control": "registration_intent_invitation",
+      "status": "landed",
+      "owner": "MESH Registration",
+      "evidence": "mesh.registration_exchange supports buyer_request, supplier_self_registration and discovery_nomination with participant account pairs, pinned contract name/version/hash, bounded allowlisted snapshot, hash-only invitation token and command-owned lifecycle.",
+      "exitGate": "Both directions pass counterparty acceptance, exact replay, rollback and RLS probes without creating NEON authority."
+    },
+    {
+      "control": "commodity_capability_non_overlap",
+      "status": "landed",
+      "owner": "MESH Profile",
+      "evidence": "Active account/commodity/trade-role periods and relationship capability episodes use exclusion constraints; ended capability episodes permit governed re-onboarding with incremented episode identity.",
+      "exitGate": "Clean and supported-upgrade construction and live re-onboarding pass."
+    },
+    {
+      "control": "potential_relationship_discovery",
+      "status": "landed",
+      "owner": "MESH Discovery",
+      "evidence": "command_discover_network_relationship atomically creates a requested relationship and requested profile_exchange capability. Other capabilities are rejected until bilateral relationship acceptance; existing access resolvers continue to require active relationships.",
+      "exitGate": "Clean and supported-upgrade discovery restriction probes pass."
+    },
+    {
+      "control": "command_only_effects",
+      "status": "landed",
+      "owner": "MESH Runtime",
+      "evidence": "Registration and capability inserts/transitions require matching immutable command evidence. Commands atomically append network evidence, audit and outbox; athyperapp has read plus function execution but no table mutation grant.",
+      "exitGate": "Direct mutation, rollback and atomic evidence/audit/outbox probes pass."
+    },
+    {
+      "control": "scenario_certification",
+      "status": "landed",
+      "owner": "MESH Security",
+      "evidence": "g3-clean and g3-upgrade MESH lifecycle reports pass buyer invitation, self-registration, discovery, bilateral acceptance, suspension, termination, re-onboarding, exact replay, stale race, wrong participant, rollback and RLS.",
+      "exitGate": "Both PostgreSQL 16.13 disposable paths pass all 14 probes and remove fixtures."
+    }
+  ]
+}

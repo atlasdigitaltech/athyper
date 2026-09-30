@@ -96,6 +96,7 @@ CREATE UNIQUE INDEX ux_entity_surface_default_kind ON metadata.entity_surface (t
 CREATE INDEX ix_entity_surface_replacement ON metadata.entity_surface (tenant_id, change_set_id, replacement_surface_key) WHERE replacement_surface_key IS NOT NULL;
 CREATE INDEX ix_entity_surface_section_tree ON metadata.entity_surface_section (tenant_id, entity_surface_id, parent_section_id, position);
 CREATE INDEX ix_entity_surface_field_binding_field ON metadata.entity_surface_field_binding (tenant_id, entity_field_id, entity_surface_id);
+CREATE INDEX ix_entity_surface_component_binding_component ON metadata.entity_surface_component_binding(tenant_id,component_surface_id,entity_surface_id);
 CREATE INDEX ix_entity_operation_change_set ON metadata.entity_operation (tenant_id, change_set_id, status, operation_kind, operation_key);
 CREATE INDEX ix_entity_operation_legacy_permission_code ON metadata.entity_operation (tenant_id, permission_code, status)
     WHERE permission_code IS NOT NULL;

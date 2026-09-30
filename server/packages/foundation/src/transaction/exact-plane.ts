@@ -1,4 +1,4 @@
-import type { PlaneKey } from "../context/execution-context.js";
+import type { PlaneKey } from "../plane/plane-key.js";
 import type { PlaneTransactionCoordinator } from "./unit-of-work.js";
 
 declare const exactPlaneTransactionBrand: unique symbol;

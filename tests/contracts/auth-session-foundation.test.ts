@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { AuthFlowError, callbackNavigationResponse, createAuthHandlers, logoutCallbackNavigationResponse, logoutNavigationResponse, type AuthContextOption, type AuthProvider, type TokenResult, type VerifiedIdentity } from "../../packages/platform/iam/auth-bff/src/index";
-import { KEYCLOAK_SESSION_TTLS_MS } from "../../packages/platform/iam/auth-bff/src/environment";
+import { KEYCLOAK_SESSION_TTLS_MS, readSessionTtls } from "../../packages/platform/iam/auth-bff/src/environment";
 import { SessionStoreUnavailableError, type SessionBinding, type SessionStore, type StoredSession } from "../../packages/platform/iam/session-store/src/index";
 
 class TestStore implements SessionStore {
@@ -11,13 +11,13 @@ class TestStore implements SessionStore {
   async health() { this.check(); }
   async create(id: string, session: StoredSession) { this.check(); this.sessions.set(id, session); }
   async read(_binding: SessionBinding, id: string) { this.check(); return this.sessions.get(id); }
-  async rotate(_binding: SessionBinding, oldId: string | undefined, newId: string, session: StoredSession) { this.check(); if (oldId) this.sessions.delete(oldId); this.sessions.set(newId, session); }
+  async rotate(_binding: SessionBinding, oldId: string, newId: string, session: StoredSession, expectedSessionVersion: number) { this.check(); if (this.locks.has(oldId) || this.sessions.get(oldId)?.sessionVersion !== expectedSessionVersion || this.sessions.has(newId)) return false; this.sessions.delete(oldId); this.sessions.set(newId, session); return true; }
   async revoke(_binding: SessionBinding, id: string) { this.check(); return this.sessions.delete(id); }
   async revokePrincipal(_binding: SessionBinding, principalId: string) { this.check(); let count = 0; for (const [key, value] of this.sessions) if (value.principalId === principalId) { this.sessions.delete(key); count++; } return count; }
   async revokeProviderSession(_binding: SessionBinding, providerSessionId: string) { this.check(); let count = 0; for (const [key, value] of this.sessions) if (value.providerSessionId === providerSessionId) { this.sessions.delete(key); count++; } return count; }
   async putOneTimeState(_binding: SessionBinding, key: string, value: string) { this.check(); this.states.set(key, value); this.lastState = value; }
   async consumeOneTimeState(_binding: SessionBinding, key: string) { this.check(); const value = this.states.get(key); this.states.delete(key); return value; }
-  async claimLogoutToken(_binding: SessionBinding, key: string) { this.check(); if (this.states.has(`logout:${key}`)) return false; this.states.set(`logout:${key}`, "1"); return true; }
+  async completeBackchannelLogout(_binding: SessionBinding, providerSessionId: string, key: string) { this.check(); if (this.states.get(`logout:${key}`) === "completed") return { replayed: true, revokedSessions: 0 }; let revokedSessions = 0; for (const [id, session] of this.sessions) if (session.providerSessionId === providerSessionId) { this.sessions.delete(id); revokedSessions++; } this.states.set(`logout:${key}`, "completed"); return { replayed: false, revokedSessions }; }
   async touch(_binding: SessionBinding, id: string, idleTtlMs: number) { this.check(); const current = this.sessions.get(id); if (!current) return undefined; const touched = { ...current, lastSeenAt: Date.now(), idleExpiresAt: Math.min(Date.now() + idleTtlMs, current.absoluteExpiresAt) }; this.sessions.set(id, touched); return touched; }
   async acquireRefreshLock(_binding: SessionBinding, id: string, owner: string) { this.check(); if (this.locks.has(id)) return false; this.locks.set(id, owner); return true; }
   async releaseRefreshLock(_binding: SessionBinding, id: string, owner: string) { this.check(); if (this.locks.get(id) === owner) this.locks.delete(id); }
@@ -25,17 +25,17 @@ class TestStore implements SessionStore {
 }
 
 function setup(overrides: Partial<VerifiedIdentity> = {}, refreshDelayMs = 0, contexts?: readonly AuthContextOption[], planeConfig: { readonly plane: "neon" | "mesh" | "studio"; readonly clientId: string; readonly authorizedRole: string; readonly origin: string } = { plane: "neon", clientId: "neon-web", authorizedRole: "grp:workbench:user", origin: "https://neon.example" }, rejectRefresh = false, registerTrustedDevice?: NonNullable<Parameters<typeof createAuthHandlers>[0]["registerTrustedDevice"]>) {
-  const store = new TestStore(); let refreshCount = 0;
+  const store = new TestStore(); let refreshCount = 0; let lastExchangedTokens: TokenResult | undefined;
   const tokens: TokenResult = { accessToken: "access-secret", refreshToken: "refresh-secret", idToken: "id-token", accessTokenExpiresAt: Date.now() + 60_000 };
   const identity = (): VerifiedIdentity => { const transaction = JSON.parse(store.lastState!) as { nonce: string }; return { issuer: "https://iam.example/realms/athyper", audience: planeConfig.clientId, subject: "principal-1", nonce: transaction.nonce, issuedAt: Date.now() - 100, expiresAt: Date.now() + 60_000, plane: planeConfig.plane, realmKey: "athyper", tenantId: "tenant-1", providerSessionId: "provider-1", roles: [planeConfig.authorizedRole], ...overrides }; };
   const provider: AuthProvider = {
-    exchangeCode: async () => tokens, verifyIdToken: async () => identity(),
+    exchangeCode: async ({ code }) => { lastExchangedTokens = code === "step-up" ? { ...tokens, accessToken: "issuer-step-up-access", refreshToken: "issuer-step-up-refresh", idToken: "issuer-step-up-id" } : tokens; return lastExchangedTokens; }, verifyIdToken: async () => identity(),
     refresh: async () => { refreshCount++; if (refreshDelayMs) await new Promise((resolve) => setTimeout(resolve, refreshDelayMs)); if (rejectRefresh) throw new AuthFlowError("auth.refresh_rejected", 401, "rejected"); return { ...tokens, accessToken: `new-access-${refreshCount}` }; },
     createEndSessionUrl: async ({ postLogoutRedirectUri, state }) => `https://iam.example/realms/athyper/protocol/openid-connect/logout?id_token_hint=id-token&post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}&state=${encodeURIComponent(state)}`,
     verifyBackchannelLogoutToken: async (token) => ({ issuer: "https://iam.example/realms/athyper", audience: planeConfig.clientId, providerSessionId: "provider-1", issuedAt: token === "stale" ? Date.now() - 10 * 60_000 : Date.now(), expiresAt: token === "expired" ? Date.now() - 1 : Date.now() + 60_000, tokenId: `logout-token-${planeConfig.plane}-${token}`, ...(token === "nonce" ? { nonce: "not-allowed" } : {}), events: { "http://schemas.openid.net/event/backchannel-logout": {} } }),
   };
-  const handlers = createAuthHandlers({ plane: planeConfig.plane, realmKey: "athyper", issuer: "https://iam.example/realms/athyper", clientId: planeConfig.clientId, redirectUri: `${planeConfig.origin}/api/auth/callback`, postLogoutRedirectUri: `${planeConfig.origin}/api/auth/logout/callback`, authorizedRole: planeConfig.authorizedRole, configurationRevision: "test-1", store, provider, resolveContexts: contexts ? async () => contexts : undefined, sealTokens: async () => "encrypted-server-only", deriveCsrfToken: () => "csrf-safe", deriveAcceptedCsrfTokens: () => ["csrf-safe", "csrf-previous"], production: true, ...(registerTrustedDevice ? { registerTrustedDevice } : {}) });
-  return { handlers, store, origin: planeConfig.origin, getRefreshCount: () => refreshCount };
+  const handlers = createAuthHandlers({ plane: planeConfig.plane, realmKey: "athyper", issuer: "https://iam.example/realms/athyper", clientId: planeConfig.clientId, redirectUri: `${planeConfig.origin}/api/auth/callback`, postLogoutRedirectUri: `${planeConfig.origin}/api/auth/logout/callback`, authorizedRole: planeConfig.authorizedRole, configurationRevision: "test-1", store, provider, resolveContexts: contexts ? async () => contexts : undefined, sealTokens: async (value) => `encrypted-server-only:${value.accessToken}:${value.refreshToken}`, deriveCsrfToken: () => "csrf-safe", deriveAcceptedCsrfTokens: () => ["csrf-safe", "csrf-previous"], production: true, ...(registerTrustedDevice ? { registerTrustedDevice } : {}) });
+  return { handlers, store, origin: planeConfig.origin, getRefreshCount: () => refreshCount, getLastExchangedTokens: () => lastExchangedTokens };
 }
 
 async function authenticate(setupValue = setup(), returnTo = "/records?view=open") {
@@ -138,6 +138,52 @@ describe("Phase 3 authentication foundation", () => {
     const authenticated = await authenticate(); const request = new Request("https://neon.example/api/auth/logout", { method: "POST", headers: { cookie: authenticated.cookie, origin: "https://evil.example", "content-type": "application/x-www-form-urlencoded" }, body: "scope=application&_csrf=csrf-safe" }); const response = await authenticated.handlers.logout(request); assert.equal(response.status, 403); assert.match(await response.text(), /auth.csrf_invalid/); assert.equal(response.headers.has("set-cookie"), false);
   });
 
+  for (const plane of ["neon", "mesh", "studio"] as const) {
+    it(`${plane}: protects anonymous logout from cross-origin cookie clearing`, async () => {
+      const origin = `https://${plane}.example`;
+      const value = await authenticate(setup({}, 0, undefined, { plane, origin, clientId: `${plane}-web`, authorizedRole: "AUTHORIZED" }));
+      const rejectedHeaders = [
+        { origin: "https://evil.example", "sec-fetch-site": "cross-site" },
+        { origin: "https://sibling.example", "sec-fetch-site": "same-site" },
+        { origin: "null", "sec-fetch-site": "cross-site" },
+        { "sec-fetch-site": "same-origin" },
+        { origin },
+        { origin, "sec-fetch-site": "cross-site" },
+        { origin, "sec-fetch-site": "same-site" },
+        { origin: "https://evil.example", "sec-fetch-site": "same-origin" },
+      ];
+      for (const extra of rejectedHeaders) {
+        const headers = new Headers({ "content-type": "application/x-www-form-urlencoded" });
+        for (const [key, entry] of Object.entries(extra)) if (entry) headers.set(key, entry);
+        const response = await value.handlers.logout(new Request(`${origin}/api/auth/logout`, { method: "POST", headers, body: "scope=application" }));
+        assert.equal(response.status, 403);
+        assert.equal((await response.json() as { code: string }).code, "auth.csrf_invalid");
+        assert.equal(response.headers.get("set-cookie"), null);
+      }
+      const navigation = await logoutNavigationResponse(new Request(`${origin}/api/auth/logout`, { method: "POST", headers: { origin: "https://evil.example", "sec-fetch-site": "cross-site", accept: "text/html" } }), value.handlers.logout, origin);
+      assert.equal(navigation.status, 303);
+      assert.equal(navigation.headers.get("set-cookie"), null);
+      assert.equal(new URL(navigation.headers.get("location")!).searchParams.get("reason"), "logout-incomplete");
+      assert.equal(value.store.sessions.size, 1, "rejected anonymous logout cannot revoke the existing session");
+      const headers = { origin, "sec-fetch-site": "same-origin", "content-type": "application/x-www-form-urlencoded" };
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const response = await value.handlers.logout(new Request(`${origin}/api/auth/logout`, { method: "POST", headers, body: "scope=application" }));
+        assert.equal(response.status, 204, "anonymous same-origin logout is idempotent and needs no CSRF token");
+        assert.equal(response.headers.getSetCookie().length, 2);
+        assert.ok(response.headers.getSetCookie().every(cookie => cookie.includes("Max-Age=0")));
+      }
+      for (const proof of [undefined, "incorrect"]) {
+        const response = await value.handlers.logout(new Request(`${origin}/api/auth/logout`, { method: "POST", headers: { ...headers, cookie: value.cookie, ...(proof ? { "x-csrf-token": proof } : {}) }, body: "scope=application" }));
+        assert.equal(response.status, 403);
+        assert.equal(response.headers.get("set-cookie"), null);
+        assert.equal(value.store.sessions.size, 1);
+      }
+      const response = await value.handlers.logout(new Request(`${origin}/api/auth/logout`, { method: "POST", headers: { ...headers, cookie: value.cookie }, body: "scope=application&_csrf=csrf-safe" }));
+      assert.equal(response.status, 204);
+      assert.equal(value.store.sessions.size, 0);
+    });
+  }
+
   it("accepts the previous CSRF key during a rolling key rotation", async () => {
     const authenticated = await authenticate();
     const headers = { cookie: authenticated.cookie, origin: "https://neon.example", "sec-fetch-site": "same-origin", "x-csrf-token": "csrf-previous" };
@@ -159,7 +205,7 @@ describe("Phase 3 authentication foundation", () => {
   });
 
   it("keeps application TTL policy aligned with the effective Keycloak realm and client settings", () => {
-    const realm = JSON.parse(readFileSync(new URL("../../stack/config/iam/realm-athyper.json", import.meta.url), "utf8")) as { ssoSessionIdleTimeout: number; ssoSessionMaxLifespan: number; clients: Array<{ clientId: string; attributes?: Record<string, string> }> };
+    const realm = JSON.parse(readFileSync(new URL("../../deploy/config/iam/realm-athyper.json", import.meta.url), "utf8")) as { ssoSessionIdleTimeout: number; ssoSessionMaxLifespan: number; clients: Array<{ clientId: string; attributes?: Record<string, string> }> };
     assert.deepEqual(KEYCLOAK_SESSION_TTLS_MS.neon, { idleTtlMs: realm.ssoSessionIdleTimeout * 1_000, absoluteTtlMs: realm.ssoSessionMaxLifespan * 1_000 });
     assert.deepEqual(KEYCLOAK_SESSION_TTLS_MS.mesh, KEYCLOAK_SESSION_TTLS_MS.neon);
     const studio = realm.clients.find((client) => client.clientId === "studio-web"); assert.ok(studio);
@@ -195,6 +241,8 @@ describe("Phase 3 authentication foundation", () => {
     const completed = await authenticated.handlers.callback(new Request(`https://neon.example/api/auth/callback?code=step-up&state=${state}`, { headers: { cookie: `${oauthCookie(started)}; ${authenticated.cookie}` } }));
     assert.equal(completed.status, 303, await completed.clone().text());
     assert.equal(completed.headers.get("location"), "/secure");
+    assert.equal(authenticated.getLastExchangedTokens()?.accessToken, "issuer-step-up-access");
+    assert.equal([...authenticated.store.sessions.values()][0]?.encryptedTokenBundle, "encrypted-server-only:issuer-step-up-access:issuer-step-up-refresh", "the rotated session stores the issuer's new tokens for subsequent Runtime calls");
     const elevatedCookie = completed.headers.getSetCookie().find((value) => value.startsWith("__Host-athyper-session="))?.split(";")[0]; assert.ok(elevatedCookie); assert.notEqual(elevatedCookie, authenticated.cookie);
     const superseded = await authenticated.handlers.session(new Request("https://neon.example/api/auth/session", { headers: { cookie: authenticated.cookie } })); assert.match(await superseded.text(), /"state":"anonymous"/);
     const session = await authenticated.handlers.session(new Request("https://neon.example/api/auth/session", { headers: { cookie: elevatedCookie } }));
@@ -246,4 +294,149 @@ describe("Phase 3 authentication foundation", () => {
   it("rejects stale, expired, or nonce-bearing backchannel logout tokens", async () => {
     for (const token of ["stale", "expired", "nonce"]) { const value = setup(); const response = await value.handlers.backchannelLogout(new Request("https://neon.example/api/auth/backchannel-logout", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: `logout_token=${token}` })); assert.equal(response.status, 401, token); assert.match(await response.text(), /auth.invalid_identity/); }
   });
+});
+
+it("restores the exact deep link from server-side OAuth state in all three planes", async () => {
+  const destination = "/mdg/business-partner/f7688c3d-8c92-5651-a469-da3f4f786375/supplier?view=open&filter=a%20b";
+  for (const plane of ["neon", "mesh", "studio"] as const) {
+    const value = setup({}, 0, undefined, { plane, clientId: `${plane}-web`, authorizedRole: "grp:workbench:user", origin: `https://${plane}.example` });
+    const { callback } = await authenticate(value, destination);
+    assert.equal(callback.status, 303);
+    assert.equal(callback.headers.get("location"), destination);
+    assert.equal(value.store.states.size, 0, "OAuth state is consumed once");
+  }
+});
+
+it("rejects a context rotation lost to revocation without issuing session cookies", async () => {
+  const value = await authenticate();
+  value.store.rotate = async (_binding, oldId) => { value.store.sessions.delete(oldId); return false; };
+  const response = await value.handlers.context(new Request(`${value.origin}/api/auth/session/context`, { method: "POST", headers: { cookie: value.cookie, origin: value.origin, "x-csrf-token": "csrf-safe", "content-type": "application/json" }, body: JSON.stringify({ tenantId: "tenant-2" }) }));
+  assert.equal(response.status, 409);
+  assert.equal(response.headers.has("set-cookie"), false);
+  assert.equal(value.store.sessions.size, 0);
+});
+
+it("rejects a step-up rotation lost to revocation without issuing session cookies", async () => {
+  const value = await authenticate(setup({ authenticationMethods: ["otp"] }));
+  const started = await value.handlers.stepUpStart(new Request(`${value.origin}/api/auth/step-up/start`, { method: "POST", headers: { cookie: value.cookie, origin: value.origin, "x-csrf-token": "csrf-safe" } }));
+  const state = new URL(started.headers.get("location")!).searchParams.get("state")!;
+  value.store.rotate = async (_binding, oldId) => { value.store.sessions.delete(oldId); return false; };
+  const response = await value.handlers.callback(new Request(`${value.origin}/api/auth/callback?code=step-up&state=${state}`, { headers: { cookie: `${oauthCookie(started)}; ${value.cookie}` } }));
+  assert.equal(response.status, 409);
+  assert.ok(response.headers.getSetCookie().every((cookie) => cookie.startsWith("__Host-athyper-oauth=")));
+  assert.equal(value.store.sessions.size, 0);
+});
+
+it("fresh login succeeds with an expired predecessor cookie", async () => {
+  const value = setup();
+  const started = await value.handlers.login(new Request(`${value.origin}/api/auth/login`));
+  const state = new URL(started.headers.get("location")!).searchParams.get("state")!;
+  const response = await value.handlers.callback(new Request(`${value.origin}/api/auth/callback?code=login&state=${state}`, { headers: { cookie: `${oauthCookie(started)}; __Host-athyper-session=expired` } }));
+  assert.equal(response.status, 303);
+  assert.equal(value.store.sessions.size, 1);
+});
+
+it("retries backchannel logout after storage failure without consuming the delivery", async () => {
+  const value = await authenticate();
+  const request = () => new Request(`${value.origin}/api/auth/backchannel-logout`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: "logout_token=valid" });
+  value.store.unavailable = true;
+  assert.equal((await value.handlers.backchannelLogout(request())).status, 503);
+  value.store.unavailable = false;
+  assert.equal(value.store.sessions.size, 1);
+  assert.equal((await value.handlers.backchannelLogout(request())).status, 204);
+  assert.equal(value.store.sessions.size, 0);
+  assert.equal((await value.handlers.backchannelLogout(request())).status, 204);
+});
+
+for (const plane of ["neon", "mesh", "studio"] as const) {
+  it(`${plane}: malformed context bodies return 400 without changing the session`, async () => {
+    const origin = `https://${plane}.example`;
+    const value = await authenticate(setup({}, 0, [{ tenantId: "tenant-1", tenantCode: "ONE", tenantName: "One", principalId: "principal-1", authEpoch: 1 }], { plane, clientId: `${plane}-web`, authorizedRole: "AUTHORIZED", origin }));
+    const before = [...value.store.sessions.entries()];
+    const headers = { cookie: value.cookie, origin, "x-csrf-token": "csrf-safe", "content-type": "application/json" };
+    const request = (body: string, suppliedHeaders = headers) => new Request(`${origin}/api/auth/session/context`, { method: "POST", headers: suppliedHeaders, body });
+    for (const body of ["", "{", "null", "[]", '"tenant-1"', "42", "true", "{}", '{"tenantId":null}', '{"tenantId":[]}', '{"tenantId":{}}', '{"tenantId":42}', '{"tenantId":false}', '{"tenantId":""}', '{"tenantId":"  \\t\\n"}']) {
+      const response = await value.handlers.context(request(body));
+      assert.equal(response.status, 400, body);
+      assert.match(response.headers.get("content-type")!, /application\/problem\+json/);
+      const problem = await response.json() as { code: string; status: number };
+      assert.equal(problem.code, "auth.invalid_request");
+      assert.equal(problem.status, 400);
+      assert.equal(response.headers.has("set-cookie"), false);
+      assert.deepEqual([...value.store.sessions.entries()], before);
+    }
+    // Authentication and CSRF checks still precede request parsing.
+    assert.equal((await value.handlers.context(request("null", { ...headers, cookie: "" }))).status, 401);
+    assert.equal((await value.handlers.context(request("null", { ...headers, "x-csrf-token": "wrong" }))).status, 403);
+    assert.equal((await value.handlers.context(request('{"tenantId":"not-a-member"}'))).status, 403);
+    assert.deepEqual([...value.store.sessions.entries()], before);
+    const valid = await value.handlers.context(request('{"tenantId":"tenant-1"}'));
+    assert.equal(valid.status, 200);
+    assert.equal((await valid.json() as { tenantId: string }).tenantId, "tenant-1");
+    assert.ok(valid.headers.has("set-cookie"));
+  });
+}
+
+it("rejects malformed logout bodies as client errors without clearing cookies", async () => {
+  const value = setup();
+  for (const endpoint of ["logout", "backchannelLogout"] as const) {
+    for (const body of ["null", "[]", "1", '"text"', "{"]) {
+      const response = await value.handlers[endpoint](new Request(`${value.origin}/api/auth/logout`, {
+        method: "POST", headers: { "content-type": "application/json", origin: value.origin, "sec-fetch-site": "same-origin" }, body,
+      }));
+      assert.equal(response.status, 400, `${endpoint}: ${body}`);
+      assert.equal((await response.json()).code, "auth.invalid_request");
+      assert.deepEqual(response.headers.getSetCookie(), []);
+    }
+  }
+  for (const logout_token of [null, 123, {}, [], "", " "]) {
+    const response = await value.handlers.backchannelLogout(new Request(`${value.origin}/api/auth/backchannel-logout`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ logout_token }),
+    }));
+    assert.equal(response.status, 400);
+  }
+});
+
+describe("deployment session lifetimes", () => {
+  it("preserves existing defaults and applies explicit DEV overrides", () => {
+    assert.deepEqual(readSessionTtls("studio", {}), KEYCLOAK_SESSION_TTLS_MS.studio);
+    assert.deepEqual(readSessionTtls("neon", {}), KEYCLOAK_SESSION_TTLS_MS.neon);
+    assert.deepEqual(readSessionTtls("studio", { AUTH_SESSION_IDLE_TTL_SECONDS: "7200", AUTH_SESSION_ABSOLUTE_TTL_SECONDS: "43200" }), { idleTtlMs: 7200000, absoluteTtlMs: 43200000 });
+  });
+  it("rejects malformed and contradictory timeouts instead of silently weakening the policy", () => {
+    for (const value of ["", "0", "-1", "1.5", "NaN", "Infinity", "99999999999999999"])
+      assert.throws(() => readSessionTtls("studio", { AUTH_SESSION_IDLE_TTL_SECONDS: value }));
+    assert.throws(() => readSessionTtls("studio", { AUTH_SESSION_IDLE_TTL_SECONDS: "7200", AUTH_SESSION_ABSOLUTE_TTL_SECONDS: "3600" }));
+  });
+});
+
+it("reuses recent issuer MFA at login without extending its freshness on refresh", async () => {
+  const authenticatedAt = Date.now() - 60_000;
+  const value = await authenticate(setup({ authenticationMethods: ["pwd", "otp"], authenticatedAt }));
+  assert.equal(value.callback.status, 303);
+  const stored = [...value.store.sessions.values()][0]!;
+  assert.equal(stored.assurance, "elevated");
+  assert.equal(stored.elevationExpiresAt, Math.min(stored.absoluteExpiresAt, authenticatedAt + 24 * 60 * 60_000));
+  await value.handlers.refresh(new Request(`${value.origin}/api/auth/refresh`, { method: "POST", headers: { cookie: value.cookie, origin: value.origin, "x-csrf-token": "csrf-safe" } }));
+  assert.equal([...value.store.sessions.values()][0]!.elevationExpiresAt, stored.elevationExpiresAt);
+});
+for (const [name, evidence] of Object.entries({
+  "password only": { authenticationMethods: ["pwd"], authenticatedAt: Date.now() },
+  "missing authentication time": { authenticationMethods: ["otp"] },
+  "expired authentication": { authenticationMethods: ["otp"], authenticatedAt: Date.now() - 25 * 60 * 60_000 },
+  "future authentication": { authenticationMethods: ["otp"], authenticatedAt: Date.now() + 60_000 },
+  "ACR without second factor evidence": { assurance: "elevated" as const, authenticatedAt: Date.now() },
+})) it(`does not reuse login assurance for ${name}`, async () => {
+  const value = await authenticate(setup(evidence));
+  assert.equal([...value.store.sessions.values()][0]!.assurance, "baseline");
+});
+
+
+it("reuses MFA inside the 24-hour window and caps it at the original authentication deadline", async () => {
+  const authenticatedAt = Date.now() - 23 * 60 * 60_000;
+  const value = await authenticate(setup({ authenticationMethods: ["otp"], authenticatedAt }));
+  const stored = [...value.store.sessions.values()][0]!;
+  assert.equal(stored.assurance, "elevated");
+  assert.equal(stored.elevationExpiresAt, authenticatedAt + 24 * 60 * 60_000);
+  assert.ok(stored.elevationExpiresAt! <= stored.absoluteExpiresAt);
 });

@@ -49,7 +49,8 @@ export function createCronwatchJobLifecycle(
     },
     async failed(job, failure) {
       await options.delegate?.failed(job, failure);
-      void ping(`${slug(job.queue, job.name)}/fail`, `${failure.code}: ${failure.message}`);
+      // Only the code leaves the process: messages can carry tenant data or internal detail.
+      void ping(`${slug(job.queue, job.name)}/fail`, String(failure.code));
     },
   };
 }

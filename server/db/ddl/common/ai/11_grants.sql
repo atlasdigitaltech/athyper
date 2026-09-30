@@ -1,8 +1,15 @@
 -- Generated from the extracted live Atlas AI contract.
--- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
+-- Maintained as canonical foundation DDL; use additive migrations for installed databases.
+-- Supported verification and maintenance: server/db/scripts/README.md (Atlas AI DDL).
 
 REVOKE ALL ON SCHEMA ai FROM PUBLIC;
 GRANT USAGE ON SCHEMA ai TO athyperapp, athyperadmin;
+
+REVOKE ALL ON FUNCTION ai.fn_atlas_conversation_access(uuid, uuid, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ai.fn_atlas_conversation_access(uuid, uuid, boolean) TO athyperapp, athyperadmin;
+
+REVOKE ALL ON FUNCTION ai.fn_is_atlas_conversation(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ai.fn_is_atlas_conversation(uuid, uuid) TO athyperapp, athyperadmin;
 
 GRANT DELETE ON TABLE "ai"."ai_action_policy" TO athyperadmin;
 
@@ -380,3 +387,33 @@ GRANT ALL PRIVILEGES ON TABLE "ai"."atlas_tenant_quota_window" TO athyperadmin;
 GRANT SELECT, INSERT, UPDATE ON TABLE "ai"."atlas_tenant_quota_window" TO athyperapp;
 GRANT ALL PRIVILEGES ON TABLE "ai"."atlas_tenant_quota_reservation" TO athyperadmin;
 GRANT SELECT, INSERT, UPDATE ON TABLE "ai"."atlas_tenant_quota_reservation" TO athyperapp;
+
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+   GRANT SELECT,INSERT ON ai.atlas_provider_usage TO athyper_runtime;
+ END IF;
+END $$;
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+REVOKE ALL ON TABLE ai.atlas_experience_release FROM PUBLIC;
+GRANT SELECT ON TABLE ai.atlas_experience_release TO athyperapp;
+GRANT ALL ON TABLE ai.atlas_experience_release TO athyperadmin;
+-- END ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+
+-- BEGIN ATLAS F4 LEARNING COMMON
+REVOKE ALL ON ai.atlas_learning_candidate FROM PUBLIC;
+GRANT SELECT,INSERT ON ai.atlas_learning_candidate TO athyperapp;
+GRANT UPDATE(handed_off_at) ON ai.atlas_learning_candidate TO athyperapp;
+GRANT ALL ON ai.atlas_learning_candidate TO athyperadmin;
+-- END ATLAS F4 LEARNING COMMON
+
+-- Compatibility for installations that provision the legacy runtime role.
+-- The conversation participant guards call both helpers as the runtime role.
+-- These functions enforce transaction-local tenant, principal and plane scope.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+    GRANT EXECUTE ON FUNCTION ai.fn_atlas_conversation_access(uuid,uuid,boolean) TO athyper_runtime;
+    GRANT EXECUTE ON FUNCTION ai.fn_is_atlas_conversation(uuid,uuid) TO athyper_runtime;
+  END IF;
+END $$;

@@ -1,6 +1,6 @@
 import { lookup as nodeLookup } from "node:dns/promises";
 import { request as httpsRequest } from "node:https";
-import { isIP } from "node:net";
+import { BlockList, isIP } from "node:net";
 import { Readable } from "node:stream";
 import type {
   ConnectorResponse,
@@ -106,6 +106,7 @@ export function createIntegrationHttpTransport(
         failureWindowMs: 60_000,
         resetTimeoutMs: 30_000,
         successThreshold: 1,
+        now,
         ...options.circuitBreaker,
         shouldTrigger: (error) => error instanceof RetryableResponseError ||
           classifyIntegrationFailure(error).kind === "transient",
@@ -197,15 +198,18 @@ async function invokeOnce(
   fetcher: PinnedFetcher,
   lookup: (hostname: string) => Promise<readonly string[]>,
 ): Promise<ConnectorResponse> {
-  const target = await resolveOutboundTarget(plan.url, lookup, options);
-  const url = target.url;
-  const credential = parseCredential(credentialBytes);
-  const auth = await authHeaders(credential, plan, options, fetcher, lookup);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(coded("INTEGRATION_HTTP_TIMEOUT", true)), plan.timeoutMs);
   const abort = () => controller.abort(signal?.reason);
-  signal?.addEventListener("abort", abort, { once: true });
+  if (signal?.aborted) abort();
+  else signal?.addEventListener("abort", abort, { once: true });
+  let oauthKey: string | undefined;
   try {
+    const target = await resolveOutboundTarget(plan.url, lookup, options);
+    const url = target.url;
+    const credential = parseCredential(credentialBytes);
+    if (credential.type === "oauth2_client_credentials") oauthKey = oauthCacheKey(credential, plan);
+    const auth = await authHeaders(credential, plan, options, fetcher, lookup, controller.signal);
     const response = await fetcher(url, {
       method: plan.method,
       headers: {
@@ -222,7 +226,16 @@ async function invokeOnce(
       throw coded("INTEGRATION_REDIRECT_DENIED");
     }
     const body = await boundedBody(response, positiveLimit(options.maxResponseBytes, DEFAULT_MAX_RESPONSE_BYTES));
+    if (response.status === 401 && oauthKey) await options.tokenCache?.delete?.(oauthKey);
     return { status: response.status, headers: Object.fromEntries(response.headers.entries()), body };
+  } catch (error) {
+    if (controller.signal.aborted) {
+      // node:http and fetch surface aborts as their own AbortError, losing the reason.
+      const reason = controller.signal.reason as { code?: string } | undefined;
+      if (reason?.code === "INTEGRATION_HTTP_TIMEOUT") throw reason;
+      throw new DOMException("The integration request was cancelled", "AbortError");
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener("abort", abort);
@@ -241,7 +254,7 @@ export function classifyIntegrationFailure(
     return { kind, status };
   }
   if (error instanceof AdapterCircuitOpenError) return { kind: "transient" };
-  if (error instanceof DOMException && error.name === "AbortError") return { kind: "cancelled" };
+  if (error instanceof Error && error.name === "AbortError") return { kind: "cancelled" };
   if (error && typeof error === "object") {
     const retryable = Reflect.get(error, "retryable");
     const errorStatus = Reflect.get(error, "status");
@@ -285,19 +298,54 @@ async function resolveOutboundTarget(
   return { url, address: addresses[0]! };
 }
 
-function isPrivateAddress(ip: string): boolean {
-  const value = ip.toLowerCase();
-  if (value.includes(":")) {
-    if (value === "::" || value === "::1" || value.startsWith("fc") || value.startsWith("fd") || /^fe[89ab]/.test(value) || value.startsWith("ff")) return true;
-    const mapped = value.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-    return mapped ? isPrivateAddress(mapped[1]!) : false;
+const PRIVATE_V4 = new BlockList();
+for (const [network, prefix] of [
+  ["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8], ["169.254.0.0", 16],
+  ["172.16.0.0", 12], ["192.0.0.0", 24], ["192.0.2.0", 24], ["192.168.0.0", 16], ["198.18.0.0", 15],
+  ["198.51.100.0", 24], ["203.0.113.0", 24], ["224.0.0.0", 3],
+] as const) PRIVATE_V4.addSubnet(network, prefix, "ipv4");
+const PRIVATE_V6 = new BlockList();
+for (const [network, prefix] of [
+  ["::", 128], ["::1", 128], ["64:ff9b::", 96], ["64:ff9b:1::", 48], ["100::", 64], ["2001::", 32],
+  ["2001:db8::", 32], ["2002::", 16], ["fc00::", 7], ["fe80::", 10], ["ff00::", 8],
+] as const) PRIVATE_V6.addSubnet(network, prefix, "ipv6");
+
+function ipv6Bytes(ip: string): Uint8Array | undefined {
+  let text = ip.toLowerCase().split("%")[0]!;
+  const dotted = /(\d+\.\d+\.\d+\.\d+)$/.exec(text);
+  if (dotted) {
+    const octets = dotted[1]!.split(".").map(Number);
+    text = text.slice(0, -dotted[1]!.length) + ((octets[0]! << 8) | octets[1]!).toString(16) + ":" + ((octets[2]! << 8) | octets[3]!).toString(16);
   }
-  const parts = value.split(".").map(Number);
-  const first = parts[0] ?? -1;
-  const second = parts[1] ?? -1;
-  return first === 10 || first === 127 || first === 0 || first === 169 && second === 254 ||
-    first === 172 && second >= 16 && second <= 31 || first === 192 && second === 168 ||
-    first === 100 && second >= 64 && second <= 127 || first === 198 && (second === 18 || second === 19) || first >= 224;
+  const [head, tail, extra] = text.split("::");
+  if (extra !== undefined) return undefined;
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const missing = 8 - left.length - right.length;
+  if (tail === undefined ? left.length !== 8 : missing < 1) return undefined;
+  const groups = [...left, ...Array(tail === undefined ? 0 : missing).fill("0"), ...right];
+  const bytes = new Uint8Array(16);
+  for (let i = 0; i < 8; i++) {
+    const value = Number.parseInt(groups[i]!, 16);
+    if (!Number.isInteger(value) || value < 0 || value > 0xffff) return undefined;
+    bytes[i * 2] = value >> 8;
+    bytes[i * 2 + 1] = value & 0xff;
+  }
+  return bytes;
+}
+
+/** Unparseable input, IPv4-mapped/compatible forms with a private IPv4, NAT64 and 6to4 are all denied. */
+function isPrivateAddress(ip: string): boolean {
+  const family = isIP(ip);
+  if (family === 4) return PRIVATE_V4.check(ip, "ipv4");
+  if (family !== 6) return true;
+  const bytes = ipv6Bytes(ip);
+  if (!bytes) return true;
+  const leadingZero = bytes.subarray(0, 10).every((byte) => byte === 0);
+  const embedded = bytes.subarray(12).join(".");
+  if (leadingZero && bytes[10] === 0xff && bytes[11] === 0xff) return PRIVATE_V4.check(embedded, "ipv4");
+  if (leadingZero && bytes[10] === 0 && bytes[11] === 0 && bytes.subarray(12).some((byte) => byte !== 0)) return true;
+  return PRIVATE_V6.check(ip, "ipv6");
 }
 
 async function resolveAddresses(host: string): Promise<readonly string[]> {
@@ -313,26 +361,39 @@ function parseCredential(bytes: Uint8Array | undefined): Credential {
   }
 }
 
+function oauthCacheKey(credential: Credential, plan: InvocationPlan): string {
+  const audience = credential.audience || plan.audience;
+  return `integration:oauth:${plan.tenantId}:${plan.credentialReference}:${plan.credentialRevision}:${audience}`;
+}
+
 async function authHeaders(
   credential: Credential,
   plan: InvocationPlan,
   options: IntegrationHttpOptions,
   fetcher: PinnedFetcher,
   lookup: (hostname: string) => Promise<readonly string[]>,
+  signal: AbortSignal,
 ): Promise<Record<string, string>> {
-  if (credential.type === "api_key") return { [credential.header || "x-api-key"]: credential.apiKey || "" };
-  if (credential.type === "bearer") return { authorization: `Bearer ${credential.token || ""}` };
+  if (credential.type === "api_key") {
+    if (!credential.apiKey) throw coded("INTEGRATION_CREDENTIAL_INVALID");
+    return { [credential.header || "x-api-key"]: credential.apiKey };
+  }
+  if (credential.type === "bearer") {
+    if (!credential.token) throw coded("INTEGRATION_CREDENTIAL_INVALID");
+    return { authorization: `Bearer ${credential.token}` };
+  }
   if (credential.type !== "oauth2_client_credentials") return {};
+  if (!credential.clientId || !credential.clientSecret) throw coded("INTEGRATION_CREDENTIAL_INVALID");
   const audience = credential.audience || plan.audience;
-  const key = `integration:oauth:${plan.tenantId}:${plan.credentialReference}:${plan.credentialRevision}:${audience}`;
+  const key = oauthCacheKey(credential, plan);
   const cached = await options.tokenCache?.get(key);
   if (cached) return { authorization: `Bearer ${cached}` };
   if (!credential.tokenUrl) throw coded("INTEGRATION_OAUTH_CONFIG_INVALID");
   const target = await resolveOutboundTarget(credential.tokenUrl, lookup, options);
   const body = new URLSearchParams({
     grant_type: "client_credentials",
-    client_id: credential.clientId || "",
-    client_secret: credential.clientSecret || "",
+    client_id: credential.clientId,
+    client_secret: credential.clientSecret,
     ...(credential.scope ? { scope: credential.scope } : {}),
     ...(audience ? { audience } : {}),
   });
@@ -341,8 +402,12 @@ async function authHeaders(
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body,
     redirect: "manual",
+    signal,
   }, target.address);
-  if (!response.ok) throw coded("INTEGRATION_OAUTH_TOKEN_FAILED", response.status >= 500 || response.status === 429);
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => undefined);
+    throw coded("INTEGRATION_OAUTH_TOKEN_FAILED", response.status >= 500 || response.status === 429);
+  }
   const bytes = await boundedBody(response, positiveLimit(options.maxCredentialResponseBytes, DEFAULT_MAX_CREDENTIAL_RESPONSE_BYTES));
   let token: { access_token?: string; expires_in?: number };
   try {
@@ -351,7 +416,8 @@ async function authHeaders(
     throw coded("INTEGRATION_OAUTH_TOKEN_INVALID");
   }
   if (!token.access_token) throw coded("INTEGRATION_OAUTH_TOKEN_INVALID");
-  await options.tokenCache?.set(key, token.access_token, Math.max(1, (token.expires_in ?? 3_600) - 60));
+  const expiresIn = Number(token.expires_in);
+  await options.tokenCache?.set(key, token.access_token, Math.max(1, (Number.isFinite(expiresIn) ? expiresIn : 3_600) - 60));
   return { authorization: `Bearer ${token.access_token}` };
 }
 
@@ -362,14 +428,17 @@ function withoutBlankIdempotencyKey(
     name.toLowerCase() !== "idempotency-key" || value.trim().length > 0));
 }
 
-function pinnedFetch(url: URL, init: RequestInit, address: string): Promise<Response> {
+export function pinnedFetch(url: URL, init: RequestInit, address: string): Promise<Response> {
   return new Promise((resolve, reject) => {
     const request = httpsRequest(url, {
       method: init.method,
       headers: init.headers as Record<string, string>,
       signal: init.signal ?? undefined,
-      lookup: ((_hostname: string, _options: unknown, callback: (error: Error | null, address: string, family: number) => void) => {
-        callback(null, address, isIP(address));
+      // Node >= 20 calls lookup with { all: true } (autoSelectFamily) and expects an array.
+      lookup: ((_hostname: string, lookupOptions: { all?: boolean }, callback: (...args: unknown[]) => void) => {
+        const family = isIP(address);
+        if (lookupOptions?.all) callback(null, [{ address, family }]);
+        else callback(null, address, family);
       }) as never,
     }, (incoming) => {
       const headers = new Headers();

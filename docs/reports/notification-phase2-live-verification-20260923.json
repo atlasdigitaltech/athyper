@@ -1,0 +1,57 @@
+{
+  "startedAt": "2026-09-23T03:07:54.367Z",
+  "captureOnly": true,
+  "checks": {
+    "createdViaApi": true,
+    "retainedMentionEditAccepted": true,
+    "exactlyOneMentionEvent": true,
+    "inAppAndEmailDelivered": true,
+    "publishedOverrideAndSharedTemplate": true,
+    "oneEmailCapture": true,
+    "liveNeonControls": true,
+    "unprivilegedOperatorToolsHidden": true,
+    "inAppAuthorizedRecordLink": true,
+    "readAndDismissApi": true
+  },
+  "commentId": "01a0cc3b-ee69-7bc2-9fd9-5e6de2f59c3e",
+  "recipientId": "645b6a55-3355-526a-9643-3900425bde47",
+  "deliveries": [
+    {
+      "id": "01a0cc3b-f1af-7ead-8bb7-0d4bfaae7e57",
+      "channel": "email",
+      "status": "delivered",
+      "template_key": "bp_mention",
+      "external_id": "capture:<c679cc41-a52c-2e1e-0bdd-555ff584947b@dev.athyper.test>"
+    },
+    {
+      "id": "01a0cc3b-f1b0-729a-a021-653f1b89f165",
+      "channel": "in_app",
+      "status": "delivered",
+      "template_key": "comment_mention",
+      "external_id": "01a0cc3b-f1ae-72e2-9996-944a6928bd79"
+    }
+  ],
+  "mailpitIds": [
+    "3eSYdaFOfP1Hf9UbuxWCj3"
+  ],
+  "completedAt": "2026-09-23T03:08:00.656Z",
+  "inAppId": "01a0cc3b-f1ae-72e2-9996-944a6928bd79",
+  "verificationScope": {
+    "livePipeline": [
+      "in_app",
+      "email"
+    ],
+    "captureAdapterSmoke": [
+      "email",
+      "sms",
+      "whatsapp",
+      "push_web",
+      "push_android",
+      "push_ios"
+    ],
+    "operatorRetry": "backend and browser fixtures; live accounts denied; no grants added",
+    "neutralEntity": "shared backend fixtures",
+    "realProvidersAndDevices": "deferred",
+    "externalCallbacks": "mocked shared mappings; authenticated provider ingestion deferred"
+  }
+}

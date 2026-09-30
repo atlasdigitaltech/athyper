@@ -5,6 +5,24 @@
   "defaultScopeBehavior": "deny_undeclared",
   "permissions": [
     {
+      "permissionCode": "common.platform.reference.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.ai.agent.use",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "studio.iam.application_projection.read",
       "scopes": [
         {
@@ -133,6 +151,15 @@
       ]
     },
     {
+      "permissionCode": "studio.metadata.contract.publish_automated",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "studio.metadata.contract.review",
       "scopes": [
         {
@@ -206,6 +233,24 @@
         },
         {
           "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.publication_policy.activate",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.publication_policy.create",
+      "scopes": [
+        {
+          "kind": "tenant",
           "propagation": "exact"
         }
       ]
@@ -307,5 +352,5 @@
       ]
     }
   ],
-  "sha256": "8d04b85b5f9fe13dcb32758e7ee9d20cabd6df44fde772bf99a29e85694f5176"
+  "sha256": "0425cc24654a98a13a8f25d584eda9e9fb56fdf0aee6c3e355f8e78822ff0eba"
 }

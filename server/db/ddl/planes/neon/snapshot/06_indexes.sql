@@ -22,3 +22,8 @@ CREATE INDEX bom_component_snapshot_source_idx
     ON snapshot.bom_component (tenant_id, source_bom_component_id);
 CREATE INDEX bom_component_snapshot_created_by_idx
     ON snapshot.bom_component (tenant_id, created_by);
+
+CREATE INDEX mesh_bp_profile_received_relationship_idx
+    ON snapshot.mesh_business_partner_profile_received
+    (tenant_id, network_relationship_id, publication_version DESC);
+CREATE INDEX mesh_bank_disclosure_received_relationship_idx ON snapshot.mesh_bank_account_disclosure_received(tenant_id,network_relationship_id,received_at DESC);

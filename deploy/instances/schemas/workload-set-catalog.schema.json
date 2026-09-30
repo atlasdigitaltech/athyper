@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/workload-set-catalog-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "sets"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "WorkloadSetCatalog" },
+    "metadata": {
+      "type": "object", "additionalProperties": false, "required": ["name"],
+      "properties": { "name": { "type": "string", "minLength": 3 } }
+    },
+    "sets": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "placement", "activation", "implementation", "hostProfiles", "services", "rationale"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
+          "placement": { "enum": ["instance", "shared-platform", "retired"] },
+          "activation": { "enum": ["preset", "explicit-profile", "platform-policy", "prohibited"] },
+          "implementation": { "enum": ["composed", "partial", "design-required", "retired"] },
+          "hostProfiles": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "services": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" }, "uniqueItems": true },
+          "rationale": { "type": "string", "minLength": 10 }
+        }
+      }
+    }
+  }
+}

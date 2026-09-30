@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_operation_decision_packet",
+  "nominationSha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb",
+  "reviewers": [
+    {
+      "id": "catl.owner",
+      "name": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ],
+      "authorityReference": "conversation:user-explicit-authorization:catl.owner-and-catl.admin:operation-semantics-permission-scope:business-security"
+    },
+    {
+      "id": "catl.admin",
+      "name": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ],
+      "authorityReference": "conversation:user-explicit-authorization:catl.owner-and-catl.admin:operation-semantics-permission-scope:business-security"
+    }
+  ],
+  "reviewSubjects": [
+    "operation_semantics",
+    "permission_proposals",
+    "scope_proposals"
+  ],
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "source": {
+    "path": "governance/policy/reports/business-partner-activation-publication.dev.json",
+    "sha256": "0a8f5a8e885dfe6b47d5a02fd9a0ef1a9fed2f3f01da78a95eb386183572d03b",
+    "base": {
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "planeKey": "neon",
+      "entityCode": "business_partner",
+      "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+      "appliedReleaseId": "01a08532-31a1-7493-8953-ca4528dda3de",
+      "headVersion": 17,
+      "releaseId": "42213535-3b6c-4c11-8877-1fe2b5142a42",
+      "releaseNo": 17,
+      "compiledHash": "671ec9e727e3b368c96df71df78c7ea5a23ddaedbc4cf0477c1191ec6e44f7f7",
+      "contractHash": "20a93ecbf375c5b65c3724c15e21fba690b5837d7517bb6c46d39b4cad9584ab",
+      "eligibleHeadsHash": "a358d053e03c836c23251be16944e8521e70385234922928e996b829a0a746fe"
+    },
+    "candidateHash": "fede6e4e5b79dfd3d75ac43fa85378588a5f5a9b1a2202967c726738681e24d1"
+  },
+  "previousPacketRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+  "revisionReason": "Governed supplier-request import implementation and workflow review; original operation and case-correction approvals remain historical.",
+  "rows": [
+    {
+      "operation": "import",
+      "proposal": {
+        "operation": "import",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read",
+          "existingId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.import",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "business_partner.import.governed_requests.v1",
+          "variant": "supplier_request_drafts"
+        },
+        "workflow": {
+          "key": "transfer",
+          "requirements": [
+            "Exact tenant import gateway plus separate existing entity_case.create authority at every proposed organization; validate active organization/company compatibility from stored catalog.",
+            "Version 1 bounded JSON: 1–100 rows, at most 4 MiB, unique stable row keys; generic mutation modes and target record IDs are rejected.",
+            "Validate every row with owning intake and current request rules before any draft is created; pin the checked published request schema.",
+            "Refresh gateway, stored scope and row authority before each draft; stop on failure or revocation and report per-row outcomes without claiming batch rollback.",
+            "Only new_partner supplier drafts with import source/integration mode; existing case owner controls idempotency, schema, audit and outbox.",
+            "Stable tenant/principal/batch/row identity; payload changes under a used key are conflicts. Submission, approval, MFA, separation of duties and application remain separate."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Replace the generic import placeholder with bounded governed supplier-request draft intake. Preserve the approved gateway scope; it never grants row creation or master mutation authority.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Select the reviewed handler in native bindings and expose its dedicated target API.",
+          "Qualify the exact signed release with explicitly authorized existing principals; no new gateway grants are implied."
+        ],
+        "regressionEvidence": [
+          {
+            "path": "server/packages/services/master-data/src/__tests__/business-partner-governed-import.test.ts",
+            "sha256": "fc5b6244f81c4dc2305f72157665b6dbb96114f1a17f8414307a5d5a0175801d",
+            "test": "Bounded intake, actual draft validation, scope and distinct gateway/row checks, replay and revocation"
+          },
+          {
+            "path": "server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts",
+            "sha256": "7e467c95918e3c9e71ebe6859bb3894685721c61abc0aa2190a012fe45d31c74",
+            "test": "Bounded intake, actual draft validation, scope and distinct gateway/row checks, replay and revocation"
+          }
+        ],
+        "nativeCompilationEligible": false,
+        "priorApproval": {
+          "packetRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+          "proposalSha256": "b886afa832c9baa8bd818619fa8dc3306381ad97d8f93909595553a793df84e4"
+        },
+        "implementationEvidence": [
+          {
+            "path": "server/packages/services/master-data/src/business-partner-governed-import.ts",
+            "sha256": "a7701776454c5e4110c8440de276b0d4869faece057af0c260b1f9496baab471"
+          },
+          {
+            "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+            "sha256": "c722610527fab8547f2d5c3bfecf3dd47d9ae4051a3613a5778c5826c28a734f"
+          },
+          {
+            "path": "server/packages/services/master-data/src/business-partner-request-validator.ts",
+            "sha256": "c9a572f86fd81ea57ad6ba891cca0f670ca142b3cd359eba21e8d96dcd736cd4"
+          },
+          {
+            "path": "server/packages/contracts/master-data/src/business-partner-request-ports.ts",
+            "sha256": "33259080fd1d5f9e0067b8d72d708007c931f2fa468d1bb7196533e438a232c6"
+          },
+          {
+            "path": "server/apps/platform-host/src/composition/business-partner-import-runtime.ts",
+            "sha256": "871423ca2b0ce53f93e29045b71bcd04396cc4aba1789dcb0e36b9e5610bfdbf"
+          }
+        ]
+      },
+      "proposalSha256": "7fc3468de94fa034b025b78bd7abac8a677467a7ee837210be887deda612233e"
+    }
+  ],
+  "packetRevision": "ef285c3c15543c113fb7321c5034c40a6be643e59c6f922cb98a7d8571bf104d"
+}

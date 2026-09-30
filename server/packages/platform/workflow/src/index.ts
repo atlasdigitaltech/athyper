@@ -12,3 +12,8 @@ export * from "./sla.js";
 export * from "./sla-automation.js";
 export * from "./workflow-jobs.js";
 export * from "./recovery.js";
+
+export {workItemEligibilitySql,workItemActionableSql} from "./work-item-eligibility-sql.js";
+export * from "./task-approval-runner.js";
+export * from "./task-governance.js";
+export * from "./task-edit-rules.js";

@@ -1,0 +1,243 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_tax_registration/core",
+  "entityCode": "business_partner_tax_registration",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "sourceObjects": [
+      "master.business_partner_tax_registration"
+    ],
+    "primaryObject": "master.business_partner_tax_registration",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_tax_registration.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "business_partner_id",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "business_partner_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_tax_registration.core.fields.business_partner_id.label",
+        "defaultText": "Business Partner Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid"
+    },
+    {
+      "key": "registration_type_code",
+      "display": {"lookup":{"code":"master.business_partner_tax_registration_type"}},
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "registration_type_code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_tax_registration.core.fields.registration_type_code.label",
+        "defaultText": "Registration Type Code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "jurisdiction_id",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "jurisdiction_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_tax_registration.core.fields.jurisdiction_id.label",
+        "defaultText": "Tax Jurisdiction"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid"
+    },
+    {
+      "key": "tax_type_id",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "tax_type_id"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_tax_registration.core.fields.tax_type_id.label",
+        "defaultText": "Tax Type"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid"
+    },
+    {
+      "key": "registration_number",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "registration_number"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_tax_registration.core.fields.registration_number.label",
+        "defaultText": "Registration Number"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "masked_only",
+      "storageType": "text",
+      "protection": {
+        "normalProjection": {
+          "mode": "masked",
+          "maskedDisplay": "••••",
+          "plaintextInNormalQueries": false
+        },
+        "reveal": {
+          "operationKey": "reveal",
+          "purposes": [{"value":"partner_review","label":{"labelKey":"business_partner.reveal.purpose.partner_review","defaultText":"Partner review"}}],
+          "permissionCode": "neon.relationship.business_partner_tax.reveal",
+          "requiresElevatedAssurance": true,
+          "historicalSnapshotAllowed": false,
+          "claim": "single_use_purpose_bound_expiring",
+          "audit": "same_transaction",
+          "cachePolicy": "no_store"
+        },
+        "sensitivity": "restricted"
+      }
+    },
+    {
+      "key": "effective_from",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "effective_from"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_tax_registration.core.fields.effective_from.label",
+        "defaultText": "Effective From"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "date"
+    },
+    {
+      "key": "effective_until",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "effective_until"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_tax_registration.core.fields.effective_until.label",
+        "defaultText": "Effective Until"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "date"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "company_optional",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.business_partner_tax_registration",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_tax_registration",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_tax_registration",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "artifactHash": "sha256:bf05178bc34f75f000a1c668b816d31d874b82cbb7236eb535ddd221be56c442",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
+}

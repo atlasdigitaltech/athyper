@@ -2,6 +2,10 @@ CREATE TRIGGER tenant_usage_counter_updated_at
 BEFORE UPDATE ON runtime_meta.tenant_usage_counter
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
+CREATE TRIGGER usage_reservation_updated_at
+BEFORE UPDATE ON runtime_meta.usage_reservation
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
 CREATE TRIGGER entity_number_counter_20_validate
 BEFORE INSERT OR UPDATE ON runtime_meta.entity_number_counter
 FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_validate_entity_number_counter();
@@ -86,3 +90,13 @@ FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_entity_contract();
 CREATE TRIGGER runtime_entity_descriptor_immutable
 BEFORE UPDATE OR DELETE ON runtime_meta.entity_descriptor
 FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_entity_descriptor();
+
+CREATE OR REPLACE FUNCTION runtime_meta.trg_guard_applied_release_payload()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN
+  RAISE EXCEPTION 'Applied release payloads are immutable' USING ERRCODE='restrict_violation';
+END; $$;
+CREATE TRIGGER runtime_applied_release_payload_immutable
+BEFORE UPDATE OR DELETE ON runtime_meta.applied_release_payload
+FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_applied_release_payload();
+CREATE TRIGGER runtime_business_partner_definition_head_guard BEFORE UPDATE ON runtime_meta.release_activation_head FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_business_partner_definition_head();

@@ -38,6 +38,20 @@ CREATE UNIQUE INDEX address_normalized_hash_uq
     ON master.address (tenant_id, normalized_hash)
     WHERE status = 'active';
 
+CREATE INDEX address_event_subject_idx
+    ON master.address_event (tenant_id, subject_address_id, occurred_at DESC);
+
+CREATE INDEX address_event_related_idx
+    ON master.address_event (tenant_id, related_address_id, occurred_at DESC)
+    WHERE related_address_id IS NOT NULL;
+
+CREATE INDEX address_event_type_idx
+    ON master.address_event (tenant_id, event_type, occurred_at DESC);
+
+CREATE INDEX address_event_correlation_idx
+    ON master.address_event (tenant_id, correlation_id, occurred_at DESC)
+    WHERE correlation_id IS NOT NULL;
+
 CREATE INDEX address_link_owner_idx
     ON master.address_link
        (tenant_id, owner_type_id, owner_id, purpose, role_qualifier);
@@ -52,7 +66,7 @@ CREATE UNIQUE INDEX address_link_current_primary_uq
     ON master.address_link
        (tenant_id, owner_type_id, owner_id, purpose, role_qualifier)
     NULLS NOT DISTINCT
-    WHERE is_primary AND effective_until IS NULL;
+    WHERE is_primary AND effective_until IS NULL AND usage_status <> 'cancelled';
 
 CREATE UNIQUE INDEX contact_link_value_uq
     ON master.contact_link

@@ -1,0 +1,69 @@
+{
+  "schema": "business-partner-r9-local-review/1",
+  "recordedAt": "2026-09-05T01:11:03.102152+00:00",
+  "workstream": "WS10",
+  "release": "R9",
+  "scope": [
+    "bp_read_summary@1",
+    "bp_submit_case@1"
+  ],
+  "localImplementation": "passed",
+  "productionQualified": false,
+  "evaluationKind": "deterministic tool and owner-command boundary; no live-model quality claim",
+  "checks": [
+    {
+      "command": "pnpm qualify:business-partner-r9",
+      "result": "passed",
+      "bpEvaluations": 34,
+      "atlasGovernanceAndLifecycleTests": 11,
+      "caseOwnerTests": 29,
+      "publicationTests": 2,
+      "skipped": 0
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-ai exec vitest run",
+      "result": "passed",
+      "files": 14,
+      "tests": 62
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-host typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm policy:business-partner-phase0",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm policy:plane-boundaries",
+      "result": "passed"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "sourceHashes": {
+    "server/packages/platform/ai/src/business-partner-tools.ts": "450e28105d55d52b49b83aee514a60434676ce58d6156da6e044a5b7c0afab33",
+    "server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts": "81950e12f678b038a5ceb27358901dbcec63d1fcf5777b7004af9f7d8a3f9f83",
+    "server/packages/platform/ai/src/tool-service.ts": "90a5c77bb13109a3a2415af061bfafe6b28a20c05404170382a0bdc146fe08b6",
+    "server/packages/contracts/ai/src/tools.ts": "938d10e515d09a90f2a1001f4d72634caca614d8217e004182acf8c6ea7b67a6",
+    "server/db/scripts/provisioning/provision-development-business-partner-runtime.ts": "95b66589095ea4401f495f9666c29cd1982b21ace257dc7a7146a81ff816bcba",
+    "server/db/scripts/__tests__/provisioning/development-business-partner-runtime.test.ts": "e3a589ca702db818be170393a2d94999e95cd1187bf978a7b211e1f99ab3e47a"
+  },
+  "pendingQualification": [
+    "deployed Atlas provider/admission/policy and approved tool profile",
+    "versioned Business Partner descriptor deployment",
+    "target browser journey and independent owner receipt",
+    "live-model quality and adversarial-source evaluations with pinned provider/model/prompt revisions",
+    "accountable release approval"
+  ],
+  "futureFeatures": [
+    "evidence extraction",
+    "scored duplicate recommendations",
+    "draft corrections and conflict resolution",
+    "role readiness recommendations",
+    "policy-backed Workforce assistance"
+  ],
+  "runbook": "docs/runbooks/business-partner-r9-atlas.md"
+}

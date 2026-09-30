@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "preparedAt": "2026-09-11T22:14:46.418Z",
+  "packet": {
+    "schema": "athyper.business-partner-case-contract-review/2",
+    "mode": "initial",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "entityId": "289732bb-45c2-49e6-abb3-70ff4b85336b",
+    "publicationKey": "metadata.entity.master_business_partner.44444444444444448444444444444444",
+    "previous": null,
+    "candidate": {
+      "entityCode": "master.business_partner",
+      "contract": {
+        "type": "object",
+        "required": [
+          "businessPartnerCode",
+          "name",
+          "ownershipClass"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "businessPartnerCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "legalName": {
+            "type": "string"
+          },
+          "legalForm": {
+            "type": "string"
+          },
+          "registrationCountryCode": {
+            "type": "string"
+          },
+          "incorporationDate": {
+            "type": "string"
+          },
+          "websiteUrl": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "ownershipClass": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "external"
+            ]
+          },
+          "requestedRole": {
+            "type": "string",
+            "enum": [
+              "supplier",
+              "customer"
+            ]
+          },
+          "roleCode": {
+            "type": "string"
+          },
+          "registrationChannel": {
+            "type": "string"
+          },
+          "operatingOrganizationId": {
+            "type": "string"
+          },
+          "meshRegistrationExchangeId": {
+            "type": "string"
+          },
+          "meshRegistrationEvidenceHash": {
+            "type": "string"
+          },
+          "bankDisclosureReceiptId": {
+            "type": "string"
+          },
+          "bankDisclosurePurposeCode": {
+            "type": "string"
+          },
+          "qualificationTypeCode": {
+            "type": "string"
+          },
+          "preferenceRationale": {
+            "type": "string"
+          },
+          "companyCodeId": {
+            "type": "string"
+          },
+          "commodityCategoryId": {
+            "type": "string"
+          },
+          "preflight": {
+            "type": "object"
+          },
+          "expectedBusinessPartnerVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "priorStatus": {
+            "type": "string"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "array"
+          },
+          "bankProjectionId": {
+            "type": "string"
+          },
+          "supplierCompanyProfileId": {
+            "type": "string"
+          },
+          "expectedBankSnapshotId": {
+            "type": "string"
+          },
+          "priorBankLinkId": {
+            "type": "string"
+          },
+          "partnerCategory": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "person"
+            ]
+          },
+          "legalClassification": {
+            "type": "string"
+          },
+          "supplierType": {
+            "type": "string"
+          },
+          "customerType": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "effectiveUntil": {
+            "type": "string"
+          },
+          "currencyCode": {
+            "type": "string"
+          },
+          "paymentTermId": {
+            "type": "string"
+          },
+          "defaultAccountingProfileId": {
+            "type": "string"
+          },
+          "defaultDimensionSetId": {
+            "type": "string"
+          },
+          "preferredRemittanceBankLinkId": {
+            "type": "string"
+          },
+          "statementCycleCode": {
+            "type": "string"
+          },
+          "tenantFields": {
+            "type": "object"
+          },
+          "relationshipProposals": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "contractHash": "6377a9093387198e931914187ea9480901474c3c5e27e289cda93ff9f290df1a",
+  "packetHash": "1811da8d32a667a000735d6fabc83649bf9c82528764f31eaefcd1276fda3da0",
+  "approvalStatus": "pending",
+  "signed": false,
+  "published": false,
+  "grantChanges": [],
+  "publicationExcludedByCurrentAccessProposal": true,
+  "historicalSchemaProvenance": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-r4-case-contract-review-scoped.json",
+  "historicalApprovalReused": false
+}

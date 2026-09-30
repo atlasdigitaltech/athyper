@@ -37,3 +37,13 @@ describe("server producer compatibility for frontend spine contracts", () => {
     assert.throws(() => parseSanitizedSession({ schemaVersion: 1, state: "required_action", plane: "neon" }), /requires actions/);
   });
 });
+
+it("session expiry is a real offset timestamp, independent of runtime date utilities", () => {
+  const session = parseSanitizedSession(fixture("sanitized-session.v1"));
+  for (const expiresAt of ["2028-02-29T23:59:59.123456789Z", "2026-09-09T10:00:00+08:00", "2026-09-09T10:00:00-05:30"]) {
+    assert.doesNotThrow(() => parseSanitizedSession({ ...session, expiresAt }));
+  }
+  for (const expiresAt of ["2026-02-29T10:00:00Z", "2100-02-29T10:00:00Z", "2026-04-31T10:00:00Z", "2026-09-09", "2026-09-09T10:00:00", "2026-09-09T24:00:00Z", "2026-09-09T10:00:00+24:00", "2026-09-09T10:00:00+00:60"]) {
+    assert.throws(() => parseSanitizedSession({ ...session, expiresAt }), /ISO timestamp/);
+  }
+});

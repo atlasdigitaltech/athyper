@@ -1,0 +1,409 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_operation_decision_packet",
+  "source": {
+    "path": "governance/policy/reviews/business-partner-operation-reviews.dev.json",
+    "sha256": "b2b561f7944633141671630b2caaa98729b0e16670f2bca9d9a85418f886a26e",
+    "base": {
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "planeKey": "neon",
+      "entityCode": "business_partner",
+      "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+      "appliedReleaseId": "01a08532-31a1-7493-8953-ca4528dda3de",
+      "headVersion": 17,
+      "releaseId": "42213535-3b6c-4c11-8877-1fe2b5142a42",
+      "releaseNo": 17,
+      "compiledHash": "671ec9e727e3b368c96df71df78c7ea5a23ddaedbc4cf0477c1191ec6e44f7f7",
+      "contractHash": "20a93ecbf375c5b65c3724c15e21fba690b5837d7517bb6c46d39b4cad9584ab",
+      "eligibleHeadsHash": "a358d053e03c836c23251be16944e8521e70385234922928e996b829a0a746fe"
+    },
+    "candidateHash": "12203b304945675c8697105ff94319b41c2e1dbdbba4aa42cc225be479aa3900"
+  },
+  "nominationSha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb",
+  "reviewers": [
+    {
+      "id": "catl.owner",
+      "name": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ],
+      "authorityReference": "conversation:user-explicit-authorization:catl.owner-and-catl.admin:operation-semantics-permission-scope:business-security"
+    },
+    {
+      "id": "catl.admin",
+      "name": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ],
+      "authorityReference": "conversation:user-explicit-authorization:catl.owner-and-catl.admin:operation-semantics-permission-scope:business-security"
+    }
+  ],
+  "reviewSubjects": [
+    "operation_semantics",
+    "permission_proposals",
+    "scope_proposals"
+  ],
+  "rows": [
+    {
+      "operation": "case_update",
+      "proposal": {
+        "operation": "case_update",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.update",
+          "existingId": "01a06b47-1ff4-72e2-afd1-7de290a59160",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.update",
+          "proposedId": "01a06b47-1ff4-72e2-afd1-7de290a59160",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "business_partner.case_update.v1",
+          "variant": "stored_case"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "existing",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "This command changes an existing independently owned request. Resolve the current immutable snapshot ownership using the request ID; proposed coordinates cannot determine its authorization scope.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Qualify the stored-case path against the same signed release and current reviewer/grant authority."
+        ],
+        "regressionEvidence": [
+          {
+            "path": "server/apps/platform-host/src/composition/__tests__/business-partner-case-runtime.test.ts",
+            "sha256": "08a7678d02c003688f09dbc79542a43e49ac1b91c4921fc8f6c01735f7b87b4a",
+            "test": "rejects each proposed-resource binding for an existing case before publication"
+          }
+        ],
+        "nativeCompilationEligible": false,
+        "priorApproval": {
+          "packetRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+          "proposalSha256": "1209a9c7fb7762c053f72eaef537fb375c29d573c9edd39ccefd9498b2ee4884"
+        }
+      },
+      "proposalSha256": "8df625ca84022160a96857a4c40d3ad4e031c2ce59b1108fe5b319c057d48639"
+    },
+    {
+      "operation": "case_validate",
+      "proposal": {
+        "operation": "case_validate",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.validate",
+          "existingId": "01a06b47-1ff4-74a5-b28a-3a6bf46bfacf",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.validate",
+          "proposedId": "01a06b47-1ff4-74a5-b28a-3a6bf46bfacf",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "business_partner.case_validate.v1",
+          "variant": "stored_case"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "existing",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "This command changes an existing independently owned request. Resolve the current immutable snapshot ownership using the request ID; proposed coordinates cannot determine its authorization scope.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Qualify the stored-case path against the same signed release and current reviewer/grant authority."
+        ],
+        "regressionEvidence": [
+          {
+            "path": "server/apps/platform-host/src/composition/__tests__/business-partner-case-runtime.test.ts",
+            "sha256": "08a7678d02c003688f09dbc79542a43e49ac1b91c4921fc8f6c01735f7b87b4a",
+            "test": "rejects each proposed-resource binding for an existing case before publication"
+          }
+        ],
+        "nativeCompilationEligible": false,
+        "priorApproval": {
+          "packetRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+          "proposalSha256": "1761030428aac538d0cc21d77b5aaa011b21c4946654fc2d38cf4430a3861e82"
+        }
+      },
+      "proposalSha256": "eddbbd20bc6a286893d3fac97bd62d767ff6da19106a7a98e6ef183031cc5cb8"
+    },
+    {
+      "operation": "case_submit",
+      "proposal": {
+        "operation": "case_submit",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.submit",
+          "existingId": "01a06b47-1ff4-7c24-bbf8-80b7ae5acaee",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.submit",
+          "proposedId": "01a06b47-1ff4-7c24-bbf8-80b7ae5acaee",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "business_partner.case_submit.v1",
+          "variant": "stored_case"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "existing",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "This command changes an existing independently owned request. Resolve the current immutable snapshot ownership using the request ID; proposed coordinates cannot determine its authorization scope.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Qualify the stored-case path against the same signed release and current reviewer/grant authority."
+        ],
+        "regressionEvidence": [
+          {
+            "path": "server/apps/platform-host/src/composition/__tests__/business-partner-case-runtime.test.ts",
+            "sha256": "08a7678d02c003688f09dbc79542a43e49ac1b91c4921fc8f6c01735f7b87b4a",
+            "test": "rejects each proposed-resource binding for an existing case before publication"
+          }
+        ],
+        "nativeCompilationEligible": false,
+        "priorApproval": {
+          "packetRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+          "proposalSha256": "24a46cb3bdfe778ab76e215a923497a75ec111737649efab609fd6515d9bd389"
+        }
+      },
+      "proposalSha256": "02aedf85b1a8ce6fd971e8539056bce5c581221e5619a1e761c7ddd40671dd12"
+    },
+    {
+      "operation": "case_decide",
+      "proposal": {
+        "operation": "case_decide",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.decide",
+          "existingId": "01a06b47-1ff4-7c66-98fe-a01ec8dcb473",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.decide",
+          "proposedId": "01a06b47-1ff4-7c66-98fe-a01ec8dcb473",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "business_partner.case_decide.v1",
+          "variant": "stored_case"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "existing",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "This command changes an existing independently owned request. Resolve the current immutable snapshot ownership using the request ID; proposed coordinates cannot determine its authorization scope.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Qualify the stored-case path against the same signed release and current reviewer/grant authority."
+        ],
+        "regressionEvidence": [
+          {
+            "path": "server/apps/platform-host/src/composition/__tests__/business-partner-case-runtime.test.ts",
+            "sha256": "08a7678d02c003688f09dbc79542a43e49ac1b91c4921fc8f6c01735f7b87b4a",
+            "test": "rejects each proposed-resource binding for an existing case before publication"
+          }
+        ],
+        "nativeCompilationEligible": false,
+        "priorApproval": {
+          "packetRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+          "proposalSha256": "343050e8b1b37d6e68942f6ee09394c4d5dea195192a904b8d3b454f43a0b41f"
+        }
+      },
+      "proposalSha256": "a68983b474fd18752cba20960daf76aeb321ac26a260bd4eab9c56eeb8785e8e"
+    },
+    {
+      "operation": "case_materialize",
+      "proposal": {
+        "operation": "case_materialize",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.materialize",
+          "existingId": "01a06b47-1ff4-7188-8eb4-1020830dc44b",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.materialize",
+          "proposedId": "01a06b47-1ff4-7188-8eb4-1020830dc44b",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "business_partner.case_materialize.v1",
+          "variant": "stored_case"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "existing",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "This command changes an existing independently owned request. Resolve the current immutable snapshot ownership using the request ID; proposed coordinates cannot determine its authorization scope.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Qualify the stored-case path against the same signed release and current reviewer/grant authority."
+        ],
+        "regressionEvidence": [
+          {
+            "path": "server/apps/platform-host/src/composition/__tests__/business-partner-case-runtime.test.ts",
+            "sha256": "08a7678d02c003688f09dbc79542a43e49ac1b91c4921fc8f6c01735f7b87b4a",
+            "test": "rejects each proposed-resource binding for an existing case before publication"
+          }
+        ],
+        "nativeCompilationEligible": false,
+        "priorApproval": {
+          "packetRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+          "proposalSha256": "2d9b1ab48053291cd42a52313f8fae4114ac7ea5a0b5b8ca6bfe547a7abacdab"
+        }
+      },
+      "proposalSha256": "70cb9e68c22c20dcc76b970a67fc2f89cb2d6bd4af5ba559867f35e774796aa4"
+    }
+  ],
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "previousPacketRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+  "revisionReason": "Correct existing-case ownership before runtime registration and publication.",
+  "packetRevision": "27aa45af20554e6360ef022acd72160de795f82e205d0848c917ab3d45d5b956"
+}

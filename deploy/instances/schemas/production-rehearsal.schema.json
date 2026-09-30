@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/production-rehearsal-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "ProductionRehearsal" },
+    "metadata": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "type": "string" } } },
+    "spec": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sourceInstance", "targetInstance", "targetContract", "promotion", "credentials", "evidence", "rollout"],
+      "properties": {
+        "sourceInstance": { "const": "stg" },
+        "targetInstance": { "const": "production" },
+        "targetContract": { "const": "deploy/production/instance.yaml" },
+        "promotion": {
+          "type": "object", "additionalProperties": false, "required": ["rebuildAllowed", "requiredImageIds", "requireImmutableDigests"],
+          "properties": {
+            "rebuildAllowed": { "const": false },
+            "requiredImageIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
+            "requireImmutableDigests": { "const": true }
+          }
+        },
+        "credentials": {
+          "type": "object", "additionalProperties": false, "required": ["requireDedicatedNamespace", "stagingReuseAllowed"],
+          "properties": { "requireDedicatedNamespace": { "const": true }, "stagingReuseAllowed": { "const": false } }
+        },
+        "evidence": {
+          "type": "object", "minProperties": 1, "additionalProperties": { "type": "string", "pattern": "^production/[a-z0-9./-]+\\.json$" }
+        },
+        "rollout": {
+          "type": "object", "additionalProperties": false, "required": ["emailCanaryPercent", "pushCanaryPercent", "rollbackOwnerRequired", "automaticPauseOnFailure"],
+          "properties": {
+            "emailCanaryPercent": { "type": "number", "exclusiveMinimum": 0, "maximum": 5 },
+            "pushCanaryPercent": { "type": "number", "exclusiveMinimum": 0, "maximum": 5 },
+            "rollbackOwnerRequired": { "const": true },
+            "automaticPauseOnFailure": { "const": true }
+          }
+        }
+      }
+    }
+  }
+}

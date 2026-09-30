@@ -1,6 +1,12 @@
 CREATE INDEX tenant_usage_counter_metric_idx
     ON runtime_meta.tenant_usage_counter (usage_metric_id, tenant_id);
 
+CREATE INDEX usage_reservation_expiry_idx
+    ON runtime_meta.usage_reservation (tenant_id, expires_at, id)
+    WHERE status = 'reserved';
+CREATE INDEX usage_reservation_resource_idx
+    ON runtime_meta.usage_reservation (tenant_id, resource_type, resource_id);
+
 CREATE UNIQUE INDEX authorization_epoch_global_uq
     ON runtime_meta.authorization_epoch (scope_kind) WHERE scope_kind = 'global';
 CREATE UNIQUE INDEX authorization_epoch_tenant_uq
@@ -25,7 +31,7 @@ CREATE INDEX runtime_entity_contract_lookup_idx
 CREATE INDEX runtime_entity_contract_publication_idx
     ON runtime_meta.entity_contract (publication_key, status, release_no DESC);
 CREATE UNIQUE INDEX runtime_entity_contract_published_uq
-    ON runtime_meta.entity_contract (tenant_id, entity_id)
+    ON runtime_meta.entity_contract (tenant_id, entity_id, entity_code)
     NULLS NOT DISTINCT WHERE status = 'published';
 
 CREATE INDEX runtime_entity_descriptor_contract_idx
@@ -35,3 +41,12 @@ CREATE INDEX runtime_entity_descriptor_release_idx
 CREATE UNIQUE INDEX runtime_entity_descriptor_active_uq
     ON runtime_meta.entity_descriptor (tenant_id, entity_id, plane_code, descriptor_kind)
     NULLS NOT DISTINCT WHERE status = 'active';
+CREATE INDEX runtime_applied_release_payload_lookup_idx
+    ON runtime_meta.applied_release_payload (tenant_id, artifact_kind, generated_at DESC);
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection
+CREATE UNIQUE INDEX experience_surface_projection_active_uq ON runtime_meta.experience_surface_projection USING btree (tenant_id, surface_key, layer) WHERE (status = 'active'::text);
+
+CREATE INDEX experience_surface_projection_lookup_idx ON runtime_meta.experience_surface_projection USING btree (tenant_id, surface_key, layer, source_revision DESC) WHERE (status = 'active'::text);
+-- END ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection

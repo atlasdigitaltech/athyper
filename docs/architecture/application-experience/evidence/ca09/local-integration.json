@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-09-22",
+  "integration": {
+    "sourceScan": "clean",
+    "derivativeScan": "clean",
+    "signedRangeStatus": 206,
+    "unsignedStatus": 403,
+    "contentType": "application/pdf",
+    "contentDisposition": "inline; filename=\"preview.pdf\"",
+    "cacheControl": "private, no-store",
+    "extractionCharacters": 29
+  },
+  "database": {
+    "exactRecordHits": 1,
+    "otherRecordHits": 0,
+    "afterUnlinkHits": 0,
+    "previewAfterUnlink": "denied",
+    "fixture": "transaction rolled back",
+    "authorization": "test admission; signed-in browser acceptance not run"
+  },
+  "containers": {
+    "rendererMiB": 16.43,
+    "parserMiB": 397,
+    "oomKilled": false,
+    "restartCount": 0
+  },
+  "boundary": "Source capability changes have not been published/activated. Integrated UI acceptance remains CA-10."
+}

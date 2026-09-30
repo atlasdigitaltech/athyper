@@ -1,0 +1,1011 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_policy_difference_triage",
+  "selectionSha256": "9d9c1a6ec6dede37e108f7a2cd73daea91e34d5364963cea7c36a07058924861",
+  "operationPacketRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+  "rows": [
+    {
+      "id": "synthetic:organization_requester:read",
+      "operation": "read",
+      "classification": "intended_policy_change",
+      "sourceSha256": "47f74cff6264025f5a24d6249693bc3cb3ca37a8f743ec72798dcab99c8e8116",
+      "historicalComparison": {
+        "persona": "organization_requester",
+        "operation": "read",
+        "legacyState": "allowed",
+        "targetState": "denied",
+        "differs": true
+      },
+      "causeConfidence": "confirmed",
+      "explanation": "Legacy directory fallback accepts the organization-scoped read permission. The target global record requires explicit tenant read authority; an organization grant cannot satisfy it.",
+      "proposedResolution": "Accept the separation between directory discovery and global-record reading as intended target policy. Keep legacy enforcement and current grants until named requester/read responsibilities are reviewed. Do not automatically widen scoped grants.",
+      "requiredRegression": [
+        {
+          "path": "tooling/scripts/verification/qualify-entity-authorization.mts",
+          "sha256": "a13b3465fdb4e19fd83b3dc72d3cd7dbf3ee58a24446219173d78dca833856fc",
+          "test": "Organization directory fallback, hypothetical requester context, selected and unauthorized organization, explicit deny"
+        },
+        {
+          "path": "governance/policy/reports/entity-authorization-policy-regression.dev.json",
+          "sha256": "4d6b839caa72b8078e2bcc49771734abb655466356bc9955b332cd56f2028c70",
+          "test": "Successful actual IAM evaluator regression run; four comparisons and selected-context assertions"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "synthetic:prospective_steward_requester_not_provisioned:amend_partner",
+      "operation": "amend_partner",
+      "classification": "intended_policy_change",
+      "sourceSha256": "47f74cff6264025f5a24d6249693bc3cb3ca37a8f743ec72798dcab99c8e8116",
+      "historicalComparison": {
+        "persona": "prospective_steward_requester_not_provisioned",
+        "operation": "amend_partner",
+        "legacyState": "denied",
+        "targetState": "context_required",
+        "differs": true
+      },
+      "causeConfidence": "confirmed",
+      "explanation": "This is a hypothetical, unprovisioned persona with explicit global read/entry and organization proposal capability. The target can discover the proposed-case operation before an organization is selected; legacy denies the unscoped request.",
+      "proposedResolution": "Accept context_required as intended discovery UX, not execution permission. Select an organization and reauthorize it before creating the case; retain workflow/approval/apply boundaries. Do not provision the hypothetical persona.",
+      "requiredRegression": [
+        {
+          "path": "tooling/scripts/verification/qualify-entity-authorization.mts",
+          "sha256": "a13b3465fdb4e19fd83b3dc72d3cd7dbf3ee58a24446219173d78dca833856fc",
+          "test": "Organization directory fallback, hypothetical requester context, selected and unauthorized organization, explicit deny"
+        },
+        {
+          "path": "governance/policy/reports/entity-authorization-policy-regression.dev.json",
+          "sha256": "4d6b839caa72b8078e2bcc49771734abb655466356bc9955b332cd56f2028c70",
+          "test": "Successful actual IAM evaluator regression run; four comparisons and selected-context assertions"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:ce52eaadeeb2d097a97aadc4",
+      "operation": "navigate_overview",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "navigate_overview",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 2
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for navigate_overview. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:6dcda53fc8486f1b156d0b07",
+      "operation": "navigate_manage",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "navigate_manage",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 2
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for navigate_manage. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:559376fc9a61286c6920ff79",
+      "operation": "navigate_review",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "navigate_review",
+        "permissionCode": "neon.relationship.entity_case.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 2
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for navigate_review. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:140bd36a539d84990ffd34a5",
+      "operation": "discover",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "discover",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 25
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for discover. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:3d725db8fe2104c9cb2b2e17",
+      "operation": "update",
+      "classification": "approved_deferral_requires_current_trace",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "update",
+        "permissionCode": "neon.relationship.business_partner.update",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "command_discovery_preview",
+        "count": 8
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and denied candidate for update. These are discovery previews, not execution decisions. Root read, operation binding, proposed scope or domain authority can reject the target; aggregate evidence does not identify which gate rejected this observation.",
+      "proposedResolution": "Keep the operation unavailable in the selected target. Recapture its exact operation trace and verify direct execution has no fallback. Historical causes remain unconfirmed.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "returns unavailable for a deferred operation before authority or scope evaluation"
+        },
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts",
+          "test": "never falls back to a legacy allow for an explicitly deferred target operation"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:68eaed5302c60b3f50ce4728",
+      "operation": "create",
+      "classification": "approved_deferral_requires_current_trace",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "create",
+        "permissionCode": "neon.relationship.business_partner.create",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "preflight_required",
+        "evidence": "command_discovery_preview",
+        "count": 6
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and preflight_required candidate for create. These are discovery previews, not execution decisions. The projected candidate reaches the explicit preflight boundary, unlike the installed binding.",
+      "proposedResolution": "Keep the operation unavailable in the selected target. Recapture its exact operation trace and verify direct execution has no fallback. Historical causes remain unconfirmed.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "returns unavailable for a deferred operation before authority or scope evaluation"
+        },
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts",
+          "test": "never falls back to a legacy allow for an explicitly deferred target operation"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:44877dcb6c22d16400896b3e",
+      "operation": "read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "read",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 112
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:8677a0cee2152e148c7015a0",
+      "operation": "identity_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "identity_read",
+        "permissionCode": "neon.relationship.business_partner_identity.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 44
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for identity_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:821b364d4b03e8f31b6d59e2",
+      "operation": "contacts_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "contacts_read",
+        "permissionCode": "neon.relationship.business_partner_contact.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for contacts_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:c8667d8d58103d57c92a4884",
+      "operation": "addresses_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "addresses_read",
+        "permissionCode": "neon.relationship.business_partner_address.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for addresses_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:43529885a79df91567e6c1aa",
+      "operation": "identifier_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "identifier_read",
+        "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for identifier_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:f9a1ded03ed0a56fe8bf8320",
+      "operation": "tax_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "tax_read",
+        "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for tax_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:80d405e69b5c8aa1cc2a7952",
+      "operation": "bank_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "bank_read",
+        "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for bank_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:f346417647301aa3300834a9",
+      "operation": "qualification_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "qualification_read",
+        "permissionCode": "neon.relationship.business_partner_qualification.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for qualification_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:4186863c102d3f21e0501070",
+      "operation": "certificate_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "certificate_read",
+        "permissionCode": "neon.relationship.business_partner_certificate.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for certificate_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:daf0b7e54c045f5f926b60ad",
+      "operation": "requests_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "requests_read",
+        "permissionCode": "neon.relationship.entity_case.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for requests_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:785e379d85a9e1068cd2d313",
+      "operation": "activity_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "activity_read",
+        "permissionCode": "neon.relationship.business_partner_activity.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for activity_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:e9fcdea2e41981d3c6d353cf",
+      "operation": "network_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "network_read",
+        "permissionCode": "neon.relationship.business_partner_network.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 22
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for network_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:7ec957c867ea38ca426c1cf1",
+      "operation": "supplier_company_read",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "supplier_company_read",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "authorization_comparison",
+        "count": 21
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed legacy allow versus installed/candidate deny for supplier_company_read. Scoped legacy admission versus target root/parent admission is a plausible mechanism, demonstrated synthetically, but the aggregate omits coordinates and denial stage; this historical group has no proven per-event cause.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": true
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:19bcc59f8110c0f979a561b7",
+      "operation": "section_propose_change",
+      "classification": "approved_deferral_requires_current_trace",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "section_propose_change",
+        "permissionCode": "neon.relationship.business_partner_amend.create",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "command_discovery_preview",
+        "count": 70
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and denied candidate for section_propose_change. These are discovery previews, not execution decisions. Root read, operation binding, proposed scope or domain authority can reject the target; aggregate evidence does not identify which gate rejected this observation.",
+      "proposedResolution": "Keep the operation unavailable in the selected target. Recapture its exact operation trace and verify direct execution has no fallback. Historical causes remain unconfirmed.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "returns unavailable for a deferred operation before authority or scope evaluation"
+        },
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts",
+          "test": "never falls back to a legacy allow for an explicitly deferred target operation"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:3163bf5ca085dec9929b68ea",
+      "operation": "amend_partner",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "amend_partner",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "command_discovery_preview",
+        "count": 1
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and denied candidate for amend_partner. These are discovery previews, not execution decisions. Root read, operation binding, proposed scope or domain authority can reject the target; aggregate evidence does not identify which gate rejected this observation.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:06d251827a99b478dd3b94e7",
+      "operation": "add_role",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "add_role",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "command_discovery_preview",
+        "count": 1
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and denied candidate for add_role. These are discovery previews, not execution decisions. Root read, operation binding, proposed scope or domain authority can reject the target; aggregate evidence does not identify which gate rejected this observation.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:4ba4bc166aedb4c4b32e3f70",
+      "operation": "assign_organization",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "assign_organization",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "command_discovery_preview",
+        "count": 1
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and denied candidate for assign_organization. These are discovery previews, not execution decisions. Root read, operation binding, proposed scope or domain authority can reject the target; aggregate evidence does not identify which gate rejected this observation.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:1ba813cff07f1971e98f259a",
+      "operation": "configure_company",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "configure_company",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "command_discovery_preview",
+        "count": 1
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and denied candidate for configure_company. These are discovery previews, not execution decisions. Root read, operation binding, proposed scope or domain authority can reject the target; aggregate evidence does not identify which gate rejected this observation.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:650dbef319316e3102e14a43",
+      "operation": "change_bank",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "change_bank",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "command_discovery_preview",
+        "count": 1
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and denied candidate for change_bank. These are discovery previews, not execution decisions. Root read, operation binding, proposed scope or domain authority can reject the target; aggregate evidence does not identify which gate rejected this observation.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:1018001b4c72961d3e00143f",
+      "operation": "lifecycle",
+      "classification": "unconfirmed_live_cause",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "lifecycle",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "command_discovery_preview",
+        "count": 1
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and denied candidate for lifecycle. These are discovery previews, not execution decisions. Root read, operation binding, proposed scope or domain authority can reject the target; aggregate evidence does not identify which gate rejected this observation.",
+      "proposedResolution": "Capture installed/candidate binding, ownership, permission, parent-read, context and preflight stages against the selected release. Fix an incorrect mapping or resolver; submit only proven intended changes for acceptance.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "diagnostics distinguish binding, ownership and permission failures without exposing them in DTOs"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    },
+    {
+      "id": "live:a2502b32bd36b5ca67f59eb4",
+      "operation": "certification",
+      "classification": "approved_deferral_requires_current_trace",
+      "sourceSha256": "350bfa03a1ee1c80f8ccbae62d1806ef01dc37b825f3eddadb7cc43179b25eb7",
+      "historicalComparison": {
+        "operationKey": "certification",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "legacy": "allowed",
+        "installedTarget": "denied",
+        "candidateTarget": "denied",
+        "evidence": "command_discovery_preview",
+        "count": 1
+      },
+      "causeConfidence": "inference",
+      "explanation": "Observed allowed legacy versus denied installed and denied candidate for certification. These are discovery previews, not execution decisions. Root read, operation binding, proposed scope or domain authority can reject the target; aggregate evidence does not identify which gate rejected this observation.",
+      "proposedResolution": "Keep the operation unavailable in the selected target. Recapture its exact operation trace and verify direct execution has no fallback. Historical causes remain unconfirmed.",
+      "requiredRegression": [
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-authorization.test.ts",
+          "test": "returns unavailable for a deferred operation before authority or scope evaluation"
+        },
+        {
+          "path": "server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts",
+          "test": "never falls back to a legacy allow for an explicitly deferred target operation"
+        }
+      ],
+      "requiredLiveEvidence": {
+        "authenticated": true,
+        "selectedReleaseArtifactHash": true,
+        "principalAndGrantSnapshot": true,
+        "decisionStages": true,
+        "executionParity": false
+      },
+      "acceptance": null,
+      "resolved": false
+    }
+  ],
+  "counts": {
+    "intended_policy_change": 2,
+    "unconfirmed_live_cause": 23,
+    "approved_deferral_requires_current_trace": 4
+  },
+  "confirmedEngineeringDefects": [
+    {
+      "code": "CATALOG_STATUS_CHECK",
+      "resolution": "Check published permission status; active applies to scope rows.",
+      "regression": "Catalog installation dry run and refreshed snapshot."
+    },
+    {
+      "code": "MISSING_CAUSAL_TELEMETRY",
+      "resolution": "Trusted bounded stage diagnostics added to evaluator and shadow events; no client DTO change. Deployment and fresh capture are pending.",
+      "regression": "Evaluator diagnostics and shadow privacy tests."
+    }
+  ],
+  "unresolvedDifferences": 29,
+  "policyDifferenceGateSatisfied": false,
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "proposalRevision": "e8cb14caea138ccc03c8a370646ecbc3b46cc26ef99ac4c64ac8549c5b2a3b6b"
+}

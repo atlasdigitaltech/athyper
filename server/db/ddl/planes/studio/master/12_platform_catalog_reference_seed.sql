@@ -59,9 +59,11 @@ FROM (VALUES
   ('pub','Publication & Release Management','Compile, sign, deploy, activate, and reconcile releases','{"tier":"Core","dependencies":["meta","pol","wfl"]}'::jsonb,'entity'),
   ('doc','Document Generation & Processing','PDF, HTML, extraction, and document transformation','{"tier":"Core","dependencies":["fnd"]}'::jsonb,'entity'),
   ('cms','Content & Object Storage','Governed content and object storage','{"tier":"Core","dependencies":["fnd"]}'::jsonb,'entity'),
+  ('exp','Experience & Navigation Design','Experience surfaces, navigation, responsive layout, and publication','{"tier":"Core","dependencies":["meta","pol","wfl","pub"]}'::jsonb,'entity'),
   ('iam','Identity & Access Management','TrustIAM authentication and authorization administration','{"tier":"Core","dependencies":["fnd","rel"]}'::jsonb,'trustiam'),
   ('onb','Trust & Onboarding','Organization onboarding, expansion, and offboarding','{"tier":"Core","dependencies":["iam","pol","wfl","pub"]}'::jsonb,'trustiam'),
   ('aud','Identity Audit & Governance','Identity reviews, certification, evidence, and compliance','{"tier":"Core","dependencies":["iam","wfl"]}'::jsonb,'trustiam'),
+  ('pcat','Platform Catalog Management','Workspace, module, route slug, and catalog publication governance','{"tier":"Core","dependencies":["fnd","rel","pub"]}'::jsonb,'plans'),
   ('sub','Subscription Management','Subscription lifecycle and effective assignments','{"tier":"Core","dependencies":["fnd","rel"]}'::jsonb,'plans'),
   ('ent','Plan & Module Entitlements','Plan-to-module commercial entitlement management','{"tier":"Core","dependencies":["sub"]}'::jsonb,'plans'),
   ('usg','Usage & Quota','Usage metrics, limits, overrides, and enforcement','{"tier":"Core","dependencies":["sub","ent"]}'::jsonb,'plans'),
@@ -92,11 +94,15 @@ WHERE (master.module.name,master.module.description,master.module.workspace_id,m
 
 DO $assertions$ BEGIN
   IF (SELECT count(*) FROM master.workspace WHERE status='active') <> 10
-     OR (SELECT count(*) FROM master.module WHERE status='active') <> 31 THEN
+     OR (SELECT count(*) FROM master.module WHERE status='active') <> 33 THEN
     RAISE EXCEPTION 'athyper final platform catalog count mismatch';
   END IF;
   IF EXISTS (
     SELECT 1 FROM master.module m LEFT JOIN master.workspace w ON w.id=m.workspace_id
     WHERE m.status='active' AND w.id IS NULL
   ) THEN RAISE EXCEPTION 'athyper final platform catalog contains orphan modules'; END IF;
+  IF EXISTS (SELECT 1 FROM master.workspace WHERE code <> lower(code))
+     OR EXISTS (SELECT 1 FROM master.module WHERE code <> lower(code)) THEN
+    RAISE EXCEPTION 'athyper final platform catalog contains non-lowercase codes';
+  END IF;
 END $assertions$;

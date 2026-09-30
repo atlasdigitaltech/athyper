@@ -1,0 +1,13 @@
+import {readFileSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
+const apply = process.argv.includes('--apply');
+if(process.argv.slice(2).some(x=>!['--apply','--dry-run'].includes(x)) || (apply && process.argv.includes('--dry-run'))) throw Error('Use --dry-run or --apply');
+const container='athyper-dev-db-1';
+const topology=JSON.parse(execFileSync('docker',['inspect',container],{encoding:'utf8'}))[0];
+if(topology.Config.Labels['com.docker.compose.project']!=='athyper-dev') throw Error('Existing DEV required');
+const seed=readFileSync('server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql','utf8');
+const catalog=seed.split('-- BEGIN BP NETWORK READ CATALOG')[1]?.split('-- END BP NETWORK READ CATALOG')[0];
+if(!catalog) throw Error('Permission overlay missing');
+const grant=readFileSync('tooling/scripts/local-dev/grant-catl-admin-network-read.sql','utf8');
+execFileSync('docker',['exec','-i',container,'psql','-X','-U','postgres','-d','athyper_neon','-v','ON_ERROR_STOP=1'],{input:`BEGIN; SET LOCAL lock_timeout='3s'; SET LOCAL statement_timeout='30s'; SELECT pg_advisory_xact_lock(hashtextextended('catl-network-read-20260925',0));\n${catalog}\n${grant}\nSET CONSTRAINTS ALL IMMEDIATE;\n${apply?'COMMIT':'ROLLBACK'};`,stdio:['pipe','pipe','pipe']});
+console.log(JSON.stringify({applied:apply,actor:'catl.admin',tenant:'cirrusatlantic',permission:'neon.relationship.bp_target.network_read',duration:'7 days; replay does not extend',writesAllowed:false}));

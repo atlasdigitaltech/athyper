@@ -1,0 +1,1050 @@
+{
+  "schema": "athyper.deleted-export-inventory/1",
+  "note": "Syntactic named import/export and import-type audit; namespace/dynamic imports are flagged for manual review. External re-export resolution requires separate review.",
+  "unresolvedBarrels": [],
+  "consumers": [
+    {
+      "file": "apps/platform-host/src/composition/__tests__/master-data-authority.test.ts",
+      "line": 6,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "createMasterDataAuthority",
+          "local": "createMasterDataAuthority",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub. Retain applicable denial/verification scenarios in replacement tests before retiring legacy coverage."
+        },
+        {
+          "exported": "MASTER_DATA_SENSITIVE_PERMISSIONS",
+          "local": "MASTER_DATA_SENSITIVE_PERMISSIONS",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub. Retain applicable denial/verification scenarios in replacement tests before retiring legacy coverage."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts",
+      "line": 4,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "contactVerificationSigningBytes",
+          "local": "contactVerificationSigningBytes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities. Retain applicable denial/verification scenarios in replacement tests before retiring legacy coverage."
+        },
+        {
+          "exported": "ProviderVerificationKey",
+          "local": "ProviderVerificationKey",
+          "typeOnly": true,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub. Retain applicable denial/verification scenarios in replacement tests before retiring legacy coverage."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/business-partner-bound-import.ts",
+      "line": 5,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "businessPartnerGovernedImportVersion",
+          "local": "businessPartnerGovernedImportVersion",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "parseBusinessPartnerGovernedImport",
+          "local": "parseBusinessPartnerGovernedImport",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "MasterDataError",
+          "local": "MasterDataError",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/business-partner-context-admission.test.ts",
+      "line": 3,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "MasterDataError",
+          "local": "MasterDataError",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub. Retain applicable denial/verification scenarios in replacement tests before retiring legacy coverage."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/business-partner-context-admission.ts",
+      "line": 2,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "MasterDataError",
+          "local": "MasterDataError",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/business-partner-import-runtime.ts",
+      "line": 8,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "createBusinessPartnerGovernedImport",
+          "local": "createBusinessPartnerGovernedImport",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "MasterDataError",
+          "local": "MasterDataError",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/business-partner-reference-admission.ts",
+      "line": 2,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "MasterDataError",
+          "local": "MasterDataError",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/create-container.ts",
+      "line": 74,
+      "source": "@athyper/server-contract-master-data",
+      "missing": [
+        {
+          "exported": "BusinessPartnerEligibilityService",
+          "local": "BusinessPartnerEligibilityService",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BusinessPartnerInvitationService",
+          "local": "BusinessPartnerInvitationService",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/create-container.ts",
+      "line": 85,
+      "source": "@athyper/server-plane-neon",
+      "missing": [
+        {
+          "exported": "BusinessPartnerAccountBankLinkageService",
+          "local": "BusinessPartnerAccountBankLinkageService",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BusinessPartnerProfileMatchService",
+          "local": "BusinessPartnerProfileMatchService",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BusinessPartnerProfileProjectionService",
+          "local": "BusinessPartnerProfileProjectionService",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/create-container.ts",
+      "line": 91,
+      "source": "@athyper/server-plane-mesh",
+      "missing": [
+        {
+          "exported": "BusinessPartnerBankDisclosureService",
+          "local": "BusinessPartnerBankDisclosureService",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BusinessPartnerNetworkExchangeService",
+          "local": "BusinessPartnerNetworkExchangeService",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BusinessPartnerProfilePublicationService",
+          "local": "BusinessPartnerProfilePublicationService",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/create-container.ts",
+      "line": 284,
+      "source": "@athyper/server-contract-master-data",
+      "missing": [
+        {
+          "exported": "BusinessPartner360Service",
+          "local": "BusinessPartner360Service",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove obsolete container contract only with its owning registrations and consumers."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/entities/partner-capability-operations.ts",
+      "line": 4,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "PartnerCapabilityService",
+          "local": "PartnerCapabilityService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyPartnerCapabilityRepository",
+          "local": "KyselyPartnerCapabilityRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "MasterDataError",
+          "local": "MasterDataError",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "PartnerCapabilityRepository",
+          "local": "PartnerCapabilityRepository",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/entity-case-preflight.ts",
+      "line": 2,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "KyselyBusinessPartnerCaseRepository",
+          "local": "KyselyBusinessPartnerCaseRepository",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 34,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "supplierRequirementSurface",
+          "local": "supplierRequirementSurface",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 36,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "validateProfileIntake",
+          "local": "validateProfileIntake",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 39,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "createBusinessPartnerCompanyPilotService",
+          "local": "createBusinessPartnerCompanyPilotService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BP_COMPANY_PILOT_CASE_ENTITY",
+          "local": "BP_COMPANY_PILOT_CASE_ENTITY",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BP_COMPANY_PILOT_ENTITY",
+          "local": "BP_COMPANY_PILOT_ENTITY",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BP_COMPANY_PILOT_PERMISSION_PREFIX",
+          "local": "BP_COMPANY_PILOT_PERMISSION_PREFIX",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BusinessPartnerRequestServiceOptions",
+          "local": "BusinessPartnerRequestServiceOptions",
+          "typeOnly": true,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 83,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "registerBusinessPartnerGovernedImportRoutes",
+          "local": "registerBusinessPartnerGovernedImportRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 85,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "createPartnerDecisionViews",
+          "local": "createPartnerDecisionViews",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createPartnerCompanyProfileViews",
+          "local": "createPartnerCompanyProfileViews",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 365,
+      "source": "@athyper/server-plane-mesh",
+      "missing": [
+        {
+          "exported": "BUSINESS_PARTNER_DELIVERY_QUEUE",
+          "local": "BUSINESS_PARTNER_DELIVERY_QUEUE",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BusinessPartnerDeliveryWorker",
+          "local": "BusinessPartnerDeliveryWorker",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerDeliveryHandler",
+          "local": "createBusinessPartnerDeliveryHandler",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerReconciliationHandler",
+          "local": "createBusinessPartnerReconciliationHandler",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerBankDisclosureService",
+          "local": "createBusinessPartnerBankDisclosureService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerNetworkExchangeService",
+          "local": "createBusinessPartnerNetworkExchangeService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createHttpSelfRegistrationPolicyAdapter",
+          "local": "createHttpSelfRegistrationPolicyAdapter",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerProfilePublicationService",
+          "local": "createBusinessPartnerProfilePublicationService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "DELIVER_BUSINESS_PARTNER_EVENTS_JOB",
+          "local": "DELIVER_BUSINESS_PARTNER_EVENTS_JOB",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartnerBankDisclosureRepository",
+          "local": "KyselyBusinessPartnerBankDisclosureRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartnerNetworkExchangeRepository",
+          "local": "KyselyBusinessPartnerNetworkExchangeRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartnerDeliveryRepository",
+          "local": "KyselyBusinessPartnerDeliveryRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartnerProfilePublicationRepository",
+          "local": "KyselyBusinessPartnerProfilePublicationRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "RECONCILE_BUSINESS_PARTNER_EVENTS_JOB",
+          "local": "RECONCILE_BUSINESS_PARTNER_EVENTS_JOB",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerBusinessPartnerBankDisclosureRoutes",
+          "local": "registerBusinessPartnerBankDisclosureRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerBusinessPartnerNetworkExchangeRoutes",
+          "local": "registerBusinessPartnerNetworkExchangeRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerBusinessPartnerProfilePublicationRoutes",
+          "local": "registerBusinessPartnerProfilePublicationRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "BusinessPartnerDeliveryItem",
+          "local": "BusinessPartnerDeliveryItem",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "DeliveryDisposition",
+          "local": "DeliveryDisposition",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 389,
+      "source": "@athyper/server-plane-neon",
+      "missing": [
+        {
+          "exported": "createBusinessPartnerAccountBankLinkageService",
+          "local": "createBusinessPartnerAccountBankLinkageService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerProfileMatchService",
+          "local": "createBusinessPartnerProfileMatchService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerProfileProjectionService",
+          "local": "createBusinessPartnerProfileProjectionService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createNeonBusinessPartnerImportAdapter",
+          "local": "createNeonBusinessPartnerImportAdapter",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartnerAccountBankRepository",
+          "local": "KyselyBusinessPartnerAccountBankRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "meshAccountBankPermissions",
+          "local": "meshAccountBankPermissions",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartnerProfileMatchRepository",
+          "local": "KyselyBusinessPartnerProfileMatchRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartnerProfileProjectionRepository",
+          "local": "KyselyBusinessPartnerProfileProjectionRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerBusinessPartnerAccountBankLinkageRoutes",
+          "local": "registerBusinessPartnerAccountBankLinkageRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerBusinessPartnerProfileMatchRoutes",
+          "local": "registerBusinessPartnerProfileMatchRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerBusinessPartnerProfileProjectionRoutes",
+          "local": "registerBusinessPartnerProfileProjectionRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "MeshBankDisclosureEnvelope",
+          "local": "MeshBankDisclosureEnvelope",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "MeshBusinessPartnerProfileEnvelope",
+          "local": "MeshBusinessPartnerProfileEnvelope",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 554,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "BUSINESS_PARTNER_INVITATION_MAINTENANCE_QUEUE",
+          "local": "BUSINESS_PARTNER_INVITATION_MAINTENANCE_QUEUE",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerEligibilityService",
+          "local": "createBusinessPartnerEligibilityService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerInvitationExpiryHandler",
+          "local": "createBusinessPartnerInvitationExpiryHandler",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerInvitationExternalGuard",
+          "local": "createBusinessPartnerInvitationExternalGuard",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerInvitationService",
+          "local": "createBusinessPartnerInvitationService",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerRequestService",
+          "local": "createBusinessPartnerRequestService",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createBusinessPartnerIntakeCommandMapper",
+          "local": "createBusinessPartnerIntakeCommandMapper",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createBusinessPartnerIntakeOperationProvider",
+          "local": "createBusinessPartnerIntakeOperationProvider",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createBusinessPartnerRequestValidator",
+          "local": "createBusinessPartnerRequestValidator",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createGovernedInternalBusinessPartnerCaseService",
+          "local": "createGovernedInternalBusinessPartnerCaseService",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createSupplierActivationReevaluationHandler",
+          "local": "createSupplierActivationReevaluationHandler",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createSupplierQualificationExpiryHandler",
+          "local": "createSupplierQualificationExpiryHandler",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createSupplierWorkforceRequisitionService",
+          "local": "createSupplierWorkforceRequisitionService",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createSupplierWorkforceCommandGuard",
+          "local": "createSupplierWorkforceCommandGuard",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createWorkerEngagementIamService",
+          "local": "createWorkerEngagementIamService",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createWorkerEngagementLifecycleService",
+          "local": "createWorkerEngagementLifecycleService",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createHttpSupplierWorkforceDistributionEligibility",
+          "local": "createHttpSupplierWorkforceDistributionEligibility",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createWorkforceService",
+          "local": "createWorkforceService",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createHrStage2Service",
+          "local": "createHrStage2Service",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB",
+          "local": "EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "EXPIRE_SUPPLIER_QUALIFICATIONS_JOB",
+          "local": "EXPIRE_SUPPLIER_QUALIFICATIONS_JOB",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartnerEligibilityRepository",
+          "local": "KyselyBusinessPartnerEligibilityRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "evaluateSupplierOnboardingCompletion",
+          "local": "evaluateSupplierOnboardingCompletion",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "authorizeSupplierActivationReadiness",
+          "local": "authorizeSupplierActivationReadiness",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "KyselyBusinessPartnerInvitationRepository",
+          "local": "KyselyBusinessPartnerInvitationRepository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartnerOnboardingCycleCoordinator",
+          "local": "KyselyBusinessPartnerOnboardingCycleCoordinator",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "KyselyBusinessPartnerCaseRepository",
+          "local": "KyselyBusinessPartnerCaseRepository",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "KyselyGovernedInternalBusinessPartnerCaseRepository",
+          "local": "KyselyGovernedInternalBusinessPartnerCaseRepository",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "KyselyWorkforceRepository",
+          "local": "KyselyWorkforceRepository",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "KyselyWorkforceRequestRepository",
+          "local": "KyselyWorkforceRequestRepository",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "KyselySupplierWorkforceRequisitionRepository",
+          "local": "KyselySupplierWorkforceRequisitionRepository",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "KyselyWorkerEngagementIamRepository",
+          "local": "KyselyWorkerEngagementIamRepository",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "KyselyWorkerEngagementLifecycleRepository",
+          "local": "KyselyWorkerEngagementLifecycleRepository",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "MasterDataError",
+          "local": "MasterDataError",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "REEVALUATE_SUPPLIER_ACTIVATIONS_JOB",
+          "local": "REEVALUATE_SUPPLIER_ACTIVATIONS_JOB",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerBusinessPartnerEligibilityRoutes",
+          "local": "registerBusinessPartnerEligibilityRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerBusinessPartnerInvitationRoutes",
+          "local": "registerBusinessPartnerInvitationRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerBusinessPartnerRequestRoutes",
+          "local": "registerBusinessPartnerRequestRoutes",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "registerGovernedInternalBusinessPartnerRoutes",
+          "local": "registerGovernedInternalBusinessPartnerRoutes",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "registerWorkforceRoutes",
+          "local": "registerWorkforceRoutes",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "registerHrStage2Routes",
+          "local": "registerHrStage2Routes",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "registerSupplierWorkforceRequisitionRoutes",
+          "local": "registerSupplierWorkforceRequisitionRoutes",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "registerWorkerEngagementIamRoutes",
+          "local": "registerWorkerEngagementIamRoutes",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "registerWorkerEngagementLifecycleRoutes",
+          "local": "registerWorkerEngagementLifecycleRoutes",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "SUPPLIER_READINESS_MAINTENANCE_QUEUE",
+          "local": "SUPPLIER_READINESS_MAINTENANCE_QUEUE",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 601,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "createBusinessPartner360Service",
+          "local": "createBusinessPartner360Service",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createBusinessPartnerAtlasInsightOwner",
+          "local": "createBusinessPartnerAtlasInsightOwner",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createHttpBusinessPartner360MeshNetworkAdapter",
+          "local": "createHttpBusinessPartner360MeshNetworkAdapter",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createLastValidBusinessPartner360DefinitionResolver",
+          "local": "createLastValidBusinessPartner360DefinitionResolver",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "createSecretStoreProtectedValueResolver",
+          "local": "createSecretStoreProtectedValueResolver",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        },
+        {
+          "exported": "createUnavailableBusinessPartner360ActivityProviders",
+          "local": "createUnavailableBusinessPartner360ActivityProviders",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "KyselyBusinessPartner360Repository",
+          "local": "KyselyBusinessPartner360Repository",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        },
+        {
+          "exported": "parseBusinessPartner360Definition",
+          "local": "parseBusinessPartner360Definition",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/register-services.ts",
+      "line": 611,
+      "source": "@athyper/server-contract-master-data",
+      "missing": [
+        {
+          "exported": "BUSINESS_PARTNER_360_PERMISSIONS",
+          "local": "BUSINESS_PARTNER_360_PERMISSIONS",
+          "typeOnly": false,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/supplier-process-submission.ts",
+      "line": 14,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "SupplierProcessSubmission",
+          "local": "SupplierProcessSubmission",
+          "typeOnly": true,
+          "decision": "delete legacy registration",
+          "constraint": "Remove owning registrations and downstream references together; preserve adjacent generic capabilities."
+        }
+      ]
+    },
+    {
+      "file": "apps/platform-host/src/composition/supplier-process-submission.ts",
+      "line": 15,
+      "source": "@athyper/server-service-master-data",
+      "missing": [
+        {
+          "exported": "MasterDataError",
+          "local": "MasterDataError",
+          "typeOnly": false,
+          "decision": "replace with generic capability",
+          "constraint": "Preserve authorization, tenant scope and workflow/data guarantees; no alias or permissive stub."
+        }
+      ]
+    }
+  ]
+}

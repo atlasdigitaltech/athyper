@@ -20,7 +20,9 @@ BEGIN
     END IF;
 END $seed_plane_guard$;
 
--- Each physical plane owns its own backup schedule and database connection.
+-- Database backup execution is owned by Stack v2 so it can enforce volume,
+-- recovery, rollback, and immutable-receipt gates. Keep the reference row for
+-- catalog visibility, but never submit it to the application job runtime.
 INSERT INTO control.cron_schedule (
     tenant_id, code, name, description, handler_type, cron_expression,
     timezone, target_queue, payload_template, priority, max_retries,
@@ -29,7 +31,7 @@ INSERT INTO control.cron_schedule (
     NULL,
     'platform-backup-daily',
     'Daily PostgreSQL Backup',
-    'Plane-local pg_dump backup to configured object storage.',
+    'Stack v2 controlled backup; execute through stackctl with receipts.',
     'pg-dump',
     '0 2 * * *',
     'UTC',
@@ -39,7 +41,7 @@ INSERT INTO control.cron_schedule (
     2,
     1,
     'backup:daily',
-    true,
+    false,
     '00000000-0000-0000-0000-000000000000'
 )
 ON CONFLICT (tenant_id, code)
@@ -190,7 +192,21 @@ BEGIN
         RAISE EXCEPTION '[common.control.plane-cron-schedules] duplicate global code';
     END IF;
     -- seed-assertion: semantic
-    IF EXISTS (SELECT 1 FROM control.cron_schedule WHERE tenant_id IS NULL AND code = ANY(v_codes) AND NOT is_enabled) THEN
-        RAISE EXCEPTION '[common.control.plane-cron-schedules] disabled canonical schedule';
+    IF EXISTS (
+        SELECT 1 FROM control.cron_schedule
+        WHERE tenant_id IS NULL
+          AND code = ANY(v_codes)
+          AND code <> 'platform-backup-daily'
+          AND NOT is_enabled
+    ) THEN
+        RAISE EXCEPTION '[common.control.plane-cron-schedules] disabled application-owned canonical schedule';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM control.cron_schedule
+        WHERE tenant_id IS NULL
+          AND code = 'platform-backup-daily'
+          AND NOT is_enabled
+    ) THEN
+        RAISE EXCEPTION '[common.control.plane-cron-schedules] stack-controlled backup schedule must remain disabled';
     END IF;
 END $seed_assertions$;

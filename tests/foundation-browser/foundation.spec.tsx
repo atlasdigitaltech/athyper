@@ -8,7 +8,7 @@ const cases = ["login-skeleton", "error-page", "toast", "dialog", "empty-shell"]
 
 for (const name of cases) {
   test(`${name} has no critical accessibility violations and matches its visual snapshot`, async ({ page }) => {
-    const markup = execFileSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/verification/render-foundation-fixture.tsx", name], { encoding: "utf8" });
+    const markup = execFileSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "tooling/scripts/verification/render-foundation-fixture.tsx", name], { encoding: "utf8" });
     await page.setContent(`<!doctype html><html lang="en" data-theme="light" data-density="comfortable"><head><style>${css}</style></head><body>${markup}</body></html>`);
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations.filter((violation) => violation.impact === "critical")).toEqual([]);

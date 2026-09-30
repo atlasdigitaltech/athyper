@@ -3,12 +3,29 @@
 @theme inline {
   --color-background: var(--a-background);
   --color-foreground: var(--a-foreground);
-  --color-surface: var(--a-surface);
-  --color-muted: var(--a-muted);
-  --color-primary: var(--a-primary);
-  --color-danger: var(--a-danger);
-  --color-border: var(--a-border);
-  --font-sans: var(--a-font-sans);
-  --radius-md: var(--a-radius-md);
-  --shadow-overlay: var(--a-shadow-overlay);
+  --color-surface: var(--a-surface); --color-surface-raised: var(--a-surface-raised);
+  --color-muted: var(--a-muted); --color-muted-foreground: var(--a-muted-foreground);
+  --color-primary: var(--a-primary); --color-primary-foreground: var(--a-primary-foreground); --color-primary-hover: var(--a-primary-hover);
+  --color-brand: var(--a-brand); --color-brand-foreground: var(--a-brand-foreground); --color-brand-soft: var(--a-brand-soft);
+  --color-selection-strong: var(--a-selection-strong); --color-selection-strong-foreground: var(--a-selection-strong-foreground);
+  --color-selection-subtle: var(--a-selection-subtle); --color-selection-subtle-foreground: var(--a-selection-subtle-foreground);
+  --color-panel: var(--a-panel-background); --color-panel-header: var(--a-panel-header-background); --color-panel-toolbar: var(--a-panel-toolbar-background);
+  --color-danger: var(--a-danger); --color-danger-foreground: var(--a-danger-foreground); --color-danger-subtle: var(--a-danger-subtle); --color-danger-subtle-foreground: var(--a-danger-subtle-foreground);
+  --color-warning: var(--a-warning); --color-warning-foreground: var(--a-warning-foreground); --color-warning-subtle: var(--a-warning-subtle); --color-warning-subtle-foreground: var(--a-warning-subtle-foreground);
+  --color-success: var(--a-success); --color-success-foreground: var(--a-success-foreground); --color-success-subtle: var(--a-success-subtle); --color-success-subtle-foreground: var(--a-success-subtle-foreground);
+  --color-border: var(--a-border); --color-input: var(--a-input); --color-focus: var(--a-focus);
+  --font-sans: var(--a-font-sans); --font-mono: var(--a-font-mono);
+  /* Canonical typographic scale — mirrors --a-font-size-* / --a-font-weight-* (Phase 6). */
+  --text-2xs: var(--a-font-size-2xs); --text-xs: var(--a-font-size-xs); --text-sm: var(--a-font-size-sm); --text-body: var(--a-font-size-body); --text-md: var(--a-font-size-md); --text-lg: var(--a-font-size-lg); --text-title: var(--a-font-size-title); --text-display: var(--a-font-size-display);
+  --font-weight-normal: var(--a-font-weight-normal); --font-weight-regular: var(--a-font-weight-regular); --font-weight-medium: var(--a-font-weight-medium); --font-weight-strong: var(--a-font-weight-strong);
+  --spacing-1: var(--a-space-1); --spacing-2: var(--a-space-2); --spacing-3: var(--a-space-3); --spacing-4: var(--a-space-4); --spacing-5: var(--a-space-5); --spacing-6: var(--a-space-6); --spacing-8: var(--a-space-8); --spacing-10: var(--a-space-10);
+  --radius-sm: var(--a-radius-sm); --radius-md: var(--a-radius-md); --radius-lg: var(--a-radius-lg); --radius-xl: var(--a-radius-xl); --radius-full: var(--a-radius-round);
+  --shadow-raised: var(--a-shadow-raised); --shadow-overlay: var(--a-shadow-overlay); --shadow-prominent: var(--a-shadow-prominent);
+  --shadow-sm: var(--a-shadow-sm); --shadow-md: var(--a-shadow-md); --shadow-card: var(--a-shadow-card);
+
+  /* Drop Tailwind's stock type scale and weight ramp so an un-tokenised class
+     (text-xl, font-bold) produces no utility. The stock-tailwind-typography
+     audit rule is what fails the PR — this just removes the silent fallback. */
+  --text-base: initial; --text-xl: initial; --text-2xl: initial; --text-3xl: initial; --text-4xl: initial; --text-5xl: initial; --text-6xl: initial; --text-7xl: initial; --text-8xl: initial; --text-9xl: initial;
+  --font-weight-thin: initial; --font-weight-extralight: initial; --font-weight-light: initial; --font-weight-semibold: initial; --font-weight-bold: initial; --font-weight-extrabold: initial; --font-weight-black: initial;
 }

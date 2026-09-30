@@ -23,6 +23,49 @@ CREATE TABLE runtime_meta.tenant_usage_counter (
 COMMENT ON TABLE runtime_meta.tenant_usage_counter IS
   'Plane-local current usage and short-lived reservations. It is not the commercial entitlement source of truth.';
 
+CREATE TABLE runtime_meta.usage_reservation (
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+    usage_metric_id uuid        NOT NULL,
+    dimension_code  text        NOT NULL DEFAULT '*',
+    resource_type   text        NOT NULL,
+    resource_id     uuid        NOT NULL,
+    reserved_value  bigint      NOT NULL,
+    actual_value    bigint,
+    status          text        NOT NULL DEFAULT 'reserved',
+    expires_at      timestamptz NOT NULL,
+    committed_at    timestamptz,
+    released_at     timestamptz,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT usage_reservation_pkey PRIMARY KEY (id),
+    CONSTRAINT usage_reservation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT usage_reservation_resource_uq
+        UNIQUE (tenant_id, usage_metric_id, dimension_code, resource_type, resource_id),
+    CONSTRAINT usage_reservation_dimension_chk
+        CHECK (dimension_code = '*' OR dimension_code ~ '^[a-z][a-z0-9_]{1,62}$'),
+    CONSTRAINT usage_reservation_resource_type_chk
+        CHECK (resource_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'),
+    CONSTRAINT usage_reservation_values_chk
+        CHECK (reserved_value >= 0 AND (actual_value IS NULL OR actual_value >= 0)),
+    CONSTRAINT usage_reservation_status_chk
+        CHECK (status IN ('reserved', 'committed', 'released', 'expired')),
+    CONSTRAINT usage_reservation_terminal_chk CHECK (
+        (status = 'reserved' AND committed_at IS NULL AND released_at IS NULL)
+        OR (status = 'committed' AND committed_at IS NOT NULL AND released_at IS NULL)
+        OR (status IN ('released', 'expired') AND released_at IS NOT NULL)
+    ),
+    CONSTRAINT usage_reservation_expiry_chk CHECK (expires_at > created_at),
+    CONSTRAINT usage_reservation_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE runtime_meta.usage_reservation IS
+  'Idempotent plane-local resource reservations. One resource may reserve multiple metrics atomically through one row per metric.';
+
 -- Local cache-version coordinates for the authorization evaluator.
 CREATE TABLE runtime_meta.authorization_epoch (
     id          uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -197,7 +240,7 @@ CREATE TABLE runtime_meta.entity_contract (
     CONSTRAINT runtime_entity_contract_release_uq
         UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, release_id),
     CONSTRAINT runtime_entity_contract_release_no_uq
-        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, release_no),
+        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, entity_code, release_no),
     -- Compatibility coordinate retained for Mesh document envelopes.
     CONSTRAINT runtime_entity_contract_legacy_coordinate_uq
         UNIQUE (entity_id, id, entity_contract_hash),
@@ -275,3 +318,61 @@ COMMENT ON TABLE runtime_meta.entity_contract IS
   'Immutable all-plane projection of an Athyper-authored Entity release. Status is the only mutable contract state.';
 COMMENT ON TABLE runtime_meta.entity_descriptor IS
   'Immutable plane-local compiler output. Athyper uses admin_preview descriptors; Neon and Mesh use executable descriptors.';
+
+CREATE TABLE runtime_meta.applied_release_payload (
+    id                     uuid        NOT NULL,
+    applied_release_id     uuid        NOT NULL,
+    tenant_id              uuid,
+    artifact_kind          text        NOT NULL,
+    payload_schema_version text        NOT NULL,
+    payload_hash           text        NOT NULL,
+    payload_json           jsonb       NOT NULL,
+    coordinates            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    generated_at           timestamptz NOT NULL,
+    received_at            timestamptz NOT NULL DEFAULT clock_timestamp(),
+
+    CONSTRAINT runtime_applied_release_payload_pkey PRIMARY KEY (id),
+    CONSTRAINT runtime_applied_release_payload_release_uq UNIQUE (applied_release_id),
+    CONSTRAINT runtime_applied_release_payload_kind_chk
+        CHECK (artifact_kind ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT runtime_applied_release_payload_schema_chk
+        CHECK (payload_schema_version ~ '^[0-9]+\.[0-9]+(?:\.[0-9]+)?$'),
+    CONSTRAINT runtime_applied_release_payload_hash_chk CHECK (payload_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT runtime_applied_release_payload_json_chk CHECK (jsonb_typeof(payload_json) = 'object'),
+    CONSTRAINT runtime_applied_release_payload_coordinates_chk CHECK (jsonb_typeof(coordinates) = 'object'),
+    CONSTRAINT runtime_applied_release_payload_time_chk CHECK (received_at >= generated_at)
+);
+
+COMMENT ON TABLE runtime_meta.applied_release_payload IS
+  'Immutable offline-safe payload for a locally applied non-Entity publication artifact. Release lifecycle and activation are owned only by applied_release and release_activation_head.';
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection
+CREATE TABLE runtime_meta.experience_surface_projection (
+    id uuid DEFAULT shared.uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    plane_code text NOT NULL,
+    surface_key text NOT NULL,
+    layer text NOT NULL,
+    source_release_id uuid NOT NULL,
+    source_revision bigint NOT NULL,
+    definition jsonb NOT NULL,
+    content_hash character(64) NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    applied_at timestamp with time zone DEFAULT now() NOT NULL,
+    applied_by uuid NOT NULL,
+    retired_at timestamp with time zone,
+    retired_by uuid,
+    CONSTRAINT experience_surface_projection_definition_chk CHECK ((((jsonb_typeof(definition) = 'object'::text) AND ((definition ->> 'schema'::text) = 'athyper-experience-surface/1'::text) AND ((definition ->> 'id'::text) = surface_key) AND (octet_length((definition)::text) <= 262144))) IS TRUE),
+    CONSTRAINT experience_surface_projection_hash_chk CHECK ((content_hash ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT experience_surface_projection_key_chk CHECK ((surface_key ~ '^[a-z][a-z0-9_.-]{1,126}$'::text)),
+    CONSTRAINT experience_surface_projection_layer_chk CHECK ((layer = ANY (ARRAY['shared'::text, 'tenant'::text]))),
+    CONSTRAINT experience_surface_projection_local_plane_chk CHECK (((plane_code = current_setting('app.database_plane'::text, true)) AND (plane_code = substring(current_database() from 9))) IS TRUE),
+    CONSTRAINT experience_surface_projection_plane_chk CHECK ((plane_code = ANY (ARRAY['studio'::text, 'neon'::text, 'mesh'::text]))),
+    CONSTRAINT experience_surface_projection_retirement_chk CHECK ((((status = 'active'::text) AND (retired_at IS NULL) AND (retired_by IS NULL)) OR ((status = 'retired'::text) AND (retired_at IS NOT NULL) AND (retired_by IS NOT NULL)))),
+    CONSTRAINT experience_surface_projection_revision_chk CHECK ((source_revision > 0)),
+    CONSTRAINT experience_surface_projection_status_chk CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
+);
+
+COMMENT ON TABLE runtime_meta.experience_surface_projection IS 'Verified plane-local experience projection. Application planes never read Studio authoring tables at request time.';
+-- END ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection

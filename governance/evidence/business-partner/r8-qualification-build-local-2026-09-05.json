@@ -1,0 +1,24 @@
+{
+  "schema": "athyper.business-partner-local-engineering-evidence/1",
+  "asOf": "2026-09-05",
+  "scope": "R8 production qualification preparation, artifact intake and retained proof validation",
+  "environment": "local",
+  "productionQualified": false,
+  "productionGatesPassed": 0,
+  "productionGatesRequired": 5,
+  "executionPacket": "governance/evidence/business-partner/r8/packets/production-qualification-2026-09-05/packet.json",
+  "checks": [
+    { "command": "pnpm test:business-partner-r8-qualification", "status": "passed", "tests": 27 },
+    { "command": "pnpm exec tsx --test tests/contracts/business-partner-r8-contracts.test.ts", "status": "passed", "tests": 5 },
+    { "command": "pnpm --dir server/db typecheck", "status": "passed" },
+    { "command": "pnpm qualify:business-partner-r8", "status": "passed", "note": "Verifier succeeds with all five production gates pending." },
+    { "command": "pnpm preflight:business-partner-r8", "status": "blocked", "exitCode": 2, "note": "Target, source, baseline, retention, connection, canary and reviewer environment coordinates are absent; names only are retained in the packet." },
+    { "command": "pnpm prepare:business-partner-r8 --packet=production-qualification-2026-09-05", "status": "passed", "note": "Created five pending artifact drafts without changing gate status." }
+  ],
+  "limitations": [
+    "Tests use synthetic artifacts only inside temporary test workspaces; no synthetic production receipts were retained.",
+    "No production database comparison, publication, rollback, storage retention attestation or human review was executed.",
+    "Native parity scope remains S0-S5 Business Partner catalog comparison; supported upgrade execution needs target evidence.",
+    "Receipt integrity validation cannot authenticate external provider attestations or human approval references without their accountable review."
+  ]
+}

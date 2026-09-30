@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated_bp_atlas_admission_access",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "releaseId": "c2cc6900-26c1-47ca-8dfc-1d488000950c",
+  "artifactHash": "45ddc85ece1f453e84b1eccc0cea9ca141fe9847c68ab7d2500e7d347d7b75fc",
+  "image": "sha256:671d0d5abecbfc16790e2d8e643222171eed8d1b5ab485b3b4048b466439fc47",
+  "destination": {
+    "container": "athyper-bp-enter-db",
+    "network": "athyper-bp-enter-isolated",
+    "database": "athyper_neon"
+  },
+  "effectiveFrom": "2026-09-11T21:15:00Z",
+  "effectiveUntil": "2026-09-12T01:15:00Z",
+  "batches": [
+    {
+      "account": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "purpose": "atlas",
+      "roleId": "48f9a175-0b62-462e-916c-e9578be5a83e",
+      "groupId": "3d03071c-87e5-4aae-b086-b3baf341a3c4",
+      "assignmentId": "39dbedb5-db6b-4134-8aec-393f277ef7b9",
+      "code": "bp.enter.test.admin.atlas.d9e4ea98",
+      "scope": {
+        "id": "1d8314f6-8541-57cf-8748-679cbe318bc8",
+        "status": "active",
+        "scope_key": "cirrusatlantic",
+        "target_id": "44444444-4444-4444-8444-444444444444",
+        "scope_kind": "tenant"
+      },
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "87052370-9394-5104-9f1d-b87e72c733ab",
+          "code": "neon.ai.agent.use",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": true,
+          "requires_sod": false
+        }
+      ]
+    }
+  ],
+  "conditions": {
+    "mfa": "Preserve catalog flags per permission; case.decide requires MFA. Normal route/workflow step-up remains enforced. No extra grant-level MFA condition is implied.",
+    "separationOfDuties": "catl.admin creates/submits/applies; catl.owner decides; existing maker/approver/applier checks remain mandatory.",
+    "propagation": "Tenant grants are exact-only. Case grants use operating-organization subtree as required by the existing catalog: selected organization and its descendants. Current captured scope inventory has one organization; future descendants would be included during this temporary window.",
+    "resourceBoundary": "Atlas admission is tenant-exact in the isolated clone. Admission alone grants no record or field access. All tool, Records and field authorization checks remain mandatory.",
+    "testDiscipline": "Use the BP qualification retrieval journey only. No external model calls or full conversation qualification are included.",
+    "sourceConstraints": "Current source denials and conditions remain; no legacy allow grants are automatically added.",
+    "cleanup": "Revoke only these new memberships and assignments after testing, or expire at the exact end; never restore old grants."
+  },
+  "excluded": [
+    "Shared DEV grants and activation",
+    "Sensitive reveals",
+    "Company-scoped permissions: no active company scope target exists",
+    "Company-owned pilot and independent-child grants until exact published policies/scopes are qualified",
+    "Supplier qualification administration",
+    "Approval of 66 policy dispositions",
+    "Expired/revoked test grants",
+    "BP reads and mutations: proposed separately",
+    "Atlas access for catl.owner; retained as admission-negative persona"
+  ],
+  "sharedGrantChanges": [],
+  "activationAuthorized": false,
+  "approved": false,
+  "supersedesProposalRevision": null,
+  "evidence": {
+    "path": "governance/policy/reports/business-partner-enter-qualification-access-20260912.dev.json",
+    "sha256": "57708a2d5d80379abfb1f0bc8e840e7d1844eaf007956bbee19f3268ec2826b2"
+  },
+  "proposalRevision": "e3fcb693492924eedee0d0b53053a2934aa9310df3a6bba6fbbc8cb6d29de16a"
+}

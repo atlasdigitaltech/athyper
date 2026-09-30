@@ -1,4 +1,10 @@
-export const REQUIRED_BFF_ENVIRONMENT = Object.freeze(["APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"] as const);
-export interface EnvironmentValidation { readonly ready: boolean; readonly missing: readonly string[]; readonly invalid: readonly string[]; }
-export function validateRuntimeEnvironment(environment: NodeJS.ProcessEnv = process.env): EnvironmentValidation { const missing = REQUIRED_BFF_ENVIRONMENT.filter((name) => !environment[name]?.trim()), invalid: string[] = []; for (const name of ["APP_ORIGIN", "RUNTIME_API_URL", "KEYCLOAK_BASE_URL"] as const) { const value = environment[name]; if (!value) continue; try { const url = new URL(value); if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) invalid.push(name); } catch { invalid.push(name); } } const key = environment.SESSION_TOKEN_ENCRYPTION_KEY; if (key) { try { if (Buffer.from(key, "base64").byteLength !== 32) invalid.push("SESSION_TOKEN_ENCRYPTION_KEY"); } catch { invalid.push("SESSION_TOKEN_ENCRYPTION_KEY"); } } return Object.freeze({ ready: missing.length === 0 && invalid.length === 0, missing: Object.freeze(missing), invalid: Object.freeze(invalid) }); }
-export function assertRuntimeEnvironment(environment: NodeJS.ProcessEnv = process.env): void { const result = validateRuntimeEnvironment(environment); if (!result.ready) throw new Error(`Frontend BFF environment is invalid (missing=${result.missing.join(",") || "none"}; invalid=${result.invalid.join(",") || "none"})`); }
+import { createAppEnvironment } from "@athyper/platform-iam-auth-bff/runtime-environment";
+export {
+  REQUIRED_BFF_ENVIRONMENT,
+  type EnvironmentValidation,
+} from "@athyper/platform-iam-auth-bff/runtime-environment";
+
+export const DEFAULT_APP_ORIGIN = "http://localhost:3100";
+export const readAppEnvironment = createAppEnvironment(DEFAULT_APP_ORIGIN);
+export const validateRuntimeEnvironment = readAppEnvironment.validate;
+export const assertRuntimeEnvironment = readAppEnvironment.assert;

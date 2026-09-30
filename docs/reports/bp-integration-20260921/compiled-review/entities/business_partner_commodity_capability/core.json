@@ -1,0 +1,203 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_commodity_capability/core",
+  "entityCode": "business_partner_commodity_capability",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "sourceObjects": [
+      "master.business_partner_commodity_capability"
+    ],
+    "primaryObject": "master.business_partner_commodity_capability",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_capability",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_capability.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "business_partner_id",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_capability",
+        "column": "business_partner_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_capability.core.fields.business_partner_id.label",
+        "defaultText": "Business Partner Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid"
+    },
+    {
+      "key": "commodity_category_id",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_capability",
+        "column": "commodity_category_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_capability.core.fields.commodity_category_id.label",
+        "defaultText": "Commodity Category"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "partner_role",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_capability",
+        "column": "partner_role"
+      },
+      "dataType": "string",
+      "storageType": "master.partner_role_d",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_capability.core.fields.partner_role.label",
+        "defaultText": "Partner Role"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "effective_from",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_capability",
+        "column": "effective_from"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_capability.core.fields.effective_from.label",
+        "defaultText": "Effective From"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "effective_until",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_capability",
+        "column": "effective_until"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_capability.core.fields.effective_until.label",
+        "defaultText": "Effective Until"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_capability",
+        "column": "status"
+      },
+      "dataType": "string",
+      "storageType": "master.partner_extension_status_d",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_capability.core.fields.status.label",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.business_partner_commodity_capability",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_commodity_capability",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_commodity_capability",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:5050f0d64ac7611de394204d70ccd33ca312b2014785f3e89fd19eab22ddb1c9"
+}

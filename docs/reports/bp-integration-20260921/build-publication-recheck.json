@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-09-21T07:40:36.767057+00:00",
+  "build": {
+    "successful": 110,
+    "total": 110,
+    "cached": 107
+  },
+  "compiledArtifactValidation": {
+    "passed": true,
+    "count": 113
+  },
+  "nativeRuntimeRelease": {
+    "id": "7bdb29f6-6b01-4385-867d-06357504f6ca",
+    "status": "approved",
+    "compilations": 0,
+    "signedArtifacts": 0,
+    "deployments": 0
+  },
+  "authenticatedReviewStatePresent": false,
+  "providerPublicationEvidencePending": {
+    "total": 129,
+    "evaluators": 26,
+    "handlers": 88,
+    "renderers": 14,
+    "resolvers": 1
+  },
+  "published": false
+}

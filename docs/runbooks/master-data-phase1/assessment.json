@@ -1,0 +1,501 @@
+{
+  "schema": "athyper.master-data.phase1-assessment.v1",
+  "generatedAt": "2026-09-06T17:16:28.813Z",
+  "baseline": {
+    "head": "535cd9acfdc31abda3e64a2b4c2d7ed1f3841882",
+    "dirty": true,
+    "changedEntryCount": 279,
+    "sourceFingerprint": "2886bd7d3ac355ab79854d959f7261dbef0e3c6a3612d96f27d1538fcdacde66"
+  },
+  "phase1Complete": false,
+  "productionQualified": false,
+  "assessmentOnly": true,
+  "launch": {
+    "schema": "athyper.master-data.launch-scope.v1",
+    "decisionStatus": "scope_confirmed",
+    "environment": "staging",
+    "planes": [
+      "neon"
+    ],
+    "tenantIds": [],
+    "channels": [
+      "email"
+    ],
+    "provider": null,
+    "ownerTypes": [
+      "business_partner"
+    ],
+    "accountableOwners": {
+      "domain": null,
+      "integration": null,
+      "iam": null,
+      "database": null,
+      "release": null
+    },
+    "pilot": {
+      "dataPolicy": "synthetic_only",
+      "businessPartnerCount": 10,
+      "primaryTenantCount": 1,
+      "negativeTestTenantCount": 1,
+      "primaryTenantId": null,
+      "negativeTestTenantId": null,
+      "verificationTrustScope": "primary_tenant_only",
+      "addressCoverage": [
+        "create",
+        "profile_read",
+        "deactivate"
+      ],
+      "actorProfiles": [
+        "owner_scope_a_user",
+        "owner_scope_b_user",
+        "unauthorized_user",
+        "attestation_service"
+      ],
+      "providerSelection": "pending",
+      "signingKeys": "staging_only",
+      "authorizationDesignStatus": "proposed_not_published",
+      "deploymentAuthorized": false
+    }
+  },
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/master/addresses/{addressLinkId}/deactivate",
+      "permissions": [
+        "master.address.pii.write"
+      ],
+      "resource": [
+        "addressLinkId"
+      ],
+      "intent": "owner aggregate address closure plus sensitive-write capability",
+      "canonicalMapping": null,
+      "mappingStatus": "requires_owner_and_IAM_review"
+    },
+    {
+      "method": "POST",
+      "path": "/api/master/contacts/{contactId}/deactivate",
+      "permissions": [
+        "master.contact.pii.write"
+      ],
+      "resource": [
+        "contactId"
+      ],
+      "intent": "owner aggregate contact closure plus sensitive-write capability",
+      "canonicalMapping": null,
+      "mappingStatus": "requires_owner_and_IAM_review"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/master/contacts/{contactId}/verification",
+      "permissions": [
+        "master.contact.verify"
+      ],
+      "resource": [
+        "contactId"
+      ],
+      "intent": "contact verification capability with trusted owner scope",
+      "canonicalMapping": null,
+      "mappingStatus": "requires_owner_and_IAM_review"
+    },
+    {
+      "method": "POST",
+      "path": "/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/addresses",
+      "permissions": [
+        "master.address.pii.write"
+      ],
+      "resource": [
+        "tenantId",
+        "ownerEntityCode",
+        "ownerTypeId",
+        "ownerId"
+      ],
+      "intent": "owner aggregate address attachment plus sensitive-write capability",
+      "canonicalMapping": null,
+      "mappingStatus": "requires_owner_and_IAM_review"
+    },
+    {
+      "method": "POST",
+      "path": "/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/contacts",
+      "permissions": [
+        "master.contact.pii.write"
+      ],
+      "resource": [
+        "tenantId",
+        "ownerEntityCode",
+        "ownerTypeId",
+        "ownerId"
+      ],
+      "intent": "owner aggregate contact creation plus sensitive-write capability",
+      "canonicalMapping": null,
+      "mappingStatus": "requires_owner_and_IAM_review"
+    },
+    {
+      "method": "GET",
+      "path": "/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/profile",
+      "permissions": [
+        "master.profile.read",
+        "master.contact.pii.read",
+        "master.address.pii.read"
+      ],
+      "resource": [
+        "tenantId",
+        "ownerEntityCode",
+        "ownerTypeId",
+        "ownerId"
+      ],
+      "intent": "owner aggregate read plus contact/address sensitive-read capabilities",
+      "canonicalMapping": null,
+      "mappingStatus": "requires_owner_and_IAM_review"
+    }
+  ],
+  "registries": [
+    {
+      "plane": "studio",
+      "permissionCount": 26,
+      "lifecycleCounts": {
+        "proposed": 26
+      },
+      "operationBindingCount": 0,
+      "exactLegacyMatches": [],
+      "relatedCandidates": []
+    },
+    {
+      "plane": "neon",
+      "permissionCount": 24,
+      "lifecycleCounts": {
+        "proposed": 24
+      },
+      "operationBindingCount": 0,
+      "exactLegacyMatches": [],
+      "relatedCandidates": [
+        {
+          "code": "neon.address_contact.company_code.manage",
+          "kind": "capability",
+          "lifecycle": "proposed",
+          "scopes": [
+            {
+              "kind": "tenant",
+              "propagation": "exact"
+            },
+            {
+              "kind": "company_code",
+              "propagation": "exact"
+            }
+          ]
+        },
+        {
+          "code": "neon.address_contact.legal_entity.manage",
+          "kind": "capability",
+          "lifecycle": "proposed",
+          "scopes": [
+            {
+              "kind": "tenant",
+              "propagation": "exact"
+            },
+            {
+              "kind": "legal_entity",
+              "propagation": "exact"
+            }
+          ]
+        },
+        {
+          "code": "neon.address_contact.tenant.manage",
+          "kind": "capability",
+          "lifecycle": "proposed",
+          "scopes": [
+            {
+              "kind": "tenant",
+              "propagation": "exact"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "plane": "mesh",
+      "permissionCount": 33,
+      "lifecycleCounts": {
+        "proposed": 33
+      },
+      "operationBindingCount": 0,
+      "exactLegacyMatches": [],
+      "relatedCandidates": []
+    }
+  ],
+  "neonTableCoverage": [
+    {
+      "table": "master.address",
+      "reviewStatus": "pending_review",
+      "classification": "pending_review",
+      "writerOwner": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.address_link",
+      "reviewStatus": "pending_review",
+      "classification": "pending_review",
+      "writerOwner": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.contact_link",
+      "reviewStatus": "pending_review",
+      "classification": "pending_review",
+      "writerOwner": null,
+      "requiredScopeKinds": []
+    }
+  ],
+  "deployment": {
+    "verifierEnvironmentDeclared": false
+  },
+  "databaseSources": [
+    {
+      "plane": "studio",
+      "sources": [
+        "server/db/ddl/planes/studio/control/03_tables.sql",
+        "server/db/ddl/planes/studio/master/05_constraints.sql",
+        "server/db/ddl/planes/studio/master/06_indexes.sql",
+        "server/db/ddl/planes/studio/master/07_functions.sql",
+        "server/db/ddl/planes/studio/master/08_triggers.sql",
+        "server/db/ddl/planes/studio/master/10_rls.sql",
+        "server/db/ddl/planes/studio/master/11_grants.sql"
+      ]
+    },
+    {
+      "plane": "neon",
+      "sources": [
+        "server/db/ddl/planes/neon/control/03_tables.sql",
+        "server/db/ddl/planes/neon/master/05_constraints.sql",
+        "server/db/ddl/planes/neon/master/06_indexes.sql",
+        "server/db/ddl/planes/neon/master/07_functions.sql",
+        "server/db/ddl/planes/neon/master/08_triggers.sql",
+        "server/db/ddl/planes/neon/master/10_rls.sql",
+        "server/db/ddl/planes/neon/master/11_grants.sql"
+      ]
+    },
+    {
+      "plane": "mesh",
+      "sources": [
+        "server/db/ddl/planes/mesh/control/03_tables.sql",
+        "server/db/ddl/planes/mesh/master/05_constraints.sql",
+        "server/db/ddl/planes/mesh/master/06_indexes.sql",
+        "server/db/ddl/planes/mesh/master/07_functions.sql",
+        "server/db/ddl/planes/mesh/master/08_triggers.sql",
+        "server/db/ddl/planes/mesh/master/10_rls.sql",
+        "server/db/ddl/planes/mesh/master/11_grants.sql"
+      ]
+    }
+  ],
+  "blockers": [
+    {
+      "code": "LAUNCH_DECISIONS_PENDING",
+      "detail": "Resolve: tenantIds, provider, accountableOwners.domain, accountableOwners.integration, accountableOwners.iam, accountableOwners.database, accountableOwners.release"
+    },
+    {
+      "code": "PILOT_TENANT_ISOLATION_PENDING",
+      "detail": "Select distinct primary and negative-test tenant IDs and include both in the fixture scope; verification trust remains primary-tenant only"
+    },
+    {
+      "code": "CANONICAL_PERMISSION_MAPPING_REQUIRED",
+      "detail": "Legacy service permission strings lack complete exact catalog matches; related proposed/manage permissions are not replacements"
+    },
+    {
+      "code": "RELEASED_AUTHORITY_NOT_QUALIFIED",
+      "detail": "Obtain released typed mappings, scope bindings, role/grant evidence, and real-IAM acceptance per launch plane; catalog presence or candidate promotion does not certify these"
+    },
+    {
+      "code": "MASTER_TABLE_REVIEW_PENDING",
+      "detail": "Complete master address/contact ownership and sensitive-scope review in the authorization inventory"
+    },
+    {
+      "code": "TRUSTED_OWNER_SCOPE_RESOLUTION_REQUIRED",
+      "detail": "Current resources expose owner IDs or child IDs, not the IAM legalEntityId/companyCodeId/operatingOrganizationId/resourceId/recordId coordinates; qualify trusted owner-to-scope resolution and same-tenant negative tests"
+    },
+    {
+      "code": "VERIFIER_DEPLOYMENT_PLUMBING_PENDING",
+      "detail": "The checked Compose parity file does not declare MASTER_DATA_VERIFICATION_KEYS_JSON; verify any selected override separately"
+    },
+    {
+      "code": "LIVE_COMPATIBILITY_UNASSESSED",
+      "detail": "Run the read-only compatibility probe against each explicitly selected database with the application role; compare definitions and classify forward migrations. No live receipt was consumed"
+    }
+  ],
+  "inputs": [
+    {
+      "path": "docs/runbooks/master-data-phase1/launch-scope.json",
+      "sha256": "6a3596a7450025186fdd4dd7d7f0d41a11354771c04e1475fb12bd3a74f4b779"
+    },
+    {
+      "path": "server/packages/services/master-data/src/services.ts",
+      "sha256": "29092280cc608be2bf5f6e3714ec728d4751b3e6d0e28293daf5e80cd4538e54"
+    },
+    {
+      "path": "server/packages/services/master-data/src/master-data-routes.ts",
+      "sha256": "f933515ada87b01e6ae2d931abcdc34b35342beb08b0a16d2ecf3f1304df08dd"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json",
+      "sha256": "39a1c32737d49df564b41a0a96ac17c0cf09deef1e5c0c68553e38283861d34a"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/catalog/studio/operation-bindings.v1.json",
+      "sha256": "8d8d218f0ddc4adf7ffd4e81bb778bc6a27c49c2fc7c133bb64cbf3b256efd73"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/catalog/studio/scope-compatibility.v1.json",
+      "sha256": "c548f4b20dac2b51f38c79a36e7487ae7370bf01fe78f38a62dd1caef4e07a29"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json",
+      "sha256": "c104fea9d1a49119a97acd906630a1ab2414e775e87572667c9ef91b4a1d8c04"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/catalog/neon/operation-bindings.v1.json",
+      "sha256": "3a03925f3d4866fbf27b7c29554c2674e4c1fa50ced85c7122cb2251bf3fe910"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/catalog/neon/scope-compatibility.v1.json",
+      "sha256": "134cf87ebbff49cc0e66dc586ddfa54a86a9d0db1ed012f318671ee371ddfd19"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json",
+      "sha256": "7af277d1bb944f76cb0e7ee1de333de575da58458d9938e672bb140aff080915"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/operation-bindings.v1.json",
+      "sha256": "80d0a2460ecb8427e7dfe21a07455d629d8eff58656e99aa1170cefd8d2ac9ac"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/scope-compatibility.v1.json",
+      "sha256": "6417debfda686430f7d1a7d4a645f35bae7cc011002cfaa39fe091d56e91d720"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
+      "sha256": "cdabcec22810d5c5de9a55a89d42a2ebd50c4c9f83dbd686ea44c50db3cc1609"
+    },
+    {
+      "path": "server/packages/platform/iam/src/permission-authorizer.ts",
+      "sha256": "b86fdc259e9a757d2fb6e135ff78dfe4226ee99463c9e47c7f0cadad2c1af6de"
+    },
+    {
+      "path": "deploy/compose/instance/compose.parity.yaml",
+      "sha256": "692d3fcb0f46b940434f38ca7ce1d79d0107dabdef899c2e909ab0d81b1d967c"
+    },
+    {
+      "path": "server/packages/services/master-data/src/kysely-master-data-repository.ts",
+      "sha256": "3b612b84edf621e03f92bfe37eb62fd6e9bfe2f5eedddb2c2ecb720548d2e3bc"
+    },
+    {
+      "path": "server/packages/services/master-data/src/provider-evidence-verifier.ts",
+      "sha256": "2173887348a0f028afe65671d743efa84d97d753a795f6b73408c602886accb8"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/register-services.ts",
+      "sha256": "f1f14874e10000ece0cb835b0babac57c6c6f84f58977e432506e71443a17228"
+    },
+    {
+      "path": "server/db/ddl/common/master/03_platform_tables.sql",
+      "sha256": "674a64954ed4498cd13a028df3fd056184c9310748adbe4d1d62babba5f556fb"
+    },
+    {
+      "path": "server/db/seed/contracts/authorization/AUTHORIZATION-REBUILD-PLAN.md",
+      "sha256": "631b190aad931fbb3140bd48f1ed1b6d1193b036080415ec4563d1491b8feb19"
+    },
+    {
+      "path": "server/db/ddl/planes/studio/control/03_tables.sql",
+      "sha256": "7e122c348a02dd374539a11ff01a65a7243c52062538e84937627e0b5b94de5d"
+    },
+    {
+      "path": "server/db/ddl/planes/studio/master/05_constraints.sql",
+      "sha256": "d431a56b669c35587b6c8db0cc73d201dade7cb874d294edfe94d7632f28abe8"
+    },
+    {
+      "path": "server/db/ddl/planes/studio/master/06_indexes.sql",
+      "sha256": "8c27d902ef3ceb147d3cffc562d11318d0c494b672c868d1646c6d6ef4c34c2c"
+    },
+    {
+      "path": "server/db/ddl/planes/studio/master/07_functions.sql",
+      "sha256": "cecfe9efbe8a59cc17a0236ca4aea890bd3bf9e7428991ee7718c630b50c7cc5"
+    },
+    {
+      "path": "server/db/ddl/planes/studio/master/08_triggers.sql",
+      "sha256": "d5821f0e062263916e09bbd6d9794c7d1710139a81c580995f9c9d2908d3b6c9"
+    },
+    {
+      "path": "server/db/ddl/planes/studio/master/10_rls.sql",
+      "sha256": "e134eb6ef60c9e23fe34fd628e3779fb03e0627a6960411eccdc0cd27e034233"
+    },
+    {
+      "path": "server/db/ddl/planes/studio/master/11_grants.sql",
+      "sha256": "2067435f7da8d946d8a663eedb84abc9f5485f8f0e38ae47e6561c07c70b0e01"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/control/03_tables.sql",
+      "sha256": "f956a995e9199340bf3e469013d92173f557448544e60416744372eb514c1ddc"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/master/05_constraints.sql",
+      "sha256": "5e6819cae6752566140fe96991170ca03feac37105eb7cad107f411dd92e1c97"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/master/06_indexes.sql",
+      "sha256": "67ac6f19c7e56684ef1fc99c1aaf74999764228842ab6248e49938466651d043"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/master/07_functions.sql",
+      "sha256": "e41842c241518505ffc451ade8d43ac6cc2d287620622ff361cf19c027d068d4"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/master/08_triggers.sql",
+      "sha256": "40031eb7cf60a24f0c8d1cab2cb26bd137a23d12414b6a2e1b175743c3a7e7e6"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/master/10_rls.sql",
+      "sha256": "87db5503c5f8b2400db9e7c21b791fc221be8cd076efdcc9a5393bed80e2a06c"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/master/11_grants.sql",
+      "sha256": "a65c492526131dda63714be5d489bc133e14d04ce0db6eb4ad7c087a48ee2c28"
+    },
+    {
+      "path": "server/db/ddl/planes/mesh/control/03_tables.sql",
+      "sha256": "b270c97e688ff3d3da0e6e6404e45e7b8f99aa6dee29c0ccd14c52e3a3c3d595"
+    },
+    {
+      "path": "server/db/ddl/planes/mesh/master/05_constraints.sql",
+      "sha256": "21aef30336d36a2592be587672c88dc9d3581c3ff83335f8172841dba763f12b"
+    },
+    {
+      "path": "server/db/ddl/planes/mesh/master/06_indexes.sql",
+      "sha256": "152ad3818e453dded351f9235be0925c85826bcc82fe5f0e25f683d0ad6379f9"
+    },
+    {
+      "path": "server/db/ddl/planes/mesh/master/07_functions.sql",
+      "sha256": "55d9081804c5d4cd1b98f92f046d0da514f6a76c2d0ff09eba1589279910ed2d"
+    },
+    {
+      "path": "server/db/ddl/planes/mesh/master/08_triggers.sql",
+      "sha256": "cef6191e57b2c6145a9b55be264fd9eddea294f81d15f502f113e91fdfb5922d"
+    },
+    {
+      "path": "server/db/ddl/planes/mesh/master/10_rls.sql",
+      "sha256": "b40b918a56fe56cf68a791e1e9d9f9cf4957086316985865e5787e90e8a2ed97"
+    },
+    {
+      "path": "server/db/ddl/planes/mesh/master/11_grants.sql",
+      "sha256": "ac2771cd2a253acbb123d80cd56e9afcd334f0dc19cb7c463ae884eb7431ebaa"
+    },
+    {
+      "path": "tooling/scripts/verification/master-data-prerequisites.mjs",
+      "sha256": "9f26293facdc0152e2a76fa3efc05a05750aaade68d68d7df39f0c037009e05b"
+    },
+    {
+      "path": "docs/runbooks/master-data-phase1/database-compatibility.sql",
+      "sha256": "61cb318d94be72c2fb8ca9e549b1649469f4518ab357abe6ae7fb2762f588fce"
+    },
+    {
+      "path": "docs/runbooks/master-data-phase1/pilot-authorization-design.md",
+      "sha256": "f8003c0e35d04df9517a3f7ae607e654323178cc328804592cc941a0eebc4153"
+    }
+  ]
+}

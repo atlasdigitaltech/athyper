@@ -7,6 +7,8 @@ export interface PostgresNotificationListenerConfig {
   readonly connectionMode: "direct";
   readonly reconnectMinMs?: number;
   readonly reconnectMaxMs?: number;
+  /** Idle probe interval that detects half-open connections. Default 30s; 0 disables. */
+  readonly heartbeatMs?: number;
   readonly onError?: (error: Error) => void;
   /** Test/embedding hook; production callers use the default pg client. */
   readonly createClient?: () => pg.Client;
@@ -26,6 +28,9 @@ export function createPostgresNotificationListener(config: PostgresNotificationL
   let closed = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let attempt = 0;
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
+  const heartbeatMs = config.heartbeatMs ?? 30_000;
+  if (!Number.isInteger(heartbeatMs) || heartbeatMs < 0) throw new TypeError("Invalid listener heartbeat");
   let wake = () => {};
   let reconnected = () => {};
   const ending = new WeakSet<pg.Client>();
@@ -37,6 +42,7 @@ export function createPostgresNotificationListener(config: PostgresNotificationL
   };
 
   const scheduleReconnect = (failed: pg.Client): void => {
+    if (heartbeat && client === failed) { clearInterval(heartbeat); heartbeat = undefined; }
     if (client === failed) client = undefined;
     void end(failed);
     if (closed || reconnectTimer) return;
@@ -50,7 +56,7 @@ export function createPostgresNotificationListener(config: PostgresNotificationL
 
   const connect = async (): Promise<void> => {
     if (closed) return;
-    const next = config.createClient?.() ?? new Client({ connectionString: config.connectionString, application_name: `athyper-listener-${config.channel}` });
+    const next = config.createClient?.() ?? new Client({ connectionString: config.connectionString, application_name: `athyper-listener-${config.channel}`, keepAlive: true, keepAliveInitialDelayMillis: 10_000 });
     client = next;
     let failed = false;
     const fail = (error?: Error): void => {
@@ -69,6 +75,14 @@ export function createPostgresNotificationListener(config: PostgresNotificationL
       if (closed || client !== next) { await end(next); return; }
       const wasReconnect = attempt > 0;
       attempt = 0;
+      if (heartbeatMs > 0) {
+        heartbeat = setInterval(() => {
+          // A half-open socket raises no error; a stalled probe is the only signal.
+          const stalled = setTimeout(() => fail(new Error("LISTEN heartbeat timed out")), heartbeatMs);
+          next.query("SELECT 1").then(() => clearTimeout(stalled), (error) => { clearTimeout(stalled); fail(error instanceof Error ? error : new Error(String(error))); });
+        }, heartbeatMs);
+        (heartbeat as { unref?: () => void }).unref?.();
+      }
       if (wasReconnect) reconnected();
       wake();
     } catch (error) {
@@ -87,6 +101,7 @@ export function createPostgresNotificationListener(config: PostgresNotificationL
     },
     async close() {
       closed = true;
+      if (heartbeat) { clearInterval(heartbeat); heartbeat = undefined; }
       if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = undefined; }
       const current = client;
       client = undefined;

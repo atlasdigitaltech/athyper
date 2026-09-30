@@ -1,0 +1,28 @@
+# Explicit publication-only trust cutover. Ordinary Infisical consumers are unchanged.
+x-publication-trust: &publication-trust
+  ATHYPER_INSTANCE: ${ATHYPER_INSTANCE:?Set exact instance}
+  PUBLICATION_SIGNING_KEY_ID: ${PUBLICATION_SIGNING_KEY_ID:?Set reviewed key ID}
+  PUBLICATION_PRIVATE_KEY_REFERENCE: ${PUBLICATION_PRIVATE_KEY_REFERENCE:?Set private reference}
+  PUBLICATION_PUBLIC_KEY_REFERENCE: ${PUBLICATION_PUBLIC_KEY_REFERENCE:?Set public reference}
+  PUBLICATION_TRUST_DOMAIN: ${PUBLICATION_TRUST_DOMAIN:?Set trust domain}
+  PUBLICATION_TRUST_MANIFEST_FILE: /run/publication-trust/manifest.json
+  PUBLICATION_INFISICAL_URL: ${PUBLICATION_INFISICAL_URL:?Set secret-store endpoint}
+  PUBLICATION_INFISICAL_PROJECT_ID: ${PUBLICATION_INFISICAL_PROJECT_ID:?Set dedicated project}
+  PUBLICATION_INFISICAL_ENVIRONMENT: ${ATHYPER_INSTANCE:?Set exact instance}
+  PUBLICATION_INFISICAL_TOKEN_FILE: /run/publication-trust/token
+x-publication-trust-mounts: &publication-trust-mounts
+  - type: bind
+    source: ${PUBLICATION_TRUST_MANIFEST_FILE:?Set reviewed public manifest path}
+    target: /run/publication-trust/manifest.json
+    read_only: true
+  - type: bind
+    source: ${PUBLICATION_INFISICAL_TOKEN_FILE:?Set dedicated token path}
+    target: /run/publication-trust/token
+    read_only: true
+services:
+  api:
+    environment: *publication-trust
+    volumes: *publication-trust-mounts
+  worker:
+    environment: *publication-trust
+    volumes: *publication-trust-mounts

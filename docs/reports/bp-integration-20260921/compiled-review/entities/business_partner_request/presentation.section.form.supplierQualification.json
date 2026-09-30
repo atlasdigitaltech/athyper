@@ -1,0 +1,28 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner_request/presentation.section.form.supplierQualification",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "sectionKey": "form.supplierQualification",
+  "rendererKey": "platform.form.v1",
+  "form": {
+    "sections": [
+      "scope",
+      "criteria",
+      "commodityRegion",
+      "evidence",
+      "decision"
+    ],
+    "version": "2.0.0"
+  },
+  "fieldBindingNamespace": "request_payload",
+  "validationAuthority": "operation_and_registered_request_schema",
+  "dependencies": [
+    "business_partner_request/core"
+  ],
+  "accessAuthority": "operation_authorized_parent_flow",
+  "artifactHash": "sha256:8cda418449baee6534e082aeba699a7f9f09cfbc7a9a5c7c9083ea7ee1854d19"
+}

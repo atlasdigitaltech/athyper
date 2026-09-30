@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated_neon_image_binding_amendment",
+  "approved": false,
+  "applied": false,
+  "originalProposalRevision": "3c623d23098b2a862b3a32f38e256405ad3d70d2f57f93b5e2ec40845af51e3c",
+  "previousRuntimeImage": "sha256:bb6946f9f7d4e771dbc2f27d045dc768a009d4ff26b97d6bd5710ee08b3f4084",
+  "runtimeImage": "sha256:0a2546bd78a84e296dd43d1c59cd710e5e6c582f4ca8f089db056e62baafafd7",
+  "previousReleaseSetHash": "2638909aa28758e6bd9c19ffd9370a02c171c19d0dcfbb002ed12205c653de1e",
+  "releaseSetHash": "df0e005474db9b23ea476ff067e0172ddceff1b1bd9ef1fb86bb30275241bbde",
+  "artifacts": [
+    {
+      "releaseId": "145f6381-50c7-4450-8e16-7d66bf30b237",
+      "artifactHash": "4e9657a33a6b0957abe9826f935e2e2c6d7c0965ad52a1bc5e103bfffcdb4728"
+    },
+    {
+      "releaseId": "9827ce80-766d-4262-9b4f-835307ac33d2",
+      "artifactHash": "2bb595b521bedf15ee79f5182c2e0394ae3166b1382df1d8b21e00f655aff8d8"
+    },
+    {
+      "releaseId": "c2cc6900-26c1-47ca-8dfc-1d488000950c",
+      "artifactHash": "45ddc85ece1f453e84b1eccc0cea9ca141fe9847c68ab7d2500e7d347d7b75fc"
+    },
+    {
+      "releaseId": "ecbf538d-a1b7-4ba3-bb28-147d7263ed76",
+      "artifactHash": "da167c4e96230fdcd2383b812f5c50810c7b165ef431d08adc332a0b60f98f49"
+    },
+    {
+      "releaseId": "ff8168be-3136-41d5-9d07-df65c91d5c83",
+      "artifactHash": "b361dd52ce154c6e611f3064bfc97ad226de073d688238a09d97df72e420a708"
+    }
+  ],
+  "candidateManifest": "governance/policy/reports/business-partner-neon-denial-candidate-20260912.dev.json",
+  "candidateManifestSha256": "0f90d87a4cd2e87f01f8e20867a2c475c683c64d6817d2fdac3afc7740400f36",
+  "destination": {
+    "network": "athyper-bp-enter-isolated",
+    "container": "athyper-bp-enter-db",
+    "database": "athyper_neon"
+  },
+  "grantMutation": false,
+  "revokedAccessRestored": false,
+  "artifactChanges": false,
+  "activationAuthorized": false,
+  "scope": "Replace isolated API/worker with the denial-response correction and qualify already-revoked API/provider/command/Atlas boundaries. Keep all previous grants revoked.",
+  "validation": {
+    "newDirectoryDenialTests": 9,
+    "independentChildTests": 4,
+    "focusedServiceTests": 31,
+    "masterDataTypecheck": true,
+    "masterDataBuild": true
+  },
+  "excluded": [
+    "Any new or restored grants",
+    "Enforcement activation",
+    "Compatibility retirement",
+    "66-disposition acceptance",
+    "Mesh"
+  ],
+  "proposalRevision": "5ffe103d2645a4428119bdf795988022bb7981121dce2a82c52ec2d4f4eadc39"
+}

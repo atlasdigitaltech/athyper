@@ -297,7 +297,7 @@ BEGIN
         RETURN QUERY SELECT DISTINCT work.tenant_id FROM (
             SELECT m.tenant_id FROM event.notification_message m WHERE m.status IN ('pending','delivering') AND (m.expires_at IS NULL OR m.expires_at > clock_timestamp())
             UNION
-            SELECT o.tenant_id FROM event.outbox o WHERE o.event_type IS NOT NULL AND EXISTS (SELECT 1 FROM control.notification_routing_rule r WHERE r.event_type=o.event_type AND r.is_enabled AND (r.tenant_id IS NULL OR r.tenant_id=o.tenant_id)) AND NOT EXISTS (SELECT 1 FROM event.notification_outbox_state s WHERE s.tenant_id=o.tenant_id AND s.outbox_id=o.id AND s.status IN ('completed','dead_letter'))
+            SELECT o.tenant_id FROM event.outbox o WHERE o.event_type IS NOT NULL AND (o.event_type LIKE 'collaboration.comment.%' OR o.event_type LIKE 'attachments.%' OR EXISTS (SELECT 1 FROM control.notification_routing_rule r WHERE r.event_type=o.event_type AND r.is_enabled AND (r.tenant_id IS NULL OR r.tenant_id=o.tenant_id))) AND NOT EXISTS (SELECT 1 FROM event.notification_outbox_state s WHERE s.tenant_id=o.tenant_id AND s.outbox_id=o.id AND s.status IN ('completed','dead_letter'))
         ) work LIMIT p_limit;
     ELSIF p_work_kind = 'digest' THEN
         RETURN QUERY SELECT DISTINCT d.tenant_id FROM event.digest_staging d
@@ -318,6 +318,27 @@ BEGIN
           AND (d.next_retry_at IS NULL OR d.next_retry_at<=clock_timestamp()) LIMIT p_limit;
     END IF;
 END;
+$$;
+
+-- Resolves the tenant-local identity used by trusted notification maintenance
+-- jobs. SECURITY DEFINER is required because discovery starts with the global
+-- scheduler identity, which intentionally has no tenant principal membership.
+CREATE OR REPLACE FUNCTION event.fn_notification_worker_principal(p_tenant_id uuid)
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = master, pg_catalog
+AS $$
+    SELECT principal.id
+    FROM master.principal principal
+    WHERE principal.tenant_id = p_tenant_id
+      AND p_tenant_id = nullif(current_setting('app.current_tenant_id', true), '')::uuid
+      AND principal.status = 'active'
+    ORDER BY (principal.principal_type = 'service_account') DESC,
+             principal.created_at,
+             principal.id
+    LIMIT 1
 $$;
 
 -- Atomic worker claim. The active service normally claims one message at a

@@ -1,0 +1,31 @@
+# Opt-in local storage administration; combine with compose.yaml.
+services:
+  storage-console:
+    image: ${ATHYPER_IMAGE_SEAWEEDFS:-athyper/seaweedfs:4.46-hardened}
+    user: "${ATHYPER_RUNTIME_UID:-1000}:${ATHYPER_RUNTIME_GID:-1000}"
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /athyper/bin/start-storage-console.sh]
+    # Master/filer/volume endpoints stay bound to storage's private loopback.
+    network_mode: service:objectstorage
+    depends_on:
+      objectstorage: { condition: service_healthy }
+    secrets: [storage-console-password]
+    volumes:
+      - ./scripts/start-storage-console.sh:/athyper/bin/start-storage-console.sh:ro
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      test:
+        [CMD, wget, -q, -T, "3", --spider, http://127.0.0.1:23646/console/login]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+secrets:
+  storage-console-password:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/storage-console-password

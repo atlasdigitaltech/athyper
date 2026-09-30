@@ -1,4 +1,7 @@
-export * from "./rich-text-types.js";
-export * from "./clipboard-converter.js";
-export * from "./attachment-client.js";
-export * from "./rich-comment-composer.js";
+export * from "./rich-text-types";
+export * from "./rich-text-content";
+export { MAX_COMMENT_THREAD_DEPTH } from "@athyper/contract-platform-rich-text";
+export * from "./clipboard-converter";
+export * from "./attachment-client";
+export * from "./upload-lifecycle";
+export * from "./rich-comment-composer";

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "decision": "approved",
+  "proposalRevision": "381f262b588425e80f28f571bdd4602613f6d9bed58d9073a9cd49d02f4f6d6c",
+  "approvedAt": "2026-09-12T09:58:25.809Z",
+  "source": {
+    "channel": "user",
+    "exactMessage": "ok.. go ahead",
+    "respondingTo": "Simple manual walkthrough using existing test partners, one approval for needed permissions today and cleanup when finished"
+  },
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "effectiveUntil": "2026-09-12T16:00:00.000Z",
+  "grantsRestoreAuthorized": false
+}

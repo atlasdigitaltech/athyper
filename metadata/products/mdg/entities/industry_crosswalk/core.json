@@ -1,0 +1,202 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "industry_crosswalk/core",
+  "entityCode": "industry_crosswalk",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "primaryObject": "shared.industry_crosswalk",
+    "sourceObjects": [
+      "shared.industry_crosswalk"
+    ],
+    "idField": "id",
+    "tenantField": null,
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industryCrosswalk.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "sourceDomainCode",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "source_domain_code"
+      },
+      "dataType": "enum",
+      "display": {"lookup":{"code":"shared.classification_scheme"}},
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industryCrosswalk.core.fields.sourceDomainCode.label",
+        "defaultText": "Source classification scheme"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "sourceCode",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "source_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industryCrosswalk.core.fields.sourceCode.label",
+        "defaultText": "Source code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "targetDomainCode",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "target_domain_code"
+      },
+      "dataType": "enum",
+      "display": {"lookup":{"code":"shared.classification_scheme"}},
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industryCrosswalk.core.fields.targetDomainCode.label",
+        "defaultText": "Target classification scheme"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "targetCode",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "target_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industryCrosswalk.core.fields.targetCode.label",
+        "defaultText": "Target code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "mappingType",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "mapping_type"
+      },
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"EXACT","label":{"labelKey":"entity.industry_crosswalk.mappingtype.exact","defaultText":"Exact"}},{"value":"BROAD","label":{"labelKey":"entity.industry_crosswalk.mappingtype.broad","defaultText":"Broad"}},{"value":"NARROW","label":{"labelKey":"entity.industry_crosswalk.mappingtype.narrow","defaultText":"Narrow"}},{"value":"PARTIAL","label":{"labelKey":"entity.industry_crosswalk.mappingtype.partial","defaultText":"Partial"}},{"value":"RELATED","label":{"labelKey":"entity.industry_crosswalk.mappingtype.related","defaultText":"Related"}}]}},
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industry_crosswalk.core.fields.mappingType.label",
+        "defaultText": "Mapping type (reference only)"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "confidence",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "confidence"
+      },
+      "dataType": "decimal",
+      "storageType": "numeric(5,2)",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.industry_crosswalk.core.fields.confidence.label",
+        "defaultText": "Confidence"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "provenance",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "provenance"
+      },
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"OFFICIAL","label":{"labelKey":"entity.industry_crosswalk.provenance.official","defaultText":"Official"}},{"value":"AI_GENERATED","label":{"labelKey":"entity.industry_crosswalk.provenance.ai_generated","defaultText":"AI generated"}},{"value":"AI_VERIFIED","label":{"labelKey":"entity.industry_crosswalk.provenance.ai_verified","defaultText":"AI verified"}},{"value":"MANUAL","label":{"labelKey":"entity.industry_crosswalk.provenance.manual","defaultText":"Manual"}},{"value":"IMPORTED","label":{"labelKey":"entity.industry_crosswalk.provenance.imported","defaultText":"Imported"}}]}},
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industry_crosswalk.core.fields.provenance.label",
+        "defaultText": "Provenance"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "verified",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "is_verified"
+      },
+      "dataType": "boolean",
+      "storageType": "boolean",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industry_crosswalk.core.fields.verified.label",
+        "defaultText": "Verified"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "shared_reference"
+  },
+  "referencePicker": {
+    "valueField": "id",
+    "labelField": "sourceCode",
+    "displayFormat": "{sourceCode}",
+    "allowedTokens": [
+      "sourceCode"
+    ],
+    "load": "bounded_lookup"
+  },
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:048904284e75d3bbb3c6b7ac4d9998bcd7f430d62115ff3f4903f5fb5bb78cf8"
+}

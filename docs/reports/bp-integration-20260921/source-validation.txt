@@ -1,0 +1,1 @@
+PASS: 113 artifacts; hashes, catalog types, query/index allow-lists, protection/reveal contracts, relation defaults, scopes, translations, 19 flow variants and source coverage. Request table uses pinned source-DDL evidence, not live DB verification.

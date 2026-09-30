@@ -1,0 +1,843 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated_bp_qualification_access",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "releaseId": "c2cc6900-26c1-47ca-8dfc-1d488000950c",
+  "artifactHash": "45ddc85ece1f453e84b1eccc0cea9ca141fe9847c68ab7d2500e7d347d7b75fc",
+  "image": "sha256:671d0d5abecbfc16790e2d8e643222171eed8d1b5ab485b3b4048b466439fc47",
+  "destination": {
+    "container": "athyper-bp-enter-db",
+    "network": "athyper-bp-enter-isolated",
+    "database": "athyper_neon"
+  },
+  "effectiveFrom": "2026-09-11T21:15:00Z",
+  "effectiveUntil": "2026-09-12T01:15:00Z",
+  "batches": [
+    {
+      "account": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "purpose": "reads",
+      "roleId": "6bcabaf9-dcc2-45da-8b13-6879a847a9e2",
+      "groupId": "e266ee42-ba1c-4673-999b-ba0a982812c8",
+      "assignmentId": "89b80f8b-f14b-4a4e-9f67-a1c50309da55",
+      "code": "bp.enter.test.admin.reads.d9e4ea98",
+      "scope": {
+        "id": "1d8314f6-8541-57cf-8748-679cbe318bc8",
+        "status": "active",
+        "scope_key": "cirrusatlantic",
+        "target_id": "44444444-4444-4444-8444-444444444444",
+        "scope_kind": "tenant"
+      },
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "01a08fe1-ddfe-79e2-8d5c-90992cd48bc5",
+          "code": "neon.relationship.bp_target.enter",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7a0a-8aa4-4524ed0409b1",
+          "code": "neon.relationship.bp_target.discover",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7c40-8e11-547851886e10",
+          "code": "neon.relationship.bp_target.read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-779b-802c-385a5744f353",
+          "code": "neon.relationship.bp_target.navigate_manage",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7eb3-9e8e-9d774d43407c",
+          "code": "neon.relationship.bp_target.navigate_overview",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-790d-9dd4-612ecc6302b2",
+          "code": "neon.relationship.bp_target.identity_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-78cb-a0c2-454a5e805dfb",
+          "code": "neon.relationship.bp_target.contacts_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7e01-b95b-ca1da7634d43",
+          "code": "neon.relationship.bp_target.addresses_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-712a-9b28-614ba8c880eb",
+          "code": "neon.relationship.bp_target.identifier_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-77fb-9f41-a2b48fa84d81",
+          "code": "neon.relationship.bp_target.tax_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7632-8a07-087929eba398",
+          "code": "neon.relationship.bp_target.bank_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-719d-abcc-9a92238bf49b",
+          "code": "neon.relationship.bp_target.qualification_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7fd8-9c53-5a59cb1fd69b",
+          "code": "neon.relationship.bp_target.certificate_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-73e8-80ef-f62184fd79fe",
+          "code": "neon.relationship.bp_target.requests_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7f5b-9f7e-79e9830222b4",
+          "code": "neon.relationship.bp_target.activity_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7878-8cf6-1bf1f85f3727",
+          "code": "neon.relationship.bp_target.comments_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7a3f-a94c-3a54e7f35d97",
+          "code": "neon.relationship.bp_target.attachments_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        }
+      ]
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "purpose": "reads",
+      "roleId": "ab5df100-ee55-444b-a361-6835a262cb35",
+      "groupId": "fffe6d8c-0e8c-40ff-9d57-096120111224",
+      "assignmentId": "ed43f97c-f55b-4f35-b20b-f1cdace5ef2d",
+      "code": "bp.enter.test.owner.reads.d9e4ea98",
+      "scope": {
+        "id": "1d8314f6-8541-57cf-8748-679cbe318bc8",
+        "status": "active",
+        "scope_key": "cirrusatlantic",
+        "target_id": "44444444-4444-4444-8444-444444444444",
+        "scope_kind": "tenant"
+      },
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "01a08fe1-ddfe-79e2-8d5c-90992cd48bc5",
+          "code": "neon.relationship.bp_target.enter",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7a0a-8aa4-4524ed0409b1",
+          "code": "neon.relationship.bp_target.discover",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7c40-8e11-547851886e10",
+          "code": "neon.relationship.bp_target.read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-779b-802c-385a5744f353",
+          "code": "neon.relationship.bp_target.navigate_manage",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7eb3-9e8e-9d774d43407c",
+          "code": "neon.relationship.bp_target.navigate_overview",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-790d-9dd4-612ecc6302b2",
+          "code": "neon.relationship.bp_target.identity_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-78cb-a0c2-454a5e805dfb",
+          "code": "neon.relationship.bp_target.contacts_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7e01-b95b-ca1da7634d43",
+          "code": "neon.relationship.bp_target.addresses_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-712a-9b28-614ba8c880eb",
+          "code": "neon.relationship.bp_target.identifier_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-77fb-9f41-a2b48fa84d81",
+          "code": "neon.relationship.bp_target.tax_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7632-8a07-087929eba398",
+          "code": "neon.relationship.bp_target.bank_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-719d-abcc-9a92238bf49b",
+          "code": "neon.relationship.bp_target.qualification_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7fd8-9c53-5a59cb1fd69b",
+          "code": "neon.relationship.bp_target.certificate_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-73e8-80ef-f62184fd79fe",
+          "code": "neon.relationship.bp_target.requests_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7f5b-9f7e-79e9830222b4",
+          "code": "neon.relationship.bp_target.activity_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7878-8cf6-1bf1f85f3727",
+          "code": "neon.relationship.bp_target.comments_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-7a3f-a94c-3a54e7f35d97",
+          "code": "neon.relationship.bp_target.attachments_read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        }
+      ]
+    },
+    {
+      "account": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "purpose": "transfers",
+      "roleId": "3db77b6e-9cb3-4f72-ab66-e4629f2fdf0a",
+      "groupId": "8c10b1ad-9be5-4260-9c77-0d05c143714f",
+      "assignmentId": "9152e742-485b-47d0-ab9a-2476a743cd77",
+      "code": "bp.enter.test.admin.transfers.d9e4ea98",
+      "scope": {
+        "id": "1d8314f6-8541-57cf-8748-679cbe318bc8",
+        "status": "active",
+        "scope_key": "cirrusatlantic",
+        "target_id": "44444444-4444-4444-8444-444444444444",
+        "scope_kind": "tenant"
+      },
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "01a08fe1-ddfe-7e73-9d31-3f3dfd4f466b",
+          "code": "neon.relationship.bp_target.import",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08fe1-ddfe-72f9-93ba-0fc20abd6142",
+          "code": "neon.relationship.bp_target.export",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        }
+      ]
+    },
+    {
+      "account": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "purpose": "requests",
+      "roleId": "cdeafdc0-29fd-47b5-81b7-7ab2cd4ebac6",
+      "groupId": "0c84a167-686a-4cff-8fc6-c26802929874",
+      "assignmentId": "0874eee4-2bf1-4cc3-a98f-0dcdfa96f3cc",
+      "code": "bp.enter.test.admin.requests.d9e4ea98",
+      "scope": {
+        "id": "bd7f1a62-5c32-5a9b-a984-c5adc3370a24",
+        "status": "active",
+        "scope_key": "operating_organization:catl.operations",
+        "target_id": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+        "scope_kind": "operating_organization"
+      },
+      "propagation": "subtree",
+      "permissions": [
+        {
+          "id": "3135c400-b974-5368-9812-0655a4406ff9",
+          "code": "neon.relationship.entity_case.create",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "operating_organization",
+              "propagation": "subtree"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "7cea8375-f405-58cd-95c1-65d4ff771ca1",
+          "code": "neon.relationship.entity_case.read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "operating_organization",
+              "propagation": "subtree"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "f14d31b0-22ac-5fe5-bef7-651234a82b0e",
+          "code": "neon.relationship.entity_case.update",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "operating_organization",
+              "propagation": "subtree"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "60d005bc-e28a-513a-9960-eda9ecbc069d",
+          "code": "neon.relationship.entity_case.validate",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "operating_organization",
+              "propagation": "subtree"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "7a411617-6503-529a-ab78-4bcf389b606e",
+          "code": "neon.relationship.entity_case.submit",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "operating_organization",
+              "propagation": "subtree"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "high",
+          "requires_mfa": false,
+          "requires_sod": true
+        },
+        {
+          "id": "8e2797f1-ae80-5a00-95c1-65555680bc0e",
+          "code": "neon.relationship.entity_case.materialize",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "operating_organization",
+              "propagation": "subtree"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "critical",
+          "requires_mfa": false,
+          "requires_sod": true
+        }
+      ]
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "purpose": "approval",
+      "roleId": "678490d2-57b2-46ac-a3e0-5fb65503a350",
+      "groupId": "066164e6-17fc-4d88-b04e-4cdb7f9cbcbc",
+      "assignmentId": "217075ac-e091-4392-8a65-1911172267cc",
+      "code": "bp.enter.test.owner.approval.d9e4ea98",
+      "scope": {
+        "id": "bd7f1a62-5c32-5a9b-a984-c5adc3370a24",
+        "status": "active",
+        "scope_key": "operating_organization:catl.operations",
+        "target_id": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+        "scope_kind": "operating_organization"
+      },
+      "propagation": "subtree",
+      "permissions": [
+        {
+          "id": "7cea8375-f405-58cd-95c1-65d4ff771ca1",
+          "code": "neon.relationship.entity_case.read",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "operating_organization",
+              "propagation": "subtree"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "9cdb6092-2e88-5a49-a91b-d649f98766e3",
+          "code": "neon.relationship.entity_case.decide",
+          "kind": "entity_operation",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "operating_organization",
+              "propagation": "subtree"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "high",
+          "requires_mfa": true,
+          "requires_sod": true
+        }
+      ]
+    }
+  ],
+  "conditions": {
+    "mfa": "Preserve catalog flags per permission; case.decide requires MFA. Normal route/workflow step-up remains enforced. No extra grant-level MFA condition is implied.",
+    "separationOfDuties": "catl.admin creates/submits/applies; catl.owner decides; existing maker/approver/applier checks remain mandatory.",
+    "propagation": "Tenant grants are exact-only. Case grants use operating-organization subtree as required by the existing catalog: selected organization and its descendants. Current captured scope inventory has one organization; future descendants would be included during this temporary window.",
+    "resourceBoundary": "Tenant reads/transfers affect authorized BP data throughout this isolated tenant. entity_case grants cover generic governed cases within the selected organization; IAM does not limit these permission codes to BP or particular test records.",
+    "testDiscipline": "Use newly created test records and cases only; this is an operator restriction, not a per-record grant condition.",
+    "sourceConstraints": "Current source denials and conditions remain; no legacy allow grants are automatically added.",
+    "cleanup": "Revoke only these new memberships and assignments after testing, or expire at the exact end; never restore old grants."
+  },
+  "excluded": [
+    "Shared DEV grants and activation",
+    "Sensitive reveals",
+    "Company-scoped permissions: no active company scope target exists",
+    "Company-owned pilot and independent-child grants until exact published policies/scopes are qualified",
+    "Supplier qualification administration",
+    "Approval of 66 policy dispositions",
+    "Expired/revoked test grants"
+  ],
+  "sharedGrantChanges": [],
+  "activationAuthorized": false,
+  "approved": false,
+  "supersedesProposalRevision": "f24babe9afad16fb34680bee4da2e407a5353e446b7b4bcaa450bc77ae860d3a",
+  "evidence": {
+    "path": "governance/policy/reports/business-partner-enter-qualification-access-20260912.dev.json",
+    "sha256": "57708a2d5d80379abfb1f0bc8e840e7d1844eaf007956bbee19f3268ec2826b2"
+  },
+  "proposalRevision": "2b7f0041ec7fd67b8bdc59d7c06ea950bf4c50cef6f315a61337584e9945621c"
+}

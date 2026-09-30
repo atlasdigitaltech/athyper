@@ -1,0 +1,42 @@
+rule_files:
+  - ../../../config/telemetry/metrics/record-transfer-alerts.yml
+evaluation_interval: 30s
+tests:
+  - interval: 1m
+    input_series:
+      - series: athyper_record_transfer_operations_total{plane="neon",kind="import",outcome="failed"}
+        values: 0 0 0 0 0 0 0 0 0 0 1 2 3 3 3 3 3 3 3 3
+    promql_expr_test:
+      - expr: ALERTS{alertname="RecordTransferTerminalFailures",alertstate="firing"}
+        eval_time: 17m
+        exp_samples:
+          - labels: '{__name__="ALERTS",alertname="RecordTransferTerminalFailures",alertstate="firing",plane="neon",kind="import",severity="warning",team="platform",service="record-transfer"}'
+            value: 1
+  - interval: 1m
+    input_series:
+      - series: athyper_record_transfer_operations_total{plane="neon",kind="import",outcome="failed"}
+        values: 0+0x11
+    promql_expr_test:
+      - expr: ALERTS{alertname="RecordTransferTerminalFailures",alertstate="firing"}
+        eval_time: 10m
+        exp_samples: []
+  - interval: 1m
+    input_series:
+      - series: athyper_record_transfer_stuck{plane="neon",kind="import"}
+        values: 1+0x6
+    promql_expr_test:
+      - expr: ALERTS{alertname="RecordTransferStuckExecution",alertstate="firing"}
+        eval_time: 6m
+        exp_samples:
+          - labels: '{__name__="ALERTS",alertname="RecordTransferStuckExecution",alertstate="firing",plane="neon",kind="import",severity="critical",team="platform",service="record-transfer"}'
+            value: 1
+  - interval: 1m
+    input_series:
+      - series: athyper_record_transfer_retries_total{plane="mesh",kind="export"}
+        values: 0 0 0 0 0 0 0 0 0 0 12 12 12 12 12 12 12 12 12 12
+    promql_expr_test:
+      - expr: ALERTS{alertname="RecordTransferRetryStorm",alertstate="firing"}
+        eval_time: 17m
+        exp_samples:
+          - labels: '{__name__="ALERTS",alertname="RecordTransferRetryStorm",alertstate="firing",plane="mesh",kind="export",severity="warning",team="platform",service="record-transfer"}'
+            value: 1

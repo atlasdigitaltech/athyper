@@ -1,0 +1,16 @@
+source_key,table,authoring_core,persisted_value,record_identity,declared_filter_scope,active_new_selection,historical_display,consumer_status
+shared.country,shared.country,country/core,code,uuid,none,active only,exact code,existing BP address and country consumers
+shared.currency,shared.currency,currency/core,code,uuid,none,active only,exact code,existing and future BP financial consumers
+shared.language,shared.language,language/core,code,uuid,none,active only,exact code,future controlled business-language consumer
+shared.locale,shared.locale,locale/core,code,uuid,languageCode|countryCode,active only,exact code,future locale consumer; distinct from language
+shared.timezone,shared.timezone,timezone/core,code,uuid,none,active only,exact code,future address/operating-time consumer; aliases retain canonicalCode
+shared.uom,shared.uom,uom/core,code,uuid,quantityType,active only,exact code,future commodity/workforce unit consumer
+shared.state_region,shared.state_region,state_region/core,code,uuid,countryCode required,active only,exact code,BP address phase BP2-02
+shared.classification_scheme,shared.classification_scheme,classification_scheme/core,code,uuid,schemeKind,active only,exact code,classification phase BP2-05
+shared.commodity_code,shared.commodity_code,commodity_code/core,uuid,uuid,domainCode required,active only,exact UUID,classification phase BP2-05
+shared.industry_code,shared.industry_code,industry_code/core,uuid,uuid,domainCode required,active only,exact UUID,classification phase BP2-05
+shared.commodity_crosswalk,shared.commodity_crosswalk,commodity_crosswalk/core,uuid,uuid,sourceDomainCode|targetDomainCode required,active only,exact UUID,classification phase BP2-05
+shared.industry_crosswalk,shared.industry_crosswalk,industry_crosswalk/core,uuid,uuid,sourceDomainCode|targetDomainCode required,active only,exact UUID,classification phase BP2-05
+shared.bank_institution,shared.bank_institution,bank_institution/core,uuid,uuid,countryCode,active and effective only,exact UUID,BP2-09 banking directory replacement
+shared.bank_branch,shared.bank_branch,bank_branch/core,uuid,uuid,institutionId required; countryCode optional,active and effective only,exact UUID,BP2-09 banking directory replacement
+shared.bank_identifier,shared.bank_identifier,bank_identifier/core,uuid,uuid,institutionId required; branchId|jurisdiction|scheme optional,active and effective only,exact UUID,BP2-09 banking directory replacement

@@ -43,6 +43,8 @@ export class AtlasBindingRegistry {
 }
 
 function validateBinding(binding: AtlasModelBinding): void {
+  if(binding.providerId==="ollama"&&(binding.credentialPolicy!=="local_transport"||binding.routingPolicyId!=="no-fallback-v1"||binding.fallbackBindingIds?.length||!/^sha256:[a-f0-9]{64}$/.test(binding.modelDigest??""))) throw new TypeError("Local Atlas bindings require a digest and prohibit fallback.");
+  if(binding.providerId!=="ollama"&&binding.credentialPolicy==="local_transport")throw new TypeError("Local transport cannot authenticate cloud providers.");
   const required = [binding.bindingId, binding.bindingRevision, binding.publicModelId, binding.upstreamModelId, binding.adapterId, binding.adapterVersion, binding.credentialOwnerId, binding.providerRegion, binding.dataHandlingProfileId, binding.priceVersion];
   if (required.some((value) => !value.trim())) throw new TypeError("Atlas model bindings require exact non-empty identifiers.");
   if(binding.routingPolicyId==="no-fallback-v1"&&(binding.fallbackBindingIds?.length??0)>0)throw new TypeError("No-fallback Atlas bindings cannot declare fallback bindings.");

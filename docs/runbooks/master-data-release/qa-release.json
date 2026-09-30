@@ -1,0 +1,48 @@
+{
+  "schema": "athyper.master-data.environment-release.v1",
+  "environment": "qa",
+  "decisionStatus": "pending",
+  "deploymentTarget": "athyper-qa",
+  "plane": "neon",
+  "channels": [
+    "email"
+  ],
+  "primaryTenantId": "44444444-4444-4444-8444-444444444444",
+  "negativeTestTenantId": "11111111-1111-4111-8111-111111111111",
+  "tenantInventoryReference": "qa-identity-inventory.json",
+  "accountableOwners": {
+    "domain": null,
+    "integration": null,
+    "iam": null,
+    "database": null,
+    "release": null
+  },
+  "provider": {
+    "id": null,
+    "configurationReference": null,
+    "verifiedSender": null,
+    "authorizedAcceptanceRecipients": []
+  },
+  "ownershipAttestation": {
+    "implementation": "local_only_nonlocal_integration_required",
+    "configurationReference": null,
+    "trustReference": null,
+    "keyFingerprint": null
+  },
+  "candidateImageDigest": null,
+  "rollbackImageDigest": null,
+  "acceptance": {
+    "authentication": null,
+    "sixRoutes": null,
+    "realInboxConfirmation": null,
+    "tenantAndOwnerDenials": null,
+    "databaseRollback": null,
+    "auditAndOutboxConsumers": null,
+    "keyIsolationAndRotation": null,
+    "deploymentRollback": null
+  },
+  "qualified": false,
+  "workStatus": "open",
+  "executionStatus": "deferred_by_user",
+  "deferralReason": "Environment setup, qualification and deployment will be scheduled later at the user's request."
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "athyper.business-partner-account-link-receipt/1",
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "businessPartnerId": "f7688c3d-8c92-5651-a469-da3f4f786375",
+  "networkRelationshipId": "01a07108-f042-78ac-a61f-ac7979663a69",
+  "profilePublicationId": "b4519db7-5f3d-44ed-bfc8-61077ccdb1d3",
+  "profileDeliveryEventId": "549f227c-0615-4c1e-82fc-2fd030e4dc7d",
+  "profileDeliveryDisposition": "applied",
+  "accountLinkId": "4daf9926-532e-47f4-9f3a-59a1d425f230",
+  "accountLinkStatus": "active",
+  "externalReferenceId": "36cf2cdb-1aea-446b-b8f8-213baf47c39c",
+  "maker": {
+    "principalCode": "catl.admin",
+    "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93"
+  },
+  "checker": {
+    "principalCode": "catl.owner",
+    "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+    "approvedAt": "2026-09-05T13:04:26.046265Z"
+  },
+  "decisionFingerprint": "233e51881f66a3a51eae3ec12bfb3adfe44b9f671959e5fc53080c00e98f741d",
+  "containsCredentials": false,
+  "qualification": "local_manual_browser"
+}

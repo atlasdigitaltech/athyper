@@ -1,0 +1,13 @@
+Command: pnpm --dir server/apps/platform-host test
+Exit: 1
+ Test Files  3 failed | 69 passed | 1 skipped (73)
+      Tests  507 passed | 1 skipped (508)
+   Duration  4.67s (transform 25.01s, setup 0ms, import 53.46s, tests 2.62s, environment 5ms)
+ FAIL  src/composition/__tests__/business-partner-backend-intents.test.ts [ src/composition/__tests__/business-partner-backend-intents.test.ts ]
+Error: ENTITY_PERMISSION_TRANSITIONS_REQUIRED
+ FAIL  src/composition/__tests__/business-partner-backend-mapping.test.ts [ src/composition/__tests__/business-partner-backend-mapping.test.ts ]
+Error: ENTITY_PERMISSION_TRANSITIONS_REQUIRED
+ FAIL  src/composition/__tests__/partner-section-contract.test.ts [ src/composition/__tests__/partner-section-contract.test.ts ]
+Error: Cannot find module '../entities/business-partner-record-providers.js' imported from /home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/partner-section-contract.test.ts
+
+Targeted revision-authorizer, persisted-scopes and parent-admission: 19 passed.

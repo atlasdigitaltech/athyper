@@ -1,0 +1,50 @@
+# DEV-only isolated source deployment. No published port and no combined bootstrap.
+services:
+  control-api:
+    image: ${ATHYPER_CONTROL_IMAGE:?set existing DEV Node runtime image}
+    user: "1000:1000"
+    working_dir: ${ATHYPER_SOURCE_ROOT:?set repository root}/server/apps/platform-host
+    entrypoint: ["node"]
+    command: ["--import", "tsx", "src/entrypoints/control-api.ts"]
+    environment:
+      ATHYPER_ENV: local
+      ATHYPER_INSTANCE: dev
+      ATHYPER_DOMAIN_SUFFIX: dev.athyper.test
+      PLATFORM_AUTHORITY_TENANT_ID: 11111111-1111-4111-8111-111111111111
+      PLATFORM_CONTROL_REALM: platform-control
+      PLATFORM_CONTROL_ISSUER_URL: https://iam.dev.athyper.test/realms/platform-control
+      PLATFORM_CONTROL_AUDIENCE: athyper-platform-control-api
+      PLATFORM_CONTROL_LISTEN_HOST: 0.0.0.0
+      PLATFORM_CONTROL_INTERNAL_JWKS: "1"
+      PLATFORM_CONTROL_DATABASE_URL_FILE: /run/control/database-url
+      PLATFORM_CONTROL_TRUST_MANIFEST_FILE: /run/control/trust.json
+      PLATFORM_CONTROL_SIGNING_KEY_ID: athyper-publication-dev-signing-v1
+      PLATFORM_CONTROL_SECRET_PROVIDER: infisical
+      PLATFORM_CONTROL_INFISICAL_TOKEN_FILE: /run/secrets/publication-token
+      NODE_EXTRA_CA_CERTS: /run/secrets/tls.crt
+    env_file: ["${ATHYPER_CONTROL_ROOT:?set control credential root}/runtime.env"]
+    volumes:
+      - ${ATHYPER_SOURCE_ROOT}:${ATHYPER_SOURCE_ROOT}:ro
+      - ${ATHYPER_CONTROL_ROOT}/database-url:/run/control/database-url:ro
+      - ${ATHYPER_CONTROL_ROOT}/trust.json:/run/control/trust.json:ro
+      - ${ATHYPER_DEV_SECRET_ROOT:?set DEV secret root}/publication-trust-v1/publisher-token:/run/secrets/publication-token:ro
+      - ${ATHYPER_PLATFORM_TLS_CERT:?set public TLS certificate}:/run/secrets/tls.crt:ro
+    networks: [app, data]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:4010/livez').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+networks:
+  app:
+    external: true
+    name: athyper-dev_app
+  data:
+    external: true
+    name: athyper-dev_data

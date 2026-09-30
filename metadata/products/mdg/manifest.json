@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "product": "mdg",
+  "purpose": "authoring-source-layout",
+  "publicationStatus": "not-published-by-relocation",
+  "entitiesRoot": "entities",
+  "logicalReferenceBase": "entities",
+  "reviewRoot": "review",
+  "schemasRoot": "../../schemas/entity-artifacts-v2",
+  "releaseEntry": "business_partner/release.json",
+  "targetPlanes": ["neon"],
+  "note": "Layout manifest only; not a compiler input or signed deployment manifest. Additional in-progress entity definitions are not implicitly included in release membership."
+}

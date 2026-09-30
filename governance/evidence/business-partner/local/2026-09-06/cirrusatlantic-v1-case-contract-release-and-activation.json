@@ -1,0 +1,55 @@
+{
+  "schema": "athyper.development-case-contract-publication-and-activation-receipt/1",
+  "observedAt": "2026-09-05T17:41:21Z",
+  "environment": "dev",
+  "productionQualified": false,
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "publicationKey": "metadata.entity.master_business_partner.44444444444444448444444444444444",
+  "revision": {
+    "id": "be662cda-e534-4247-a8f7-4f509c79645c",
+    "contractHash": "d6b3c830fb4e2e906aea8ee10227eeacaa089774291f793c4f02ea608515df95",
+    "createdAt": "2026-09-05T17:07:29.781004Z",
+    "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13"
+  },
+  "release": {
+    "id": "f9db7a14-2831-45c5-a175-546f30b3af46",
+    "releaseNo": 4,
+    "releaseKind": "publish",
+    "status": "published",
+    "releaseHash": "d6b3c830fb4e2e906aea8ee10227eeacaa089774291f793c4f02ea608515df95",
+    "manifestHash": "20b8636a13a3c74a85bafdc70d8310ed523e474bf8d3472ea1f8370213ee41d4",
+    "approvedAt": "2026-09-05T17:08:17.026014Z",
+    "approvedBy": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+    "publishedAt": "2026-09-05T17:12:06.606127Z",
+    "publishedBy": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f"
+  },
+  "artifact": {
+    "id": "d958c422-1a99-4540-b3d6-8f61326815b7",
+    "kind": "entity_runtime",
+    "targetPlane": "neon",
+    "contentHash": "58c8866a668b859b2514904e41b52c7582927fba5f2b26b14eaa4fd884114c7e",
+    "status": "signed",
+    "signatureAlgorithm": "Ed25519",
+    "signingKeyId": "athyper-dev-publication-ed25519-20260905",
+    "validatedAt": "2026-09-05T17:08:17.155967Z",
+    "signedAt": "2026-09-05T17:08:17.156632Z"
+  },
+  "consumer": {
+    "deploymentId": "01a0728a-d886-7055-ad66-fc24886dadef",
+    "status": "activated",
+    "targetPlane": "neon",
+    "targetEnvironment": "local",
+    "receivedAt": "2026-09-05T17:10:56.010982Z",
+    "stagedAt": "2026-09-05T17:10:56.023200Z",
+    "verifiedAt": "2026-09-05T17:10:56.026731Z",
+    "activatedAt": "2026-09-05T17:10:56.034947Z",
+    "signatureVerified": true,
+    "manifestValid": true,
+    "runtimeCompatible": true,
+    "activeContractHash": "d6b3c830fb4e2e906aea8ee10227eeacaa089774291f793c4f02ea608515df95",
+    "localAppliedReleaseId": "01a0728d-4511-7977-9103-7d8c0d55000c",
+    "acknowledgementId": "01a0728d-4524-7833-9745-4015ec694d7f",
+    "acknowledgedAt": "2026-09-05T17:10:56.036274Z",
+    "activeArtifactHash": "58c8866a668b859b2514904e41b52c7582927fba5f2b26b14eaa4fd884114c7e"
+  }
+}

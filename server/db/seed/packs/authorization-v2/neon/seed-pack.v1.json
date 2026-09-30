@@ -4,6 +4,26 @@
   "semanticPermissionContract": {
     "contractVersion": "athyper.authorization.semantic.v1",
     "permissionIdentity": "plane.domain.entity.operation",
+    "sharedCapabilities": {
+      "common.platform.reference.view": {
+        "namespace": "common",
+        "permissionKind": "capability",
+        "planes": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "scope": "tenant",
+        "propagation": "exact",
+        "enrollment": "published_public_read_only_shared_reference_graph",
+        "allowedOperations": [
+          "list",
+          "read",
+          "view"
+        ],
+        "grants": "plane_local_only"
+      }
+    },
     "defaultDecision": "deny",
     "rules": {
       "keycloak": "authentication_client_admission_and_assurance_only",
@@ -30,6 +50,22 @@
   "permissionCatalog": {
     "version": "2.0.0",
     "operations": [
+      {
+        "permissionId": "51f45819-773a-566d-a4bc-69784c28afb2",
+        "canonicalPermissionCode": "common.platform.reference.view",
+        "plane": "neon",
+        "entityCode": "reference",
+        "operationCode": "view",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "62eeccb95220b38bf2bc138394ec753a6e9bc59be6a1a3d43a9a43c373bdb608",
+        "permissionKind": "capability",
+        "moduleCode": "fnd"
+      },
       {
         "permissionId": "78c1cb7c-7940-54e0-b78b-5c4773d4cadd",
         "canonicalPermissionCode": "neon.address_contact.company_code.manage",
@@ -423,6 +459,15 @@
     "defaultScopeBehavior": "deny_undeclared",
     "permissions": [
       {
+        "permissionCode": "common.platform.reference.view",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
         "permissionCode": "neon.address_contact.company_code.manage",
         "scopes": [
           {
@@ -759,7 +804,7 @@
         ]
       }
     ],
-    "sha256": "dd6d5beff70972101abf790f928a2371ddeb3f4abbb50438b485d89577883a12"
+    "sha256": "3f3fd79705164f2ce4c12146cdc3bea229c5d0d60922676a576b51a57e485f6c"
   },
   "authority": {
     "version": "authorization.clean-slate.v1",
@@ -6598,7 +6643,7 @@
   },
   "identityContract": {
     "realm": "athyper",
-    "sourceSha256": "6a7f06733d4ac0ac0440faa40494f4b7e658f416e0cd802a89811eccae056b8a",
+    "sourceSha256": "47bdffb78e9dde8bc7bad9fe6425ebc6c2702f2fdb032f0e84d7177029605c3a",
     "enabledSubjectCount": 161,
     "mappedSubjectCount": 161,
     "unmanagedKeycloakUsers": "deny",

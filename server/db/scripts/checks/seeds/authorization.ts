@@ -97,7 +97,7 @@ const keycloakSetup = await readJson<{
   }>;
 }>(resolve(
   repositoryRoot,
-  "stack/config/iam/realm-athyper-demosetup.json",
+  "deploy/config/iam/realm-athyper-demosetup.json",
 ));
 const invalidOrganizationAliases = (keycloakSetup.tenantOrganizations ?? [])
   .filter((organization) => organization.attributes?.context_kind?.includes("tenant"))

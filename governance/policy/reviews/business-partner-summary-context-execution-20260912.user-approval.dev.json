@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "decision": "approved",
+  "proposalRevision": "bb769f8f806da7788ea26b6d6cc2fa1f4ed4a304486c8dc22dca5d63f47e8bd6",
+  "approvedAt": "2026-09-12T09:06:03.877Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "Corrected release proposal bb769f8f, 43 permissions in eight fresh groups through 17:30 MYT"
+  },
+  "effectiveUntil": "2026-09-12T09:30:00.000Z",
+  "activationAuthorized": false,
+  "compatibilityRetirementAuthorized": false
+}

@@ -1,0 +1,103 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "timezone/core",
+  "entityCode": "timezone",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "primaryObject": "shared.timezone",
+    "sourceObjects": [
+      "shared.timezone"
+    ],
+    "idField": "code",
+    "tenantField": null,
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "code",
+      "binding": {
+        "sourceObject": "shared.timezone",
+        "column": "code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.timezone.core.fields.code.label",
+        "defaultText": "IANA time zone"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "name",
+      "binding": {
+        "sourceObject": "shared.timezone",
+        "column": "name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.timezone.core.fields.name.label",
+        "defaultText": "Display name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "canonicalCode",
+      "binding": {
+        "sourceObject": "shared.timezone",
+        "column": "canonical_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.timezone.core.fields.canonicalCode.label",
+        "defaultText": "Canonical time zone"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "shared_reference"
+  },
+  "referencePicker": {
+    "valueField": "code",
+    "labelField": "name",
+    "displayFormat": "{name} ({code})",
+    "allowedTokens": [
+      "name",
+      "code"
+    ],
+    "load": "bounded_lookup"
+  },
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:bee37e5a3402ef89d8aa6459a65761478f741104a52c9e4bdfe8488f7f6be10a"
+}

@@ -6,7 +6,7 @@ type Database = Record<string, never>;
 type RecordTransaction = Transaction<Database>;
 
 /** PostgreSQL adapter for event.command_execution. Every call requires the active record transaction. */
-export function createKyselyCommandExecutionStore(): CommandExecutionStore<RecordTransaction, RecordMutationResult> {
+export function createKyselyCommandExecutionStore<Result extends object = RecordMutationResult>(): CommandExecutionStore<RecordTransaction, Result> {
   return {
     async begin(input, transaction) {
       const inserted = await sql<{ id: string }>`
@@ -28,7 +28,7 @@ export function createKyselyCommandExecutionStore(): CommandExecutionStore<Recor
         id: string;
         request_fingerprint: string;
         status: string;
-        result_payload: RecordMutationResult | null;
+        result_payload: Result | null;
       }>`
         SELECT id, request_fingerprint, status, result_payload
           FROM event.command_execution

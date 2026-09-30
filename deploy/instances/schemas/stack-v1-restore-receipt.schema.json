@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/stack-v1-restore-receipt-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "completedAt", "exportDirectory", "databaseCount", "postgresImage", "exportIntakeSha256", "exportManifestSha256", "databaseVerificationSha256", "containerRemoved", "volumeRemoved", "passed"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "StackV1RestoreReceipt" },
+    "completedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T" },
+    "exportDirectory": { "type": "string", "pattern": "^athyper-stack-v1-[0-9]{8}T[0-9]{6}Z$" },
+    "databaseCount": { "type": "integer", "minimum": 1 },
+    "postgresImage": { "type": "string", "minLength": 4 },
+    "exportIntakeSha256": { "type": "string", "pattern": "^(?!0{64}$)[a-f0-9]{64}$" },
+    "exportManifestSha256": { "type": "string", "pattern": "^(?!0{64}$)[a-f0-9]{64}$" },
+    "databaseVerificationSha256": { "type": "string", "pattern": "^(?!0{64}$)[a-f0-9]{64}$" },
+    "containerRemoved": { "const": true },
+    "volumeRemoved": { "const": true },
+    "passed": { "const": true }
+  }
+}

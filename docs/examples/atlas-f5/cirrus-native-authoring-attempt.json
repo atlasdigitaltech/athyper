@@ -1,0 +1,15 @@
+{
+  "at": "2026-09-10T02:05:59.604Z",
+  "status": 201,
+  "response": {
+    "id": "28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "entityId": "8e409dca-cb54-5110-9ed4-6174889cef82",
+    "entityCode": "unknown",
+    "branchCode": "atlas-f5-retrieval",
+    "status": "draft",
+    "revision": 0,
+    "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13"
+  },
+  "changeSetId": "28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb"
+}

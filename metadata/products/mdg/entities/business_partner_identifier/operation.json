@@ -1,0 +1,65 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "operation",
+  "artifactKey": "business_partner_identifier/operation",
+  "entityCode": "business_partner_identifier",
+  "plane": "neon",
+  "operations": [
+    {
+      "key": "reveal",
+      "permissionCode": "neon.relationship.business_partner_identifier.reveal",
+      "execution": { "handlerKey": "neon.bp.identifier.reveal.v1", "registryRequired": true },
+      "scopeBinding": { "scopeSource": "persisted_record", "resolverKey": "neon.business-context.v1", "denyUnresolved": true },
+      "idempotency": "single_use_claim",
+      "cache": "no_store",
+      "policyRequirements": ["elevated_assurance", "purpose_bound_claim", "audit_in_same_transaction"]
+    },
+    {
+      "key": "read",
+      "permissionCode": "neon.business_partner_identifier.read",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.business_partner_identifier.read.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "not_applicable"
+    },
+    {
+      "key": "request_change",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "permissionStatus": "requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.bp.governed-request.create.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required",
+      "draftEntityCode": "business_partner_request",
+      "targetBinding": {
+        "targetEntityCode": "business_partner_identifier",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
+    }
+  ],
+  "policyBindings": [],
+  "dependencies": [
+    "business_partner_identifier/core",
+    "platform/governed-child-operation.v1"
+  ],
+  "artifactHash": "sha256:8a2b3ec821b7da5bf93ecb74fcb8cb0a946ed6fed91c6b7e6ce62f55232bdfcb",
+  "operationDefaultsProfile": "platform.governed-child-operation.v1",
+  "operationDefaultsProfileRef": "platform/governed-child-operation.v1.json"
+}

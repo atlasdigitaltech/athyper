@@ -1,0 +1,57 @@
+{
+  "capturedAt": "2026-09-11T22:11:10.963657+00:00",
+  "scope": "development only",
+  "containers": [
+    {
+      "name": "/athyper-dev-virusscan-1",
+      "image": "athyper/clamav:1.5.2-zip-limit-1",
+      "imageId": "sha256:6f8eb7e3a9050961952d6d5fff99b3a65ae743e22c490a7b8a6510c691939e91",
+      "state": "running",
+      "health": "healthy",
+      "capDrop": ["ALL"],
+      "capAdd": [
+        "CAP_CHOWN",
+        "CAP_DAC_OVERRIDE",
+        "CAP_FOWNER",
+        "CAP_SETGID",
+        "CAP_SETUID"
+      ]
+    },
+    {
+      "name": "/athyper-dev-docrender-1",
+      "image": "gotenberg/gotenberg:8.31.0",
+      "imageId": "sha256:f0d86e8a1dbc7b33a5a65cb251d02bb271a48ffa989da3feb5ed7d954fe4d4b3",
+      "state": "running",
+      "health": "healthy",
+      "capDrop": ["ALL"],
+      "capAdd": null
+    },
+    {
+      "name": "/athyper-dev-searchcore-1",
+      "image": "getmeili/meilisearch:v1.13.3@sha256:bed3fb650e62da53145777204891159242f6ea4ce69e215b36223af4aa64a0ae",
+      "imageId": "sha256:bed3fb650e62da53145777204891159242f6ea4ce69e215b36223af4aa64a0ae",
+      "state": "running",
+      "health": "healthy",
+      "capDrop": ["ALL"],
+      "capAdd": ["CAP_DAC_OVERRIDE"]
+    },
+    {
+      "name": "/athyper-dev-source-api-1",
+      "image": "sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df",
+      "imageId": "sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df",
+      "state": "running",
+      "health": "healthy",
+      "capDrop": ["ALL"],
+      "capAdd": null
+    },
+    {
+      "name": "/athyper-dev-source-worker-1",
+      "image": "sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df",
+      "imageId": "sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df",
+      "state": "running",
+      "health": "healthy",
+      "capDrop": ["ALL"],
+      "capAdd": null
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/compose-acceptance-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "ComposeAcceptance" },
+    "metadata": { "type": "object", "additionalProperties": false, "required": ["machineId", "recordedAt"], "properties": { "machineId": { "type": "string", "minLength": 3 }, "recordedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T" } } },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dev", "qa", "stg"],
+      "properties": {
+        "dev": { "type": "object", "additionalProperties": false, "required": ["functionalParityPassed", "receipt"], "properties": { "functionalParityPassed": { "const": true }, "receipt": { "type": "string", "minLength": 8 } } },
+        "qa": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["devFingerprintUnchanged", "cycles"],
+          "properties": {
+            "devFingerprintUnchanged": { "const": true },
+            "cycles": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "object", "additionalProperties": false, "required": ["receipt", "passed"], "properties": { "receipt": { "type": "string", "minLength": 8 }, "passed": { "const": true } } } }
+          }
+        },
+        "stg": { "type": "object", "additionalProperties": false, "required": ["exactQaDigests", "restoreDrillPassed", "receipt"], "properties": { "exactQaDigests": { "const": true }, "restoreDrillPassed": { "const": true }, "receipt": { "type": "string", "minLength": 8 } } }
+      }
+    }
+  }
+}

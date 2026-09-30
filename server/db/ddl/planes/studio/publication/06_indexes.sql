@@ -1,4 +1,5 @@
 CREATE INDEX publication_release_status_idx ON publication.release(status, created_at DESC);
+CREATE INDEX publication_bp_definition_release_link_revision_idx ON publication.business_partner_definition_release_link(definition_revision_id);
 CREATE INDEX publication_artifact_release_idx ON publication.artifact(publication_release_id, plane_code);
 CREATE INDEX publication_artifact_compilation_release_idx ON publication.artifact_compilation(publication_release_id,plane_code);
 CREATE INDEX publication_deployment_target_idx ON publication.deployment(target_plane, target_environment, status, created_at);

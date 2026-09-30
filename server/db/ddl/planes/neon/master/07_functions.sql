@@ -16,6 +16,44 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION master.command_materialize_internal_business_partner_case(
+ p_tenant_id uuid,p_case_id uuid,p_expected_case_version bigint,p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL)
+RETURNS TABLE(entity_case_id uuid,business_partner_id uuid,result_snapshot_id uuid,row_version bigint,case_status text,replayed boolean,outbox_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,master,document,control,snapshot,event,runtime_meta,shared SET row_security=on AS $$
+DECLARE fingerprint text;prior event.command_execution%ROWTYPE;execution uuid;current document.entity_case%ROWTYPE;payload jsonb;canonical_payload jsonb;bp_id uuid:=shared.uuidv7();bp master.business_partner%ROWTYPE;lifecycle record;result_snapshot uuid;next_version bigint;attempt_no integer;materialization_id uuid;outbox uuid;result jsonb;lineage_hash text;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true)<>'neon' OR shared.current_tenant_id()<>p_tenant_id OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN RAISE EXCEPTION 'Internal Business Partner materialization context mismatch' USING ERRCODE='insufficient_privilege';END IF;
+ IF p_expected_case_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 THEN RAISE EXCEPTION 'Internal Business Partner materialization arguments are invalid' USING ERRCODE='check_violation';END IF;
+ fingerprint:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'expectedCaseVersion',p_expected_case_version,'idempotencyKey',p_idempotency_key,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case-materialization:'||p_idempotency_key,0));
+ SELECT e.* INTO prior FROM event.command_execution e WHERE e.tenant_id=p_tenant_id AND e.command_code='entity.case.materialize.internal_business_partner' AND e.idempotency_key=p_idempotency_key;
+ IF FOUND THEN IF prior.request_fingerprint<>fingerprint THEN RAISE EXCEPTION 'Internal Business Partner materialization idempotency conflict' USING ERRCODE='unique_violation';END IF;RETURN QUERY SELECT (prior.result_payload->>'caseId')::uuid,(prior.result_payload->>'businessPartnerId')::uuid,(prior.result_payload->>'resultSnapshotId')::uuid,(prior.result_payload->>'rowVersion')::bigint,prior.result_payload->>'status',true,(prior.result_payload->>'outboxId')::uuid;RETURN;END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by) VALUES(p_tenant_id,'entity.case.materialize.internal_business_partner',p_idempotency_key,fingerprint,'processing',p_actor_id,'neon-business-partner',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case:'||p_case_id::text,0));
+ SELECT c.* INTO current FROM document.entity_case c WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id FOR UPDATE;IF NOT FOUND THEN RAISE EXCEPTION 'Approved entity case was not found' USING ERRCODE='no_data_found';END IF;
+ IF current.row_version<>p_expected_case_version THEN RAISE EXCEPTION 'Entity case version is stale' USING ERRCODE='serialization_failure';END IF;
+ IF current.status<>'approved' OR current.entity_code<>'master.business_partner' OR current.operation_code<>'register' OR current.target_entity_id IS NOT NULL OR current.decision_snapshot_id IS NULL THEN RAISE EXCEPTION 'Entity case is not an approved internal Business Partner registration' USING ERRCODE='object_not_in_prerequisite_state';END IF;
+ SELECT s.payload_json INTO payload FROM snapshot.entity_snapshot s WHERE s.tenant_id=p_tenant_id AND s.snapshot_id=current.decision_snapshot_id;IF NOT FOUND THEN RAISE EXCEPTION 'Decision snapshot was not found' USING ERRCODE='data_corrupted';END IF;
+ IF NOT(payload?'businessPartnerCode' AND payload?'name') OR payload->>'ownershipClass'<>'internal' OR EXISTS(SELECT 1 FROM jsonb_object_keys(payload) k WHERE k NOT IN('businessPartnerCode','name','legalForm','registrationCountryCode','incorporationDate','description','ownershipClass')) THEN RAISE EXCEPTION 'Internal Business Partner payload is outside the materializer contract' USING ERRCODE='check_violation';END IF;
+ INSERT INTO master.business_partner(id,tenant_id,code,name,partner_category,ownership_class,category_locked_by,description,status,created_by) VALUES(bp_id,p_tenant_id,payload->>'businessPartnerCode',payload->>'name','organization','internal',p_actor_id,payload->>'description','draft',p_actor_id) RETURNING * INTO bp;
+ PERFORM master.update_business_partner_organization_identity(p_tenant_id,bp_id,jsonb_build_object('legalForm',payload->'legalForm','registrationCountryCode',payload->'registrationCountryCode','incorporationDate',payload->'incorporationDate'),p_actor_id);
+ SELECT * INTO bp FROM master.business_partner WHERE tenant_id=p_tenant_id AND id=bp_id;
+ SELECT * INTO lifecycle FROM control.command_business_partner_lifecycle(p_tenant_id,'business_partner',bp_id,'active',bp.record_version,'approved governed internal registration','case-bp-activate:'||p_case_id::text,p_actor_id);IF lifecycle.aggregate_id IS NULL OR lifecycle.record_version<>bp.record_version+1 THEN RAISE EXCEPTION 'Business Partner authority did not acknowledge materialization' USING ERRCODE='data_exception';END IF;
+ SELECT b.* INTO bp FROM master.business_partner b WHERE b.tenant_id=p_tenant_id AND b.id=bp_id;
+ canonical_payload:=payload||jsonb_build_object('businessPartnerCode',bp.code,'name',bp.name,'ownershipClass',bp.ownership_class);IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c WHERE c.tenant_id=p_tenant_id AND c.id=current.entity_contract_id AND c.entity_contract_hash=current.entity_contract_hash AND c.status IN('published','superseded')),canonical_payload))>0 THEN RAISE EXCEPTION 'Materialized Business Partner snapshot violates the pinned contract' USING ERRCODE='check_violation';END IF;
+ result_snapshot:=snapshot.fn_capture_entity('master.business_partner',bp_id,bp.code,1,current.entity_contract_hash,bp.record_version,'entity.case.materialized','create',canonical_payload,p_correlation_id,NULL,NULL,NULL,'legal','neon-business-partner');
+ next_version:=current.row_version+1;SELECT COALESCE(max(m.attempt_no),0)+1 INTO attempt_no FROM document.entity_case_materialization m WHERE m.tenant_id=p_tenant_id AND m.entity_case_id=p_case_id;
+ INSERT INTO document.entity_case_materialization(tenant_id,entity_case_id,attempt_no,source_snapshot_id,result_snapshot_id,materializer_code,materializer_version,request_fingerprint,expected_target_version,status,result_code,started_at,completed_at,requested_by,completed_by) VALUES(p_tenant_id,p_case_id,attempt_no,current.decision_snapshot_id,result_snapshot,'neon.internal_business_partner','1',fingerprint,NULL,'succeeded','BUSINESS_PARTNER_CREATED',clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO materialization_id;
+ lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'sourceSnapshotId',current.decision_snapshot_id,'targetSnapshotId',result_snapshot,'businessPartnerId',bp_id,'materializationId',materialization_id)::text,'UTF8'),'sha256'),'hex');
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by) VALUES(p_tenant_id,p_case_id,current.decision_snapshot_id,result_snapshot,'materialized_from','master.business_partner',bp_id,'neon.internal_business_partner','1',lineage_hash,p_actor_id);
+ UPDATE document.entity_case c SET target_entity_id=bp_id,result_snapshot_id=result_snapshot,status='materialized',row_version=next_version,updated_by=p_actor_id WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(p_tenant_id,p_case_id,'entity.case.materialize',p_idempotency_key,fingerprint,p_expected_case_version,current.row_version,next_version,'approved','materialized','accepted','BUSINESS_PARTNER_CREATED',result_snapshot,jsonb_build_object('businessPartnerId',bp_id,'materializationId',materialization_id,'authorityEvidenceId',lifecycle.evidence_id),p_actor_id);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant_id,'governed-entity-case','entity.case.materialized','entity-case:'||p_case_id::text||':v'||next_version::text||':'||p_idempotency_key,'document.entity_case',p_case_id,'entity_case',p_case_id,LEAST(next_version,2147483647)::integer,p_actor_id,'neon-business-partner',p_correlation_id,p_tenant_id::text,jsonb_build_object('caseId',p_case_id,'businessPartnerId',bp_id,'resultSnapshotId',result_snapshot,'rowVersion',next_version,'status','materialized','materializer','neon.internal_business_partner'),p_actor_id) RETURNING id INTO outbox;
+ result:=jsonb_build_object('caseId',p_case_id,'businessPartnerId',bp_id,'resultSnapshotId',result_snapshot,'rowVersion',next_version,'status','materialized','outboxId',outbox);UPDATE event.command_execution SET status='succeeded',result_payload=result,completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
+ RETURN QUERY SELECT p_case_id,bp_id,result_snapshot,next_version,'materialized',false,outbox;
+END $$;
+
+
 CREATE OR REPLACE FUNCTION master.trg_guard_master_evidence()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -63,6 +101,11 @@ BEGIN
         NEW.created_by := v_actor;
     ELSIF v_actor IS NOT NULL THEN
         NEW.created_by := v_actor;
+    END IF;
+
+    IF TG_TABLE_NAME = 'business_partner' THEN
+        NEW.category_locked_by := NEW.created_by;
+        NEW.category_locked_at := COALESCE(NEW.category_locked_at, now());
     END IF;
 
     RETURN NEW;
@@ -243,7 +286,7 @@ BEGIN
     v_capability := CASE TG_TABLE_NAME
         WHEN 'address_link' THEN 'address'
         WHEN 'contact_link' THEN 'contact'
-        WHEN 'bank_account_link' THEN 'bank_account'
+        WHEN 'payment_instrument_link' THEN 'bank_account'
         ELSE NULL
     END;
 
@@ -342,8 +385,10 @@ BEGIN
                 USING ERRCODE = 'check_violation';
         END IF;
     ELSIF NEW.channel_type = 'website' THEN
-        IF NEW.value !~ '^https?://[^[:space:]]+$' THEN
-            RAISE EXCEPTION 'Website contact value must be an absolute HTTP(S) URL'
+        IF length(NEW.value)>2048
+           OR NEW.value ~ '[[:space:][:cntrl:]@]'
+           OR NEW.value !~* '^https://([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?(?::[0-9]{1,5})?(?:[/#?][^[:space:][:cntrl:]]*)?$' THEN
+            RAISE EXCEPTION 'Website contact value must be a credential-free absolute HTTPS URL with a valid DNS host'
                 USING ERRCODE = 'check_violation';
         END IF;
     END IF;
@@ -1041,28 +1086,26 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, master
 AS $$
 DECLARE
-    v_domain master.operating_organization_domain_d;
+    v_capability master.operating_organization_capability_d;
     v_company_ids uuid[];
     v_company_id uuid;
 BEGIN
-    SELECT organization.domain
-      INTO v_domain
-      FROM master.operating_organization AS organization
-     WHERE organization.tenant_id = NEW.tenant_id
-       AND organization.id = NEW.operating_organization_id;
-
-    IF v_domain IS NULL THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM master.operating_organization AS organization
+         WHERE organization.tenant_id = NEW.tenant_id
+           AND organization.id = NEW.operating_organization_id
+    ) THEN
         RAISE EXCEPTION 'Operating organization does not exist in tenant'
             USING ERRCODE = 'foreign_key_violation';
     END IF;
-    IF TG_TABLE_NAME = 'procurement_organization_profile'
-       AND v_domain NOT IN ('procurement', 'both') THEN
-        RAISE EXCEPTION 'Procurement profile requires procurement or both domain'
-            USING ERRCODE = 'check_violation';
-    END IF;
-    IF TG_TABLE_NAME = 'sales_organization_profile'
-       AND v_domain NOT IN ('sales', 'both') THEN
-        RAISE EXCEPTION 'Sales profile requires sales or both domain'
+    v_capability := CASE TG_TABLE_NAME WHEN 'procurement_organization_profile' THEN 'procurement' WHEN 'sales_organization_profile' THEN 'sales' END;
+    IF NOT EXISTS (
+        SELECT 1 FROM master.operating_organization_capability capability
+         WHERE capability.tenant_id=NEW.tenant_id AND capability.operating_organization_id=NEW.operating_organization_id
+           AND capability.capability_code=v_capability AND capability.status='active'
+           AND capability.effective_from<=CURRENT_DATE AND (capability.effective_until IS NULL OR capability.effective_until>CURRENT_DATE)
+    ) THEN
+        RAISE EXCEPTION 'Operating organization lacks required % capability', v_capability
             USING ERRCODE = 'check_violation';
     END IF;
 
@@ -1781,26 +1824,6 @@ COMMENT ON FUNCTION master.fn_refresh_mv_cpa() IS
 -- Neon operational-banking guards and commands
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION master.trg_normalize_bank_party()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = pg_catalog
-AS $$
-BEGIN
-    NEW.code := lower(btrim(NEW.code));
-    NEW.name := btrim(NEW.name);
-    NEW.country_code := upper(btrim(NEW.country_code::text));
-    NEW.bic := nullif(upper(regexp_replace(NEW.bic, '\s+', '', 'g')), '');
-    NEW.national_bank_code_type :=
-        nullif(lower(btrim(NEW.national_bank_code_type)), '');
-    NEW.national_bank_code :=
-        nullif(upper(regexp_replace(NEW.national_bank_code, '\s+', '', 'g')), '');
-    NEW.branch_code :=
-        nullif(upper(regexp_replace(NEW.branch_code, '\s+', '', 'g')), '');
-    NEW.branch_name := nullif(btrim(NEW.branch_name), '');
-    RETURN NEW;
-END;
-$$;
 
 CREATE OR REPLACE FUNCTION master.trg_normalize_bank_account()
 RETURNS trigger
@@ -1808,20 +1831,25 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog
 AS $$
 BEGIN
-    NEW.code := nullif(lower(btrim(NEW.code)), '');
-    NEW.name := nullif(btrim(NEW.name), '');
     NEW.account_holder_name := btrim(NEW.account_holder_name);
     NEW.account_id_value :=
         upper(regexp_replace(NEW.account_id_value, '[^A-Za-z0-9]', '', 'g'));
-    NEW.account_last4 := right(NEW.account_id_value, 4);
+    IF nullif(btrim(NEW.metadata->>'protectedValueToken'), '') IS NOT NULL THEN
+        -- Protected registrations persist a fingerprint, not the account number.
+        -- Their display suffix must come from the validated input, never the hash.
+        IF NEW.account_id_value !~ '^[A-F0-9]{64}$'
+           OR NEW.account_last4 IS NULL
+           OR upper(btrim(NEW.account_last4)) !~ '^[A-Z0-9]{4}$' THEN
+            RAISE EXCEPTION 'Protected bank fingerprint and four-character display suffix are required'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        NEW.account_last4 := upper(btrim(NEW.account_last4));
+    ELSE
+        NEW.account_last4 := right(NEW.account_id_value, 4);
+    END IF;
     NEW.currency_code := upper(btrim(NEW.currency_code::text));
     NEW.bic_override :=
         nullif(upper(regexp_replace(NEW.bic_override, '\s+', '', 'g')), '');
-    NEW.bank_name_override := nullif(btrim(NEW.bank_name_override), '');
-    IF NEW.bank_country_override IS NOT NULL THEN
-        NEW.bank_country_override :=
-            upper(btrim(NEW.bank_country_override::text));
-    END IF;
     NEW.provider_account_ref := nullif(btrim(NEW.provider_account_ref), '');
     RETURN NEW;
 END;
@@ -1840,82 +1868,31 @@ BEGIN
     END IF;
 
     IF (
-        OLD.is_verified
-        OR EXISTS (
+        EXISTS (
             SELECT 1
-              FROM master.bank_account_link AS link
+              FROM master.payment_instrument_link AS link
              WHERE link.tenant_id = OLD.tenant_id
-               AND link.bank_account_id = OLD.id
+               AND link.payment_instrument_id = OLD.id
         )
     ) AND ROW(
-        NEW.bank_party_id, NEW.account_holder_name, NEW.account_id_type,
-        NEW.account_id_value, NEW.currency_code, NEW.bank_country_override,
+        NEW.bank_institution_id, NEW.bank_branch_id, NEW.provisional_bank_reference_id, NEW.account_holder_name, NEW.account_id_type,
+        NEW.account_id_value, NEW.currency_code,
         NEW.account_nature, NEW.provider_account_ref,
-        NEW.correspondent_bank_party_id
+        NEW.correspondent_bank_institution_id
     ) IS DISTINCT FROM ROW(
-        OLD.bank_party_id, OLD.account_holder_name, OLD.account_id_type,
-        OLD.account_id_value, OLD.currency_code, OLD.bank_country_override,
+        OLD.bank_institution_id, OLD.bank_branch_id, OLD.provisional_bank_reference_id, OLD.account_holder_name, OLD.account_id_type,
+        OLD.account_id_value, OLD.currency_code,
         OLD.account_nature, OLD.provider_account_ref,
-        OLD.correspondent_bank_party_id
+        OLD.correspondent_bank_institution_id
     ) THEN
         RAISE EXCEPTION
-            'Verified or linked bank-account coordinates are immutable; create a replacement account'
+            'Linked bank-account coordinates are immutable; create a replacement account'
             USING ERRCODE = 'integrity_constraint_violation';
     END IF;
     RETURN NEW;
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION master.trg_guard_bank_verification()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = pg_catalog, master
-AS $$
-DECLARE
-    v_actor uuid := nullif(
-        current_setting('app.current_principal_id', true), ''
-    )::uuid;
-BEGIN
-    IF ROW(
-        NEW.is_verified, NEW.verified_at, NEW.verified_by,
-        NEW.verification_method
-    ) IS NOT DISTINCT FROM ROW(
-        OLD.is_verified, OLD.verified_at, OLD.verified_by,
-        OLD.verification_method
-    ) THEN
-        RETURN NEW;
-    END IF;
-
-    IF current_user = 'athyperapp' AND v_actor IS NULL THEN
-        RAISE EXCEPTION 'Bank verification requires principal context'
-            USING ERRCODE = 'insufficient_privilege';
-    END IF;
-    IF current_user = 'athyperapp'
-       AND NEW.verified_by IS NOT NULL
-       AND NEW.verified_by IS DISTINCT FROM v_actor THEN
-        RAISE EXCEPTION
-            'Bank verification actor does not match principal context'
-            USING ERRCODE = 'insufficient_privilege';
-    END IF;
-
-    IF NEW.is_verified THEN
-        NEW.verified_at := clock_timestamp();
-        NEW.verified_by := COALESCE(v_actor, NEW.verified_by);
-        IF NEW.verification_method IS NULL THEN
-            RAISE EXCEPTION 'Verification method is required'
-                USING ERRCODE = 'check_violation';
-        END IF;
-    ELSE
-        NEW.verified_at := NULL;
-        NEW.verified_by := NULL;
-        NEW.verification_method := NULL;
-        IF NEW.status = 'active' THEN
-            NEW.status := 'pending_verification';
-        END IF;
-    END IF;
-    RETURN NEW;
-END;
-$$;
 
 CREATE OR REPLACE FUNCTION master.trg_resolve_bank_account_owner()
 RETURNS trigger
@@ -1994,7 +1971,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION master.trg_guard_bank_account_link_identity()
+CREATE OR REPLACE FUNCTION master.trg_guard_payment_instrument_link_identity()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = pg_catalog
@@ -2002,12 +1979,12 @@ AS $$
 BEGIN
     IF ROW(
         NEW.id, NEW.tenant_id, NEW.owner_type_id, NEW.owner_type,
-        NEW.owner_id, NEW.relationship_role, NEW.bank_account_id,
+        NEW.owner_id, NEW.relationship_role, NEW.payment_instrument_id,
         NEW.company_code_id, NEW.purpose, NEW.effective_from,
         NEW.created_at, NEW.created_by
     ) IS DISTINCT FROM ROW(
         OLD.id, OLD.tenant_id, OLD.owner_type_id, OLD.owner_type,
-        OLD.owner_id, OLD.relationship_role, OLD.bank_account_id,
+        OLD.owner_id, OLD.relationship_role, OLD.payment_instrument_id,
         OLD.company_code_id, OLD.purpose, OLD.effective_from,
         OLD.created_at, OLD.created_by
     ) THEN
@@ -2032,19 +2009,19 @@ AS $$
 DECLARE
     v_company_id uuid;
     v_account_currency character(3);
-    v_account_verified boolean;
-    v_account_status master.bank_account_status_d;
+    v_account_status text;
 BEGIN
     SELECT link.owner_id, account.currency_code,
-           account.is_verified, account.status
+           instrument.status
       INTO v_company_id, v_account_currency,
-           v_account_verified, v_account_status
-      FROM master.bank_account_link AS link
+           v_account_status
+      FROM master.payment_instrument_link AS link
       JOIN master.bank_account AS account
         ON account.tenant_id = link.tenant_id
-       AND account.id = link.bank_account_id
+       AND account.id = link.payment_instrument_id
+      JOIN master.payment_instrument instrument ON instrument.tenant_id=account.tenant_id AND instrument.id=account.id
      WHERE link.tenant_id = NEW.tenant_id
-       AND link.id = NEW.bank_account_link_id
+       AND link.id = NEW.payment_instrument_link_id
        AND link.owner_type = 'company_code'
        AND link.relationship_role = 'operational'
        AND link.company_code_id = link.owner_id;
@@ -2055,10 +2032,18 @@ BEGIN
             USING ERRCODE = 'foreign_key_violation';
     END IF;
 
-    IF NEW.status = 'active'
-       AND (NOT v_account_verified OR v_account_status <> 'active') THEN
+    -- company_code_id is derived from the link owner; a supplied value must agree.
+    IF NEW.company_code_id IS NOT NULL AND NEW.company_code_id <> v_company_id THEN
         RAISE EXCEPTION
-            'Active house-bank configuration requires an active verified bank account'
+            'House-bank company must match the company that owns the bank-account link'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    NEW.company_code_id := v_company_id;
+
+    IF NEW.status = 'active'
+       AND v_account_status <> 'active' THEN
+        RAISE EXCEPTION
+            'Active house-bank configuration requires an active bank-account instrument'
             USING ERRCODE = 'object_not_in_prerequisite_state';
     END IF;
 
@@ -2082,7 +2067,7 @@ BEGIN
            AND company_control.status = 'active'
          WHERE account.tenant_id = NEW.tenant_id
            AND account.id = NEW.gl_account_id
-           AND account.status = 'active'
+           AND instrument.status = 'active'
            AND account.node_type = 'posting'
            AND NOT account.is_blocked
            AND (account.currency_code IS NULL
@@ -2093,6 +2078,43 @@ BEGIN
         RAISE EXCEPTION
             'House-bank GL is not currently postable for the company and account currency'
             USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_house_payment_method()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_direction text;
+    v_method_status text;
+    v_disbursement boolean;
+    v_collection boolean;
+BEGIN
+    SELECT method.direction, method.status
+      INTO v_direction, v_method_status
+      FROM master.payment_method AS method
+     WHERE method.tenant_id = NEW.tenant_id
+       AND method.id = NEW.payment_method_id;
+    SELECT config.is_disbursement_enabled, config.is_collection_enabled
+      INTO v_disbursement, v_collection
+      FROM master.bank_account_house_config AS config
+     WHERE config.tenant_id = NEW.tenant_id
+       AND config.id = NEW.house_config_id;
+
+    IF v_method_status IS DISTINCT FROM 'active' THEN
+        RAISE EXCEPTION 'Payment method must be active'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF (v_direction = 'outbound' AND NOT v_disbursement)
+       OR (v_direction = 'inbound' AND NOT v_collection)
+       OR (v_direction = 'both' AND NOT (v_disbursement OR v_collection)) THEN
+        RAISE EXCEPTION
+            'Payment method direction is not enabled on the house-bank configuration'
+            USING ERRCODE = 'check_violation';
     END IF;
     RETURN NEW;
 END;
@@ -2120,12 +2142,12 @@ BEGIN
     SELECT link.owner_id, account.currency_code,
            link.effective_from, link.effective_until
       INTO v_company_id, v_currency, v_from, v_until
-      FROM master.bank_account_link AS link
+      FROM master.payment_instrument_link AS link
       JOIN master.bank_account AS account
         ON account.tenant_id = link.tenant_id
-       AND account.id = link.bank_account_id
+       AND account.id = link.payment_instrument_id
      WHERE link.tenant_id = NEW.tenant_id
-       AND link.id = NEW.bank_account_link_id;
+       AND link.id = NEW.payment_instrument_link_id;
 
     IF NOT FOUND THEN
         RETURN NEW;
@@ -2142,12 +2164,12 @@ BEGIN
     IF EXISTS (
         SELECT 1
           FROM master.bank_account_house_config AS config
-          JOIN master.bank_account_link AS link
+          JOIN master.payment_instrument_link AS link
             ON link.tenant_id = config.tenant_id
-           AND link.id = config.bank_account_link_id
+           AND link.id = config.payment_instrument_link_id
           JOIN master.bank_account AS account
             ON account.tenant_id = link.tenant_id
-           AND account.id = link.bank_account_id
+           AND account.id = link.payment_instrument_id
          WHERE config.tenant_id = NEW.tenant_id
            AND config.id <> NEW.id
            AND config.status = 'active'
@@ -2171,18 +2193,18 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION master.end_bank_account_link(
+CREATE OR REPLACE FUNCTION master.end_payment_instrument_link(
     p_tenant_id uuid,
     p_link_id uuid,
     p_effective_until date,
     p_actor_id uuid
 )
-RETURNS master.bank_account_link
+RETURNS master.payment_instrument_link
 LANGUAGE plpgsql
 SET search_path = pg_catalog, master, shared, control, document
 AS $$
 DECLARE
-    v_link master.bank_account_link;
+    v_link master.payment_instrument_link;
     v_actor uuid := master.current_principal_id_soft();
     v_policy_conflict boolean := false;
 BEGIN
@@ -2195,7 +2217,7 @@ BEGIN
 
     SELECT *
       INTO v_link
-      FROM master.bank_account_link
+      FROM master.payment_instrument_link
      WHERE tenant_id = p_tenant_id
        AND id = p_link_id
        AND owner_type = 'company_code'
@@ -2222,7 +2244,7 @@ BEGIN
                  SELECT 1
                    FROM control.payment_method_company_policy AS policy
                   WHERE policy.tenant_id = $1
-                    AND policy.bank_account_link_id = $2
+                    AND policy.payment_instrument_link_id = $2
                     AND policy.status = ''active''
                     AND (
                         policy.effective_until IS NULL
@@ -2245,10 +2267,10 @@ BEGIN
            updated_at = clock_timestamp(),
            updated_by = v_actor
      WHERE tenant_id = p_tenant_id
-       AND bank_account_link_id = p_link_id
+       AND payment_instrument_link_id = p_link_id
        AND status <> 'retired';
 
-    UPDATE master.bank_account_link
+    UPDATE master.payment_instrument_link
        SET effective_until = p_effective_until,
            updated_at = clock_timestamp(),
            updated_by = v_actor
@@ -3090,23 +3112,8 @@ BEGIN
     IF TG_TABLE_NAME = 'business_partner' THEN
         NEW.code := upper(btrim(NEW.code));
         NEW.name := btrim(NEW.name);
-        NEW.display_name := nullif(btrim(NEW.display_name), '');
-        NEW.legal_name := nullif(btrim(NEW.legal_name), '');
-        NEW.legal_form := nullif(btrim(NEW.legal_form), '');
-        NEW.registration_country_code :=
-            nullif(upper(btrim(NEW.registration_country_code::text)), '')::character(2);
         NEW.website_url := nullif(btrim(NEW.website_url), '');
         NEW.description := nullif(btrim(NEW.description), '');
-        SELECT COALESCE(
-                   array_agg(alias_value ORDER BY alias_value),
-                   '{}'::text[]
-               )
-          INTO NEW.aliases
-          FROM (
-              SELECT DISTINCT btrim(value) AS alias_value
-                FROM unnest(COALESCE(NEW.aliases, '{}'::text[])) AS value
-               WHERE btrim(value) <> ''
-          ) AS normalized_alias;
     ELSIF TG_TABLE_NAME = 'supplier' THEN
         NEW.supplier_code := upper(btrim(NEW.supplier_code));
         NEW.supplier_type :=
@@ -3117,6 +3124,113 @@ BEGIN
             lower(btrim(NEW.customer_type::text))::master.customer_type_d;
     END IF;
 
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_counterparty_catalog()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master, control
+AS $$
+DECLARE
+    v_domain text;
+    v_code text;
+BEGIN
+    IF TG_TABLE_NAME = 'supplier' THEN
+        v_domain := 'master.supplier_type'; v_code := NEW.supplier_type::text;
+    ELSIF TG_TABLE_NAME = 'customer' THEN
+        v_domain := 'master.customer_type'; v_code := NEW.customer_type::text;
+    ELSE
+        IF NEW.statement_cycle_code IS NULL THEN RETURN NEW; END IF;
+        NEW.statement_cycle_code := lower(btrim(NEW.statement_cycle_code));
+        v_domain := 'master.statement_cycle'; v_code := NEW.statement_cycle_code;
+    END IF;
+    IF NOT control.lookup_value_is_active(v_domain, v_code, NEW.tenant_id) THEN
+        RAISE EXCEPTION 'Unknown or inactive lookup value %/%', v_domain, v_code
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION master.trg_guard_partner_relationship_cycle()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF NEW.status <> 'active' OR NEW.relationship_type_code <> 'parent' THEN
+        RETURN NEW;
+    END IF;
+    PERFORM pg_advisory_xact_lock(hashtextextended(NEW.tenant_id::text||':bp-parent-graph',0));
+    IF EXISTS (
+        WITH RECURSIVE ancestors(id) AS (
+            SELECT NEW.target_business_partner_id
+            UNION
+            SELECT relation.target_business_partner_id
+              FROM master.business_partner_relationship relation
+              JOIN ancestors ON ancestors.id = relation.source_business_partner_id
+             WHERE relation.tenant_id = NEW.tenant_id
+               AND relation.relationship_type_code = 'parent'
+               AND relation.status = 'active'
+               AND relation.id IS DISTINCT FROM NEW.id
+        ) SELECT 1 FROM ancestors WHERE id = NEW.source_business_partner_id
+    ) THEN
+        RAISE EXCEPTION 'Business Partner parent relationship would create a cycle'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_partner_profile_references()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    -- Setup is partner-owned. Disabling a capability retains existing profiles;
+    -- only new activation requires a currently enabled capability and scope.
+    IF NEW.status='active' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM master.business_partner b
+            JOIN master.business_partner_operating_organization_assignment a
+              ON a.tenant_id=b.tenant_id AND a.business_partner_id=b.id
+            JOIN master.operating_organization_company_assignment c
+              ON c.tenant_id=a.tenant_id AND c.operating_organization_id=a.operating_organization_id
+            WHERE b.tenant_id=NEW.tenant_id AND b.id=NEW.business_partner_id AND b.status='active'
+              AND CASE WHEN TG_TABLE_NAME='company_code_supplier_profile' THEN b.supplier_enabled ELSE b.customer_enabled END
+              AND a.partner_role::text=CASE WHEN TG_TABLE_NAME='company_code_supplier_profile' THEN 'supplier' ELSE 'customer' END
+              AND a.status='active' AND a.effective_from<=CURRENT_DATE
+              AND (a.effective_until IS NULL OR a.effective_until>CURRENT_DATE)
+              AND c.company_code_id=NEW.company_code_id AND c.status='active' AND c.effective_from<=CURRENT_DATE
+              AND (c.effective_until IS NULL OR c.effective_until>CURRENT_DATE)
+        ) THEN
+            RAISE EXCEPTION 'Profile activation requires enabled partner capability and effective company coverage'
+                USING ERRCODE='check_violation';
+        END IF;
+    END IF;
+    IF NEW.status = 'active' THEN
+        IF NOT EXISTS (SELECT 1 FROM master.company_code c WHERE c.tenant_id=NEW.tenant_id AND c.id=NEW.company_code_id AND c.is_active) THEN
+            RAISE EXCEPTION 'Company code must be active' USING ERRCODE='foreign_key_violation';
+        END IF;
+        IF NEW.payment_term_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.payment_term p WHERE p.tenant_id=NEW.tenant_id AND p.id=NEW.payment_term_id AND p.is_active) THEN
+            RAISE EXCEPTION 'Payment term must be active' USING ERRCODE='foreign_key_violation';
+        END IF;
+        IF NEW.default_accounting_profile_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.accounting_profile p WHERE p.tenant_id=NEW.tenant_id AND p.id=NEW.default_accounting_profile_id AND p.is_active) THEN
+            RAISE EXCEPTION 'Accounting profile must be active' USING ERRCODE='foreign_key_violation';
+        END IF;
+        -- Branch before resolving Supplier-only fields: Customer profile records
+        -- do not contain preferred_remittance_bank_link_id.
+        IF TG_TABLE_NAME = 'company_code_supplier_profile' THEN
+            IF NEW.preferred_remittance_bank_link_id IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM master.payment_instrument_link l WHERE l.tenant_id=NEW.tenant_id AND l.id=NEW.preferred_remittance_bank_link_id AND (l.company_code_id IS NULL OR l.company_code_id=NEW.company_code_id) AND l.effective_from<=CURRENT_DATE AND (l.effective_until IS NULL OR l.effective_until>CURRENT_DATE)) THEN
+                RAISE EXCEPTION 'Remittance bank link must be effective for the company' USING ERRCODE='foreign_key_violation';
+            END IF;
+        END IF;
+    END IF;
     RETURN NEW;
 END;
 $$;
@@ -3152,11 +3266,19 @@ BEGIN
 
     IF TG_TABLE_NAME = 'business_partner' THEN
         IF NEW.code IS DISTINCT FROM OLD.code
-           OR NEW.partner_category IS DISTINCT FROM OLD.partner_category THEN
+           OR NEW.partner_category IS DISTINCT FROM OLD.partner_category
+           OR NEW.person_id IS DISTINCT FROM OLD.person_id
+           OR NEW.ownership_class IS DISTINCT FROM OLD.ownership_class
+           OR NEW.category_locked_at IS DISTINCT FROM OLD.category_locked_at
+           OR NEW.category_locked_by IS DISTINCT FROM OLD.category_locked_by
+           OR NEW.canonical_party_id IS DISTINCT FROM OLD.canonical_party_id
+              AND OLD.status <> 'draft'
+           OR NEW.representation_purpose_code IS DISTINCT FROM OLD.representation_purpose_code THEN
             RAISE EXCEPTION
-                'Business-partner code and category are immutable'
+                'Business-partner structural identity is immutable'
                 USING ERRCODE = 'check_violation';
         END IF;
+        NEW.record_version := OLD.record_version + 1;
     ELSIF TG_TABLE_NAME = 'supplier' THEN
         IF NEW.business_partner_id IS DISTINCT FROM OLD.business_partner_id
            OR NEW.supplier_code IS DISTINCT FROM OLD.supplier_code THEN
@@ -3208,23 +3330,113 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION master.trg_guard_business_partner_relationship_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Business Partner relationships are archived, not deleted'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.source_business_partner_id IS DISTINCT FROM OLD.source_business_partner_id
+       OR NEW.target_business_partner_id IS DISTINCT FROM OLD.target_business_partner_id
+       OR NEW.relationship_type_code IS DISTINCT FROM OLD.relationship_type_code
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION 'Business Partner relationship identity and provenance are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    NEW.record_version := OLD.record_version + 1;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_bump_business_partner_record_version()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    NEW.record_version := OLD.record_version + 1;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_guard_customer_lifecycle_authority()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master, control
+AS $$
+DECLARE
+    v_event_id uuid;
+    v_event control.customer_lifecycle_event%ROWTYPE;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.status::text <> 'prospect'
+           OR NEW.status_changed_at IS NOT NULL
+           OR NEW.status_changed_by IS NOT NULL THEN
+            RAISE EXCEPTION 'New Customer roles must start as evidence-free prospects'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.status IS NOT DISTINCT FROM OLD.status THEN
+        IF NEW.status_changed_at IS DISTINCT FROM OLD.status_changed_at
+           OR NEW.status_changed_by IS DISTINCT FROM OLD.status_changed_by THEN
+            RAISE EXCEPTION 'Customer lifecycle evidence is command-owned'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    BEGIN
+        v_event_id := NULLIF(
+            current_setting('app.customer_lifecycle_event_id', true), ''
+        )::uuid;
+    EXCEPTION WHEN invalid_text_representation THEN
+        v_event_id := NULL;
+    END;
+    IF v_event_id IS NULL THEN
+        RAISE EXCEPTION 'Customer status may only change through control.command_customer_lifecycle'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    SELECT event.* INTO v_event
+      FROM control.customer_lifecycle_event event
+     WHERE event.id = v_event_id
+       AND event.tenant_id = OLD.tenant_id
+       AND event.customer_id = OLD.id;
+    IF NOT FOUND
+       OR v_event.business_partner_id IS DISTINCT FROM OLD.business_partner_id
+       OR v_event.from_status IS DISTINCT FROM OLD.status::text
+       OR v_event.to_status IS DISTINCT FROM NEW.status::text
+       OR v_event.occurred_by IS DISTINCT FROM NEW.updated_by THEN
+        RAISE EXCEPTION 'Customer status change does not match its lifecycle command evidence'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION master.trg_validate_commercial_role()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = pg_catalog, master
 AS $$
 DECLARE
-    v_category master.business_partner_category_d;
+    v_ownership master.business_partner_ownership_d;
     v_partner_status master.business_partner_status_d;
     v_is_intercompany boolean;
 BEGIN
-    SELECT partner.partner_category, partner.status
-      INTO v_category, v_partner_status
+    SELECT partner.ownership_class, partner.status
+      INTO v_ownership, v_partner_status
       FROM master.business_partner AS partner
      WHERE partner.tenant_id = NEW.tenant_id
        AND partner.id = NEW.business_partner_id;
 
-    IF v_category IS NULL THEN
+    IF v_ownership IS NULL THEN
         RAISE EXCEPTION 'Business partner does not exist in tenant'
             USING ERRCODE = 'foreign_key_violation';
     END IF;
@@ -3242,7 +3454,7 @@ BEGIN
             ELSE false
         END;
 
-    IF (v_category = 'internal') IS DISTINCT FROM v_is_intercompany THEN
+    IF (v_ownership = 'internal') IS DISTINCT FROM v_is_intercompany THEN
         RAISE EXCEPTION
             'Internal business partners require an intercompany % role, and intercompany roles require an internal business partner',
             TG_TABLE_NAME
@@ -3555,7 +3767,7 @@ AS $$
 DECLARE
     v_partner_id uuid;
     v_role master.partner_role_d;
-    v_domain master.operating_organization_domain_d;
+    v_capability master.operating_organization_capability_d;
 BEGIN
     v_partner_id := NEW.business_partner_id;
     v_role := NEW.partner_role;
@@ -3579,14 +3791,15 @@ BEGIN
     END IF;
 
     IF TG_TABLE_NAME = 'business_partner_operating_organization_assignment' THEN
-        SELECT domain INTO v_domain
-          FROM master.operating_organization
-         WHERE tenant_id = NEW.tenant_id
-           AND id = NEW.operating_organization_id;
-        IF (v_role = 'supplier' AND v_domain NOT IN ('procurement', 'both'))
-           OR (v_role = 'customer' AND v_domain NOT IN ('sales', 'both')) THEN
-            RAISE EXCEPTION 'Partner role % is incompatible with organization domain %',
-                v_role, v_domain
+        v_capability := CASE v_role WHEN 'supplier' THEN 'procurement' ELSE 'sales' END;
+        IF NOT EXISTS (
+            SELECT 1 FROM master.operating_organization_capability capability
+             WHERE capability.tenant_id=NEW.tenant_id AND capability.operating_organization_id=NEW.operating_organization_id
+               AND capability.capability_code=v_capability AND capability.status='active'
+               AND capability.effective_from<=CURRENT_DATE AND (capability.effective_until IS NULL OR capability.effective_until>CURRENT_DATE)
+        ) THEN
+            RAISE EXCEPTION 'Partner role % requires operating organization capability %',
+                v_role, v_capability
                 USING ERRCODE = 'check_violation';
         END IF;
     END IF;
@@ -3600,12 +3813,12 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, master
 AS $$
 DECLARE
-    v_category master.business_partner_category_d;
+    v_ownership master.business_partner_ownership_d;
 BEGIN
-    SELECT partner_category INTO v_category
+    SELECT ownership_class INTO v_ownership
       FROM master.business_partner
      WHERE tenant_id = NEW.tenant_id AND id = NEW.business_partner_id;
-    IF v_category IS DISTINCT FROM 'internal'::master.business_partner_category_d THEN
+    IF v_ownership IS DISTINCT FROM 'internal'::master.business_partner_ownership_d THEN
         RAISE EXCEPTION 'Legal entity self mapping requires an internal business partner'
             USING ERRCODE = 'check_violation';
     END IF;
@@ -3623,20 +3836,19 @@ DECLARE
     v_owner_id uuid;
     v_owner_type text;
     v_company_id uuid;
-    v_account_status master.bank_account_status_d;
+    v_account_status text;
 BEGIN
     IF NEW.preferred_remittance_bank_link_id IS NULL THEN
         RETURN NEW;
     END IF;
-    SELECT business_partner_id INTO v_partner_id
-      FROM master.supplier
-     WHERE tenant_id = NEW.tenant_id AND id = NEW.supplier_id;
-    SELECT link.owner_id, link.owner_type, link.company_code_id, account.status
+    v_partner_id := NEW.business_partner_id;
+    SELECT link.owner_id, link.owner_type, link.company_code_id, instrument.status
       INTO v_owner_id, v_owner_type, v_company_id, v_account_status
-      FROM master.bank_account_link link
+      FROM master.payment_instrument_link link
       JOIN master.bank_account account
         ON account.tenant_id = link.tenant_id
-       AND account.id = link.bank_account_id
+       AND account.id = link.payment_instrument_id
+      JOIN master.payment_instrument instrument ON instrument.tenant_id=account.tenant_id AND instrument.id=account.id
      WHERE link.tenant_id = NEW.tenant_id
        AND link.id = NEW.preferred_remittance_bank_link_id
        AND link.relationship_role = 'beneficiary';
@@ -3783,6 +3995,37 @@ $$;
 
 COMMENT ON FUNCTION master.trg_validate_work_assignment_contract() IS
   'Requires an assignment employment, employee, and company code to describe the same workforce contract.';
+
+CREATE OR REPLACE FUNCTION master.trg_validate_employment_contract()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM master.company_code company
+         WHERE company.tenant_id = NEW.tenant_id
+           AND company.id = NEW.company_code_id
+           AND company.legal_entity_id = NEW.legal_entity_id
+    ) THEN
+        RAISE EXCEPTION 'Employment company code does not belong to its legal entity'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF NEW.employee_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM master.employee employee
+         WHERE employee.tenant_id = NEW.tenant_id
+           AND employee.id = NEW.employee_id
+           AND employee.person_id = NEW.person_id
+    ) THEN
+        RAISE EXCEPTION 'Employment employee does not belong to its person'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_validate_employment_contract() IS
+  'Requires employment person, optional employee, legal entity, and company code to resolve to one tenant-local workforce contract.';
 
 CREATE OR REPLACE FUNCTION master.trg_guard_warehouse_identity()
 RETURNS trigger
@@ -4648,3 +4891,1340 @@ END $$;
 
 CREATE OR REPLACE FUNCTION master.trg_reject_organization_amendment_mutation() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'organization_amendment is append-only' USING ERRCODE='integrity_constraint_violation'; END $$;
+CREATE OR REPLACE FUNCTION master.trg_enforce_business_partner_governance_totals()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_tenant_id uuid := COALESCE(NEW.tenant_id, OLD.tenant_id);
+    v_business_partner_id uuid := COALESCE(NEW.business_partner_id, OLD.business_partner_id);
+    v_ownership numeric;
+    v_voting numeric;
+    v_beneficial numeric;
+BEGIN
+    SELECT COALESCE(sum(ownership_pct), 0),
+           COALESCE(sum(voting_pct), 0),
+           COALESCE(sum(beneficial_ownership_pct), 0)
+      INTO v_ownership, v_voting, v_beneficial
+      FROM master.business_partner_governance_relation
+     WHERE tenant_id = v_tenant_id
+       AND business_partner_id = v_business_partner_id
+       AND status = 'active';
+
+    IF v_ownership > 100 OR v_voting > 100 OR v_beneficial > 100 THEN
+        RAISE EXCEPTION 'Active Business Partner governance percentages exceed 100%%'
+            USING ERRCODE = 'check_violation',
+                  DETAIL = format(
+                      'tenant_id=%s business_partner_id=%s ownership=%s voting=%s beneficial=%s',
+                      v_tenant_id, v_business_partner_id, v_ownership, v_voting, v_beneficial
+                  );
+    END IF;
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
+-- Domain-owned G5 materializer for role-free core and supplier/customer registrations.
+-- The approved, release-pinned G1 decision snapshot is the only request input;
+-- no section-specific request row is created or consulted.
+CREATE OR REPLACE FUNCTION master.command_materialize_business_partner_role_case(
+ p_tenant_id uuid,p_case_id uuid,p_expected_case_version bigint,
+ p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL)
+RETURNS TABLE(entity_case_id uuid,business_partner_id uuid,role_id uuid,
+ qualification_id uuid,preference_id uuid,result_snapshot_id uuid,
+ row_version bigint,case_status text,replayed boolean,outbox_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,master,document,control,snapshot,event,runtime_meta,shared
+SET row_security=on AS $$
+DECLARE
+ fingerprint text; prior event.command_execution%ROWTYPE; execution uuid;
+ current_case document.entity_case%ROWTYPE; payload jsonb; bp master.business_partner%ROWTYPE;
+ bp_id uuid:=shared.uuidv7(); new_role_id uuid:=shared.uuidv7(); assignment_id uuid:=shared.uuidv7();
+ new_qualification_id uuid; new_preference_id uuid; lifecycle record; authority_evidence_id uuid;
+ result_snapshot uuid; next_version bigint; attempt_no integer; materialization_id uuid;
+ outbox uuid; result jsonb; lineage_hash text; requested_role text; channel text;
+ org_id uuid; qualification_type text; preference_rationale text; preflight jsonb;
+ core_registration boolean:=false;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true)<>'neon'
+    OR shared.current_tenant_id()<>p_tenant_id
+    OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN
+  RAISE EXCEPTION 'Business Partner role materialization context mismatch' USING ERRCODE='insufficient_privilege';
+ END IF;
+ IF p_expected_case_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key
+    OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 THEN
+  RAISE EXCEPTION 'Business Partner role materialization arguments are invalid' USING ERRCODE='check_violation';
+ END IF;
+ fingerprint:=encode(public.digest(convert_to(jsonb_build_object(
+  'caseId',p_case_id,'expectedCaseVersion',p_expected_case_version,
+  'idempotencyKey',p_idempotency_key,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case-materialization:'||p_idempotency_key,0));
+ SELECT e.* INTO prior FROM event.command_execution e
+  WHERE e.tenant_id=p_tenant_id AND e.command_code='entity.case.materialize.business_partner_role'
+    AND e.idempotency_key=p_idempotency_key;
+ IF FOUND THEN
+  IF prior.request_fingerprint<>fingerprint THEN
+   RAISE EXCEPTION 'Business Partner role materialization idempotency conflict' USING ERRCODE='unique_violation';
+  END IF;
+  RETURN QUERY SELECT (prior.result_payload->>'caseId')::uuid,
+   (prior.result_payload->>'businessPartnerId')::uuid,(prior.result_payload->>'roleId')::uuid,
+   NULLIF(prior.result_payload->>'qualificationId','')::uuid,NULLIF(prior.result_payload->>'preferenceId','')::uuid,
+   (prior.result_payload->>'resultSnapshotId')::uuid,(prior.result_payload->>'rowVersion')::bigint,
+   prior.result_payload->>'status',true,(prior.result_payload->>'outboxId')::uuid;
+  RETURN;
+ END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,
+  actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by)
+ VALUES(p_tenant_id,'entity.case.materialize.business_partner_role',p_idempotency_key,fingerprint,'processing',
+  p_actor_id,'neon-business-partner',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id)
+ RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case:'||p_case_id::text,0));
+ SELECT c.* INTO current_case FROM document.entity_case c
+  WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Approved entity case was not found' USING ERRCODE='no_data_found'; END IF;
+ IF current_case.row_version<>p_expected_case_version THEN
+  RAISE EXCEPTION 'Entity case version is stale' USING ERRCODE='serialization_failure';
+ END IF;
+ IF current_case.status<>'approved' OR current_case.entity_code<>'master.business_partner'
+    OR current_case.operation_code NOT IN('register','new_partner','add_supplier','add_customer')
+    OR current_case.decision_snapshot_id IS NULL THEN
+  RAISE EXCEPTION 'Entity case is not an approved Business Partner role registration' USING ERRCODE='object_not_in_prerequisite_state';
+ END IF;
+ SELECT s.payload_json INTO payload FROM snapshot.entity_snapshot s
+  WHERE s.tenant_id=p_tenant_id AND s.snapshot_id=current_case.decision_snapshot_id;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Decision snapshot was not found' USING ERRCODE='data_corrupted'; END IF;
+ requested_role:=payload->>'requestedRole'; channel:=payload->>'registrationChannel';
+ org_id:=NULLIF(payload->>'operatingOrganizationId','')::uuid;
+ qualification_type:=NULLIF(payload->>'qualificationTypeCode','');
+ preference_rationale:=NULLIF(payload->>'preferenceRationale',''); preflight:=payload->'preflight';
+ core_registration:=requested_role IS NULL AND current_case.operation_code='new_partner' AND current_case.target_entity_id IS NULL;
+ IF core_registration THEN
+  IF channel IS DISTINCT FROM 'internal' OR COALESCE(payload->>'partnerCategory','') NOT IN ('organization','person')
+    OR COALESCE(payload->>'ownershipClass','') NOT IN('internal','external')
+    OR length(btrim(COALESCE(payload->>'name','')))=0 OR length(btrim(COALESCE(payload->>'businessPartnerCode','')))=0
+    OR EXISTS(SELECT 1 FROM jsonb_object_keys(payload) k WHERE k NOT IN('businessPartnerCode','name','partnerCategory','personId','ownershipClass','legalClassification','legalForm','registrationCountryCode','incorporationDate','websiteUrl','description','registrationChannel')) THEN
+   RAISE EXCEPTION 'Role-free registration accepts core identity only' USING ERRCODE='check_violation';
+  END IF;
+  IF (payload->>'partnerCategory'='person' AND (NULLIF(payload->>'personId','') IS NULL
+      OR payload ?| ARRAY['legalForm','registrationCountryCode','incorporationDate']))
+     OR (payload->>'partnerCategory'='organization' AND payload ? 'personId') THEN
+   RAISE EXCEPTION 'Partner category and identity fields disagree' USING ERRCODE='check_violation';
+  END IF;
+  new_role_id:=NULL; assignment_id:=NULL;
+ ELSE
+ IF NOT(payload?'businessPartnerCode' AND payload?'name' AND payload?'roleCode'
+        AND payload?'requestedRole' AND payload?'registrationChannel' AND payload?'operatingOrganizationId')
+    OR payload->>'ownershipClass' NOT IN('internal','external') OR requested_role NOT IN('supplier','customer')
+    OR channel NOT IN('internal','invitation','mesh_proposal','buyer_request','supplier_self_registration','customer_onboarding')
+    OR (requested_role='supplier' AND channel='customer_onboarding')
+    OR (requested_role='customer' AND channel NOT IN('internal','mesh_proposal','customer_onboarding'))
+    OR EXISTS(SELECT 1 FROM jsonb_object_keys(payload) k WHERE k NOT IN(
+      'businessPartnerCode','name','legalForm','registrationCountryCode',
+      'incorporationDate','websiteUrl','description','ownershipClass','requestedRole','roleCode',
+      'partnerCategory','legalClassification','supplierType','customerType',
+      'registrationChannel','operatingOrganizationId','meshRegistrationExchangeId',
+      'meshRegistrationEvidenceHash','bankDisclosureReceiptId','bankDisclosurePurposeCode',
+      'qualificationTypeCode','preferenceRationale','companyCodeId','commodityCategoryId','preflight',
+      'tenantFields','relationshipProposals','requestedComplianceLevel','complianceRequirementReason'))
+    OR (payload?'requestedComplianceLevel' AND (payload->>'requestedComplianceLevel' NOT IN('basic','standard','enhanced') OR jsonb_typeof(payload->'requestedComplianceLevel') IS DISTINCT FROM 'string'))
+    OR (payload?'complianceRequirementReason' AND (jsonb_typeof(payload->'complianceRequirementReason') IS DISTINCT FROM 'string' OR length(payload->>'complianceRequirementReason')>2000))
+    OR (payload->>'requestedComplianceLevel'='basic' AND length(btrim(COALESCE(payload->>'complianceRequirementReason','')))=0) THEN
+  RAISE EXCEPTION 'Business Partner role payload is outside the materializer contract' USING ERRCODE='check_violation';
+ END IF;
+ END IF;
+ IF requested_role='supplier' AND channel='mesh_proposal' AND (
+    NULLIF(payload->>'meshRegistrationExchangeId','')::uuid IS NULL
+    OR payload->>'meshRegistrationEvidenceHash' !~ '^[a-f0-9]{64}$') THEN
+  RAISE EXCEPTION 'Supplier registration requires accepted MESH exchange evidence' USING ERRCODE='check_violation';
+ END IF;
+ IF channel='buyer_request' AND (
+    NULLIF(payload->>'bankDisclosureReceiptId','')::uuid IS NULL
+    OR payload->>'bankDisclosurePurposeCode' !~ '^[a-z][a-z0-9_.-]{1,62}$') THEN
+  RAISE EXCEPTION 'Buyer-requested supplier requires purpose-bound disclosure evidence' USING ERRCODE='check_violation';
+ END IF;
+ IF channel='supplier_self_registration' AND (
+    jsonb_typeof(preflight)<>'object' OR preflight-ARRAY['trust','rate','duplicate','sponsorPolicy']::text[]<>'{}'::jsonb
+    OR preflight->>'trust'<>'passed' OR preflight->>'rate'<>'passed'
+    OR preflight->>'duplicate'<>'passed' OR preflight->>'sponsorPolicy'<>'approved') THEN
+  RAISE EXCEPTION 'Supplier self-registration requires bounded successful preflight evidence' USING ERRCODE='check_violation';
+ END IF;
+ IF requested_role='supplier' AND payload->>'ownershipClass'='external' AND qualification_type IS NULL THEN
+  RAISE EXCEPTION 'Supplier registration requires a qualification type' USING ERRCODE='check_violation';
+ END IF;
+ IF current_case.target_entity_id IS NULL THEN
+  INSERT INTO master.business_partner(id,tenant_id,code,name,partner_category,person_id,
+   ownership_class,category_locked_by,legal_classification,website_url,
+   description,status,created_by)
+  VALUES(bp_id,p_tenant_id,payload->>'businessPartnerCode',payload->>'name',
+   CASE WHEN core_registration THEN payload->>'partnerCategory' ELSE 'organization' END,
+   CASE WHEN core_registration THEN NULLIF(payload->>'personId','')::uuid ELSE NULL END,
+   payload->>'ownershipClass',p_actor_id,NULLIF(payload->>'legalClassification','')::master.business_partner_legal_classification_d,
+   payload->>'websiteUrl',payload->>'description','draft',p_actor_id) RETURNING * INTO bp;
+  IF bp.partner_category='organization' THEN
+   PERFORM master.update_business_partner_organization_identity(p_tenant_id,bp_id,jsonb_build_object('legalForm',payload->'legalForm','registrationCountryCode',payload->'registrationCountryCode','incorporationDate',payload->'incorporationDate'),p_actor_id);
+  END IF;
+  SELECT * INTO bp FROM master.business_partner WHERE tenant_id=p_tenant_id AND id=bp_id;
+ ELSE
+  bp_id:=current_case.target_entity_id;
+  SELECT * INTO bp FROM master.business_partner WHERE tenant_id=p_tenant_id AND id=bp_id FOR UPDATE;
+  IF NOT FOUND OR bp.status<>'active'
+     OR (requested_role='supplier' AND EXISTS(SELECT 1 FROM master.supplier r WHERE r.tenant_id=p_tenant_id AND r.business_partner_id=bp_id AND r.status<>'retired'))
+     OR (requested_role='customer' AND EXISTS(SELECT 1 FROM master.customer r WHERE r.tenant_id=p_tenant_id AND r.business_partner_id=bp_id AND r.status<>'retired')) THEN
+   RAISE EXCEPTION 'Target Business Partner is not eligible for the requested role' USING ERRCODE='unique_violation';
+  END IF;
+ END IF;
+ IF requested_role='supplier' THEN
+  INSERT INTO master.supplier(id,tenant_id,business_partner_id,supplier_code,supplier_type,status,created_by)
+   VALUES(new_role_id,p_tenant_id,bp_id,payload->>'roleCode',
+    COALESCE(NULLIF(payload->>'supplierType',''),'general')::master.supplier_type_d,'onboarding',p_actor_id);
+ ELSIF requested_role='customer' THEN
+  INSERT INTO master.customer(id,tenant_id,business_partner_id,customer_code,customer_type,status,created_by)
+   VALUES(new_role_id,p_tenant_id,bp_id,payload->>'roleCode',
+    COALESCE(NULLIF(payload->>'customerType',''),'corporate')::master.customer_type_d,'prospect',p_actor_id);
+ END IF;
+ IF NOT core_registration THEN
+ INSERT INTO master.business_partner_operating_organization_assignment(
+  id,tenant_id,business_partner_id,operating_organization_id,partner_role,effective_from,status,
+  status_changed_at,status_changed_by,created_by)
+ VALUES(assignment_id,p_tenant_id,bp_id,org_id,requested_role::master.partner_role_d,CURRENT_DATE,'active',
+  clock_timestamp(),p_actor_id,p_actor_id);
+ END IF;
+ IF requested_role='supplier' AND qualification_type IS NOT NULL THEN
+  SELECT created.aggregate_id INTO new_qualification_id
+    FROM control.command_create_business_partner_decision(p_tenant_id,'qualification',bp_id,'supplier',new_role_id,
+      org_id,NULLIF(payload->>'companyCodeId','')::uuid,NULLIF(payload->>'commodityCategoryId','')::uuid,
+      jsonb_build_object('qualificationTypeCode',qualification_type),
+      'case-qualification:'||p_case_id::text,p_actor_id) created;
+  IF preference_rationale IS NOT NULL THEN
+   SELECT created.aggregate_id INTO new_preference_id
+     FROM control.command_create_business_partner_decision(p_tenant_id,'supplier_preference',bp_id,'supplier',new_role_id,
+       org_id,NULLIF(payload->>'companyCodeId','')::uuid,NULLIF(payload->>'commodityCategoryId','')::uuid,
+       jsonb_build_object('effectiveFrom',CURRENT_DATE,'rationale',preference_rationale),
+       'case-preference:'||p_case_id::text,p_actor_id) created;
+  END IF;
+ END IF;
+ IF current_case.target_entity_id IS NULL THEN
+  SELECT * INTO lifecycle FROM control.command_business_partner_lifecycle(p_tenant_id,'business_partner',bp_id,
+   'active',bp.record_version,CASE WHEN core_registration THEN 'approved governed partner registration' ELSE 'approved governed role registration' END,'case-bp-activate:'||p_case_id::text,p_actor_id);
+  authority_evidence_id:=lifecycle.evidence_id;
+ END IF;
+ SELECT b.* INTO bp FROM master.business_partner b WHERE b.tenant_id=p_tenant_id AND b.id=bp_id;
+ IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c
+   WHERE c.tenant_id=p_tenant_id AND c.id=current_case.entity_contract_id
+     AND c.entity_contract_hash=current_case.entity_contract_hash AND c.status IN('published','superseded')),payload))>0 THEN
+  RAISE EXCEPTION 'Materialized Business Partner snapshot violates the pinned contract' USING ERRCODE='check_violation';
+ END IF;
+ result_snapshot:=snapshot.fn_capture_entity('master.business_partner',bp_id,bp.code,1,
+  current_case.entity_contract_hash,bp.record_version,'entity.case.materialized','create',payload,
+  p_correlation_id,NULL,NULL,NULL,'legal','neon-business-partner');
+ next_version:=current_case.row_version+1;
+ SELECT COALESCE(max(m.attempt_no),0)+1 INTO attempt_no FROM document.entity_case_materialization m
+  WHERE m.tenant_id=p_tenant_id AND m.entity_case_id=p_case_id;
+ INSERT INTO document.entity_case_materialization(tenant_id,entity_case_id,attempt_no,source_snapshot_id,
+  result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,
+  started_at,completed_at,requested_by,completed_by)
+ VALUES(p_tenant_id,p_case_id,attempt_no,current_case.decision_snapshot_id,result_snapshot,
+  'neon.business_partner_role','2',fingerprint,'succeeded',COALESCE(upper(requested_role)||'_CREATED','PARTNER_REGISTERED'),
+  clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO materialization_id;
+ lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,
+  'sourceSnapshotId',current_case.decision_snapshot_id,'targetSnapshotId',result_snapshot,
+  'businessPartnerId',bp_id,'roleId',new_role_id,'materializationId',materialization_id)::text,'UTF8'),'sha256'),'hex');
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,
+  lineage_role,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+ VALUES(p_tenant_id,p_case_id,current_case.decision_snapshot_id,result_snapshot,'materialized_from',
+  'master.business_partner',bp_id,'neon.business_partner_role','1',lineage_hash,p_actor_id);
+ UPDATE document.entity_case c SET target_entity_id=bp_id,result_snapshot_id=result_snapshot,status='materialized',
+  row_version=next_version,updated_by=p_actor_id WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,
+  request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,
+  result_code,result_snapshot_id,result_evidence,recorded_by)
+ VALUES(p_tenant_id,p_case_id,'entity.case.materialize',p_idempotency_key,fingerprint,p_expected_case_version,
+  current_case.row_version,next_version,'approved','materialized','accepted',COALESCE(upper(requested_role)||'_CREATED','PARTNER_REGISTERED'),
+  result_snapshot,jsonb_build_object('businessPartnerId',bp_id,'roleId',new_role_id,'role',requested_role,
+   'assignmentId',assignment_id,'qualificationId',new_qualification_id,'preferenceId',new_preference_id,
+   'materializationId',materialization_id,'authorityEvidenceId',authority_evidence_id),p_actor_id);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,
+  event_version,actor_id,source,correlation_id,partition_key,payload,created_by)
+ VALUES(p_tenant_id,'governed-entity-case','entity.case.materialized','entity-case:'||p_case_id::text||':v'||next_version::text||':'||p_idempotency_key,
+  'document.entity_case',p_case_id,'entity_case',p_case_id,LEAST(next_version,2147483647)::integer,p_actor_id,
+  'neon-business-partner',p_correlation_id,p_tenant_id::text,jsonb_build_object('caseId',p_case_id,
+   'businessPartnerId',bp_id,'roleId',new_role_id,'role',requested_role,'qualificationId',new_qualification_id,
+   'preferenceId',new_preference_id,'resultSnapshotId',result_snapshot,'rowVersion',next_version,
+   'status','materialized','materializer','neon.business_partner_role'),p_actor_id) RETURNING id INTO outbox;
+ result:=jsonb_build_object('caseId',p_case_id,'businessPartnerId',bp_id,'roleId',new_role_id,
+  'qualificationId',COALESCE(new_qualification_id::text,''),'preferenceId',COALESCE(new_preference_id::text,''),
+  'resultSnapshotId',result_snapshot,'rowVersion',next_version,'status','materialized','outboxId',outbox);
+ UPDATE event.command_execution SET status='succeeded',result_payload=result,completed_at=clock_timestamp(),
+  status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
+ RETURN QUERY SELECT p_case_id,bp_id,new_role_id,new_qualification_id,new_preference_id,result_snapshot,
+  next_version,'materialized',false,outbox;
+END $$;
+
+-- Identity-only registration authority for the capability cutover.
+-- The authorized workflow consumer selects it only for core new-partner cases.
+CREATE OR REPLACE FUNCTION master.command_materialize_business_partner_registration_case(
+ p_tenant_id uuid,p_case_id uuid,p_expected_case_version bigint,
+ p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL)
+RETURNS TABLE(entity_case_id uuid,business_partner_id uuid,result_snapshot_id uuid,
+ row_version bigint,case_status text,replayed boolean,outbox_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,master,document,control,snapshot,event,runtime_meta,shared
+SET row_security=on AS $$
+DECLARE
+ fingerprint text; prior event.command_execution%ROWTYPE; execution uuid;
+ current_case document.entity_case%ROWTYPE; payload jsonb; contract jsonb; bp master.business_partner%ROWTYPE;
+ bp_id uuid:=shared.uuidv7();
+ lifecycle record; authority_evidence_id uuid;
+ result_snapshot uuid; next_version bigint; attempt_no integer; materialization_id uuid;
+ outbox uuid; result jsonb; lineage_hash text;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true) IS DISTINCT FROM 'neon'
+    OR shared.current_tenant_id() IS DISTINCT FROM p_tenant_id
+    OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN
+  RAISE EXCEPTION 'Business Partner registration materialization context mismatch' USING ERRCODE='insufficient_privilege';
+ END IF;
+ IF p_tenant_id IS NULL OR p_actor_id IS NULL OR p_case_id IS NULL OR p_idempotency_key IS NULL OR p_expected_case_version IS NULL OR p_expected_case_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key
+    OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 THEN
+  RAISE EXCEPTION 'Business Partner registration materialization arguments are invalid' USING ERRCODE='check_violation';
+ END IF;
+ fingerprint:=encode(public.digest(convert_to(jsonb_build_object(
+  'caseId',p_case_id,'expectedCaseVersion',p_expected_case_version,
+  'idempotencyKey',p_idempotency_key,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case-materialization:'||p_idempotency_key,0));
+ SELECT e.* INTO prior FROM event.command_execution e
+  WHERE e.tenant_id=p_tenant_id AND e.command_code='entity.case.materialize.business_partner_registration'
+    AND e.idempotency_key=p_idempotency_key;
+ IF FOUND THEN
+  IF prior.request_fingerprint<>fingerprint THEN
+   RAISE EXCEPTION 'Business Partner registration materialization idempotency conflict' USING ERRCODE='unique_violation';
+  END IF;
+  RETURN QUERY SELECT (prior.result_payload->>'caseId')::uuid,
+   (prior.result_payload->>'businessPartnerId')::uuid,
+   (prior.result_payload->>'resultSnapshotId')::uuid,(prior.result_payload->>'rowVersion')::bigint,
+   prior.result_payload->>'status',true,(prior.result_payload->>'outboxId')::uuid;
+  RETURN;
+ END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,
+  actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by)
+ VALUES(p_tenant_id,'entity.case.materialize.business_partner_registration',p_idempotency_key,fingerprint,'processing',
+  p_actor_id,'neon-business-partner',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id)
+ RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case:'||p_case_id::text,0));
+ SELECT c.* INTO current_case FROM document.entity_case c
+  WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Approved entity case was not found' USING ERRCODE='no_data_found'; END IF;
+ IF current_case.row_version<>p_expected_case_version THEN
+  RAISE EXCEPTION 'Entity case version is stale' USING ERRCODE='serialization_failure';
+ END IF;
+ IF current_case.status IS DISTINCT FROM 'approved' OR current_case.entity_code<>'master.business_partner'
+    OR current_case.operation_code IS DISTINCT FROM 'new_partner' OR current_case.target_entity_id IS NOT NULL
+    OR current_case.decision_snapshot_id IS NULL OR NOT EXISTS(
+      SELECT 1 FROM document.entity_case_command_evidence approval
+      WHERE approval.tenant_id=p_tenant_id AND approval.entity_case_id=p_case_id
+        AND approval.after_status='approved' AND approval.outcome='accepted'
+        AND approval.recorded_by<>current_case.created_by
+        AND approval.after_version=current_case.row_version) THEN
+  RAISE EXCEPTION 'Entity case is not an independently approved Business Partner registration' USING ERRCODE='object_not_in_prerequisite_state';
+ END IF;
+ SELECT s.payload_json INTO payload FROM snapshot.entity_snapshot s
+  WHERE s.tenant_id=p_tenant_id AND s.snapshot_id=current_case.decision_snapshot_id;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Decision snapshot was not found' USING ERRCODE='data_corrupted'; END IF;
+ SELECT c.contract_json INTO contract FROM runtime_meta.entity_contract c
+ WHERE c.tenant_id=p_tenant_id AND c.id=current_case.entity_contract_id
+   AND c.entity_contract_hash=current_case.entity_contract_hash AND c.status IN('published','superseded');
+ IF NOT FOUND OR contract IS NULL OR jsonb_typeof(payload) IS DISTINCT FROM 'object'
+    OR cardinality(document.fn_validate_entity_case_payload(contract,payload)) IS DISTINCT FROM 0 THEN
+   RAISE EXCEPTION 'Registration requires its valid pinned contract' USING ERRCODE='check_violation';
+ END IF;
+  IF payload->>'registrationChannel' IS DISTINCT FROM 'internal' OR COALESCE(payload->>'partnerCategory','') NOT IN ('organization','person')
+    OR COALESCE(payload->>'ownershipClass','') NOT IN('internal','external')
+    OR length(btrim(COALESCE(payload->>'name','')))=0 OR length(btrim(COALESCE(payload->>'businessPartnerCode','')))=0
+    OR EXISTS(SELECT 1 FROM jsonb_object_keys(payload) k WHERE k NOT IN('businessPartnerCode','name','partnerCategory','personId','ownershipClass','legalClassification','legalForm','registrationCountryCode','incorporationDate','websiteUrl','description','registrationChannel')) THEN
+   RAISE EXCEPTION 'Role-free registration accepts core identity only' USING ERRCODE='check_violation';
+  END IF;
+  IF (payload->>'partnerCategory'='person' AND (NULLIF(payload->>'personId','') IS NULL
+      OR payload ?| ARRAY['legalForm','registrationCountryCode','incorporationDate']))
+     OR (payload->>'partnerCategory'='organization' AND payload ? 'personId') THEN
+   RAISE EXCEPTION 'Partner category and identity fields disagree' USING ERRCODE='check_violation';
+  END IF;
+  INSERT INTO master.business_partner(id,tenant_id,code,name,partner_category,person_id,
+   ownership_class,category_locked_by,legal_classification,website_url,
+   description,status,created_by)
+  VALUES(bp_id,p_tenant_id,payload->>'businessPartnerCode',payload->>'name',
+   payload->>'partnerCategory',
+   NULLIF(payload->>'personId','')::uuid,
+   payload->>'ownershipClass',p_actor_id,NULLIF(payload->>'legalClassification','')::master.business_partner_legal_classification_d,
+   payload->>'websiteUrl',payload->>'description','draft',p_actor_id) RETURNING * INTO bp;
+  IF bp.partner_category='organization' THEN
+   PERFORM master.update_business_partner_organization_identity(p_tenant_id,bp_id,jsonb_build_object('legalForm',payload->'legalForm','registrationCountryCode',payload->'registrationCountryCode','incorporationDate',payload->'incorporationDate'),p_actor_id);
+  END IF;
+  SELECT * INTO bp FROM master.business_partner WHERE tenant_id=p_tenant_id AND id=bp_id;
+  SELECT * INTO lifecycle FROM control.command_business_partner_lifecycle(p_tenant_id,'business_partner',bp_id,
+   'active',bp.record_version,'approved governed partner registration','case-bp-activate:'||p_case_id::text,p_actor_id);
+  authority_evidence_id:=lifecycle.evidence_id;
+  IF lifecycle.aggregate_id IS DISTINCT FROM bp_id OR lifecycle.record_version IS DISTINCT FROM bp.record_version+1 THEN
+   RAISE EXCEPTION 'Registration lifecycle authority did not acknowledge activation' USING ERRCODE='data_exception';
+  END IF;
+ SELECT b.* INTO bp FROM master.business_partner b WHERE b.tenant_id=p_tenant_id AND b.id=bp_id;
+ IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c
+   WHERE c.tenant_id=p_tenant_id AND c.id=current_case.entity_contract_id
+     AND c.entity_contract_hash=current_case.entity_contract_hash AND c.status IN('published','superseded')),payload))>0 THEN
+  RAISE EXCEPTION 'Materialized Business Partner snapshot violates the pinned contract' USING ERRCODE='check_violation';
+ END IF;
+ result_snapshot:=snapshot.fn_capture_entity('master.business_partner',bp_id,bp.code,1,
+  current_case.entity_contract_hash,bp.record_version,'entity.case.materialized','create',payload,
+  p_correlation_id,NULL,NULL,NULL,'legal','neon-business-partner');
+ next_version:=current_case.row_version+1;
+ SELECT COALESCE(max(m.attempt_no),0)+1 INTO attempt_no FROM document.entity_case_materialization m
+  WHERE m.tenant_id=p_tenant_id AND m.entity_case_id=p_case_id;
+ INSERT INTO document.entity_case_materialization(tenant_id,entity_case_id,attempt_no,source_snapshot_id,
+  result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,
+  started_at,completed_at,requested_by,completed_by)
+ VALUES(p_tenant_id,p_case_id,attempt_no,current_case.decision_snapshot_id,result_snapshot,
+  'neon.business_partner_registration','2',fingerprint,'succeeded','PARTNER_REGISTERED',
+  clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO materialization_id;
+ lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,
+  'sourceSnapshotId',current_case.decision_snapshot_id,'targetSnapshotId',result_snapshot,
+  'businessPartnerId',bp_id,'materializationId',materialization_id)::text,'UTF8'),'sha256'),'hex');
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,
+  lineage_role,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+ VALUES(p_tenant_id,p_case_id,current_case.decision_snapshot_id,result_snapshot,'materialized_from',
+  'master.business_partner',bp_id,'neon.business_partner_registration','1',lineage_hash,p_actor_id);
+ UPDATE document.entity_case c SET target_entity_id=bp_id,result_snapshot_id=result_snapshot,status='materialized',
+  row_version=next_version,updated_by=p_actor_id WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,
+  request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,
+  result_code,result_snapshot_id,result_evidence,recorded_by)
+ VALUES(p_tenant_id,p_case_id,'entity.case.materialize',p_idempotency_key,fingerprint,p_expected_case_version,
+  current_case.row_version,next_version,'approved','materialized','accepted','PARTNER_REGISTERED',
+  result_snapshot,jsonb_build_object('businessPartnerId',bp_id,
+   'materializationId',materialization_id,'authorityEvidenceId',authority_evidence_id),p_actor_id);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,
+  event_version,actor_id,source,correlation_id,partition_key,payload,created_by)
+ VALUES(p_tenant_id,'governed-entity-case','entity.case.materialized','entity-case:'||p_case_id::text||':v'||next_version::text||':'||p_idempotency_key,
+  'document.entity_case',p_case_id,'entity_case',p_case_id,LEAST(next_version,2147483647)::integer,p_actor_id,
+  'neon-business-partner',p_correlation_id,p_tenant_id::text,jsonb_build_object('caseId',p_case_id,
+   'businessPartnerId',bp_id,'resultSnapshotId',result_snapshot,'rowVersion',next_version,
+   'status','materialized','materializer','neon.business_partner_registration'),p_actor_id) RETURNING id INTO outbox;
+ result:=jsonb_build_object('caseId',p_case_id,'businessPartnerId',bp_id,
+  'resultSnapshotId',result_snapshot,'rowVersion',next_version,'status','materialized','outboxId',outbox);
+ UPDATE event.command_execution SET status='succeeded',result_payload=result,completed_at=clock_timestamp(),
+  status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
+ RETURN QUERY SELECT p_case_id,bp_id,result_snapshot,
+  next_version,'materialized',false,outbox;
+END $$;
+REVOKE ALL ON FUNCTION master.command_materialize_business_partner_registration_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+
+
+-- Company finance configuration has a distinct authority and does not create a role.
+-- The legacy role_id return slot remains NULL; a partner UUID is never relabelled
+-- as a Supplier/Customer identity. Consumers use business_partner_id + capability.
+CREATE OR REPLACE FUNCTION master.command_materialize_business_partner_company_case(
+ p_tenant_id uuid,p_case_id uuid,p_expected_case_version bigint,
+ p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL)
+RETURNS TABLE(entity_case_id uuid,business_partner_id uuid,role_id uuid,
+ qualification_id uuid,preference_id uuid,result_snapshot_id uuid,
+ row_version bigint,case_status text,replayed boolean,outbox_id uuid,
+ company_profile_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,master,document,control,snapshot,event,runtime_meta,shared
+SET row_security=on AS $$
+DECLARE
+ fingerprint text; prior event.command_execution%ROWTYPE; execution uuid;
+ current_case document.entity_case%ROWTYPE; payload jsonb; bp master.business_partner%ROWTYPE;
+ bp_id uuid; target_role_id uuid; profile_id uuid; company_id uuid; org_id uuid;
+ requested_role text; currency text; payment_term uuid; accounting_profile uuid;
+ dimension_set uuid; remittance_link uuid; statement_cycle text; profile_payload jsonb;
+ result_snapshot uuid; next_version bigint; attempt_no integer; materialization_id uuid;
+ outbox uuid; result jsonb; lineage_hash text; target_type text; purchasing_setup boolean:=false;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true)<>'neon'
+    OR shared.current_tenant_id()<>p_tenant_id
+    OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN
+  RAISE EXCEPTION 'Business Partner company materialization context mismatch' USING ERRCODE='insufficient_privilege';
+ END IF;
+ IF p_expected_case_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key
+    OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 THEN
+  RAISE EXCEPTION 'Business Partner company materialization arguments are invalid' USING ERRCODE='check_violation';
+ END IF;
+ fingerprint:=encode(public.digest(convert_to(jsonb_build_object(
+  'caseId',p_case_id,'expectedCaseVersion',p_expected_case_version,
+  'idempotencyKey',p_idempotency_key,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case-materialization:'||p_idempotency_key,0));
+ SELECT e.* INTO prior FROM event.command_execution e
+  WHERE e.tenant_id=p_tenant_id AND e.command_code='entity.case.materialize.business_partner_company'
+    AND e.idempotency_key=p_idempotency_key;
+ IF FOUND THEN
+  IF prior.request_fingerprint<>fingerprint THEN
+   RAISE EXCEPTION 'Business Partner company materialization idempotency conflict' USING ERRCODE='unique_violation';
+  END IF;
+  RETURN QUERY SELECT (prior.result_payload->>'caseId')::uuid,
+   (prior.result_payload->>'businessPartnerId')::uuid,(prior.result_payload->>'roleId')::uuid,
+   NULL::uuid,NULL::uuid,(prior.result_payload->>'resultSnapshotId')::uuid,
+   (prior.result_payload->>'rowVersion')::bigint,prior.result_payload->>'status',true,
+   (prior.result_payload->>'outboxId')::uuid,(prior.result_payload->>'companyProfileId')::uuid;
+  RETURN;
+ END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,
+  actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by)
+ VALUES(p_tenant_id,'entity.case.materialize.business_partner_company',p_idempotency_key,fingerprint,'processing',
+  p_actor_id,'neon-business-partner',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id)
+ RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case:'||p_case_id::text,0));
+ SELECT c.* INTO current_case FROM document.entity_case c
+  WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Approved entity case was not found' USING ERRCODE='no_data_found'; END IF;
+ IF current_case.row_version<>p_expected_case_version THEN
+  RAISE EXCEPTION 'Entity case version is stale' USING ERRCODE='serialization_failure';
+ END IF;
+ IF current_case.status<>'approved' OR current_case.entity_code NOT IN('master.business_partner','master.business_partner_company_setup_request')
+    OR current_case.operation_code<>'configure_company' OR current_case.target_entity_id IS NULL
+    OR current_case.decision_snapshot_id IS NULL THEN
+  RAISE EXCEPTION 'Entity case is not an approved Business Partner company configuration' USING ERRCODE='object_not_in_prerequisite_state';
+ END IF;
+ SELECT s.payload_json INTO payload FROM snapshot.entity_snapshot s
+  WHERE s.tenant_id=p_tenant_id AND s.snapshot_id=current_case.decision_snapshot_id;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Decision snapshot was not found' USING ERRCODE='data_corrupted'; END IF;
+ IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c
+   WHERE c.tenant_id=p_tenant_id AND c.id=current_case.entity_contract_id
+     AND c.entity_contract_hash=current_case.entity_contract_hash AND c.status IN('published','superseded')),payload))>0 THEN
+  RAISE EXCEPTION 'Company configuration payload violates the pinned contract' USING ERRCODE='check_violation';
+ END IF;
+ bp_id:=current_case.target_entity_id;
+ requested_role:=payload->>'requestedRole';
+ org_id:=NULLIF(payload->>'operatingOrganizationId','')::uuid;
+ company_id:=NULLIF(payload->>'companyCodeId','')::uuid;
+ IF current_case.entity_code='master.business_partner_company_setup_request' AND current_case.owner_company_code_id IS DISTINCT FROM company_id THEN
+  RAISE EXCEPTION 'Company setup decision does not match its immutable owner' USING ERRCODE='check_violation';
+ END IF;
+ currency:=upper(NULLIF(btrim(payload->>'currencyCode'),''));
+ payment_term:=NULLIF(payload->>'paymentTermId','')::uuid;
+ accounting_profile:=NULLIF(payload->>'defaultAccountingProfileId','')::uuid;
+ dimension_set:=NULLIF(payload->>'defaultDimensionSetId','')::uuid;
+ remittance_link:=NULLIF(payload->>'preferredRemittanceBankLinkId','')::uuid;
+ statement_cycle:=NULLIF(btrim(payload->>'statementCycleCode'),'');
+ SELECT requested_role='supplier' AND count(*)=1 AND bool_and(p.operation_code='purchasing') AND EXISTS(SELECT 1 FROM governance.cycle_subject subject JOIN governance.cycle_run run ON run.tenant_id=subject.tenant_id AND run.id=subject.cycle_run_id WHERE subject.tenant_id=p_tenant_id AND subject.entity_case_id=p_case_id AND subject.subject_role='company_setup' AND run.status IN('running','blocked') AND run.data->>'schema'='athyper.process-run/1') INTO purchasing_setup FROM control.supplier_activation_policy p WHERE p.tenant_id=p_tenant_id AND p.operating_organization_id=org_id AND p.company_code_id=company_id AND p.effective_from<=now() AND (p.effective_until IS NULL OR p.effective_until>now());
+ IF requested_role NOT IN('supplier','customer') OR org_id IS NULL OR company_id IS NULL
+    OR currency IS NULL OR currency !~ '^[A-Z]{3}$' OR (NOT purchasing_setup AND (payment_term IS NULL OR accounting_profile IS NULL))
+    OR (requested_role='supplier' AND remittance_link IS NULL AND NOT purchasing_setup)
+    OR (requested_role='customer' AND remittance_link IS NOT NULL) THEN
+  RAISE EXCEPTION 'Company configuration coordinates or finance fields are incomplete' USING ERRCODE='check_violation';
+ END IF;
+ SELECT b.* INTO bp FROM master.business_partner b
+  WHERE b.tenant_id=p_tenant_id AND b.id=bp_id AND b.status='active' FOR SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Target Business Partner is not active' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+ IF NOT EXISTS(
+   SELECT 1 FROM master.business_partner_operating_organization_assignment assignment
+   JOIN master.operating_organization_company_assignment company_scope
+     ON company_scope.tenant_id=assignment.tenant_id
+    AND company_scope.operating_organization_id=assignment.operating_organization_id
+    AND company_scope.company_code_id=company_id
+   WHERE assignment.tenant_id=p_tenant_id AND assignment.business_partner_id=bp_id
+    AND assignment.operating_organization_id=org_id AND assignment.partner_role=requested_role::master.partner_role_d
+    AND assignment.status='active' AND assignment.effective_from<=CURRENT_DATE
+    AND (assignment.effective_until IS NULL OR assignment.effective_until>CURRENT_DATE)
+    AND company_scope.status='active' AND company_scope.effective_from<=CURRENT_DATE
+    AND (company_scope.effective_until IS NULL OR company_scope.effective_until>CURRENT_DATE)
+  ) THEN
+  RAISE EXCEPTION 'Active Business Partner role scope does not cover the selected company' USING ERRCODE='check_violation';
+ END IF;
+ IF requested_role='supplier' THEN
+  IF NOT bp.supplier_enabled THEN RAISE EXCEPTION 'Supplier capability must be enabled' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+  INSERT INTO master.company_code_supplier_profile(
+   tenant_id,business_partner_id,company_code_id,currency_code,payment_term_id,
+   default_accounting_profile_id,preferred_remittance_bank_link_id,default_dimension_set_id,
+   metadata,status,status_changed_at,status_changed_by,created_by)
+  VALUES(p_tenant_id,bp_id,company_id,currency,payment_term,accounting_profile,
+   remittance_link,dimension_set,jsonb_build_object('sourceCaseId',p_case_id),'active',
+   clock_timestamp(),p_actor_id,p_actor_id)
+  ON CONFLICT(tenant_id,business_partner_id,company_code_id) DO UPDATE SET
+   currency_code=EXCLUDED.currency_code,payment_term_id=EXCLUDED.payment_term_id,
+   default_accounting_profile_id=EXCLUDED.default_accounting_profile_id,
+   preferred_remittance_bank_link_id=EXCLUDED.preferred_remittance_bank_link_id,
+   default_dimension_set_id=EXCLUDED.default_dimension_set_id,
+   metadata=master.company_code_supplier_profile.metadata||jsonb_build_object('sourceCaseId',p_case_id),
+   status='active',status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,
+   updated_at=clock_timestamp(),updated_by=p_actor_id
+  RETURNING id INTO profile_id;
+  target_type:='master.company_code_supplier_profile';
+ ELSE
+  IF NOT bp.customer_enabled THEN RAISE EXCEPTION 'Customer capability must be enabled' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+  INSERT INTO master.company_code_customer_profile(
+   tenant_id,business_partner_id,company_code_id,currency_code,payment_term_id,
+   default_accounting_profile_id,default_dimension_set_id,statement_cycle_code,
+   metadata,status,status_changed_at,status_changed_by,created_by)
+  VALUES(p_tenant_id,bp_id,company_id,currency,payment_term,accounting_profile,
+   dimension_set,statement_cycle,jsonb_build_object('sourceCaseId',p_case_id),'active',
+   clock_timestamp(),p_actor_id,p_actor_id)
+  ON CONFLICT(tenant_id,business_partner_id,company_code_id) DO UPDATE SET
+   currency_code=EXCLUDED.currency_code,payment_term_id=EXCLUDED.payment_term_id,
+   default_accounting_profile_id=EXCLUDED.default_accounting_profile_id,
+   default_dimension_set_id=EXCLUDED.default_dimension_set_id,
+   statement_cycle_code=EXCLUDED.statement_cycle_code,
+   metadata=master.company_code_customer_profile.metadata||jsonb_build_object('sourceCaseId',p_case_id),
+   status='active',status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,
+   updated_at=clock_timestamp(),updated_by=p_actor_id
+  RETURNING id INTO profile_id;
+  target_type:='master.company_code_customer_profile';
+ END IF;
+ profile_payload:=jsonb_strip_nulls(jsonb_build_object(
+  'businessPartnerId',bp_id,'requestedRole',requested_role,
+  'operatingOrganizationId',org_id,'companyCodeId',company_id,'companyProfileId',profile_id,
+  'currencyCode',currency,'paymentTermId',payment_term,
+  'defaultAccountingProfileId',accounting_profile,'defaultDimensionSetId',dimension_set,
+  'preferredRemittanceBankLinkId',remittance_link,'statementCycleCode',statement_cycle));
+ result_snapshot:=snapshot.fn_capture_entity(target_type,profile_id,bp.code||':'||company_id::text,1,
+  current_case.entity_contract_hash,p_expected_case_version,'entity.case.materialized','version',profile_payload,
+  p_correlation_id,NULL,NULL,NULL,'legal','neon-business-partner');
+ next_version:=current_case.row_version+1;
+ SELECT COALESCE(max(m.attempt_no),0)+1 INTO attempt_no FROM document.entity_case_materialization m
+  WHERE m.tenant_id=p_tenant_id AND m.entity_case_id=p_case_id;
+ INSERT INTO document.entity_case_materialization(tenant_id,entity_case_id,attempt_no,source_snapshot_id,
+  result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,
+  started_at,completed_at,requested_by,completed_by)
+ VALUES(p_tenant_id,p_case_id,attempt_no,current_case.decision_snapshot_id,result_snapshot,
+  'neon.business_partner_company','1',fingerprint,'succeeded','COMPANY_CONFIGURED',
+  clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO materialization_id;
+ lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,
+  'sourceSnapshotId',current_case.decision_snapshot_id,'targetSnapshotId',result_snapshot,
+  'businessPartnerId',bp_id,'roleId',target_role_id,'companyProfileId',profile_id,
+  'materializationId',materialization_id)::text,'UTF8'),'sha256'),'hex');
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,
+  lineage_role,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+ VALUES(p_tenant_id,p_case_id,current_case.decision_snapshot_id,result_snapshot,'materialized_from',
+  target_type,profile_id,'neon.business_partner_company','1',lineage_hash,p_actor_id);
+ UPDATE document.entity_case c SET result_snapshot_id=result_snapshot,status='materialized',
+  row_version=next_version,updated_by=p_actor_id WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,
+  request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,
+  result_code,result_snapshot_id,result_evidence,recorded_by)
+ VALUES(p_tenant_id,p_case_id,'entity.case.materialize',p_idempotency_key,fingerprint,p_expected_case_version,
+  current_case.row_version,next_version,'approved','materialized','accepted','COMPANY_CONFIGURED',
+  result_snapshot,jsonb_build_object('businessPartnerId',bp_id,'roleId',target_role_id,'role',requested_role,
+   'companyProfileId',profile_id,'companyCodeId',company_id,'operatingOrganizationId',org_id,
+   'materializationId',materialization_id,'resultKind','company_configured'),p_actor_id);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,
+  event_version,actor_id,source,correlation_id,partition_key,payload,created_by)
+ VALUES(p_tenant_id,'governed-entity-case','entity.case.materialized','entity-case:'||p_case_id::text||':v'||next_version::text||':'||p_idempotency_key,
+  'document.entity_case',p_case_id,'entity_case',p_case_id,LEAST(next_version,2147483647)::integer,p_actor_id,
+  'neon-business-partner',p_correlation_id,p_tenant_id::text,jsonb_build_object('caseId',p_case_id,
+   'businessPartnerId',bp_id,'roleId',target_role_id,'role',requested_role,'companyProfileId',profile_id,
+   'companyCodeId',company_id,'operatingOrganizationId',org_id,'resultSnapshotId',result_snapshot,
+   'rowVersion',next_version,'status','materialized','materializer','neon.business_partner_company',
+   'resultKind','company_configured'),p_actor_id) RETURNING id INTO outbox;
+ result:=jsonb_build_object('caseId',p_case_id,'businessPartnerId',bp_id,'roleId',target_role_id,
+  'companyProfileId',profile_id,'resultSnapshotId',result_snapshot,'rowVersion',next_version,
+  'status','materialized','outboxId',outbox);
+ UPDATE event.command_execution SET status='succeeded',result_payload=result,completed_at=clock_timestamp(),
+  status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
+ RETURN QUERY SELECT p_case_id,bp_id,target_role_id,NULL::uuid,NULL::uuid,result_snapshot,
+  next_version,'materialized',false,outbox,profile_id;
+END $$;
+
+-- Kind-specific G5 changes reuse native lifecycle and independent bank-verification authorities.
+-- Child activation pins existing proposals; it never edits their business data
+-- or verification fields. The fixed kind map is the only dynamic SQL boundary.
+CREATE OR REPLACE FUNCTION master.fn_pin_business_partner_child_activation(
+ p_tenant_id uuid,p_business_partner_id uuid,p_items jsonb,p_require_fingerprints boolean DEFAULT true)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,master,document,snapshot,shared SET row_security=on AS $$
+DECLARE item jsonb; row_data jsonb; table_name text; owner_column text;
+ fingerprint text; attachment_fingerprint text; result jsonb:='[]'::jsonb;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true) IS DISTINCT FROM 'neon'
+  OR shared.current_tenant_id() IS DISTINCT FROM p_tenant_id OR master.current_principal_id_soft() IS NULL THEN
+  RAISE EXCEPTION 'Child activation context mismatch' USING ERRCODE='insufficient_privilege';
+ END IF;
+ IF jsonb_typeof(p_items) IS DISTINCT FROM 'array' OR jsonb_array_length(p_items) NOT BETWEEN 1 AND 50 THEN
+  RAISE EXCEPTION 'Child activation requires 1 to 50 rows' USING ERRCODE='check_violation';
+ END IF;
+ IF (SELECT count(DISTINCT (value->>'kind',lower(value->>'id'))) FROM jsonb_array_elements(p_items))<>jsonb_array_length(p_items) THEN
+  RAISE EXCEPTION 'Duplicate activation row' USING ERRCODE='check_violation';
+ END IF;
+ PERFORM 1 FROM master.business_partner WHERE tenant_id=p_tenant_id AND id=p_business_partner_id AND status='active' FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Active parent required' USING ERRCODE='check_violation'; END IF;
+ FOR item IN SELECT value FROM jsonb_array_elements(p_items) ORDER BY value->>'kind',lower(value->>'id') LOOP
+  table_name:=CASE item->>'kind'
+   WHEN 'identifier' THEN 'business_partner_identifier' WHEN 'tax_registration' THEN 'business_partner_tax_registration'
+   WHEN 'relationship' THEN 'business_partner_relationship' WHEN 'governance_relation' THEN 'business_partner_governance_relation'
+   WHEN 'commodity_classification' THEN 'business_partner_commodity_classification' WHEN 'industry_classification' THEN 'business_partner_industry_classification'
+   WHEN 'certificate_evidence' THEN 'certification' END;
+  IF table_name IS NULL OR jsonb_typeof(item) IS DISTINCT FROM 'object'
+   OR EXISTS(SELECT 1 FROM jsonb_object_keys(item) k WHERE k NOT IN('kind','id','fingerprint','attachmentId','attachmentFingerprint'))
+   OR COALESCE(item->>'id','') !~* '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' THEN
+   RAISE EXCEPTION 'Unsupported activation row' USING ERRCODE='check_violation';
+  END IF;
+  attachment_fingerprint:=NULL;
+  IF item->>'kind'='certificate_evidence' THEN
+   SELECT to_jsonb(c) INTO row_data FROM master.certification c WHERE c.tenant_id=p_tenant_id AND c.owner_type='business_partner'
+    AND c.owner_id=p_business_partner_id AND c.id=(item->>'id')::uuid AND c.status='active'
+    AND (c.effective_from IS NULL OR c.effective_from<=CURRENT_DATE) AND (c.effective_until IS NULL OR c.effective_until>CURRENT_DATE) FOR UPDATE;
+   SELECT encode(public.digest(convert_to(jsonb_build_object('id',a.id,'sha256',a.sha256,'seriesId',a.series_id,'sizeBytes',a.size_bytes)::text,'UTF8'),'sha256'),'hex')
+    INTO attachment_fingerprint FROM document.attachment a JOIN document.attachment_series s ON s.tenant_id=a.tenant_id AND s.id=a.series_id AND s.current_attachment_id=a.id
+    JOIN document.attachment_link l ON l.tenant_id=a.tenant_id AND l.attachment_series_id=a.series_id
+    WHERE a.tenant_id=p_tenant_id AND a.id=(item->>'attachmentId')::uuid AND a.status='active' AND a.is_active AND a.is_virus_scanned
+    AND (a.expires_at IS NULL OR a.expires_at>clock_timestamp())
+    AND l.entity_type IN('business_partner','master.business_partner') AND l.entity_id=p_business_partner_id::text FOR SHARE OF a,s,l;
+   IF attachment_fingerprint IS NULL OR (p_require_fingerprints AND item->>'attachmentFingerprint' IS DISTINCT FROM attachment_fingerprint) THEN
+    RAISE EXCEPTION 'Current completed attachment linked to the same partner required' USING ERRCODE='check_violation';
+   END IF;
+  ELSE
+   IF item ? 'attachmentId' OR item ? 'attachmentFingerprint' THEN RAISE EXCEPTION 'Attachment input requires certificate evidence' USING ERRCODE='check_violation'; END IF;
+   owner_column:=CASE WHEN item->>'kind'='relationship' THEN 'source_business_partner_id' ELSE 'business_partner_id' END;
+   EXECUTE format('SELECT to_jsonb(c) FROM master.%I c WHERE tenant_id=$1 AND %I=$2 AND id=$3 AND status=''draft'' FOR UPDATE',table_name,owner_column)
+    INTO row_data USING p_tenant_id,p_business_partner_id,(item->>'id')::uuid;
+  END IF;
+  IF row_data IS NULL OR NOT EXISTS(
+   SELECT 1 FROM snapshot.entity_case_snapshot_lineage l JOIN document.entity_case c ON c.tenant_id=l.tenant_id AND c.id=l.entity_case_id
+   WHERE l.tenant_id=p_tenant_id AND l.target_authority_type='master.'||table_name AND l.target_authority_id=(item->>'id')::uuid
+    AND c.target_entity_id=p_business_partner_id AND c.status='materialized' AND c.entity_code='master.business_partner'
+    AND c.id::text=row_data->'metadata'->>'sourceCaseId' AND l.source_snapshot_id::text=row_data->'metadata'->>'sourceSnapshotId') THEN
+   RAISE EXCEPTION 'Draft child with governed parent lineage required' USING ERRCODE='check_violation';
+  END IF;
+  fingerprint:=encode(public.digest(convert_to(row_data::text,'UTF8'),'sha256'),'hex');
+  IF NULLIF(row_data->>'effective_until','')::date<=CURRENT_DATE OR NULLIF(row_data->>'end_of_term','')::date<CURRENT_DATE THEN
+   RAISE EXCEPTION 'Expired child is not activatable' USING ERRCODE='check_violation';
+  END IF;
+  IF item->>'kind'='tax_registration' AND NOT EXISTS(SELECT 1 FROM master.tax_jurisdiction j
+   JOIN shared.country c ON c.code=j.country_code AND c.status='active'
+   WHERE j.tenant_id=p_tenant_id AND j.id=(row_data->>'jurisdiction_id')::uuid AND j.status='active'
+    AND (j.state_region_code IS NULL OR EXISTS(SELECT 1 FROM shared.state_region r WHERE r.country_code=j.country_code AND r.code=j.state_region_code AND r.status='active'))) THEN
+   RAISE EXCEPTION 'Active tax jurisdiction required' USING ERRCODE='check_violation';
+  END IF;
+  IF item->>'kind' IN('commodity_capability','commodity_classification') AND NOT EXISTS(SELECT 1 FROM master.commodity_category c
+    WHERE c.tenant_id=p_tenant_id AND c.id=(row_data->>'commodity_category_id')::uuid AND c.status='active') THEN
+   RAISE EXCEPTION 'Active commodity category required' USING ERRCODE='check_violation';
+  END IF;
+  IF item->>'kind'='industry_classification' AND NOT EXISTS(SELECT 1 FROM shared.industry_code c
+    WHERE c.id=(row_data->>'industry_code_id')::uuid AND c.domain_code=row_data->>'industry_domain_code' AND c.status='active') THEN
+   RAISE EXCEPTION 'Active domain-qualified industry code required' USING ERRCODE='check_violation';
+  END IF;
+  IF p_require_fingerprints AND item->>'fingerprint' IS DISTINCT FROM fingerprint THEN
+   RAISE EXCEPTION 'Child changed after proposal capture' USING ERRCODE='serialization_failure';
+  END IF;
+  result:=result||jsonb_build_array(jsonb_build_object('kind',item->>'kind','id',lower(item->>'id'),'fingerprint',fingerprint)
+   ||CASE WHEN attachment_fingerprint IS NULL THEN '{}'::jsonb ELSE jsonb_build_object('attachmentId',item->>'attachmentId','attachmentFingerprint',attachment_fingerprint) END);
+ END LOOP;
+ RETURN result;
+END $$;
+
+CREATE OR REPLACE FUNCTION master.command_materialize_business_partner_change_case(
+ p_tenant_id uuid,p_case_id uuid,p_expected_case_version bigint,
+ p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL)
+RETURNS TABLE(entity_case_id uuid,business_partner_id uuid,role_id uuid,
+ qualification_id uuid,preference_id uuid,result_snapshot_id uuid,
+ row_version bigint,case_status text,replayed boolean,outbox_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,master,document,control,snapshot,event,runtime_meta,shared
+SET row_security=on AS $$
+DECLARE
+ fingerprint text; prior event.command_execution%ROWTYPE; execution uuid;
+ current_case document.entity_case%ROWTYPE; payload jsonb; bp master.business_partner%ROWTYPE;
+ bp_id uuid:=shared.uuidv7(); new_role_id uuid:=shared.uuidv7(); assignment_id uuid:=shared.uuidv7();
+ new_qualification_id uuid; new_preference_id uuid; lifecycle record; authority_evidence_id uuid;
+ result_snapshot uuid; next_version bigint; attempt_no integer; materialization_id uuid;
+ outbox uuid; result jsonb; lineage_hash text; requested_role text; channel text;
+ org_id uuid; to_state text; result_kind text; reason_code text;
+ activation_item jsonb; activation_table text;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true) IS DISTINCT FROM 'neon'
+    OR shared.current_tenant_id() IS DISTINCT FROM p_tenant_id
+    OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN
+  RAISE EXCEPTION 'Business Partner role materialization context mismatch' USING ERRCODE='insufficient_privilege';
+ END IF;
+ IF p_tenant_id IS NULL OR p_actor_id IS NULL OR p_case_id IS NULL OR p_expected_case_version IS NULL OR p_idempotency_key IS NULL OR p_expected_case_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key
+    OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 THEN
+  RAISE EXCEPTION 'Business Partner role materialization arguments are invalid' USING ERRCODE='check_violation';
+ END IF;
+ fingerprint:=encode(public.digest(convert_to(jsonb_build_object(
+  'caseId',p_case_id,'expectedCaseVersion',p_expected_case_version,
+  'idempotencyKey',p_idempotency_key,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case-materialization:'||p_idempotency_key,0));
+ SELECT e.* INTO prior FROM event.command_execution e
+  WHERE e.tenant_id=p_tenant_id AND e.command_code='entity.case.materialize.business_partner_change'
+    AND e.idempotency_key=p_idempotency_key;
+ IF FOUND THEN
+  IF prior.request_fingerprint<>fingerprint OR prior.status<>'succeeded' THEN
+   RAISE EXCEPTION 'Business Partner role materialization idempotency conflict' USING ERRCODE='unique_violation';
+  END IF;
+  RETURN QUERY SELECT (prior.result_payload->>'caseId')::uuid,
+   (prior.result_payload->>'businessPartnerId')::uuid,(prior.result_payload->>'roleId')::uuid,
+   NULLIF(prior.result_payload->>'qualificationId','')::uuid,NULLIF(prior.result_payload->>'preferenceId','')::uuid,
+   (prior.result_payload->>'resultSnapshotId')::uuid,(prior.result_payload->>'rowVersion')::bigint,
+   prior.result_payload->>'status',true,(prior.result_payload->>'outboxId')::uuid;
+  RETURN;
+ END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,
+  actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by)
+ VALUES(p_tenant_id,'entity.case.materialize.business_partner_change',p_idempotency_key,fingerprint,'processing',
+  p_actor_id,'neon-business-partner',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id)
+ RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case:'||p_case_id::text,0));
+ SELECT c.* INTO current_case FROM document.entity_case c
+  WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Approved entity case was not found' USING ERRCODE='no_data_found'; END IF;
+ IF current_case.row_version<>p_expected_case_version THEN
+  RAISE EXCEPTION 'Entity case version is stale' USING ERRCODE='serialization_failure';
+ END IF;
+ IF current_case.status<>'approved' OR current_case.entity_code<>'master.business_partner'
+    OR current_case.operation_code NOT IN('change_bank','deactivate','reactivate','archive','amend_partner')
+    OR current_case.target_entity_id IS NULL OR current_case.decision_snapshot_id IS NULL
+    OR NOT EXISTS(SELECT 1 FROM document.entity_case_command_evidence approval
+      WHERE approval.tenant_id=p_tenant_id AND approval.entity_case_id=p_case_id
+       AND approval.after_status='approved' AND approval.outcome='accepted'
+       AND approval.recorded_by<>current_case.created_by AND approval.after_version=current_case.row_version) THEN
+  RAISE EXCEPTION 'An independently approved Business Partner change case is required' USING ERRCODE='object_not_in_prerequisite_state';
+ END IF;
+ SELECT s.payload_json INTO payload FROM snapshot.entity_snapshot s
+  WHERE s.tenant_id=p_tenant_id AND s.snapshot_id=current_case.decision_snapshot_id;
+ IF payload IS NULL OR NOT EXISTS(SELECT 1 FROM runtime_meta.entity_contract contract WHERE contract.tenant_id=p_tenant_id AND contract.id=current_case.entity_contract_id AND contract.entity_contract_hash=current_case.entity_contract_hash AND contract.status IN('published','superseded'))
+    OR cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c
+   WHERE c.tenant_id=p_tenant_id AND c.id=current_case.entity_contract_id
+     AND c.entity_contract_hash=current_case.entity_contract_hash AND c.status IN('published','superseded')),payload))>0 THEN
+  RAISE EXCEPTION 'Business Partner change violates its pinned contract' USING ERRCODE='check_violation';
+ END IF;
+ bp_id:=current_case.target_entity_id;
+ new_role_id:=NULL; assignment_id:=NULL;
+ SELECT b.* INTO bp FROM master.business_partner b WHERE b.tenant_id=p_tenant_id AND b.id=bp_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Business Partner change target is unavailable' USING ERRCODE='no_data_found'; END IF;
+ IF NULLIF(payload->>'expectedBusinessPartnerVersion','')::bigint IS DISTINCT FROM bp.record_version
+    OR payload->>'priorStatus' IS DISTINCT FROM bp.status::text THEN
+  RAISE EXCEPTION 'Business Partner changed after proposal capture' USING ERRCODE='serialization_failure';
+ END IF;
+ reason_code:=payload->>'reasonCode';
+ IF reason_code IS NULL OR reason_code !~ '^[A-Z][A-Z0-9_.-]{2,126}$' THEN
+  RAISE EXCEPTION 'Business Partner change reason is required' USING ERRCODE='check_violation';
+ END IF;
+ IF current_case.operation_code='amend_partner' THEN
+  IF payload->'childActivation'->>'schema' IS DISTINCT FROM 'athyper.bp-child-activation/1'
+    OR payload ? 'meshChangeResolutionId' OR payload ? 'requestedRole' THEN
+   RAISE EXCEPTION 'A child activation amendment is required' USING ERRCODE='check_violation';
+  END IF;
+  PERFORM master.fn_pin_business_partner_child_activation(p_tenant_id,bp_id,payload->'childActivation'->'items',true);
+  FOR activation_item IN SELECT value FROM jsonb_array_elements(payload->'childActivation'->'items') ORDER BY value->>'kind',value->>'id' LOOP
+   activation_table:='business_partner_'||(activation_item->>'kind');
+   -- The helper's closed kind map has already rejected every other table name.
+   IF activation_item->>'kind'='certificate_evidence' THEN
+    UPDATE master.certification SET document_attachment_id=(activation_item->>'attachmentId')::uuid,updated_by=p_actor_id
+     WHERE tenant_id=p_tenant_id AND id=(activation_item->>'id')::uuid;
+   ELSIF activation_item->>'kind'='commodity_classification' THEN
+    UPDATE master.business_partner_commodity_classification SET status='active',record_version=record_version+1,
+     updated_at=clock_timestamp(),updated_by=p_actor_id
+     WHERE tenant_id=p_tenant_id AND business_partner_id=bp_id AND id=(activation_item->>'id')::uuid AND status='draft';
+   ELSIF activation_item->>'kind'='relationship' THEN
+    SELECT * INTO lifecycle FROM control.command_business_partner_lifecycle(p_tenant_id,'business_partner_relationship',
+     (activation_item->>'id')::uuid,'active',
+     (SELECT r.record_version FROM master.business_partner_relationship r WHERE r.tenant_id=p_tenant_id AND r.id=(activation_item->>'id')::uuid),
+     reason_code,'case-child:'||p_case_id::text||':'||(activation_item->>'id'),p_actor_id);
+    IF lifecycle.aggregate_id IS NULL THEN RAISE EXCEPTION 'Relationship activation version conflict' USING ERRCODE='serialization_failure'; END IF;
+   ELSE
+    EXECUTE format('UPDATE master.%I SET status=''active'',status_changed_at=clock_timestamp(),status_changed_by=$1,updated_by=$1 WHERE tenant_id=$2 AND id=$3',activation_table)
+     USING p_actor_id,p_tenant_id,(activation_item->>'id')::uuid;
+   END IF;
+  END LOOP;
+  UPDATE master.business_partner SET updated_by=p_actor_id,record_version=record_version+1 WHERE tenant_id=p_tenant_id AND id=bp_id;
+  result_kind:='partner_amended';
+ ELSIF current_case.operation_code='change_bank' THEN
+  RAISE EXCEPTION 'Legacy bank verification is retired; use payment-instrument capture' USING ERRCODE='feature_not_supported';
+ ELSE
+  IF payload ? 'requestedRole' THEN RAISE EXCEPTION 'Partner lifecycle cannot mutate a thin role' USING ERRCODE='check_violation'; END IF;
+  to_state:=CASE current_case.operation_code WHEN 'deactivate' THEN 'inactive' WHEN 'reactivate' THEN 'active' ELSE 'archived' END;
+  IF to_state='active' AND EXISTS(SELECT 1 FROM control.business_partner_block block
+   WHERE block.tenant_id=p_tenant_id AND block.business_partner_id=bp_id AND block.status='active'
+    AND block.effective_from<=clock_timestamp() AND (block.effective_until IS NULL OR block.effective_until>clock_timestamp())) THEN
+   RAISE EXCEPTION 'An effective Business Partner block prevents reactivation' USING ERRCODE='check_violation';
+  END IF;
+  SELECT * INTO lifecycle FROM control.command_business_partner_lifecycle(p_tenant_id,'business_partner',bp_id,
+   to_state,bp.record_version,reason_code,'case-lifecycle:'||p_case_id::text,p_actor_id);
+  IF lifecycle.aggregate_id IS NULL THEN RAISE EXCEPTION 'Business Partner lifecycle did not acknowledge the expected version' USING ERRCODE='serialization_failure'; END IF;
+  authority_evidence_id:=lifecycle.evidence_id;
+  result_kind:=CASE current_case.operation_code WHEN 'deactivate' THEN 'partner_deactivated' WHEN 'reactivate' THEN 'partner_reactivated' ELSE 'partner_archived' END;
+ END IF;
+ SELECT b.* INTO bp FROM master.business_partner b WHERE b.tenant_id=p_tenant_id AND b.id=bp_id;
+ IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c
+   WHERE c.tenant_id=p_tenant_id AND c.id=current_case.entity_contract_id
+     AND c.entity_contract_hash=current_case.entity_contract_hash AND c.status IN('published','superseded')),payload))>0 THEN
+  RAISE EXCEPTION 'Materialized Business Partner snapshot violates the pinned contract' USING ERRCODE='check_violation';
+ END IF;
+ result_snapshot:=snapshot.fn_capture_entity('master.business_partner',bp_id,bp.code,1,
+  current_case.entity_contract_hash,bp.record_version,'entity.case.materialized','version',payload,
+  p_correlation_id,NULL,NULL,NULL,'legal','neon-business-partner');
+ next_version:=current_case.row_version+1;
+ SELECT COALESCE(max(m.attempt_no),0)+1 INTO attempt_no FROM document.entity_case_materialization m
+  WHERE m.tenant_id=p_tenant_id AND m.entity_case_id=p_case_id;
+ INSERT INTO document.entity_case_materialization(tenant_id,entity_case_id,attempt_no,source_snapshot_id,
+  result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,
+  started_at,completed_at,requested_by,completed_by)
+ VALUES(p_tenant_id,p_case_id,attempt_no,current_case.decision_snapshot_id,result_snapshot,
+  'neon.business_partner_change','1',fingerprint,'succeeded',upper(result_kind),
+  clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO materialization_id;
+ lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,
+  'sourceSnapshotId',current_case.decision_snapshot_id,'targetSnapshotId',result_snapshot,
+  'businessPartnerId',bp_id,'roleId',new_role_id,'materializationId',materialization_id)::text,'UTF8'),'sha256'),'hex');
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,
+  lineage_role,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+ VALUES(p_tenant_id,p_case_id,current_case.decision_snapshot_id,result_snapshot,'materialized_from',
+  'master.business_partner',bp_id,'neon.business_partner_change','1',lineage_hash,p_actor_id);
+ IF current_case.operation_code='amend_partner' THEN
+  FOR activation_item IN SELECT value FROM jsonb_array_elements(payload->'childActivation'->'items') LOOP
+   INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,
+    lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+   VALUES(p_tenant_id,p_case_id,current_case.decision_snapshot_id,result_snapshot,'materialized_from',
+    '$.childActivation.items['||(activation_item->>'id')||']',CASE WHEN activation_item->>'kind'='certificate_evidence' THEN 'master.certification' ELSE 'master.business_partner_'||(activation_item->>'kind') END,
+    (activation_item->>'id')::uuid,'neon.business_partner_child_activation','1',activation_item->>'fingerprint',p_actor_id);
+  END LOOP;
+ END IF;
+ UPDATE document.entity_case c SET target_entity_id=bp_id,result_snapshot_id=result_snapshot,status='materialized',
+  row_version=next_version,updated_by=p_actor_id WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,
+  request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,
+  result_code,result_snapshot_id,result_evidence,recorded_by)
+ VALUES(p_tenant_id,p_case_id,'entity.case.materialize',p_idempotency_key,fingerprint,p_expected_case_version,
+  current_case.row_version,next_version,'approved','materialized','accepted',upper(result_kind),
+  result_snapshot,jsonb_build_object('businessPartnerId',bp_id,'roleId',new_role_id,'role',requested_role,
+   'assignmentId',assignment_id,'qualificationId',new_qualification_id,'preferenceId',new_preference_id,
+   'materializationId',materialization_id,'authorityEvidenceId',authority_evidence_id,
+   'resultKind',result_kind,'reasonCode',reason_code),p_actor_id);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,
+  event_version,actor_id,source,correlation_id,partition_key,payload,created_by)
+ VALUES(p_tenant_id,'governed-entity-case','entity.case.materialized','entity-case:'||p_case_id::text||':v'||next_version::text||':'||p_idempotency_key,
+  'document.entity_case',p_case_id,'entity_case',p_case_id,LEAST(next_version,2147483647)::integer,p_actor_id,
+  'neon-business-partner',p_correlation_id,p_tenant_id::text,jsonb_build_object('caseId',p_case_id,
+   'businessPartnerId',bp_id,'roleId',new_role_id,'role',requested_role,'qualificationId',new_qualification_id,
+   'preferenceId',new_preference_id,'resultSnapshotId',result_snapshot,'rowVersion',next_version,
+   'status','materialized','materializer','neon.business_partner_change','resultKind',result_kind),p_actor_id) RETURNING id INTO outbox;
+ result:=jsonb_build_object('caseId',p_case_id,'businessPartnerId',bp_id,'roleId',new_role_id,
+  'qualificationId',COALESCE(new_qualification_id::text,''),'preferenceId',COALESCE(new_preference_id::text,''),
+  'resultSnapshotId',result_snapshot,'rowVersion',next_version,'status','materialized','outboxId',outbox);
+ UPDATE event.command_execution SET status='succeeded',result_payload=result,completed_at=clock_timestamp(),
+  status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
+ RETURN QUERY SELECT p_case_id,bp_id,new_role_id,new_qualification_id,new_preference_id,result_snapshot,
+  next_version,'materialized',false,outbox;
+END $$;
+
+CREATE OR REPLACE FUNCTION master.fn_materialize_business_partner_case_relationships()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,master,document,control,snapshot,shared
+SET row_security=on AS $$
+DECLARE
+ payload jsonb; proposals jsonb; item jsonb; channel jsonb;
+ owner_type_id uuid; contact_owner_type_id uuid; address_id uuid; contact_id uuid; channel_id uuid;
+ primary_addresses integer; primary_contacts integer; primary_channels integer;
+ evidence_hash text; profile_id uuid; alias_language text;
+BEGIN
+ IF NOT(OLD.status='approved' AND NEW.status='materialized' AND NEW.entity_code='master.business_partner'
+   AND NEW.operation_code IN('register','new_partner') AND NEW.target_entity_id IS NOT NULL
+   AND NEW.decision_snapshot_id IS NOT NULL AND NEW.result_snapshot_id IS NOT NULL) THEN RETURN NEW; END IF;
+ SELECT s.payload_json INTO payload FROM snapshot.entity_snapshot s
+  WHERE s.tenant_id=NEW.tenant_id AND s.snapshot_id=NEW.decision_snapshot_id;
+ proposals:=payload->'relationshipProposals';
+ IF jsonb_typeof(proposals) IS DISTINCT FROM 'object' THEN RETURN NEW; END IF;
+ IF jsonb_typeof(proposals->'addresses')<>'array' OR jsonb_typeof(proposals->'contactPersons')<>'array'
+   OR jsonb_typeof(proposals->'contactChannels')<>'array' THEN
+  RAISE EXCEPTION 'Relationship proposals must contain address, contact person, and channel arrays' USING ERRCODE='check_violation';
+ END IF;
+ SELECT count(*) FILTER(WHERE value->>'isPrimary'='true') INTO primary_addresses FROM jsonb_array_elements(proposals->'addresses');
+ SELECT count(*) FILTER(WHERE value->>'isPrimary'='true') INTO primary_contacts FROM jsonb_array_elements(proposals->'contactPersons');
+ SELECT count(*) INTO primary_channels FROM jsonb_array_elements(proposals->'contactChannels') c
+  JOIN jsonb_array_elements(proposals->'contactPersons') p ON p.value->>'clientItemKey'=c.value->>'contactClientItemKey' AND p.value->>'isPrimary'='true'
+  WHERE c.value->>'isPrimary'='true';
+ IF jsonb_array_length(proposals->'addresses')<1 OR primary_addresses<>1 OR jsonb_array_length(proposals->'contactPersons')<1 OR primary_contacts<>1 OR primary_channels<1 THEN
+  RAISE EXCEPTION 'Exactly one primary address and contact with a primary channel are required' USING ERRCODE='check_violation';
+ END IF;
+ SELECT id INTO owner_type_id FROM control.owner_type
+  WHERE code='business_partner' AND (tenant_id IS NULL OR tenant_id=NEW.tenant_id)
+  ORDER BY (tenant_id=NEW.tenant_id) DESC NULLS LAST LIMIT 1;
+ IF owner_type_id IS NULL THEN RAISE EXCEPTION 'Business Partner owner type is unavailable' USING ERRCODE='data_exception'; END IF;
+ SELECT id INTO contact_owner_type_id FROM control.owner_type
+  WHERE code='contact_person' AND (tenant_id IS NULL OR tenant_id=NEW.tenant_id)
+  ORDER BY (tenant_id=NEW.tenant_id) DESC NULLS LAST LIMIT 1;
+ IF contact_owner_type_id IS NULL THEN RAISE EXCEPTION 'Contact person owner type is unavailable' USING ERRCODE='data_exception'; END IF;
+
+ FOR item IN SELECT value FROM jsonb_array_elements(proposals->'addresses') LOOP
+  IF NOT EXISTS(SELECT 1 FROM shared.country country WHERE country.code=upper(btrim(item->>'countryCode')) AND country.status='active') THEN
+   RAISE EXCEPTION 'Address country must be an active supported country' USING ERRCODE='foreign_key_violation';
+  END IF;
+  IF NULLIF(item->>'stateRegionCode','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM shared.state_region subdivision
+    WHERE subdivision.country_code=upper(btrim(item->>'countryCode'))
+      AND subdivision.code=upper(btrim(item->>'stateRegionCode'))
+      AND subdivision.status='active'
+  ) THEN
+   RAISE EXCEPTION 'Address subdivision must be active and belong to the selected country' USING ERRCODE='foreign_key_violation';
+  END IF;
+  IF item->>'regionEntryMode'='directory' AND NULLIF(item->>'stateRegionCode','') IS NULL THEN
+   RAISE EXCEPTION 'Directory region entry requires a subdivision code' USING ERRCODE='check_violation';
+  END IF;
+  IF item->>'regionEntryMode'='manual' AND NULLIF(item->>'stateRegionCode','') IS NOT NULL THEN
+   RAISE EXCEPTION 'Manual region entry cannot assert a subdivision code' USING ERRCODE='check_violation';
+  END IF;
+  IF NULLIF(item->>'timezoneCode','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM shared.timezone timezone WHERE timezone.code=btrim(item->>'timezoneCode') AND timezone.status='active'
+  ) THEN
+   RAISE EXCEPTION 'Address timezone must be an active supported timezone' USING ERRCODE='foreign_key_violation';
+  END IF;
+  address_id:=shared.uuidv7();
+  INSERT INTO master.address AS created_address(id,tenant_id,address_type,address_kind,building_name,floor,unit,house_number,street_name,po_box,po_box_city,po_box_postal_code,line1,line2,city,region,state_region_code,postal_code,country_code,timezone_code,normalized_hash,
+   formatted_address,validation_status,metadata,status,status_changed_at,status_changed_by,created_by)
+  VALUES(address_id,NEW.tenant_id,item->>'purpose',COALESCE(NULLIF(item->>'addressKind',''),'street'),NULLIF(item->>'buildingName',''),NULLIF(item->>'floor',''),NULLIF(item->>'unit',''),NULLIF(item->>'houseNumber',''),NULLIF(item->>'streetName',''),NULLIF(item->>'poBox',''),CASE WHEN item->>'addressKind'='po_box' THEN NULLIF(item->>'city','') END,CASE WHEN item->>'addressKind'='po_box' THEN NULLIF(item->>'postalCode','') END,NULLIF(item->>'line1',''),NULLIF(item->>'line2',''),
+   NULLIF(item->>'city',''),NULLIF(item->>'region',''),NULLIF(upper(btrim(item->>'stateRegionCode')),''),NULLIF(item->>'postalCode',''),upper(btrim(item->>'countryCode'))::character(2),NULLIF(btrim(item->>'timezoneCode'),''),item->>'normalizedHash',
+   NULLIF(concat_ws(', ',
+    CASE WHEN item->>'addressKind'='po_box' THEN 'PO Box '||NULLIF(item->>'poBox','')
+      WHEN NULLIF(item->>'line1','') IS NOT NULL OR NULLIF(item->>'line2','') IS NOT NULL THEN concat_ws(', ',NULLIF(item->>'line1',''),NULLIF(item->>'line2',''))
+      ELSE NULLIF(concat_ws(', ',NULLIF(item->>'buildingName',''),CASE WHEN NULLIF(item->>'floor','') IS NOT NULL THEN 'Floor '||(item->>'floor') END,CASE WHEN NULLIF(item->>'unit','') IS NOT NULL THEN 'Unit '||(item->>'unit') END,NULLIF(concat_ws(' ',NULLIF(item->>'houseNumber',''),NULLIF(item->>'streetName','')),'')),'') END,
+    NULLIF(item->>'city',''),NULLIF(item->>'region',''),NULLIF(item->>'postalCode',''),item->>'countryCode'),''),
+   'unverified',jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'clientItemKey',item->>'clientItemKey'),'active',clock_timestamp(),NEW.updated_by,NEW.updated_by)
+  ON CONFLICT(tenant_id,normalized_hash) WHERE status='active' DO NOTHING
+  RETURNING created_address.id INTO address_id;
+  IF address_id IS NULL THEN
+   SELECT a.id INTO address_id FROM master.address a WHERE a.tenant_id=NEW.tenant_id AND a.normalized_hash=item->>'normalizedHash' AND a.status='active';
+   IF address_id IS NULL THEN RAISE EXCEPTION 'Canonical address reuse changed concurrently' USING ERRCODE='serialization_failure'; END IF;
+  END IF;
+  INSERT INTO master.address_link(tenant_id,owner_type_id,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
+  VALUES(NEW.tenant_id,owner_type_id,NEW.target_entity_id,address_id,item->>'purpose',COALESCE((item->>'isPrimary')::boolean,false),CURRENT_DATE,
+   jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'definitionFieldCode',item->>'definitionFieldCode'),NEW.updated_by);
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',address_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.addresses['||(item->>'clientItemKey')||']','master.address',address_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+ END LOOP;
+
+ FOR item IN SELECT value FROM jsonb_array_elements(proposals->'contactPersons') LOOP
+  contact_id:=shared.uuidv7();
+  INSERT INTO master.contact_person(id,tenant_id,owner_type_id,owner_id,contact_name,business_title,department_name,is_primary,metadata,status,created_by)
+  VALUES(contact_id,NEW.tenant_id,owner_type_id,NEW.target_entity_id,item->>'contactName',NULLIF(item->>'businessTitle',''),NULLIF(item->>'departmentName',''),COALESCE((item->>'isPrimary')::boolean,false),
+   jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'clientItemKey',item->>'clientItemKey'),'active',NEW.updated_by);
+  IF NULLIF(item->>'roleCode','') IS NOT NULL THEN
+   INSERT INTO master.contact_person_role(tenant_id,contact_person_id,role_code,is_primary,effective_from,metadata,created_by)
+   VALUES(NEW.tenant_id,contact_id,item->>'roleCode',true,CURRENT_DATE,jsonb_build_object('sourceCaseId',NEW.id),NEW.updated_by);
+  END IF;
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',contact_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.contactPersons['||(item->>'clientItemKey')||']','master.contact_person',contact_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+  FOR channel IN SELECT value FROM jsonb_array_elements(proposals->'contactChannels') WHERE value->>'contactClientItemKey'=item->>'clientItemKey' LOOP
+   channel_id:=shared.uuidv7();
+   INSERT INTO master.contact_link(id,tenant_id,owner_type_id,owner_id,channel_type,value,purpose,role_qualifier,is_primary,is_verified,metadata,status,created_by)
+   VALUES(channel_id,NEW.tenant_id,contact_owner_type_id,contact_id,channel->>'channelType',channel->>'value',channel->>'purpose',NULL,
+    COALESCE((channel->>'isPrimary')::boolean,false),false,jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'contactPersonId',contact_id,'clientItemKey',channel->>'clientItemKey'),'active',NEW.updated_by);
+   evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',channel_id,'clientItemKey',channel->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+   INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+   VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.contactChannels['||(channel->>'clientItemKey')||']','master.contact_link',channel_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+  END LOOP;
+ END LOOP;
+ -- Optional full-profile collections. Only explicit business columns are writable;
+ -- approval/verification, tenant and owner coordinates are always service-owned.
+ FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'aliases','[]'::jsonb)) LOOP
+  alias_language:=NULLIF(btrim(item->>'languageCode'),'');
+  IF alias_language IS NOT NULL THEN
+   IF alias_language !~* '^[a-z]{2,3}(-[a-z]{2})?$' THEN
+    RAISE EXCEPTION 'Alias language must be a base language or language-region locale' USING ERRCODE='check_violation';
+   END IF;
+   alias_language:=lower(split_part(alias_language,'-',1)) || CASE WHEN position('-' IN alias_language)>0 THEN '-'||upper(split_part(alias_language,'-',2)) ELSE '' END;
+  END IF;
+  contact_id:=shared.uuidv7();
+  INSERT INTO master.business_partner_alias(id,tenant_id,business_partner_id,alias_kind,alias_name,language_code,country_code,effective_from,effective_until,is_primary,metadata,created_by)
+  VALUES(contact_id,NEW.tenant_id,NEW.target_entity_id,item->>'aliasKind',item->>'aliasName',alias_language,NULLIF(item->>'countryCode',''),COALESCE(NULLIF(item->>'effectiveFrom','')::date,CURRENT_DATE),NULLIF(item->>'effectiveUntil','')::date,COALESCE((item->>'isPrimary')::boolean,false),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id),NEW.updated_by) RETURNING id INTO profile_id;
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.aliases['||(item->>'clientItemKey')||']','master.business_partner_alias',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+ END LOOP;
+ FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'identifiers','[]'::jsonb)) LOOP
+  IF (NULLIF(item->>'value','') IS NULL)=(NULLIF(item->>'protectedValueToken','') IS NULL) THEN
+   RAISE EXCEPTION 'Exactly one identifier value or protected token is required' USING ERRCODE='check_violation';
+  END IF;
+ IF item ? 'value' AND regexp_replace(lower(item->>'schemeCode'),'[_-]','','g') IN('nationalid','nationalidentifier','taxid','taxidentifier','passport','passportnumber') THEN
+   RAISE EXCEPTION 'Restricted identifiers require protected capture' USING ERRCODE='check_violation';
+  END IF;
+  IF NULLIF(item->>'issuingCountryCode','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM shared.country country
+    WHERE country.code=upper(btrim(item->>'issuingCountryCode'))
+      AND country.status='active'
+  ) THEN
+   RAISE EXCEPTION 'Identifier issuing country must be an active supported country' USING ERRCODE='foreign_key_violation';
+  END IF;
+  INSERT INTO master.business_partner_identifier(tenant_id,business_partner_id,scheme_code,identifier_value,issuing_authority,issuing_country_code,issued_at,effective_until,is_primary,metadata,status,created_by)
+  VALUES(NEW.tenant_id,NEW.target_entity_id,item->>'schemeCode',CASE WHEN item ? 'protectedValueToken' THEN upper(item->>'valueHash') ELSE item->>'value' END,NULLIF(item->>'issuingAuthority',''),NULLIF(upper(btrim(item->>'issuingCountryCode')),'')::character(2),NULLIF(item->>'effectiveFrom','')::date,NULLIF(item->>'effectiveUntil','')::date,COALESCE((item->>'isPrimary')::boolean,false),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'protected',item ? 'protectedValueToken','protectedValueToken',item->>'protectedValueToken','maskedValue',item->>'maskedValue','valueHash',item->>'valueHash'),'draft',NEW.updated_by) RETURNING id INTO profile_id;
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.identifiers['||(item->>'clientItemKey')||']','master.business_partner_identifier',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+ END LOOP;
+ FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'classifications','[]'::jsonb)) LOOP
+  IF item->>'classificationKind'='commodity' THEN
+   IF NOT EXISTS(SELECT 1 FROM master.commodity_category category WHERE category.tenant_id=NEW.tenant_id AND category.id=(item->>'referenceId')::uuid AND category.status='active') THEN
+    RAISE EXCEPTION 'Commodity capability requires an active category owned by this tenant' USING ERRCODE='foreign_key_violation';
+   END IF;
+   IF item ? 'commodityCodeId' OR item ? 'crosswalkId' THEN
+    RAISE EXCEPTION 'Commodity capability selects a tenant category; code and crosswalk records are reference evidence only' USING ERRCODE='check_violation';
+   END IF;
+   INSERT INTO master.business_partner_commodity_classification(tenant_id,business_partner_id,commodity_category_id,effective_from,effective_until,source_system,source_reference,notes,status,created_by)
+   VALUES(NEW.tenant_id,NEW.target_entity_id,(item->>'referenceId')::uuid,COALESCE(NULLIF(item->>'effectiveFrom','')::date,CURRENT_DATE),NULLIF(item->>'effectiveUntil','')::date,
+    'governed_entity_case',NEW.id::text||':'||(item->>'clientItemKey'),'Decision snapshot: '||NEW.decision_snapshot_id::text,'draft',NEW.updated_by) RETURNING id INTO profile_id;
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.classifications['||(item->>'clientItemKey')||']','master.business_partner_commodity_classification',profile_id,'neon.business_partner_relationships','2',evidence_hash,NEW.updated_by);
+  ELSIF item->>'classificationKind'='industry' THEN
+   IF item ? 'crosswalkId' THEN
+    RAISE EXCEPTION 'Industry crosswalks are reference evidence and cannot replace the selected industry code' USING ERRCODE='check_violation';
+   END IF;
+   IF NOT EXISTS(SELECT 1 FROM shared.industry_code code WHERE code.id=(item->>'referenceId')::uuid AND code.domain_code=item->>'domainCode' AND code.status='active') THEN
+    RAISE EXCEPTION 'Industry classification requires an active code in the selected domain' USING ERRCODE='foreign_key_violation';
+   END IF;
+   INSERT INTO master.business_partner_industry_classification(tenant_id,business_partner_id,industry_domain_code,industry_code_id,assignment_kind,is_primary,effective_from,effective_until,metadata,status,created_by)
+   VALUES(NEW.tenant_id,NEW.target_entity_id,item->>'domainCode',(item->>'referenceId')::uuid,'declared',COALESCE((item->>'isPrimary')::boolean,false),COALESCE(NULLIF(item->>'effectiveFrom','')::date,CURRENT_DATE),NULLIF(item->>'effectiveUntil','')::date,jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id),'draft',NEW.updated_by) RETURNING id INTO profile_id;
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.classifications['||(item->>'clientItemKey')||']','master.business_partner_industry_classification',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+  ELSE RAISE EXCEPTION 'Unknown classification type' USING ERRCODE='check_violation'; END IF;
+ END LOOP;
+ FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'governanceRelations','[]'::jsonb)) LOOP
+  INSERT INTO master.business_partner_governance_relation(tenant_id,business_partner_id,relation_type_code,member_name,member_type,member_business_partner_id,member_country_code,business_title,ownership_pct,voting_pct,beneficial_ownership_pct,appointed_date,end_of_term,notes,metadata,status,created_by)
+  VALUES(NEW.tenant_id,NEW.target_entity_id,item->>'relationTypeCode',item->>'memberName',(item->>'memberType')::master.governance_member_type_d,NULLIF(item->>'memberBusinessPartnerId','')::uuid,NULLIF(item->>'memberCountryCode',''),NULLIF(item->>'businessTitle',''),NULLIF(item->>'ownershipPct','')::numeric,NULLIF(item->>'votingPct','')::numeric,NULLIF(item->>'beneficialOwnershipPct','')::numeric,NULLIF(item->>'appointedDate','')::date,NULLIF(item->>'endOfTerm','')::date,NULLIF(item->>'notes',''),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id),'draft',NEW.updated_by) RETURNING id INTO profile_id;
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.governanceRelations['||(item->>'clientItemKey')||']','master.business_partner_governance_relation',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+ END LOOP;
+ FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'relationships','[]'::jsonb)) LOOP
+  IF (item->>'targetBusinessPartnerId')::uuid=NEW.target_entity_id THEN
+   RAISE EXCEPTION 'A Business Partner cannot relate to itself' USING ERRCODE='check_violation';
+  END IF;
+  INSERT INTO master.business_partner_relationship(tenant_id,source_business_partner_id,target_business_partner_id,relationship_type_code,country_code,effective_from,effective_until,notes,metadata,status,created_by)
+  VALUES(NEW.tenant_id,NEW.target_entity_id,(item->>'targetBusinessPartnerId')::uuid,item->>'relationshipTypeCode',NULLIF(item->>'countryCode',''),NULLIF(item->>'effectiveFrom','')::date,NULLIF(item->>'effectiveUntil','')::date,NULLIF(item->>'notes',''),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id),'draft',NEW.updated_by) RETURNING id INTO profile_id;
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.relationships['||(item->>'clientItemKey')||']','master.business_partner_relationship',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+ END LOOP;
+ FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'certifications','[]'::jsonb)) LOOP
+  IF NULLIF(item->>'attachmentId','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM document.attachment attachment
+    JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id AND series.current_attachment_id=attachment.id
+    JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id
+    WHERE attachment.tenant_id=NEW.tenant_id AND attachment.id=(item->>'attachmentId')::uuid
+      AND attachment.status='active' AND attachment.is_active AND attachment.is_virus_scanned
+      AND (link.entity_type IN ('business_partner','master.business_partner') AND link.entity_id=NEW.target_entity_id::text
+        OR link.entity_type IN ('entity_case','document.entity_case') AND link.entity_id=NEW.id::text)
+  ) THEN
+   RAISE EXCEPTION 'Certification evidence must be a completed attachment linked to this partner or governing case' USING ERRCODE='foreign_key_violation';
+  END IF;
+  INSERT INTO master.certification(tenant_id,owner_type,owner_id,certification_type_id,custom_name,certificate_number,certified_by,certified_location,document_attachment_id,effective_from,effective_until,metadata,status,created_by)
+  VALUES(NEW.tenant_id,'business_partner',NEW.target_entity_id,NULLIF(item->>'certificationTypeId','')::uuid,NULLIF(item->>'customName',''),NULLIF(item->>'certificateNumberToken',''),NULLIF(item->>'certifiedBy',''),NULLIF(item->>'certifiedLocation',''),NULLIF(item->>'attachmentId','')::uuid,NULLIF(item->>'effectiveFrom','')::date,NULLIF(item->>'effectiveUntil','')::date,jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'protected',item ? 'certificateNumberToken','maskedCertificateNumber',item->>'maskedCertificateNumber'),'active',NEW.updated_by) RETURNING id INTO profile_id;
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.certifications['||(item->>'clientItemKey')||']','master.certification',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+ END LOOP;
+ FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'taxRegistrations','[]'::jsonb)) LOOP
+ IF NULLIF(item->>'protectedValueToken','') IS NULL OR length(item->>'protectedValueToken')>128 OR item ? 'value' OR COALESCE(item->>'valueHash','') !~ '^[a-f0-9]{64}$' THEN
+   RAISE EXCEPTION 'Tax registration requires protected capture' USING ERRCODE='check_violation';
+  END IF;
+  IF NOT EXISTS(
+    SELECT 1 FROM master.tax_jurisdiction jurisdiction
+    JOIN shared.country country ON country.code=jurisdiction.country_code AND country.status='active'
+    LEFT JOIN shared.state_region subdivision ON subdivision.country_code=jurisdiction.country_code
+      AND subdivision.code=jurisdiction.state_region_code AND subdivision.status='active'
+    WHERE jurisdiction.tenant_id=NEW.tenant_id
+      AND jurisdiction.id=(item->>'jurisdictionId')::uuid
+      AND jurisdiction.status='active'
+      AND (jurisdiction.state_region_code IS NULL OR subdivision.id IS NOT NULL)
+  ) THEN
+   RAISE EXCEPTION 'Tax registration jurisdiction must be an active supported jurisdiction and subdivision' USING ERRCODE='foreign_key_violation';
+  END IF;
+  IF NULLIF(item->>'taxTypeId','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM master.tax_type tax_type
+    WHERE tax_type.tenant_id=NEW.tenant_id
+      AND tax_type.id=(item->>'taxTypeId')::uuid
+      AND tax_type.status='active'
+  ) THEN
+   RAISE EXCEPTION 'Tax registration type must be an active type owned by this tenant' USING ERRCODE='foreign_key_violation';
+  END IF;
+  INSERT INTO master.business_partner_tax_registration(tenant_id,business_partner_id,jurisdiction_id,tax_type_id,registration_type_code,registration_number,effective_from,effective_until,is_primary,metadata,status,created_by)
+  VALUES(NEW.tenant_id,NEW.target_entity_id,(item->>'jurisdictionId')::uuid,NULLIF(item->>'taxTypeId','')::uuid,item->>'registrationTypeCode',upper(item->>'valueHash'),NULLIF(item->>'effectiveFrom','')::date,NULLIF(item->>'effectiveUntil','')::date,COALESCE((item->>'isPrimary')::boolean,false),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'protected',true,'protectedValueToken',item->>'protectedValueToken','maskedValue',item->>'maskedValue','valueHash',item->>'valueHash'),'draft',NEW.updated_by) RETURNING id INTO profile_id;
+  evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
+  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+  VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.taxRegistrations['||(item->>'clientItemKey')||']','master.business_partner_tax_registration',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
+ END LOOP;
+ RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION master.command_materialize_mesh_profile_change_case(
+ p_tenant_id uuid,p_case_id uuid,p_expected_case_version bigint,
+ p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL)
+RETURNS TABLE(entity_case_id uuid,business_partner_id uuid,role_id uuid,
+ qualification_id uuid,preference_id uuid,result_snapshot_id uuid,
+ row_version bigint,case_status text,replayed boolean,outbox_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,master,document,control,snapshot,event,runtime_meta,shared
+SET row_security=on AS $$
+DECLARE
+ resolution document.mesh_profile_change_resolution%ROWTYPE; source_row snapshot.mesh_business_partner_profile_received%ROWTYPE; field text; canonical_field text; expected_value jsonb; current_values jsonb;
+ fingerprint text; prior event.command_execution%ROWTYPE; execution uuid;
+ current_case document.entity_case%ROWTYPE; payload jsonb; bp master.business_partner%ROWTYPE;
+ bp_id uuid:=shared.uuidv7(); new_role_id uuid:=shared.uuidv7(); assignment_id uuid:=shared.uuidv7();
+ new_qualification_id uuid; new_preference_id uuid; lifecycle record; authority_evidence_id uuid;
+ result_snapshot uuid; next_version bigint; attempt_no integer; materialization_id uuid;
+ outbox uuid; result jsonb; lineage_hash text; requested_role text; channel text;
+ org_id uuid; to_state text; result_kind text; reason_code text;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true) IS DISTINCT FROM 'neon'
+    OR shared.current_tenant_id() IS DISTINCT FROM p_tenant_id
+    OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN
+  RAISE EXCEPTION 'Business Partner role materialization context mismatch' USING ERRCODE='insufficient_privilege';
+ END IF;
+ IF p_tenant_id IS NULL OR p_actor_id IS NULL OR p_case_id IS NULL OR p_expected_case_version IS NULL OR p_idempotency_key IS NULL OR p_expected_case_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key
+    OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 THEN
+  RAISE EXCEPTION 'Business Partner role materialization arguments are invalid' USING ERRCODE='check_violation';
+ END IF;
+ fingerprint:=encode(public.digest(convert_to(jsonb_build_object(
+  'caseId',p_case_id,'expectedCaseVersion',p_expected_case_version,
+  'idempotencyKey',p_idempotency_key,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case-materialization:'||p_idempotency_key,0));
+ SELECT e.* INTO prior FROM event.command_execution e
+  WHERE e.tenant_id=p_tenant_id AND e.command_code='entity.case.materialize.mesh_profile_change'
+    AND e.idempotency_key=p_idempotency_key;
+ IF FOUND THEN
+  IF prior.request_fingerprint<>fingerprint OR prior.status<>'succeeded' THEN
+   RAISE EXCEPTION 'Business Partner role materialization idempotency conflict' USING ERRCODE='unique_violation';
+  END IF;
+  RETURN QUERY SELECT (prior.result_payload->>'caseId')::uuid,
+   (prior.result_payload->>'businessPartnerId')::uuid,(prior.result_payload->>'roleId')::uuid,
+   NULLIF(prior.result_payload->>'qualificationId','')::uuid,NULLIF(prior.result_payload->>'preferenceId','')::uuid,
+   (prior.result_payload->>'resultSnapshotId')::uuid,(prior.result_payload->>'rowVersion')::bigint,
+   prior.result_payload->>'status',true,(prior.result_payload->>'outboxId')::uuid;
+  RETURN;
+ END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,
+  actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by)
+ VALUES(p_tenant_id,'entity.case.materialize.mesh_profile_change',p_idempotency_key,fingerprint,'processing',
+  p_actor_id,'neon-business-partner',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id)
+ RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case:'||p_case_id::text,0));
+ SELECT c.* INTO current_case FROM document.entity_case c
+  WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Approved entity case was not found' USING ERRCODE='no_data_found'; END IF;
+ IF current_case.row_version<>p_expected_case_version THEN
+  RAISE EXCEPTION 'Entity case version is stale' USING ERRCODE='serialization_failure';
+ END IF;
+ IF current_case.status<>'approved' OR current_case.entity_code<>'master.business_partner'
+    OR current_case.operation_code NOT IN('amend_partner')
+    OR current_case.target_entity_id IS NULL OR current_case.decision_snapshot_id IS NULL
+    OR NOT EXISTS(SELECT 1 FROM document.entity_case_command_evidence approval
+      WHERE approval.tenant_id=p_tenant_id AND approval.entity_case_id=p_case_id
+       AND approval.after_status='approved' AND approval.outcome='accepted'
+       AND approval.recorded_by<>current_case.created_by AND approval.after_version=current_case.row_version) THEN
+  RAISE EXCEPTION 'An independently approved Business Partner change case is required' USING ERRCODE='object_not_in_prerequisite_state';
+ END IF;
+ SELECT s.payload_json INTO payload FROM snapshot.entity_snapshot s
+  WHERE s.tenant_id=p_tenant_id AND s.snapshot_id=current_case.decision_snapshot_id;
+ IF payload IS NULL OR NOT EXISTS(SELECT 1 FROM runtime_meta.entity_contract contract WHERE contract.tenant_id=p_tenant_id AND contract.id=current_case.entity_contract_id AND contract.entity_contract_hash=current_case.entity_contract_hash AND contract.status='published')
+    OR cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c
+   WHERE c.tenant_id=p_tenant_id AND c.id=current_case.entity_contract_id
+     AND c.entity_contract_hash=current_case.entity_contract_hash AND c.status='published'),payload))>0 THEN
+  RAISE EXCEPTION 'Business Partner change violates its pinned contract' USING ERRCODE='check_violation';
+ END IF;
+ bp_id:=current_case.target_entity_id;
+ new_role_id:=NULL; assignment_id:=NULL;
+ SELECT b.* INTO bp FROM master.business_partner b WHERE b.tenant_id=p_tenant_id AND b.id=bp_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Business Partner change target is unavailable' USING ERRCODE='no_data_found'; END IF;
+ IF NULLIF(payload->>'expectedBusinessPartnerVersion','')::bigint IS DISTINCT FROM bp.record_version
+    OR payload->>'priorStatus' IS DISTINCT FROM bp.status::text THEN
+  RAISE EXCEPTION 'Business Partner changed after proposal capture' USING ERRCODE='serialization_failure';
+ END IF;
+ reason_code:=payload->>'reasonCode';
+ IF reason_code IS NULL OR reason_code !~ '^[A-Z][A-Z0-9_.-]{2,126}$' THEN
+  RAISE EXCEPTION 'Business Partner change reason is required' USING ERRCODE='check_violation';
+ END IF;
+ SELECT r.* INTO resolution FROM document.mesh_profile_change_resolution r
+  JOIN document.mesh_profile_change_case link ON link.tenant_id=r.tenant_id AND link.resolution_id=r.id
+  WHERE r.tenant_id=p_tenant_id AND r.id=(payload->>'meshChangeResolutionId')::uuid AND link.entity_case_id=p_case_id
+    AND r.business_partner_id=bp_id AND r.created_by=current_case.created_by;
+ IF NOT FOUND OR resolution.expected_target_version<>bp.record_version OR bp.status<>'active'
+  OR payload->>'meshChangeFingerprint' IS DISTINCT FROM resolution.preview_fingerprint
+  OR payload->'meshChangeDecisions' IS DISTINCT FROM resolution.decisions OR payload->'meshChangePreview' IS DISTINCT FROM resolution.preview OR payload ? 'requestedRole'
+  OR (payload->>'operatingOrganizationId')::uuid IS DISTINCT FROM resolution.operating_organization_id THEN
+  RAISE EXCEPTION 'Pinned profile resolution does not match approved case and target' USING ERRCODE='serialization_failure';
+ END IF;
+ PERFORM 1 FROM control.mesh_business_partner_profile_projection p WHERE p.tenant_id=p_tenant_id
+  AND p.id=resolution.projection_id AND p.current_snapshot_id=resolution.incoming_snapshot_id AND p.projection_status='active' FOR SHARE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Incoming profile was withdrawn or superseded' USING ERRCODE='serialization_failure'; END IF;
+ SELECT s.* INTO source_row FROM snapshot.mesh_business_partner_profile_received s WHERE s.tenant_id=p_tenant_id AND s.id=resolution.incoming_snapshot_id;
+ IF NOT FOUND OR NOT EXISTS(SELECT 1 FROM snapshot.mesh_business_partner_profile_received a WHERE a.tenant_id=p_tenant_id AND a.id=resolution.baseline_snapshot_id AND a.network_relationship_id=source_row.network_relationship_id AND a.publication_version<source_row.publication_version)
+  OR NOT EXISTS(SELECT 1 FROM master.business_partner_operating_organization_assignment a WHERE a.tenant_id=p_tenant_id AND a.business_partner_id=bp_id AND a.operating_organization_id=resolution.operating_organization_id AND a.status='active' AND a.effective_from<=CURRENT_DATE AND (a.effective_until IS NULL OR a.effective_until>CURRENT_DATE)) THEN
+  RAISE EXCEPTION 'Profile baseline or operating organization is invalid' USING ERRCODE='check_violation';
+ END IF;
+ IF (SELECT count(*) FROM jsonb_object_keys(resolution.decisions))<>6 OR (SELECT count(*) FROM jsonb_object_keys(resolution.proposed_values))<>6 THEN
+  RAISE EXCEPTION 'Every profile field requires an explicit decision' USING ERRCODE='check_violation';
+ END IF;
+ SELECT jsonb_build_object('legalName',v.legal_name,'legalForm',v.legal_form,'countryCode',v.registration_country_code,'incorporationDate',v.incorporation_date::text,'websiteUrl',v.website_url,'description',v.description)
+ INTO current_values FROM master.business_partner_identity_current v WHERE v.tenant_id=p_tenant_id AND v.id=bp_id;
+ FOREACH field IN ARRAY ARRAY['legalName','legalForm','countryCode','incorporationDate','websiteUrl','description'] LOOP
+  IF (resolution.decisions->>('partner.'||field) IS DISTINCT FROM 'source' AND resolution.decisions->>('partner.'||field) IS DISTINCT FROM 'local') OR NOT(resolution.decisions ? ('partner.'||field)) THEN
+   RAISE EXCEPTION 'Unsupported profile decision' USING ERRCODE='check_violation';
+  END IF;
+  expected_value:=CASE WHEN resolution.decisions->>('partner.'||field)='source' THEN COALESCE(source_row.payload_json->'partner'->field,'null'::jsonb) ELSE current_values->field END;
+  canonical_field:=CASE field WHEN 'countryCode' THEN 'registrationCountryCode' WHEN 'legalName' THEN 'name' ELSE field END;
+  IF resolution.proposed_values->('partner.'||field) IS DISTINCT FROM expected_value OR COALESCE(payload->canonical_field,'null'::jsonb) IS DISTINCT FROM expected_value THEN
+   RAISE EXCEPTION 'Approved field values differ from retained choices' USING ERRCODE='check_violation';
+  END IF;
+ END LOOP;
+ IF NULLIF(btrim(payload->>'name'),'') IS NULL THEN RAISE EXCEPTION 'Registered name is required' USING ERRCODE='check_violation'; END IF;
+ PERFORM master.update_business_partner_organization_identity(p_tenant_id,bp_id,jsonb_build_object('legalName',payload->'name','legalForm',payload->'legalForm','registrationCountryCode',payload->'registrationCountryCode','incorporationDate',payload->'incorporationDate'),p_actor_id);
+ UPDATE master.business_partner SET website_url=payload->>'websiteUrl',description=payload->>'description',updated_by=p_actor_id
+  WHERE tenant_id=p_tenant_id AND id=bp_id;
+ result_kind:='partner_amended';
+ SELECT b.* INTO bp FROM master.business_partner b WHERE b.tenant_id=p_tenant_id AND b.id=bp_id;
+ SELECT (payload-ARRAY['name','legalForm','registrationCountryCode','incorporationDate','websiteUrl','description'])||jsonb_strip_nulls(jsonb_build_object('name',v.legal_name,'legalForm',v.legal_form,'registrationCountryCode',v.registration_country_code,'incorporationDate',v.incorporation_date::text,'websiteUrl',v.website_url,'description',v.description))
+ INTO payload FROM master.business_partner_identity_current v WHERE v.tenant_id=p_tenant_id AND v.id=bp_id;
+
+ IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c
+   WHERE c.tenant_id=p_tenant_id AND c.id=current_case.entity_contract_id
+     AND c.entity_contract_hash=current_case.entity_contract_hash AND c.status='published'),payload))>0 THEN
+  RAISE EXCEPTION 'Materialized Business Partner snapshot violates the pinned contract' USING ERRCODE='check_violation';
+ END IF;
+ result_snapshot:=snapshot.fn_capture_entity('master.business_partner',bp_id,bp.code,1,
+  current_case.entity_contract_hash,bp.record_version,'entity.case.materialized','version',payload,
+  p_correlation_id,NULL,NULL,NULL,'legal','neon-business-partner');
+ next_version:=current_case.row_version+1;
+ SELECT COALESCE(max(m.attempt_no),0)+1 INTO attempt_no FROM document.entity_case_materialization m
+  WHERE m.tenant_id=p_tenant_id AND m.entity_case_id=p_case_id;
+ INSERT INTO document.entity_case_materialization(tenant_id,entity_case_id,attempt_no,source_snapshot_id,
+  result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,
+  started_at,completed_at,requested_by,completed_by)
+ VALUES(p_tenant_id,p_case_id,attempt_no,current_case.decision_snapshot_id,result_snapshot,
+  'neon.mesh_profile_change','1',fingerprint,'succeeded',upper(result_kind),
+  clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO materialization_id;
+ lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,
+  'sourceSnapshotId',current_case.decision_snapshot_id,'targetSnapshotId',result_snapshot,
+  'businessPartnerId',bp_id,'roleId',new_role_id,'materializationId',materialization_id)::text,'UTF8'),'sha256'),'hex');
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,
+  lineage_role,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
+ VALUES(p_tenant_id,p_case_id,current_case.decision_snapshot_id,result_snapshot,'materialized_from',
+  'master.business_partner',bp_id,'neon.mesh_profile_change','1',lineage_hash,p_actor_id);
+ UPDATE document.entity_case c SET target_entity_id=bp_id,result_snapshot_id=result_snapshot,status='materialized',
+  row_version=next_version,updated_by=p_actor_id WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,
+  request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,
+  result_code,result_snapshot_id,result_evidence,recorded_by)
+ VALUES(p_tenant_id,p_case_id,'entity.case.materialize',p_idempotency_key,fingerprint,p_expected_case_version,
+  current_case.row_version,next_version,'approved','materialized','accepted',upper(result_kind),
+  result_snapshot,jsonb_build_object('businessPartnerId',bp_id,'roleId',new_role_id,'role',requested_role,
+   'assignmentId',assignment_id,'qualificationId',new_qualification_id,'preferenceId',new_preference_id,
+   'materializationId',materialization_id,'authorityEvidenceId',authority_evidence_id,
+   'resultKind',result_kind,'reasonCode',reason_code),p_actor_id);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,
+  event_version,actor_id,source,correlation_id,partition_key,payload,created_by)
+ VALUES(p_tenant_id,'governed-entity-case','entity.case.materialized','entity-case:'||p_case_id::text||':v'||next_version::text||':'||p_idempotency_key,
+  'document.entity_case',p_case_id,'entity_case',p_case_id,LEAST(next_version,2147483647)::integer,p_actor_id,
+  'neon-business-partner',p_correlation_id,p_tenant_id::text,jsonb_build_object('caseId',p_case_id,
+   'businessPartnerId',bp_id,'roleId',new_role_id,'role',requested_role,'qualificationId',new_qualification_id,
+   'preferenceId',new_preference_id,'resultSnapshotId',result_snapshot,'rowVersion',next_version,
+   'status','materialized','materializer','neon.mesh_profile_change','resultKind',result_kind),p_actor_id) RETURNING id INTO outbox;
+ result:=jsonb_build_object('caseId',p_case_id,'businessPartnerId',bp_id,'roleId',new_role_id,
+  'qualificationId',COALESCE(new_qualification_id::text,''),'preferenceId',COALESCE(new_preference_id::text,''),
+  'resultSnapshotId',result_snapshot,'rowVersion',next_version,'status','materialized','outboxId',outbox);
+ UPDATE event.command_execution SET status='succeeded',result_payload=result,completed_at=clock_timestamp(),
+  status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
+ RETURN QUERY SELECT p_case_id,bp_id,new_role_id,new_qualification_id,new_preference_id,result_snapshot,
+  next_version,'materialized',false,outbox;
+END $$;

@@ -402,6 +402,22 @@
       "moduleCode": "neon.content"
     },
     {
+      "permissionId": "2a295664-36f3-5dbf-860d-74789ad267cb",
+      "canonicalPermissionCode": "neon.context.catalog.read",
+      "plane": "neon",
+      "entityCode": "catalog",
+      "operationCode": "read",
+      "operationKind": "read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "shareable": false,
+      "delegable": false,
+      "definitionSha256": "9200faac007f99c54dcce72313bd7dc2d6be7e78ae2dfe80cf44477ccab28557",
+      "permissionKind": "capability",
+      "moduleCode": "neon.context"
+    },
+    {
       "permissionId": "fcb9c010-44ba-5c3b-8bfe-0f8d6ab36545",
       "canonicalPermissionCode": "neon.organization.company_code.activate",
       "plane": "neon",

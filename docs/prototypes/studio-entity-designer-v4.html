@@ -1,0 +1,435 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Studio · Entity Designer prototype v4</title><style>
+:root{--ink:#17273d;--blue:#285b99;--line:#dae3ed;--muted:#61748c;--bg:#f4f7fb;--red:#a14535;--green:#276649;--amber:#795815}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;background:white;border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--ink)}
+button:hover{border-color:var(--blue)}button:disabled{opacity:.4;cursor:not-allowed}
+.primary{background:var(--blue);color:white;border-color:var(--blue)}
+header{height:76px;background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:32px;padding:0 28px}
+.logo{letter-spacing:4px;font-size:25px;font-weight:800;color:var(--blue)}
+.demo{margin-left:auto;background:#fff4d9;color:var(--amber);border-radius:30px;padding:5px 12px;font-size:12px}
+aside{position:fixed;top:76px;bottom:0;width:220px;background:#10243b;padding:25px 16px;color:#c6d4e6}
+aside div{padding:13px;border-radius:8px}aside .active{background:#243f5d;color:white}
+main{margin-left:220px;padding:30px 38px;max-width:1700px}
+.crumb,.muted,small{color:var(--muted)}
+h1{font-size:30px;letter-spacing:-1px;margin:8px 0}h2{font-size:20px;margin:0 0 12px}h3{font-size:15px;margin:0 0 10px}h4{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 4px}
+p{margin:8px 0 16px}
+.bar,.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.bar{justify-content:space-between}
+.pill{border-radius:25px;background:#eaf1fa;color:var(--blue);padding:4px 10px;font-size:12px}
+.card{background:white;border:1px solid var(--line);border-radius:13px;padding:22px;margin-top:18px}
+.grid{display:grid;grid-template-columns:420px 1fr;gap:22px}
+.field{margin:12px 0}.field label{display:block;font-size:13px;font-weight:650;margin-bottom:6px}
+.field label input[type=checkbox]{margin-right:6px}
+input:not([type=checkbox]),select,textarea{width:100%;padding:9px;border:1px solid #c9d5e2;border-radius:7px;background:white;color:var(--ink)}
+textarea{min-height:60px}
+.note{background:#eef4fb;padding:12px;border-radius:8px;font-size:13px;margin:12px 0}
+.gap{border:1px dashed #c3b3e0;background:#f7f3fc;color:#5a3f86;padding:10px 12px;border-radius:8px;font-size:12.5px;margin:10px 0}
+.gap b{font-family:ui-monospace,monospace}
+.status{min-height:22px;font-size:13px;margin-top:10px}
+code{font-size:12px;overflow-wrap:anywhere}
+footer{color:var(--muted);font-size:12px;padding:26px 0}
+.treepane{max-height:78vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px}
+.treegroup{margin-bottom:6px}
+.node{display:flex;align-items:center;gap:2px;margin:1px 0}
+.twisty{border:0;background:none;width:20px;height:24px;padding:0;color:var(--muted);border-radius:4px}
+.twisty-space{display:inline-block;width:20px}
+.nodelabel{border:0;background:none;text-align:left;padding:4px 8px;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:6px;flex:1}
+.nodelabel:hover{background:#f2f6fb}
+.nodelabel.selected{background:#eaf1fa;font-weight:650}
+.nodekind{font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);background:#f0f2f5;border-radius:4px;padding:1px 5px}
+.childgrouplabel{font-size:11px;color:var(--muted);margin:4px 0 2px}
+.addchild{font-size:12px;padding:5px 9px;margin:2px 0 8px}
+.reorder{border:0;background:none;padding:0 3px;color:var(--muted);font-size:11px}
+.addroot{margin-top:8px}
+@media(max-width:1000px){aside{display:none}main{margin:0;padding:20px}.grid{grid-template-columns:1fr}header{padding:12px;height:auto}}
+.workspace{display:grid;grid-template-columns:260px minmax(280px,1fr) minmax(270px,.9fr);gap:22px}.workspace>*{min-width:0}.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}.treepane{max-height:68vh}.nodekind{display:none}.node{min-width:0}.nodelabel{overflow-wrap:anywhere}.preview-section{padding:14px;border:1px solid var(--line);border-radius:9px;margin:10px 0}.preview-field{padding:8px;border:2px solid transparent;border-radius:8px}.preview-field.highlight{border-color:#4385c8;background:#eef6ff}.preview-field label{display:block;font-weight:600;font-size:13px}.view.hidden{display:none}pre{white-space:pre-wrap;overflow-wrap:anywhere}dialog{max-width:550px;border:1px solid var(--line);border-radius:14px;padding:26px}dialog::backdrop{background:#17273d66}button:focus-visible{outline:3px solid #75a8df}nav{margin-top:16px}#compForm label{display:block;margin-top:10px}#compForm .row{margin-top:20px}@media(max-width:1250px){.workspace{grid-template-columns:230px minmax(0,1fr)}.workspace>div:last-child{grid-column:1/-1}}@media(max-width:800px){aside{display:none}main{margin:0;padding:16px}.workspace,.two{grid-template-columns:1fr}.treepane{max-height:320px}header{height:auto;padding:12px;gap:10px}.demo{font-size:10px}.logo{font-size:20px}}
+</style></head>
+<body>
+<header><span class="logo">STUDIO</span><strong>CirrusAtlantic</strong><span class="demo">PROTOTYPE V4 · UNIFIED DESIGNER · SAMPLE DATA</span></header>
+<aside><div>⌂ &nbsp; Home</div><div class="active">▦ &nbsp; Entity Studio</div><div>♧ &nbsp; TrustIAM Studio</div><div>◫ &nbsp; Plans &amp; Entitlements</div><div>◎ &nbsp; Observability</div><div>✧ &nbsp; Atlas AI Studio</div></aside>
+<main><div class="crumb">Entity Studio / Master Data Governance / Business Partner</div><h1>Business Partner designer <span class="pill">V4 prototype</span></h1><p class="muted">Compose the form, review the changes, and follow a simulated release.</p>
+<div class="card bar"><div><small>Configuration family</small><br><strong>Native entity graph · sample version 2</strong></div><div><label for="target">Target</label><select id="target"><option>Neon · CirrusAtlantic UK · DEV</option><option>Neon · CirrusAtlantic Singapore · DEV</option></select></div><label><input id="viewer" type="checkbox"> Simulate read-only access</label><div><strong id="dirty"></strong><div class="row"><button id="undo">Undo</button><button id="reload">Reload saved</button><button id="save" class="primary">Save draft</button></div></div></div><div id="message" role="status" class="note">Sample data only. Drafts save locally in this browser.</div>
+<nav class="row" aria-label="Designer views"><button data-view="design" class="primary">Compose</button><button data-view="review">Preview & differences</button><button data-view="permissions">Permissions</button><button data-view="publication">Publication</button><button data-view="advanced">Advanced tables</button></nav>
+<section id="design" class="view"><div class="workspace card"><div><label for="search">Find a field or section</label><input id="search" placeholder="Search composition…"><div id="compTree" class="treepane"></div></div><div><small id="compBreadcrumb"></small><div id="compForm"></div></div><div><div class="bar"><h3>Live preview</h3><button id="togglePreview">Hide preview</button></div><div id="livePreview"></div><small>Illustrative renderer. Select a field to highlight its placement.</small></div></div></section>
+<section id="review" class="view hidden"><div class="card"><h2>Preview & differences</h2><div class="two"><div><h3>Published sample base</h3><div id="basePreview"></div></div><div><h3>Working draft</h3><div id="draftPreview"></div></div></div><h3>Changes by object identity</h3><div id="diffs"></div></div></section>
+<section id="permissions" class="view hidden"><div class="card"><h2>Permission explorer</h2><p>Source mappings are illustrative; they are not effective-access evidence.</p><div class="two"><div><label for="testUser">Sample user</label><select id="testUser"><option value="author">Alex · UK requester</option><option value="viewer">Morgan · viewer</option></select></div><div><label for="testScope">Company</label><select id="testScope"><option value="uk">UK</option><option value="sg">Singapore</option></select></div></div><div id="permissionTrace" class="note"></div><div id="operationList"></div></div></section>
+<section id="publication" class="view hidden"><div class="card"><h2>Publication journey <span class="pill">Simulation only</span></h2><div id="steps" class="row"></div><p id="phaseText"></p><label for="actor">Simulated actor</label><select id="actor"><option value="author">Catl Admin · author</option><option value="reviewer">Catl Owner · independent reviewer</option></select><label id="ackWrap"><input type="checkbox" id="ack"> I reviewed the preview and differences.</label><p><button class="primary" id="advance">Validate</button></p><hr><h3>Target observation</h3><label for="outcome">Simulated response</label><select id="outcome"><option value="active">Selected release active</option><option value="pending">Activation pending</option><option value="mismatch">Different release active</option><option value="denied">Read denied</option><option value="failed">Deployment failed</option></select><button id="check">Check target</button><div id="evidence" class="note"></div></div></section>
+<section id="advanced" class="view hidden"><div class="card"><h2>Advanced table inspector</h2><p>Read-only view of the same working draft used by the tree, preview and publication.</p><select id="table" aria-label="Metadata table"></select><pre id="tableData"></pre></div></section>
+<dialog id="removeDialog"><h2>Remove this object?</h2><p id="removeImpact"></p><p>Child objects must be removed or moved first. Shared field definitions remain in the catalogue.</p><div class="row"><button id="cancelRemove">Cancel</button><button id="confirmRemove">Remove object</button></div></dialog>
+<footer>Prototype V4 · No backend calls, real grants, approvals or deployments. Native graph editing is a design proposal; actual supported edits require backend qualification.</footer></main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// --- Descriptors (same shape/engine as v2, grounded in server/db/ddl/planes/studio/metadata/{02_domains,03_tables}.sql) ---
+const TREE_DESCRIPTORS={
+  entity_surface:{keyCol:'surface_key',noun:'entity_surface',columns:[
+    {name:'surface_key',label:'Surface key',type:'identity',pattern:/^[a-z][a-z0-9_.-]{1,126}$/,required:true},
+    {name:'surface_kind',label:'Surface kind',type:'enum',domain:['form','detail','list','lookup','embedded'],required:true},
+    {name:'title',label:'Title',type:'text',maxLength:256,required:true},
+    {name:'description',label:'Description',type:'longtext',maxLength:4000},
+    {name:'layout_kind',label:'Layout kind',type:'enum',domain:['flow','grid','stack','tabs'],default:'flow'},
+    {name:'is_default',label:'Default surface',type:'bool',default:true},
+    {name:'status',label:'Status',type:'lifecycle',domain:['active','deprecated'],default:'active'}
+  ]},
+  entity_surface_section:{keyCol:'section_key',noun:'entity_surface_section',columns:[
+    {name:'section_key',label:'Section key',type:'identity',pattern:/^[a-z][a-z0-9_.-]{1,126}$/,required:true},
+    {name:'section_kind',label:'Section kind',type:'enum',domain:['section','group','fieldset','tab','columns'],default:'section'},
+    {name:'title',label:'Title',type:'text',maxLength:256},
+    {name:'position',label:'Position',type:'int',min:0,required:true,default:0},
+    {name:'column_count',label:'Columns',type:'int',min:1,max:12,default:1},
+    {name:'collapsible',label:'Collapsible',type:'bool',default:false},
+    {name:'collapsed_by_default',label:'Collapsed by default',type:'bool',default:false,
+      disabledWhen:r=>!r.collapsible,forceWhen:r=>!r.collapsible?false:undefined}
+  ]},
+  entity_surface_field_binding:{keyCol:'binding_key',noun:'entity_surface_field_binding',columns:[
+    {name:'binding_key',label:'Binding key',type:'identity',pattern:/^[a-z][a-z0-9_.-]{1,126}$/,required:true},
+    {name:'entity_field_id',label:'Field',type:'ref',refTable:'entity_field',required:true},
+    {name:'position',label:'Position',type:'int',min:0,required:true,default:0},
+    {name:'label_override',label:'Label override',type:'text',maxLength:256},
+    {name:'help_text',label:'Help text',type:'longtext',maxLength:4000},
+    {name:'placeholder',label:'Placeholder',type:'text',maxLength:512},
+    {name:'widget_key',label:'Widget key',type:'text',pattern:/^[a-z][a-z0-9_.:-]{1,126}$/},
+    {name:'column_span',label:'Column span',type:'int',min:1,max:12,default:12},
+    {name:'status',label:'Status',type:'lifecycle',domain:['active','deprecated'],default:'active'}
+  ]},
+  entity_surface_operation:{keyCol:'placement_key',noun:'entity_surface_operation',columns:[
+    {name:'placement_key',label:'Placement key',type:'identity',pattern:/^[a-z][a-z0-9_.-]{1,126}$/,required:true},
+    {name:'entity_operation_id',label:'Operation',type:'ref',refTable:'entity_operation',required:true},
+    {name:'interaction_target',label:'Interaction target',type:'enum',domain:['primary','secondary','toolbar','row','selection','overflow'],default:'secondary'},
+    {name:'selection_mode',label:'Selection mode',type:'enum',domain:['none','single','multiple'],default:'none',
+      disabledWhen:r=>r.interaction_target!=='selection',forceWhen:r=>r.interaction_target!=='selection'?'none':undefined},
+    {name:'position',label:'Position',type:'int',min:0,required:true,default:0},
+    {name:'label_override',label:'Label override',type:'text',maxLength:256},
+    {name:'status',label:'Status',type:'lifecycle',domain:['active','deprecated'],default:'active'}
+  ]},
+  entity_key:{keyCol:'key_key',noun:'entity_key',columns:[
+    {name:'key_key',label:'Key key',type:'identity',pattern:/^[a-z][a-z0-9_]{0,62}$/,required:true},
+    {name:'key_kind',label:'Key kind',type:'enum',domain:['primary','natural','alternate','idempotency'],required:true},
+    {name:'uniqueness_scope',label:'Uniqueness scope',type:'enum',domain:['global','tenant'],required:true},
+    {name:'null_semantics',label:'Null semantics',type:'enum',domain:['not_allowed','nulls_distinct','nulls_not_distinct'],default:'not_allowed',
+      disabledWhen:r=>r.key_kind==='primary',forceWhen:r=>r.key_kind==='primary'?'not_allowed':undefined},
+    {name:'status',label:'Status',type:'lifecycle',domain:['active','deprecated'],default:'active'}
+  ]},
+  entity_key_field:{keyCol:'id',noun:'entity_key_field',columns:[
+    {name:'entity_field_id',label:'Field',type:'ref',refTable:'entity_field',required:true},
+    {name:'position',label:'Position',type:'int',min:1,max:64,required:true,default:1}
+  ]},
+  entity_relation:{keyCol:'relation_key',noun:'entity_relation',columns:[
+    {name:'relation_key',label:'Relation key',type:'identity',pattern:/^[a-z][a-z0-9_]{0,62}$/,required:true},
+    {name:'relation_kind',label:'Relation kind',type:'enum',domain:['one_to_one','many_to_one','one_to_many','many_to_many'],required:true},
+    {name:'resolution_kind',label:'Resolution kind',type:'enum',domain:['foreign_key','logical','polymorphic'],required:true},
+    {name:'ownership_mode',label:'Ownership mode',type:'enum',domain:['reference','aggregate_child','shared'],default:'reference'},
+    {name:'mutation_mode',label:'Mutation mode',type:'enum',domain:['read_only','source_owned','target_owned','coordinated'],default:'read_only'},
+    {name:'on_delete',label:'On delete',type:'enum',domain:['restrict','cascade','set_null','no_action'],default:'restrict'},
+    {name:'on_update',label:'On update',type:'enum',domain:['restrict','cascade','no_action'],default:'restrict'},
+    {name:'status',label:'Status',type:'lifecycle',domain:['active','deprecated'],default:'active'}
+  ],crossFieldRules:[
+    r=>(r.on_delete==='set_null'&&!['one_to_one','many_to_one'].includes(r.relation_kind))?'On delete "set_null" requires relation kind one_to_one or many_to_one.':null,
+    r=>(r.ownership_mode==='aggregate_child'&&(r.relation_kind==='many_to_many'||!['source_owned','target_owned','coordinated'].includes(r.mutation_mode)))?'Ownership "aggregate_child" requires a non many-to-many relation with source_owned, target_owned, or coordinated mutation.':null
+  ]},
+  entity_relation_target:{keyCol:'relation_target_key',noun:'entity_relation_target',columns:[
+    {name:'relation_target_key',label:'Target key',type:'identity',pattern:/^[a-z][a-z0-9_]{0,62}$/,required:true},
+    {name:'target_entity_label',label:'Target entity',type:'text',required:true},
+    {name:'target_key_key',label:'Target key key',type:'identity',pattern:/^[a-z][a-z0-9_]{0,62}$/,required:true},
+    {name:'discriminator_value',label:'Discriminator value',type:'text',maxLength:128},
+    {name:'is_default',label:'Default target',type:'bool',default:true}
+  ]},
+  entity_relation_field:{keyCol:'id',noun:'entity_relation_field',columns:[
+    {name:'source_field_id',label:'Source field',type:'ref',refTable:'entity_field',required:true},
+    {name:'target_field_key',label:'Target field key',type:'identity',pattern:/^[a-z][a-z0-9_]{0,62}$/,required:true},
+    {name:'position',label:'Position',type:'int',min:1,max:64,required:true,default:1}
+  ]}
+};
+
+// Which tables are children of which, matched by real foreign keys (not just a naive parentField string,
+// since entity_surface_section nests under itself via parent_section_id).
+const CHILDREN={
+  entity_surface:[
+    {table:'entity_surface_section',label:'Sections',match:(c,p)=>c.entity_surface_id===p.id&&!c.parent_section_id,newRow:p=>({entity_surface_id:p.id,parent_section_id:null})},
+    {table:'entity_surface_field_binding',label:'Unsectioned field bindings',match:(c,p)=>c.entity_surface_id===p.id&&!c.entity_surface_section_id,newRow:p=>({entity_surface_id:p.id,entity_surface_section_id:null})},
+    {table:'entity_surface_operation',label:'Surface-level actions',match:(c,p)=>c.entity_surface_id===p.id&&!c.entity_surface_section_id,newRow:p=>({entity_surface_id:p.id,entity_surface_section_id:null})}
+  ],
+  entity_surface_section:[
+    {table:'entity_surface_section',label:'Nested sections',match:(c,p)=>c.entity_surface_id===p.entity_surface_id&&c.parent_section_id===p.id,newRow:p=>({entity_surface_id:p.entity_surface_id,parent_section_id:p.id})},
+    {table:'entity_surface_field_binding',label:'Field bindings',match:(c,p)=>c.entity_surface_section_id===p.id,newRow:p=>({entity_surface_id:p.entity_surface_id,entity_surface_section_id:p.id})},
+    {table:'entity_surface_operation',label:'Actions',match:(c,p)=>c.entity_surface_section_id===p.id,newRow:p=>({entity_surface_id:p.entity_surface_id,entity_surface_section_id:p.id})}
+  ],
+  entity_key:[
+    {table:'entity_key_field',label:'Member fields (ordered)',match:(c,p)=>c.entity_key_id===p.id,newRow:p=>({entity_key_id:p.id})}
+  ],
+  entity_relation:[
+    {table:'entity_relation_target',label:'Targets',match:(c,p)=>c.entity_relation_id===p.id,newRow:p=>({entity_relation_id:p.id})}
+  ],
+  entity_relation_target:[
+    {table:'entity_relation_field',label:'Field mappings (ordered)',match:(c,p)=>c.entity_relation_target_id===p.id,newRow:p=>({entity_relation_target_id:p.id})}
+  ]
+};
+
+const rowsByTable={
+  entity_field:[
+    {id:'f1',field_key:'legal_name'},{id:'f2',field_key:'trading_name'},
+    {id:'f3',field_key:'registration_number'},{id:'f4',field_key:'country'},{id:'f5',field_key:'display_name'}
+  ],
+  entity_operation:[
+    {id:'op1',operation_key:'business_partner.create'},{id:'op2',operation_key:'business_partner.amend'},{id:'op3',operation_key:'business_partner.escalate'}
+  ],
+  entity_surface:[
+    {id:'surf1',surface_key:'business_partner_details',surface_kind:'form',title:'Business Partner · Details',description:'Primary create/amend surface.',layout_kind:'flow',is_default:true,status:'active'}
+  ],
+  entity_surface_section:[
+    {id:'sec1',entity_surface_id:'surf1',parent_section_id:null,section_key:'identity',section_kind:'section',title:'Identity',position:0,column_count:2,collapsible:false,collapsed_by_default:false},
+    {id:'sec2',entity_surface_id:'surf1',parent_section_id:null,section_key:'registration',section_kind:'section',title:'Registration',position:1,column_count:2,collapsible:false,collapsed_by_default:false},
+    {id:'sec3',entity_surface_id:'surf1',parent_section_id:'sec2',section_key:'registration_advanced',section_kind:'group',title:'Advanced',position:0,column_count:1,collapsible:true,collapsed_by_default:true}
+  ],
+  entity_surface_field_binding:[
+    {id:'fb1',entity_surface_id:'surf1',entity_surface_section_id:'sec1',entity_field_id:'f1',binding_key:'legal_name',position:0,label_override:'',help_text:'Use the name on the registration document.',placeholder:'Enter legal name',widget_key:'text',column_span:6,status:'active'},
+    {id:'fb2',entity_surface_id:'surf1',entity_surface_section_id:'sec1',entity_field_id:'f2',binding_key:'trading_name',position:1,label_override:'',help_text:'',placeholder:'',widget_key:'text',column_span:6,status:'active'},
+    {id:'fb3',entity_surface_id:'surf1',entity_surface_section_id:'sec2',entity_field_id:'f3',binding_key:'registration_number',position:0,label_override:'',help_text:'',placeholder:'12345678',widget_key:'text',column_span:6,status:'active'},
+    {id:'fb4',entity_surface_id:'surf1',entity_surface_section_id:'sec2',entity_field_id:'f4',binding_key:'country',position:1,label_override:'',help_text:'',placeholder:'',widget_key:'select',column_span:6,status:'active'},
+    {id:'fb5',entity_surface_id:'surf1',entity_surface_section_id:'sec3',entity_field_id:'f5',binding_key:'display_name',position:0,label_override:'',help_text:'',placeholder:'',widget_key:'text',column_span:12,status:'active'}
+  ],
+  entity_surface_operation:[
+    {id:'so1',entity_surface_id:'surf1',entity_surface_section_id:null,entity_operation_id:'op1',placement_key:'create',interaction_target:'primary',selection_mode:'none',position:0,label_override:'',status:'active'},
+    {id:'so2',entity_surface_id:'surf1',entity_surface_section_id:'sec2',entity_operation_id:'op3',placement_key:'escalate-registration',interaction_target:'row',selection_mode:'none',position:0,label_override:'Escalate',status:'active'}
+  ],
+  entity_key:[
+    {id:'k1',key_key:'bp_primary_key',key_kind:'primary',uniqueness_scope:'tenant',null_semantics:'not_allowed',status:'active'},
+    {id:'k2',key_key:'bp_natural_key',key_kind:'natural',uniqueness_scope:'tenant',null_semantics:'not_allowed',status:'active'}
+  ],
+  entity_key_field:[
+    {id:'kf1',entity_key_id:'k2',entity_field_id:'f3',position:1},
+    {id:'kf2',entity_key_id:'k2',entity_field_id:'f4',position:2}
+  ],
+  entity_relation:[
+    {id:'r1',relation_key:'bank_accounts',relation_kind:'one_to_many',resolution_kind:'foreign_key',ownership_mode:'aggregate_child',mutation_mode:'coordinated',on_delete:'restrict',on_update:'restrict',status:'active'}
+  ],
+  entity_relation_target:[
+    {id:'rt1',entity_relation_id:'r1',relation_target_key:'default',target_entity_label:'entity_bank_account',target_key_key:'bank_account_primary_key',discriminator_value:'',is_default:true}
+  ],
+  entity_relation_field:[
+    {id:'rf1',entity_relation_target_id:'rt1',source_field_id:'f1',target_field_key:'business_partner_legal_name',position:1}
+  ]
+};
+
+let selected=null;
+const expanded=new Set(['node:entity_surface:surf1','node:entity_surface_section:sec1','node:entity_surface_section:sec2','node:entity_key:k2','node:entity_relation:r1']);
+
+// --- Generic field control + validator (same engine as v2) ---
+function colVisible(col,row){return !col.visibleWhen||col.visibleWhen(row)}
+function applyForcedValues(d,row){d.columns.forEach(c=>{if(c.forceWhen){const forced=c.forceWhen(row);if(forced!==undefined)row[c.name]=forced}})}
+function labelFor(refTable,id){
+  if(!id)return'';
+  const row=(rowsByTable[refTable]||[]).find(r=>r.id===id);
+  if(!row)return'#'+id;
+  const d=TREE_DESCRIPTORS[refTable];
+  return friendly(refTable,row);
+}
+function fieldControl(col,row){
+  if(!colVisible(col,row))return'';
+  const val=row[col.name];
+  const dis=(col.disabledWhen&&col.disabledWhen(row))?'disabled':'';
+  const req=col.required||(col.requiredWhen&&col.requiredWhen(row));
+  if(col.type==='bool')return`<div class="field"><label><input type="checkbox" data-col="${col.name}" ${val?'checked':''} ${dis}>${col.label}</label></div>`;
+  if(col.type==='longtext')return`<div class="field"><label>${col.label}${req?' *':''}</label><textarea data-col="${col.name}" ${dis}>${esc(val??'')}</textarea></div>`;
+  if(col.type==='enum'||col.type==='lifecycle')return`<div class="field"><label>${col.label}${req?' *':''}</label><select data-col="${col.name}" ${dis}>${col.domain.map(o=>`<option value="${o}" ${o===val?'selected':''}>${o}</option>`).join('')}</select></div>`;
+  if(col.type==='int')return`<div class="field"><label>${col.label}${req?' *':''}</label><input type="number" data-col="${col.name}" value="${val??''}" min="${col.min??''}" max="${col.max??''}" ${dis}></div>`;
+  if(col.type==='ref'){
+    const opts=(rowsByTable[col.refTable]||[]).map(r=>`<option value="${r.id}" ${r.id===val?'selected':''}>${esc(labelFor(col.refTable,r.id))}</option>`).join('');
+    return`<div class="field"><label>${col.label}${req?' *':''}</label><select data-col="${col.name}" ${dis}><option value="">Select&hellip;</option>${opts}</select></div>`;
+  }
+  return`<div class="field"><label>${col.label}${req?' *':''}</label><input data-col="${col.name}" value="${esc(val??'')}" ${dis}></div>`;
+}
+function validateRow(d,row){
+  const errors=[];
+  d.columns.forEach(c=>{
+    if(!colVisible(c,row))return;
+    const v=row[c.name];
+    const required=c.required||(c.requiredWhen&&c.requiredWhen(row));
+    if(c.type==='bool')return;
+    if(required&&(v===undefined||v===null||v==='')){errors.push(`${c.label} is required.`);return}
+    if(v===undefined||v===null||v==='')return;
+    if(c.pattern&&typeof v==='string'&&!c.pattern.test(v))errors.push(`${c.label} does not match the required pattern.`);
+    if(c.maxLength&&String(v).length>c.maxLength)errors.push(`${c.label} exceeds ${c.maxLength} characters.`);
+    if((c.type==='enum'||c.type==='lifecycle')&&!c.domain.includes(v))errors.push(`${c.label} must be one of: ${c.domain.join(', ')}.`);
+    if(c.type==='int'){
+      if(!Number.isInteger(Number(v)))errors.push(`${c.label} must be an integer.`);
+      if(c.min!==undefined&&Number(v)<c.min)errors.push(`${c.label} must be >= ${c.min}.`);
+      if(c.max!==undefined&&Number(v)>c.max)errors.push(`${c.label} must be <= ${c.max}.`);
+    }
+  });
+  (d.crossFieldRules||[]).forEach(rule=>{const msg=rule(row);if(msg)errors.push(msg)});
+  return errors;
+}
+function newRowFor(table,overrides){
+  const d=TREE_DESCRIPTORS[table];
+  const row={id:table+'_'+Math.random().toString(36).slice(2,8),...overrides};
+  d.columns.forEach(c=>{if(row[c.name]===undefined)row[c.name]=c.default!==undefined?c.default:(c.type==='int'?(c.min??0):c.type==='bool'?false:'')});
+  return row;
+}
+
+// --- Tree rendering ---
+function siblingsOf(table,row,spec,parentRow){
+  return (rowsByTable[table]||[]).filter(c=>spec.match(c,parentRow)).sort((a,b)=>(a.position??0)-(b.position??0));
+}
+function renderNode(kind,row,depth,parentSpec,parentRow){
+  const key='node:'+kind+':'+row.id;
+  const specs=CHILDREN[kind]||[];
+  const isOpen=expanded.has(key);
+  const d=TREE_DESCRIPTORS[kind];
+  const label=friendly(kind,row);
+  const isSelected=selected&&selected.kind===kind&&selected.id===row.id;
+  let reorder='';
+  if(parentSpec&&'position'in row){
+    const sibs=siblingsOf(kind,row,parentSpec,parentRow);
+    const idx=sibs.findIndex(s=>s.id===row.id);
+    reorder=`<button class="reorder" data-move="up:${kind}:${row.id}" ${idx<=0?'disabled':''} title="Move up">&uarr;</button><button class="reorder" data-move="down:${kind}:${row.id}" ${idx>=sibs.length-1?'disabled':''} title="Move down">&darr;</button>`;
+  }
+  let html=`<div class="node" style="padding-left:${depth*16}px">`+
+    (specs.length?`<button class="twisty" data-toggle="${key}">${isOpen?'▾':'▸'}</button>`:'<span class="twisty-space"></span>')+
+    `<button class="nodelabel ${isSelected?'selected':''}" data-select-kind="${kind}" data-select-id="${row.id}"><span class="nodekind">${noun(kind)}</span>${esc(String(label))}</button>${reorder}</div>`;
+  if(isOpen){
+    specs.forEach(spec=>{
+      const children=siblingsOf(spec.table,null,spec,row);
+      html+=`<div class="childgrouplabel" style="padding-left:${(depth+1)*16}px">${spec.label}</div>`;
+      children.forEach(c=>{html+=renderNode(spec.table,c,depth+1,spec,row)});
+      html+=`<div style="padding-left:${(depth+1)*16+20}px"><button class="addchild" data-add-child="${kind}|${row.id}|${spec.table}">+ Add ${noun(spec.table)}</button></div>`;
+    });
+  }
+  return html;
+}
+function renderTree(){
+  let html='';
+  [['Surfaces','entity_surface'],['Keys','entity_key'],['Relations','entity_relation']].forEach(([label,kind])=>{
+    html+=`<div class="treegroup"><h4>${label}</h4>`;
+    (rowsByTable[kind]||[]).forEach(r=>{html+=renderNode(kind,r,0,null,null)});
+    html+=`<button class="addroot" data-add-root="${kind}">+ New ${noun(kind)}</button></div>`;
+  });
+  $('compTree').innerHTML=html;
+  document.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.toggle;expanded.has(k)?expanded.delete(k):expanded.add(k);renderTree();
+  });
+  document.querySelectorAll('[data-select-kind]').forEach(b=>b.onclick=()=>{
+    selected={kind:b.dataset.selectKind,id:b.dataset.selectId};renderTree();renderForm();
+  });
+  document.querySelectorAll('[data-add-child]').forEach(b=>b.onclick=()=>{
+    const [parentKind,parentId,childTable]=b.dataset.addChild.split('|');
+    const parentRow=rowsByTable[parentKind].find(r=>r.id===parentId);
+    const spec=CHILDREN[parentKind].find(s=>s.table===childTable);
+    const row=newRowFor(childTable,spec.newRow(parentRow));
+    if('position' in row){const sibs=siblingsOf(childTable,null,spec,parentRow);row.position=sibs.length?Math.max(...sibs.map(s=>s.position))+1:row.position;}
+    rowsByTable[childTable].push(row);
+    expanded.add('node:'+parentKind+':'+parentId);
+    selected={kind:childTable,id:row.id};
+    renderTree();renderForm();
+  });
+  document.querySelectorAll('[data-add-root]').forEach(b=>b.onclick=()=>{
+    const kind=b.dataset.addRoot;
+    const row=newRowFor(kind,{});
+    rowsByTable[kind].push(row);
+    selected={kind,id:row.id};
+    renderTree();renderForm();
+  });
+  document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{
+    const [dir,kind,id]=b.dataset.move.split(':');
+    moveSibling(kind,id,dir);
+  });
+}
+function moveSibling(kind,id,dir){
+  // Find this row's parent context by scanning CHILDREN specs that could own it, then swap position with the adjacent sibling.
+  for(const parentKind in CHILDREN){
+    for(const spec of CHILDREN[parentKind]){
+      if(spec.table!==kind)continue;
+      for(const parentRow of (rowsByTable[parentKind]||[])){
+        const sibs=siblingsOf(kind,null,spec,parentRow);
+        const idx=sibs.findIndex(s=>s.id===id);
+        if(idx===-1)continue;
+        const swapIdx=dir==='up'?idx-1:idx+1;
+        if(swapIdx<0||swapIdx>=sibs.length)return;
+        const a=sibs[idx],b=sibs[swapIdx];
+        const tmp=a.position;a.position=b.position;b.position=tmp;
+        renderTree();renderForm();
+        return;
+      }
+    }
+  }
+}
+
+// --- Ancestor lookup for breadcrumb (small and explicit; the match() functions above aren't easily inverted) ---
+function parentOf(kind,row){
+  if(kind==='entity_surface_section'){
+    if(row.parent_section_id){const p=rowsByTable.entity_surface_section.find(r=>r.id===row.parent_section_id);if(p)return{kind:'entity_surface_section',row:p}}
+    const p=rowsByTable.entity_surface.find(r=>r.id===row.entity_surface_id);return p?{kind:'entity_surface',row:p}:null;
+  }
+  if(kind==='entity_surface_field_binding'||kind==='entity_surface_operation'){
+    if(row.entity_surface_section_id){const p=rowsByTable.entity_surface_section.find(r=>r.id===row.entity_surface_section_id);if(p)return{kind:'entity_surface_section',row:p}}
+    const p=rowsByTable.entity_surface.find(r=>r.id===row.entity_surface_id);return p?{kind:'entity_surface',row:p}:null;
+  }
+  if(kind==='entity_key_field'){const p=rowsByTable.entity_key.find(r=>r.id===row.entity_key_id);return p?{kind:'entity_key',row:p}:null}
+  if(kind==='entity_relation_target'){const p=rowsByTable.entity_relation.find(r=>r.id===row.entity_relation_id);return p?{kind:'entity_relation',row:p}:null}
+  if(kind==='entity_relation_field'){const p=rowsByTable.entity_relation_target.find(r=>r.id===row.entity_relation_target_id);return p?{kind:'entity_relation_target',row:p}:null}
+  return null;
+}
+function breadcrumbFor(kind,row){
+  const parts=[];let curKind=kind,curRow=row;
+  while(curRow){
+    const d=TREE_DESCRIPTORS[curKind];
+    parts.unshift(friendly(curKind,curRow));
+    const p=parentOf(curKind,curRow);
+    if(!p)break;
+    curKind=p.kind;curRow=p.row;
+  }
+  return parts.join(' › ');
+}
+
+function renderForm(){
+  if(!selected){$('compBreadcrumb').textContent='';$('compForm').innerHTML='<div class="note">Select a node in the tree, or add a new one.</div>';return}
+  const d=TREE_DESCRIPTORS[selected.kind];
+  const row=(rowsByTable[selected.kind]||[]).find(r=>r.id===selected.id);
+  if(!row){selected=null;renderForm();return}
+  applyForcedValues(d,row);
+  $('compBreadcrumb').textContent=breadcrumbFor(selected.kind,row);
+  $('compForm').innerHTML=`<div class="bar"><h3>${esc(friendly(selected.kind,row))}</h3><span class="pill">${selected.kind}</span></div>`+
+    d.columns.map(c=>fieldControl(c,row)).join('')+
+    `<div class="row"><button class="primary" data-node-save>Validate object</button><button data-node-delete>Remove</button></div><div class="status" id="nodeStatus"></div>`;
+  d.columns.forEach(c=>{
+    const el=document.querySelector(`#compForm [data-col="${c.name}"]`);if(!el)return;
+    el.onchange=el.oninput=()=>{
+      row[c.name]=c.type==='bool'?el.checked:c.type==='int'?Number(el.value):el.value;
+      applyForcedValues(d,row);
+      renderTree();
+      if(c.type==='enum'||c.type==='ref'||c.type==='bool')renderForm();
+    };
+  });
+  $('compForm').querySelector('[data-node-save]').onclick=()=>{
+    const errors=validateRow(d,row),el=$('nodeStatus');
+    el.textContent=errors.length?('Rejected: '+errors.join(' ')):'Valid — row satisfies the descriptor constraints (mirrors the server CHECK constraints).';
+    el.style.color=errors.length?'var(--red)':'var(--green)';
+    renderTree();
+  };
+  $('compForm').querySelector('[data-node-delete]').onclick=()=>{
+    requestRemoval();
+  };
+}
+
+
+const noun=kind=>({entity_surface:'Form',entity_surface_section:'Section',entity_surface_field_binding:'Field placement',entity_surface_operation:'Action',entity_key:'Key',entity_key_field:'Key member',entity_relation:'Relation',entity_relation_target:'Target',entity_relation_field:'Field mapping',entity_field:'Field',entity_operation:'Operation'}[kind]||kind);
+const human=s=>String(s||'').replaceAll('_',' ').replace(/^./,c=>c.toUpperCase());
+function friendly(kind,row){if(kind==='entity_surface_field_binding')return row.label_override||human(rowsByTable.entity_field.find(f=>f.id===row.entity_field_id)?.field_key)||human(row.binding_key);return row.title||human(row.field_key||row.operation_key||row[TREE_DESCRIPTORS[kind]?.keyCol]||row.id)}
+const storageKey='studio-entity-designer-v4';let baseline,saved,history=[],phase=0,observed=null,lastState,pendingRemoval;
+const snapshot=()=>JSON.parse(JSON.stringify(rowsByTable));
+function restore(v){for(const k of Object.keys(rowsByTable))delete rowsByTable[k];Object.assign(rowsByTable,JSON.parse(JSON.stringify(v)));}
+function dirty(){return JSON.stringify(rowsByTable)!==JSON.stringify(saved)}
+function changes(){const result=[];for(const table of new Set([...Object.keys(baseline),...Object.keys(rowsByTable)])){const a=new Map((baseline[table]||[]).map(r=>[r.id,r])),b=new Map((rowsByTable[table]||[]).map(r=>[r.id,r]));for(const id of new Set([...a.keys(),...b.keys()])){if(JSON.stringify(a.get(id))!==JSON.stringify(b.get(id)))result.push({table,id,before:a.get(id),after:b.get(id)});}}return result;}
+function graphErrors(){const errors=[];for(const [kind,rows] of Object.entries(rowsByTable)){const d=TREE_DESCRIPTORS[kind];const keys=new Set();for(const r of rows){if(d){errors.push(...validateRow(d,r).map(e=>friendly(kind,r)+': '+e));const scope=JSON.stringify([r.entity_surface_id,r.parent_section_id,r.entity_surface_section_id,r.entity_key_id,r.entity_relation_id,r.entity_relation_target_id]);const key=scope+'|'+r[d.keyCol];if(keys.has(key))errors.push('Duplicate '+noun(kind)+' key');keys.add(key);}for(const [prop,target] of Object.entries({entity_surface_id:'entity_surface',entity_surface_section_id:'entity_surface_section',parent_section_id:'entity_surface_section',entity_field_id:'entity_field',source_field_id:'entity_field',entity_operation_id:'entity_operation',entity_key_id:'entity_key',entity_relation_id:'entity_relation',entity_relation_target_id:'entity_relation_target'})){if(r[prop]&&!(rowsByTable[target]||[]).some(x=>x.id===r[prop]))errors.push('Missing reference: '+prop);}if(r.parent_section_id){const parent=rowsByTable.entity_surface_section.find(x=>x.id===r.parent_section_id);if(parent&&parent.entity_surface_id!==r.entity_surface_id)errors.push('Section parent belongs to a different form');let cur=r,seen=new Set();while(cur){if(seen.has(cur.id)){errors.push('Section cycle');break}seen.add(cur.id);cur=rowsByTable.entity_surface_section.find(x=>x.id===cur.parent_section_id);}}}}return [...new Set(errors)];}
+function fieldPreview(model,binding,prefix){const field=model.entity_field.find(f=>f.id===binding.entity_field_id);const label=binding.label_override||human(field?.field_key)||'Unbound field';return `<div class="preview-field ${selected?.id===binding.id?'highlight':''}" style="grid-column:span ${Math.max(1,Math.min(12,binding.column_span||12))}"><label for="${prefix}-${esc(binding.id)}">${esc(label)}</label>${binding.widget_key==='textarea'?`<textarea id="${prefix}-${esc(binding.id)}" placeholder="${esc(binding.placeholder||'')}" readonly></textarea>`:binding.widget_key==='select'?`<select id="${prefix}-${esc(binding.id)}" disabled><option>Select ${esc(label)}</option></select>`:`<input id="${prefix}-${esc(binding.id)}" placeholder="${esc(binding.placeholder||'')}" readonly>`}<small>${esc(binding.help_text||'')}</small></div>`;}
+function formPreview(model,prefix){const surf=model.entity_surface.find(x=>x.id===selected?.id)||model.entity_surface.find(x=>x.id===(rowsByTable[selected?.kind]||[]).find(x=>x.id===selected?.id)?.entity_surface_id)||model.entity_surface[0];if(!surf)return '<p>No forms in this draft.</p>';const visited=new Set();function section(sec){if(visited.has(sec.id))return '';visited.add(sec.id);return `<div class="preview-section"><h3>${esc(sec.title||human(sec.section_key))}</h3><div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr))">${model.entity_surface_field_binding.filter(f=>f.entity_surface_section_id===sec.id).sort((a,b)=>a.position-b.position).map(f=>fieldPreview(model,f,prefix)).join('')}</div>${model.entity_surface_section.filter(x=>x.parent_section_id===sec.id).sort((a,b)=>a.position-b.position).map(section).join('')}</div>`;}return `<h3>${esc(surf.title)}</h3>`+model.entity_surface_section.filter(x=>x.entity_surface_id===surf.id&&!x.parent_section_id).sort((a,b)=>a.position-b.position).map(section).join('')+model.entity_surface_field_binding.filter(f=>f.entity_surface_id===surf.id&&!f.entity_surface_section_id).map(f=>fieldPreview(model,f,prefix)).join('');}
+function requestRemoval(){pendingRemoval={...selected};const refs=[];for(const [t,rs] of Object.entries(rowsByTable))for(const r of rs)if(r.id!==selected.id&&Object.entries(r).some(([k,v])=>k.endsWith('_id')&&v===selected.id))refs.push(noun(t)+' '+friendly(t,r));$('removeImpact').textContent=refs.length?'Removal blocked. Referenced by: '+refs.join(', '):'Remove '+friendly(selected.kind,rowsByTable[selected.kind].find(r=>r.id===selected.id))+' from the working draft? You can undo this change.';$('confirmRemove').disabled=refs.length>0;$('removeDialog').showModal();}
+function redraw(){renderTree();renderForm();sync();}
+function sync(){const state=JSON.stringify(rowsByTable);if(lastState&&state!==lastState){history.push(JSON.parse(lastState));phase=0;observed=null;$('ack').checked=false;}lastState=state;$('dirty').textContent=dirty()?'Unsaved changes':'Saved local draft';$('save').disabled=!dirty()||$('viewer').checked;$('undo').disabled=!history.length||$('viewer').checked;$('reload').disabled=$('viewer').checked;$('livePreview').innerHTML=formPreview(rowsByTable,'live');$('basePreview').innerHTML=formPreview(baseline,'base');$('draftPreview').innerHTML=formPreview(rowsByTable,'draft');$('diffs').innerHTML=changes().map(c=>`<details class="note"><summary>${c.before?c.after?'Changed':'Removed':'Added'} · ${noun(c.table)} · ${esc(friendly(c.table,c.after||c.before))}</summary><div class="two"><pre>${esc(JSON.stringify(c.before||null,null,2))}</pre><pre>${esc(JSON.stringify(c.after||null,null,2))}</pre></div></details>`).join('')||'<p>No differences from the base.</p>';$('tableData').textContent=JSON.stringify(rowsByTable[$('table').value],null,2);const steps=['Draft','Validated','In review','Approved','Published'];$('steps').innerHTML=steps.map((x,i)=>`<span class="pill">${i===phase?'● ':i<phase?'✓ ':''}${x}</span>`).join('');const blocked=$('viewer').checked||dirty()||!changes().length||phase===4||(phase===2&&($('actor').value!=='reviewer'||!$('ack').checked));$('advance').disabled=blocked;$('advance').textContent=['Validate draft','Submit for review','Approve','Publish sample','Published'][phase];$('phaseText').textContent=dirty()?'Save the complete draft before validation.':phase===2?'An independent reviewer must review the complete composition.':phase===4?'Sample release created. Target activation is a separate observation.':'Review the preview and differences before continuing.';$('ackWrap').style.display=phase===2?'block':'none';$('check').disabled=phase<4||$('viewer').checked;$('evidence').textContent=observed||'No target observation for this draft and target.';document.querySelectorAll('#compForm input,#compForm select,#compForm textarea,#compForm button,[data-add-child],[data-add-root],[data-move]').forEach(e=>e.disabled=$('viewer').checked||e.disabled);if($('viewer').checked)$('message').textContent='Read-only simulation. Draft mutation controls are disabled.';permissionView();}
+function permissionView(){$('permissionTrace').textContent=$('testUser').value==='viewer'?'DENIED · viewer has no Create permission.':$('testScope').value==='sg'?'DENIED · requester grant covers the UK company only.':'ALLOWED · sample Create grant applies to UK.';$('operationList').innerHTML=rowsByTable.entity_surface_operation.map(r=>`<p>${esc(friendly('entity_surface',rowsByTable.entity_surface.find(s=>s.id===r.entity_surface_id)||{}))} → ${esc(rowsByTable.entity_operation.find(o=>o.id===r.entity_operation_id)?.operation_key||'Unbound operation')}</p>`).join('')+'<code>Example Create permission: neon.relationship.business_partner.create</code>';}
+function initUnified(){baseline=snapshot();saved=snapshot();try{const v=JSON.parse(localStorage.getItem(storageKey));if(v&&Object.keys(baseline).every(k=>Array.isArray(v[k]))){restore(v);saved=snapshot();}}catch{}lastState=JSON.stringify(rowsByTable);$('table').innerHTML=Object.keys(rowsByTable).map(k=>`<option>${k}</option>`).join('');selected={kind:'entity_surface_field_binding',id:'fb1'};redraw();document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.view').forEach(v=>v.classList.toggle('hidden',v.id!==b.dataset.view));document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('primary',x===b));sync();});$('save').onclick=()=>{const errors=graphErrors();if(errors.length){$('message').textContent=errors.join('; ');return}try{localStorage.setItem(storageKey,JSON.stringify(rowsByTable));saved=snapshot();sync();$('message').textContent='Whole composition saved locally. All views use this same draft.';}catch{$('message').textContent='Storage unavailable. Draft was not saved.'}};$('reload').onclick=()=>{restore(saved);redraw();$('message').textContent='Saved composition reloaded. Undo can restore the previous working copy.'};$('undo').onclick=()=>{if(!history.length)return;restore(history.pop());lastState=JSON.stringify(rowsByTable);phase=0;observed=null;$('ack').checked=false;redraw();};$('cancelRemove').onclick=()=>$('removeDialog').close();$('confirmRemove').onclick=()=>{rowsByTable[pendingRemoval.kind]=rowsByTable[pendingRemoval.kind].filter(r=>r.id!==pendingRemoval.id);selected=null;$('removeDialog').close();redraw();};$('advance').onclick=()=>{if($('advance').disabled)return;const errors=graphErrors();if(errors.length){$('message').textContent=errors.join('; ');return}phase++;sync();};$('check').onclick=()=>{observed='SIMULATED · '+$('outcome').selectedOptions[0].textContent+' · '+$('target').value+' · sample release 3 · '+new Date().toLocaleTimeString()+'. Browser verification remains pending.';sync();};$('outcome').onchange=()=>{observed=null;sync()};$('target').onchange=()=>{phase=0;observed=null;$('ack').checked=false;sync()};$('actor').onchange=sync;$('ack').onchange=sync;$('viewer').onchange=redraw;$('table').onchange=sync;$('testUser').onchange=permissionView;$('testScope').onchange=permissionView;$('togglePreview').onclick=()=>{$('livePreview').classList.toggle('hidden');$('togglePreview').textContent=$('livePreview').classList.contains('hidden')?'Show preview':'Hide preview'};$('search').oninput=()=>{const q=$('search').value.toLowerCase();if(q){Object.entries(rowsByTable).forEach(([k,rs])=>rs.forEach(r=>expanded.add('node:'+k+':'+r.id)));renderTree();}document.querySelectorAll('.node').forEach(n=>n.style.display=n.textContent.toLowerCase().includes(q)?'':'none');};document.addEventListener('input',e=>{if(e.target.closest('#compForm'))sync()});document.addEventListener('change',e=>{if(e.target.closest('#compForm'))sync()});document.addEventListener('click',e=>{if(e.target.closest('#compTree')||e.target.closest('#compForm'))sync()});window.addEventListener('beforeunload',e=>{if(dirty()){e.preventDefault();e.returnValue='';}});}
+
+initUnified();
+</script>
+</body></html>

@@ -1,0 +1,294 @@
+{
+  "schema": "bp-ai-release-inventory/1",
+  "observedAt": "2026-09-10T09:54:58.110Z",
+  "runId": "cfb11453-ef34-415f-8942-0b43578f5238",
+  "target": "DEV CirrusAtlantic",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "images": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "digest": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "digest": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "digest": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "deployed": {
+    "modules": [
+      {
+        "name": "business-partner-tools",
+        "sha256": "d5f1265db7c9bd27afdc193c11e8fefc56395efe802a5b6502df9d495f3b420c"
+      },
+      {
+        "name": "business-partner-insight-tools",
+        "sha256": "0ee5e09ae607cc00b8f2522aad56b47e3b557f035e4de326bf090c798fa564f8"
+      },
+      {
+        "name": "business-partner-list-insights",
+        "sha256": "d609ca128b31c850337ece158af8ef1ade7b14d28cc95cecf031fbefc7f19342"
+      },
+      {
+        "name": "business-partner-case-tools",
+        "sha256": "51b2cedbb4c67b74f98ed42d76910bed4b23028c712cf876508d29d4c5104887"
+      },
+      {
+        "name": "local-generation-composition",
+        "sha256": "b6eac61ec48828a618f3f1307dc2722b3e24cb4bbbc246250f71971813f97b72"
+      },
+      {
+        "name": "agent-runtime",
+        "sha256": "5d6e8a8730e29cbf8d1da6308533dae2c91ea7042a8d02b4965a87c07b7598bf"
+      }
+    ],
+    "tools": [
+      {
+        "code": "bp_read_summary",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      },
+      {
+        "code": "bp_submit_case",
+        "version": "1",
+        "access": "mutation",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.entity_case.submit"]
+      },
+      {
+        "code": "bp_explain_case_validation",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.entity_case.read"]
+      },
+      {
+        "code": "bp_explain_case_diff",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.entity_case.read"]
+      },
+      {
+        "code": "bp_read_brief",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      },
+      {
+        "code": "bp_explain_readiness",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      },
+      {
+        "code": "bp_check_eligibility",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      },
+      {
+        "code": "bp_read_contacts",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      },
+      {
+        "code": "bp_read_addresses",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      },
+      {
+        "code": "bp_read_banking",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      },
+      {
+        "code": "bp_read_certificates",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      },
+      {
+        "code": "bp_read_tax_identifiers",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      },
+      {
+        "code": "bp_read_list_insights",
+        "version": "1",
+        "access": "read",
+        "planes": ["neon"],
+        "permissions": ["neon.relationship.business_partner.read"]
+      }
+    ],
+    "insightOwnerComposed": true,
+    "insightToolsComposed": true,
+    "caseToolsComposed": true,
+    "basis": "Deployed module manifests and composition; authenticated execution is qualified separately."
+  },
+  "publications": [
+    {
+      "ai": null,
+      "tenantId": null,
+      "releaseId": "7872ca07-6dbe-4268-a2a0-b7762c8001d1",
+      "releaseNo": 25,
+      "compiledHash": "ea53d3b4b151de16c470019fff5320dd91b714ec84b19994c5310c4626afb89b",
+      "publicationKey": "metadata.entity.business_partner"
+    },
+    {
+      "ai": {
+        "actions": [
+          {
+            "id": "open_record",
+            "version": 1,
+            "operationKey": "read"
+          }
+        ],
+        "aliases": ["Business partner", "Supplier", "Customer"],
+        "enabled": true,
+        "description": "Saved Business Partner identity and authorized owner sections",
+        "contextKinds": ["record", "manage"],
+        "schemaVersion": 1,
+        "searchFieldKeys": ["code", "display_name"],
+        "insightProviders": [
+          {
+            "id": "entity_read_record",
+            "version": 1
+          },
+          {
+            "id": "bp_read_summary",
+            "version": 1
+          },
+          {
+            "id": "bp_read_contacts",
+            "version": 1
+          },
+          {
+            "id": "bp_read_addresses",
+            "version": 1
+          },
+          {
+            "id": "bp_read_brief",
+            "version": 1
+          },
+          {
+            "id": "bp_explain_readiness",
+            "version": 1
+          },
+          {
+            "id": "bp_check_eligibility",
+            "version": 1
+          },
+          {
+            "id": "bp_explain_case_validation",
+            "version": 1
+          },
+          {
+            "id": "bp_explain_case_diff",
+            "version": 1
+          },
+          {
+            "id": "bp_read_list_insights",
+            "version": 1
+          }
+        ],
+        "relationshipKeys": [],
+        "summaryFieldKeys": [
+          "code",
+          "display_name",
+          "status",
+          "partner_category"
+        ],
+        "presentationProfiles": [
+          {
+            "id": "record_brief",
+            "version": 1
+          },
+          {
+            "id": "list_brief",
+            "version": 1
+          }
+        ]
+      },
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "releaseId": "126721f6-a2e5-45e2-91bf-0d6a1b660c56",
+      "releaseNo": 18,
+      "compiledHash": "700e00716fd05a782102a3666406f72929769ed11536c318e1dd3243baf894e4",
+      "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic"
+    }
+  ],
+  "sourceSnapshotSha256": "32ae0b64b7836032e137509fff9517347517f03982c31fc326e62f6183f8a2b2",
+  "candidatePackages": [
+    "BP-AI-00",
+    "BP-AI-01",
+    "BP-AI-02",
+    "BP-AI-03",
+    "BP-AI-04",
+    "BP-AI-05",
+    "BP-AI-06",
+    "BP-AI-07",
+    "BP-AI-08"
+  ],
+  "observedEnabledPackages": null,
+  "proactive": {
+    "releaseQualified": false,
+    "defaultOff": true,
+    "ownerRevisionResolverQualified": false
+  },
+  "deferrals": [
+    {
+      "capability": "duplicate_candidates",
+      "reason": "Separate owner matching/disclosure contract and quality/workflow qualification required."
+    },
+    {
+      "capability": "document_expiry",
+      "reason": "Retrieval does not establish business expiry; owner date/rule contract and qualified workflow required."
+    },
+    {
+      "capability": "draft_preview",
+      "reason": "Optional nonpersistent owner API and allowlisted patch contract not qualified."
+    }
+  ],
+  "releaseQualified": false
+}

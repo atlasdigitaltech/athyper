@@ -1,0 +1,35 @@
+{
+  "captured_at": "2026-09-22T21:19:06.480417+00:00",
+  "database": "local athyper_neon",
+  "read_only": true,
+  "manifest_files": 249,
+  "reviewed_tables": 592,
+  "user_listed_tables": 43,
+  "retired_tables": 11,
+  "draft_artifacts": 113,
+  "active_artifacts": 101,
+  "source_mismatches": 0,
+  "draft_active_differences": 7,
+  "core_binding_gaps": 0,
+  "registered_section_handlers": 15,
+  "registered_domain_operation_handlers": 6,
+  "releases": [
+    {
+      "activated_at": "2026-09-22T20:15:02.405947+00:00",
+      "artifact_hash": "8662087ea8aed7cf934158c6d10d22cb64cf6a75ebfa8146c80b10c6259a4306",
+      "publication_key": "metadata.compiled_entity.business_partner",
+      "source_release_no": 16,
+      "applied_release_id": "01a0cac1-eef9-7a4c-a4cb-6b1570f8c77d",
+      "compiled_release_hash": "sha256:1b8002a2c20df317f6fba20a75058ab06349e923c3caf5d6766d48558c9ff5b8",
+      "entity_code": "business_partner",
+      "artifact_count": 101
+    }
+  ],
+  "manifest_sha256": "68d6d86605db4a52f8d1b4473d51f18b120d5331a8ec6fbe0f1c4cb0844b519c",
+  "limitations": [
+    "Static SQL declaration scan is not a PostgreSQL parser; live catalog cross-check recorded separately.",
+    "Qualified source mentions are candidate provider evidence, not proof of reachability or authorization.",
+    "Activation snapshot is metadata-only; no authenticated browser journey or operation execution is claimed.",
+    "Generic domain dispatch registration is distinct from domain-specific HTTP routes and shared collaboration capability dispatch."
+  ]
+}

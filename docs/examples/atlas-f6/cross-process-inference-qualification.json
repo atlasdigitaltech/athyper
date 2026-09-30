@@ -1,0 +1,586 @@
+{
+  "observedAt": "2026-09-10T08:50:15.189Z",
+  "imagesBefore": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "requests": [
+    {
+      "mode": "generation",
+      "processId": 337,
+      "observedAt": "2026-09-10T08:50:15.398Z",
+      "diagnostics": [
+        {
+          "workload": "generation",
+          "phase": "queued",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "dcebb892-0bf7-4875-a02e-fa8029b5c160",
+          "providerCallId": "e6ee47e2-0777-45e8-91c8-7dc6d1b3206a",
+          "attempt": 0,
+          "queueWaitMs": 0,
+          "loadDurationMs": 0,
+          "elapsedMs": 1,
+          "observedMs": 1789030215399
+        },
+        {
+          "workload": "generation",
+          "phase": "admitted",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "dcebb892-0bf7-4875-a02e-fa8029b5c160",
+          "providerCallId": "e6ee47e2-0777-45e8-91c8-7dc6d1b3206a",
+          "attempt": 0,
+          "queueWaitMs": 0,
+          "loadDurationMs": 0,
+          "elapsedMs": 1,
+          "observedMs": 1789030215399
+        },
+        {
+          "workload": "generation",
+          "phase": "ready",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "dcebb892-0bf7-4875-a02e-fa8029b5c160",
+          "providerCallId": "e6ee47e2-0777-45e8-91c8-7dc6d1b3206a",
+          "attempt": 1,
+          "queueWaitMs": 0,
+          "loadDurationMs": 0,
+          "elapsedMs": 32,
+          "observedMs": 1789030215430
+        },
+        {
+          "workload": "generation",
+          "phase": "chat_dispatch",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "dcebb892-0bf7-4875-a02e-fa8029b5c160",
+          "providerCallId": "e6ee47e2-0777-45e8-91c8-7dc6d1b3206a",
+          "attempt": 1,
+          "queueWaitMs": 0,
+          "loadDurationMs": 0,
+          "elapsedMs": 32,
+          "observedMs": 1789030215430
+        },
+        {
+          "workload": "generation",
+          "phase": "completed",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "dcebb892-0bf7-4875-a02e-fa8029b5c160",
+          "providerCallId": "e6ee47e2-0777-45e8-91c8-7dc6d1b3206a",
+          "attempt": 1,
+          "queueWaitMs": 0,
+          "loadDurationMs": 0,
+          "elapsedMs": 325,
+          "observedMs": 1789030215723
+        },
+        {
+          "workload": "generation",
+          "phase": "released",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "dcebb892-0bf7-4875-a02e-fa8029b5c160",
+          "providerCallId": "e6ee47e2-0777-45e8-91c8-7dc6d1b3206a",
+          "attempt": 1,
+          "queueWaitMs": 0,
+          "loadDurationMs": 0,
+          "elapsedMs": 330,
+          "observedMs": 1789030215728
+        }
+      ],
+      "passed": true,
+      "terminal": {
+        "kind": "completed",
+        "reason": "stop"
+      },
+      "container": "athyper-dev-api-1"
+    },
+    {
+      "mode": "embedding",
+      "processId": 228,
+      "observedAt": "2026-09-10T08:50:15.478Z",
+      "diagnostics": [
+        {
+          "event": "atlas.inference.diagnostic",
+          "workload": "embedding",
+          "operationId": "59aa89ad-94d5-41de-9d08-940ac15495b4",
+          "phase": "admitted",
+          "model": "nomic-embed-text:v1.5",
+          "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "attempt": 1,
+          "queueWaitMs": 256,
+          "loadDurationMs": null,
+          "elapsedMs": 256,
+          "observedMs": 1789030215748
+        },
+        {
+          "event": "atlas.inference.diagnostic",
+          "workload": "embedding",
+          "operationId": "59aa89ad-94d5-41de-9d08-940ac15495b4",
+          "phase": "completed",
+          "model": "nomic-embed-text:v1.5",
+          "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "attempt": 1,
+          "queueWaitMs": 256,
+          "loadDurationMs": 1839.038953,
+          "elapsedMs": 2233,
+          "observedMs": 1789030217725
+        },
+        {
+          "event": "atlas.inference.diagnostic",
+          "workload": "embedding",
+          "operationId": "59aa89ad-94d5-41de-9d08-940ac15495b4",
+          "phase": "released",
+          "model": "nomic-embed-text:v1.5",
+          "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "attempt": 1,
+          "queueWaitMs": 256,
+          "loadDurationMs": 1839.038953,
+          "elapsedMs": 2234,
+          "observedMs": 1789030217726
+        }
+      ],
+      "passed": true,
+      "container": "athyper-dev-worker-1"
+    },
+    {
+      "mode": "generation",
+      "processId": 354,
+      "observedAt": "2026-09-10T08:50:17.918Z",
+      "diagnostics": [
+        {
+          "workload": "generation",
+          "phase": "queued",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "b4c54bd3-b8f9-415e-a24a-2beb14a71f63",
+          "providerCallId": "bd675439-9b11-44e0-bbd7-95ce7f829202",
+          "attempt": 0,
+          "queueWaitMs": 0,
+          "loadDurationMs": 0,
+          "elapsedMs": 0,
+          "observedMs": 1789030217919
+        },
+        {
+          "workload": "generation",
+          "phase": "admitted",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "b4c54bd3-b8f9-415e-a24a-2beb14a71f63",
+          "providerCallId": "bd675439-9b11-44e0-bbd7-95ce7f829202",
+          "attempt": 0,
+          "queueWaitMs": 1,
+          "loadDurationMs": 0,
+          "elapsedMs": 1,
+          "observedMs": 1789030217920
+        },
+        {
+          "workload": "generation",
+          "phase": "readiness_wait",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "b4c54bd3-b8f9-415e-a24a-2beb14a71f63",
+          "providerCallId": "bd675439-9b11-44e0-bbd7-95ce7f829202",
+          "attempt": 1,
+          "queueWaitMs": 1,
+          "loadDurationMs": 0,
+          "elapsedMs": 72,
+          "code": "model_not_resident",
+          "observedMs": 1789030217991
+        },
+        {
+          "workload": "generation",
+          "phase": "warmup_started",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "b4c54bd3-b8f9-415e-a24a-2beb14a71f63",
+          "providerCallId": "bd675439-9b11-44e0-bbd7-95ce7f829202",
+          "attempt": 1,
+          "queueWaitMs": 1,
+          "loadDurationMs": 0,
+          "elapsedMs": 72,
+          "observedMs": 1789030217991
+        },
+        {
+          "workload": "generation",
+          "phase": "warmup_completed",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "b4c54bd3-b8f9-415e-a24a-2beb14a71f63",
+          "providerCallId": "bd675439-9b11-44e0-bbd7-95ce7f829202",
+          "attempt": 1,
+          "queueWaitMs": 1,
+          "loadDurationMs": 3113,
+          "elapsedMs": 3185,
+          "observedMs": 1789030221104
+        },
+        {
+          "workload": "generation",
+          "phase": "ready",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "b4c54bd3-b8f9-415e-a24a-2beb14a71f63",
+          "providerCallId": "bd675439-9b11-44e0-bbd7-95ce7f829202",
+          "attempt": 2,
+          "queueWaitMs": 1,
+          "loadDurationMs": 3113,
+          "elapsedMs": 3188,
+          "observedMs": 1789030221107
+        },
+        {
+          "workload": "generation",
+          "phase": "chat_dispatch",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "b4c54bd3-b8f9-415e-a24a-2beb14a71f63",
+          "providerCallId": "bd675439-9b11-44e0-bbd7-95ce7f829202",
+          "attempt": 2,
+          "queueWaitMs": 1,
+          "loadDurationMs": 3113,
+          "elapsedMs": 3188,
+          "observedMs": 1789030221107
+        },
+        {
+          "workload": "generation",
+          "phase": "completed",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "b4c54bd3-b8f9-415e-a24a-2beb14a71f63",
+          "providerCallId": "bd675439-9b11-44e0-bbd7-95ce7f829202",
+          "attempt": 2,
+          "queueWaitMs": 1,
+          "loadDurationMs": 3113,
+          "elapsedMs": 3353,
+          "observedMs": 1789030221272
+        },
+        {
+          "workload": "generation",
+          "phase": "released",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "b4c54bd3-b8f9-415e-a24a-2beb14a71f63",
+          "providerCallId": "bd675439-9b11-44e0-bbd7-95ce7f829202",
+          "attempt": 2,
+          "queueWaitMs": 1,
+          "loadDurationMs": 3113,
+          "elapsedMs": 3357,
+          "observedMs": 1789030221276
+        }
+      ],
+      "passed": true,
+      "terminal": {
+        "kind": "completed",
+        "reason": "stop"
+      },
+      "container": "athyper-dev-api-1"
+    },
+    {
+      "mode": "embedding",
+      "processId": 245,
+      "observedAt": "2026-09-10T08:50:17.913Z",
+      "diagnostics": [
+        {
+          "event": "atlas.inference.diagnostic",
+          "workload": "embedding",
+          "operationId": "c574fda8-36ad-4f3f-91fc-46913100dd67",
+          "phase": "admitted",
+          "model": "nomic-embed-text:v1.5",
+          "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "attempt": 1,
+          "queueWaitMs": 3346,
+          "loadDurationMs": null,
+          "elapsedMs": 3347,
+          "observedMs": 1789030221280
+        },
+        {
+          "event": "atlas.inference.diagnostic",
+          "workload": "embedding",
+          "operationId": "c574fda8-36ad-4f3f-91fc-46913100dd67",
+          "phase": "completed",
+          "model": "nomic-embed-text:v1.5",
+          "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "attempt": 1,
+          "queueWaitMs": 3346,
+          "loadDurationMs": 1822.359487,
+          "elapsedMs": 5277,
+          "observedMs": 1789030223210
+        },
+        {
+          "event": "atlas.inference.diagnostic",
+          "workload": "embedding",
+          "operationId": "c574fda8-36ad-4f3f-91fc-46913100dd67",
+          "phase": "released",
+          "model": "nomic-embed-text:v1.5",
+          "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "attempt": 1,
+          "queueWaitMs": 3346,
+          "loadDurationMs": 1822.359487,
+          "elapsedMs": 5279,
+          "observedMs": 1789030223212
+        }
+      ],
+      "passed": true,
+      "container": "athyper-dev-worker-1"
+    },
+    {
+      "mode": "generation",
+      "processId": 377,
+      "observedAt": "2026-09-10T08:50:23.409Z",
+      "diagnostics": [
+        {
+          "workload": "generation",
+          "phase": "queued",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "9e42397d-eff9-4e85-aec6-a8edfd03f7c3",
+          "providerCallId": "385f9486-aecb-471e-837b-ff5993182bfb",
+          "attempt": 0,
+          "queueWaitMs": 0,
+          "loadDurationMs": 0,
+          "elapsedMs": 0,
+          "observedMs": 1789030223410
+        },
+        {
+          "workload": "generation",
+          "phase": "admitted",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "9e42397d-eff9-4e85-aec6-a8edfd03f7c3",
+          "providerCallId": "385f9486-aecb-471e-837b-ff5993182bfb",
+          "attempt": 0,
+          "queueWaitMs": 1,
+          "loadDurationMs": 0,
+          "elapsedMs": 1,
+          "observedMs": 1789030223411
+        },
+        {
+          "workload": "generation",
+          "phase": "readiness_wait",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "9e42397d-eff9-4e85-aec6-a8edfd03f7c3",
+          "providerCallId": "385f9486-aecb-471e-837b-ff5993182bfb",
+          "attempt": 1,
+          "queueWaitMs": 1,
+          "loadDurationMs": 0,
+          "elapsedMs": 70,
+          "code": "model_not_resident",
+          "observedMs": 1789030223480
+        },
+        {
+          "workload": "generation",
+          "phase": "warmup_started",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "9e42397d-eff9-4e85-aec6-a8edfd03f7c3",
+          "providerCallId": "385f9486-aecb-471e-837b-ff5993182bfb",
+          "attempt": 1,
+          "queueWaitMs": 1,
+          "loadDurationMs": 0,
+          "elapsedMs": 70,
+          "observedMs": 1789030223480
+        },
+        {
+          "workload": "generation",
+          "phase": "warmup_completed",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "9e42397d-eff9-4e85-aec6-a8edfd03f7c3",
+          "providerCallId": "385f9486-aecb-471e-837b-ff5993182bfb",
+          "attempt": 1,
+          "queueWaitMs": 1,
+          "loadDurationMs": 2932,
+          "elapsedMs": 3002,
+          "observedMs": 1789030226412
+        },
+        {
+          "workload": "generation",
+          "phase": "ready",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "9e42397d-eff9-4e85-aec6-a8edfd03f7c3",
+          "providerCallId": "385f9486-aecb-471e-837b-ff5993182bfb",
+          "attempt": 2,
+          "queueWaitMs": 1,
+          "loadDurationMs": 2932,
+          "elapsedMs": 3006,
+          "observedMs": 1789030226416
+        },
+        {
+          "workload": "generation",
+          "phase": "chat_dispatch",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "9e42397d-eff9-4e85-aec6-a8edfd03f7c3",
+          "providerCallId": "385f9486-aecb-471e-837b-ff5993182bfb",
+          "attempt": 2,
+          "queueWaitMs": 1,
+          "loadDurationMs": 2932,
+          "elapsedMs": 3006,
+          "observedMs": 1789030226416
+        },
+        {
+          "workload": "generation",
+          "phase": "completed",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "9e42397d-eff9-4e85-aec6-a8edfd03f7c3",
+          "providerCallId": "385f9486-aecb-471e-837b-ff5993182bfb",
+          "attempt": 2,
+          "queueWaitMs": 1,
+          "loadDurationMs": 2932,
+          "elapsedMs": 3156,
+          "observedMs": 1789030226566
+        },
+        {
+          "workload": "generation",
+          "phase": "released",
+          "model": "qwen3:8b",
+          "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "runId": "9e42397d-eff9-4e85-aec6-a8edfd03f7c3",
+          "providerCallId": "385f9486-aecb-471e-837b-ff5993182bfb",
+          "attempt": 2,
+          "queueWaitMs": 1,
+          "loadDurationMs": 2932,
+          "elapsedMs": 3159,
+          "observedMs": 1789030226569
+        }
+      ],
+      "passed": true,
+      "terminal": {
+        "kind": "completed",
+        "reason": "stop"
+      },
+      "container": "athyper-dev-api-1"
+    },
+    {
+      "mode": "embedding",
+      "processId": 274,
+      "observedAt": "2026-09-10T08:50:23.398Z",
+      "diagnostics": [
+        {
+          "event": "atlas.inference.diagnostic",
+          "workload": "embedding",
+          "operationId": "4aded9a7-fdfe-4b95-bcbd-8e8c4d1b6d0c",
+          "phase": "admitted",
+          "model": "nomic-embed-text:v1.5",
+          "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "attempt": 1,
+          "queueWaitMs": 3196,
+          "loadDurationMs": null,
+          "elapsedMs": 3196,
+          "observedMs": 1789030226612
+        },
+        {
+          "event": "atlas.inference.diagnostic",
+          "workload": "embedding",
+          "operationId": "4aded9a7-fdfe-4b95-bcbd-8e8c4d1b6d0c",
+          "phase": "completed",
+          "model": "nomic-embed-text:v1.5",
+          "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "attempt": 1,
+          "queueWaitMs": 3196,
+          "loadDurationMs": 1712.907861,
+          "elapsedMs": 4998,
+          "observedMs": 1789030228414
+        },
+        {
+          "event": "atlas.inference.diagnostic",
+          "workload": "embedding",
+          "operationId": "4aded9a7-fdfe-4b95-bcbd-8e8c4d1b6d0c",
+          "phase": "released",
+          "model": "nomic-embed-text:v1.5",
+          "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "attempt": 1,
+          "queueWaitMs": 3196,
+          "loadDurationMs": 1712.907861,
+          "elapsedMs": 5000,
+          "observedMs": 1789030228416
+        }
+      ],
+      "passed": true,
+      "container": "athyper-dev-worker-1"
+    }
+  ],
+  "authenticated": false,
+  "searchStorageStubbed": true,
+  "completed": 6,
+  "boundedRejections": 0,
+  "noOverlappingInference": true,
+  "passed": true,
+  "qualificationScope": "Cross-process mutual exclusion and bounded overload, not a zero-failure availability gate",
+  "imagesAfter": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "stableDeployment": true
+}

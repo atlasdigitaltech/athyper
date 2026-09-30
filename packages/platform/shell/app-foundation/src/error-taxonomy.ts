@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { ApiTransportError } from "@athyper/platform-api-client";
 
 export type AppErrorKind =
@@ -5,6 +6,7 @@ export type AppErrorKind =
   | "required-action"
   | "permission-denied"
   | "context-mismatch"
+  | "not-found"
   | "conflict"
   | "validation"
   | "rate-limit"
@@ -30,6 +32,8 @@ export interface AppErrorModel {
 
 export interface ClassifyAppErrorInput {
   readonly error: unknown;
+  /** Trusted page label, never inferred from the server's error detail. */
+  readonly applicationName?: string;
   readonly online?: boolean;
   readonly requiredActions?: readonly string[];
   readonly retryAfter?: string;
@@ -44,10 +48,12 @@ export function classifyAppError(input: ClassifyAppErrorInput): AppErrorModel {
   const requestId = safeRequestId(facts.requestId);
   const common = { ...(facts.status ? { status: facts.status } : {}), ...(requestId ? { requestId } : {}), requiredActions };
 
-  if (facts.code === "AUTH_CONTEXT_MISMATCH") return model("context-mismatch", "Your access context changed", "Choose an active context before continuing.", "select-context", false, false, common);
   if (facts.status === 401 || facts.transportKind === "authentication") return model("authentication", "Sign in required", "Your session is no longer available. Sign in again to continue.", "login", false, false, common);
+  if (facts.code === "AUTH_CONTEXT_MISMATCH") return model("context-mismatch", "Your access context changed", "Choose an active context before continuing.", "select-context", false, false, common);
   if ((facts.status === 403 && REQUIRED_ACTION_CODES.has(facts.code ?? "")) || requiredActions.length > 0) return model("required-action", "Action required", "Complete the required identity action before continuing.", "complete-action", false, true, common);
   if (facts.status === 403 || facts.transportKind === "authorization") return model("permission-denied", "Access denied", "You do not have permission to view this resource.", "none", false, false, common);
+  if (facts.status === 404 && facts.code === "ENTITY_DESCRIPTOR_NOT_FOUND") return model("service-unavailable", `${input.applicationName?.trim() || "This entity"} is not configured for this workspace`, "An administrator needs to publish and activate the entity configuration for this workspace. This does not mean the business records are missing.", "none", false, false, common);
+  if (facts.status === 404 || facts.transportKind === "not-found") return model("not-found", "Record not found", "This record does not exist, or it may have been moved or removed. Check the link or return to the workspace.", "none", false, false, common);
   if (facts.status === 409 || facts.transportKind === "conflict") return model("conflict", "This item changed", "Keep your input while you reload the latest version or compare changes.", "reload-compare", false, true, common);
   if (facts.status === 422 || facts.transportKind === "validation") return model("validation", "Check your entries", "Correct the highlighted fields and submit again. Your input has been kept.", "correct-fields", false, true, common);
   if (facts.status === 429 || facts.transportKind === "rate-limit") {
@@ -56,6 +62,7 @@ export function classifyAppError(input: ClassifyAppErrorInput): AppErrorModel {
   }
   if (input.online === false && (facts.transportKind === "network" || facts.status === undefined)) return model("offline", "You are offline", "Reconnect to continue. Any safe local draft can remain on this device.", "retry", true, true, common);
   if (facts.transportKind === "network" || facts.transportKind === "timeout") return model("network", "Connection problem", "The service could not be reached. Check your connection and try again.", "retry", true, true, common);
+  if (facts.status === 503 && facts.code === "ENTITY_APPLICATION_UNAVAILABLE") return model("service-unavailable", "Application unavailable", "This application has no active published configuration. Ask an administrator to publish and activate it, then reload this page.", "none", false, true, common);
   if (facts.status === 503 || facts.transportKind === "dependency") return model("service-unavailable", "Service temporarily unavailable", "The service is unavailable right now. Try again shortly.", "retry", true, true, common);
   return model("unexpected", "Something went wrong", "The page could not be completed. You can safely try again.", "reset", true, false, common);
 }
@@ -90,6 +97,6 @@ function safeDigest(value: unknown): string | undefined { return typeof value ==
 function cleanActions(values: readonly string[] | undefined): readonly string[] { return Object.freeze([...new Set((values ?? []).filter((value) => /^[A-Za-z0-9._:-]{1,80}$/.test(value)))]); }
 function parseRetryAfter(value: string | undefined, now = Date.now()): number | undefined {
   if (!value) return undefined;
-  const seconds = /^\d+$/.test(value.trim()) ? Number(value) : Math.ceil((Date.parse(value) - now) / 1_000);
+  const seconds = /^\d+$/.test(value.trim()) ? Number(value) : Math.ceil((parseInstant(value) - now) / 1_000);
   return Number.isFinite(seconds) && seconds > 0 ? Math.min(300, seconds) : undefined;
 }

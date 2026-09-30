@@ -108,9 +108,13 @@ export function createOpenTelemetryRuntime(
     },
     shutdown() {
       shutdownPromise ??= (async () => {
-        if (startPromise) await startPromise;
-        if (state === "started") await sdk.shutdown();
-        state = "stopped";
+        // A failed start must not make shutdown permanently fail.
+        if (startPromise) await startPromise.catch(() => undefined);
+        try {
+          if (state === "started") await sdk.shutdown();
+        } finally {
+          state = "stopped";
+        }
       })();
       return shutdownPromise;
     },

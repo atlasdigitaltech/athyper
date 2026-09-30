@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-09-10T06:47:35.355Z",
+  "actor": "catl.admin",
+  "entityId": "253c9d44-311d-49ec-8f60-9d61527ceacc",
+  "operatorScaffold": true,
+  "status": 201,
+  "body": {
+    "id": "0dc01c3d-eac6-49b3-ac26-bc1a2a407df6",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "entityId": "253c9d44-311d-49ec-8f60-9d61527ceacc",
+    "entityCode": "unknown",
+    "branchCode": "atlas-mesh-tenant-fork",
+    "status": "draft",
+    "revision": 0,
+    "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13"
+  }
+}

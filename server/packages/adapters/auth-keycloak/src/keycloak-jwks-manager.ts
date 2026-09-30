@@ -14,7 +14,10 @@ export interface JwksHealthStatus {
 }
 
 export interface KeycloakJwksManagerOptions {
+  readonly jwksUrl?: string;
   readonly cacheTtlMs?: number;
+  /** Minimum wait before refetching keys because of an unknown `kid`. Default 30s. */
+  readonly refetchCooldownMs?: number;
   readonly warmUpTimeoutMs?: number;
   readonly logger?: Pick<Logger, "info" | "warn" | "error">;
   readonly fetcher?: typeof fetch;
@@ -39,14 +42,17 @@ export class KeycloakJwksManager {
   constructor(issuerUrl: string, options: KeycloakJwksManagerOptions = {}) {
     this.#issuerUrl = normalizeIssuerUrl(issuerUrl);
     this.#jwksUrl = new URL(
-      `${this.#issuerUrl}/protocol/openid-connect/certs`,
+      options.jwksUrl ?? `${this.#issuerUrl}/protocol/openid-connect/certs`,
     );
     this.#fetcher = options.fetcher ?? fetch;
     this.#now = options.now ?? Date.now;
     this.#logger = options.logger;
     this.#warmUpTimeoutMs = options.warmUpTimeoutMs ?? 8_000;
+    // cacheMaxAge is the key-set TTL. cooldownDuration is only the minimum wait before a refetch
+    // for an unknown `kid`; keeping it short lets tokens signed by a freshly rotated key verify.
     this.#remoteKeySet = createRemoteJWKSet(this.#jwksUrl, {
-      cooldownDuration: options.cacheTtlMs ?? 600_000,
+      cacheMaxAge: options.cacheTtlMs ?? 600_000,
+      cooldownDuration: options.refetchCooldownMs ?? 30_000,
     });
     this.#keySet = (async (
       protectedHeader: JWSHeaderParameters,

@@ -236,3 +236,14 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+-- [B] Bank master data updated_at (shared.trg_set_updated_at)
+
+DROP TRIGGER IF EXISTS trg_bank_institution_updated_at ON shared.bank_institution;
+CREATE TRIGGER trg_bank_institution_updated_at BEFORE UPDATE ON shared.bank_institution FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_bank_branch_updated_at ON shared.bank_branch;
+CREATE TRIGGER trg_bank_branch_updated_at BEFORE UPDATE ON shared.bank_branch FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_bank_identifier_updated_at ON shared.bank_identifier;
+CREATE TRIGGER trg_bank_identifier_updated_at BEFORE UPDATE ON shared.bank_identifier FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

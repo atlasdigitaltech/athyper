@@ -84,6 +84,10 @@ CREATE TRIGGER trg_address_link_updated_at
 BEFORE UPDATE ON master.address_link
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
+CREATE TRIGGER trg_address_event_immutable
+BEFORE UPDATE OR DELETE ON master.address_event
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_address_event_immutable();
+
 CREATE TRIGGER trg_contact_link_10_normalize
 BEFORE INSERT OR UPDATE OF channel_type, value, purpose, role_qualifier
 ON master.contact_link

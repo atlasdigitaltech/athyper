@@ -71,6 +71,10 @@ describe("permission authorizer", () => {
       },
     };
     const resource = { tenantId: context.tenantId, entityCode: "finance.invoice", operationKey: "read", legalEntityId: "legal-1" };
+    await expect(createPermissionAuthorizer().authorize({ context: {...secured, permissions:{...secured.permissions, allowed:[]}}, permissionCode: "records.read", resource }))
+      .resolves.toEqual({ allowed: false, reason: "missing_permission" });
+    await expect(createPermissionAuthorizer().authorize({ context: {...secured, permissions:{...secured.permissions, evidence:[{permissionCode:"records.read",effect:"allow",proof:"record_acl",scopeTargetId:"tenant-scope",scopeKind:"tenant",targetId:context.tenantId,propagationMode:"exact",resourceCode:"finance.invoice",recordId:"one"}]}}, permissionCode: "records.read", resource:{...resource,resourceCode:"finance.invoice",recordId:"other"} }))
+      .resolves.toEqual({ allowed: false, reason: "scope_not_contained" });
     await expect(createPermissionAuthorizer().authorize({ context: secured, permissionCode: "records.read", resource }))
       .resolves.toEqual({ allowed: false, reason: "mfa_required" });
     await expect(createPermissionAuthorizer().authorize({ context: { ...secured, assurance: "elevated" }, permissionCode: "records.read", resource }))

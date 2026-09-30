@@ -1,0 +1,24 @@
+{
+  "verifiedAt": "2026-09-27T22:49:42.894Z",
+  "plane": "neon",
+  "account": "catl.admin",
+  "readOnly": true,
+  "receipts": [
+    {
+      "path": "/detail-descriptor?recordId=01a0d433-806b-7874-862d-49a9b955f6a1",
+      "status": 200,
+      "localizedFields": 22
+    },
+    {
+      "path": "/records/01a0d433-806b-7874-862d-49a9b955f6a1/collaboration/comments",
+      "status": 200,
+      "releaseId": "3a3d4961-0103-45c9-b2b0-eef85d950fc3"
+    },
+    {
+      "path": "/records/01a0d433-806b-7874-862d-49a9b955f6a1/collaboration/attachments",
+      "status": 200,
+      "releaseId": "3a3d4961-0103-45c9-b2b0-eef85d950fc3"
+    }
+  ],
+  "studioMeshSignedIn": "manual acceptance retained by user"
+}

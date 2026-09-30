@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "canonical_read_design_acceptance",
+  "proposalRevision": "b92129795f2e64c25d1f560acfa58eaa06c276a790e4c029d2d8fcdf1b3e1ca7",
+  "scope": "implementation_design_only",
+  "acceptedAt": "2026-09-11T04:15:08.047927+00:00",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "Approve design for implementation only"
+  },
+  "grantChangesAuthorized": false,
+  "publicationAuthorized": false,
+  "enforcementAuthorized": false
+}

@@ -1,0 +1,10 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {evaluateAtlasF6}from'./atlas-f6-pilot-model.mjs';
+const now=Date.now(),images=[{name:'api',digest:'sha256:a',health:'healthy'}];
+function fixture(){return Object.fromEntries(['personas','model-studio','model-neon','model-mesh','grounded','database','rollback','accessibility','second-entity','disposable-database'].map(k=>[k,{passed:true,observedAt:new Date(now).toISOString(),images,secondEntityReady:true,restored:true,policyRevision:'p'}]));}
+test('requires complete evidence for the same deployed bindings',()=>{assert.equal(evaluateAtlasF6({receipts:fixture(),currentImages:images,now}).passed,true);});
+test('missing or failed persona proof cannot close F6',()=>{const r=fixture();delete r.personas;assert.equal(evaluateAtlasF6({receipts:r,currentImages:images,now}).passed,false);r.personas={...r.database,passed:false};assert.equal(evaluateAtlasF6({receipts:r,currentImages:images,now}).passed,false);});
+test('a changed service image invalidates old evidence',()=>{const r=fixture();r.database.images=[{name:'api',digest:'sha256:old'}];assert.match(evaluateAtlasF6({receipts:r,currentImages:images,now}).blockers.join(' '),/release binding changed/);});
+test('rollback must restore service and publication of the second entity is required',()=>{const r=fixture();r.rollback.restored=false;r.database.secondEntityReady=false;const result=evaluateAtlasF6({receipts:r,currentImages:images,now});assert.equal(result.passed,false);assert.ok(result.blockers.some(b=>b.includes('restoration')));assert.ok(result.blockers.some(b=>b.includes('publication')));});
+test('stale and missing snapshot evidence fail closed',()=>{const r=fixture();r['model-studio'].observedAt='2000-01-01T00:00:00Z';delete r.grounded.images;assert.equal(evaluateAtlasF6({receipts:r,currentImages:images,now}).passed,false);});
+test('different policy revisions do not qualify a common pilot binding',()=>{const r=fixture();r['model-neon'].policyRevision='other';assert.equal(evaluateAtlasF6({receipts:r,currentImages:images,now}).passed,false);});

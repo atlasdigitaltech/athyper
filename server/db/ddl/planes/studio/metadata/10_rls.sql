@@ -170,7 +170,7 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'entity_surface', 'entity_surface_section', 'entity_surface_field_binding', 'entity_operation',
+        'entity_surface', 'entity_surface_section', 'entity_surface_field_binding', 'entity_surface_component_binding', 'entity_operation',
         'entity_operation_permission'
     ] LOOP
         EXECUTE format('ALTER TABLE metadata.%I ENABLE ROW LEVEL SECURITY', v_table);
@@ -191,7 +191,7 @@ DECLARE v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'entity_surface_operation', 'entity_operation_rule', 'entity_flow', 'entity_flow_step',
-        'entity_policy_binding', 'entity_field_policy_binding', 'entity_contract_test_case'
+        'entity_capability', 'entity_policy_binding', 'entity_field_policy_binding', 'entity_contract_test_case'
     ] LOOP
         EXECUTE format('ALTER TABLE metadata.%I ENABLE ROW LEVEL SECURITY', v_table);
         EXECUTE format('ALTER TABLE metadata.%I FORCE ROW LEVEL SECURITY', v_table);
@@ -245,3 +245,15 @@ CREATE POLICY entity_operation_scope_binding_write
 CREATE POLICY entity_operation_scope_binding_seed_write
     ON metadata.entity_operation_scope_binding
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+-- Execution bindings can be read by the graph repository. Application writes
+-- stay disabled until the governed-command authoring policy is deployed.
+DO $$ DECLARE t text; BEGIN
+  FOREACH t IN ARRAY ARRAY['entity_change_case_binding','entity_operation_context_requirement',
+    'entity_field_reference_binding','entity_materialization_binding','entity_materialization_field_mapping'] LOOP
+    EXECUTE format('ALTER TABLE metadata.%I ENABLE ROW LEVEL SECURITY',t);
+    EXECUTE format('ALTER TABLE metadata.%I FORCE ROW LEVEL SECURITY',t);
+    EXECUTE format('CREATE POLICY application_read ON metadata.%I FOR SELECT TO athyperapp USING(tenant_id IS NULL OR tenant_id=shared.current_tenant_id_soft())',t);
+    EXECUTE format('CREATE POLICY administrator_access ON metadata.%I FOR ALL TO athyperadmin USING(true) WITH CHECK(true)',t);
+  END LOOP;
+END $$;

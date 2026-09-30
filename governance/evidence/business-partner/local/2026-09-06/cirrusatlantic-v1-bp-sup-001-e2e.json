@@ -1,0 +1,135 @@
+{
+  "schema": "athyper.business-partner-v1-e2e-evidence/1",
+  "scenario": "BP-SUP-001",
+  "project": "bp-v1-009",
+  "actors": {
+    "requesterApproverDistinct": true,
+    "approverMaterializerDistinct": true,
+    "requesterMaterializerDistinct": true
+  },
+  "caseId": "e29bc88c-73e5-49ae-9c89-93665f3a94bb",
+  "partnerPath": "/mdg/business-partner/:id",
+  "accessibility": [
+    "supplier-create",
+    "requester-pending-case",
+    "approval-dialog",
+    "materialized-result-proof",
+    "materialized-supplier-procurement-desktop",
+    "materialized-supplier-procurement-phone"
+  ],
+  "reflow": [
+    "supplier-create@200%",
+    "materialized-supplier-procurement-desktop@200%",
+    "materialized-supplier-procurement-phone"
+  ],
+  "operations": [
+    {
+      "method": "POST",
+      "path": "/api/relay/neon/business-partner-cases",
+      "status": 201,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partner-cases/:id/view",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "POST",
+      "path": "/api/relay/neon/business-partner-cases/:id/validate",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partner-cases/:id/view",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "POST",
+      "path": "/api/relay/neon/business-partner-cases/:id/submit",
+      "status": 201,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partner-cases/:id/view",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partner-cases/:id/view",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "POST",
+      "path": "/api/relay/neon/business-partner-cases/:id/decisions",
+      "status": 403,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partner-cases/:id/view",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "POST",
+      "path": "/api/relay/neon/business-partner-cases/:id/decisions",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partner-cases/:id/view",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partner-cases/:id/view",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "POST",
+      "path": "/api/relay/neon/business-partner-cases/:id/materialize",
+      "status": 201,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partner-cases/:id/view",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partners/:id/360/summary",
+      "status": 404,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partners/:id/360/summary",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partners/:id/360/roles",
+      "status": 200,
+      "durationMs": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/relay/neon/business-partners/:id/360/company-configuration",
+      "status": 200,
+      "durationMs": 0
+    }
+  ]
+}

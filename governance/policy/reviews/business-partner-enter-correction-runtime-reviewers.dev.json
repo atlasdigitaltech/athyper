@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "kind": "business_partner_operation_reviewer_nomination",
+  "nominatedAt": "2026-09-09T19:19:20.788Z",
+  "authorityReference": "conversation:user-explicit-authorization:catl.owner-and-catl.admin:operation-semantics-permission-scope:business-security",
+  "scope": {
+    "environment": "dev",
+    "planeKey": "neon",
+    "entityCode": "business_partner",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic.enter-correction",
+    "subjects": [
+      "operation_semantics",
+      "permission_proposals",
+      "scope_proposals"
+    ],
+    "appliesTo": "Current BP operation packet and subsequent explicitly presented revisions in this publication coordinate; each revision requires fresh decisions."
+  },
+  "reviewers": [
+    {
+      "id": "catl.owner",
+      "name": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ]
+    },
+    {
+      "id": "catl.admin",
+      "name": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ]
+    }
+  ],
+  "initialPacket": {
+    "path": "governance/policy/reviews/business-partner-operation-reviews.dev.json",
+    "sha256": "db1bc5cea9ccf3d68cc232feb2747b81eab00f7c48ee5dfa50aad158953ecd38",
+    "candidateHash": "12203b304945675c8697105ff94319b41c2e1dbdbba4aa42cc225be479aa3900",
+    "operationCount": 51
+  },
+  "conditions": {
+    "authenticatedSubmission": true,
+    "mfaRequired": true,
+    "revisionBoundDecisions": true,
+    "reviewerAuthorityRechecked": true
+  },
+  "nominationOnly": true,
+  "operationApprovals": [],
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "publicationScopeAmendment": {
+    "source": "conversation user approval to review and publish corrected BP release",
+    "releaseId": "c2cc6900-26c1-47ca-8dfc-1d488000950c",
+    "existingReviewerResponsibilitiesUnchanged": true
+  }
+}

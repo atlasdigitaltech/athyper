@@ -1,0 +1,238 @@
+src/composition/business-partner-backend-mapping.ts(1,54): error TS2307: Cannot find module './business-partner-permission-transitions.js' or its corresponding type declarations.
+src/composition/business-partner-backend-mapping.ts(58,20): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/composition/business-partner-backend-mapping.ts(212,14): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/composition/business-partner-bound-import.ts(5,9): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'businessPartnerGovernedImportVersion'.
+src/composition/business-partner-bound-import.ts(5,47): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'parseBusinessPartnerGovernedImport'.
+src/composition/business-partner-bound-import.ts(5,83): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'MasterDataError'.
+src/composition/business-partner-bound-import.ts(27,68): error TS18048: 'binding' is possibly 'undefined'.
+src/composition/business-partner-bound-import.ts(27,108): error TS18048: 'binding' is possibly 'undefined'.
+src/composition/business-partner-context-admission.ts(2,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'MasterDataError'.
+src/composition/business-partner-import-runtime.ts(9,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerGovernedImport'.
+src/composition/business-partner-import-runtime.ts(10,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'MasterDataError'.
+src/composition/business-partner-import-runtime.ts(43,28): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/business-partner-import-runtime.ts(63,22): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/business-partner-import-runtime.ts(63,31): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/composition/business-partner-reference-admission.ts(2,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'MasterDataError'.
+src/composition/create-container.ts(75,3): error TS2305: Module '"@athyper/server-contract-master-data"' has no exported member 'BusinessPartnerEligibilityService'.
+src/composition/create-container.ts(76,3): error TS2305: Module '"@athyper/server-contract-master-data"' has no exported member 'BusinessPartnerInvitationService'.
+src/composition/create-container.ts(86,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'BusinessPartnerAccountBankLinkageService'.
+src/composition/create-container.ts(87,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'BusinessPartnerProfileMatchService'.
+src/composition/create-container.ts(88,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'BusinessPartnerProfileProjectionService'.
+src/composition/create-container.ts(92,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'BusinessPartnerBankDisclosureService'.
+src/composition/create-container.ts(93,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'BusinessPartnerNetworkExchangeService'.
+src/composition/create-container.ts(94,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'BusinessPartnerProfilePublicationService'.
+src/composition/create-container.ts(284,73): error TS2694: Namespace '"/home/chandravel_natarajan/src/athyper/server/packages/contracts/master-data/src/index"' has no exported member 'BusinessPartner360Service'.
+src/composition/entities/partner-capability-operations.ts(4,9): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'PartnerCapabilityService'.
+src/composition/entities/partner-capability-operations.ts(4,34): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyPartnerCapabilityRepository'.
+src/composition/entities/partner-capability-operations.ts(4,68): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'MasterDataError'.
+src/composition/entities/partner-capability-operations.ts(4,89): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'PartnerCapabilityRepository'.
+src/composition/entities/partner-capability-operations.ts(20,113): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/composition/entities/partner-capability-operations.ts(26,69): error TS18046: 'error' is of type 'unknown'.
+src/composition/entities/partner-capability-operations.ts(26,121): error TS18046: 'error' is of type 'unknown'.
+src/composition/entities/partner-capability-operations.ts(26,153): error TS18046: 'error' is of type 'unknown'.
+src/composition/entity-case-preflight.ts(2,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartnerCaseRepository'.
+src/composition/register-services.ts(34,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'supplierRequirementSurface'.
+src/composition/register-services.ts(36,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'validateProfileIntake'.
+src/composition/register-services.ts(40,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerCompanyPilotService'.
+src/composition/register-services.ts(41,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'BP_COMPANY_PILOT_CASE_ENTITY'.
+src/composition/register-services.ts(42,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'BP_COMPANY_PILOT_ENTITY'.
+src/composition/register-services.ts(43,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'BP_COMPANY_PILOT_PERMISSION_PREFIX'.
+src/composition/register-services.ts(44,8): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'BusinessPartnerRequestServiceOptions'.
+src/composition/register-services.ts(49,81): error TS2307: Cannot find module './business-partner-case-authority.js' or its corresponding type declarations.
+src/composition/register-services.ts(60,8): error TS2307: Cannot find module './business-partner-qualification-runtime.js' or its corresponding type declarations.
+src/composition/register-services.ts(61,65): error TS2307: Cannot find module './business-partner-reveal-runtime.js' or its corresponding type declarations.
+src/composition/register-services.ts(68,8): error TS2307: Cannot find module './business-partner-case-runtime.js' or its corresponding type declarations.
+src/composition/register-services.ts(71,8): error TS2307: Cannot find module './business-partner-read-runtime.js' or its corresponding type declarations.
+src/composition/register-services.ts(83,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerBusinessPartnerGovernedImportRoutes'.
+src/composition/register-services.ts(84,54): error TS2307: Cannot find module './entities/business-partner-record-providers.js' or its corresponding type declarations.
+src/composition/register-services.ts(85,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createPartnerDecisionViews'.
+src/composition/register-services.ts(85,38): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createPartnerCompanyProfileViews'.
+src/composition/register-services.ts(343,3): error TS2724: '"@athyper/server-platform-ai"' has no exported member named 'createBusinessPartnerCaseTools'. Did you mean 'createBusinessPartnerAtlasTools'?
+src/composition/register-services.ts(366,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'BUSINESS_PARTNER_DELIVERY_QUEUE'.
+src/composition/register-services.ts(367,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'BusinessPartnerDeliveryWorker'.
+src/composition/register-services.ts(368,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'createBusinessPartnerDeliveryHandler'.
+src/composition/register-services.ts(369,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'createBusinessPartnerReconciliationHandler'.
+src/composition/register-services.ts(370,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'createBusinessPartnerBankDisclosureService'.
+src/composition/register-services.ts(371,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'createBusinessPartnerNetworkExchangeService'.
+src/composition/register-services.ts(372,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'createHttpSelfRegistrationPolicyAdapter'.
+src/composition/register-services.ts(373,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'createBusinessPartnerProfilePublicationService'.
+src/composition/register-services.ts(376,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'DELIVER_BUSINESS_PARTNER_EVENTS_JOB'.
+src/composition/register-services.ts(377,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'KyselyBusinessPartnerBankDisclosureRepository'.
+src/composition/register-services.ts(378,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'KyselyBusinessPartnerNetworkExchangeRepository'.
+src/composition/register-services.ts(379,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'KyselyBusinessPartnerDeliveryRepository'.
+src/composition/register-services.ts(380,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'KyselyBusinessPartnerProfilePublicationRepository'.
+src/composition/register-services.ts(381,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'RECONCILE_BUSINESS_PARTNER_EVENTS_JOB'.
+src/composition/register-services.ts(382,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'registerBusinessPartnerBankDisclosureRoutes'.
+src/composition/register-services.ts(383,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'registerBusinessPartnerNetworkExchangeRoutes'.
+src/composition/register-services.ts(385,3): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'registerBusinessPartnerProfilePublicationRoutes'.
+src/composition/register-services.ts(386,8): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'BusinessPartnerDeliveryItem'.
+src/composition/register-services.ts(387,8): error TS2305: Module '"@athyper/server-plane-mesh"' has no exported member 'DeliveryDisposition'.
+src/composition/register-services.ts(390,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'createBusinessPartnerAccountBankLinkageService'.
+src/composition/register-services.ts(391,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'createBusinessPartnerProfileMatchService'.
+src/composition/register-services.ts(392,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'createBusinessPartnerProfileProjectionService'.
+src/composition/register-services.ts(393,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'createNeonBusinessPartnerImportAdapter'.
+src/composition/register-services.ts(397,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'KyselyBusinessPartnerAccountBankRepository'.
+src/composition/register-services.ts(398,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'meshAccountBankPermissions'.
+src/composition/register-services.ts(399,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'KyselyBusinessPartnerProfileMatchRepository'.
+src/composition/register-services.ts(400,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'KyselyBusinessPartnerProfileProjectionRepository'.
+src/composition/register-services.ts(401,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'registerBusinessPartnerAccountBankLinkageRoutes'.
+src/composition/register-services.ts(402,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'registerBusinessPartnerProfileMatchRoutes'.
+src/composition/register-services.ts(403,3): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'registerBusinessPartnerProfileProjectionRoutes'.
+src/composition/register-services.ts(408,8): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'MeshBankDisclosureEnvelope'.
+src/composition/register-services.ts(409,8): error TS2305: Module '"@athyper/server-plane-neon"' has no exported member 'MeshBusinessPartnerProfileEnvelope'.
+src/composition/register-services.ts(538,3): error TS2305: Module '"@athyper/server-service-finance"' has no exported member 'createBusinessPartnerJournalActivityReader'.
+src/composition/register-services.ts(555,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'BUSINESS_PARTNER_INVITATION_MAINTENANCE_QUEUE'.
+src/composition/register-services.ts(556,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerEligibilityService'.
+src/composition/register-services.ts(557,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerInvitationExpiryHandler'.
+src/composition/register-services.ts(558,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerInvitationExternalGuard'.
+src/composition/register-services.ts(559,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerInvitationService'.
+src/composition/register-services.ts(560,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerRequestService'.
+src/composition/register-services.ts(561,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerIntakeCommandMapper'.
+src/composition/register-services.ts(562,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerIntakeOperationProvider'.
+src/composition/register-services.ts(563,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerRequestValidator'.
+src/composition/register-services.ts(564,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createGovernedInternalBusinessPartnerCaseService'.
+src/composition/register-services.ts(565,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createSupplierActivationReevaluationHandler'.
+src/composition/register-services.ts(566,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createSupplierQualificationExpiryHandler'.
+src/composition/register-services.ts(567,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createSupplierWorkforceRequisitionService'.
+src/composition/register-services.ts(568,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createSupplierWorkforceCommandGuard'.
+src/composition/register-services.ts(569,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createWorkerEngagementIamService'.
+src/composition/register-services.ts(570,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createWorkerEngagementLifecycleService'.
+src/composition/register-services.ts(571,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createHttpSupplierWorkforceDistributionEligibility'.
+src/composition/register-services.ts(572,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createWorkforceService'.
+src/composition/register-services.ts(573,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createHrStage2Service'.
+src/composition/register-services.ts(574,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB'.
+src/composition/register-services.ts(575,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'EXPIRE_SUPPLIER_QUALIFICATIONS_JOB'.
+src/composition/register-services.ts(576,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartnerEligibilityRepository'.
+src/composition/register-services.ts(577,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'evaluateSupplierOnboardingCompletion'.
+src/composition/register-services.ts(578,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'authorizeSupplierActivationReadiness'.
+src/composition/register-services.ts(579,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartnerInvitationRepository'.
+src/composition/register-services.ts(580,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartnerOnboardingCycleCoordinator'.
+src/composition/register-services.ts(581,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartnerCaseRepository'.
+src/composition/register-services.ts(582,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyGovernedInternalBusinessPartnerCaseRepository'.
+src/composition/register-services.ts(583,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyWorkforceRepository'.
+src/composition/register-services.ts(584,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyWorkforceRequestRepository'.
+src/composition/register-services.ts(585,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselySupplierWorkforceRequisitionRepository'.
+src/composition/register-services.ts(586,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyWorkerEngagementIamRepository'.
+src/composition/register-services.ts(587,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyWorkerEngagementLifecycleRepository'.
+src/composition/register-services.ts(588,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'MasterDataError'.
+src/composition/register-services.ts(589,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'REEVALUATE_SUPPLIER_ACTIVATIONS_JOB'.
+src/composition/register-services.ts(590,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerBusinessPartnerEligibilityRoutes'.
+src/composition/register-services.ts(591,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerBusinessPartnerInvitationRoutes'.
+src/composition/register-services.ts(592,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerBusinessPartnerRequestRoutes'.
+src/composition/register-services.ts(593,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerGovernedInternalBusinessPartnerRoutes'.
+src/composition/register-services.ts(594,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerWorkforceRoutes'.
+src/composition/register-services.ts(595,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerHrStage2Routes'.
+src/composition/register-services.ts(596,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerSupplierWorkforceRequisitionRoutes'.
+src/composition/register-services.ts(597,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerWorkerEngagementIamRoutes'.
+src/composition/register-services.ts(598,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'registerWorkerEngagementLifecycleRoutes'.
+src/composition/register-services.ts(599,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'SUPPLIER_READINESS_MAINTENANCE_QUEUE'.
+src/composition/register-services.ts(602,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartner360Service'.
+src/composition/register-services.ts(603,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createBusinessPartnerAtlasInsightOwner'.
+src/composition/register-services.ts(604,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createHttpBusinessPartner360MeshNetworkAdapter'.
+src/composition/register-services.ts(605,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createLastValidBusinessPartner360DefinitionResolver'.
+src/composition/register-services.ts(606,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createSecretStoreProtectedValueResolver'.
+src/composition/register-services.ts(607,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'createUnavailableBusinessPartner360ActivityProviders'.
+src/composition/register-services.ts(608,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'KyselyBusinessPartner360Repository'.
+src/composition/register-services.ts(609,3): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'parseBusinessPartner360Definition'.
+src/composition/register-services.ts(612,3): error TS2305: Module '"@athyper/server-contract-master-data"' has no exported member 'BUSINESS_PARTNER_360_PERMISSIONS'.
+src/composition/register-services.ts(854,13): error TS2339: Property 'businessPartnerAuthorizationShadow' does not exist on type 'HostConfig'.
+src/composition/register-services.ts(857,26): error TS2339: Property 'businessPartnerAuthorizationShadow' does not exist on type 'HostConfig'.
+src/composition/register-services.ts(866,15): error TS2339: Property 'businessPartnerAuthorizationShadow' does not exist on type 'HostConfig'.
+src/composition/register-services.ts(1175,22): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/register-services.ts(1175,31): error TS7006: Parameter 'entityCode' implicitly has an 'any' type.
+src/composition/register-services.ts(1175,43): error TS7006: Parameter 'scopeCoordinate' implicitly has an 'any' type.
+src/composition/register-services.ts(2194,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/register-services.ts(2282,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/register-services.ts(2369,39): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/register-services.ts(2369,48): error TS7006: Parameter 'requested' implicitly has an 'any' type.
+src/composition/register-services.ts(2375,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/register-services.ts(2414,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/register-services.ts(2499,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/register-services.ts(2668,69): error TS7006: Parameter 'work' implicitly has an 'any' type.
+src/composition/register-services.ts(2678,16): error TS7006: Parameter 'labels' implicitly has an 'any' type.
+src/composition/register-services.ts(3365,29): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(3365,36): error TS7006: Parameter 'transaction' implicitly has an 'any' type.
+src/composition/register-services.ts(3456,35): error TS7006: Parameter 'query' implicitly has an 'any' type.
+src/composition/register-services.ts(3456,42): error TS7006: Parameter 'caseId' implicitly has an 'any' type.
+src/composition/register-services.ts(3470,16): error TS18046: 'error' is of type 'unknown'.
+src/composition/register-services.ts(3470,40): error TS18046: 'error' is of type 'unknown'.
+src/composition/register-services.ts(3487,38): error TS7006: Parameter 'query' implicitly has an 'any' type.
+src/composition/register-services.ts(3505,48): error TS7006: Parameter 'query' implicitly has an 'any' type.
+src/composition/register-services.ts(3505,55): error TS7006: Parameter 'attachmentId' implicitly has an 'any' type.
+src/composition/register-services.ts(3514,26): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(3529,27): error TS7006: Parameter 'actor' implicitly has an 'any' type.
+src/composition/register-services.ts(3529,34): error TS7006: Parameter 'work' implicitly has an 'any' type.
+src/composition/register-services.ts(3531,37): error TS7006: Parameter 'query' implicitly has an 'any' type.
+src/composition/register-services.ts(3531,44): error TS7006: Parameter 'permissionCode' implicitly has an 'any' type.
+src/composition/register-services.ts(3569,30): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/register-services.ts(3569,39): error TS7006: Parameter 'entityCode' implicitly has an 'any' type.
+src/composition/register-services.ts(3569,51): error TS7006: Parameter 'recordId' implicitly has an 'any' type.
+src/composition/register-services.ts(3585,26): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/register-services.ts(3585,35): error TS7006: Parameter 'recordId' implicitly has an 'any' type.
+src/composition/register-services.ts(3594,26): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/register-services.ts(3594,34): error TS7006: Parameter 'recordId' implicitly has an 'any' type.
+src/composition/register-services.ts(3839,296): error TS2339: Property 'id' does not exist on type '{}'.
+src/composition/register-services.ts(3839,317): error TS2339: Property 'id' does not exist on type '{}'.
+src/composition/register-services.ts(3839,383): error TS2339: Property 'operatingOrganizationId' does not exist on type '{}'.
+src/composition/register-services.ts(3839,419): error TS2339: Property 'companyCodeId' does not exist on type '{}'.
+src/composition/register-services.ts(3839,456): error TS2339: Property 'companyCodeId' does not exist on type '{}'.
+src/composition/register-services.ts(3839,494): error TS2339: Property 'approvedBy' does not exist on type '{}'.
+src/composition/register-services.ts(3839,544): error TS2339: Property 'approvedAt' does not exist on type '{}'.
+src/composition/register-services.ts(3839,564): error TS2339: Property 'approvedBy' does not exist on type '{}'.
+src/composition/register-services.ts(3839,584): error TS2339: Property 'decisionFingerprint' does not exist on type '{}'.
+src/composition/register-services.ts(3866,25): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(3887,25): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(3887,32): error TS7006: Parameter 'transaction' implicitly has an 'any' type.
+src/composition/register-services.ts(3927,123): error TS7006: Parameter 'command' implicitly has an 'any' type.
+src/composition/register-services.ts(3938,34): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/composition/register-services.ts(3938,51): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/composition/register-services.ts(3942,58): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/composition/register-services.ts(3943,64): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/composition/register-services.ts(3950,67): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/composition/register-services.ts(3950,88): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/composition/register-services.ts(3951,47): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/composition/register-services.ts(3951,68): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/composition/register-services.ts(3963,21): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/register-services.ts(3967,23): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/register-services.ts(3967,32): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/composition/register-services.ts(3971,19): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/register-services.ts(3971,28): error TS7006: Parameter 'operatingOrganizationId' implicitly has an 'any' type.
+src/composition/register-services.ts(3971,53): error TS7006: Parameter 'kind' implicitly has an 'any' type.
+src/composition/register-services.ts(3971,59): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/composition/register-services.ts(3971,66): error TS7006: Parameter 'bank' implicitly has an 'any' type.
+src/composition/register-services.ts(3976,23): error TS7006: Parameter 'command' implicitly has an 'any' type.
+src/composition/register-services.ts(3976,32): error TS7006: Parameter 'current' implicitly has an 'any' type.
+src/composition/register-services.ts(3996,71): error TS18046: 'error' is of type 'unknown'.
+src/composition/register-services.ts(3996,85): error TS18046: 'error' is of type 'unknown'.
+src/composition/register-services.ts(3996,97): error TS18046: 'error' is of type 'unknown'.
+src/composition/register-services.ts(4009,23): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(4009,30): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/composition/register-services.ts(4021,45): error TS7006: Parameter 'stage' implicitly has an 'any' type.
+src/composition/register-services.ts(4030,28): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/composition/register-services.ts(4043,41): error TS7006: Parameter 'context' implicitly has an 'any' type.
+src/composition/register-services.ts(4043,50): error TS7006: Parameter 'operation' implicitly has an 'any' type.
+src/composition/register-services.ts(4043,61): error TS7006: Parameter 'permissionCode' implicitly has an 'any' type.
+src/composition/register-services.ts(4112,24): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(4112,31): error TS7006: Parameter 'transaction' implicitly has an 'any' type.
+src/composition/register-services.ts(4171,23): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(4171,30): error TS7006: Parameter 'transaction' implicitly has an 'any' type.
+src/composition/register-services.ts(4260,25): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(4285,23): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(4295,26): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/composition/register-services.ts(4295,33): error TS7006: Parameter 'contentType' implicitly has an 'any' type.
+src/composition/register-services.ts(4369,20): error TS7006: Parameter 'reason' implicitly has an 'any' type.
+src/composition/register-services.ts(4382,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/register-services.ts(4398,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/register-services.ts(4444,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/register-services.ts(4460,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/register-services.ts(4476,21): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/composition/supplier-process-submission.ts(14,15): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'SupplierProcessSubmission'.
+src/composition/supplier-process-submission.ts(15,10): error TS2305: Module '"@athyper/server-service-master-data"' has no exported member 'MasterDataError'.
+src/composition/supplier-process-submission.ts(41,16): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/composition/supplier-process-submission.ts(41,19): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/composition/supplier-process-submission.ts(50,18): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/composition/supplier-process-submission.ts(50,21): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/composition/supplier-process-submission.ts(50,30): error TS7006: Parameter 'tx' implicitly has an 'any' type.
+src/composition/supplier-process-submission.ts(87,18): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/composition/supplier-process-submission.ts(87,21): error TS7006: Parameter '_request' implicitly has an 'any' type.
+src/composition/supplier-process-submission.ts(87,31): error TS7006: Parameter 'tx' implicitly has an 'any' type.

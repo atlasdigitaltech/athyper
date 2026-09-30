@@ -86,7 +86,8 @@ export function createSmsAdapter(
           },
         );
       }
-      const result = (await response.json()) as { sid?: unknown };
+      // The message is already accepted: an unreadable body must not trigger a duplicate-sending retry.
+      const result = (await response.json().catch(() => ({}))) as { sid?: unknown };
       return typeof result.sid === "string" ? { externalId: result.sid } : {};
     },
     async health() {

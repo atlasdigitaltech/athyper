@@ -1,0 +1,88 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.qualifications-certificates",
+  "entityCode": "business_partner_qualification",
+  "plane": "neon",
+  "sectionKey": "qualifications-certificates",
+  "rendererKey": "platform.related-collection.v1",
+  "emptyState": {
+    "title": "No qualifications",
+    "detail": "No qualification records are available for this partner."
+  },
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.qualifications.v2",
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "business_partner_qualification/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "id"
+    },
+    {
+      "fieldKey": "qualification_type_code"
+    },
+    {
+      "fieldKey": "context_kind"
+    },
+    {
+      "fieldKey": "context_reference"
+    },
+    {
+      "fieldKey": "decision"
+    },
+    {
+      "fieldKey": "coverage"
+    },
+    {
+      "fieldKey": "condition_summaries"
+    },
+    {
+      "fieldKey": "recorded_condition_count"
+    },
+    {
+      "fieldKey": "effective_from"
+    },
+    {
+      "fieldKey": "effective_until"
+    },
+    {
+      "fieldKey": "next_review_at"
+    },
+    {
+      "fieldKey": "date_window"
+    },
+    {
+      "fieldKey": "assessed_at"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_qualification.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "additionalCoreRefs": [],
+  "dependencies": [
+    "business_partner_qualification/core"
+  ],
+  "childCollections": []
+}

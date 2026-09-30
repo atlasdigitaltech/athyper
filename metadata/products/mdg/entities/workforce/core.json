@@ -1,0 +1,301 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "workforce/core",
+  "entityCode": "workforce",
+  "plane": "neon",
+  "storage": {
+    "kind": "handler_projection",
+    "sourceObjects": [
+      "master.employee"
+    ],
+    "primaryObject": "master.employee",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.workforce.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "employee_number",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "employee_number"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.workforce.core.fields.employee_number.label",
+        "defaultText": "Employee Number"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "display_name",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "display_name"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.workforce.core.fields.display_name.label",
+        "defaultText": "Display Name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "employment_type",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "employment_type"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.workforce.core.fields.employment_type.label",
+        "defaultText": "Employment Type"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "company_code_id",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "company_code_id"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.workforce.core.fields.company_code_id.label",
+        "defaultText": "Company Code Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid"
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "status"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.workforce.core.fields.status.label",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "company",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": true,
+      "serviceKey": "platform.comments.v1",
+      "load": "lazy",
+      "ownerEntityCode": "workforce"
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [
+    {
+      "code": "BUSINESS_PARTNER_ACTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.business_partner_active.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "EMPLOYEE_ACTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.employee_active.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "EMPLOYMENT_EFFECTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.employment_effective.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "PRIMARY_ASSIGNMENT_EFFECTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.primary_assignment_effective.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "ONBOARDING_COMPLETE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.onboarding_complete.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    }
+  ],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.employee",
+      "column": "company_code_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.employee",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.employee",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "artifactHash": "sha256:ce7df1ed17dfce6c178b827664f49cc20be3467695f0a152452fa1a1f2e98fa0",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
+}

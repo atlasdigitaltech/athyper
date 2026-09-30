@@ -1,0 +1,14 @@
+{
+  "schema": "athyper.compilation-recovery-proposal-evidence/1",
+  "candidate": "compilation-recovery-policy-candidate-20260928.json",
+  "actor": "platform.admin",
+  "sessionVerifiedAt": "2026-09-27T16:22:09.874Z",
+  "httpStatus": 200,
+  "result": {
+    "id": "a9953bc3-f508-414a-8b7c-2920074052c0",
+    "version": 1,
+    "hash": "d0d40bc857eb66694ac2ca84665476df367fb5ae37bfcc9cca7ce2c816512336",
+    "status": "pending_approval"
+  },
+  "publicationExecuted": false
+}

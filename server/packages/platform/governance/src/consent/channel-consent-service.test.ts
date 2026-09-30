@@ -1,3 +1,4 @@
+import { DummyDriver, Kysely, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from "kysely";
 import { describe, expect, it } from "vitest";
 import type {ChannelConsentCoordinate,ChannelConsentRepository} from "@athyper/server-contract-governance";
 import { createChannelConsentService,hashDestination } from "./channel-consent-service.js";
@@ -8,4 +9,21 @@ describe("channel consent destination hashing",()=>{
   it("passes only a destination hash to point-in-time and history persistence",async()=>{const seen:ChannelConsentCoordinate[]=[];const repository:ChannelConsentRepository<any>={upsert:async()=>{throw new Error("unused");},findAt:async input=>{seen.push(input);return null;},history:async input=>{seen.push(input);return{items:[],hasMore:false};}};const service=createChannelConsentService<any>({transactions:{run:async(plane:"studio"|"neon"|"mesh",_actor:unknown,work:(transaction:any)=>Promise<any>)=>work(brandExactPlaneTransaction({},plane))} as never,repositories:createExactPlaneRepositoryProvider({neon:repository}),audit:{} as never,outbox:{} as never,now:()=>new Date("2026-08-11T00:00:00.000Z")});await service.checkAt({planeKey:"neon",tenantId:"11111111-1111-4111-8111-111111111111",subjectType:"principal",subjectId:"22222222-2222-4222-8222-222222222222",channel:"email",destination:" User@Example.COM "});await service.history({planeKey:"neon",tenantId:"11111111-1111-4111-8111-111111111111",subjectType:"principal",subjectId:"22222222-2222-4222-8222-222222222222",channel:"email",destination:"user@example.com"});expect(seen).toHaveLength(2);expect(seen[0]?.destinationHash).toBe(hashDestination("email","user@example.com"));expect(JSON.stringify(seen)).not.toContain("User@Example.COM");});
   it("rejects a missing exact plane before opening a transaction",async()=>{let transactionStarted=false;const service=createChannelConsentService<any>({transactions:{run:async()=>{transactionStarted=true;throw new Error("transaction started");}} as never,repositories:createExactPlaneRepositoryProvider({studio:{} as ChannelConsentRepository<any>},{unavailableCode:"GOVERNANCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE"}),audit:{} as never,outbox:{} as never});expect(()=>service.checkAt({planeKey:"neon",tenantId:"tenant",subjectType:"principal",subjectId:"principal",channel:"email"})).toThrow("GOVERNANCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE:neon");expect(transactionStarted).toBe(false);});
   it("uses the request plane for notification consent reads",async()=>{const calls:string[]=[];const repository=(plane:string):ChannelConsentRepository<any>=>({upsert:async()=>{throw new Error("unused");},findAt:async()=>{calls.push(plane);return null;},history:async()=>({items:[],hasMore:false})});const service=createChannelConsentService<any>({transactions:{run:async(plane:"studio"|"neon"|"mesh",_actor:unknown,work:(transaction:any)=>Promise<any>)=>work(brandExactPlaneTransaction({},plane))} as never,repositories:createExactPlaneRepositoryProvider({studio:repository("studio"),neon:repository("neon"),mesh:repository("mesh")}),audit:{} as never,outbox:{} as never});await service.checkAt({planeKey:"mesh",tenantId:"tenant",subjectType:"principal",subjectId:"principal",channel:"push"});expect(calls).toEqual(["mesh"]);});
+  it("preserves punctuation in opaque push tokens", () => {
+    expect(hashDestination("push","token-a")).not.toBe(hashDestination("push","tokena"));
+  });
+  it("uses the injected effective clock and ignores untrusted evidence expiry", async () => {
+    const writes: import("@athyper/server-contract-governance").ChannelConsentWrite[] = [];
+    const db = new Kysely<Record<string,never>>({dialect:{createDriver:()=>new DummyDriver(),createAdapter:()=>new PostgresAdapter(),createIntrospector:db=>new PostgresIntrospector(db),createQueryCompiler:()=>new PostgresQueryCompiler()}});
+    const service = createChannelConsentService<any>({transactions:{run:async(_plane:unknown,_actor:unknown,work:(tx:any)=>Promise<any>)=>db.transaction().execute(work)} as never,repositories:createExactPlaneRepositoryProvider({neon:{upsert:async(input:any)=>{writes.push(input);return input;},findAt:async()=>null,history:async()=>({items:[],hasMore:false})}}),audit:{record:async()=>{}} as never,outbox:{append:async()=>{}} as never,now:()=>new Date("2026-01-01T00:00:00Z")});
+    const base = {context:{planeKey:"neon",tenantId:"tenant",principalId:"principal"} as never,subjectType:"principal" as const,subjectId:"subject",channel:"email" as const,consented:true,sourceCode:"test"};
+    try {
+      await service.record({...base,expiresAt:"2026-01-02T00:00:00Z"});
+      expect(writes[0]?.effectiveAt).toBe("2026-01-01T00:00:00.000Z");
+      await service.record({...base,evidence:{expiresAt:"not-a-date",proof:true}});
+      expect(writes[1]?.evidence).toEqual({proof:true});
+      await expect(service.record({...base,expiresAt:"2025-12-31T00:00:00Z"})).rejects.toMatchObject({code:"GOVERNANCE_INVALID_COMMAND"});
+    } finally { await db.destroy(); }
+  });
+
 });

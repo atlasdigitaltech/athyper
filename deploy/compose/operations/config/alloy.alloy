@@ -1,0 +1,38 @@
+// Push-only log collection. Workloads send Loki-compatible requests to the
+// loopback-bound receiver. Docker discovery and docker.sock are prohibited.
+loki.source.api "receiver" {
+  http {
+    listen_address = "0.0.0.0"
+    listen_port    = 3500
+  }
+  forward_to = [loki.process.normalize.receiver]
+}
+
+loki.process "normalize" {
+  stage.drop {
+    older_than          = "2h"
+    drop_counter_reason = "entry_too_old"
+  }
+  // Parse the bounded audit envelope as extracted fields. Identifiers remain
+  // structured metadata rather than Loki labels to avoid unbounded cardinality.
+  stage.json {
+    expressions = {
+      audit_event_id = "audit_event_id",
+      event_code = "event_code",
+      event_class = "event_class",
+      plane_code = "plane_code",
+      tenant_id = "tenant_id",
+      outcome = "outcome",
+      severity = "severity",
+      correlation_id = "correlation_id",
+    }
+  }
+  stage.label_keep {
+    values = ["instance", "environment", "service", "container", "stream", "source_revision"]
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint { url = "http://logging:3100/loki/api/v1/push" }
+}

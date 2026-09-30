@@ -1,0 +1,10 @@
+import{readFileSync,writeFileSync}from'node:fs';import{execFileSync}from'node:child_process';import assert from'node:assert/strict';
+const source=readFileSync('server/packages/platform/iam/src/kysely-permission-resolver.ts','utf8');
+let query=source.split('const operationRows = await sql<OperationBindingRow>`')[1]?.split('`.execute(transaction)')[0];assert.ok(query);
+query=query.replaceAll('${identity.planeKey}',"'neon'").replaceAll('${identity.tenantId}',"'44444444-4444-4444-8444-444444444444'");assert.ok(!query.includes('${'));
+const witness=`SELECT json_build_object('readBindings',count(*),'permissions',json_agg(permission_code)) FROM (${query}) bindings WHERE entity_code='business_partner' AND operation_key='read';`;
+const sql=`BEGIN; ${witness} UPDATE authz.entity_operation_binding SET status='retired',effective_until=now(),retired_at=now(),retired_by='cca94907-7519-5871-8e3c-6b11aa545c93' WHERE tenant_id='44444444-4444-4444-8444-444444444444' AND entity_code='business_partner' AND operation_key='read' AND status='published'; ${witness} ROLLBACK; ${witness}`;
+const output=execFileSync('docker',['exec','-i','athyper-bp-r19-db','psql','-X','-U','postgres','-d','athyper_neon','-At','-v','ON_ERROR_STOP=1'],{input:sql,encoding:'utf8',stdio:['pipe','pipe','pipe']});
+const results=output.split('\n').filter(l=>l.startsWith('{')).map(JSON.parse);
+assert.equal(results[0].readBindings,1);assert.deepEqual(results[0].permissions,['neon.relationship.bp_target.read']);assert.equal(results[1].readBindings,0);assert.deepEqual(results[2],results[0]);
+const report={capturedAt:new Date().toISOString(),qualified:true,results,isolatedOnly:true,bindingRetirementCommitted:false,globalFallbackAfterRetirement:false};writeFileSync('governance/policy/reports/business-partner-release-19-binding-selection.dev.json',JSON.stringify(report,null,2)+'\n');console.log(report);

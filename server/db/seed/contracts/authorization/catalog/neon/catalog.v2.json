@@ -6,6 +6,19 @@
   "idStrategy": "uuidv5:namespace=uuidv5(dns,athyper.authorization.catalog.v2);name={canonicalCode}",
   "permissions": [
     {
+      "permissionId": "51f45819-773a-566d-a4bc-69784c28afb2",
+      "canonicalCode": "common.platform.reference.view",
+      "product": "common",
+      "domain": "platform",
+      "entity": "reference",
+      "operation": "view",
+      "permissionKind": "capability",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "lifecycle": "proposed",
+      "definitionSha256": "62eeccb95220b38bf2bc138394ec753a6e9bc59be6a1a3d43a9a43c373bdb608"
+    },
+    {
       "permissionId": "78c1cb7c-7940-54e0-b78b-5c4773d4cadd",
       "canonicalCode": "neon.address_contact.company_code.manage",
       "product": "neon",
@@ -318,5 +331,5 @@
       "definitionSha256": "b1b49d011ee421dc3448653c7d54c23768425d923c54a3ca31555c9699504258"
     }
   ],
-  "sha256": "052df31f0da8f61b99a655ba6da2de234c1c02e09dbabbbb2f5f6f17db6d66f5"
+  "sha256": "524bfe752b67b1374f5af1dc4fc10cf1f5f450f9e2e7103dd2b2968551c26998"
 }

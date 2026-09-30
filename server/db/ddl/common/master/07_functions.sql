@@ -85,6 +85,16 @@ SET search_path = pg_catalog, master, control
 AS $$
 BEGIN
     NEW.role_code := lower(btrim(NEW.role_code));
+    IF NEW.address_link_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM master.contact_person c
+        JOIN master.address_link a ON a.tenant_id=c.tenant_id
+          AND a.owner_type_id=c.owner_type_id AND a.owner_id=c.owner_id
+        WHERE c.tenant_id=NEW.tenant_id AND c.id=NEW.contact_person_id AND a.id=NEW.address_link_id
+        FOR SHARE OF c,a
+    ) THEN
+        RAISE EXCEPTION 'Address responsibility must belong to the contact owner and tenant'
+            USING ERRCODE='23514';
+    END IF;
     IF NOT control.lookup_value_is_active(
         'master.contact_role', NEW.role_code, NEW.tenant_id
     ) THEN
@@ -105,6 +115,7 @@ BEGIN
     IF NEW.id IS DISTINCT FROM OLD.id
        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
        OR NEW.contact_person_id IS DISTINCT FROM OLD.contact_person_id
+       OR NEW.address_link_id IS DISTINCT FROM OLD.address_link_id
        OR NEW.role_code IS DISTINCT FROM OLD.role_code
        OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
@@ -112,6 +123,205 @@ BEGIN
         RAISE EXCEPTION 'master.contact_person_role assignment coordinates are immutable'
             USING ERRCODE = 'check_violation';
     END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION master.trg_guard_contact_address_owner() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,master AS $$
+BEGIN
+ IF ROW(NEW.tenant_id,NEW.owner_type_id,NEW.owner_id) IS DISTINCT FROM
+    ROW(OLD.tenant_id,OLD.owner_type_id,OLD.owner_id)
+ AND EXISTS(SELECT 1 FROM master.contact_person_role r WHERE r.tenant_id=OLD.tenant_id AND r.address_link_id=OLD.id) THEN
+  RAISE EXCEPTION 'Address owner cannot change while contact responsibilities reference it' USING ERRCODE='23514';
+ END IF;
+ RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION master.trg_normalize_address()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    NEW.address_type := nullif(btrim(NEW.address_type), '');
+    NEW.address_kind := nullif(lower(btrim(NEW.address_kind)), '');
+    NEW.street_name := nullif(btrim(NEW.street_name), '');
+    NEW.house_number := nullif(btrim(NEW.house_number), '');
+    NEW.house_number_suffix := nullif(btrim(NEW.house_number_suffix), '');
+    NEW.building_name := nullif(btrim(NEW.building_name), '');
+    NEW.floor := nullif(btrim(NEW.floor), '');
+    NEW.room := nullif(btrim(NEW.room), '');
+    NEW.entrance := nullif(btrim(NEW.entrance), '');
+    NEW.unit := nullif(btrim(NEW.unit), '');
+    NEW.line1 := nullif(btrim(NEW.line1), '');
+    NEW.line2 := nullif(btrim(NEW.line2), '');
+    NEW.line3 := nullif(btrim(NEW.line3), '');
+    NEW.city := nullif(btrim(NEW.city), '');
+    NEW.dependent_locality := nullif(btrim(NEW.dependent_locality), '');
+    NEW.region := nullif(btrim(NEW.region), '');
+    NEW.state_region_code := nullif(upper(btrim(NEW.state_region_code)), '');
+    NEW.postal_code := nullif(btrim(NEW.postal_code), '');
+    NEW.po_box := nullif(btrim(NEW.po_box), '');
+    NEW.po_box_postal_code := nullif(btrim(NEW.po_box_postal_code), '');
+    NEW.po_box_city := nullif(btrim(NEW.po_box_city), '');
+    NEW.delivery_service_type := nullif(btrim(NEW.delivery_service_type), '');
+    NEW.delivery_service_number := nullif(btrim(NEW.delivery_service_number), '');
+    NEW.country_code := nullif(upper(btrim(NEW.country_code::text)), '')::character(2);
+    -- IANA identifiers are canonical, case-sensitive reference values.
+    NEW.timezone_code := nullif(btrim(NEW.timezone_code), '');
+    NEW.normalization_version := COALESCE(NEW.normalization_version, 'v1');
+    NEW.format_version := COALESCE(NEW.format_version, 'v1');
+    NEW.formatted_address := nullif(btrim(NEW.formatted_address), '');
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_address_postal_code()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master, shared
+AS $$
+BEGIN
+    IF NOT shared.fn_validate_postal_code(NEW.country_code::text, NEW.postal_code) THEN
+        RAISE EXCEPTION 'master.address postal code "%" does not match country "%"',
+            NEW.postal_code, NEW.country_code
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_guard_address_identity()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        IF OLD.status <> 'draft' AND (
+            NEW.id IS DISTINCT FROM OLD.id
+            OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+            OR NEW.address_type IS DISTINCT FROM OLD.address_type
+            OR NEW.address_kind IS DISTINCT FROM OLD.address_kind
+            OR NEW.street_name IS DISTINCT FROM OLD.street_name
+            OR NEW.house_number IS DISTINCT FROM OLD.house_number
+            OR NEW.house_number_suffix IS DISTINCT FROM OLD.house_number_suffix
+            OR NEW.building_name IS DISTINCT FROM OLD.building_name
+            OR NEW.floor IS DISTINCT FROM OLD.floor
+            OR NEW.room IS DISTINCT FROM OLD.room
+            OR NEW.entrance IS DISTINCT FROM OLD.entrance
+            OR NEW.unit IS DISTINCT FROM OLD.unit
+            OR NEW.line1 IS DISTINCT FROM OLD.line1
+            OR NEW.line2 IS DISTINCT FROM OLD.line2
+            OR NEW.line3 IS DISTINCT FROM OLD.line3
+            OR NEW.city IS DISTINCT FROM OLD.city
+            OR NEW.dependent_locality IS DISTINCT FROM OLD.dependent_locality
+            OR NEW.region IS DISTINCT FROM OLD.region
+            OR NEW.state_region_code IS DISTINCT FROM OLD.state_region_code
+            OR NEW.postal_code IS DISTINCT FROM OLD.postal_code
+            OR NEW.po_box IS DISTINCT FROM OLD.po_box
+            OR NEW.po_box_postal_code IS DISTINCT FROM OLD.po_box_postal_code
+            OR NEW.po_box_city IS DISTINCT FROM OLD.po_box_city
+            OR NEW.delivery_service_type IS DISTINCT FROM OLD.delivery_service_type
+            OR NEW.delivery_service_number IS DISTINCT FROM OLD.delivery_service_number
+            OR NEW.country_code IS DISTINCT FROM OLD.country_code
+            OR NEW.timezone_code IS DISTINCT FROM OLD.timezone_code
+            OR NEW.normalized_hash IS DISTINCT FROM OLD.normalized_hash
+            OR NEW.normalization_version IS DISTINCT FROM OLD.normalization_version
+            OR NEW.formatted_address IS DISTINCT FROM OLD.formatted_address
+            OR NEW.format_version IS DISTINCT FROM OLD.format_version
+            OR NEW.latitude IS DISTINCT FROM OLD.latitude
+            OR NEW.longitude IS DISTINCT FROM OLD.longitude
+            OR NEW.created_at IS DISTINCT FROM OLD.created_at
+            OR NEW.created_by IS DISTINCT FROM OLD.created_by
+        ) THEN
+            RAISE EXCEPTION 'master.address identity and core fields are immutable'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_address_link_usage()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND OLD.usage_status = 'cancelled' AND NEW.usage_status <> 'cancelled' THEN
+        RAISE EXCEPTION 'Cancelled address usage cannot be reactivated' USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.usage_status = 'cancelled' AND NEW.effective_from < (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date
+       AND (TG_OP = 'INSERT' OR OLD.usage_status <> 'cancelled') THEN
+        RAISE EXCEPTION 'Established address usage must be end-dated' USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP IN ('INSERT', 'UPDATE') THEN
+        IF NEW.usage_status IS DISTINCT FROM OLD.usage_status OR TG_OP = 'INSERT' THEN
+            IF NEW.usage_status IN ('suspended', 'prohibited', 'cancelled') THEN
+                NEW.usage_denied_at := COALESCE(NEW.usage_denied_at, clock_timestamp());
+                NEW.usage_denied_by := COALESCE(
+                    NEW.usage_denied_by,
+                    NULLIF(current_setting('app.current_principal_id', true), '')::uuid
+                );
+                IF NEW.usage_denied_reason_code IS NULL OR btrim(NEW.usage_denied_reason_code) = '' THEN
+                    RAISE EXCEPTION 'master.address_link usage_status=% requires usage_denied_reason_code',
+                        NEW.usage_status
+                        USING ERRCODE = 'check_violation';
+                END IF;
+                IF NEW.usage_denied_by IS NULL THEN
+                    RAISE EXCEPTION 'master.address_link usage governance requires usage_denied_by for non-active states'
+                        USING ERRCODE = 'check_violation';
+                END IF;
+            ELSE
+                NEW.usage_denied_reason_code := NULL;
+                NEW.usage_denied_at := NULL;
+                NEW.usage_denied_by := NULL;
+            END IF;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_guard_address_event_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    RAISE EXCEPTION 'master.address_event is append-only; create a new event instead'
+        USING ERRCODE = 'object_not_in_prerequisite_state';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_address_link_target_status()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_status text;
+BEGIN
+    SELECT status
+      INTO v_status
+      FROM master.address
+     WHERE tenant_id = NEW.tenant_id
+       AND id = NEW.address_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'master.address_link references unknown address %',
+            NEW.address_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF NEW.usage_status = 'active' AND v_status <> 'active' THEN
+        RAISE EXCEPTION 'master.address_link cannot be active while address % is %',
+            NEW.address_id, v_status
+            USING ERRCODE = 'check_violation';
+    END IF;
+
     RETURN NEW;
 END;
 $$;

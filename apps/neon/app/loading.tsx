@@ -1,2 +1,7 @@
-import { AppLoadingBoundary } from "@athyper/platform-shell-app-foundation";
-export default function Loading() { return <AppLoadingBoundary kind="bootstrap" label="Loading Athyper Neon" />; }
+import { ApplicationLoading } from "@athyper/platform-shell-app-foundation";
+import { cookies } from "next/headers";
+
+export default async function Loading() {
+  const collapsed = (await cookies()).get("athyper_shell_collapsed")?.value === "true";
+  return <ApplicationLoading plane="neon" collapsed={collapsed} />;
+}

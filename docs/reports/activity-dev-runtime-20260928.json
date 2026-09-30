@@ -1,0 +1,27 @@
+{
+  "schema": "athyper.dev-activity-rollout/1",
+  "at": "2026-09-28T06:42:38.119475+00:00",
+  "services": [
+    {
+      "name": "athyper-dev-source-api-1",
+      "status": "running",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-source-worker-1",
+      "status": "running",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-control-control-api-1",
+      "status": "running",
+      "health": "healthy"
+    }
+  ],
+  "activeReleaseNo": 8,
+  "headsUnchanged": true,
+  "countryDataChanged": false,
+  "publicationStatus": "awaiting_authenticated_policy_enrollment",
+  "controlSessionProbeStatus": 401,
+  "roleGrantsCreated": false
+}

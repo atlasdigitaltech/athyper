@@ -1719,13 +1719,66 @@ BEGIN
     IF EXISTS(SELECT 1 FROM jsonb_array_elements(v_bindings) item
       WHERE item->>'permissionCode' LIKE 'legacy.%'
          OR array_length(string_to_array(item->>'permissionCode','.'),1)<>4
-         OR split_part(item->>'permissionCode','.',1)<>lower(p_plane_code)
+         OR (split_part(item->>'permissionCode','.',1)<>lower(p_plane_code)
+             AND item->>'permissionCode' NOT IN ('common.platform.reference.view',
+               'common.identity.principal.read','common.identity.principal_profile.read','common.identity.principal_profile.edit',
+               'common.identity.principal_notification_preference.read','common.identity.principal_notification_preference.edit'))
          OR split_part(item->>'permissionCode','.',2)='action'
          OR split_part(item->>'permissionCode','.',3)='action'
          OR COALESCE(item->>'permissionId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
          OR COALESCE(item->>'bindingId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
          OR COALESCE(item->>'scopeBindingId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') THEN
       RAISE EXCEPTION 'OPERATION_BINDING_CANONICAL_PERMISSION_REQUIRED' USING ERRCODE='check_violation';
+    END IF;
+    -- Exact shared capability exception, never a common.* wildcard. The signed
+    -- descriptor must enroll a read-only shared entity; grants stay plane-local.
+    IF EXISTS (SELECT 1 FROM jsonb_array_elements(v_bindings) item
+      WHERE item->>'permissionCode'='common.platform.reference.view') THEN
+      IF p_compiled_json->>'referenceCapability' IS DISTINCT FROM 'common.platform.reference.view'
+         OR p_compiled_json->>'planeKey' IS DISTINCT FROM lower(p_plane_code)
+         OR p_compiled_json#>>'{storage,schema}' IS DISTINCT FROM 'shared'
+         OR p_compiled_json#>>'{storage,tenantField}' IS NOT NULL
+         OR jsonb_typeof(p_compiled_json->'operations') IS DISTINCT FROM 'object'
+         OR jsonb_typeof(p_compiled_json->'fields') IS DISTINCT FROM 'array' THEN
+        RAISE EXCEPTION 'COMMON_REFERENCE_DESCRIPTOR_REQUIRED' USING ERRCODE='check_violation';
+      END IF;
+      IF jsonb_array_length(p_compiled_json->'fields')=0
+         OR p_compiled_json->'operations'='{}'::jsonb
+         OR EXISTS (SELECT 1 FROM jsonb_array_elements(p_compiled_json->'fields') field
+           WHERE field->'writableOn' IS DISTINCT FROM '[]'::jsonb)
+         OR EXISTS (SELECT 1 FROM jsonb_each(p_compiled_json->'operations') operation
+           WHERE operation.key NOT IN ('list','read','view')
+             OR operation.value->>'permissionCode' IS DISTINCT FROM 'common.platform.reference.view')
+         OR EXISTS (SELECT 1 FROM jsonb_array_elements(v_bindings) item
+           WHERE item->>'permissionCode' IS DISTINCT FROM 'common.platform.reference.view'
+             OR item->>'permissionKind' IS DISTINCT FROM 'capability'
+             OR COALESCE(item->>'operationKey','') NOT IN ('list','read','view')
+             OR item->>'entityCode' IS DISTINCT FROM p_compiled_json->>'entityCode'
+             OR item->>'scopeKind' IS DISTINCT FROM 'tenant'
+             OR item->>'coordinateSource' IS DISTINCT FROM 'tenant_context'
+             OR item->>'coordinateKey' IS NOT NULL OR item->>'resolverKey' IS NOT NULL) THEN
+        RAISE EXCEPTION 'COMMON_REFERENCE_READ_ONLY_BINDING_REQUIRED' USING ERRCODE='check_violation';
+      END IF;
+    END IF;
+    -- Identity capabilities stay exact-tenant and bound to their published owner
+    -- dataset. Administer is a separate runtime authority, never an operation binding.
+    IF EXISTS (SELECT 1 FROM jsonb_array_elements(v_bindings) item WHERE item->>'permissionCode' LIKE 'common.identity.%') THEN
+      IF p_compiled_json->>'planeKey' IS DISTINCT FROM lower(p_plane_code)
+        OR p_compiled_json#>>'{storage,schema}' IS DISTINCT FROM 'master'
+        OR p_compiled_json#>>'{storage,tenantField}' IS DISTINCT FROM 'tenant_id'
+        OR p_compiled_json#>>'{storage,object}' IS DISTINCT FROM p_compiled_json->>'entityCode'
+        OR p_compiled_json#>>'{ownerAccess,administerPermission}' IS DISTINCT FROM 'common.identity.principal.administer'
+        OR p_compiled_json#>>'{ownerAccess,ownerField}' IS DISTINCT FROM (CASE WHEN p_compiled_json->>'entityCode'='principal' THEN 'id' ELSE 'principal_id' END)
+        OR EXISTS (SELECT 1 FROM jsonb_array_elements(v_bindings) item
+          WHERE item->>'permissionCode' IS DISTINCT FROM 'common.identity.'||(p_compiled_json->>'entityCode')||'.'||(CASE WHEN item->>'operationKey' IN ('list','read') THEN 'read' ELSE 'edit' END)
+            OR item->>'operationKey' NOT IN ('list','read','create','patch')
+            OR item->>'entityCode' IS DISTINCT FROM p_compiled_json->>'entityCode'
+            OR item->>'permissionKind' IS DISTINCT FROM 'capability'
+            OR item->>'scopeKind' IS DISTINCT FROM 'tenant'
+            OR item->>'coordinateSource' IS DISTINCT FROM 'tenant_context'
+            OR item->>'coordinateKey' IS NOT NULL OR item->>'resolverKey' IS NOT NULL) THEN
+        RAISE EXCEPTION 'COMMON_IDENTITY_OWNER_BINDING_REQUIRED' USING ERRCODE='check_violation';
+      END IF;
     END IF;
     IF EXISTS(SELECT 1 FROM jsonb_array_elements(v_bindings) item
       GROUP BY item->>'sourceEntityOperationId'
@@ -1756,7 +1809,8 @@ BEGIN
       id,tenant_id,applied_release_id,plane_code,source_entity_id,source_entity_operation_id,
       source_release_id,source_release_hash,source_compiled_hash,entity_code,operation_key,
       permission_id,decision_mode,created_by)
-    SELECT DISTINCT ON (item->>'sourceEntityOperationId') (item->>'bindingId')::uuid,p_tenant_id,p_applied_release_id,lower(p_plane_code),
+    -- Descriptor IDs identify source bindings; projection rows belong to one applied release.
+    SELECT DISTINCT ON (item->>'sourceEntityOperationId') md5(p_applied_release_id::text||':operation:'||(item->>'bindingId'))::uuid,p_tenant_id,p_applied_release_id,lower(p_plane_code),
       v_source_entity_id,(item->>'sourceEntityOperationId')::uuid,p_source_release_id,v_release_hash,
       p_source_compiled_hash,item->>'entityCode',item->>'operationKey',p.id,
       (item->>'decisionMode')::authz.operation_decision_mode_d,v_actor
@@ -1767,7 +1821,7 @@ BEGIN
     IF v_actual<>v_expected THEN RAISE EXCEPTION 'OPERATION_BINDING_STAGE_COUNT_MISMATCH' USING ERRCODE='check_violation'; END IF;
     INSERT INTO authz.entity_operation_scope_binding(
       id,entity_operation_binding_id,scope_kind,coordinate_source,coordinate_key,resolver_key,created_by)
-    SELECT (item->>'scopeBindingId')::uuid,b.id,(item->>'scopeKind')::authz.scope_kind_d,
+    SELECT md5(p_applied_release_id::text||':scope:'||(item->>'scopeBindingId'))::uuid,b.id,(item->>'scopeKind')::authz.scope_kind_d,
       (item->>'coordinateSource')::authz.scope_coordinate_source_d,item->>'coordinateKey',item->>'resolverKey',v_actor
     FROM jsonb_array_elements(v_bindings) item
     JOIN authz.entity_operation_binding b ON b.applied_release_id=p_applied_release_id
@@ -1791,22 +1845,21 @@ CREATE OR REPLACE FUNCTION authz.fn_retire_entity_operation_projection(p_applied
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,authz AS $$
 DECLARE v_actor uuid:=COALESCE(NULLIF(current_setting('app.current_principal_id',true),'')::uuid,'00000000-0000-0000-0000-000000000000'::uuid); DECLARE v_count integer;
 BEGIN
-  UPDATE authz.entity_operation_binding SET status='retired',effective_until=p_at,retired_at=p_at,retired_by=v_actor,updated_at=p_at,updated_by=v_actor
+  UPDATE authz.entity_operation_binding SET status='retired',effective_until=LEAST(COALESCE(effective_until,p_at),p_at),retired_at=p_at,retired_by=v_actor,updated_at=p_at,updated_by=v_actor
    WHERE applied_release_id=p_applied_release_id AND status='published'; GET DIAGNOSTICS v_count=ROW_COUNT; RETURN v_count;
 END; $$;
 
 CREATE OR REPLACE FUNCTION authz.fn_restore_entity_operation_projection(p_applied_release_id uuid,p_at timestamptz)
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,authz AS $$
-DECLARE v_count integer;
 BEGIN
-  -- Transaction-local marker makes rollback the sole controlled exception to retired-row immutability.
-  PERFORM set_config('authz.rollback_restore','on',true);
-  UPDATE authz.entity_operation_binding SET status='published',effective_until=NULL,retired_at=NULL,retired_by=NULL,updated_at=p_at
-   WHERE applied_release_id=p_applied_release_id AND status='retired'; GET DIAGNOSTICS v_count=ROW_COUNT;
-  PERFORM set_config('authz.rollback_restore','off',true);
-  RETURN v_count;
-EXCEPTION WHEN OTHERS THEN
-  PERFORM set_config('authz.rollback_restore','off',true); RAISE;
+  -- Historical rows do not record whether retirement came from publication,
+  -- revocation or expiry. Never infer permission to republish from that state.
+  -- Recover through a reviewed successor compiled against the current head.
+  IF EXISTS (SELECT 1 FROM authz.entity_operation_binding
+             WHERE applied_release_id=p_applied_release_id) THEN
+    RAISE EXCEPTION 'BINDING_RECOVERY_SUCCESSOR_REQUIRED' USING ERRCODE='check_violation';
+  END IF;
+  RETURN 0;
 END; $$;
 
 REVOKE athyper_projection_owner FROM CURRENT_USER;

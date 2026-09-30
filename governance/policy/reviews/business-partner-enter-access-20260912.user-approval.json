@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-11T21:18:58.022Z",
+  "decision": "approved",
+  "authority": "Explicit user approval in this conversation",
+  "authenticatedReviewerReceipt": false,
+  "proposalRevisions": [
+    "2b7f0041ec7fd67b8bdc59d7c06ea950bf4c50cef6f315a61337584e9945621c",
+    "e3fcb693492924eedee0d0b53053a2934aa9310df3a6bba6fbbc8cb6d29de16a"
+  ],
+  "effectiveFrom": "2026-09-11T21:15:00Z",
+  "effectiveUntil": "2026-09-12T01:15:00Z",
+  "scope": "The two exact isolated-only proposals: business access and admin Atlas admission",
+  "sharedGrantsAuthorized": false,
+  "enforcementActivationAuthorized": false,
+  "automaticRenewalAuthorized": false
+}

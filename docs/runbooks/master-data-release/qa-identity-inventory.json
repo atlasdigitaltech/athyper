@@ -1,0 +1,55 @@
+{
+  "environment": "qa",
+  "observedAt": "2026-09-06T21:33:06.147873+00:00",
+  "method": "read-only administrative inventory; no permission evaluation or credential authentication",
+  "inventory": {
+    "actors": [
+      {
+        "id": "71667bf5-941b-5f6d-aab0-355e39c0bbde",
+        "code": "athyper.owner",
+        "status": "active",
+        "tenantId": "11111111-1111-4111-8111-111111111111"
+      },
+      {
+        "id": "d4250b08-6e5e-5887-b4e1-6f3eb31d7c8c",
+        "code": "athyper.admin",
+        "status": "active",
+        "tenantId": "11111111-1111-4111-8111-111111111111"
+      },
+      {
+        "id": "cca94907-7519-5871-8e3c-6b11aa545c93",
+        "code": "catl.admin",
+        "status": "active",
+        "tenantId": "44444444-4444-4444-8444-444444444444"
+      },
+      {
+        "id": "645b6a55-3355-526a-9643-3900425bde47",
+        "code": "catl.owner",
+        "status": "active",
+        "tenantId": "44444444-4444-4444-8444-444444444444"
+      }
+    ],
+    "tenants": [
+      {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "code": "athyper",
+        "status": "active"
+      },
+      {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "code": "cirrusatlantic",
+        "status": "active"
+      }
+    ],
+    "challengeTable": null,
+    "sensitivePermissions": [],
+    "ownerRegistryLockFunction": null
+  },
+  "api": {
+    "image": "sha256:6eceee4552c7b4b36096ad303d01b4259a260afe48dccc1764507635dff834a0",
+    "health": "healthy",
+    "challengeEnabled": false,
+    "trustSettingPresent": false
+  },
+  "qualified": false
+}

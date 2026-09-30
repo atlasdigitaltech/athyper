@@ -1,0 +1,338 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_request/core",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "storage": {
+    "kind": "handler_projection",
+    "sourceObjects": [
+      "document.entity_case"
+    ],
+    "primaryObject": "document.entity_case",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "document.entity_case",
+        "column": "id"
+      },
+      "storageType": "uuid",
+      "dataType": "uuid",
+      "nullable": false,
+      "valueOrigin": "stored",
+      "label": {
+        "labelKey": "entity.business_partner_request.field.id",
+        "defaultText": "Id"
+      },
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "case_code",
+      "binding": { "sourceObject": "document.entity_case", "column": "case_code" },
+      "storageType": "text", "dataType": "string", "nullable": false,
+      "valueOrigin": "stored",
+      "label": { "labelKey": "entity.business_partner_request.field.case_code", "defaultText": "Case code" },
+      "writePolicy": "system_managed",
+      "uiFacets": { "visibility": "hidden", "editability": "readonly" }
+    },
+    {
+      "key": "operation_code",
+      "binding": { "sourceObject": "document.entity_case", "column": "operation_code" },
+      "storageType": "text", "dataType": "string", "nullable": false,
+      "valueOrigin": "stored",
+      "label": { "labelKey": "entity.business_partner_request.field.operation_code", "defaultText": "Operation code" },
+      "writePolicy": "system_managed",
+      "uiFacets": { "visibility": "hidden", "editability": "readonly" }
+    },
+    {
+      "key": "created_at",
+      "binding": { "sourceObject": "document.entity_case", "column": "created_at" },
+      "storageType": "timestamptz", "dataType": "datetime", "nullable": false,
+      "valueOrigin": "stored",
+      "label": { "labelKey": "entity.business_partner_request.field.created_at", "defaultText": "Created at" },
+      "writePolicy": "system_managed",
+      "uiFacets": { "visibility": "hidden", "editability": "readonly" }
+    },
+    {
+      "key": "updated_at",
+      "binding": { "sourceObject": "document.entity_case", "column": "updated_at" },
+      "storageType": "timestamptz", "dataType": "datetime", "nullable": false,
+      "valueOrigin": "stored",
+      "label": { "labelKey": "entity.business_partner_request.field.updated_at", "defaultText": "Updated at" },
+      "writePolicy": "system_managed",
+      "uiFacets": { "visibility": "hidden", "editability": "readonly" }
+    },
+    {
+      "key": "tenant_id",
+      "binding": { "sourceObject": "document.entity_case", "column": "tenant_id" },
+      "storageType": "uuid", "dataType": "uuid", "nullable": false,
+      "valueOrigin": "stored",
+      "label": { "labelKey": "entity.business_partner_request.field.tenant_id", "defaultText": "Tenant id" },
+      "writePolicy": "system_managed",
+      "uiFacets": { "visibility": "hidden", "editability": "readonly" }
+    },
+    {
+      "key": "request_no",
+      "binding": {
+        "sourceObject": "document.entity_case",
+        "column": "case_code"
+      },
+      "storageType": "text",
+      "dataType": "string",
+      "nullable": false,
+      "valueOrigin": "stored",
+      "label": {
+        "labelKey": "entity.business_partner_request.field.request_no",
+        "defaultText": "Request No"
+      },
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "request_kind",
+      "binding": {
+        "sourceObject": "document.entity_case",
+        "column": "operation_code"
+      },
+      "storageType": "text",
+      "dataType": "string",
+      "nullable": false,
+      "valueOrigin": "derived",
+      "label": {
+        "labelKey": "entity.business_partner_request.field.request_kind",
+        "defaultText": "Request Kind"
+      }
+    },
+    {
+      "key": "target_business_partner_id",
+      "binding": {
+        "sourceObject": "document.entity_case",
+        "column": "target_entity_id"
+      },
+      "storageType": "uuid",
+      "dataType": "uuid",
+      "nullable": true,
+      "valueOrigin": "stored",
+      "label": {
+        "labelKey": "entity.business_partner_request.field.target_business_partner_id",
+        "defaultText": "Target Business Partner Id"
+      }
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "document.entity_case",
+        "column": "status"
+      },
+      "storageType": "text",
+      "dataType": "string",
+      "nullable": false,
+      "valueOrigin": "derived",
+      "label": {
+        "labelKey": "entity.business_partner_request.field.status",
+        "defaultText": "Status"
+      },
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "request_coordinates",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only",
+    "persistDraftCoordinates": true,
+    "contextChange": "explicit_revalidate_and_invalidate_prior_decisions",
+    "owningLegalEntityRule": "requires_separate_approved_domain_rule",
+    "activeSelectorFallback": "forbidden"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "fieldAccess": {
+    "categoryPolicies": {
+      "organization": {
+        "category": "organization",
+        "prohibited": [
+          "person.identityEvidence",
+          "person.dateOfBirth",
+          "employment.compensation"
+        ],
+        "restricted": [
+          "partner.taxIdentifiers"
+        ],
+        "visible": [
+          "partner.displayName",
+          "partner.legalName",
+          "partner.countryCode",
+          "partner.category",
+          "partner.registrationNumber",
+          "partner.taxIdentifiers",
+          "partner.addresses",
+          "partner.contacts",
+          "partner.legalForm",
+          "partner.incorporationDate",
+          "partner.websiteUrl",
+          "partner.industryCodes"
+        ]
+      },
+      "person": {
+        "category": "person",
+        "prohibited": [
+          "bankVerification",
+          "supplier.qualification"
+        ],
+        "restricted": [
+          "person.identityEvidence",
+          "person.dateOfBirth",
+          "person.nationalIdentifiers",
+          "employment.compensation"
+        ],
+        "visible": [
+          "person.firstName",
+          "person.lastName",
+          "person.personalEmail",
+          "person.phone",
+          "person.consent",
+          "person.preferredName",
+          "employment.startDate"
+        ]
+      },
+      "portal": {
+        "prohibited": [
+          "workflow.decision",
+          "readiness.override",
+          "masterData"
+        ],
+        "read": [
+          "requestNo",
+          "status",
+          "validationSummary",
+          "returnReasons"
+        ],
+        "write": [
+          "partner.displayName",
+          "partner.legalName",
+          "partner.countryCode",
+          "partner.category",
+          "partner.registrationNumber",
+          "partner.taxIdentifiers",
+          "partner.addresses",
+          "partner.contacts",
+          "person.firstName",
+          "person.lastName",
+          "person.personalEmail",
+          "person.phone",
+          "person.consent",
+          "evidence.references"
+        ]
+      }
+    },
+    "combine": "prohibited_over_restricted_over_visible",
+    "portalWritePolicy": "allowlist_intersect_authorization",
+    "visibilityIsNotAuthorization": true
+  },
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "document.entity_case",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "document.entity_case",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "document.entity_case",
+      "column": "row_version",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "document.entity_case",
+      "column": "target_entity_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "document.entity_case",
+      "column": "owner_company_code_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "document.entity_case",
+      "column": "entity_code",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "document.entity_case",
+      "column": "current_snapshot_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "snapshot.entity_snapshot",
+      "column": "payload_json",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "artifactHash": "sha256:7cdc514e45eb4880676b49aecf9308aa4076fe0f2bd03ed873d7e0a0778157d2",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "environment": "dev",
+  "tenantCode": "cirrusatlantic",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "entityCode": "business_partner",
+  "file": "cirrus-synthetic-bp-document.txt",
+  "contentType": "text/plain",
+  "sizeBytes": 1476,
+  "sha256": "21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+  "businessPartnerId": "f7688c3d-8c92-5651-a469-da3f4f786375",
+  "intendedPrincipal": "catl.admin",
+  "status": "uploaded, scanned, extracted and indexed; authorized retrieval and document-grounded chat verified",
+  "sourceVersionTemplate": "<attachment.id>:<scanned attachment.sha256>",
+  "sourcePermissionCode": "neon.collaboration.attachment.read",
+  "constraints": [
+    "Use the real attachment staging/finalization/extraction pipeline",
+    "Use actual extracted text for ingestion, not an assumed extraction result",
+    "Do not set scan or extraction flags manually",
+    "Do not reuse private prompt attachments",
+    "Do not infer permission grants from synthetic content"
+  ],
+  "businessPartnerCode": "CATL-BP-001",
+  "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+  "reservedAttachmentId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+  "attachmentId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+  "lastAttempt": {
+    "at": "2026-09-09T19:46:07.095542+00:00",
+    "session": "authenticated catl.admin in CirrusAtlantic DEV",
+    "parentReadStatus": 200,
+    "stageStatus": 403,
+    "stageCode": "FORBIDDEN",
+    "uploaded": false,
+    "grantsChanged": false
+  },
+  "finalizedAt": "2026-09-10T04:22:15.482Z",
+  "processingStatus": "active",
+  "extractionStatus": "extracted",
+  "sourceVersionId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6:21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+  "knowledgeRevisionId": "6f2a53ae-330a-442a-81bf-61f329422e68",
+  "retrievalVerifiedAt": "2026-09-10T05:19:31.598Z",
+  "verificationReceipt": "cirrus-attachment-enablement.verified.json"
+}

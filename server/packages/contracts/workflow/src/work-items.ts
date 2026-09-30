@@ -4,6 +4,10 @@ export type WorkItemStatus = "open" | "claimed" | "in_progress" | "blocked" | "c
 export type WorkItemPriority = "low" | "normal" | "high" | "urgent";
 
 export interface WorkItem {
+  readonly assignmentLabel?: string;
+  readonly recordLabel?: string;
+  readonly actionLabel?: string;
+  readonly href?: string;
   readonly id: string;
   readonly tenantId: string;
   readonly workTypeCode: string;
@@ -71,6 +75,7 @@ export interface WorkflowRevisionCoordinate {
 
 export interface ApproverCandidate { readonly principalId: string; readonly source: string; }
 export interface ApproverResolutionEvidence {
+  readonly filterEvidence?: import("./task-governance.js").TaskCandidateFilterEvidence;
   readonly resolverVersion: string;
   readonly resolvedAt: string;
   readonly strategy: "direct" | "role" | "group" | "hierarchy" | "fallback" | "escalation";
@@ -88,5 +93,6 @@ export type WorkItemActionResult =
 
 export interface WorkItemListResult {
   readonly data: readonly WorkItem[];
+  readonly totalCount: number;
   readonly nextCursor?: string;
 }

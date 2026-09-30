@@ -3,28 +3,50 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./shared/preview/environment": "./src/shared/preview/environment.ts",
+    "./shared/case-contract/model": "./src/shared/case-contract/model.ts",
+    "./shared/collections/compiler": "./src/shared/collections/compiler.ts",
+    "./kysely-publication-authority-work": "./src/kysely-publication-authority-work.ts",
+    "./kysely-authority-repository": "./src/kysely-authority-repository.ts",
+    "./kysely-local-projection-repository": "./src/kysely-local-projection-repository.ts",
+    "./publication-artifact-loader": "./src/publication-artifact-loader.ts",
+    "./publication-orchestrator": "./src/publication-orchestrator.ts",
+    "./entity-foundation-definition": "./src/entity-foundation-definition.ts",
+    "./entity-definition-compiler": "./src/entity-definition-compiler.ts",
+    "./compiled-entity-artifact-compiler": "./src/compiled-entity-artifact-compiler.ts",
+    "./compiled-entity-collection-compiler": "./src/compiled-entity-collection-compiler.ts",
+    "./entity-case-contract-service": "./src/entity-case-contract-service.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
+    "test:integration:publication-authority-repository": "pnpm exec tsx src/__tests__/integration/publication-authority-repository.mjs",
+    "test:integration:case-contract-publication": "tsx src/__tests__/integration/entity-case-contract-publication.ts",
     "test:integration:three-plane": "pnpm exec tsx src/__tests__/integration/three-plane-local-projection.mjs"
   },
   "dependencies": {
     "@athyper/server-contract-audit": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
+    "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-object-storage": "workspace:*",
     "@athyper/server-contract-publication": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
+    "@athyper/server-platform-metadata": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
-    "kysely": "^0.28.16"
+    "kysely": "^0.28.17",
+    "@athyper/contract-platform-collection": "workspace:*"
   },
   "devDependencies": {
+    "@athyper/server-adapter-publication-signing": "workspace:*",
+    "@athyper/server-platform-audit": "workspace:*",
     "@types/node": "^25.6.0",
-    "@types/pg": "^8.11.10",
-    "pg": "^8.13.0",
-    "tsx": "^4.19.2",
+    "@types/pg": "^8.20.0",
+    "pg": "^8.20.0",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

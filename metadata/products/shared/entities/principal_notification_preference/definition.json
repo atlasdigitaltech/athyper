@@ -1,0 +1,1126 @@
+{
+  "schema": "athyper.table-entity-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
+  "definition": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "principal_notification_preference",
+      "entityClass": "configuration",
+      "ownershipModel": "system"
+    },
+    "runtimeProfiles": [
+      {
+        "id": "6023d8e1-0852-5c49-ad4b-5868fd026ef5",
+        "profileKey": "default",
+        "backingKind": "table",
+        "storagePlane": "studio",
+        "storageSchema": "master",
+        "storageObject": "principal_notification_preference",
+        "tenantFieldKey": "tenant_id",
+        "apiExposure": "api",
+        "readMode": "generic",
+        "writeMode": "generic",
+        "createMode": "form_only",
+        "concurrencyMode": "optimistic",
+        "recordVersionFieldKey": "record_version"
+      }
+    ],
+    "fields": [
+      {
+        "id": "150524fa-0a82-54a3-8e08-4c5c88fa8a4c",
+        "fieldKey": "id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "0eaad4ce-0ae8-59c8-9122-26b24987828e",
+        "fieldKey": "tenant_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "tenant_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "49cda3c5-213c-56db-b17d-c543d8004104",
+        "fieldKey": "principal_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "principal_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "774ea4fe-0417-550a-aea0-4566084f9e7a",
+        "fieldKey": "event_code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "min_length": 2,
+          "max_length": 127,
+          "pattern": "^[a-z][a-z0-9_.:-]{1,126}$"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "event_code",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "eb3975ba-c1d8-5b84-aada-437176fc3972",
+        "fieldKey": "channel",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.notification_channel"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "channel",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "0f9eaa8d-8835-5420-8048-97db28a7fc38",
+        "fieldKey": "is_enabled",
+        "dataType": "boolean",
+        "typeConfig": {
+          "kind": "boolean"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "is_enabled",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "c74ce15f-220e-512c-b546-5d07eec43dd5",
+        "fieldKey": "frequency_code",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.notification_digest_frequency"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "frequency_code",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "72d51b57-69fa-5d5a-98e5-43a87673c5b1",
+        "fieldKey": "status",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "shared.ref_status"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "status",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "282144c2-f2da-5fe4-9048-b3588b97548d",
+        "fieldKey": "record_version",
+        "dataType": "integer",
+        "typeConfig": {
+          "kind": "integer"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "record_version",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "f144da7b-c246-5658-9cde-a325bc525ee8",
+        "fieldKey": "created_at",
+        "dataType": "datetime",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "created_at",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "823274f9-c05c-5091-bf2a-e6d3e7f395e4",
+        "fieldKey": "updated_at",
+        "dataType": "datetime",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "updated_at",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "5ed1a4fd-47a3-5b37-b316-7a45441f759d",
+        "fieldKey": "created_by",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "created_by",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "806ad8ce-2f39-59cb-ab9c-f7df16abaae5",
+        "fieldKey": "updated_by",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "updated_by",
+        "dataClassification": "internal",
+        "status": "active"
+      }
+    ],
+    "keys": [
+      {
+        "id": "af537e56-48f2-5430-ac56-962684812b63",
+        "keyKey": "primary",
+        "keyKind": "primary",
+        "uniquenessScope": "global"
+      },
+      {
+        "id": "8107bbb1-5a1f-5422-8c40-efd33741dbcc",
+        "keyKey": "natural",
+        "keyKind": "natural",
+        "uniquenessScope": "tenant"
+      }
+    ],
+    "keyFields": [
+      {
+        "entityKeyId": "af537e56-48f2-5430-ac56-962684812b63",
+        "entityFieldId": "150524fa-0a82-54a3-8e08-4c5c88fa8a4c",
+        "position": 1,
+        "id": "0d5b1666-890c-5722-aa39-0369f4cddb6d"
+      },
+      {
+        "entityKeyId": "8107bbb1-5a1f-5422-8c40-efd33741dbcc",
+        "entityFieldId": "0eaad4ce-0ae8-59c8-9122-26b24987828e",
+        "position": 1,
+        "id": "942599c3-6cb7-5e1c-bd8b-77f0134d2baa"
+      },
+      {
+        "entityKeyId": "8107bbb1-5a1f-5422-8c40-efd33741dbcc",
+        "entityFieldId": "49cda3c5-213c-56db-b17d-c543d8004104",
+        "position": 2,
+        "id": "94faf29c-8469-5285-a1bd-8284db6e64b8"
+      },
+      {
+        "entityKeyId": "8107bbb1-5a1f-5422-8c40-efd33741dbcc",
+        "entityFieldId": "774ea4fe-0417-550a-aea0-4566084f9e7a",
+        "position": 3,
+        "id": "e0bd7e15-0c6d-5d04-9df3-be9f06d3644d"
+      },
+      {
+        "entityKeyId": "8107bbb1-5a1f-5422-8c40-efd33741dbcc",
+        "entityFieldId": "eb3975ba-c1d8-5b84-aada-437176fc3972",
+        "position": 4,
+        "id": "342633e7-2ef0-5296-bd5d-25c6649a55c1"
+      }
+    ],
+    "operations": [
+      {
+        "id": "6e5100ca-1510-5bb7-a1b5-fbb2da750193",
+        "operationKey": "list",
+        "operationKind": "read",
+        "label": "Notification preferences",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "principal_id",
+          "event_code",
+          "channel",
+          "is_enabled",
+          "frequency_code",
+          "status",
+          "record_version",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
+        ],
+        "auditEventCode": "principal_notification_preference.list"
+      },
+      {
+        "id": "b69cca7a-0c0b-5c90-8819-12cd48a73bb5",
+        "operationKey": "read",
+        "operationKind": "read",
+        "label": "View record",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "principal_id",
+          "event_code",
+          "channel",
+          "is_enabled",
+          "frequency_code",
+          "status",
+          "record_version",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
+        ],
+        "auditEventCode": "principal_notification_preference.read"
+      },
+      {
+        "id": "9706eb29-1a73-5bcf-bde1-083414d6db95",
+        "operationKey": "create",
+        "operationKind": "create",
+        "label": "Add",
+        "fieldKeys": [
+          "event_code",
+          "channel",
+          "is_enabled",
+          "frequency_code",
+          "status"
+        ],
+        "auditEventCode": "principal_notification_preference.create",
+        "idempotencyMode": "required",
+        "handlerKey": "entity.record.create.v1"
+      },
+      {
+        "id": "c2e4dfb4-c98b-57b3-b8b4-a1129ec8f1ce",
+        "operationKey": "patch",
+        "operationKind": "update",
+        "label": "Save",
+        "fieldKeys": [
+          "event_code",
+          "channel",
+          "is_enabled",
+          "frequency_code",
+          "status"
+        ],
+        "auditEventCode": "principal_notification_preference.patch",
+        "idempotencyMode": "required",
+        "handlerKey": "entity.record.patch.v1"
+      }
+    ],
+    "operationPermissions": [
+      {
+        "entityOperationId": "6e5100ca-1510-5bb7-a1b5-fbb2da750193",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal_notification_preference.read",
+        "permissionKind": "capability",
+        "id": "48016e1f-d0ba-5c5e-8648-40f39e23a28b"
+      },
+      {
+        "entityOperationId": "b69cca7a-0c0b-5c90-8819-12cd48a73bb5",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal_notification_preference.read",
+        "permissionKind": "capability",
+        "id": "aa2623cc-5a63-5b53-9f09-851a6ab01685"
+      },
+      {
+        "entityOperationId": "9706eb29-1a73-5bcf-bde1-083414d6db95",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal_notification_preference.edit",
+        "permissionKind": "capability",
+        "id": "c8ef5ce7-4ce4-58ab-ab6a-9bceac1ebc45"
+      },
+      {
+        "entityOperationId": "c2e4dfb4-c98b-57b3-b8b4-a1129ec8f1ce",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal_notification_preference.edit",
+        "permissionKind": "capability",
+        "id": "9bdea929-a8e5-57e3-afad-0c1519055745"
+      }
+    ],
+    "operationScopeBindings": [
+      {
+        "entityOperationId": "6e5100ca-1510-5bb7-a1b5-fbb2da750193",
+        "bindingKey": "list_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "collection",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "8bed9592-d0d7-5e5f-9e68-79cd3ce4b4a7"
+      },
+      {
+        "entityOperationId": "b69cca7a-0c0b-5c90-8819-12cd48a73bb5",
+        "bindingKey": "read_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "3058558b-7a5f-56fb-b654-de39d0db38e1"
+      },
+      {
+        "entityOperationId": "9706eb29-1a73-5bcf-bde1-083414d6db95",
+        "bindingKey": "create_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "c7c45d62-401f-5b53-8914-c83e9f64d2d6"
+      },
+      {
+        "entityOperationId": "c2e4dfb4-c98b-57b3-b8b4-a1129ec8f1ce",
+        "bindingKey": "patch_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "2d490930-46ab-52ad-9e41-4ecff02b5aae"
+      }
+    ],
+    "searchProfiles": [
+      {
+        "id": "94fa210d-2693-5568-bd3e-8eecd8ee1e3b",
+        "searchKey": "default",
+        "searchKind": "keyword",
+        "minimumQueryLength": 1,
+        "isDefault": true
+      }
+    ],
+    "searchFields": [
+      {
+        "entitySearchProfileId": "94fa210d-2693-5568-bd3e-8eecd8ee1e3b",
+        "entityFieldId": "774ea4fe-0417-550a-aea0-4566084f9e7a",
+        "position": 1,
+        "matchMode": "contains",
+        "id": "cdd310de-48c7-5594-8219-7de80fa25be8"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "surfaceKey": "list",
+        "surfaceKind": "list",
+        "title": "Notification preferences",
+        "isDefault": true,
+        "layoutConfig": {
+          "identityField": "id",
+          "defaultState": {
+            "sort": [
+              {
+                "field": "event_code",
+                "direction": "asc"
+              }
+            ],
+            "density": "comfortable",
+            "mode": "table"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "limits": {
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              10,
+              25,
+              50,
+              100
+            ],
+            "maxSortLevels": 3,
+            "countMode": "exact"
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "principal_notification_preference",
+            "planeKey": "studio",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "permissionCode": "common.identity.principal_notification_preference.read",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "permissionCode": "common.identity.principal_notification_preference.read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "create",
+                "permissionCode": "common.identity.principal_notification_preference.edit",
+                "scope": "tenant.record.v1",
+                "target": "proposed",
+                "effect": "write",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "patch",
+                "permissionCode": "common.identity.principal_notification_preference.edit",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "write",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "principal_id",
+                "fields": [
+                  "principal_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "event_code",
+                "fields": [
+                  "event_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "channel",
+                "fields": [
+                  "channel"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "is_enabled",
+                "fields": [
+                  "is_enabled"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "frequency_code",
+                "fields": [
+                  "frequency_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "record_version",
+                "fields": [
+                  "record_version"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "created_at",
+                "fields": [
+                  "created_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "updated_at",
+                "fields": [
+                  "updated_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "created_by",
+                "fields": [
+                  "created_by"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "updated_by",
+                "fields": [
+                  "updated_by"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "create",
+                "handler": "entity.record.create.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "patch",
+                "handler": "entity.record.patch.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "ownerAccess": {
+            "schemaVersion": 1,
+            "ownerField": "principal_id",
+            "administerPermission": "common.identity.principal.administer",
+            "createdByField": "created_by",
+            "updatedByField": "updated_by"
+          },
+          "mutationPolicy": {
+            "schemaVersion": 1,
+            "handlerKey": "platform.notifications.preferences.v1"
+          },
+          "recordPredicates": [
+            {
+              "field": "event_code",
+              "operator": "ne",
+              "value": "platform.preferences.version"
+            }
+          ]
+        }
+      },
+      {
+        "id": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "surfaceKey": "detail",
+        "surfaceKind": "detail",
+        "title": "Notification preferences",
+        "layoutConfig": {
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "event_code",
+            "sections": [
+              {
+                "key": "overview",
+                "label": "Overview",
+                "fields": [
+                  "event_code",
+                  "channel",
+                  "is_enabled",
+                  "frequency_code",
+                  "status"
+                ]
+              }
+            ],
+            "actions": []
+          }
+        }
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "150524fa-0a82-54a3-8e08-4c5c88fa8a4c",
+        "bindingKey": "list_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "5b87ab5d-95da-53a8-8a7b-ba41cfe47aa6"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "0eaad4ce-0ae8-59c8-9122-26b24987828e",
+        "bindingKey": "list_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "bb87bf75-449d-5020-b3e4-9692e4579165"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "49cda3c5-213c-56db-b17d-c543d8004104",
+        "bindingKey": "list_principal_id",
+        "position": 2,
+        "labelOverride": "Principal",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "c3f1df0b-6863-5922-b8ae-4b1befa2557a"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "774ea4fe-0417-550a-aea0-4566084f9e7a",
+        "bindingKey": "list_event_code",
+        "position": 3,
+        "labelOverride": "Event",
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "id": "717a8aa8-c43a-5271-a02b-3dee2e665c79"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "eb3975ba-c1d8-5b84-aada-437176fc3972",
+        "bindingKey": "list_channel",
+        "position": 4,
+        "labelOverride": "Channel",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "in_app",
+                "label": "In app"
+              },
+              {
+                "value": "email",
+                "label": "Email"
+              },
+              {
+                "value": "sms",
+                "label": "Sms"
+              },
+              {
+                "value": "push",
+                "label": "Push"
+              },
+              {
+                "value": "whatsapp",
+                "label": "Whatsapp"
+              }
+            ]
+          }
+        },
+        "id": "0956ffe2-634c-508e-921b-5e9105f5476c"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "0f9eaa8d-8835-5420-8048-97db28a7fc38",
+        "bindingKey": "list_is_enabled",
+        "position": 5,
+        "labelOverride": "Delivery setting",
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "id": "c20d6326-78a3-5ecf-af3b-45f51556680e"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "c74ce15f-220e-512c-b546-5d07eec43dd5",
+        "bindingKey": "list_frequency_code",
+        "position": 6,
+        "labelOverride": "Frequency",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "hourly_digest",
+                "label": "Hourly digest"
+              },
+              {
+                "value": "daily_digest",
+                "label": "Daily digest"
+              },
+              {
+                "value": "weekly_digest",
+                "label": "Weekly digest"
+              }
+            ]
+          }
+        },
+        "id": "4a729e78-49f4-542c-b33b-173adb402150"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "72d51b57-69fa-5d5a-98e5-43a87673c5b1",
+        "bindingKey": "list_status",
+        "position": 7,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "inactive",
+                "label": "Inactive"
+              }
+            ]
+          }
+        },
+        "id": "a578655c-b1fe-549a-bf52-08ead25df3c3"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "282144c2-f2da-5fe4-9048-b3588b97548d",
+        "bindingKey": "list_record_version",
+        "position": 8,
+        "labelOverride": "Record version",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "26d85112-d6f2-55a5-b9d5-9c68f7609d7c"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "f144da7b-c246-5658-9cde-a325bc525ee8",
+        "bindingKey": "list_created_at",
+        "position": 9,
+        "labelOverride": "Created",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "fb2d23eb-3985-5174-8a5c-daf7c84a6b47"
+      },
+      {
+        "entitySurfaceId": "5704aed7-5fdf-52c6-9590-980cbe220afc",
+        "entityFieldId": "823274f9-c05c-5091-bf2a-e6d3e7f395e4",
+        "bindingKey": "list_updated_at",
+        "position": 10,
+        "labelOverride": "Updated",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "a814f51c-0645-5fe0-b4d9-17c5d30d2e61"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "150524fa-0a82-54a3-8e08-4c5c88fa8a4c",
+        "bindingKey": "detail_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "d0f9e38b-7f03-5dc8-8d46-8b6d3d880fe5"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "0eaad4ce-0ae8-59c8-9122-26b24987828e",
+        "bindingKey": "detail_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "7b5aacda-267c-5220-bba0-da3db7ee6968"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "49cda3c5-213c-56db-b17d-c543d8004104",
+        "bindingKey": "detail_principal_id",
+        "position": 2,
+        "labelOverride": "Principal",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "4371fc31-1277-5da1-b663-49410d09fa5e"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "774ea4fe-0417-550a-aea0-4566084f9e7a",
+        "bindingKey": "detail_event_code",
+        "position": 3,
+        "labelOverride": "Event",
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "id": "1a51e8b0-4d9a-5061-835b-e995e868d216"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "eb3975ba-c1d8-5b84-aada-437176fc3972",
+        "bindingKey": "detail_channel",
+        "position": 4,
+        "labelOverride": "Channel",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "in_app",
+                "label": "In app"
+              },
+              {
+                "value": "email",
+                "label": "Email"
+              },
+              {
+                "value": "sms",
+                "label": "Sms"
+              },
+              {
+                "value": "push",
+                "label": "Push"
+              },
+              {
+                "value": "whatsapp",
+                "label": "Whatsapp"
+              }
+            ]
+          }
+        },
+        "id": "f33f72f2-3b4d-58f8-872b-75965873fa99"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "0f9eaa8d-8835-5420-8048-97db28a7fc38",
+        "bindingKey": "detail_is_enabled",
+        "position": 5,
+        "labelOverride": "Delivery setting",
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "id": "cb5ef254-ec63-50ba-8e85-7150ca0b47e9"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "c74ce15f-220e-512c-b546-5d07eec43dd5",
+        "bindingKey": "detail_frequency_code",
+        "position": 6,
+        "labelOverride": "Frequency",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "hourly_digest",
+                "label": "Hourly digest"
+              },
+              {
+                "value": "daily_digest",
+                "label": "Daily digest"
+              },
+              {
+                "value": "weekly_digest",
+                "label": "Weekly digest"
+              }
+            ]
+          }
+        },
+        "id": "9d539e6b-65d1-5256-9f14-c103fd0a12c8"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "72d51b57-69fa-5d5a-98e5-43a87673c5b1",
+        "bindingKey": "detail_status",
+        "position": 7,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "inactive",
+                "label": "Inactive"
+              }
+            ]
+          }
+        },
+        "id": "08094dfa-efd9-5df5-be5d-af3f20df0125"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "282144c2-f2da-5fe4-9048-b3588b97548d",
+        "bindingKey": "detail_record_version",
+        "position": 8,
+        "labelOverride": "Record version",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "6981e870-12e1-513a-8908-621f092a2e8d"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "f144da7b-c246-5658-9cde-a325bc525ee8",
+        "bindingKey": "detail_created_at",
+        "position": 9,
+        "labelOverride": "Created",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "f6a0ad56-ffdd-5c40-9203-290c99ee1a04"
+      },
+      {
+        "entitySurfaceId": "551f3f5b-929d-5a72-aa4a-afbc46e00190",
+        "entityFieldId": "823274f9-c05c-5091-bf2a-e6d3e7f395e4",
+        "bindingKey": "detail_updated_at",
+        "position": 10,
+        "labelOverride": "Updated",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "d3f222b1-95f1-5d00-adf5-3242e11e4dc6"
+      }
+    ]
+  }
+}

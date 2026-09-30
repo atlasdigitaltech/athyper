@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 
-import { loadConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerRuntimes, startRuntimes } from "../register-runtimes.js";
 
 describe("runtime composition", () => {
@@ -51,7 +51,7 @@ describe("runtime composition", () => {
       const upsert = vi.fn(async () => undefined);
       const reconcile = vi.fn(async () => ({ upserted: 1, removed: 0 }));
       registerRuntimes(container, loadConfig(), lifecycle, {
-        createScheduler: () => ({ upsert, remove: vi.fn(), close: vi.fn(async () => undefined) }),
+        createScheduler: () => ({ listScheduleIds: async () => [], upsert, remove: vi.fn(), close: vi.fn(async () => undefined) }),
       });
       container.runtimes.scheduleReconcile = reconcile;
       container.runtimes.scheduledJobs.push({

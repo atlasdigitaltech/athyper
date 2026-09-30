@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "default": "local-only",
+  "controlFiles": [
+    ".gitignore",
+    "README.md",
+    "tracking-policy.json"
+  ],
+  "allowlist": [
+    {
+      "path": "business-partner-accepted-operations.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "tooling/scripts/verification/entity-authorization/case-runtime-correction.test.mjs",
+        "server/apps/platform-host/src/composition/__tests__/business-partner-case-runtime.test.ts",
+        "server/packages/services/records/src/__tests__/records-vertical.test.ts"
+      ],
+      "sha256": "73ce1ec76b4c64c187a71e352164168ab9ad6fed778e6ada4033877cedacf4a8"
+    },
+    {
+      "path": "business-partner-activation-publication.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "tooling/scripts/verification/entity-authorization/accepted-operation-selection.test.mjs"
+      ],
+      "sha256": "0a8f5a8e885dfe6b47d5a02fd9a0ef1a9fed2f3f01da78a95eb386183572d03b"
+    },
+    {
+      "path": "business-partner-case-correction-decisions.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "tooling/scripts/verification/entity-authorization/case-runtime-correction.test.mjs"
+      ],
+      "sha256": "eab94200edb673621c62d2210ba728e954d1894a55648671d662552f4cd9b194"
+    },
+    {
+      "path": "business-partner-child-storage-20260912.compilation.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "server/packages/services/publication/src/__tests__/document-collection-compiler.test.ts"
+      ],
+      "sha256": "f1af7f1c21354a625e1f259856f81dc82b9b98b1804a6dde344f085e8ce9c6ee"
+    },
+    {
+      "path": "business-partner-combined-persisted-approval.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "server/packages/planes/studio/meta-entity-authoring/src/__tests__/authorization-successor.test.ts"
+      ],
+      "sha256": "f4067745f40e684db0ebbd2e0e367fe8b54c251a01f7044ee2bd4f54e14b2c36"
+    },
+    {
+      "path": "business-partner-combined-source.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "server/packages/planes/studio/meta-entity-authoring/src/__tests__/canonical-v2-successor.test.ts",
+        "server/packages/planes/studio/meta-entity-authoring/src/__tests__/authorization-successor.test.ts"
+      ],
+      "sha256": "7bda08d0c1d5e50add3fb1e2d698f94ef9cef6e0e8c45f2af65fdab744ce5f79"
+    },
+    {
+      "path": "business-partner-combined-successor.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "server/packages/planes/studio/meta-entity-authoring/src/__tests__/authorization-successor.test.ts"
+      ],
+      "sha256": "9133d22b849f2650e1ee44447b28c8f468b45edf9e2d95fe31fd8ba8a5c435e6"
+    },
+    {
+      "path": "business-partner-corrected-release.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "tooling/scripts/verification/entity-authorization/governed-import-selection.test.mjs",
+        "server/apps/platform-host/src/composition/__tests__/business-partner-bound-import.test.ts",
+        "server/apps/platform-host/src/composition/__tests__/business-partner-read-runtime.test.ts",
+        "server/apps/platform-host/src/composition/__tests__/business-partner-action-runtime.test.ts"
+      ],
+      "sha256": "849d1c61171397e8d3f60e32db94faff3073a1504e83d16dbefc36bdce401048"
+    },
+    {
+      "path": "business-partner-governed-import-decisions.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "tooling/scripts/verification/entity-authorization/governed-import-selection.test.mjs"
+      ],
+      "sha256": "a7fa01fb70c917a9e6da56c251bfb9b39ac1d32be156c0200bc4b2947409e577"
+    },
+    {
+      "path": "business-partner-operation-decisions.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "tooling/scripts/verification/entity-authorization/accepted-operation-selection.test.mjs"
+      ],
+      "sha256": "cb7828b5085d16b3cff0496f39f9e3c4b3c3105202b05eff94b8c43cdb7def05"
+    },
+    {
+      "path": "business-partner-target-read-grants.dry-run.dev.json",
+      "purpose": "Required deterministic test input; preserved identifiers and hashes are part of contract assertions.",
+      "consumers": [
+        "tooling/scripts/verification/entity-authorization/target-read-grants.test.mjs"
+      ],
+      "sha256": "2bc655aa844619b0544f565463a6d761d7eab9f50cdc08845e3b62dc3fcf310b"
+    },
+    {
+      "path": "authorization/inventories/authorization-source-inventory.md",
+      "purpose": "Generated authorization source inventory required by policy tooling."
+    },
+    {
+      "path": "authorization/inventories/authorization-data-disposition-inventory.md",
+      "purpose": "Generated authorization disposition inventory required by policy tooling."
+    },
+    {
+      "path": "test-reachability-retirement.json",
+      "purpose": "Repository test reachability baseline."
+    }
+  ],
+  "reviewNote": "Required test inputs retain linked identifiers and hashes. They are exceptions to local-only evidence retention, not current approvals or permission to publish future local reports. No private-key, JWT, AWS-access-key or email patterns were found in these test JSON inputs during this review."
+}

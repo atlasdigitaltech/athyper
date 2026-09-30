@@ -1,24 +1,44 @@
-import { createRelayHandler, EXPERIENCE_BOOTSTRAP_OPERATION, IAM_ME_OPERATION, type RelayHandler } from "@athyper/platform-gateway-bff-relay";
-import { authRuntime } from "@/lib/auth";
+import { readAppEnvironment } from "./environment";
+import {
+  COMMON_PLANE_RELAY_OPERATIONS,
+  createLazyRelay,
+  createRelayHandler,
+  MESH_BP_BANK_DISCLOSURE_RELAY_OPERATIONS,
+  MESH_BP_NETWORK_EXCHANGE_RELAY_OPERATIONS,
+  MESH_BP_PROFILE_PUBLICATION_RELAY_OPERATIONS,
+  MESH_NETWORK_ACCOUNTS_OPERATION,
+  relaySessionFromAuth,
+  type RelayHandler,
+} from "@athyper/platform-gateway-bff-relay";
+import { authRuntime } from "./auth";
 
-let relay: RelayHandler | undefined;
-export const platformRelay: RelayHandler = (request, context) => {
-  relay ??= createRelayHandler({
-    plane: "mesh",
-    runtimeApiUrl: requiredEnvironment("RUNTIME_API_URL"),
-    appOrigin: process.env.APP_ORIGIN ?? process.env.NEXT_PUBLIC_APP_ORIGIN ?? "http://localhost:3100",
-    operations: [IAM_ME_OPERATION, EXPERIENCE_BOOTSTRAP_OPERATION],
-    session: {
-      resolve: (input) => authRuntime.resolveRelaySession(input),
-      refresh: (input) => authRuntime.refreshRelaySession(input),
-      invalidate: (input) => authRuntime.invalidateRelaySession(input),
+export const platformRelay: RelayHandler = createLazyRelay(() =>
+  createAppRelay(
+    {
+      runtimeApiUrl: readAppEnvironment().runtimeApiUrl,
+      appOrigin: readAppEnvironment().appOrigin,
+      session: relaySessionFromAuth(authRuntime),
     },
-  });
-  return relay(request, context);
-};
+    process.env,
+  ),
+);
 
-function requiredEnvironment(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is required; the browser relay fails closed without a server runtime URL`);
-  return value;
+export function createAppRelay(
+  options: Omit<
+    Parameters<typeof createRelayHandler>[0],
+    "plane" | "operations"
+  >,
+  environment: Readonly<Record<string, string | undefined>> = {},
+): RelayHandler {
+  return createRelayHandler({
+    ...options,
+    plane: "mesh",
+    operations: [
+      ...COMMON_PLANE_RELAY_OPERATIONS,
+      MESH_NETWORK_ACCOUNTS_OPERATION,
+      ...MESH_BP_PROFILE_PUBLICATION_RELAY_OPERATIONS,
+      ...MESH_BP_NETWORK_EXCHANGE_RELAY_OPERATIONS,
+      ...MESH_BP_BANK_DISCLOSURE_RELAY_OPERATIONS,
+    ],
+  });
 }

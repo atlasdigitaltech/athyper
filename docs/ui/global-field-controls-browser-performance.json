@@ -1,0 +1,8 @@
+{
+  "p95Milliseconds": 33.599999994039536,
+  "longTasksMilliseconds": [],
+  "choices": 249,
+  "mountedControls": 20,
+  "fixture": "Chromium production React, two animation frames per search; local fixture only",
+  "scope": "Search interactions; excludes initial form load and deployed-network measurements"
+}

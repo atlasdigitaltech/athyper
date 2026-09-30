@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_execution_approval",
+  "decision": "approved",
+  "proposalRevision": "3c623d23098b2a862b3a32f38e256405ad3d70d2f57f93b5e2ec40845af51e3c",
+  "approvedAt": "2026-09-12T04:56:54.388Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "NEON corrected image and 47 temporary permission assignments for 13:00–15:00 MYT on 12 September 2026"
+  },
+  "effectiveFrom": "2026-09-12T05:00:00.000Z",
+  "effectiveUntil": "2026-09-12T07:00:00.000Z",
+  "activationAuthorized": false,
+  "dispositionAcceptance": false
+}

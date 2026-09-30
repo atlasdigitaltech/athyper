@@ -1,0 +1,219 @@
+{
+  "kind": "bp_dev_operational_access",
+  "environment": "dev",
+  "plane": "neon",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "approvalSource": "User approved the eight proposed DEV group/role bundles in this conversation.",
+  "sourceRef": "user-approved:bp-dev-operational-access:20260912:v1",
+  "effectiveUntil": null,
+  "scopes": {
+    "tenant": [
+      "44444444-4444-4444-8444-444444444444",
+      "exact"
+    ],
+    "operating_organization": [
+      "a478f9c0-8226-5d22-9599-b8fb27a45180",
+      "subtree"
+    ],
+    "company_code": [
+      "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+      "exact"
+    ]
+  },
+  "groups": [
+    {
+      "code": "dev.bp.readers",
+      "members": [
+        "catl.admin",
+        "catl.owner"
+      ],
+      "roles": [
+        {
+          "code": "dev.bp.readers.tenant",
+          "scope": "tenant",
+          "permissions": [
+            "neon.relationship.bp_target.activity_read",
+            "neon.relationship.bp_target.addresses_read",
+            "neon.relationship.bp_target.attachments_read",
+            "neon.relationship.bp_target.bank_read",
+            "neon.relationship.bp_target.certificate_read",
+            "neon.relationship.bp_target.comments_read",
+            "neon.relationship.bp_target.contacts_read",
+            "neon.relationship.bp_target.discover",
+            "neon.relationship.bp_target.enter",
+            "neon.relationship.bp_target.identifier_read",
+            "neon.relationship.bp_target.identity_read",
+            "neon.relationship.bp_target.navigate_manage",
+            "neon.relationship.bp_target.navigate_overview",
+            "neon.relationship.bp_target.qualification_read",
+            "neon.relationship.bp_target.read",
+            "neon.relationship.bp_target.requests_read",
+            "neon.relationship.bp_target.tax_read"
+          ]
+        },
+        {
+          "code": "dev.bp.readers.operating_organization",
+          "scope": "operating_organization",
+          "permissions": [
+            "neon.relationship.business_partner.read",
+            "neon.relationship.business_partner_activity.read",
+            "neon.relationship.business_partner_address.read",
+            "neon.relationship.business_partner_bank.read_masked",
+            "neon.relationship.business_partner_certificate.read",
+            "neon.relationship.business_partner_contact.read",
+            "neon.relationship.business_partner_identifier.read_masked",
+            "neon.relationship.business_partner_identity.read",
+            "neon.relationship.business_partner_qualification.read",
+            "neon.relationship.business_partner_tax.read_masked",
+            "neon.relationship.entity_case.read"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "dev.bp.requesters",
+      "members": [
+        "catl.admin"
+      ],
+      "roles": [
+        {
+          "code": "dev.bp.requesters.operating_organization",
+          "scope": "operating_organization",
+          "permissions": [
+            "neon.relationship.entity_case.create",
+            "neon.relationship.entity_case.read",
+            "neon.relationship.entity_case.submit",
+            "neon.relationship.entity_case.update",
+            "neon.relationship.entity_case.validate"
+          ]
+        },
+        {
+          "code": "dev.bp.requesters.company_code",
+          "scope": "company_code",
+          "permissions": [
+            "neon.relationship.bp_target.configure_company"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "dev.bp.approvers",
+      "members": [
+        "catl.owner"
+      ],
+      "roles": [
+        {
+          "code": "dev.bp.approvers.operating_organization",
+          "scope": "operating_organization",
+          "permissions": [
+            "neon.relationship.entity_case.decide",
+            "neon.relationship.entity_case.read"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "dev.bp.appliers",
+      "members": [
+        "catl.admin"
+      ],
+      "roles": [
+        {
+          "code": "dev.bp.appliers.operating_organization",
+          "scope": "operating_organization",
+          "permissions": [
+            "neon.relationship.entity_case.materialize"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "dev.bp.company-users",
+      "members": [
+        "catl.admin",
+        "catl.owner"
+      ],
+      "roles": [
+        {
+          "code": "dev.bp.company-users.company_code",
+          "scope": "company_code",
+          "permissions": [
+            "neon.relationship.bp_target.credit_read",
+            "neon.relationship.bp_target.customer_company_read",
+            "neon.relationship.bp_target.supplier_company_read"
+          ]
+        },
+        {
+          "code": "dev.bp.company-users.operating_organization",
+          "scope": "operating_organization",
+          "permissions": [
+            "neon.relationship.business_partner_credit.read"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "dev.bp.data-transfer",
+      "members": [
+        "catl.admin"
+      ],
+      "roles": [
+        {
+          "code": "dev.bp.data-transfer.tenant",
+          "scope": "tenant",
+          "permissions": [
+            "neon.relationship.bp_target.export",
+            "neon.relationship.bp_target.import"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "dev.bp.protected-readers",
+      "members": [
+        "catl.admin"
+      ],
+      "roles": [
+        {
+          "code": "dev.bp.protected-readers.tenant",
+          "scope": "tenant",
+          "permissions": [
+            "neon.relationship.bp_target.bank_reveal",
+            "neon.relationship.bp_target.tax_reveal"
+          ]
+        },
+        {
+          "code": "dev.bp.protected-readers.operating_organization",
+          "scope": "operating_organization",
+          "permissions": [
+            "neon.relationship.business_partner_bank.reveal",
+            "neon.relationship.business_partner_tax.reveal"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "dev.bp.finance-readers",
+      "members": [
+        "catl.admin"
+      ],
+      "roles": [
+        {
+          "code": "dev.bp.finance-readers.company_code",
+          "scope": "company_code",
+          "permissions": [
+            "finance.ledger.business_partner_activity.read"
+          ]
+        }
+      ]
+    }
+  ],
+  "enforcementActivation": false,
+  "legacyRetirement": false,
+  "restoreExpiredGrants": false,
+  "limitations": [
+    "Source read gates may also admit legacy import/export where bound to the same code; separate target enforcement remains pending.",
+    "Resource-scoped comment/attachment domain permissions are not broadened to tenant scope.",
+    "Company-owned case lifecycle and release activation remain separate deployment prerequisites."
+  ]
+}

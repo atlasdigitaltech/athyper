@@ -1,6 +1,18 @@
 {
   "contractVersion": "athyper.authorization.semantic.v1",
   "permissionIdentity": "plane.domain.entity.operation",
+  "sharedCapabilities": {
+    "common.platform.reference.view": {
+      "namespace": "common",
+      "permissionKind": "capability",
+      "planes": ["studio", "neon", "mesh"],
+      "scope": "tenant",
+      "propagation": "exact",
+      "enrollment": "published_public_read_only_shared_reference_graph",
+      "allowedOperations": ["list", "read", "view"],
+      "grants": "plane_local_only"
+    }
+  },
   "defaultDecision": "deny",
   "rules": {
     "keycloak": "authentication_client_admission_and_assurance_only",

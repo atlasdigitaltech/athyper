@@ -102,6 +102,7 @@ CREATE TABLE governance.cycle_task (
     cycle_run_id uuid NOT NULL,
     cycle_type_id uuid NOT NULL,
     task_template_id uuid NOT NULL,
+    process_attempt_id uuid,
     phase_id uuid NOT NULL,
     code text NOT NULL,
     name text NOT NULL,
@@ -126,12 +127,30 @@ CREATE TABLE governance.cycle_task (
     CONSTRAINT cycle_task_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT cycle_task_run_id_uq UNIQUE (tenant_id, cycle_run_id, id),
     CONSTRAINT cycle_task_run_template_uq
-        UNIQUE (tenant_id, cycle_run_id, task_template_id),
+        UNIQUE NULLS NOT DISTINCT (tenant_id, cycle_run_id, task_template_id, process_attempt_id),
     CONSTRAINT cycle_task_code_chk CHECK (code ~ '^[A-Z][A-Z0-9_.-]{1,62}$'),
     CONSTRAINT cycle_task_evidence_chk CHECK (jsonb_typeof(completion_evidence) = 'object'),
     CONSTRAINT cycle_task_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT cycle_task_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL)),
     CONSTRAINT cycle_task_version_chk CHECK (version > 0)
+);
+
+CREATE TABLE governance.cycle_subject (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    cycle_run_id uuid NOT NULL, cycle_task_id uuid, subject_role text NOT NULL,
+    entity_case_id uuid, entity_code text, entity_id uuid, snapshot_id uuid, external_reference text,
+    is_primary boolean NOT NULL DEFAULT false,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT cycle_subject_pkey PRIMARY KEY(id), CONSTRAINT cycle_subject_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT cycle_subject_coordinate_uq UNIQUE NULLS NOT DISTINCT(tenant_id,cycle_run_id,subject_role,entity_case_id,entity_code,entity_id,snapshot_id,external_reference),
+    CONSTRAINT cycle_subject_role_chk CHECK(subject_role ~ '^[a-z][a-z0-9_.:-]{1,62}$'),
+    CONSTRAINT cycle_subject_one_coordinate_chk CHECK(num_nonnulls(entity_case_id,snapshot_id,external_reference,(CASE WHEN entity_code IS NOT NULL AND entity_id IS NOT NULL THEN entity_id END))=1 AND (entity_code IS NULL)=(entity_id IS NULL)),
+    CONSTRAINT cycle_subject_entity_code_chk CHECK(entity_code IS NULL OR entity_code ~ '^[a-z][a-z0-9_.:-]{1,126}$'),
+    CONSTRAINT cycle_subject_external_chk CHECK(external_reference IS NULL OR (btrim(external_reference)<>'' AND length(external_reference)<=256)),
+    CONSTRAINT cycle_subject_run_fk FOREIGN KEY(tenant_id,cycle_run_id) REFERENCES governance.cycle_run(tenant_id,id) ON DELETE RESTRICT,
+    CONSTRAINT cycle_subject_task_fk FOREIGN KEY(tenant_id,cycle_task_id) REFERENCES governance.cycle_task(tenant_id,id) ON DELETE RESTRICT,
+    CONSTRAINT cycle_subject_snapshot_fk FOREIGN KEY(tenant_id,snapshot_id) REFERENCES snapshot.entity_snapshot_identity(tenant_id,id) ON DELETE RESTRICT,
+    CONSTRAINT cycle_subject_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id)
 );
 
 CREATE TABLE governance.cycle_task_dependency (
@@ -170,7 +189,7 @@ CREATE TABLE governance.cycle_deviation (
     created_by uuid NOT NULL,
     CONSTRAINT cycle_deviation_pkey PRIMARY KEY (id),
     CONSTRAINT cycle_deviation_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT cycle_deviation_carry_idempotency_uq UNIQUE NULLS NOT DISTINCT (tenant_id, carry_idempotency_key),
+    CONSTRAINT cycle_deviation_carry_idempotency_uq UNIQUE (tenant_id, carry_idempotency_key),
     CONSTRAINT cycle_deviation_severity_chk CHECK (severity_code IN ('low','medium','high','critical')),
     CONSTRAINT cycle_deviation_status_chk CHECK (status IN ('open','resolved','waived','carried')),
     CONSTRAINT cycle_deviation_carry_count_chk CHECK (carry_count >= 0),
@@ -303,4 +322,86 @@ CREATE TABLE governance.report_pack (
     CONSTRAINT report_pack_ready_artifact_chk CHECK (status NOT IN ('ready','superseded') OR artifact_uri IS NOT NULL AND artifact_hash IS NOT NULL AND generated_at IS NOT NULL),
     CONSTRAINT report_pack_expiry_chk CHECK (expires_at IS NULL OR generated_at IS NOT NULL AND expires_at > generated_at),
     CONSTRAINT report_pack_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+-- Accepted routing evidence; P2 inserts in the transaction that owns case/run/attempt creation.
+CREATE TABLE governance.process_selection_evidence (
+    id uuid PRIMARY KEY, tenant_id uuid NOT NULL,
+    plane_key text NOT NULL CHECK (plane_key IN ('neon','studio','mesh')),
+    process_family text NOT NULL CHECK (btrim(process_family)<>''),
+    operating_organization_id uuid NOT NULL, company_code_id uuid,
+    case_id uuid NOT NULL, cycle_run_id uuid NOT NULL, attempt_id uuid NOT NULL,
+    attempt_number integer NOT NULL CHECK (attempt_number>0),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 8 AND 200),
+    evidence jsonb NOT NULL CHECK (jsonb_typeof(evidence)='object'),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT process_selection_tenant_id_uq UNIQUE (tenant_id,id),
+    CONSTRAINT process_selection_attempt_uq UNIQUE (tenant_id,case_id,attempt_id),
+    CONSTRAINT process_selection_attempt_number_uq UNIQUE (tenant_id,case_id,attempt_number),
+    CONSTRAINT process_selection_idempotency_uq UNIQUE (tenant_id,case_id,idempotency_key),
+    CONSTRAINT process_selection_coordinate_chk CHECK ((
+      evidence->'coordinate'->>'selectionId'=id::text
+      AND evidence->'coordinate'->>'caseId'=case_id::text
+      AND evidence->'coordinate'->>'cycleRunId'=cycle_run_id::text
+      AND evidence->'coordinate'->>'attemptId'=attempt_id::text
+      AND evidence->'coordinate'->'scope'->>'tenantId'=tenant_id::text
+      AND evidence->'coordinate'->'scope'->>'planeKey'=plane_key
+      AND evidence->'coordinate'->'scope'->>'processFamily'=process_family
+      AND evidence->'coordinate'->'scope'->>'operatingOrganizationId'=operating_organization_id::text
+      AND (evidence->'coordinate'->'scope'->>'companyCodeId') IS NOT DISTINCT FROM company_code_id::text
+      AND (evidence->'coordinate'->>'attemptNumber')::integer=attempt_number
+      AND evidence->>'idempotencyKey'=idempotency_key
+    ) IS TRUE)
+);
+
+-- P2 immutable acceptance; runtime status belongs to tasks and document jobs.
+CREATE TABLE governance.process_attempt (
+ id uuid PRIMARY KEY, tenant_id uuid NOT NULL, case_id uuid NOT NULL, cycle_run_id uuid NOT NULL,
+ selection_id uuid NOT NULL, attempt_number integer NOT NULL CHECK(attempt_number>0),
+ submission_snapshot_id uuid NOT NULL, submission_snapshot_version integer NOT NULL CHECK(submission_snapshot_version>0),
+ submission_snapshot_hash text NOT NULL CHECK(submission_snapshot_hash ~ '^[a-f0-9]{64}$'),
+ manifest_id uuid NOT NULL, manifest_version integer NOT NULL CHECK(manifest_version>0),
+ manifest_hash text NOT NULL CHECK(manifest_hash ~ '^[a-f0-9]{64}$'),
+ idempotency_key text NOT NULL CHECK(length(idempotency_key) BETWEEN 8 AND 200),
+ request_fingerprint text NOT NULL CHECK(request_fingerprint ~ '^[a-f0-9]{64}$'),
+ expected_case_version bigint NOT NULL CHECK(expected_case_version>0),
+ response jsonb NOT NULL CHECK(jsonb_typeof(response)='object'),
+ review_pack_job_id uuid GENERATED ALWAYS AS ((response->'process'->>'reviewPackJobId')::uuid) STORED NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+ CONSTRAINT process_attempt_tenant_id_uq UNIQUE(tenant_id,id),
+ CONSTRAINT process_attempt_case_number_uq UNIQUE(tenant_id,case_id,attempt_number),
+ CONSTRAINT process_attempt_replay_uq UNIQUE(tenant_id,idempotency_key),
+ CONSTRAINT process_attempt_selection_uq UNIQUE(tenant_id,selection_id),
+ CONSTRAINT process_attempt_coordinate_uq UNIQUE(tenant_id,id,case_id,cycle_run_id,selection_id),
+ CONSTRAINT process_attempt_run_fk FOREIGN KEY(tenant_id,cycle_run_id) REFERENCES governance.cycle_run(tenant_id,id) ON DELETE RESTRICT,
+ CONSTRAINT process_attempt_selection_fk FOREIGN KEY(tenant_id,selection_id) REFERENCES governance.process_selection_evidence(tenant_id,id) ON DELETE RESTRICT
+);
+
+-- Committed intent is the durable dispatch boundary. P4 owns execution and gate results.
+CREATE TABLE governance.process_document_job (
+ id uuid PRIMARY KEY, tenant_id uuid NOT NULL, attempt_id uuid NOT NULL, case_id uuid NOT NULL,
+ cycle_run_id uuid NOT NULL, selection_id uuid NOT NULL,
+ purpose text NOT NULL CHECK(purpose IN('submitted_review_pack','decision_document','activation_confirmation')),
+ idempotency_key text NOT NULL CHECK(length(idempotency_key) BETWEEN 8 AND 200),
+ intent_hash text NOT NULL CHECK(intent_hash ~ '^[a-f0-9]{64}$'), intent jsonb NOT NULL,
+ status text NOT NULL DEFAULT 'pending' CHECK(status IN('pending','processing','ready','failed','cancelled')),
+ result jsonb, claim_token uuid, lease_expires_at timestamptz, attempt_count integer NOT NULL DEFAULT 0,
+ gate_status text NOT NULL DEFAULT 'pending' CHECK(gate_status IN('pending','succeeded','failed')), last_error text, updated_at timestamptz,
+ created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+ CONSTRAINT process_document_job_tenant_id_uq UNIQUE(tenant_id,id),
+ CONSTRAINT process_document_job_coordinate_uq UNIQUE(tenant_id,id,attempt_id,case_id,cycle_run_id,selection_id),
+ CONSTRAINT process_document_job_replay_uq UNIQUE(tenant_id,idempotency_key),
+ CONSTRAINT process_document_job_purpose_uq UNIQUE(tenant_id,attempt_id,purpose),
+ CONSTRAINT process_document_job_attempt_fk FOREIGN KEY(tenant_id,attempt_id,case_id,cycle_run_id,selection_id)
+  REFERENCES governance.process_attempt(tenant_id,id,case_id,cycle_run_id,selection_id) DEFERRABLE INITIALLY DEFERRED,
+ CONSTRAINT process_document_job_coordinate_chk CHECK((
+  intent->'coordinate'->>'attemptId'=attempt_id::text AND intent->'coordinate'->>'caseId'=case_id::text
+  AND intent->'coordinate'->>'cycleRunId'=cycle_run_id::text AND intent->'coordinate'->>'selectionId'=selection_id::text
+  AND intent->'coordinate'->'scope'->>'tenantId'=tenant_id::text AND intent->'binding'->>'purpose'=purpose
+  AND intent->>'idempotencyKey'=idempotency_key AND intent->>'requestedBy'=created_by::text) IS TRUE),
+ CONSTRAINT process_document_job_ready_chk CHECK(status<>'ready' OR (
+  result->>'status'='ready' AND result->>'scanStatus'='clean' AND result->>'sha256' ~ '^[a-f0-9]{64}$'
+  AND result->>'attachmentId' IS NOT NULL AND result->>'attachmentVersionId' IS NOT NULL
+  AND result->'coordinate'=intent->'coordinate' AND result->'template'=intent->'binding'->'template'
+  AND result->'sourceSnapshot'=intent->'sourceSnapshot' AND result->>'jobId'=id::text) IS TRUE)
 );

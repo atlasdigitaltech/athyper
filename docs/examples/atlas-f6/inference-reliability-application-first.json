@@ -1,0 +1,123 @@
+{
+  "observedAt": "2026-09-10T08:09:07.876Z",
+  "kind": "authenticated-live-application-reliability",
+  "plane": "neon",
+  "actor": "catl.admin",
+  "imagesBefore": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "athyper-runtime-server:inference-reliability-20260910",
+      "digest": "sha256:b604218602a65433c330bf2c0fe2dc2197227d4625846281f5737372d8de361a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "digest": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "requests": [
+    {
+      "scenario": "warm",
+      "workload": "generation",
+      "threadId": "90a416cb-d74b-48f3-bee6-6b36adf6c5df",
+      "runId": "15dddc2f-3fbf-4f04-ad09-8656431a22b9",
+      "status": "run.completed",
+      "elapsedMs": 480,
+      "answerCorrect": true,
+      "replayedSameRun": true,
+      "providerEntries": [
+        {
+          "errorCode": null,
+          "errorClass": null,
+          "finishReason": "stop",
+          "providerCallId": "ea302793-87b6-43fe-b00b-aaf8e35d3d3e",
+          "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "readinessDiagnostics": null
+        }
+      ]
+    },
+    {
+      "scenario": "mixed-2",
+      "workload": "retrieval",
+      "httpStatus": 400,
+      "elapsedMs": 6,
+      "citationCount": 0,
+      "expectedAttachment": false
+    }
+  ],
+  "assurance": "elevated",
+  "passed": false,
+  "blocker": "Expected values to be strictly equal:",
+  "imagesAfter": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "athyper-runtime-server:inference-reliability-20260910",
+      "digest": "sha256:b604218602a65433c330bf2c0fe2dc2197227d4625846281f5737372d8de361a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "digest": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "stableDeployment": true,
+  "assessmentHarnessIssue": {
+    "description": "The harness sent an Idempotency-Key on knowledge/search. The relay disallows this header for that operation.",
+    "observedHttpStatus": 400,
+    "diagnosisSource": "packages/platform/gateway/bff-relay/src/index.ts:283",
+    "correctedHarness": "Omit the header on retrieval; use a unique key per generation and await every concurrent result.",
+    "isModelFailure": false
+  }
+}

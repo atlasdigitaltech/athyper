@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "contractStatus",
+    "artifactType",
+    "artifactKey",
+    "entityCode",
+    "plane",
+    "dependencies",
+    "artifactHash"
+  ],
+  "properties": {
+    "artifactHash": {},
+    "artifactKey": {},
+    "artifactType": {
+      "const": "core"
+    },
+    "businessContext": {},
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "audit": {},
+        "customFields": {},
+        "lifecycle": {},
+        "numbering": {},
+        "print": {},
+        "snapshot": {},
+        "comments": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "const": false
+                },
+                "reasonCode": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 127
+                }
+              },
+              "required": [
+                "enabled"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "const": true
+                },
+                "serviceKey": {
+                  "const": "platform.comments.v1"
+                },
+                "ownerEntityCode": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 127
+                },
+                "load": {
+                  "const": "lazy"
+                },
+                "includeInAggregateData": {
+                  "const": false
+                }
+              },
+              "required": [
+                "enabled",
+                "serviceKey",
+                "ownerEntityCode",
+                "load"
+              ]
+            }
+          ]
+        },
+        "attachments": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "const": false
+                },
+                "reasonCode": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 127
+                }
+              },
+              "required": [
+                "enabled"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "const": true
+                },
+                "serviceKey": {
+                  "const": "platform.attachments.v1"
+                },
+                "ownerEntityCode": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 127
+                },
+                "load": {
+                  "const": "lazy"
+                },
+                "includeInAggregateData": {
+                  "const": false
+                }
+              },
+              "required": [
+                "enabled",
+                "serviceKey",
+                "ownerEntityCode",
+                "load"
+              ]
+            }
+          ]
+        }
+      },
+      "required": []
+    },
+    "contractStatus": {},
+    "coreKind": {},
+    "defaultsProfile": {},
+    "defaultsProfileRef": {},
+    "deferredRelations": {},
+    "dependencies": {},
+    "editRuntimeTier": {},
+    "entityCode": {},
+    "fieldAccess": {},
+    "fieldDefaults": {},
+    "fields": {},
+    "operationDefaults": {},
+    "ownerBinding": {},
+    "plane": {
+      "const": "neon"
+    },
+    "profileKey": {},
+    "projectionPolicy": {},
+    "protections": {},
+    "query": {},
+    "querySafetyLimits": {},
+    "readinessFacts": {},
+    "referencePicker": {},
+    "relationDefaults": {},
+    "relations": {},
+    "schema": {},
+    "schemaVersion": {
+      "const": 2
+    },
+    "serverDependencies": {},
+    "storage": {},
+    "validationAuthority": {}
+  }
+}

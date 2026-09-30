@@ -31,12 +31,16 @@ export interface MasterDataRepository<Transaction = unknown> {
   ownerExists(tenantId: string, owner: OwnerCoordinate, transaction: Transaction): Promise<boolean>;
   findContactDuplicate(input: { readonly tenantId: string; readonly owner: OwnerCoordinate; readonly channelType: ContactChannel; readonly value: string; readonly purpose: string; readonly roleQualifier?: string }, transaction: Transaction): Promise<ContactLink | null>;
   createContact(input: Omit<ContactLink, "id" | "tenantId" | "isVerified" | "verifiedAt" | "status"> & { readonly tenantId: string }, transaction: Transaction): Promise<ContactLink>;
+  /** Lock the current contact until verification and its effects commit or roll back. */
+  getContactForVerification(tenantId: string, contactId: string, transaction: Transaction): Promise<ContactLink | null>;
+  /** Persist evidence atomically; reject previously accepted or older evidence within this transaction. */
   setContactVerification(tenantId: string, contactId: string, verified: boolean, verifiedAt: string, evidence: SignedProviderEvidence, transaction: Transaction): Promise<ContactLink | null>;
   deactivateContact(tenantId: string, contactId: string, effectiveUntil: string, transaction: Transaction): Promise<boolean>;
   findAddressDuplicate(tenantId: string, normalizedHash: string, transaction: Transaction): Promise<{ readonly id: string; readonly address: AddressValue } | null>;
   createAddress(tenantId: string, address: AddressValue, normalizedHash: string, transaction: Transaction): Promise<{ readonly id: string; readonly address: AddressValue }>;
   createAddressLink(input: Omit<AddressLink, "id" | "address">, transaction: Transaction): Promise<AddressLink>;
-  deactivateAddressLink(tenantId: string, addressLinkId: string, effectiveUntil: string, transaction: Transaction): Promise<boolean>;
+  /** false means missing; cancellation retains the original date interval for audit. */
+  deactivateAddressLink(tenantId: string, addressLinkId: string, effectiveUntil: string, transaction: Transaction): Promise<false | "deactivated" | "cancelled">;
   listContacts(tenantId: string, owner: OwnerCoordinate, asOf: string, transaction: Transaction): Promise<readonly ContactLink[]>;
   listAddresses(tenantId: string, owner: OwnerCoordinate, asOf: string, transaction: Transaction): Promise<readonly AddressLink[]>;
 }

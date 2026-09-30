@@ -1,11 +1,70 @@
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 import { describe, expect, it, vi } from "vitest";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import type { HostConfig } from "../../config/index.js";
-import { createContainer } from "../create-container.js";
+import { loadConfig, type HostConfig } from "../../config/environment.js";
+import { createContainer } from "../../kernel/container.js";
 import { registerAdapters } from "../register-adapters.js";
 
 describe("registerAdapters", () => {
+  it("keeps dedicated publication credentials separate and closes both stores", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "publication-store-"));
+    const tokenFile = join(directory, "token");
+    writeFileSync(tokenFile, "publication-fixture-token", { mode: 0o600 });
+    const ordinary = { resolve: vi.fn(), close: vi.fn() };
+    const publication = { resolve: vi.fn(), close: vi.fn() };
+    const createSecretStore = vi.fn().mockReturnValueOnce(ordinary).mockReturnValueOnce(publication);
+    const container = createContainer(), lifecycle = createLifecycle(), hostConfig = config();
+    hostConfig.infisical = { endpoint: "https://ordinary.test", token: "ordinary-fixture-token", workspaceId: "ordinary", environment: "dev" };
+    hostConfig.publication = { ...loadConfig().publication, authoringEnabled: true,
+      signingKeyId: "dev-fixture", privateKeyReference: "PRIVATE", publicKeyReference: "PUBLIC",
+      trust: { domain: "dev", manifest: { schema: "athyper.dev-publication-trust/1", keys: [
+        { domain: "dev", keyId: "dev-fixture", publicKeyFingerprint: `sha256:${"a".repeat(64)}` },
+      ] } }, secretStore: { endpoint: "https://publication.test", workspaceId: "publication", environment: "dev", tokenFile } };
+    container.adapters.objectStorageArtifacts = { putIfAbsent: vi.fn() } as never;
+    container.adapters.objectStorageArtifactsBucket = "artifacts";
+    try {
+      registerAdapters(container, hostConfig, lifecycle, { createSecretStore });
+      expect(container.adapters.secretStore).toBe(ordinary);
+      expect(createSecretStore).toHaveBeenNthCalledWith(2, { endpoint: "https://publication.test", workspaceId: "publication", environment: "dev", token: "publication-fixture-token" });
+      expect(container.adapters.publicationSigner).toBeDefined();
+      expect(publication.resolve).not.toHaveBeenCalled();
+      await lifecycle.shutdown("test");
+      expect(ordinary.close).toHaveBeenCalledOnce();
+      expect(publication.close).toHaveBeenCalledOnce();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+  it("configures protected-value storage without enabling publication", async () => {
+    const hostConfig = config();
+    hostConfig.publication = {
+      ...hostConfig.publication,
+      authoringEnabled: false,
+      compileEnabled: false,
+      dispatchEnabled: false,
+      applyEnabled: false,
+    };
+    hostConfig.infisical = {
+      ...hostConfig.infisical,
+      endpoint: "https://secrets.example.test",
+      token: "fixture-service-token",
+      workspaceId: "fixture-workspace",
+      environment: "dev",
+    };
+    const close = vi.fn(),
+      store = { resolve: vi.fn(), close },
+      createSecretStore = vi.fn(() => store),
+      container = createContainer(),
+      lifecycle = createLifecycle();
+    registerAdapters(container, hostConfig, lifecycle, { createSecretStore });
+    expect(container.adapters.secretStore).toBe(store);
+    expect(container.adapters.publicationSigner).toBeUndefined();
+    expect(container.adapters.publicationArtifactStore).toBeUndefined();
+    await lifecycle.shutdown("test");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("does not create an adapter without host database configuration", () => {
     const createNeonDatabase = vi.fn();
 
@@ -118,7 +177,9 @@ describe("registerAdapters", () => {
       subscribe: vi.fn(),
       close: closeNotificationEvents,
     };
-    const createNotificationEvents = vi.fn().mockReturnValue(notificationEvents);
+    const createNotificationEvents = vi
+      .fn()
+      .mockReturnValue(notificationEvents);
     const hostConfig = config();
     hostConfig.redis = {
       url: "redis://localhost:6379/0",
@@ -157,12 +218,17 @@ describe("registerAdapters", () => {
     const createSms = vi.fn().mockReturnValue(sms);
     const hostConfig = config();
     hostConfig.email = {
+      provider: "smtp",
       host: "smtp.example.test",
       port: 465,
       secure: true,
       user: "mailer",
       password: "secret",
       fromAddress: "no-reply@example.test",
+      sesRegion: undefined,
+      sesConfigurationSetName: undefined,
+      sesFromAddress: undefined,
+      sesReplyToAddress: undefined,
     };
     hostConfig.sms = {
       accountSid: "AC123",
@@ -197,6 +263,104 @@ describe("registerAdapters", () => {
     expect(close).toHaveBeenCalledOnce();
   });
 
+  it("registers SES v2 as the selected email provider with deterministic tenant mapping", async () => {
+    const close = vi.fn();
+    const email = { channel: "email", close };
+    const createSesEmail = vi.fn().mockReturnValue(email);
+    const hostConfig = config();
+    hostConfig.env = "staging";
+    hostConfig.email = {
+      provider: "ses",
+      host: undefined,
+      port: 587,
+      secure: false,
+      user: undefined,
+      password: undefined,
+      fromAddress: undefined,
+      sesRegion: "ap-southeast-1",
+      sesConfigurationSetName: "athyper-stg-transactional",
+      sesFromAddress: "notifications@notify.stg.athyper.com",
+      sesReplyToAddress: "support@athyper.com",
+    };
+    const container = createContainer();
+    const lifecycle = createLifecycle();
+
+    registerAdapters(container, hostConfig, lifecycle, {
+      createSesEmail: createSesEmail as never,
+    });
+
+    expect(container.adapters.notificationChannels.get("email")).toBe(email);
+    const sesConfig = createSesEmail.mock.calls[0]?.[0];
+    expect(sesConfig).toMatchObject({
+      region: "ap-southeast-1",
+      configurationSetName: "athyper-stg-transactional",
+      fromAddress: "notifications@notify.stg.athyper.com",
+      replyToAddress: "support@athyper.com",
+      environment: "staging",
+    });
+    expect(
+      sesConfig.resolveTenantName("11111111-1111-4111-8111-111111111111"),
+    ).toMatch(/^t-[a-f0-9]{40}$/);
+    await lifecycle.shutdown("test");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("composes the worker SES event source with lifecycle and deferred platform handler", async () => {
+    const run = vi.fn().mockResolvedValue(undefined);
+    const close = vi.fn();
+    const health = vi
+      .fn()
+      .mockResolvedValue({ status: "healthy", latencyMs: 1 });
+    const source = { run, close, health, pollOnce: vi.fn() };
+    const createSesEventSource = vi.fn().mockReturnValue(source);
+    const hostConfig = config();
+    hostConfig.mode = "worker";
+    hostConfig.email.provider = "ses";
+    hostConfig.jobs = {
+      scheduleReconcileMs: 60_000,
+      cronwatchBaseUrl: undefined,
+      cronwatchPingKey: undefined,
+      workerDatabaseUrls: {
+        studio: undefined,
+        neon: undefined,
+        mesh: undefined,
+      },
+      invalidationListenerDatabaseUrls: {
+        studio: undefined,
+        neon: undefined,
+        mesh: undefined,
+      },
+    };
+    hostConfig.sesEvents = {
+      region: "ap-southeast-1",
+      queueUrl:
+        "https://sqs.ap-southeast-1.amazonaws.com/123456789012/athyper-stg-ses-events",
+      waitTimeSeconds: 20,
+      visibilityTimeoutSeconds: 60,
+      maxMessages: 10,
+      failureBackoffMs: 1_000,
+    };
+    const container = createContainer();
+    const lifecycle = createLifecycle();
+
+    registerAdapters(container, hostConfig, lifecycle, {
+      createSesEventSource: createSesEventSource as never,
+    });
+    expect(container.adapters.sesEventSource).toBe(source);
+    expect(container.runtimes.health.list()).toContain(
+      "notifications.ses-event-source",
+    );
+    const forwarded = vi.fn().mockResolvedValue({ outcome: "acknowledge" });
+    container.adapters.sesEventHandler = { process: forwarded };
+    const handler = createSesEventSource.mock.calls[0]?.[1];
+    await handler.process("{}");
+    expect(forwarded).toHaveBeenCalledWith("{}");
+    await lifecycle.signalReady();
+    expect(run).toHaveBeenCalledOnce();
+    await lifecycle.shutdown("test");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("registers Meta WhatsApp and separate push transports in the composition root", () => {
     const whatsApp = { channel: "whatsapp" };
     const fcm = { platforms: ["android", "ios"] };
@@ -226,22 +390,31 @@ describe("registerAdapters", () => {
       createWebPush: vi.fn().mockReturnValue(webPush) as never,
     });
 
-    expect(container.adapters.notificationChannels.get("whatsapp")).toBe(whatsApp);
+    expect(container.adapters.notificationChannels.get("whatsapp")).toBe(
+      whatsApp,
+    );
     expect(container.adapters.pushTransports).toEqual([fcm, webPush]);
   });
 
   it("constructs S3 storage in the composition root and owns readiness validation", async () => {
     const validateAccess = vi.fn().mockResolvedValue(undefined);
+    const validateReadAccess = vi.fn().mockResolvedValue(undefined);
     const close = vi.fn();
-    const objectStorage = { validateAccess, close };
+    const objectStorage = { validateAccess, validateReadAccess, close };
     const createObjectStorage = vi.fn().mockReturnValue(objectStorage);
     const hostConfig = config();
     hostConfig.objectStorage = {
       endpoint: "http://localhost:9000",
       region: "us-east-1",
-      bucket: "documents",
+      buckets: {
+        documents: "documents",
+        artifacts: "artifacts",
+        transfers: "transfers",
+      },
       accessKeyId: "app",
       secretAccessKey: "secret",
+      artifactsWriterAccessKeyId: "writer",
+      artifactsWriterSecretAccessKey: "writer-secret",
       multipartPartSizeMb: 5,
       multipartQueueSize: 4,
       maxUploadMb: 100,
@@ -254,7 +427,9 @@ describe("registerAdapters", () => {
       createObjectStorage: createObjectStorage as never,
     });
 
-    expect(container.adapters.objectStorage).toBe(objectStorage);
+    expect(container.adapters.objectStorageDocuments).toBe(objectStorage);
+    expect(container.adapters.objectStorageArtifacts).toBe(objectStorage);
+    expect(container.adapters.objectStorageTransfers).toBe(objectStorage);
     expect(createObjectStorage).toHaveBeenCalledWith({
       endpoint: "http://localhost:9000",
       region: "us-east-1",
@@ -266,10 +441,35 @@ describe("registerAdapters", () => {
       maxUploadMb: 100,
       presignedTtlSeconds: 900,
     });
+    expect(createObjectStorage).toHaveBeenCalledWith({
+      endpoint: "http://localhost:9000",
+      region: "us-east-1",
+      bucket: "artifacts",
+      accessKeyId: "writer",
+      secretAccessKey: "writer-secret",
+      multipartPartSizeMb: 5,
+      multipartQueueSize: 4,
+      maxUploadMb: 100,
+      presignedTtlSeconds: 900,
+    });
+    expect(createObjectStorage).toHaveBeenCalledWith({
+      endpoint: "http://localhost:9000",
+      region: "us-east-1",
+      bucket: "transfers",
+      accessKeyId: "app",
+      secretAccessKey: "secret",
+      multipartPartSizeMb: 5,
+      multipartQueueSize: 4,
+      maxUploadMb: 100,
+      presignedTtlSeconds: 900,
+    });
     await lifecycle.signalReady();
-    expect(validateAccess).toHaveBeenCalledOnce();
+    expect(validateAccess).toHaveBeenCalledTimes(2);
+    expect(validateReadAccess).toHaveBeenCalledWith(
+      "_probes/artifacts-sentinel",
+    );
     await lifecycle.shutdown("test");
-    expect(close).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledTimes(3);
   });
 
   it("constructs ClamAV centrally and requires a healthy scanner at readiness", async () => {
@@ -278,21 +478,86 @@ describe("registerAdapters", () => {
     const malwareScanner = { scan: vi.fn(), health, close };
     const createMalwareScanner = vi.fn().mockReturnValue(malwareScanner);
     const hostConfig = config();
-    hostConfig.malwareScanning = { host:"virusscan", port:3310, timeoutMs:30_000, maxBytes:104_857_600, onUnavailable:"fail-closed" };
+    hostConfig.malwareScanning = {
+      host: "virusscan",
+      port: 3310,
+      timeoutMs: 30_000,
+      maxBytes: 104_857_600,
+      onUnavailable: "fail-closed",
+      signatureMaxAgeMs: 172_800_000,
+      signatureCheckIntervalMs: 300_000,
+    };
     const container = createContainer();
     const lifecycle = createLifecycle();
 
-    registerAdapters(container, hostConfig, lifecycle, { createMalwareScanner: createMalwareScanner as never });
+    registerAdapters(container, hostConfig, lifecycle, {
+      createMalwareScanner: createMalwareScanner as never,
+    });
 
     expect(container.adapters.malwareScanner).toBe(malwareScanner);
-    expect(createMalwareScanner).toHaveBeenCalledWith({ host:"virusscan", port:3310, timeoutMs:30_000, maxBytes:104_857_600 });
+    expect(createMalwareScanner).toHaveBeenCalledWith({
+      host: "virusscan",
+      port: 3310,
+      timeoutMs: 30_000,
+      maxBytes: 104_857_600,
+      signatureMaxAgeMs: 172_800_000,
+      signatureCheckIntervalMs: 300_000,
+    });
     await lifecycle.signalReady();
     expect(health).toHaveBeenCalledOnce();
     await lifecycle.shutdown("test");
     expect(close).toHaveBeenCalledOnce();
   });
 
-  it("owns Tika and Meilisearch readiness and shutdown",async()=>{const tikaHealth=vi.fn().mockResolvedValue({status:"healthy"});const tikaClose=vi.fn();const searchHealth=vi.fn().mockResolvedValue({status:"healthy"});const initialize=vi.fn().mockResolvedValue(undefined);const searchClose=vi.fn();const createContentExtractor=vi.fn().mockReturnValue({extract:vi.fn(),health:tikaHealth,close:tikaClose});const createSearchIndex=vi.fn().mockReturnValue({upsert:vi.fn(),remove:vi.fn(),search:vi.fn(),health:searchHealth,initialize,close:searchClose});const hostConfig=config();hostConfig.contentExtraction={baseUrl:"http://docparser:9998",timeoutMs:120_000,maxInputBytes:52_428_800,maxTextChars:5_000_000};hostConfig.search={baseUrl:"http://searchcore:7700",apiKey:"secret",indexUid:"documents",timeoutMs:10_000};const container=createContainer();const lifecycle=createLifecycle();registerAdapters(container,hostConfig,lifecycle,{createContentExtractor:createContentExtractor as never,createSearchIndex:createSearchIndex as never});expect(container.adapters.contentExtractor).toBeDefined();expect(container.adapters.searchIndex).toBeDefined();await lifecycle.signalReady();expect(tikaHealth).toHaveBeenCalledOnce();expect(searchHealth).toHaveBeenCalledOnce();expect(initialize).toHaveBeenCalledOnce();await lifecycle.shutdown("test");expect(tikaClose).toHaveBeenCalledOnce();expect(searchClose).toHaveBeenCalledOnce();});
+  it("owns Tika and Meilisearch readiness and shutdown", async () => {
+    const tikaHealth = vi.fn().mockResolvedValue({ status: "healthy" });
+    const tikaClose = vi.fn();
+    const searchHealth = vi.fn().mockResolvedValue({ status: "healthy" });
+    const initialize = vi.fn().mockResolvedValue(undefined);
+    const searchClose = vi.fn();
+    const createContentExtractor = vi.fn().mockReturnValue({
+      extract: vi.fn(),
+      health: tikaHealth,
+      close: tikaClose,
+    });
+    const createSearchIndex = vi.fn().mockReturnValue({
+      upsert: vi.fn(),
+      remove: vi.fn(),
+      search: vi.fn(),
+      health: searchHealth,
+      initialize,
+      close: searchClose,
+    });
+    const hostConfig = config();
+    hostConfig.mode = "api";
+    hostConfig.contentExtraction = {
+      baseUrl: "http://docparser:9998",
+      timeoutMs: 120_000,
+      maxInputBytes: 52_428_800,
+      maxTextChars: 5_000_000,
+    };
+    hostConfig.search = {
+      baseUrl: "http://searchcore:7700",
+      apiKey: "secret",
+      indexUid: "documents",
+      timeoutMs: 10_000,
+    };
+    const container = createContainer();
+    const lifecycle = createLifecycle();
+    registerAdapters(container, hostConfig, lifecycle, {
+      createContentExtractor: createContentExtractor as never,
+      createSearchIndex: createSearchIndex as never,
+    });
+    expect(container.adapters.contentExtractor).toBeDefined();
+    expect(container.adapters.searchIndex).toBeDefined();
+    await lifecycle.signalReady();
+    expect(tikaHealth).toHaveBeenCalledOnce();
+    expect(searchHealth).not.toHaveBeenCalled();
+    expect(initialize).toHaveBeenCalledOnce();
+    await lifecycle.shutdown("test");
+    expect(tikaClose).toHaveBeenCalledOnce();
+    expect(searchClose).toHaveBeenCalledOnce();
+  });
 
   it("constructs Gotenberg centrally and verifies readiness", async () => {
     const health = vi.fn().mockResolvedValue({ status: "healthy" });
@@ -312,6 +577,7 @@ describe("registerAdapters", () => {
       createPdfRenderer: createPdfRenderer as never,
     });
     expect(container.adapters.pdfRenderer).toBe(pdfRenderer);
+    expect(container.adapters.previewRenderer).toBeUndefined();
     expect(createPdfRenderer).toHaveBeenCalledWith(hostConfig.rendering);
     await lifecycle.signalReady();
     expect(health).toHaveBeenCalledOnce();
@@ -367,6 +633,10 @@ function adapter(name: string, shutdownOrder: string[]) {
 
 function config(connectionString?: string): HostConfig {
   return {
+    wave0: {
+      ...loadConfig().wave0,
+      authorizationWriterConnectionsPath: undefined,
+    },
     port: 4000,
     logLevel: "info",
     shutdownTimeoutMs: 15_000,
@@ -388,14 +658,21 @@ function config(connectionString?: string): HostConfig {
     },
     objectStorage: {
       endpoint: undefined,
+      publicEndpoint: undefined,
       region: "us-east-1",
-      bucket: undefined,
+      buckets: undefined,
       accessKeyId: undefined,
       secretAccessKey: undefined,
+      artifactsWriterAccessKeyId: undefined,
+      artifactsWriterSecretAccessKey: undefined,
       multipartPartSizeMb: 5,
       multipartQueueSize: 4,
       maxUploadMb: 100,
       presignedTtlSeconds: 900,
+      tenantQuotaGb: 10,
+      tenantQuotaItems: 50_000,
+      quotaReservationTtlSeconds: 1_800,
+      quotaRetryAfterSeconds: 900,
     },
     malwareScanning: {
       host: undefined,
@@ -403,9 +680,21 @@ function config(connectionString?: string): HostConfig {
       timeoutMs: 30_000,
       maxBytes: 104_857_600,
       onUnavailable: "fail-closed",
+      signatureMaxAgeMs: 172_800_000,
+      signatureCheckIntervalMs: 300_000,
     },
-    contentExtraction:{baseUrl:undefined,timeoutMs:120_000,maxInputBytes:52_428_800,maxTextChars:5_000_000},
-    search:{baseUrl:undefined,apiKey:undefined,indexUid:"documents",timeoutMs:10_000},
+    contentExtraction: {
+      baseUrl: undefined,
+      timeoutMs: 120_000,
+      maxInputBytes: 52_428_800,
+      maxTextChars: 5_000_000,
+    },
+    search: {
+      baseUrl: undefined,
+      apiKey: undefined,
+      indexUid: "documents",
+      timeoutMs: 10_000,
+    },
     openTelemetry: {
       endpoint: undefined,
       serviceName: "athyper-platform-host",
@@ -413,12 +702,25 @@ function config(connectionString?: string): HostConfig {
       enableAutoInstrumentations: false,
     },
     email: {
+      provider: "disabled",
       host: undefined,
       port: 587,
       secure: false,
       user: undefined,
       password: undefined,
       fromAddress: undefined,
+      sesRegion: undefined,
+      sesConfigurationSetName: undefined,
+      sesFromAddress: undefined,
+      sesReplyToAddress: undefined,
+    },
+    sesEvents: {
+      region: undefined,
+      queueUrl: undefined,
+      waitTimeSeconds: 20,
+      visibilityTimeoutSeconds: 60,
+      maxMessages: 10,
+      failureBackoffMs: 1_000,
     },
     sms: {
       accountSid: undefined,

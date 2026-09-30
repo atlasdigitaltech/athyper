@@ -1,0 +1,136 @@
+{
+  "schema": "athyper.dev-publication-successor-baseline/1",
+  "capturedAt": "2026-09-27T22:35:27.126Z",
+  "readOnly": true,
+  "source": {
+    "entityId": "b7e5b981-2227-4720-ba5d-040a48ab6842",
+    "entityCode": "country",
+    "sourceTenantId": null,
+    "authoring": {
+      "releaseId": "fd5d1272-8447-4a50-a59d-d2c0d6997a48",
+      "releaseNo": 6,
+      "releaseHash": "6e9e266db620c9af64e160025ae35fad766d4cf2231657916c42f9b19a0790b4",
+      "contractHash": "1c25546df23a5577a6b39c340d5860a58edd2e1ed3d0c0fe240873555b5d5086",
+      "changeSetId": "507bbaec-88f1-4647-aecd-2c768d6e8d4e",
+      "revisionId": "01a0e47f-b1e5-71d1-9384-663f28d55897",
+      "signingKeyId": "athyper-publication-dev-signing-v1"
+    },
+    "snapshot": {
+      "revisionId": "01a0e47f-b1e5-71d1-9384-663f28d55897",
+      "contractHash": "1c25546df23a5577a6b39c340d5860a58edd2e1ed3d0c0fe240873555b5d5086",
+      "revisionHash": "48665b81582488df7f9bf760be01848d6799b9037f7c69e1733816e79ce5ae28",
+      "validationStatus": "valid"
+    },
+    "publication": {
+      "releaseId": "fd5d1272-8447-4a50-a59d-d2c0d6997a48",
+      "releaseNo": 6,
+      "releaseKey": "metadata.reference.country",
+      "releaseHash": "6e9e266db620c9af64e160025ae35fad766d4cf2231657916c42f9b19a0790b4",
+      "manifestHash": "6e9e266db620c9af64e160025ae35fad766d4cf2231657916c42f9b19a0790b4",
+      "status": "approved"
+    },
+    "actors": {
+      "maker": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "submitter": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+      "approver": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "publisher": "c0febdd1-491c-46b8-8113-160be767b88d"
+    },
+    "targetPlanes": [
+      "studio",
+      "neon",
+      "mesh"
+    ]
+  },
+  "targets": [
+    {
+      "plane": "studio",
+      "observedEnvironment": "local",
+      "observedInstance": "dev",
+      "head": {
+        "row_version": 6,
+        "activated_at": "2026-09-27T20:12:53.168225+00:00",
+        "artifact_hash": "378e61b7d9322a68c4924227c5df51a6f774a7eb8853c8ebf18c0a697520cdb5",
+        "publication_key": "metadata.reference.country",
+        "source_release_no": 6,
+        "applied_release_id": "01a0e47f-c211-7b06-844e-02f6701ecd00"
+      },
+      "applied": {
+        "id": "01a0e47f-c211-7b06-844e-02f6701ecd00",
+        "sourceReleaseId": "fd5d1272-8447-4a50-a59d-d2c0d6997a48",
+        "sourceReleaseNo": 6,
+        "status": "active",
+        "artifactHash": "378e61b7d9322a68c4924227c5df51a6f774a7eb8853c8ebf18c0a697520cdb5"
+      },
+      "publishedOperationBindings": 2
+    },
+    {
+      "plane": "neon",
+      "observedEnvironment": "local",
+      "observedInstance": "dev",
+      "head": {
+        "row_version": 6,
+        "activated_at": "2026-09-27T20:12:52.716355+00:00",
+        "artifact_hash": "5c78b6cec5e13d51229fb380d02a7915b0593ef430b33900557f56d27182feda",
+        "publication_key": "metadata.reference.country",
+        "source_release_no": 6,
+        "applied_release_id": "01a0e47f-c044-7726-bbd7-2727a923bb47"
+      },
+      "applied": {
+        "id": "01a0e47f-c044-7726-bbd7-2727a923bb47",
+        "sourceReleaseId": "fd5d1272-8447-4a50-a59d-d2c0d6997a48",
+        "sourceReleaseNo": 6,
+        "status": "active",
+        "artifactHash": "5c78b6cec5e13d51229fb380d02a7915b0593ef430b33900557f56d27182feda"
+      },
+      "publishedOperationBindings": 2
+    },
+    {
+      "plane": "mesh",
+      "observedEnvironment": "local",
+      "observedInstance": "dev",
+      "head": {
+        "row_version": 6,
+        "activated_at": "2026-09-27T20:12:52.641021+00:00",
+        "artifact_hash": "de911eab4a98fa564b497bbb219a318eb3f562a02ec376efd456852b1cb929a1",
+        "publication_key": "metadata.reference.country",
+        "source_release_no": 6,
+        "applied_release_id": "01a0e47f-bffd-7203-ae1f-4738a3cad2cd"
+      },
+      "applied": {
+        "id": "01a0e47f-bffd-7203-ae1f-4738a3cad2cd",
+        "sourceReleaseId": "fd5d1272-8447-4a50-a59d-d2c0d6997a48",
+        "sourceReleaseNo": 6,
+        "status": "active",
+        "artifactHash": "de911eab4a98fa564b497bbb219a318eb3f562a02ec376efd456852b1cb929a1"
+      },
+      "publishedOperationBindings": 2
+    }
+  ],
+  "workingFiles": [
+    {
+      "path": "server/apps/platform-host/src/composition/shared/publication/workload.ts",
+      "sha256": "b6c23da39d1149705f6e0887da7d577177b3cf6c98e8eeb5a2331d64065c7107"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts",
+      "sha256": "291a7c3593dae1a05a2528785772062cc57fd2638c8320d006b9c0d3e191861d"
+    },
+    {
+      "path": "server/packages/planes/studio/meta-entity-authoring/src/publication/publication-workflow.ts",
+      "sha256": "cdfbb62e35384d490de8a9449714b3da9799c20866665a7ea34b2d2f78fdf775"
+    },
+    {
+      "path": "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts",
+      "sha256": "dfbb7ce21cdc5aa7d60c2257bec25dce727b1b6a5738ee208f93373b658f0fd9"
+    },
+    {
+      "path": "server/db/ddl/planes/studio/publication/15_system_entity_commands.sql",
+      "sha256": "0d582ed92584e07d0e52ebd803fcc8aa81311e106b14e7fbcbc4722585b1ac45"
+    },
+    {
+      "path": "server/db/ddl/common/runtime_meta/07_functions.sql",
+      "sha256": "48b35f2ee88733789880782b8546bd82d9f2b2c0f653b59fc75be303d86a7c30"
+    }
+  ],
+  "limitation": "Sequential per-database snapshots, not a distributed atomic snapshot or approval. Recheck pins under locks before publication/activation."
+}

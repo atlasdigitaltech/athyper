@@ -56,4 +56,47 @@ if command -v pnpm &>/dev/null; then
   fi
 fi
 
+# ── Generated-artifact drift ──
+# The fast subset of pnpm policy:static: checks whose only failure mode is a
+# stale committed artifact. Each has a one-command fix, so catching them here
+# costs seconds instead of a full CI round trip. The expensive architectural
+# policies stay in CI. inventory:authorization:check is deliberately excluded:
+# it also reports unknownSources findings that no regeneration can clear.
+#
+# Skip for a deliberate work-in-progress push:  ATHYPER_SKIP_DRIFT=1 git push
+
+if [ -z "$ATHYPER_SKIP_DRIFT" ] && command -v pnpm &>/dev/null; then
+  echo ""
+  echo "  [drift] Checking generated artifacts (~10s; ATHYPER_SKIP_DRIFT=1 to skip)..."
+
+  drift_failed=""
+
+  check_drift() {
+    if ! pnpm "$1" >/dev/null 2>&1; then
+      drift_failed="$drift_failed\n    pnpm $1  →  fix: pnpm $2"
+    fi
+  }
+
+  check_drift inventory:server-rebuild:check                  inventory:server-rebuild
+  check_drift routes:server-manifest:check                    routes:server-manifest
+  check_drift inventory:authorization-data-disposition:check  "exec node tooling/scripts/policy/authorization-data-disposition.mjs --artifacts-only"
+  check_drift urls:check                                      urls:generate
+  check_drift format:changed:check                            format:changed
+
+  if [ -n "$drift_failed" ]; then
+    echo ""
+    echo "  ✖  Generated artifacts are stale. CI will reject this push."
+    echo ""
+    printf "  Stale:$drift_failed\n"
+    echo ""
+    echo "  Run the fix command(s), commit the regenerated files, then push again."
+    echo "  Emergency bypass: git push --no-verify"
+    echo ""
+    exit 1
+  fi
+
+  echo "  ✓  Generated artifacts are in sync."
+  echo ""
+fi
+
 exit 0

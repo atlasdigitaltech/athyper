@@ -1,0 +1,15 @@
+{
+  "baseCommit": "535bc01045ae1d6009eb87759009c767b646f9cb",
+  "note": "Scoped pre-change working-tree hashes; not a clean committed release revision. Existing unrelated work preserved.",
+  "files": {
+    "package.json": "b9617f585ca6de2bff98b2463d02e9f5cba8250d624eab8cdaccd8c059b1db07",
+    "packages/platform/foundation/theme/src/styles.css": "40a402c96c223ba9721adb9a9afbf6694bf37c2a7812df8080251c5bcb98baba",
+    "packages/platform/foundation/ui/src/styles.css": "85901ea5531f809c4906d6ccff3890b2185e82f15a6dc64c013ff777b7db45d8",
+    "packages/platform/entity/runtime/form-detail/src/detail-workspace.tsx": "669b4303174bae8912795aed54bd5cb1468b234641ad09512773b399ff2eda26",
+    "packages/platform/entity/runtime/form-detail/src/record/record-navigation.tsx": "b795deac3eeeb3dae6a7a3f5ef5778522793381fa025ee632426487d11522eab",
+    "packages/platform/entity/runtime/form-detail/src/record/record-summary-panel.tsx": "df1e4762aef5a843addac1b61f0c5dbf4e254e767a9c0dc717ffc1973a1b8a14",
+    "packages/platform/entity/runtime/form-detail/src/collaboration-surface.tsx": "b67ee1e71d8d1ac9a7b28bd13fa975d15da8107e0b5efddcd1b35e7622f80325",
+    "server/packages/platform/metadata/src/native-runtime-projection.ts": "07bb7b3f6db31d04feb745a13df591fde960eacb618dedf099418347b2461a53",
+    "metadata/products/shared/entities/country/capabilities.json": "131a376a31f8e6209800742cbfdde61796cf368708140cb3b30836dec71daa03"
+  }
+}

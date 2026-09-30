@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { parseSanitizedSession } from "../../packages/contracts/platform/auth-session/src/index";
-import { createHttpClient, createOperation, createRequestScope, encodePathSegment, type ApiTransportError } from "../../packages/platform/foundation/api-client/src/index";
+import { createHttpClient, createOperation, createRequestScope, encodePathSegment, entityListDescriptorOperation, type ApiTransportError } from "../../packages/platform/foundation/api-client/src/index";
 import { parsePlatformBootstrap } from "../../packages/platform/foundation/api-client/src/bootstrap";
 
 const json = (value: unknown, init: ResponseInit = {}) => new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json", ...init.headers }, ...init });
@@ -25,6 +25,14 @@ describe("same-origin API transport", () => {
     await client.request(operation);
 
     assert.equal(observedUrl, "/api/relay/neon/work-contexts");
+  });
+
+  it("encodes entity-list coordinates and repeated query values through the relay", async () => {
+    let observedUrl: string | undefined;
+    const client = createHttpClient({ fetch: async (input) => { observedUrl = String(input); return json({ schemaVersion: 1, plane: "neon", entity: { code: "invoice", label: "Invoice", pluralLabel: "Invoices", identityField: "record_id" }, revision: { release: 1, descriptorHash: "a".repeat(64), surfaceHash: "b".repeat(64) }, surface: { key: "default_list", title: "Invoices", defaultState: { filters: [], sort: [], columns: ["record_id"], density: "comfortable", mode: "table" }, supportedModes: ["table"] }, fields: [{ key: "record_id", label: "Record ID", valueKind: "string", defaultVisible: true, defaultOrder: 0, filterOperators: [], sortable: false, groupable: false, aggregations: [] }], actions: [], scope: { status: "ready", labels: [], fingerprint: "c".repeat(64) }, limits: { defaultPageSize: 50, allowedPageSizes: [50], maxSortLevels: 5, countMode: "none" } }); } });
+    await client.request(entityListDescriptorOperation, { params: { entityCode: "invoice" }, query: { companyCodeId: "11111111-1111-4111-8111-111111111111", legalEntityId: "22222222-2222-4222-8222-222222222222", operatingOrganizationId: "33333333-3333-4333-8333-333333333333", networkAccountId: "44444444-4444-4444-8444-444444444444" } });
+    assert.equal(observedUrl, "/api/relay/entity-runtime/invoice/list-descriptor?companyCodeId=11111111-1111-4111-8111-111111111111&legalEntityId=22222222-2222-4222-8222-222222222222&operatingOrganizationId=33333333-3333-4333-8333-333333333333&networkAccountId=44444444-4444-4444-8444-444444444444");
+    await assert.rejects(client.request(entityListDescriptorOperation, { params: { entityCode: "../invoice" } }), /catalog code/);
   });
 
   it("parses the current platform problem and preserves request/correlation IDs without leaking diagnostics", async () => {

@@ -1,0 +1,6 @@
+import {chromium} from '@playwright/test';
+import {chmodSync} from 'node:fs';
+import {authenticated,parent,actors} from './atlas-f6-common.mjs';
+const admin=await authenticated('neon','catl.admin');try{const r=await admin.client.post('/api/relay/atlas/knowledge/search',{headers:await admin.headers(),data:{entityCode:'business_partner',recordId:parent,query:'Indigo Lantern'}});console.log(JSON.stringify({check:'admin-retrieval',status:r.status(),response:await r.json()}));}finally{await admin.close();}
+const browser=await chromium.launch();
+try{for(const plane of ['studio','neon']){const path=`tests/e2e/.auth/dev/${plane}/catl.owner.json`;const c=await browser.newContext({ignoreHTTPSErrors:true,storageState:path});try{const p=await c.newPage();await p.goto(`https://${plane}.dev.athyper.test/api/auth/login?returnTo=%2Fhome`,{waitUntil:'domcontentloaded',timeout:20000});await p.waitForURL(`https://${plane}.dev.athyper.test/home`,{timeout:12000}).catch(()=>{});const r=await c.request.get(`https://${plane}.dev.athyper.test/api/auth/session`);const s=await r.json();const valid=s.state==='authenticated'&&s.principalId===actors[plane]['catl.owner'];if(valid){await c.storageState({path});chmodSync(path,0o600);}console.log(JSON.stringify({plane,actor:'catl.owner',state:s.state,normalSsoRecovered:valid}));}finally{await c.close();}}}finally{await browser.close();}

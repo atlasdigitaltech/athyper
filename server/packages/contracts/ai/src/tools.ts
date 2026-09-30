@@ -55,6 +55,36 @@ export interface AtlasToolPreview {
   readonly replayed: boolean;
 }
 
+/** Content-free audit projection. Tokens, raw arguments, and policy snapshots are never returned. */
+export interface AtlasToolAuditEntry {
+  readonly proposalId: string;
+  readonly threadId: string;
+  readonly runId: string;
+  readonly toolCode: string;
+  readonly toolVersion: string;
+  readonly summary: string;
+  readonly access: AtlasToolAccess;
+  readonly risk: AtlasToolRisk;
+  readonly autonomyDecision: AtlasToolAutonomyDecision;
+  readonly affectedEntityType?: string;
+  readonly affectedEntityId?: string;
+  readonly expectedRowVersion?: number;
+  readonly policyRevision: string;
+  readonly profileRevision: string;
+  readonly authorizationEpoch: number;
+  readonly confirmationRequired: boolean;
+  readonly status: AtlasToolInvocationStatus;
+  readonly createdAt: string;
+  readonly confirmationAt?: string;
+  readonly executingAt?: string;
+  readonly terminalAt?: string;
+  readonly durationMs?: number;
+  readonly terminalErrorClass?: string;
+  readonly businessTransactionId?: string;
+  readonly businessTransactionType?: string;
+  readonly evidenceRefs: readonly Readonly<Record<string, unknown>>[];
+}
+
 export interface AtlasToolRunResult {
   readonly proposalId: string;
   readonly outcome: "completed" | "denied" | "failed" | "cancelled";
@@ -67,7 +97,19 @@ export interface AtlasToolRunResult {
 
 export interface AtlasReadToolHandlerContext { readonly context: VerifiedRequestContext; readonly records: AtlasRecordDataGateway; readonly signal: AbortSignal }
 export interface AtlasReadToolHandler { execute(input: { readonly context: AtlasReadToolHandlerContext; readonly arguments: Readonly<Record<string, unknown>> }): Promise<{ readonly data: unknown; readonly sources: readonly AtlasToolSourceEvidence[] }> }
-export interface AtlasRegisteredTool { readonly manifest: AtlasToolManifest; readonly readHandler?: AtlasReadToolHandler }
+export interface AtlasRegisteredTool {
+  readonly entitySection?: import("./entity-sections.js").AtlasEntitySectionContext;
+  readonly manifest: AtlasToolManifest;
+  readonly readHandler?: AtlasReadToolHandler;
+  /** Owner read guard, after authorization and before issuing confirmation. */
+  readonly validatePreview?: (input: { readonly context: VerifiedRequestContext; readonly arguments: Readonly<Record<string, unknown>> }) => Promise<void>;
+  /** Code-owned validation runs before preview persistence and again before execution. */
+  readonly validateArguments?: (argumentsValue: Readonly<Record<string, unknown>>, target: {
+    readonly affectedEntityType?: string;
+    readonly affectedEntityId?: string;
+    readonly expectedRowVersion?: number;
+  }) => void;
+}
 
 export interface AtlasToolPolicyDecision {
   readonly allowed: boolean;
@@ -102,6 +144,10 @@ export interface AtlasToolProposal extends Omit<AtlasToolPreview, "confirmationT
   readonly profileSnapshot: Readonly<Record<string, unknown>>;
   readonly confirmationTokenHash?: string;
   readonly createdAt: string;
+  readonly confirmationAt?: string;
+  readonly executingAt?: string;
+  readonly terminalAt?: string;
+  readonly durationMs?: number;
   readonly executionAuthEpoch?: number;
   readonly executionPolicyRevision?: string;
   readonly downstreamIdempotencyKey?: string;
@@ -117,6 +163,7 @@ export type AtlasToolStoreResult = { readonly kind: "created" | "transitioned"; 
 export interface AtlasToolProposalStore {
   propose(input: { readonly context: VerifiedRequestContext; readonly proposal: AtlasToolProposal }): Promise<AtlasToolStoreResult>;
   get(input: { readonly context: VerifiedRequestContext; readonly proposalId: string }): Promise<AtlasToolProposal | null>;
+  list(input: { readonly context: VerifiedRequestContext; readonly limit: number }): Promise<readonly AtlasToolProposal[]>;
   confirm(input: { readonly context: VerifiedRequestContext; readonly proposalId: string; readonly tokenHash: string; readonly confirmedAt: string }): Promise<AtlasToolStoreResult>;
   beginExecution(input: { readonly context: VerifiedRequestContext; readonly proposalId: string; readonly expectedStatus: "proposed" | "confirmed"; readonly executionGuard: Readonly<Record<string, unknown>>; readonly authorizationEpoch: number; readonly policyRevision: string; readonly downstreamIdempotencyKey?: string; readonly executingAt: string }): Promise<AtlasToolStoreResult>;
   complete(input: { readonly context: VerifiedRequestContext; readonly proposalId: string; readonly resultHash: string; readonly evidenceRefs?: readonly Readonly<Record<string, unknown>>[]; readonly businessTransactionId?: string; readonly businessTransactionType?: string; readonly terminalAt: string; readonly durationMs: number }): Promise<AtlasToolStoreResult>;

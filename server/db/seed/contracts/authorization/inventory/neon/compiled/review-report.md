@@ -4,9 +4,9 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 
 ## Coverage
 
-- Physical tables: 260 (140 master, 120 document)
+- Physical tables: 309 (145 master, 164 document)
 - Reviewed tables: 45
-- Pending business review: 215
+- Pending business review: 264
 - Proposed operations: 43
 - Proposed lifecycles: 6
 - Studio-to-Neon organization resource contracts: 3
@@ -17,12 +17,12 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 
 | Classification | Tables |
 | --- | ---: |
-| aggregate_child | 19 |
-| aggregate_root | 11 |
+| aggregate_child | 21 |
+| aggregate_root | 13 |
 | immutable_evidence | 1 |
-| projection_derived_state | 5 |
+| projection_derived_state | 3 |
 | sensitive_overlay | 5 |
-| technical_work_state | 4 |
+| technical_work_state | 2 |
 
 ## Reviewed tables
 
@@ -34,19 +34,18 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 | document.attachment_legal_hold | attachment_content | sensitive_overlay | document.attachment | @athyper/svc-attachments | resource |
 | document.attachment_legal_hold_event | attachment_content | immutable_evidence | document.attachment | @athyper/svc-attachments | resource |
 | document.attachment_link | attachment_content | aggregate_child | document.attachment | @athyper/svc-attachments | resource |
-| document.attachment_quota_reservation | attachment_content | technical_work_state | document.attachment | @athyper/svc-attachments | tenant |
-| document.attachment_quota_usage | attachment_content | projection_derived_state | document.attachment | @athyper/svc-attachments | tenant |
 | document.attachment_series | attachment_content | aggregate_child | document.attachment | @athyper/svc-attachments | resource |
+| document.business_partner_invitation | business_partner_onboarding | aggregate_root | document.business_partner_invitation | @athyper/server-service-master-data | tenant |
+| document.business_partner_request | business_partner_onboarding | aggregate_root | document.business_partner_request | @athyper/server-plane-neon | operating_organization |
+| document.business_partner_request_evidence | business_partner_onboarding | sensitive_overlay | document.business_partner_request | @athyper/server-plane-neon | operating_organization |
+| document.business_partner_request_validation | business_partner_onboarding | aggregate_child | document.business_partner_request | @athyper/server-plane-neon | operating_organization |
 | document.comment | attachment_content | aggregate_root | document.comment | @athyper/platform-collaboration | resource |
 | document.comment_draft | attachment_content | aggregate_child | document.comment | @athyper/platform-collaboration | resource |
 | document.comment_feed_cursor | attachment_content | projection_derived_state | document.comment | @athyper/platform-collaboration | resource |
 | document.comment_mention | attachment_content | aggregate_child | document.comment | @athyper/platform-collaboration | resource |
 | document.comment_reaction | attachment_content | aggregate_child | document.comment | @athyper/platform-collaboration | resource |
 | document.content_item | attachment_content | aggregate_root | document.content_item | @athyper/svc-content | resource |
-| document.content_item_access_grant | attachment_content | sensitive_overlay | document.content_item | @athyper/svc-content | resource |
 | document.content_item_link | attachment_content | aggregate_child | document.content_item | @athyper/svc-content | resource |
-| document.content_quota_reservation | attachment_content | technical_work_state | document.content_item | @athyper/svc-content | tenant |
-| document.content_quota_usage | attachment_content | projection_derived_state | document.content_item | @athyper/svc-content | tenant |
 | document.conversation | attachment_content | aggregate_root | document.conversation | @athyper/platform-collaboration | resource |
 | document.conversation_participant | attachment_content | aggregate_child | document.conversation | @athyper/platform-collaboration | resource |
 | document.multipart_upload | attachment_content | technical_work_state | document.attachment | @athyper/svc-attachments | resource |
@@ -56,6 +55,7 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 | master.business_partner_commodity_capability | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.business_partner_governance_relation | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.business_partner_identifier | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
+| master.business_partner_industry_classification | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.business_partner_operating_organization_assignment | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.business_partner_relationship | business_partner | aggregate_root | master.business_partner_relationship | @athyper/svc-records | operating_organization |
 | master.business_partner_tax_registration | business_partner | sensitive_overlay | master.business_partner | @athyper/svc-records | legal_entity |
@@ -67,7 +67,7 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 | master.customer | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.intercompany_trading_pair | business_partner | aggregate_root | master.intercompany_trading_pair | @athyper/svc-records | legal_entity |
 | master.legal_entity | organization_topology | aggregate_root | master.legal_entity | @athyper/server-service-master-data | legal_entity |
-| master.legal_entity_business_partner_link | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | legal_entity |
+| master.legal_entity_internal_partner_link | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | legal_entity |
 | master.operating_organization | organization_topology | aggregate_root | master.operating_organization | @athyper/server-service-master-data | operating_organization |
 | master.operating_organization_company_assignment | organization_topology | aggregate_child | master.operating_organization | @athyper/server-service-master-data | operating_organization, company_code |
 | master.procurement_organization_profile | organization_topology | aggregate_child | master.operating_organization | @athyper/server-service-master-data | operating_organization |
@@ -186,12 +186,25 @@ Required before enforcement:
 - document.bank_statement_line
 - document.budget_allocation
 - document.budget_profile
+- document.business_partner_bank_verification
+- document.business_partner_duplicate_resolution
+- document.business_partner_invitation_recovery
+- document.business_partner_request_address
+- document.business_partner_request_certification
+- document.business_partner_request_classification
+- document.business_partner_request_contact_channel
+- document.business_partner_request_contact_person
+- document.business_partner_request_identifier
+- document.business_partner_request_materialization_item
+- document.business_partner_request_tax_registration
 - document.catalog_import
 - document.catalog_import_line
 - document.commitment
 - document.commitment_line
 - document.commitment_release_allocation
 - document.compensation_change
+- document.contingent_work_order
+- document.contingent_work_order_revision
 - document.delivery_note
 - document.delivery_note_line
 - document.depreciation_run
@@ -199,6 +212,20 @@ Required before enforcement:
 - document.depreciation_schedule
 - document.employee_tax_declaration
 - document.employee_tax_declaration_line
+- document.engagement_onboarding_case
+- document.entity_case
+- document.entity_case_command_evidence
+- document.entity_case_materialization
+- document.entity_case_validation
+- document.external_candidate_evaluation
+- document.external_candidate_submission
+- document.external_expense_item
+- document.external_expense_sheet
+- document.external_service_entry
+- document.external_service_entry_line
+- document.external_time_entry
+- document.external_time_sheet
+- document.external_workforce_invoice_allocation
 - document.fx_revaluation_run
 - document.hr_case
 - document.ic_elimination
@@ -213,6 +240,11 @@ Required before enforcement:
 - document.leave_balance_entry
 - document.leave_request
 - document.match_exception
+- document.mesh_business_partner_acceptance
+- document.mesh_business_partner_acceptance_event
+- document.mesh_business_partner_match
+- document.mesh_profile_change_case
+- document.mesh_profile_change_resolution
 - document.netting_batch
 - document.obligation_horizon
 - document.offboarding_case
@@ -257,6 +289,7 @@ Required before enforcement:
 - document.schedule_line
 - document.service_sheet
 - document.service_sheet_line
+- document.service_sheet_source_allocation
 - document.shift_assignment
 - document.sourcing_event
 - document.sourcing_event_award
@@ -264,16 +297,29 @@ Required before enforcement:
 - document.sourcing_event_company
 - document.sourcing_event_demand
 - document.sourcing_event_intercompany_allocation
+- document.statement_of_work
+- document.statement_of_work_item
+- document.statement_of_work_revision
 - document.stocktake
 - document.stocktake_line
+- document.supplier_activation_evidence
 - document.time_punch
 - document.user_profile_update_request
 - document.wht_certificate
 - document.work_item
+- document.worker_compliance_item
+- document.worker_engagement
+- document.worker_operational_placement
 - document.workflow_request
 - document.workflow_stage
+- document.workforce_iam_projection
+- document.workforce_request
+- document.workforce_request_validation
+- document.workforce_requisition
+- document.workforce_requisition_supplier
 - master.accounting_profile
 - master.address
+- master.address_event
 - master.address_link
 - master.asset
 - master.asset_assignment_history
@@ -283,11 +329,12 @@ Required before enforcement:
 - master.bank_account
 - master.bank_account_house_config
 - master.bank_account_link
-- master.bank_party
+- master.bank_provisional_reference
 - master.bom
 - master.bom_component
 - master.brand_profile
 - master.business_intent
+- master.business_partner_alias
 - master.career_band
 - master.career_level
 - master.catalog
@@ -319,6 +366,7 @@ Required before enforcement:
 - master.employee_statutory_enrollment
 - master.employment
 - master.external_reference
+- master.external_worker
 - master.fiscal_period
 - master.fx_rate
 - master.gl_account
@@ -353,6 +401,7 @@ Required before enforcement:
 - master.payment_term_clause
 - master.payment_term_discount_tier
 - master.person
+- master.person_business_partner_legacy_link
 - master.person_sensitive_profile
 - master.position
 - master.principal
@@ -394,5 +443,5 @@ Required before enforcement:
 
 ## Release conclusion
 
-Blocked: 215 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
+Blocked: 264 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
 

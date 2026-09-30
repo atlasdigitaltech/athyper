@@ -1,0 +1,76 @@
+{
+  "schema": "athyper.business-partner-r5-qualification-build/1",
+  "asOf": "2026-09-05",
+  "sourceRevision": "68600dfd3880821ec02196cd2316e660e85b1bce",
+  "workingTree": "dirty; includes pre-existing work",
+  "productionQualified": false,
+  "approvalRecorded": false,
+  "targetBrowserExecuted": false,
+  "pendingGates": [
+    "onboarding",
+    "role_extensions",
+    "controls",
+    "lifecycle_negative",
+    "downstream",
+    "product_approval"
+  ],
+  "checks": [
+    {
+      "command": "node --test tooling/scripts/verification/business-partner-r5-qualification.test.mjs tooling/scripts/verification/preflight-business-partner-environment.test.mjs",
+      "result": "passed",
+      "tests": 18
+    },
+    {
+      "command": "pnpm exec tsx --test server/db/scripts/__tests__/provisioning/business-partner-r5-fixtures.test.ts",
+      "result": "passed",
+      "tests": 2
+    },
+    {
+      "command": "pnpm qualify:business-partner-r5 --require-qualified",
+      "result": "blocked_as_expected",
+      "exitCode": 2,
+      "pendingGates": 6
+    },
+    {
+      "command": "R5 fixture provisioner against isolated PostgreSQL 16.13",
+      "result": "passed"
+    },
+    {
+      "command": "R5 fixture repeat provisioning",
+      "result": "refused_as_expected"
+    },
+    {
+      "command": "psql -v ON_ERROR_STOP=1 < server/db/scripts/tests/integration/business-partner-r5-customer-controls.sql",
+      "result": "passed",
+      "transaction": "rolled_back"
+    }
+  ],
+  "additionalChecks": {
+    "qualificationAndPreflightTests": 18,
+    "fixtureTests": 2,
+    "existingContractAndDdlTests": 7,
+    "fixtureTypecheck": "passed",
+    "playwrightDiscovery": 2,
+    "isolatedBaselineEntries": 207,
+    "baselineNote": "207-entry clean baseline followed by applying the corrected shared profile trigger from this build.",
+    "postgresqlVersion": "16.13",
+    "postProbeCustomerState": {
+      "status": "prospect",
+      "recordVersion": 1,
+      "lifecycleEventCount": 0
+    }
+  },
+  "sourceHashes": {
+    "server/db/scripts/provisioning/provision-business-partner-r5-fixtures.ts": "bee3c3d99213ac9c5031c7df5450c7880bf03c4df44a1090429f493214613e45",
+    "server/db/ddl/planes/neon/master/07_functions.sql": "963a6a00903157cc81bbf07442ed88ef156658615710075ebadce6ff931006d4",
+    "server/db/scripts/tests/integration/business-partner-r5-customer-controls.sql": "1fe40c0e87fadadde6e65d1159b4e9bd3cc3a8bb08177827880e407d052be937",
+    "tests/e2e/business-partner/bp-r5.spec.ts": "f1e0c9520ceb01b5653fdc4274085ceaa41cd334f7d76a4d21de26314f12fc9c",
+    "tooling/scripts/verification/verify-business-partner-r5-qualification.mjs": "2e86f530519283d0cdf574a1bed17caa6bb054b5924aa6a53d16d97d03908941"
+  },
+  "blockers": [
+    "The authenticated browser target still needs three distinct scoped actor credential pairs and four scope/fixture UUIDs. The provisioner now emits the scope/fixture UUIDs; no materialized-case UUID is required.",
+    "The disposable fixture has been applied to isolated PostgreSQL. An equivalent fixture plus Customer definition/workflow and actor authority must be deployed to the browser target.",
+    "Implement/identify the Customer portal binding and dedicated projection consumer; retain consumed projection and delivered notification receipts for the five lifecycle events.",
+    "Named NEON Master Data reviewer and retained BP-Q002 decision remain pending."
+  ]
+}

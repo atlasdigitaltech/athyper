@@ -1,0 +1,221 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.industries",
+  "entityCode": "business_partner_industry_classification",
+  "plane": "neon",
+  "sectionKey": "industries",
+  "rendererKey": "platform.related-collection.v1",
+  "emptyState": {
+    "title": "No industries declared",
+    "detail": "Business activities belong to the partner, independently of commercial roles or company usage."
+  },
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.industries.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/identity"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "business_partner_industry_classification/core.json",
+  "fieldBindings": [],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_identity.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "additionalCoreRefs": [
+    "industry_crosswalk/core.json"
+  ],
+  "dependencies": [
+    "business_partner_industry_classification/core",
+    "industry_crosswalk/core"
+  ],
+  "childCollections": [
+    {
+      "key": "industries",
+      "label": {
+        "labelKey": "entity.business_partner.classifications.industries",
+        "defaultText": "Declared industries"
+      },
+      "entityCode": "business_partner_industry_classification",
+      "coreRef": "business_partner_industry_classification/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "industry_domain_code",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.industry_system",
+            "defaultText": "Classification system"
+          }
+        },
+        {
+          "fieldKey": "industry_code",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.industry_code",
+            "defaultText": "Industry code"
+          }
+        },
+        {
+          "fieldKey": "industry_name",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.industry_name",
+            "defaultText": "Business activity"
+          }
+        },
+        {
+          "fieldKey": "is_primary",
+          "label": {
+            "labelKey": "entity.business_partner_industry_classification.core.fields.is_primary.label",
+            "defaultText": "Primary"
+          }
+        },
+        {
+          "fieldKey": "assignment_kind",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.assignment_kind",
+            "defaultText": "Declaration source"
+          }
+        },
+        {
+          "fieldKey": "verification_status",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.verification_status",
+            "defaultText": "Classification verification"
+          }
+        },
+        {
+          "fieldKey": "status",
+          "label": {
+            "labelKey": "entity.business_partner_industry_classification.core.fields.status.label",
+            "defaultText": "Status"
+          }
+        },
+        {
+          "fieldKey": "effective_from",
+          "label": {
+            "labelKey": "entity.business_partner_industry_classification.core.fields.effective_from.label",
+            "defaultText": "Effective From"
+          }
+        },
+        {
+          "fieldKey": "effective_until",
+          "label": {
+            "labelKey": "entity.business_partner_industry_classification.core.fields.effective_until.label",
+            "defaultText": "Effective Until"
+          }
+        },
+        {
+          "fieldKey": "source_system",
+          "label": {
+            "labelKey": "entity.business_partner_industry_classification.core.fields.source_system.label",
+            "defaultText": "Source System"
+          }
+        },
+        {
+          "fieldKey": "source_reference",
+          "label": {
+            "labelKey": "entity.business_partner_industry_classification.core.fields.source_reference.label",
+            "defaultText": "Source Reference"
+          }
+        }
+      ],
+      "load": "on_visible"
+    },
+    {
+      "key": "industry_crosswalk_reference_evidence",
+      "entityCode": "industry_crosswalk",
+      "coreRef": "industry_crosswalk/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "sourceDomainCode",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.mapping.source_domain_code",
+            "defaultText": "Source classification system"
+          }
+        },
+        {
+          "fieldKey": "sourceCode",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.mapping.source_code",
+            "defaultText": "Source code"
+          }
+        },
+        {
+          "fieldKey": "targetDomainCode",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.mapping.target_domain_code",
+            "defaultText": "Related classification system"
+          }
+        },
+        {
+          "fieldKey": "targetCode",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.mapping.target_code",
+            "defaultText": "Related code"
+          }
+        },
+        {
+          "fieldKey": "mappingType",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.mapping.mapping_type",
+            "defaultText": "Mapping relationship"
+          }
+        },
+        {
+          "fieldKey": "confidence",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.mapping.confidence",
+            "defaultText": "Mapping confidence"
+          }
+        },
+        {
+          "fieldKey": "provenance",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.mapping.provenance",
+            "defaultText": "Mapping source"
+          }
+        },
+        {
+          "fieldKey": "verified",
+          "label": {
+            "labelKey": "entity.business_partner.classifications.mapping.verified",
+            "defaultText": "Mapping verified"
+          }
+        }
+      ],
+      "load": "on_visible",
+      "emptyState": {
+        "title": "No crosswalk reference evidence",
+        "detail": "Reference only. The selected classification is unchanged."
+      },
+      "display": "disclosure",
+      "label": {
+        "labelKey": "entity.business_partner.classifications.related_mappings",
+        "defaultText": "Related classification mappings"
+      },
+      "description": "Reference mappings between catalog codes only. Mapping verification does not verify the partner classification. Mapped codes are not partner declarations."
+    }
+  ],
+  "artifactHash": "sha256:8bbf8ba582afdc4f29fb1404a5dbfb0528848c87ad90b76c321c8f44c6259892"
+}

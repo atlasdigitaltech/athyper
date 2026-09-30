@@ -9,7 +9,7 @@
 -- seed-natural-key: control.subscription_plan_module(subscription_plan_id,module_id)
 -- seed-cross-file-ids: true
 -- seed-id-strategy: deterministic-uuid:athyper-wave2-plan-module-v2
--- seed-expected-row-count: exact:53
+-- seed-expected-row-count: exact:65
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 -- seed-assertion: expected-count
@@ -43,8 +43,19 @@ ON CONFLICT (subscription_plan_id,module_id) DO UPDATE SET
 WHERE (control.subscription_plan_module.entitlement_mode,control.subscription_plan_module.metadata,control.subscription_plan_module.status)
   IS DISTINCT FROM (excluded.entitlement_mode,excluded.metadata,excluded.status);
 
+UPDATE control.subscription_plan_module pm SET status='deprecated',updated_at=now(),updated_by='00000000-0000-0000-0000-000000000000'::uuid
+FROM control.subscription_plan p,control.module m
+WHERE pm.subscription_plan_id=p.id AND pm.module_id=m.id AND pm.status='active'
+  AND pm.metadata #>> '{_seed,pack}'='neon.subscription-plan-modules'
+  AND NOT (
+    (p.code='erp_enterprise' AND p.status='active' AND m.status='active')
+    OR (p.code='finance_free' AND p.status='active' AND m.status='active' AND m.code IN (
+      'fnd','meta','iam','aud','pol','wfl','job','doc','ntf','int','cms','act','rel','acc'
+    ))
+  );
+
 DO $assertions$ BEGIN
-  IF (SELECT count(*) FROM control.subscription_plan_module WHERE status='active') <> 53 THEN
+  IF (SELECT count(*) FROM control.subscription_plan_module WHERE status='active') <> 65 THEN
     RAISE EXCEPTION 'neon plan-module count mismatch'; END IF;
   IF NOT EXISTS (
     SELECT 1 FROM control.subscription_plan_module pm

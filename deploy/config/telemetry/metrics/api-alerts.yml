@@ -1,0 +1,18 @@
+groups:
+  - name: athyper_api_health
+    interval: 30s
+    rules:
+      - alert: ApiHighErrorRate
+        expr: |
+          (
+            sum by (instance, environment, method, route) (rate(athyper_http_errors_total{service="api"}[5m]))
+            /
+            clamp_min(sum by (instance, environment, method, route) (rate(athyper_http_request_duration_seconds_count{service="api"}[5m])), 0.001)
+          ) > 0.05
+          and on (instance, environment, method, route)
+          sum by (instance, environment, method, route) (rate(athyper_http_request_duration_seconds_count{service="api"}[5m])) > 1
+        for: 5m
+        labels: { severity: warning, service: api, team: platform }
+        annotations:
+          summary: "API error rate above 5% ({{ $labels.route }})"
+          description: "API 5xx responses exceed 5% for five minutes at more than one request per second."

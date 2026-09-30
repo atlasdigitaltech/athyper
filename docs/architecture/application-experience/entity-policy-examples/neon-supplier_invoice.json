@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "neon.business-context.entity-policy",
+  "status": "draft_for_analysis",
+  "plane": "neon",
+  "entity": {
+    "code": "supplier_invoice",
+    "class": "document",
+    "displayName": "Supplier Invoice"
+  },
+  "scope": {
+    "kind": "company",
+    "globalLegalEntityEffect": "limits_eligible_company_codes",
+    "recordOwnership": {
+      "tenantId": "required",
+      "legalEntityId": "derived_from_company_code",
+      "companyCodeId": "required",
+      "operatingOrganizationId": "required"
+    },
+    "organizationEligibility": {
+      "assignment": "active_effective_company_assignment_required",
+      "requiredCapability": "procurement",
+      "profile": "procurement_organization_profile_required",
+      "serverValidation": "validateNeonBusinessContext"
+    }
+  },
+  "workspace": {
+    "globalSelector": "legal_entity",
+    "workspaceContext": {
+      "companyCode": "required",
+      "operatingOrganization": "required"
+    },
+    "selectionOrder": ["legalEntity", "companyCode", "operatingOrganization"],
+    "standardView": "my_documents",
+    "supportedViews": ["my_documents", "my_team", "shared_with_me", "all_accessible"],
+    "aggregateMode": {
+      "supported": false,
+      "reason": "A supplier invoice always has one accounting Company Code and one responsible Operating Organization."
+    }
+  },
+  "defaults": {
+    "resolutionOrder": [
+      "explicit_page_intent",
+      "compatible_workspace_context",
+      "valid_profile_default",
+      "valid_tenant_domain_default",
+      "unique_eligible_combination",
+      "user_selection"
+    ],
+    "dependentValuesToRevalidate": [
+      "currency",
+      "invoice_numbering",
+      "tax_and_accounting_policy",
+      "supplier_eligibility",
+      "payment_terms",
+      "workflow_routing"
+    ]
+  },
+  "actions": {
+    "read": {
+      "permission": "neon.supplier_invoice.read",
+      "requiredCoordinates": ["legalEntityId", "companyCodeId", "operatingOrganizationId"]
+    },
+    "create": {
+      "permission": "neon.supplier_invoice.create",
+      "requiredCoordinates": ["legalEntityId", "companyCodeId", "operatingOrganizationId"],
+      "requiredCapability": "procurement",
+      "contextValidation": "validateNeonBusinessContext"
+    },
+    "submit": {
+      "permission": "neon.supplier_invoice.submit",
+      "requiredCoordinates": ["legalEntityId", "companyCodeId", "operatingOrganizationId"],
+      "contextValidation": "persisted_record_context_and_current_authorization"
+    }
+  },
+  "draftContextChanges": {
+    "allowed": true,
+    "until": "before_submission",
+    "effect": "Revalidate all dependent values and clear only values incompatible with the new Company Code / Operating Organization pair.",
+    "afterSubmission": "correction_or_cancellation_process_required"
+  },
+  "authorization": {
+    "clientMetadataMayGrantAccess": false,
+    "serverIsAuthoritative": true,
+    "recordContextIsImmutableByGlobalSelector": true
+  }
+}

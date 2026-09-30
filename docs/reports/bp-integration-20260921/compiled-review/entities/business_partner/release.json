@@ -1,0 +1,908 @@
+{
+  "schema": "athyper.entity-release-envelope/2.0-draft",
+  "contractStatus": "unsigned_review_only",
+  "artifactType": "release_envelope",
+  "releaseId": "bp-prototype-review-1",
+  "publicationKey": "neon.business_partner.aggregate",
+  "releaseNo": 1,
+  "supersedesReleaseId": null,
+  "targetPlanes": [
+    "neon"
+  ],
+  "scope": {
+    "kind": "package_baseline",
+    "tenantOverrideResolution": "compile_separate_effective_artifact_set"
+  },
+  "activation": {
+    "mode": "atomic_head_compare_and_swap",
+    "expectedPreviousReleaseId": null,
+    "validateAllDependencies": true,
+    "validateHandlerPermissionAndRendererRegistry": true,
+    "validatePhysicalSchema": true,
+    "rejectMissingOrUnknownRequiredArtifact": true,
+    "rollback": "explicit_new_activation_of_verified_retained_set",
+    "inFlightReads": "pin_release_for_entire_request",
+    "openUI": "pin_release_until_explicit_refresh",
+    "commands": "verify_release_and_record_version_reauthorize_current_actor",
+    "requiredChecks": [
+      "offline_artifact_validation",
+      "live_neon_storage_catalog_match"
+    ],
+    "liveSchemaCheck": {
+      "command": "python3 docs/architecture/application-experience/entity-policy-examples/New_Entity/verify_live_schema.py",
+      "missingDatabaseAccess": "block",
+      "schemaMismatch": "block",
+      "evidenceScope": "target_environment_and_release_hash"
+    },
+    "validateEvaluatorRegistry": true
+  },
+  "externalDependencies": [
+    {
+      "serviceKey": "neon.bp.governed-materialization.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "neon.business-context.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "neon.evaluator-registry.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.attachments.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.audit.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.comments.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.document-render.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.entity-snapshot.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.numbering.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.workflow.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    }
+  ],
+  "hashing": {
+    "algorithm": "sha256",
+    "canonicalization": "python-json-sort-keys-compact-utf8-v1",
+    "artifactExcludes": [
+      "artifactHash"
+    ],
+    "envelopeExcludes": [
+      "releaseHash",
+      "signature"
+    ],
+    "productionRequirement": "standardize_cross_language_canonicalization_before_signing"
+  },
+  "runtimeCompatibility": {
+    "consumerContract": "compiled-entity/2.0",
+    "minimumCompiler": "2.0.0-proposed",
+    "currentRuntimeCompatible": false
+  },
+  "artifactHash": "sha256:0d62291f8e183b59c41bac2b62419916692122a8070290c897aa82c4d0a95fe8",
+  "signature": {
+    "algorithm": "",
+    "keyId": "",
+    "value": ""
+  },
+  "artifacts": [
+    {
+      "artifactKey": "address_link/core",
+      "artifactType": "core",
+      "entityCode": "address_link",
+      "ref": "address_link/core.json",
+      "hash": "sha256:07c456016f258718fd3a727c041445d5000ecf0002ae97a02eea6cc533cde046"
+    },
+    {
+      "artifactKey": "address_link/operation",
+      "artifactType": "operation",
+      "entityCode": "address_link",
+      "ref": "address_link/operation.json",
+      "hash": "sha256:8c95e607d8c1c07df597fc2baf57f5cbe48a1825492dc7f5428f1962f126d5d1"
+    },
+    {
+      "artifactKey": "address/core",
+      "artifactType": "core",
+      "entityCode": "address",
+      "ref": "address/core.json",
+      "hash": "sha256:c400650d5e7621d87146faa84de3ad6601736047bd8e3359b940ae96d7b231d4"
+    },
+    {
+      "artifactKey": "address/operation",
+      "artifactType": "operation",
+      "entityCode": "address",
+      "ref": "address/operation.json",
+      "hash": "sha256:75694f8e49ee6073241ab23530cc6279fa2464d0692c7dbee6c0ca8ccab9ff54"
+    },
+    {
+      "artifactKey": "address/presentation.section",
+      "artifactType": "presentation_section",
+      "entityCode": "address",
+      "ref": "address/presentation.section.json",
+      "hash": "sha256:73c6717cd47042096b96291c2aa38e52d8e7160d13a4bf65a21c23dd2bc99645"
+    },
+    {
+      "artifactKey": "bank_branch/core",
+      "artifactType": "core",
+      "entityCode": "bank_branch",
+      "ref": "bank_branch/core.json",
+      "hash": "sha256:6a1514aa8301b46bb5df3906cd516f93c0846850ec4663d33e3e930ae1efa333"
+    },
+    {
+      "artifactKey": "bank_identifier/core",
+      "artifactType": "core",
+      "entityCode": "bank_identifier",
+      "ref": "bank_identifier/core.json",
+      "hash": "sha256:ae7d34fac10d91b2d42e1b1ee112ba9ee0577c46b03e2d359ed9f1958076d9b4"
+    },
+    {
+      "artifactKey": "bank_institution/core",
+      "artifactType": "core",
+      "entityCode": "bank_institution",
+      "ref": "bank_institution/core.json",
+      "hash": "sha256:4e73d32193b7e32dcf6fff74ea0a2312c26c894034b2b0515f6569c0135ba1aa"
+    },
+    {
+      "artifactKey": "business_partner_alias/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_alias",
+      "ref": "business_partner_alias/core.json",
+      "hash": "sha256:cc0024faf6a9fa5c5737fa214c795b2b96728db49641a3c3ef353d0bd01bcc85"
+    },
+    {
+      "artifactKey": "business_partner_alias/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_alias",
+      "ref": "business_partner_alias/operation.json",
+      "hash": "sha256:4e506005b8ee16e4d1368acd8b546ec0f18f8f4133d390c221af5e04ad7efadb"
+    },
+    {
+      "artifactKey": "business_partner_banking/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_banking",
+      "ref": "business_partner_banking/core.json",
+      "hash": "sha256:8e56417ae9952448b177693d573a72ce247852a31365ab265fb344ceada406be"
+    },
+    {
+      "artifactKey": "business_partner_banking/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_banking",
+      "ref": "business_partner_banking/operation.json",
+      "hash": "sha256:a87740ca82d6fc7e1ea615f5b1943a0c35b86622b890514b560892a6e9af55b6"
+    },
+    {
+      "artifactKey": "business_partner_commodity_capability/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_commodity_capability",
+      "ref": "business_partner_commodity_capability/core.json",
+      "hash": "sha256:5050f0d64ac7611de394204d70ccd33ca312b2014785f3e89fd19eab22ddb1c9"
+    },
+    {
+      "artifactKey": "business_partner_commodity_capability/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_commodity_capability",
+      "ref": "business_partner_commodity_capability/operation.json",
+      "hash": "sha256:e70f1c3b1787b5c40442f958938207100d2ff1b22d781dda866c5170bee9988c"
+    },
+    {
+      "artifactKey": "business_partner_governance_relation/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_governance_relation",
+      "ref": "business_partner_governance_relation/core.json",
+      "hash": "sha256:b0d5626933a0feb5f1400e4ca88fa3375409aa71c3c9cd03571bbe9bec76551d"
+    },
+    {
+      "artifactKey": "business_partner_governance_relation/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_governance_relation",
+      "ref": "business_partner_governance_relation/operation.json",
+      "hash": "sha256:00d3f47b1492ff7f4980eb263ba596e52f3a1eff928a49db6e047649e4798b7f"
+    },
+    {
+      "artifactKey": "business_partner_identifier/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_identifier",
+      "ref": "business_partner_identifier/core.json",
+      "hash": "sha256:624924ca8441088e17c4c636057fdc4dccaf78344eecab51c445f495879557c1"
+    },
+    {
+      "artifactKey": "business_partner_identifier/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_identifier",
+      "ref": "business_partner_identifier/operation.json",
+      "hash": "sha256:8a2b3ec821b7da5bf93ecb74fcb8cb0a946ed6fed91c6b7e6ce62f55232bdfcb"
+    },
+    {
+      "artifactKey": "business_partner_industry_classification/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_industry_classification",
+      "ref": "business_partner_industry_classification/core.json",
+      "hash": "sha256:9c1cdd6e3be964a9018a20b60fdf67a36efd2664f59c977fedb9dc009fb0fcc8"
+    },
+    {
+      "artifactKey": "business_partner_industry_classification/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_industry_classification",
+      "ref": "business_partner_industry_classification/operation.json",
+      "hash": "sha256:c2480eb406b3ca8dccb9ec2dd7eba290e0551a6a29735285886cd58d5b4a030b"
+    },
+    {
+      "artifactKey": "business_partner_operating_organization_assignment/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_operating_organization_assignment",
+      "ref": "business_partner_operating_organization_assignment/core.json",
+      "hash": "sha256:c966d6e649ad1a522727a745831afb1345e688816614c239fe5b9ed6d47b7482"
+    },
+    {
+      "artifactKey": "business_partner_operating_organization_assignment/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_operating_organization_assignment",
+      "ref": "business_partner_operating_organization_assignment/operation.json",
+      "hash": "sha256:c3a9b259c917f11f0d85e3dece33495ce195c0bdcdcfe12e45ecfa9f673f0d87"
+    },
+    {
+      "artifactKey": "business_partner_qualification/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_qualification",
+      "ref": "business_partner_qualification/core.json",
+      "hash": "sha256:314fae4e5a952e6e04c687b361fad877c09972df93962f1298df8c90e93ca3f3"
+    },
+    {
+      "artifactKey": "business_partner_qualification/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_qualification",
+      "ref": "business_partner_qualification/operation.json",
+      "hash": "sha256:ec4f7739197f639717f11647589dc218c75854aa7b31aaa333d9b02debf81fc0"
+    },
+    {
+      "artifactKey": "business_partner_relationship/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_relationship",
+      "ref": "business_partner_relationship/core.json",
+      "hash": "sha256:fa369bbefc8014a89296f6b12ae7a18c2d86f59c76a9a33f6c357eecd3667de7"
+    },
+    {
+      "artifactKey": "business_partner_relationship/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_relationship",
+      "ref": "business_partner_relationship/operation.json",
+      "hash": "sha256:af52621b9e2450096cdb91c452b24639ffc90b14984a66aa8ae99f7ac7fb2be2"
+    },
+    {
+      "artifactKey": "business_partner_request/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/core.json",
+      "hash": "sha256:7cdc514e45eb4880676b49aecf9308aa4076fe0f2bd03ed873d7e0a0778157d2"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.base",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.base.json",
+      "hash": "sha256:f90a6c76f91763c37dfa461fdb9296150b2c9997792116876c085c6ea26ed2e0"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.add",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.customer.add.json",
+      "hash": "sha256:38f2e9e3ec5e71f02fee5e6b4a09ca21dff0ed90cbc9a07037f10098f91c34f6"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.company",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.customer.company.json",
+      "hash": "sha256:403b282f65a60009a443805fb532c1d35af216e5f05de43a742658c1609348c2"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.credit",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.customer.credit.json",
+      "hash": "sha256:834863df91af78b98e79e7259dea90d3ddbc00f17b7b3f2ab1cb88a562a47790"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.new",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.customer.new.json",
+      "hash": "sha256:694912836f9d0240185b4d47a86bd1dbd912a39186b22b1e483f4b12ce6438df"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.amend",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.partner.amend.json",
+      "hash": "sha256:6c6392534125467c2c1971f4d17261c4f97e37113deb35b7896ce1bfb2f84663"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.archive",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.partner.archive.json",
+      "hash": "sha256:d327aa60ee6a58b0ac5d1691338a8034e4e1da89efe6fd9880547fbad2bb9535"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.assign",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.partner.assign.json",
+      "hash": "sha256:cc45c058abec98b3222f0523989ce27b2080c1d19a9efab70f3b733e7dd44408"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.deactivate",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.partner.deactivate.json",
+      "hash": "sha256:03b63a4b26c34abde4359f8d0b1efcce10391afb5bc4316ebd1b3f2896ae6049"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.reactivate",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.partner.reactivate.json",
+      "hash": "sha256:9f534fdbf1dad73575fe09a5b17e83ad713a574ad715e8a8daa62ff619f7cdfa"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.activate",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.supplier.activate.json",
+      "hash": "sha256:b9b8883f8a9407405a89d3b58e9587d8cded2f247d7bc005281816406a012d9b"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.add",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.supplier.add.json",
+      "hash": "sha256:9d5e6e4adf377c56f08b67524fa1d1b8a7b32f2e40f117ec9c2a82e4f6dba42a"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.bank",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.supplier.bank.json",
+      "hash": "sha256:aadd5c92cea81d9d8d8c0bbb03ab30bbec6912d18204e7c85b82372c30da46ea"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.company",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.supplier.company.json",
+      "hash": "sha256:578eb55341fe7d81bdb5677c933169fa173c68e223eb25c89799fecabbba39ee"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.new",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.supplier.new.json",
+      "hash": "sha256:096153240821431b74c7acc39a3309dd6ad51102eeff9affc5b98d2b2badc7cf"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.qualify",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.supplier.qualify.json",
+      "hash": "sha256:246cf97f33ea6bb4fcd8a3310dd1e1d0a1260d176fcaf50afa140358023dfbf8"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.add",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.workforce.add.json",
+      "hash": "sha256:16c4a137b72d32532b5cb718847ec4da0db0f2416fe05dfbfc1bd77883e311d5"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.change",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.workforce.change.json",
+      "hash": "sha256:ec8ad5625fdf8dc2e432c35f2e91bdbc735e397c3894d27249ecadcc1d2cd976"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.new",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.workforce.new.json",
+      "hash": "sha256:d4a3380c3e0c2545b2237634476138a0f1ee649e8d8bc662335ab3c7e088c36f"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.offboard",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.workforce.offboard.json",
+      "hash": "sha256:7d144f1de530136a48e61d801b5ea78a2952ffda96c8fe404833ac94de159a16"
+    },
+    {
+      "artifactKey": "business_partner_request/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/operation.json",
+      "hash": "sha256:88b05474dab21ce572b2fc2add8a6a145ac0b64f5cae7a457e23217a4de4db78"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.detail",
+      "artifactType": "presentation_surface",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.detail.json",
+      "hash": "sha256:e296ec331047298addbf9a6e238edcbd03f42b57d3e43c081567d65710ec729f"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.list",
+      "artifactType": "presentation_surface",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.list.json",
+      "hash": "sha256:bc211721fab590d1a6c24ae2c969f649db3d731fd05443af214253b2fa731e42"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.review",
+      "artifactType": "presentation_surface",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.review.json",
+      "hash": "sha256:77df918f4e099022a4a1ae001f5d2cb61e09c055d56af21bb555e9a9e041a508"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.capture",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.section.capture.json",
+      "hash": "sha256:86ce6da2a8bd41b5a7d5f963511a8ac64e167bb539c73b9d459156ceda96a45c"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.evidence",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.section.evidence.json",
+      "hash": "sha256:b83b048f07c5c5ee3cd1940810cdd66a6dd417a8290bae8385c274ac31f910d7"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.customerCredit",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.section.form.customerCredit.json",
+      "hash": "sha256:811e9fc1759883d30c0a8687e280079fa2c1ec70f1ab08c3d3ae23cb33b01c31"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.request",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.section.form.request.json",
+      "hash": "sha256:ee4f28fa7b9d6b363e727e27ac69cf0b77bda92729c203c25217ed667cabdde3"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.supplierQualification",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.section.form.supplierQualification.json",
+      "hash": "sha256:8cda418449baee6534e082aeba699a7f9f09cfbc7a9a5c7c9083ea7ee1854d19"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.supplierRequest",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.section.form.supplierRequest.json",
+      "hash": "sha256:103fd7e5c65d372c23cd23472f0e1a481ffaf080f81cb59a74d75a280cdbca9b"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.workforceReview",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/presentation.section.form.workforceReview.json",
+      "hash": "sha256:d8defc7220d1de6bcda52530b3bac40da326386665148a6f8d9179284ba6dec4"
+    },
+    {
+      "artifactKey": "business_partner_tax_registration/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_tax_registration",
+      "ref": "business_partner_tax_registration/core.json",
+      "hash": "sha256:bf05178bc34f75f000a1c668b816d31d874b82cbb7236eb535ddd221be56c442"
+    },
+    {
+      "artifactKey": "business_partner_tax_registration/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner_tax_registration",
+      "ref": "business_partner_tax_registration/operation.json",
+      "hash": "sha256:f9b2d1609951fa0eb89e283256426a02fef5527f272eb3e16c0bfe2b3dcef360"
+    },
+    {
+      "artifactKey": "business_partner/core",
+      "artifactType": "core",
+      "entityCode": "business_partner",
+      "ref": "business_partner/core.json",
+      "hash": "sha256:a68fbbbd3c578daac7f23ae8761700e2a2545a99b19e8c9b7fc3dd8a8b6e1271"
+    },
+    {
+      "artifactKey": "business_partner/flow.intake",
+      "artifactType": "flow",
+      "entityCode": "business_partner",
+      "ref": "business_partner/flow.intake.json",
+      "hash": "sha256:6ed94cc8c9324382583088b6c49b65104aff06064135c559c2973a08d9e30fcd"
+    },
+    {
+      "artifactKey": "business_partner/operation",
+      "artifactType": "operation",
+      "entityCode": "business_partner",
+      "ref": "business_partner/operation.json",
+      "hash": "sha256:4b1766a5e243304cced9277d7874dcbc86eefd89dccd4cf70485bb6f3b944032"
+    },
+    {
+      "artifactKey": "business_partner/presentation.detail",
+      "artifactType": "presentation_surface",
+      "entityCode": "business_partner",
+      "ref": "business_partner/presentation.detail.json",
+      "hash": "sha256:9f4e5e413fc87d75a90c5b510b157bce0b7b2fb6cb8b9dd83910cddf92260362"
+    },
+    {
+      "artifactKey": "business_partner/presentation.list",
+      "artifactType": "presentation_surface",
+      "entityCode": "business_partner",
+      "ref": "business_partner/presentation.list.json",
+      "hash": "sha256:ecfff25ebfdc44a07d8945686c96a1de85c18be79db75deafc6f9f5872e32638"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.activity",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner",
+      "ref": "business_partner/presentation.section.activity.json",
+      "hash": "sha256:f5c8e6b97b1b68c2b8a6f33bc0836b211fab490d9e6a469af73b5bd8efb943a9"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.addresses",
+      "artifactType": "presentation_section",
+      "entityCode": "address_link",
+      "ref": "business_partner/presentation.section.addresses.json",
+      "hash": "sha256:d68ce7cf3e91ba1679845539d182f605c2c0bf55740c810c23fc6a28ddda9d1e"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.attachments",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner",
+      "ref": "business_partner/presentation.section.attachments.json",
+      "hash": "sha256:8c9682da244e64b2f363c9399dec80bc84ab5ab1d5d533ccecd620b64d23a74e"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.banking",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_banking",
+      "ref": "business_partner/presentation.section.banking.json",
+      "hash": "sha256:0ee27dc9e0ba9e50734eae7188700a4047c84c898cc637da4a4ea7ef70eddb22"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.business-activity",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner",
+      "ref": "business_partner/presentation.section.business-activity.json",
+      "hash": "sha256:285c460f739e873205c8c80fb4326ba9a2d94e29926f7da2c2e2d97cf7d00cf4"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.comments",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner",
+      "ref": "business_partner/presentation.section.comments.json",
+      "hash": "sha256:e58ab9f30fa458af2b93f87937d4d096614e9c1be48a8c2e559ce4719a1e8fd1"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.contacts",
+      "artifactType": "presentation_section",
+      "entityCode": "contact_person",
+      "ref": "business_partner/presentation.section.contacts.json",
+      "hash": "sha256:24c103560160fee3ca64f76e394e32ab960a762f7aae412cc718ef0aa5c85bf3"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.credit",
+      "artifactType": "presentation_section",
+      "entityCode": "customer",
+      "ref": "business_partner/presentation.section.credit.json",
+      "hash": "sha256:ec585003bee890d858303255970e2abaed783109cf87f699851c158323d9222f"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.customer-company",
+      "artifactType": "presentation_section",
+      "entityCode": "customer_company_profile",
+      "ref": "business_partner/presentation.section.customer-company.json",
+      "hash": "sha256:9e610d46ce72fa1952edc847ba01af824fd851b14b051673af3c198c9b840013"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.identifiers-tax",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_identifier",
+      "ref": "business_partner/presentation.section.identifiers-tax.json",
+      "hash": "sha256:c93c8380cbf190bb0d21dd05ba31345ee8af02d346fa221df834042a4aa962a8"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.identity",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner",
+      "ref": "business_partner/presentation.section.identity.json",
+      "hash": "sha256:3c506fa817231afe44b3c3b3aa59772d2a451ec183f0d224596b9b4f959b5412"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.network",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner",
+      "ref": "business_partner/presentation.section.network.json",
+      "hash": "sha256:fc03361b06ea83f5aa1064e65f4ae310b8a5762fa789c19cadd70724975f7763"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.overview",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner",
+      "ref": "business_partner/presentation.section.overview.json",
+      "hash": "sha256:ae1d113de218f246d7dd4d473eb3094f6af73a4045f69923b86b85431588a554"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.qualifications-certificates",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_qualification",
+      "ref": "business_partner/presentation.section.qualifications-certificates.json",
+      "hash": "sha256:02dbdcd9d683c2ba3eb61c4a318d1fc36e28ac3ac515ee570d5f30d91ee6df34"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.requests",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner/presentation.section.requests.json",
+      "hash": "sha256:b956aaded32a71271de6add42b3089d2455b8454fa98e8e8694ca1871a85fecb"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.roles-scope",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_operating_organization_assignment",
+      "ref": "business_partner/presentation.section.roles-scope.json",
+      "hash": "sha256:2693ff6dd640e902b80f4bf4471f87dcfb0142ee7203f374d6d1886dc5960513"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.supplier-company",
+      "artifactType": "presentation_section",
+      "entityCode": "supplier_company_profile",
+      "ref": "business_partner/presentation.section.supplier-company.json",
+      "hash": "sha256:d2d9c4f97ea9d7e5f522c4bf9a6bc74687d3ba3c171337b7577b416d855df9ad"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.workforce",
+      "artifactType": "presentation_section",
+      "entityCode": "workforce",
+      "ref": "business_partner/presentation.section.workforce.json",
+      "hash": "sha256:7ed498fc3f9293ce0947a7eb23376d1ff3bc35ab4872f0738385b230cbc9e319"
+    },
+    {
+      "artifactKey": "certification/core",
+      "artifactType": "core",
+      "entityCode": "certification",
+      "ref": "certification/core.json",
+      "hash": "sha256:3b2eb2df4613c95c5a0153f156763a58bd6d73cee31fadbba516056c107f631c"
+    },
+    {
+      "artifactKey": "certification/operation",
+      "artifactType": "operation",
+      "entityCode": "certification",
+      "ref": "certification/operation.json",
+      "hash": "sha256:84c2e0954f699ce07e8d109cfc39751d162b4349c98ec28164fe24f4632a096a"
+    },
+    {
+      "artifactKey": "classification_scheme/core",
+      "artifactType": "core",
+      "entityCode": "classification_scheme",
+      "ref": "classification_scheme/core.json",
+      "hash": "sha256:3ab5d0ccde94aab1344de9e96d38fb3cfb5974f6a0700a066c07c0bf0a33dfdf"
+    },
+    {
+      "artifactKey": "commodity_code/core",
+      "artifactType": "core",
+      "entityCode": "commodity_code",
+      "ref": "commodity_code/core.json",
+      "hash": "sha256:185379724c9fd02a91c0b61353df60773020589c71436602879369ac0f4f1429"
+    },
+    {
+      "artifactKey": "commodity_crosswalk/core",
+      "artifactType": "core",
+      "entityCode": "commodity_crosswalk",
+      "ref": "commodity_crosswalk/core.json",
+      "hash": "sha256:67bc29da4cacfd683ef4261aafe5d4fab1cfaa049b94043eebab13b276620f3c"
+    },
+    {
+      "artifactKey": "contact_channel/core",
+      "artifactType": "core",
+      "entityCode": "contact_channel",
+      "ref": "contact_channel/core.json",
+      "hash": "sha256:617cf461d135b13988e77b8d60265b8f74385b5762435817aeb51caa3168607e"
+    },
+    {
+      "artifactKey": "contact_person_role/core",
+      "artifactType": "core",
+      "entityCode": "contact_person_role",
+      "ref": "contact_person_role/core.json",
+      "hash": "sha256:9c5cdab64a3450748c1932198ea9fde10c70cfab9128a852ba2a7c94b4578d47"
+    },
+    {
+      "artifactKey": "contact_person/core",
+      "artifactType": "core",
+      "entityCode": "contact_person",
+      "ref": "contact_person/core.json",
+      "hash": "sha256:1cdc3fdbd099a453092ff6fe01cc4edde64f15bd6c2feffa77adbd03ef156944"
+    },
+    {
+      "artifactKey": "contact_person/operation",
+      "artifactType": "operation",
+      "entityCode": "contact_person",
+      "ref": "contact_person/operation.json",
+      "hash": "sha256:1ec165ba9e19b76cc41e184774ad03f684ed9eed02b2735d02cbf27b7233777a"
+    },
+    {
+      "artifactKey": "country/core",
+      "artifactType": "core",
+      "entityCode": "country",
+      "ref": "country/core.json",
+      "hash": "sha256:d7ec514519bf56c39fad43c9d12effc114c1de33cb1a534231ba9af004292a16"
+    },
+    {
+      "artifactKey": "currency/core",
+      "artifactType": "core",
+      "entityCode": "currency",
+      "ref": "currency/core.json",
+      "hash": "sha256:b16ed0896b80e5db1669ed785d14833eb36c57dbb9329e0898a15f43c25c63f1"
+    },
+    {
+      "artifactKey": "customer_company_profile/core",
+      "artifactType": "core",
+      "entityCode": "customer_company_profile",
+      "ref": "customer_company_profile/core.json",
+      "hash": "sha256:2362bd1ceabce04f5b1a5ec8044b6baaacaf31012f64139d7ca4415051e6c7e8"
+    },
+    {
+      "artifactKey": "customer_company_profile/operation",
+      "artifactType": "operation",
+      "entityCode": "customer_company_profile",
+      "ref": "customer_company_profile/operation.json",
+      "hash": "sha256:c0abe40ea3a872d7a68af69647a6a323cbfc735d555b1327af1235bccadc53e8"
+    },
+    {
+      "artifactKey": "customer/core",
+      "artifactType": "core",
+      "entityCode": "customer",
+      "ref": "customer/core.json",
+      "hash": "sha256:b1a719235a8476179864d837309fd21284eba6838e2644aead850060348b213a"
+    },
+    {
+      "artifactKey": "customer/operation",
+      "artifactType": "operation",
+      "entityCode": "customer",
+      "ref": "customer/operation.json",
+      "hash": "sha256:2f6425d74e486e838d9e8af693e3c947eb1449e6d5e10c94a2d0d41449e3fcae"
+    },
+    {
+      "artifactKey": "industry_code/core",
+      "artifactType": "core",
+      "entityCode": "industry_code",
+      "ref": "industry_code/core.json",
+      "hash": "sha256:d3eacf8331b4182b486136a5301b27110c2a66dc14444dad4a610fdbc2d2c0d3"
+    },
+    {
+      "artifactKey": "industry_crosswalk/core",
+      "artifactType": "core",
+      "entityCode": "industry_crosswalk",
+      "ref": "industry_crosswalk/core.json",
+      "hash": "sha256:048904284e75d3bbb3c6b7ac4d9998bcd7f430d62115ff3f4903f5fb5bb78cf8"
+    },
+    {
+      "artifactKey": "language/core",
+      "artifactType": "core",
+      "entityCode": "language",
+      "ref": "language/core.json",
+      "hash": "sha256:f272ee14eb343a78ab3908d716f69bde519e9caed9b6c13555c12150e2be8296"
+    },
+    {
+      "artifactKey": "locale/core",
+      "artifactType": "core",
+      "entityCode": "locale",
+      "ref": "locale/core.json",
+      "hash": "sha256:c21f1fa65b5c56f4fa2bb2613f98cd57117eb293b4ad1df5574cd336891680c4"
+    },
+    {
+      "artifactKey": "platform/core-field-defaults.v1",
+      "artifactType": "core",
+      "entityCode": "platform.core_field_defaults",
+      "ref": "platform/core-field-defaults.v1.json",
+      "hash": "sha256:562eb3e2bdfe414092679dfb6537199e07785c20cc97177f717afd2807c72e24"
+    },
+    {
+      "artifactKey": "platform/governed-child-operation.v1",
+      "artifactType": "core",
+      "entityCode": "platform.governed_child_operation",
+      "ref": "platform/governed-child-operation.v1.json",
+      "hash": "sha256:570055c27a9ac830ca3b22069c8e10ee046f4cc9399de9cbd721a070bed640da"
+    },
+    {
+      "artifactKey": "state_region/core",
+      "artifactType": "core",
+      "entityCode": "state_region",
+      "ref": "state_region/core.json",
+      "hash": "sha256:4d21055ec43cda15a0141c4c42512e36e60a4e15960ddd20e0bcb16551f0d0c6"
+    },
+    {
+      "artifactKey": "supplier_company_profile/core",
+      "artifactType": "core",
+      "entityCode": "supplier_company_profile",
+      "ref": "supplier_company_profile/core.json",
+      "hash": "sha256:7295d20d3fbd1182c6b1d4493a54d0e3a46c2148d65f0f3c9edf4f25f1ad31ee"
+    },
+    {
+      "artifactKey": "supplier_company_profile/operation",
+      "artifactType": "operation",
+      "entityCode": "supplier_company_profile",
+      "ref": "supplier_company_profile/operation.json",
+      "hash": "sha256:6a8b1f2bbef269a43f1fbe1e5359426a5abf946c6191a4239ee5ab2ab5e2e575"
+    },
+    {
+      "artifactKey": "supplier/core",
+      "artifactType": "core",
+      "entityCode": "supplier",
+      "ref": "supplier/core.json",
+      "hash": "sha256:3064fa07430671e3507b6dc74927c921bf228e0af364bd1140e16e137ba7ba7f"
+    },
+    {
+      "artifactKey": "supplier/operation",
+      "artifactType": "operation",
+      "entityCode": "supplier",
+      "ref": "supplier/operation.json",
+      "hash": "sha256:c28557fffebe10fa8e94afc36da5185c01466beeb911515d04fa82b094bbba80"
+    },
+    {
+      "artifactKey": "timezone/core",
+      "artifactType": "core",
+      "entityCode": "timezone",
+      "ref": "timezone/core.json",
+      "hash": "sha256:bee37e5a3402ef89d8aa6459a65761478f741104a52c9e4bdfe8488f7f6be10a"
+    },
+    {
+      "artifactKey": "uom/core",
+      "artifactType": "core",
+      "entityCode": "uom",
+      "ref": "uom/core.json",
+      "hash": "sha256:84ec7b949afb3fa81baec3a9935dce4211bc10c4f20c0031af320d43eb725447"
+    },
+    {
+      "artifactKey": "workforce/core",
+      "artifactType": "core",
+      "entityCode": "workforce",
+      "ref": "workforce/core.json",
+      "hash": "sha256:ce7df1ed17dfce6c178b827664f49cc20be3467695f0a152452fa1a1f2e98fa0"
+    },
+    {
+      "artifactKey": "workforce/operation",
+      "artifactType": "operation",
+      "entityCode": "workforce",
+      "ref": "workforce/operation.json",
+      "hash": "sha256:6a2fb17be873f1a517eddabee7ab3cdcf6eb1aabc7343321bf10d414d0c34d4a"
+    }
+  ],
+  "releaseHash": "sha256:bc2047578e0d9199978386bd6e125d1f9385829451b3a248f2e91627bf5ed835"
+}

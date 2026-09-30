@@ -1,0 +1,34 @@
+{
+  "schema": "athyper.business-partner-v1-materialization-evidence/1",
+  "environment": "local_dev",
+  "recordedAt": "2026-09-06T03:55:05+08:00",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "case": {
+    "id": "6e7af673-1eed-440e-9630-a034d064f517",
+    "code": "BPR-F31C72D51F3E444CB970D0C70F5A7AA0",
+    "status": "materialized",
+    "rowVersion": 5
+  },
+  "approvedPayload": {
+    "requestedRole": "supplier",
+    "ownershipClass": "external",
+    "supplierType": "strategic",
+    "qualificationTypeCode": "compliance"
+  },
+  "result": {
+    "businessPartnerId": "01a07323-8f04-7056-ad1b-18f314479db2",
+    "businessPartnerStatus": "active",
+    "supplierId": "01a07323-8f04-7a14-9c73-1b4b48e62165",
+    "supplierStatus": "onboarding",
+    "qualificationId": "01a07323-8f0d-7047-a9a4-8f82b734366b",
+    "qualificationDecision": "pending",
+    "resultSnapshotId": "01a07323-8f1f-71df-b1b2-481a3c8f0768"
+  },
+  "checks": {
+    "requestValidationFindings": 15,
+    "blockingFindings": 0,
+    "makerCheckerApproval": "passed",
+    "authorizedMaterialization": "passed",
+    "normalizedQualificationCreation": "passed"
+  }
+}

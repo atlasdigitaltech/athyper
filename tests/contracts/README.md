@@ -50,6 +50,8 @@ Do not infer or add GitHub team handles from the logical-owner labels below.
 | `frontend-spine-browser-contracts.test.ts` | Browser consumers against canonical API problem, sanitized session, authorization, feature, and navigation fixtures | Contract Platform and UI Platform (joint) | Contract Platform owns wire schemas; UI Platform owns browser consumption. |
 | `frontend-spine-server-contracts.test.ts` | Server producer compatibility against the same canonical frontend spine fixtures | Contract Platform and Server Platform Host (joint) | The shared fixtures prevent an independently maintained frontend/server DTO mirror. |
 | `api-client-transport.test.ts` | Same-origin relay transport, cancellation, streaming, CSRF/idempotency, and canonical boundary parsers | Shared Platform and Contract Platform (joint) | Shared Platform owns transport behavior; Contract Platform owns the response schemas and compatibility fixtures. |
+| `business-partner-phase0-contracts.test.ts` | Native Business Partner relay inventory and server/browser compatibility for the governed case, evidence, context, and notification contracts | Business Partner, Contract Platform, and Server Master Data (joint) | The shared governed-case fixture freezes the compatibility-to-native adapter while the browser leaves the compatibility route family. |
+| `business-partner-r3-contracts.test.ts` | Restricted applicant relay and MESH-to-NEON proposal-only boundary | Business Partner, Mesh, Neon, and Contract Platform (joint) | The shared R3 fixture prevents applicant projection leaks and any direct MESH-to-master mutation path. |
 
 When a contract changes, request review from its logical owner and from each
 affected application-plane owner. A root contract can have more than one

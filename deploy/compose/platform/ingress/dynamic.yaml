@@ -1,0 +1,48 @@
+tls:
+  certificates:
+    - certFile: /run/secrets/platform-tls-certificate
+      keyFile: /run/secrets/platform-tls-private-key
+  options:
+    default:
+      minVersion: VersionTLS12
+
+http:
+  routers:
+    dev:
+      rule: HostRegexp(`[a-z0-9-]+\.dev\.athyper\.test`)
+      entryPoints: [websecure]
+      service: gateway-dev-failover
+      tls: {}
+    qa:
+      rule: HostRegexp(`[a-z0-9-]+\.qa\.athyper\.test`)
+      entryPoints: [websecure]
+      service: gateway-qa-failover
+      tls: {}
+    stg:
+      rule: HostRegexp(`[a-z0-9-]+\.stg\.athyper\.test`)
+      entryPoints: [websecure]
+      service: gateway-stg-failover
+      tls: {}
+  services:
+    gateway-dev-failover:
+      failover: { healthCheck: {}, service: gateway-dev, fallback: platform-outage }
+    gateway-dev:
+      loadBalancer:
+        healthCheck: { path: /ping, port: 8082, interval: 10s, timeout: 3s }
+        servers: [{ url: http://gateway-dev:8080 }]
+    gateway-qa-failover:
+      failover: { healthCheck: {}, service: gateway-qa, fallback: platform-outage }
+    gateway-qa:
+      loadBalancer:
+        healthCheck: { path: /ping, port: 8082, interval: 10s, timeout: 3s }
+        servers: [{ url: http://gateway-qa:8080 }]
+    gateway-stg-failover:
+      failover: { healthCheck: {}, service: gateway-stg, fallback: platform-outage }
+    gateway-stg:
+      loadBalancer:
+        healthCheck: { path: /ping, port: 8082, interval: 10s, timeout: 3s }
+        servers: [{ url: http://gateway-stg:8080 }]
+    platform-outage:
+      loadBalancer:
+        healthCheck: { path: /healthz, interval: 10s, timeout: 3s }
+        servers: [{ url: http://platform-outage:8080 }]

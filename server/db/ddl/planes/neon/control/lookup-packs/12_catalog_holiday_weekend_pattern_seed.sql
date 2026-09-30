@@ -23,7 +23,7 @@ END $guard$;
 INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
-  ('master.holiday_weekend_pattern', 'Holiday Calendar Weekend Pattern', 'Which days are non-working weekends in a calendar (sat_sun, fri_sat, fri_only, sat_only, sun_only, thu_fri). is_extensible=false ??? patterns are jurisdiction-defined.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('master.holiday_weekend_pattern', 'Holiday Calendar Weekend Pattern', 'Which days are non-working weekends in a calendar (sat_sun, fri_sat, fri_only, sat_only, sun_only, thu_fri). is_extensible=false — patterns are jurisdiction-defined.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,
@@ -44,7 +44,7 @@ VALUES
   ('fri_only', 'Friday Only', 'master.holiday_weekend_pattern', 'Single-day Friday weekend', NULL, 30, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('sat_only', 'Saturday Only', 'master.holiday_weekend_pattern', 'Single-day Saturday weekend', NULL, 40, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('sun_only', 'Sunday Only', 'master.holiday_weekend_pattern', 'Single-day Sunday weekend', NULL, 50, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('thu_fri', 'Thursday & Friday', 'master.holiday_weekend_pattern', 'Some Gulf states ??? Thursday & Friday weekend', NULL, 60, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('thu_fri', 'Thursday & Friday', 'master.holiday_weekend_pattern', 'Some Gulf states — Thursday & Friday weekend', NULL, 60, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (domain_code, code) WHERE tenant_id IS NULL DO UPDATE SET
   name = excluded.name, description = excluded.description, category = excluded.category,
   sort_order = excluded.sort_order, is_system = excluded.is_system,

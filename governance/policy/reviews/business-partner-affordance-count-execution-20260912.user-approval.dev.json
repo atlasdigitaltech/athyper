@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "decision": "approved",
+  "proposalRevision": "d1b9e00eceeb4becd076a4241683eba92a5c865aa10e0cde77567146135d115a",
+  "approvedAt": "2026-09-12T07:14:44.480Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "Authenticated qualification proposal d1b9e00: candidate images and 44 permission assignments in nine new groups, 15:15–16:00 MYT"
+  },
+  "effectiveUntil": "2026-09-12T08:00:00.000Z",
+  "activationAuthorized": false,
+  "compatibilityRetirementAuthorized": false
+}

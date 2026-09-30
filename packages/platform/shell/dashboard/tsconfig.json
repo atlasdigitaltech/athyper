@@ -1,4 +1,4 @@
-﻿{
+{
   "extends": "@athyper/config/tsconfig-react",
   "compilerOptions": { "noEmit": true },
   "include": ["src"],

@@ -3,7 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
+const root = resolve(fileURLToPath(new URL("../../../../../", import.meta.url)));
 const db = resolve(root, "server/db");
 const packsRoot = resolve(db, "seed/packs/blueprints-v2");
 const sha = (value: string) => createHash("sha256").update(value.replace(/\r\n?/g, "\n")).digest("hex");

@@ -1,10 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { CycleDesiredStatePayload, CycleTemplateDraft, CycleTemplateRepository, PublishCycleTemplateResult, PublishedCycleTemplate, SignedCycleDesiredStateRevision } from "@athyper/server-contract-control-admin";
 import { createExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";
 import { createCycleConfigService, cycleTemplateHash } from "./cycle-config-service.js";
 
-const context = { tenantId: "tenant-1", principalId: "principal-1", planeKey: "neon" } as VerifiedRequestContext;
+import { desiredState, validTemplate } from "./cycle-test-fixtures.js";
+
+const context = { tenantId: "00000000-0000-4000-8000-000000000001", principalId: "principal-1", planeKey: "neon" } as VerifiedRequestContext;
 const allow: Authorizer = { async authorize() { return { allowed: true }; } };
 
 describe("control-admin CycleConfigService", () => {
@@ -12,19 +14,19 @@ describe("control-admin CycleConfigService", () => {
     const service = createCycleConfigService({ authorizer: allow, repositories: provider(repository()) });
     const preview = await service.preview(context, validTemplate());
     expect(preview.valid).toBe(true);
-    expect(preview.topologicalTaskIds).toEqual(["task-a", "task-b", "task-c"]);
+    expect(preview.topologicalTaskIds).toEqual(["00000000-0000-4000-8000-000000000006", "00000000-0000-4000-8000-000000000007", "00000000-0000-4000-8000-000000000008"]);
     const reordered = validTemplate(); reordered.tasks.reverse(); reordered.dependencies.reverse();
     expect(cycleTemplateHash(reordered)).toBe(preview.templateHash);
   });
 
   it("rejects missing references, duplicate ordering, cycles, and invalid carry targets", async () => {
     const draft = validTemplate();
-    draft.phases.push({ ...draft.phases[0]!, id: "phase-2" });
-    draft.tasks[1] = { ...draft.tasks[1]!, phaseId: "missing", completionMode: "system", systemCheckHandler: undefined };
-    draft.dependencies.push({ predecessorTemplateId: "task-c", successorTemplateId: "task-a", dependencyType: "finish_to_start", isHard: true });
-    draft.carryForwardRules.push({ deviationType: "exception", action: "auto_carry", targetCycleTypeId: "missing-type" });
+    draft.phases.push({ ...draft.phases[0]!, id: "00000000-0000-4000-8000-000000000004" });
+    draft.tasks[1] = { ...draft.tasks[1]!, phaseId: "00000000-0000-4000-8000-000000000009", completionMode: "system", systemCheckHandler: undefined };
+    draft.dependencies.push({ predecessorTemplateId: "00000000-0000-4000-8000-000000000008", successorTemplateId: "00000000-0000-4000-8000-000000000006", dependencyType: "finish_to_start", isHard: true });
+    draft.carryForwardRules.push({ deviationType: "exception", action: "auto_carry", targetCycleTypeId: "00000000-0000-4000-8000-000000000010" });
     const preview = await createCycleConfigService({ authorizer: allow, repositories: provider(repository()) }).validate(context, draft);
-    expect(new Set(preview.issues.map((item) => item.code))).toEqual(expect.objectContaining(new Set(["DUPLICATE_ORDER", "MISSING_REFERENCE", "INVALID_TASK_HANDLER", "CYCLIC_DEPENDENCY", "INVALID_CARRY_FORWARD_TARGET"])));
+    expect(preview.issues.map((item) => item.code)).toEqual(expect.arrayContaining(["DUPLICATE_ORDER", "MISSING_REFERENCE", "INVALID_TASK_HANDLER", "CYCLIC_DEPENDENCY", "INVALID_CARRY_FORWARD_TARGET"]));
   });
 
   it("publishes complete immutable revisions with replay semantics", async () => {
@@ -63,8 +65,83 @@ describe("control-admin CycleConfigService", () => {
   });
 });
 
-function desiredState(): SignedCycleDesiredStateRevision { const template = validTemplate(); return { schema: "athyper.cycle-template-desired-state/1.0", desiredStateId: "desired-1", sourceBlueprintId: "blueprint-1", sourceRevision: 7, targetPlane: "neon", tenantId: context.tenantId, template, templateHash: cycleTemplateHash(template), issuedAt: "2026-08-11T00:00:00.000Z", signature: { algorithm: "Ed25519", keyId: "studio-1", value: "signed" } }; }
-function validTemplate(): Mutable<CycleTemplateDraft> { return { cycleType: { id: "cycle-type-1", code: "MONTH_END", name: "Month end", domainCode: "finance.close", frequency: "monthly", cleanCyclePolicy: {}, approvalPolicy: {}, runDataSchema: {}, taskDataSchema: {} }, phases: [{ id: "phase-1", code: "CLOSE", name: "Close", sortOrder: 1, isGateEnforced: true }], categories: [{ id: "category-1", code: "CONTROL", name: "Control", sortOrder: 1 }], tasks: [{ id: "task-a", phaseId: "phase-1", categoryId: "category-1", entityCode: "finance.close", code: "A", name: "A", completionMode: "manual", isMandatory: true, isWaivable: false, sortOrder: 1, applicability: {} }, { id: "task-b", phaseId: "phase-1", categoryId: "category-1", entityCode: "finance.close", code: "B", name: "B", completionMode: "manual", isMandatory: true, isWaivable: false, sortOrder: 2, applicability: {} }, { id: "task-c", phaseId: "phase-1", categoryId: "category-1", entityCode: "finance.close", code: "C", name: "C", completionMode: "manual", isMandatory: true, isWaivable: false, sortOrder: 3, applicability: {} }], dependencies: [{ predecessorTemplateId: "task-a", successorTemplateId: "task-c", dependencyType: "finish_to_start", isHard: true }, { predecessorTemplateId: "task-b", successorTemplateId: "task-c", dependencyType: "finish_to_start", isHard: true }], crossDependencies: [], carryForwardRules: [] }; }
-type Mutable<T> = { -readonly [K in keyof T]: T[K] extends readonly (infer U)[] ? U[] : T[K] };
 function repository(): CycleTemplateRepository { let published: PublishedCycleTemplate | undefined; let key: string | undefined; return { async externalPhaseExists() { return false; }, async cycleTypeExists() { return false; }, async publish(input): Promise<PublishCycleTemplateResult> { if (published && key === input.idempotencyKey) return { kind: "replayed", value: published }; key = input.idempotencyKey; published = { ...input.preview, id: "revision-1", tenantId: input.tenantId, version: 1, publishedAt: "2026-08-11T00:00:00.000Z", publishedBy: input.principalId }; return { kind: "published", value: published }; }, async getPublished() { return published; } }; }
 function provider(repository: CycleTemplateRepository) { return createExactPlaneRepositoryProvider({ neon: repository }); }
+
+describe("cycle configuration validation boundaries", () => {
+  const serviceFor = (store: CycleTemplateRepository = repository()) => createCycleConfigService({ authorizer: allow, repositories: provider(store) });
+  it.each([
+    { phases: [null] }, { tasks: [{}] }, { categories: "bad" }, { dependencies: [{ isHard: true }] },
+    { carryForwardRules: [{ deviationType: "exception", action: "unknown" }] }, { crossDependencies: [null] }, { unexpected: true },
+  ])("rejects malformed nested aggregate %j before publication", async fields => {
+    const store = repository(); const publish = vi.spyOn(store, "publish");
+    await expect(serviceFor(store).publish({ context, template: { ...validTemplate(), ...fields } as CycleTemplateDraft, idempotencyKey: "one" })).rejects.toMatchObject({ statusCode: 400 });
+    expect(publish).not.toHaveBeenCalled();
+  });
+  it.each([{ minimumReadinessPct: 101 }, { minimumReadinessPct: -1 }, { targetHoursFromStart: 0 }, { sortOrder: -1 }, { isGateEnforced: "yes" }])("rejects phase field bounds/types %j", async fields => {
+    const template = validTemplate();
+    template.phases[0] = { ...template.phases[0]!, ...fields } as CycleTemplateDraft["phases"][number];
+    await expect(serviceFor().preview(context, template)).rejects.toMatchObject({ statusCode: 400 });
+  });
+  it.each([null, true, "0", -1, 0.5, Number.MAX_SAFE_INTEGER])("rejects invalid expected version %s", async expectedLatestVersion => {
+    await expect(serviceFor().publish({ context, template: validTemplate(), idempotencyKey: "one", expectedLatestVersion: expectedLatestVersion as number })).rejects.toMatchObject({ statusCode: 400 });
+  });
+  it("rejects blank idempotency keys and invalid stored/read identifiers", async () => {
+    await expect(serviceFor().publish({ context, template: validTemplate(), idempotencyKey: " " })).rejects.toMatchObject({ statusCode: 400 });
+    await expect(serviceFor().readPublished(context, "not-a-uuid")).rejects.toMatchObject({ statusCode: 400 });
+    for (const version of [0, -1, 0.5, Number.MAX_SAFE_INTEGER]) await expect(serviceFor().readPublished(context, validTemplate().cycleType.id, version)).rejects.toMatchObject({ statusCode: 400 });
+  });
+  it("does not expose a task ordering for self-dependencies or duplicate IDs", async () => {
+    const template = validTemplate();
+    template.dependencies.push({ predecessorTemplateId: template.tasks[0]!.id, successorTemplateId: template.tasks[0]!.id, dependencyType: "finish_to_start", isHard: true });
+    const preview = await serviceFor().preview(context, template);
+    expect(preview).toMatchObject({ valid: false, topologicalTaskIds: [] });
+    expect(preview.issues.map(item => item.code)).toContain("SELF_DEPENDENCY");
+    template.dependencies.pop(); template.tasks.push(template.tasks[0]!);
+    await expect(serviceFor().preview(context, template)).resolves.toMatchObject({ valid: false, topologicalTaskIds: [] });
+  });
+  it("rejects duplicate and self-referencing cross-cycle edges", async () => {
+    const template = validTemplate();
+    const edge = { predecessorTypeId: template.cycleType.id, successorTypeId: template.cycleType.id, predecessorPhaseId: template.phases[0]!.id, successorPhaseId: template.phases[0]!.id, isHard: true };
+    template.crossDependencies.push(edge, edge);
+    const preview = await serviceFor().preview(context, template);
+    expect(preview.valid).toBe(false);
+    expect(preview.issues.map(item => item.code)).toEqual(expect.arrayContaining(["SELF_DEPENDENCY", "DUPLICATE_DEPENDENCY"]));
+  });
+  it("returns an independent normalized snapshot", async () => {
+    const template = validTemplate(); const preview = await serviceFor().preview(context, template);
+    template.cycleType = { ...template.cycleType, name: "Changed after preview" };
+    expect(preview.template.cycleType.name).toBe("Month end");
+    expect(cycleTemplateHash(preview.template)).toBe(preview.templateHash);
+  });
+  it("rejects non-JSON policy data instead of hashing silently altered values", async () => {
+    const template = validTemplate();
+    template.cycleType = { ...template.cycleType, approvalPolicy: { threshold: Number.NaN } };
+    await expect(serviceFor().preview(context, template)).rejects.toMatchObject({ statusCode: 400 });
+  });
+  it.each([{ schema: "unknown" }, { sourceRevision: 0 }, { sourceRevision: 1.5 }, { issuedAt: "not-a-date" }, { signature: null }, { signature: { algorithm: "Ed25519", keyId: " ", value: "signed" } }, { sourceBlueprintId: " " }])("rejects malformed signed revisions %j without publishing", async fields => {
+    const store = repository(), publish = vi.spyOn(store, "publish"), verify = vi.fn(async () => true);
+    const service = createCycleConfigService({ authorizer: allow, repositories: provider(store), desiredStateVerifier: { verify } });
+    await expect(service.applyDesiredState({ context, revision: { ...desiredState(), ...fields } as SignedCycleDesiredStateRevision })).rejects.toMatchObject({ statusCode: 400 });
+    expect(verify).not.toHaveBeenCalled(); expect(publish).not.toHaveBeenCalled();
+  });
+  it("rejects missing verifiers, bad signatures, tampered hashes, and wrong tenant targets", async () => {
+    const store = repository(), publish = vi.spyOn(store, "publish");
+    await expect(serviceFor(store).applyDesiredState({ context, revision: desiredState() })).rejects.toMatchObject({ statusCode: 403, code: "CONTROL_ADMIN_DESIRED_STATE_SIGNATURE_INVALID" });
+    const service = createCycleConfigService({ authorizer: allow, repositories: provider(store), desiredStateVerifier: { verify: async () => false } });
+    await expect(service.applyDesiredState({ context, revision: desiredState() })).rejects.toMatchObject({ statusCode: 403 });
+    await expect(service.applyDesiredState({ context, revision: { ...desiredState(), templateHash: "a".repeat(64) } })).rejects.toMatchObject({ code: "CONTROL_ADMIN_DESIRED_STATE_HASH_INVALID" });
+    await expect(service.applyDesiredState({ context, revision: { ...desiredState(), tenantId: "00000000-0000-4000-8000-000000000099" } })).rejects.toMatchObject({ statusCode: 403, code: "CONTROL_ADMIN_DESIRED_STATE_TARGET_MISMATCH" });
+    expect(publish).not.toHaveBeenCalled();
+  });
+  it("returns intentional errors for missing revisions and unavailable planes", async () => {
+    await expect(serviceFor().readPublished(context, validTemplate().cycleType.id)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(serviceFor().preview({ ...context, planeKey: "mesh" }, validTemplate())).rejects.toMatchObject({ statusCode: 503 });
+  });
+});
+
+it('rejects a two-phase dependency cycle even when task dependencies are acyclic',async()=>{
+ const draft=validTemplate(),first=draft.phases[0]!,second={...first,id:'00000000-0000-4000-8000-000000000044',code:'SECOND',sortOrder:2};draft.phases.push(second);
+ draft.crossDependencies.push(...[[first.id,second.id],[second.id,first.id]].map(([from,to])=>({predecessorTypeId:draft.cycleType.id,successorTypeId:draft.cycleType.id,predecessorPhaseId:from!,successorPhaseId:to!,isHard:true})));
+ const preview=await createCycleConfigService({authorizer:allow,repositories:provider(repository())}).preview(context,draft);expect(preview.valid).toBe(false);expect(preview.issues).toContainEqual(expect.objectContaining({code:'CYCLIC_DEPENDENCY',path:'crossDependencies'}));
+});

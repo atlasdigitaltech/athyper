@@ -1,3 +1,4 @@
+import { JobValidationError } from "@athyper/server-contract-jobs";
 import { describe, expect, it } from "vitest";
 import { previewCron } from "../cron-preview.js";
 
@@ -8,6 +9,22 @@ describe("governed cron preview", () => {
       timezone: "Asia/Kuala_Lumpur",
       nextRuns: ["2026-08-10T01:00:00.000Z", "2026-08-11T01:00:00.000Z"],
     });
+  });
+
+  it.each([
+    { expression: "not cron", timezone: "UTC" },
+    { expression: "0 * * * *", timezone: "" },
+    { expression: "0 * * * *", timezone: "UTC", from: "not-a-date" },
+  ])("identifies expected validation errors: %j", (input) => {
+    expect(() => previewCron(input)).toThrow(JobValidationError);
+  });
+
+  it.each([NaN, Infinity, 0, -1, 1.5])("rejects invalid preview count %s", (count) => {
+    expect(() => previewCron({ expression: "0 * * * *", timezone: "UTC", count })).toThrow(JobValidationError);
+  });
+
+  it("rejects unknown timezones", () => {
+    expect(() => previewCron({ expression: "0 * * * *", timezone: "Mars/Olympus" })).toThrow(JobValidationError);
   });
 
   it("rejects invalid expressions and bounds the response", () => {

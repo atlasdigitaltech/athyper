@@ -1,0 +1,68 @@
+{
+  "verifiedAt": "2026-09-27T22:49:42.228Z",
+  "receipts": [
+    {
+      "plane": "studio",
+      "appliedReleaseId": "01a0e50e-676c-72b5-a2e3-864389f2200b",
+      "releaseId": "3a3d4961-0103-45c9-b2b0-eef85d950fc3",
+      "headVersion": 7,
+      "status": "active",
+      "verification": {
+        "payload_hash": "39b749335984214c2cd691acab0e8c20bd080e340108eb30189b59bf30f0fcfc",
+        "target_plane": "studio",
+        "manifest_valid": true,
+        "signing_key_id": "athyper-publication-dev-signing-v1",
+        "runtime_compatible": true,
+        "signature_verified": true,
+        "signature_algorithm": "Ed25519",
+        "payload_schema_version": "2.0"
+      },
+      "collaborationMatchesRelease6": true,
+      "defaultAudience": "private",
+      "localizedFieldCount": 22,
+      "activatedAt": "2026-09-27T22:48:41.61402+00:00"
+    },
+    {
+      "plane": "neon",
+      "appliedReleaseId": "01a0e50e-67ae-7ccc-918b-07e9261a03e6",
+      "releaseId": "3a3d4961-0103-45c9-b2b0-eef85d950fc3",
+      "headVersion": 7,
+      "status": "active",
+      "verification": {
+        "payload_hash": "cfc42c1821f2125d9e6490dc459cb1be1adfd110e9bb7afcb57ceb2b0030026b",
+        "target_plane": "neon",
+        "manifest_valid": true,
+        "signing_key_id": "athyper-publication-dev-signing-v1",
+        "runtime_compatible": true,
+        "signature_verified": true,
+        "signature_algorithm": "Ed25519",
+        "payload_schema_version": "2.0"
+      },
+      "collaborationMatchesRelease6": true,
+      "defaultAudience": "private",
+      "localizedFieldCount": 22,
+      "activatedAt": "2026-09-27T22:48:41.68496+00:00"
+    },
+    {
+      "plane": "mesh",
+      "appliedReleaseId": "01a0e50e-65a3-7e91-a480-856262710279",
+      "releaseId": "3a3d4961-0103-45c9-b2b0-eef85d950fc3",
+      "headVersion": 7,
+      "status": "active",
+      "verification": {
+        "payload_hash": "72e0e094805ba4a89a0ce36b5efb3ff2e168a9079b1015d6ed0fdfc52bd0b4c2",
+        "target_plane": "mesh",
+        "manifest_valid": true,
+        "signing_key_id": "athyper-publication-dev-signing-v1",
+        "runtime_compatible": true,
+        "signature_verified": true,
+        "signature_algorithm": "Ed25519",
+        "payload_schema_version": "2.0"
+      },
+      "collaborationMatchesRelease6": true,
+      "defaultAudience": "private",
+      "localizedFieldCount": 22,
+      "activatedAt": "2026-09-27T22:48:41.170592+00:00"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-21T09:35:09.000352+00:00",
+  "scope": "DEVFULL CATL native business_partner intake",
+  "studio": {
+    "mode": "development_auto_approval",
+    "releaseId": "7bdb29f6-6b01-4385-867d-06357504f6ca",
+    "artifactId": "4294242d-8348-404b-a685-5a5f22085b69",
+    "artifactHash": "654c378b5336674cc7c4f827a77a0c497408f379fdcc5ee9348bba7d824c51e3",
+    "deploymentId": "01a0c34c-e68c-7613-b3c4-ba3fc01f78a5",
+    "signingKeyId": "athyper-dev-publication-ed25519-20260905",
+    "acknowledgedAt": "2026-09-21T09:32:30.03314+00:00",
+    "artifactStatus": "signed",
+    "authorityStatus": "approved",
+    "acknowledgedHash": "654c378b5336674cc7c4f827a77a0c497408f379fdcc5ee9348bba7d824c51e3",
+    "deploymentStatus": "activated",
+    "acknowledgementId": "01a0c34f-4fd1-7650-9436-df43b66c62fb",
+    "signatureAlgorithm": "Ed25519",
+    "approvalReceiptSha256": "29904e360b8025de5436238521b344910f12e668d9fe753ddd9ef42a5a762f43",
+    "localAppliedReleaseId": "01a0c34f-4e80-7acd-9b88-020244be18b5"
+  },
+  "neon": {
+    "status": "active",
+    "flowCount": 1,
+    "activatedAt": "2026-09-21T09:32:29.956693+00:00",
+    "artifactHash": "654c378b5336674cc7c4f827a77a0c497408f379fdcc5ee9348bba7d824c51e3",
+    "surfaceCount": 19,
+    "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic.enter-correction.dev-intake-7ba61b1c516f",
+    "sourceReleaseId": "7bdb29f6-6b01-4385-867d-06357504f6ca",
+    "appliedReleaseId": "01a0c34f-4e80-7acd-9b88-020244be18b5",
+    "descriptorStatus": "active"
+  },
+  "qualification": {
+    "path": "docs/reports/bp-integration-20260921/runtime-workload-v4/qualification.json",
+    "sha256": "2e31d86b5aed1953b3c1e86b83e37bd66a52c093f2249629817d8525dc4042ce",
+    "sourceAndCheckFiles": 468,
+    "expiresAt": "2026-09-22T09:29:36.676Z"
+  },
+  "validation": {
+    "buildTasksPassed": 110,
+    "testsPassed": 786,
+    "testsSkipped": 25,
+    "migrationLayoutPassed": true
+  },
+  "humanMfaReceiptsCreated": 0,
+  "businessRequestApprovalRulesChanged": false,
+  "compiled113ArtifactPackageActivated": false,
+  "runtimeIdentityUpgrade": {
+    "script": "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_runtime_contract_code_identity.sql",
+    "rehearsedWithRollback": true,
+    "appliedTo": "DEV Neon"
+  }
+}

@@ -1,0 +1,24 @@
+[
+  {
+    "ID": "0r30Tshg50XSilobq7FNfp",
+    "Subject": "[FIRING:1] RedisExporterDown qa (qa athyper-instances memorycache critical)",
+    "To": [
+      {
+        "Name": "",
+        "Address": "redis-alerts@athyper.test"
+      }
+    ],
+    "Created": "2026-09-12T03:13:12.482Z"
+  },
+  {
+    "ID": "4gNqui0VJwc1ig1TLwPpdU",
+    "Subject": "[RESOLVED] RedisExporterDown qa (qa athyper-instances memorycache critical)",
+    "To": [
+      {
+        "Name": "",
+        "Address": "redis-alerts@athyper.test"
+      }
+    ],
+    "Created": "2026-09-12T03:13:43.998Z"
+  }
+]

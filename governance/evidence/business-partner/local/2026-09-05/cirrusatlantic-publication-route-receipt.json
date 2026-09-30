@@ -1,0 +1,26 @@
+{
+  "schema": "athyper.development-publication-route-receipt/1",
+  "observedAt": "2026-09-05T03:56:26.758451+00:00",
+  "environment": "dev",
+  "tenantCode": "cirrusatlantic",
+  "route": "/mdg/business-partner/publication",
+  "requiredModule": "pub",
+  "requiredPermissions": [
+    "studio.business_partner_definition.read"
+  ],
+  "image": "athyper-studio-web:publication-dev",
+  "imageId": "sha256:f63a9c123905214fee03574d649fefcceaeab939055c8e4f954a331f38b8f219",
+  "containerStatus": "running",
+  "containerHealth": "healthy",
+  "validation": {
+    "regressionTestsPassed": 21,
+    "studioShellTypecheck": "passed",
+    "studioImageBuild": "passed",
+    "httpsLivezStatus": 200,
+    "unauthenticatedPublicationHttpStatus": 200,
+    "authenticatedBrowserVerification": "pending_user_retry"
+  },
+  "nativeApproval": null,
+  "signedRelease": null,
+  "consumerActivationReceipts": []
+}

@@ -20,3 +20,10 @@ describe("bounded JSON rule evaluator", () => {
     expect(() => bounded.evaluate({ "!": { "!": { "!": true } } }, {})).toThrow(/depth|node/i);
   });
 });
+
+it("treats inherited properties as missing facts", () => {
+  const evaluator = createJsonRuleEvaluator();
+  expect(evaluator.evaluate({ var: ["toString", "missing"] }, {})).toBe("missing");
+  expect(evaluator.evaluate({ missing: ["valueOf", "nested.toString"] }, { nested: {} })).toEqual(["valueOf", "nested.toString"]);
+  expect(evaluator.evaluate({ var: "nested.toString" }, { nested: { toString: "own fact" } })).toBe("own fact");
+});

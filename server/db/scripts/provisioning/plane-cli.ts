@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 
-import { applyAuthorizationSeedPack } from "../apply-authorization-seed-pack.js";
-import type { ProvisionPlane } from "../safe-provision.js";
+import { applyAuthorizationSeedPack } from "./apply-authorization-seed-pack.js";
+import type { ProvisionPlane } from "./safe-provision.js";
 
 export async function runPlaneProvisionCli(
   plane: ProvisionPlane,

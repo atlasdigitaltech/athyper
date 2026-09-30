@@ -1,0 +1,63 @@
+{
+  "recordedAt": "2026-09-05T06:31:09.966960+00:00",
+  "requestId": "9a825929-a5a1-4333-bb78-3ac0f220b959",
+  "fixes": [
+    "Derive qualification role ID from tenant-bound supplier/customer role records",
+    "Close the organization scope condition in supplier summary counts"
+  ],
+  "verification": {
+    "masterDataTestsPassed": 131,
+    "typecheck": "passed",
+    "liveSummaryQuery": "passed, read-only",
+    "liveEligibilityRepository": {
+      "businessPartnerId": "f7688c3d-8c92-5651-a469-da3f4f786375",
+      "role": "supplier",
+      "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+      "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+      "operationCode": "activation",
+      "businessDate": "2026-09-05",
+      "eligible": false,
+      "reasons": [
+        {
+          "code": "PAYMENT_TERM_INVALID",
+          "severity": "blocking",
+          "recordId": "9ebbd61e-1ac3-55ff-9c40-ff046f745aaa"
+        },
+        {
+          "code": "RISK_ASSESSMENT_MISSING",
+          "severity": "blocking"
+        }
+      ],
+      "qualifications": [
+        {
+          "id": "85336f0a-58f5-54d2-a907-573e5c0f0e5f",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "businessPartnerId": "f7688c3d-8c92-5651-a469-da3f4f786375",
+          "partnerRole": "supplier",
+          "roleId": "60c69ed7-0e2a-538b-b331-a94918e6b02b",
+          "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+          "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+          "commodityCapabilityId": "20da7a08-feee-5a3d-bf15-b1201035572d",
+          "qualificationTypeCode": "compliance",
+          "decision": "approved",
+          "decisionReason": "Development acceptance evidence",
+          "reviewedAt": "2026-08-30T00:00:00.000Z",
+          "reviewedBy": "645b6a55-3355-526a-9643-3900425bde47",
+          "approvedAt": "2026-08-30T00:00:00.000Z",
+          "approvedBy": "645b6a55-3355-526a-9643-3900425bde47",
+          "effectiveFrom": "2024-12-31",
+          "nextReviewAt": "2027-08-29",
+          "rowVersion": 1,
+          "createdAt": "2026-08-30T14:59:00.847Z",
+          "createdBy": "cca94907-7519-5871-8e3c-6b11aa545c93",
+          "updatedAt": "2026-09-02T19:06:48.968Z",
+          "updatedBy": "645b6a55-3355-526a-9643-3900425bde47"
+        }
+      ],
+      "activeBlockIds": [],
+      "preferredSupplier": false,
+      "effectivePreferenceIds": []
+    }
+  },
+  "browserRetest": "pending"
+}

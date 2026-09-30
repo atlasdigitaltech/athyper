@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-10T00:57:47.542Z",
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "user": "catl.admin",
+  "studioPrincipalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+  "session": {
+    "verified": true,
+    "state": "authenticated"
+  },
+  "attempts": [
+    {
+      "operation": "authorization status",
+      "status": 403,
+      "code": "AUTHZ_MANAGEMENT_PERMISSION_DENIED",
+      "requiredPermission": "authorization.management.read"
+    },
+    {
+      "operation": "create BP authoring draft",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "requiredPermission": "metadata.entity.author"
+    }
+  ],
+  "catalogue": {
+    "studioRequiredDefinitionsFound": 0,
+    "neonCanonicalAttachmentDefinitionsFound": 0,
+    "existingBpTargetAttachmentRead": "neon.relationship.bp_target.attachments_read",
+    "bpTargetReadDoesNotAuthorizeAttachmentUpload": true
+  },
+  "writer": {
+    "mutationsEnabled": false,
+    "policyPathConfigured": false
+  },
+  "requiredReview": {
+    "studioPermissions": [
+      "metadata.entity.author",
+      "metadata.entity.validate",
+      "metadata.entity.test",
+      "metadata.entity.submit",
+      "metadata.entity.review",
+      "metadata.entity.publish",
+      "metadata.entity.activate",
+      "authorization.management.read",
+      "authorization.management.manage"
+    ],
+    "neonPermissions": [
+      "neon.collaboration.attachment.create",
+      "neon.collaboration.attachment.read"
+    ],
+    "note": "Review and publish catalogue definitions and least-privilege assignments using the approved authority path; preserve independent publication review. Do not infer grants from the admin username or substitute BP target read for attachment permissions.",
+    "writerSwitchEvidence": "Exact-plane approved rollout and qualified writer-switch evidence required before management writes."
+  },
+  "result": {
+    "draftCreated": false,
+    "metadataPublished": false,
+    "permissionsPublished": false,
+    "documentUploaded": false,
+    "retrievalEnabled": false
+  }
+}

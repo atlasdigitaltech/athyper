@@ -1,6 +1,87 @@
-import { createHmac,timingSafeEqual } from "node:crypto";
-import type { InboundWebhookPolicyResolver,IntegrationRepository,SecretResolver } from "@athyper/server-contract-integration";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import type {
+  InboundWebhookPolicyResolver,
+  IntegrationRepository,
+  SecretResolver,
+} from "@athyper/server-contract-integration";
 import { sha256 } from "./integration-service.js";
-export interface InboundWebhookRequest{readonly subscriptionId:string;readonly rawBody:Uint8Array;readonly headers:Readonly<Record<string,string|undefined>>;readonly now?:Date;}
-export async function admitInboundWebhook(request:InboundWebhookRequest,deps:{policies:InboundWebhookPolicyResolver;secrets:SecretResolver;repository:IntegrationRepository}):Promise<{readonly id:string;readonly duplicate:boolean;readonly payload:unknown}>{const policy=await deps.policies.resolve(request.subscriptionId);if(!policy)throw admission("INTEGRATION_WEBHOOK_NOT_FOUND",404);if(request.rawBody.byteLength>policy.maxBodyBytes)throw admission("INTEGRATION_WEBHOOK_TOO_LARGE",413);const timestamp=request.headers[policy.timestampHeader.toLowerCase()]??request.headers[policy.timestampHeader],signature=request.headers[policy.signatureHeader.toLowerCase()]??request.headers[policy.signatureHeader];if(!timestamp||!signature)throw admission("INTEGRATION_WEBHOOK_AUTH_REQUIRED",401);const seconds=Number(timestamp),now=(request.now??new Date()).getTime()/1000;if(!Number.isFinite(seconds)||Math.abs(now-seconds)>policy.toleranceSeconds)throw admission("INTEGRATION_WEBHOOK_TIMESTAMP_INVALID",401);const secret=await deps.secrets.resolve(policy.signingSecretReference),expected=createHmac("sha256",secret.bytes).update(timestamp).update(".").update(request.rawBody).digest("hex"),actual=signature.replace(/^sha256=/,"");if(actual.length!==expected.length||!timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))throw admission("INTEGRATION_WEBHOOK_SIGNATURE_INVALID",401);let payload:unknown;try{payload=JSON.parse(Buffer.from(request.rawBody).toString("utf8"));}catch{throw admission("INTEGRATION_WEBHOOK_JSON_INVALID",400);}const bodyHash=sha256(request.rawBody),deliveryKey=request.headers["idempotency-key"]??request.headers["x-webhook-delivery"]??sha256(`${timestamp}.${bodyHash}`),result=await deps.repository.admitInbound({tenantId:policy.tenantId,subscriptionId:policy.subscriptionId,deliveryKey,timestamp,bodyHash,rawBody:request.rawBody,headers:Object.fromEntries(Object.entries(request.headers).filter((x):x is [string,string]=>typeof x[1]==="string"))});return{...result,payload};}
-function admission(code:string,status:number):Error{return Object.assign(new Error(code),{code,status,retryable:false});}
+export interface InboundWebhookRequest {
+  readonly subscriptionId: string;
+  readonly rawBody: Uint8Array;
+  readonly headers: Readonly<Record<string, string | undefined>>;
+  readonly now?: Date;
+}
+export async function admitInboundWebhook(
+  request: InboundWebhookRequest,
+  deps: {
+    policies: InboundWebhookPolicyResolver;
+    secrets: SecretResolver;
+    repository: IntegrationRepository;
+  },
+): Promise<{
+  readonly id: string;
+  readonly duplicate: boolean;
+  readonly payload: unknown;
+}> {
+  const policy = await deps.policies.resolve(request.subscriptionId);
+  if (!policy) throw admission("INTEGRATION_WEBHOOK_NOT_FOUND", 404);
+  if (request.rawBody.byteLength > policy.maxBodyBytes)
+    throw admission("INTEGRATION_WEBHOOK_TOO_LARGE", 413);
+  const timestamp =
+      request.headers[policy.timestampHeader.toLowerCase()] ??
+      request.headers[policy.timestampHeader],
+    signature =
+      request.headers[policy.signatureHeader.toLowerCase()] ??
+      request.headers[policy.signatureHeader];
+  if (!timestamp || !signature)
+    throw admission("INTEGRATION_WEBHOOK_AUTH_REQUIRED", 401);
+  const seconds = Number(timestamp),
+    now = (request.now ?? new Date()).getTime() / 1000;
+  if (
+    !Number.isFinite(seconds) ||
+    Math.abs(now - seconds) > policy.toleranceSeconds
+  )
+    throw admission("INTEGRATION_WEBHOOK_TIMESTAMP_INVALID", 401);
+  const secret = await deps.secrets.resolve(policy.signingSecretReference),
+    expected = createHmac("sha256", secret.bytes)
+      .update(timestamp)
+      .update(".")
+      .update(request.rawBody)
+      .digest("hex"),
+    actual = signature.replace(/^sha256=/, "");
+  if (
+    !/^[0-9a-f]{64}$/i.test(actual) ||
+    !timingSafeEqual(Buffer.from(actual, "hex"), Buffer.from(expected, "hex"))
+  )
+    throw admission("INTEGRATION_WEBHOOK_SIGNATURE_INVALID", 401);
+  let payload: unknown;
+  try {
+    payload = JSON.parse(Buffer.from(request.rawBody).toString("utf8"));
+  } catch {
+    throw admission("INTEGRATION_WEBHOOK_JSON_INVALID", 400);
+  }
+  if (payload === null || typeof payload !== "object")
+    throw admission("INTEGRATION_WEBHOOK_PAYLOAD_INVALID", 400);
+  const bodyHash = sha256(request.rawBody),
+    deliveryKey =
+      request.headers["idempotency-key"] ??
+      request.headers["x-webhook-delivery"] ??
+      sha256(`${timestamp}.${bodyHash}`),
+    result = await deps.repository.admitInbound({
+      tenantId: policy.tenantId,
+      subscriptionId: policy.subscriptionId,
+      deliveryKey,
+      timestamp,
+      bodyHash,
+      rawBody: request.rawBody,
+      headers: Object.fromEntries(
+        Object.entries(request.headers).filter(
+          (x): x is [string, string] => typeof x[1] === "string",
+        ),
+      ),
+    });
+  return { ...result, payload };
+}
+function admission(code: string, status: number): Error {
+  return Object.assign(new Error(code), { code, status, retryable: false });
+}

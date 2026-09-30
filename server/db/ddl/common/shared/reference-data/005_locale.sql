@@ -93,6 +93,7 @@ values
   -- Yiddish: Hebrew script, right-to-left. Primarily Ashkenazi Jewish communities.
   ('yi',    'yi', null, 'Hebr', 'Yiddish',                 'rtl', '00000000-0000-0000-0000-000000000000'),
   ('zh',    'zh', null, 'Hans', 'Chinese',                 'ltr', '00000000-0000-0000-0000-000000000000'),
+  ('zh-Hans','zh', null, 'Hans', 'Chinese (Simplified)',    'ltr', '00000000-0000-0000-0000-000000000000'),
   ('zu',    'zu', null, 'Latn', 'Zulu',                    'ltr', '00000000-0000-0000-0000-000000000000')
 on conflict (code) do update set
   name          = excluded.name,

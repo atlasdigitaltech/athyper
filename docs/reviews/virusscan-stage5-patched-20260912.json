@@ -1,0 +1,164 @@
+{
+  "startedAt": "2026-09-11T21:16:38.403318+00:00",
+  "scope": "local-dev; not production certification",
+  "deployment": {
+    "container": "athyper-dev-virusscan-1",
+    "imageId": "sha256:c54e350c860498f93b3c6a577909a1d921fb0c35a50b66a896483d4322c868c4",
+    "repoDigests": [
+      "athyper/clamav@sha256:c54e350c860498f93b3c6a577909a1d921fb0c35a50b66a896483d4322c868c4"
+    ],
+    "portBindings": {},
+    "networks": {
+      "athyper-dev_data": {
+        "ip": "172.22.0.7",
+        "internal": true
+      },
+      "athyper-dev_signature-egress": {
+        "ip": "172.21.0.2",
+        "internal": false
+      }
+    }
+  },
+  "before": {
+    "version": "ClamAV 1.5.2/28119/Thu Sep 10 06:24:09 2026",
+    "config": "Checking configuration files in /etc/clamav\n\nConfig file: clamd.conf\n-----------------------\nAlertExceedsMax = \"yes\"\nLogFile = \"/var/log/clamav/clamd.log\"\nLogTime = \"yes\"\nLocalSocket = \"/tmp/clamd.sock\"\nTCPSocket = \"3310\"\nSelfCheck = \"60\"\nUser = \"clamav\"\n\nConfig file: freshclam.conf\n---------------------------\nUpdateLogFile = \"/var/log/clamav/freshclam.log\"\nDatabaseMirror = \"database.clamav.net\"\n\nConfig file: clamav-milter.conf\n-------------------------------\nLogFile = \"/var/log/clamav/milter.log\"\nLogTime = \"yes\"\nUser = \"clamav\"\nClamdSocket = \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\"\nMilterSocket = \"inet:7357\"\n\nSoftware settings\n-----------------\nVersion: 1.5.2\nOptional features supported: MEMPOOL AUTOIT_EA06 ICONV RAR \n\nDatabase information\n--------------------\nDatabase directory: /var/lib/clamav\ndaily.cld: version 28119, sigs: 355653, built on Thu Sep 10 06:24:09 2026\nbytecode.cvd: version 339, sigs: 80, built on Thu Sep 11 12:29:19 2025\nmain.cvd: version 63, sigs: 3287027, built on Tue Dec 16 23:18:22 2025\nTotal number of signatures: 3642760\n\nPlatform information\n--------------------\nuname: Linux 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64\nOS: Linux, ARCH: x86_64, CPU: x86_64\nzlib version: 1.3.2 (1.3.2), compile flags: a9\nplatform id: 0x0a21e8e808000000020f0200\n\nBuild information\n-----------------\nGNU C: 15.2.0 (15.2.0)\nsizeof(void*) = 8\nEngine flevel: 232, dconf: 232"
+  },
+  "freshclamHistory": "--------------------------------------\nClamAV update process started at Mon Jun 29 01:45:12 2026\ndaily database available for download (remote version: 28045)\nTesting database: '/var/lib/clamav/tmp.56db0a94b7/daily.cvd' ...\nDatabase test passed.\ndaily.cvd updated (version: 28045, sigs: 355479, f-level: 90, builder: svc.clamav-publisher)\nmain database available for download (remote version: 63)\nTesting database: '/var/lib/clamav/tmp.56db0a94b7/main.cvd' ...\nDatabase test passed.\nmain.cvd updated (version: 63, sigs: 3287027, f-level: 90, builder: tomjudge)\nbytecode database available for download (remote version: 339)\nTesting database: '/var/lib/clamav/tmp.56db0a94b7/bytecode.cvd' ...\nDatabase test passed.\nbytecode.cvd updated (version: 339, sigs: 80, f-level: 90, builder: nrandolp)\nWARNING: Clamd was NOT notified: Can't connect to clamd through /tmp/clamd.sock: No such file or directory\n--------------------------------------\nfreshclam daemon 1.5.2 (OS: Linux, ARCH: x86_64, CPU: x86_64)\nClamAV update process started at Fri Sep 11 21:12:36 2026\ndaily.cld database is up-to-date (version: 28119, sigs: 355653, f-level: 90, builder: svc.clamav-publisher)\nmain.cvd database is up-to-date (version: 63, sigs: 3287027, f-level: 90, builder: tomjudge)\nbytecode.cvd database is up-to-date (version: 339, sigs: 80, f-level: 90, builder: nrandolp)\n--------------------------------------",
+  "freshclamProcess": "30 clamav    0:00 freshclam --checks=24 --daemon --foreground --stdout --user=clamav",
+  "listeners": "Active Internet connections (only servers)\nProto Recv-Q Send-Q Local Address           Foreign Address         State       \ntcp        0      0 127.0.0.11:38263        0.0.0.0:*               LISTEN      \ntcp        0      0 0.0.0.0:3310            0.0.0.0:*               LISTEN      \ntcp        0      0 :::3310                 :::*                    LISTEN      \nsrw-rw-rw-    1 clamav   clamav           0 Sep 11 21:12 /tmp/clamd.sock\nFri Sep 11 21:16:38 UTC 2026",
+  "clients": {
+    "athyper-dev-source-api-1": {
+      "pid": "7",
+      "malwareScanning": {
+        "host": "virusscan",
+        "port": 3310,
+        "timeoutMs": 30000,
+        "maxBytes": 104857600,
+        "onUnavailable": "fail-closed",
+        "signatureMaxAgeMs": 172800000,
+        "signatureCheckIntervalMs": 300000
+      },
+      "maxUploadMb": 100,
+      "ping": "PONG"
+    },
+    "athyper-dev-source-worker-1": {
+      "pid": "7",
+      "malwareScanning": {
+        "host": "virusscan",
+        "port": 3310,
+        "timeoutMs": 30000,
+        "maxBytes": 104857600,
+        "onUnavailable": "fail-closed",
+        "signatureMaxAgeMs": 172800000,
+        "signatureCheckIntervalMs": 300000
+      },
+      "maxUploadMb": 100,
+      "ping": "PONG"
+    }
+  },
+  "hostDirectPing": "PONG",
+  "networkProbes": {
+    "athyper-dev_data": "PONG",
+    "athyper-dev_app": "no response",
+    "athyper-dev_app -> athyper-dev_signature-egress": "no response",
+    "athyper-dev_edge": "no response",
+    "athyper-dev_edge -> athyper-dev_signature-egress": "no response",
+    "athyper-dev_signature-egress": "PONG"
+  },
+  "isolatedRecovery": {
+    "fixture": "unsigned CUD, real clamd 1.5.2, never mounted in live scanner",
+    "beforeVersion": "ClamAV 1.5.2/900001/Tue Sep  8 21:16:51 2026",
+    "staleAdmission": {
+      "health": {
+        "status": "unhealthy",
+        "message": "ClamAV signature database is 72h old, exceeding the 48h freshness limit",
+        "signature": {
+          "fresh": false,
+          "version": "900001",
+          "builtAt": "2026-09-08T21:16:51.000Z",
+          "ageMs": 259200721
+        }
+      },
+      "scan": {
+        "code": "MALWARE_SCANNER_SIGNATURE_STALE"
+      }
+    },
+    "reloadReply": "RELOADING",
+    "afterVersion": "ClamAV 1.5.2/900002/Fri Sep 11 21:16:51 2026",
+    "freshAdmission": {
+      "health": {
+        "status": "healthy",
+        "signature": {
+          "fresh": true,
+          "version": "900002",
+          "builtAt": "2026-09-11T21:16:51.000Z",
+          "ageMs": 1147
+        }
+      },
+      "scan": {
+        "status": "clean",
+        "scanner": "clamav",
+        "scannedAt": "2026-09-11T21:16:52.152Z",
+        "durationMs": 3,
+        "signatureVersion": "900002"
+      }
+    },
+    "selfCheckVersion": "ClamAV 1.5.2/900003/Fri Sep 11 21:16:52 2026"
+  },
+  "isolatedInspectionLimits": {
+    "MaxFileSize": {
+      "response": "stream: Heuristics.Limits.Exceeded.MaxFileSize FOUND",
+      "passed": true
+    },
+    "MaxScanSize": {
+      "response": "stream: Heuristics.Limits.Exceeded.MaxScanSize FOUND",
+      "passed": true
+    },
+    "MaxRecursion": {
+      "response": "stream: Heuristics.Limits.Exceeded.MaxRecursion FOUND",
+      "passed": true
+    }
+  },
+  "isolatedTruncation": {
+    "markerAtStart": "stream: Qualification.Marker.UNOFFICIAL FOUND",
+    "markerBeyondLimit": "stream: Heuristics.Limits.Exceeded.MaxFileSize FOUND",
+    "note": "Harmless custom signature, placed before/after the 1 MiB extraction limit."
+  },
+  "isolatedZipBoundaries": {
+    "stored-1048000": "stream: OK",
+    "stored-1048576": "stream: Heuristics.Limits.Exceeded.MaxFileSize FOUND",
+    "stored-1048577": "stream: Heuristics.Limits.Exceeded.MaxFileSize FOUND",
+    "deflate-1048000": "stream: OK",
+    "deflate-1048576": "stream: OK",
+    "deflate-1048577": "stream: Heuristics.Limits.Exceeded.MaxFileSize FOUND",
+    "bzip2-1048000": "stream: OK",
+    "bzip2-1048576": "stream: OK",
+    "bzip2-1048577": "stream: Heuristics.Limits.Exceeded.MaxFileSize FOUND"
+  },
+  "isolatedDaemonLog": "Limits: Global time limit set to 120000 milliseconds.\nLimits: Global size limit set to 4194304 bytes.\nLimits: File size limit set to 1048576 bytes.\nLimits: Recursion level limit set to 3.\nLimits: Files limit set to 10000.\nLimits: MaxEmbeddedPE limit set to 41943040 bytes.\nLimits: MaxHTMLNormalize limit set to 41943040 bytes.\nLimits: MaxHTMLNoTags limit set to 8388608 bytes.\nLimits: MaxScriptNormalize limit set to 20971520 bytes.\nLimits: MaxZipTypeRcg limit set to 1048576 bytes.\nLimits: MaxPartitions limit set to 50.\nLimits: MaxIconsPE limit set to 100.\nLimits: MaxRecHWP3 limit set to 16.\nLimits: PCREMatchLimit limit set to 100000.\nLimits: PCRERecMatchLimit limit set to 2000.\nLimits: PCREMaxFileSize limit set to 104857600.\nArchive support enabled.\nImage (graphics) scanning support enabled.\nDetection using image fuzzy hash enabled.\nHeuristic alerting enabled for scans that exceed set maximums.\nHeuristic alerts enabled.\nPortable Executable support enabled.\nELF support enabled.\nMail files support enabled.\nOLE2 support enabled.\nPDF support enabled.\nSWF support enabled.\nHTML support enabled.\nXMLDOCS support enabled.\nHWP3 support enabled.\nOneNote support enabled.\nSelf checking every 1 seconds.\nSet stacksize to 1048576\nReading databases from /qualification/db\nDatabase correctly reloaded (1 signatures)\nDatabase reload completed.\nActivating the newly loaded database...\nSelfCheck: Database status OK.\nSelfCheck: Database modification detected. Forcing reload.\nReading databases from /qualification/db\nDatabase correctly reloaded (1 signatures)\nDatabase reload completed.\nActivating the newly loaded database...\nSelfCheck: Database status OK.\ninstream(172.17.0.1@36184): Heuristics.Limits.Exceeded.MaxFileSize FOUND\ninstream(172.17.0.1@36196): Heuristics.Limits.Exceeded.MaxScanSize FOUND\ninstream(172.17.0.1@36212): Heuristics.Limits.Exceeded.MaxRecursion FOUND\ninstream(172.17.0.1@36216): Qualification.Marker.UNOFFICIAL FOUND\ninstream(172.17.0.1@36222): Heuristics.Limits.Exceeded.MaxFileSize FOUND\ninstream(172.17.0.1@36230): Heuristics.Limits.Exceeded.MaxFileSize FOUND\ninstream(172.17.0.1@36236): Heuristics.Limits.Exceeded.MaxFileSize FOUND\ninstream(172.17.0.1@36260): Heuristics.Limits.Exceeded.MaxFileSize FOUND\ninstream(172.17.0.1@36278): Heuristics.Limits.Exceeded.MaxFileSize FOUND",
+  "effectiveConfig": "Checking configuration files in /etc/clamav\n\nConfig file: clamd.conf\n-----------------------\nAlertExceedsMax = \"yes\"\nLogFile = \"/var/log/clamav/clamd.log\"\nLogTime = \"yes\"\nLocalSocket = \"/tmp/clamd.sock\"\nTCPSocket = \"3310\"\nSelfCheck = \"60\"\nUser = \"clamav\"\n\nConfig file: freshclam.conf\n---------------------------\nUpdateLogFile = \"/var/log/clamav/freshclam.log\"\nDatabaseMirror = \"database.clamav.net\"\n\nConfig file: clamav-milter.conf\n-------------------------------\nLogFile = \"/var/log/clamav/milter.log\"\nLogTime = \"yes\"\nUser = \"clamav\"\nClamdSocket = \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\", \"unix:/tmp/clamd.sock\"\nMilterSocket = \"inet:7357\"\n\nSoftware settings\n-----------------\nVersion: 1.5.2\nOptional features supported: MEMPOOL AUTOIT_EA06 ICONV RAR \n\nDatabase information\n--------------------\nDatabase directory: /var/lib/clamav\ndaily.cld: version 28119, sigs: 355653, built on Thu Sep 10 06:24:09 2026\nbytecode.cvd: version 339, sigs: 80, built on Thu Sep 11 12:29:19 2025\nmain.cvd: version 63, sigs: 3287027, built on Tue Dec 16 23:18:22 2025\nTotal number of signatures: 3642760\n\nPlatform information\n--------------------\nuname: Linux 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64\nOS: Linux, ARCH: x86_64, CPU: x86_64\nzlib version: 1.3.2 (1.3.2), compile flags: a9\nplatform id: 0x0a21e8e808000000020f0200\n\nBuild information\n-----------------\nGNU C: 15.2.0 (15.2.0)\nsizeof(void*) = 8\nEngine flevel: 232, dconf: 232",
+  "liveInspectionLimits": {
+    "MaxFileSize": {
+      "response": "stream: Heuristics.Limits.Exceeded.MaxFileSize FOUND",
+      "passed": true
+    },
+    "MaxScanSize": {
+      "response": "stream: Heuristics.Limits.Exceeded.MaxScanSize FOUND",
+      "passed": true
+    },
+    "MaxRecursion": {
+      "response": "stream: Heuristics.Limits.Exceeded.MaxRecursion FOUND",
+      "passed": true
+    }
+  },
+  "liveReload": {
+    "before": "ClamAV 1.5.2/28119/Thu Sep 10 06:24:09 2026",
+    "reply": "RELOADING",
+    "completionLog": "Fri Sep 11 21:16:59 2026 -> SelfCheck: Database status OK.\nFri Sep 11 21:17:24 2026 -> instream(172.22.0.1@51340): Heuristics.Limits.Exceeded.MaxFileSize FOUND\nFri Sep 11 21:17:27 2026 -> instream(172.22.0.1@51354): Heuristics.Limits.Exceeded.MaxScanSize FOUND\nFri Sep 11 21:17:27 2026 -> instream(172.22.0.1@51364): Heuristics.Limits.Exceeded.MaxRecursion FOUND\nFri Sep 11 21:17:27 2026 -> Reading databases from /var/lib/clamav\nFri Sep 11 21:17:36 2026 -> Database correctly reloaded (3628058 signatures)\nFri Sep 11 21:17:36 2026 -> Activating the newly loaded database...",
+    "after": "ClamAV 1.5.2/28119/Thu Sep 10 06:24:09 2026",
+    "note": "Same official revision on disk; no CDN update claimed. Revision-changing recovery tested in isolation."
+  },
+  "acceptanceFailures": [],
+  "passed": true,
+  "finishedAt": "2026-09-11T21:17:45.763131+00:00"
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "athyper.local-infisical-backup/1",
+  "environment": "dev",
+  "sanitized": true,
+  "completedAt": "2026-09-05T03:41:51.481078+00:00",
+  "backupReference": "/home/chandravel_natarajan/.athyper/instances/dev/backups/publication/infisical-20260905T034151Z.dump",
+  "sha256": "97ef4d32462d46013fc2ceadf48c9e3ecc143bb9439be5cec61351d7372ace72",
+  "bytes": 3183712,
+  "restoreVerified": false,
+  "runtimeNodeUid": 1001,
+  "image": "infisical/infisical:v0.159.16"
+}

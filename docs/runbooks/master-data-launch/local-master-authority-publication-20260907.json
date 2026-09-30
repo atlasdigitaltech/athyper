@@ -1,0 +1,35 @@
+{
+  "environment": "local",
+  "tenant": "44444444-4444-4444-8444-444444444444",
+  "source": "local-master-data-authority:v1",
+  "capabilities": [
+    "neon.relationship.business_partner.read_contact_sensitive",
+    "neon.relationship.business_partner.read_address_sensitive",
+    "neon.relationship.business_partner.write_contact_sensitive",
+    "neon.relationship.business_partner.write_address_sensitive"
+  ],
+  "riskTier": "medium",
+  "requiresMfa": false,
+  "requiresSod": false,
+  "shareable": false,
+  "delegable": false,
+  "sensitiveScope": "operating_organization/exact",
+  "rootScope": "operating_organization/subtree",
+  "fixtures": [
+    {
+      "username": "catl.admin",
+      "org": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+      "partner": "f7688c3d-8c92-5651-a469-da3f4f786375"
+    },
+    {
+      "username": "catl.owner",
+      "org": "24267903-6196-5846-8322-43a8e35c9630",
+      "partner": "ea76b2b4-c089-5052-8a3b-ac9917a77598"
+    }
+  ],
+  "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+  "releaseId": "6117a538-b775-514a-ae65-516da83e05bf",
+  "artifactHash": "8d74cc7dd5d03f908499424d113e839ba45d25d0bc36fbc492641a33e17d66ad",
+  "status": "applied",
+  "approvalScope": "User-authorized local synthetic pilot; no staging/production qualification"
+}

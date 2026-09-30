@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { createHmac } from "node:crypto";
 import { isIP } from "node:net";
 import { lookup } from "node:dns/promises";
@@ -188,6 +189,6 @@ function parseRetryAfter(value: string | null): number {
   if (!value) return 3_600_000;
   const seconds = Number(value);
   if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1_000;
-  const date = Date.parse(value);
+  const date = parseInstant(value);
   return Number.isNaN(date) ? 3_600_000 : Math.max(0, date - Date.now());
 }

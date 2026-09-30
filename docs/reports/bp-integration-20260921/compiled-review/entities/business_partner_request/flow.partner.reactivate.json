@@ -1,0 +1,51 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "flow",
+  "artifactKey": "business_partner_request/flow.partner.reactivate",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "flowKey": "partner.reactivate",
+  "journey": "governance",
+  "requestContract": {
+    "kind": "required_path_contract",
+    "requestKind": "partner.reactivate",
+    "domainOperation": "reactivate",
+    "requiredPaths": [
+      "targetBusinessPartnerId",
+      "reasonCode"
+    ],
+    "payloadSchemaAuthority": "registered_governed_request_validator",
+    "rejectUnknownPaths": true,
+    "fullPayloadSchemaNotImpliedByRequiredPaths": true,
+    "requiredCoordinates": []
+  },
+  "supportedSources": [
+    "internal",
+    "api"
+  ],
+  "dependencies": [
+    "business_partner_request/core",
+    "business_partner_request/flow.base",
+    "business_partner_request/operation",
+    "business_partner_request/presentation.review",
+    "business_partner_request/presentation.section.evidence",
+    "business_partner_request/presentation.section.form.request"
+  ],
+  "sourceMappingKeys": [
+    "internal.governance",
+    "api.governance"
+  ],
+  "presentationSlots": {
+    "capture": "business_partner_request/presentation.section.form.request.json"
+  },
+  "flowKind": "variant",
+  "baseFlowRef": "business_partner_request/flow.base.json",
+  "composition": {
+    "stage": "artifact_preparation",
+    "cacheKey": "base_hash_and_variant_hash",
+    "securityOverride": "forbidden"
+  },
+  "artifactHash": "sha256:9f534fdbf1dad73575fe09a5b17e83ad713a574ad715e8a8daa62ff619f7cdfa"
+}

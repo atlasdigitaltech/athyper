@@ -1,58 +1,763 @@
 import { describe, expect, it } from "vitest";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { OutboxEventInput } from "@athyper/server-contract-events";
-import { createCollaborationService, createInMemoryCollaborationPersistence } from "../index.js";
+import {
+  createCollaborationService,
+  createInMemoryCollaborationPersistence,
+} from "../index.js";
 
-const id = { tenant: "11111111-1111-4111-8111-111111111111", author: "22222222-2222-4222-8222-222222222222", mentioned: "33333333-3333-4333-8333-333333333333", comment: "44444444-4444-4444-8444-444444444444", flag: "55555555-5555-4555-8555-555555555555" };
+const id = {
+  tenant: "11111111-1111-4111-8111-111111111111",
+  author: "22222222-2222-4222-8222-222222222222",
+  mentioned: "33333333-3333-4333-8333-333333333333",
+  comment: "44444444-4444-4444-8444-444444444444",
+  flag: "55555555-5555-4555-8555-555555555555",
+};
 
 describe("collaboration transaction boundary", () => {
+  it("allows an empty rich-text draft for attachment staging but rejects an empty posted comment", async () => {
+    const { service, persistence } = harness();
+    const empty = { ...base, text: "", format: "rich_json" as const, content: { type: "doc", schema: "athyper.rich-text/1.0", content: [{ type: "paragraph", content: [] }] } };
+    await service.putDraft(empty);
+    expect([...persistence.inspect().drafts.values()][0]?.text).toBe("");
+    await expect(service.create(empty)).rejects.toMatchObject({ code: "INVALID_RICH_TEXT" });
+    await expect(service.putDraft({ ...empty, content: { ...empty.content, content: [{ type: "unsupported" }] } })).rejects.toMatchObject({ code: "INVALID_RICH_TEXT" });
+  });
+  it("keeps edit upload drafts separate from root and reply drafts",async()=>{
+    const {service,persistence}=harness();
+    const parent=await service.create(base);
+    await service.putDraft({...base,text:"Unsent root"});
+    await service.putDraft({...base,parentCommentId:parent.id,text:"Unsent reply"});
+    const contextType="entity_edit_11111111111141118111111111111111";
+    await service.putDraft({...base,contextType,text:"Editing attachment"});
+    expect(persistence.inspect().drafts.size).toBe(3);
+    await service.deleteDraft({...base,contextType});
+    expect([...persistence.inspect().drafts.values()].map(draft=>draft.text).sort()).toEqual(["Unsent reply","Unsent root"]);
+  });
   it("creates comment, resolved mention records, audit, and notification outbox atomically", async () => {
-    const events: OutboxEventInput[] = []; const persistence = createInMemoryCollaborationPersistence({ createId: ids(id.comment), now: () => new Date("2026-08-10T00:00:00Z") });
-    const service = createCollaborationService({ authorizer: allow(), principals: { resolveActivePrincipals: async (_context, values) => values.filter((value) => value === id.mentioned) }, repository: persistence.repository, transactions: persistence.transactions, outbox: { append: async (event) => { events.push(event); } }, audit: { record: async (input) => ({ ...input, id: "audit-1", occurredAt: "2026-08-10T00:00:00Z", severity: "info" }) } });
-    const comment = await service.create({ context: context(), entityType: "content.item", entityId: "article-1", text: "Hello @Ada", mentionedPrincipalIds: [id.mentioned] });
-    expect(comment).toMatchObject({ id: id.comment, text: "Hello @Ada", threadDepth: 0 });
-    expect(persistence.inspect().mentions.get(id.comment)).toEqual([id.mentioned]);
-    expect(events.map((event) => event.eventType)).toEqual(["collaboration.comment.created", "collaboration.comment.mentioned"]);
+    const events: OutboxEventInput[] = [];
+    const persistence = createInMemoryCollaborationPersistence({
+      createId: ids(id.comment),
+      now: () => new Date("2026-08-10T00:00:00Z"),
+    });
+    const service = createCollaborationService({
+      authorizer: allow(),
+      principals: {
+        resolveActivePrincipals: async (_context, values) =>
+          values.filter((value) => value === id.mentioned),
+      },
+      repository: persistence.repository,
+      commandExecutions: persistence.commandExecutions,
+      transactions: persistence.transactions,
+      outbox: {
+        append: async (event) => {
+          events.push(event);
+        },
+      },
+      audit: {
+        record: async (input) => ({
+          ...input,
+          id: "audit-1",
+          occurredAt: "2026-08-10T00:00:00Z",
+          severity: "info",
+        }),
+      },
+    });
+    const comment = await service.create({
+      context: context(),
+      entityType: "content.item",
+      entityId: "article-1",
+      text: "Hello @Ada",
+      mentionedPrincipalIds: [id.mentioned],
+    });
+    expect(comment).toMatchObject({
+      id: id.comment,
+      text: "Hello @Ada",
+      threadDepth: 0,
+    });
+    expect(persistence.inspect().mentions.get(id.comment)).toEqual([
+      id.mentioned,
+    ]);
+    expect(events.map((event) => event.eventType)).toEqual([
+      "collaboration.comment.created",
+      "collaboration.comment.mentioned",
+    ]);
   });
 
   it("rolls back the comment when notification outbox persistence fails", async () => {
-    const persistence = createInMemoryCollaborationPersistence({ createId: ids(id.comment) }); const service = createCollaborationService({ authorizer: allow(), principals: { resolveActivePrincipals: async (_context, values) => values }, repository: persistence.repository, transactions: persistence.transactions, outbox: { append: async () => { throw new Error("outbox down"); } }, audit: { record: async (input) => ({ ...input, id: "audit", occurredAt: new Date().toISOString(), severity: "info" }) } });
-    await expect(service.create({ context: context(), entityType: "content.item", entityId: "article-1", text: "Hello" })).rejects.toThrow("outbox down");
+    const persistence = createInMemoryCollaborationPersistence({
+      createId: ids(id.comment),
+    });
+    const service = createCollaborationService({
+      authorizer: allow(),
+      principals: {
+        resolveActivePrincipals: async (_context, values) => values,
+      },
+      repository: persistence.repository,
+      commandExecutions: persistence.commandExecutions,
+      transactions: persistence.transactions,
+      outbox: {
+        append: async () => {
+          throw new Error("outbox down");
+        },
+      },
+      audit: {
+        record: async (input) => ({
+          ...input,
+          id: "audit",
+          occurredAt: new Date().toISOString(),
+          severity: "info",
+        }),
+      },
+    });
+    await expect(
+      service.create({
+        context: context(),
+        entityType: "content.item",
+        entityId: "article-1",
+        text: "Hello",
+      }),
+    ).rejects.toThrow("outbox down");
     expect(persistence.inspect().comments.size).toBe(0);
   });
 
   it("makes reaction PUT idempotent", async () => {
-    const persistence = createInMemoryCollaborationPersistence({ createId: ids(id.comment) }); const service = createCollaborationService({ authorizer: allow(), principals: { resolveActivePrincipals: async (_context, values) => values }, repository: persistence.repository, transactions: persistence.transactions, outbox: { append: async () => undefined }, audit: { record: async (input) => ({ ...input, id: "audit", occurredAt: new Date().toISOString(), severity: "info" }) } });
-    await service.create({ context: context(), entityType: "content.item", entityId: "article-1", text: "Hello" });
-    await expect(service.putReaction({ context: context(), commentId: id.comment, code: "thumbs_up" })).resolves.toBe(true);
-    await expect(service.putReaction({ context: context(), commentId: id.comment, code: "thumbs_up" })).resolves.toBe(false);
+    const persistence = createInMemoryCollaborationPersistence({
+      createId: ids(id.comment),
+    });
+    const service = createCollaborationService({
+      authorizer: allow(),
+      principals: {
+        resolveActivePrincipals: async (_context, values) => values,
+      },
+      repository: persistence.repository,
+      commandExecutions: persistence.commandExecutions,
+      transactions: persistence.transactions,
+      outbox: { append: async () => undefined },
+      audit: {
+        record: async (input) => ({
+          ...input,
+          id: "audit",
+          occurredAt: new Date().toISOString(),
+          severity: "info",
+        }),
+      },
+    });
+    await service.create({
+      context: context(),
+      entityType: "content.item",
+      entityId: "article-1",
+      text: "Hello",
+    });
+    await expect(
+      service.putReaction({
+        context: context(),
+        commentId: id.comment,
+        code: "thumbs_up",
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      service.putReaction({
+        context: context(),
+        commentId: id.comment,
+        code: "thumbs_up",
+      }),
+    ).resolves.toBe(false);
   });
 
   it("opens moderation in the same transaction as the comment flag", async () => {
-    const persistence = createInMemoryCollaborationPersistence({ createId: ids(id.comment,id.flag) }); let observed=false;
-    const service = createCollaborationService({ authorizer: allow(), principals: { resolveActivePrincipals: async (_context, values) => values }, repository: persistence.repository, transactions: persistence.transactions, outbox: { append: async () => undefined }, audit: { record: async (input) => ({ ...input, id: "audit", occurredAt: new Date().toISOString(), severity: "info" }) }, moderation: { open: async (input, transaction) => { observed=transaction!.flags.has(input.commentFlagId); return { id: "66666666-6666-4666-8666-666666666666",tenantId:id.tenant,commentFlagId:id.flag,reviewerEvidence:input.reviewerEvidence??{}, replayed:false, status:"open" }; },review:async()=>{throw new Error("unused")},resolve:async()=>{throw new Error("unused")},dismiss:async()=>{throw new Error("unused")} } });
-    await service.create({ context: context(), entityType: "content.item", entityId: "article-1", text: "Hello" });
-    await expect(service.flag({ context: context(), commentId:id.comment, reasonCode:"spam" })).resolves.toBe(id.flag);
+    const persistence = createInMemoryCollaborationPersistence({
+      createId: ids(id.comment, id.flag),
+    });
+    let observed = false;
+    const service = createCollaborationService({
+      authorizer: allow(),
+      principals: {
+        resolveActivePrincipals: async (_context, values) => values,
+      },
+      repository: persistence.repository,
+      commandExecutions: persistence.commandExecutions,
+      transactions: persistence.transactions,
+      outbox: { append: async () => undefined },
+      audit: {
+        record: async (input) => ({
+          ...input,
+          id: "audit",
+          occurredAt: new Date().toISOString(),
+          severity: "info",
+        }),
+      },
+      moderation: {
+        open: async (input, transaction) => {
+          observed = transaction!.flags.has(input.commentFlagId);
+          return {
+            id: "66666666-6666-4666-8666-666666666666",
+            tenantId: id.tenant,
+            commentFlagId: id.flag,
+            reviewerEvidence: input.reviewerEvidence ?? {},
+            replayed: false,
+            status: "open",
+          };
+        },
+        review: async () => {
+          throw new Error("unused");
+        },
+        resolve: async () => {
+          throw new Error("unused");
+        },
+        dismiss: async () => {
+          throw new Error("unused");
+        },
+      },
+    });
+    await service.create({
+      context: context(),
+      entityType: "content.item",
+      entityId: "article-1",
+      text: "Hello",
+    });
+    await expect(
+      service.flag({
+        context: context(),
+        commentId: id.comment,
+        reasonCode: "spam",
+      }),
+    ).resolves.toBe(id.flag);
     expect(observed).toBe(true);
   });
 
   it("derives safe projections and references from canonical rich text", async () => {
-    const events: OutboxEventInput[] = []; const persistence = createInMemoryCollaborationPersistence({ createId: ids(id.comment) });
-    const service = createCollaborationService({ authorizer: allow(), principals: { resolveActivePrincipals: async (_context, values) => values }, repository: persistence.repository, transactions: persistence.transactions, outbox: { append: async (event) => { events.push(event); } }, audit: { record: async (input) => ({ ...input, id: "audit", occurredAt: new Date().toISOString(), severity: "info" }) } });
-    const result = await service.create({ context: context(), entityType: "content.item", entityId: "article-1", text: "untrusted", format: "rich_json", content: { type: "doc", schema: "athyper.rich-text/1.0", content: [{ type: "paragraph", content: [{ type: "text", text: "<script>alert(1)</script>" }, { type: "mention", attrs: { principalId: id.mentioned, label: "Ada" } }] }, { type: "attachmentImage", attrs: { attachmentId: id.flag, alt: "Chart" } }] }, html: "<script>trusted?</script>" });
+    const events: OutboxEventInput[] = [];
+    const persistence = createInMemoryCollaborationPersistence({
+      createId: ids(id.comment),
+    });
+    const service = createCollaborationService({
+      authorizer: allow(),
+      principals: {
+        resolveActivePrincipals: async (_context, values) => values,
+      },
+      repository: persistence.repository,
+      commandExecutions: persistence.commandExecutions,
+      transactions: persistence.transactions,
+      outbox: {
+        append: async (event) => {
+          events.push(event);
+        },
+      },
+      audit: {
+        record: async (input) => ({
+          ...input,
+          id: "audit",
+          occurredAt: new Date().toISOString(),
+          severity: "info",
+        }),
+      },
+    });
+    const result = await service.create({
+      context: context(),
+      entityType: "content.item",
+      entityId: "article-1",
+      text: "untrusted",
+      format: "rich_json",
+      content: {
+        type: "doc",
+        schema: "athyper.rich-text/1.0",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "<script>alert(1)</script>" },
+              {
+                type: "mention",
+                attrs: { principalId: id.mentioned, label: "Ada" },
+              },
+            ],
+          },
+          {
+            type: "attachmentImage",
+            attrs: { attachmentId: id.flag, alt: "Chart" },
+          },
+        ],
+      },
+      html: "<script>trusted?</script>",
+    });
     expect(result.text).toContain("<script>alert(1)</script>");
     expect(result.html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
     expect(result.html).not.toContain("<script>");
-    expect(result).toMatchObject({ format: "rich_json", contentSchema: "athyper.rich-text/1.0" });
-    expect(persistence.inspect().mentions.get(id.comment)).toEqual([id.mentioned]);
-    expect(events.some((event) => event.eventType === "collaboration.comment.mentioned")).toBe(true);
+    expect(result).toMatchObject({
+      format: "rich_json",
+      contentSchema: "athyper.rich-text/1.0",
+    });
+    expect(persistence.inspect().mentions.get(id.comment)).toEqual([
+      id.mentioned,
+    ]);
+    expect(
+      events.some(
+        (event) => event.eventType === "collaboration.comment.mentioned",
+      ),
+    ).toBe(true);
   });
 
   it("rejects unsafe links and unknown HTML-like nodes", async () => {
-    const persistence = createInMemoryCollaborationPersistence({ createId: ids(id.comment) }); const service = createCollaborationService({ authorizer: allow(), principals: { resolveActivePrincipals: async (_context, values) => values }, repository: persistence.repository, transactions: persistence.transactions, outbox: { append: async () => undefined }, audit: { record: async (input) => ({ ...input, id: "audit", occurredAt: new Date().toISOString(), severity: "info" }) } });
-    await expect(service.create({ context: context(), entityType: "content.item", entityId: "article-1", text: "x", format: "rich_json", content: { type: "doc", schema: "athyper.rich-text/1.0", content: [{ type: "paragraph", content: [{ type: "text", text: "click", marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }] }] }] } })).rejects.toMatchObject({ code: "INVALID_RICH_TEXT" });
+    const persistence = createInMemoryCollaborationPersistence({
+      createId: ids(id.comment),
+    });
+    const service = createCollaborationService({
+      authorizer: allow(),
+      principals: {
+        resolveActivePrincipals: async (_context, values) => values,
+      },
+      repository: persistence.repository,
+      commandExecutions: persistence.commandExecutions,
+      transactions: persistence.transactions,
+      outbox: { append: async () => undefined },
+      audit: {
+        record: async (input) => ({
+          ...input,
+          id: "audit",
+          occurredAt: new Date().toISOString(),
+          severity: "info",
+        }),
+      },
+    });
+    await expect(
+      service.create({
+        context: context(),
+        entityType: "content.item",
+        entityId: "article-1",
+        text: "x",
+        format: "rich_json",
+        content: {
+          type: "doc",
+          schema: "athyper.rich-text/1.0",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "click",
+                  marks: [
+                    { type: "link", attrs: { href: "javascript:alert(1)" } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_RICH_TEXT" });
   });
 });
-function ids(...values: string[]): () => string { let i = 0; return () => values[i++] ?? id.flag; }
-function allow() { return { authorize: async () => ({ allowed: true } as const) }; }
-function context(): VerifiedRequestContext { return { planeKey: "studio", realmKey: "athyper", tenantId: id.tenant, principalId: id.author, authEpoch: 1, profileHash: "profile", requestId: "request", permissions: { planeKey: "studio", tenantId: id.tenant, principalId: id.author, principalFingerprint: "fp", profileHash: "profile", schemaHash: "schema", resolvedAt: 1, allowed: [], denied: [], planLocked: [], planeExcluded: [], entries: [], authorizationScopes: [] } }; }
+function ids(...values: string[]): () => string {
+  let i = 0;
+  return () => values[i++] ?? id.flag;
+}
+function allow() {
+  return { authorize: async () => ({ allowed: true }) as const };
+}
+function context(): VerifiedRequestContext {
+  return {
+    planeKey: "studio",
+    realmKey: "athyper",
+    tenantId: id.tenant,
+    principalId: id.author,
+    authEpoch: 1,
+    profileHash: "profile",
+    requestId: "request",
+    permissions: {
+      planeKey: "studio",
+      tenantId: id.tenant,
+      principalId: id.author,
+      principalFingerprint: "fp",
+      profileHash: "profile",
+      schemaHash: "schema",
+      resolvedAt: 1,
+      allowed: [],
+      denied: [],
+      planLocked: [],
+      planeExcluded: [],
+      entries: [],
+      authorizationScopes: [],
+    },
+  };
+}
+
+function harness(
+  options: {
+    failOutbox?: () => boolean;
+    deny?: boolean;
+    authorizeCapability?: import("../collaboration-service.js").CollaborationServiceOptions<unknown>["authorizeCapability"];
+  } = {},
+) {
+  const events: OutboxEventInput[] = [];
+  const persistence = createInMemoryCollaborationPersistence({
+    now: () => new Date("2026-08-10T00:00:00Z"),
+  });
+  const service = createCollaborationService({
+    authorizer: { authorize: async () => ({ allowed: !options.deny }) },
+    ...(options.authorizeCapability
+      ? { authorizeCapability: options.authorizeCapability }
+      : {}),
+    principals: { resolveActivePrincipals: async (_context, values) => values },
+    repository: persistence.repository,
+    commandExecutions: persistence.commandExecutions,
+    transactions: persistence.transactions,
+    outbox: {
+      append: async (event) => {
+        if (options.failOutbox?.()) throw new Error("outbox down");
+        events.push(event);
+      },
+    },
+    audit: {
+      record: async (input) => ({
+        ...input,
+        id: "audit",
+        occurredAt: new Date().toISOString(),
+        severity: "info",
+      }),
+    },
+  });
+  return { persistence, service, events };
+}
+const base = {
+  context: context(),
+  entityType: "content.item",
+  entityId: "article-1",
+  text: "hello",
+};
+describe("collaboration regression coverage", () => {
+  it("records a durable orphan intent when an edit removes the final attachment pin", async () => {
+    const { service, persistence, events } = harness();
+    const comment = await service.create(base);
+    const original = persistence.repository.edit.bind(persistence.repository);
+    persistence.repository.edit = async (command, mentions, tx) => {
+      const outcome = await original(command, mentions, tx);
+      return outcome ? { ...outcome, orphanedAttachmentIds: [id.mentioned] } : null;
+    };
+    await service.edit({ context: context(), commentId: comment.id, text: "without file", expectedRevision: 1 });
+    expect(events).toContainEqual(expect.objectContaining({ topic: "attachments.lifecycle", eventType: "attachments.orphaned", entityId: id.mentioned, eventKey: `attachment:${id.mentioned}:orphaned:comment:${comment.id}`, payload: expect.objectContaining({ reason: "comment_attachment_removed" }) }));
+  });
+  it("uses admitted canonical permission and audience, and cannot fall back after denial", async () => {
+    const admitted = harness({
+      deny: true,
+      authorizeCapability: async () => ({ defaultAudience: "private" }),
+    });
+    const comment = await admitted.service.create({
+      ...base,
+      entityType: "business_partner",
+    });
+    expect(comment.visibility).toBe("private");
+    const denied = harness({
+      authorizeCapability: async () => {
+        throw new Error("policy denied");
+      },
+    });
+    await expect(denied.service.create(base)).rejects.toThrow("policy denied");
+    expect(denied.persistence.inspect().comments.size).toBe(0);
+  });
+  it("does not infer a revision for an edit whose client omitted it", async () => {
+    const { service } = harness();
+    const comment = await service.create(base);
+    await expect(
+      service.edit({
+        context: context(),
+        commentId: comment.id,
+        text: "missing revision",
+        expectedRevision: undefined as unknown as number,
+      }),
+    ).rejects.toMatchObject({ code: "COMMENT_REVISION_REQUIRED" });
+  });
+  it("requires a revision on the first edit and rejects stale revisions", async () => {
+    const { service } = harness();
+    const comment = await service.create(base);
+    await expect(
+      service.edit({
+        expectedRevision: 1,
+        context: context(),
+        commentId: comment.id,
+        text: "edited",
+      }),
+    ).resolves.toMatchObject({ text: "edited" });
+    await expect(
+      service.edit({
+        expectedRevision: 1,
+        context: context(),
+        commentId: comment.id,
+        text: "stale",
+      }),
+    ).rejects.toMatchObject({ statusCode: 409 });
+  });
+  it.each(["garbage", "infinity", "2026-08-10", "2026-08-10T00:00:00"])(
+    "rejects invalid timestamps %s",
+    async (readAt) => {
+      const { service, persistence } = harness();
+      await expect(service.markRead({ ...base, readAt })).rejects.toMatchObject(
+        { code: "INVALID_TIMESTAMP" },
+      );
+      expect(persistence.inspect().cursors.size).toBe(0);
+    },
+  );
+  it("never moves a read cursor backwards", async () => {
+    const { service, persistence } = harness();
+    await service.markRead({ ...base, readAt: "2026-08-10T00:00:00Z" });
+    await service.markRead({ ...base, readAt: "2026-08-09T00:00:00Z" });
+    expect([...persistence.inspect().cursors.values()]).toEqual([
+      "2026-08-10T00:00:00.000Z",
+    ]);
+  });
+  it("returns controlled errors for absent and mismatched reply parents and excessive depth", async () => {
+    const { service } = harness();
+    await expect(
+      service.create({ ...base, parentCommentId: id.comment }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    let parent = await service.create(base);
+    await expect(
+      service.create({
+        ...base,
+        contextType: "workflow",
+        parentCommentId: parent.id,
+      }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    for (let depth = 1; depth <= 5; depth++)
+      parent = await service.create({ ...base, parentCommentId: parent.id });
+    await expect(
+      service.create({ ...base, parentCommentId: parent.id }),
+    ).rejects.toMatchObject({ statusCode: 422 });
+  });
+  it("clears all rich projections when converting to plain text", async () => {
+    const { service } = harness();
+    const comment = await service.create({
+      ...base,
+      format: "rich_json",
+      content: {
+        type: "doc",
+        schema: "athyper.rich-text/1.0",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "rich" }] },
+        ],
+      },
+    });
+    const edited = await service.edit({
+      expectedRevision: 1,
+      context: context(),
+      commentId: comment.id,
+      text: "plain",
+      contentSchema: "athyper.rich-text/9.9",
+    });
+    expect(edited.format).toBe("plain");
+    expect(edited.content).toBeUndefined();
+    expect(edited.html).toBeUndefined();
+    expect(edited.contentSchema).toBeUndefined();
+  });
+  it("rejects reactions and flags against missing or other-tenant comments", async () => {
+    const { service } = harness();
+    const comment = await service.create(base);
+    for (const commentId of [id.comment, comment.id]) {
+      const other = { ...context(), tenantId: id.mentioned };
+      await expect(
+        service.putReaction({ context: other, commentId, code: "thumbs_up" }),
+      ).resolves.toBe(false);
+      await expect(
+        service.flag({ context: other, commentId, reasonCode: "spam" }),
+      ).rejects.toMatchObject({ statusCode: 404 });
+    }
+  });
+  it("reuses an open flag for repeated reports", async () => {
+    const { service, persistence } = harness();
+    const comment = await service.create(base);
+    const input = {
+      context: context(),
+      commentId: comment.id,
+      reasonCode: "spam",
+    };
+    expect(await service.flag(input)).toBe(
+      await service.flag({ ...input, reasonCode: "abuse" }),
+    );
+    expect(persistence.inspect().flags.size).toBe(1);
+  });
+  it.each([
+    null,
+    { type: "text", text: "hello", marks: {} },
+    { type: "text", text: "hello", marks: [null] },
+  ])("rejects malformed rich-text nodes", async (node) => {
+    const { service } = harness();
+    await expect(
+      service.create({
+        ...base,
+        format: "rich_json",
+        content: {
+          type: "doc",
+          schema: "athyper.rich-text/1.0",
+          content: [{ type: "paragraph", content: [node] }],
+        },
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_RICH_TEXT" });
+  });
+});
+
+describe("comment create idempotency", () => {
+  it("replays concurrent retries and rejects a changed request or actor", async () => {
+    const { service, persistence } = harness();
+    const command = { ...base, idempotencyKey: "collaboration-create-0001" };
+    const [first, second] = await Promise.all([
+      service.create(command),
+      service.create({
+        ...command,
+        context: { ...context(), requestId: "retry" },
+      }),
+    ]);
+    expect(second).toEqual(first);
+    expect(persistence.inspect().comments.size).toBe(1);
+    await expect(
+      service.create({ ...command, text: "different" }),
+    ).rejects.toMatchObject({ statusCode: 409 });
+    await expect(
+      service.create({
+        ...command,
+        context: { ...context(), principalId: id.mentioned },
+      }),
+    ).rejects.toMatchObject({ statusCode: 409 });
+  });
+  it("rejects malformed keys before inserting", async () => {
+    const { service, persistence } = harness();
+    await expect(
+      service.create({ ...base, idempotencyKey: "bad" }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(persistence.inspect().comments.size).toBe(0);
+  });
+});
+
+describe("collaboration side-effect regressions", () => {
+  it("rolls back the receipt on failure and emits side effects only on the successful attempt", async () => {
+    let fail = true;
+    const { service, persistence, events } = harness({
+      failOutbox: () => fail,
+    });
+    const command = { ...base, idempotencyKey: "collaboration-create-0002" };
+    await expect(service.create(command)).rejects.toThrow("outbox down");
+    expect(persistence.inspect().receipts.size).toBe(0);
+    expect(persistence.inspect().comments.size).toBe(0);
+    fail = false;
+    const first = await service.create(command);
+    expect(await service.create(command)).toEqual(first);
+    expect(events).toHaveLength(1);
+  });
+  it("does not repeat retained mentions across successive edits", async () => {
+    const { service, events } = harness();
+    const comment = await service.create(base);
+    for (const [index, text] of ["first mention", "second mention"].entries())
+      await service.edit({
+        expectedRevision: index + 1,
+        context: context(),
+        commentId: comment.id,
+        text,
+        mentionedPrincipalIds: [id.mentioned],
+      });
+    const mentions = events.filter(
+      (event) => event.eventType === "collaboration.comment.mentioned",
+    );
+    expect(mentions).toHaveLength(1);
+    expect(mentions[0]?.eventKey).toBe(`comment:${comment.id}:revision:2:mention:${id.mentioned}`);
+  });
+  it("caps future read times and rejects impossible calendar dates", async () => {
+    const { service, persistence } = harness();
+    const before = Date.now();
+    await service.markRead({ ...base, readAt: "2099-01-01T00:00:00Z" });
+    const cursor = [...persistence.inspect().cursors.values()][0]!;
+    expect(Date.parse(cursor)).toBeGreaterThanOrEqual(before);
+    expect(Date.parse(cursor)).toBeLessThanOrEqual(Date.now());
+    await expect(
+      service.markRead({ ...base, readAt: "2026-02-30T00:00:00Z" }),
+    ).rejects.toMatchObject({ code: "INVALID_TIMESTAMP" });
+  });
+});
+
+it("uses a UUID outbox entity for mentions on resources with text IDs", async () => {
+  const { service, events } = harness();
+  const comment = await service.create({
+    ...base,
+    mentionedPrincipalIds: [id.mentioned],
+  });
+  expect(
+    events.find(
+      (event) => event.eventType === "collaboration.comment.mentioned",
+    ),
+  ).toMatchObject({
+    entityType: "document.comment",
+    entityId: comment.id,
+    payload: { entity_type: "content.item", entity_id: "article-1" },
+  });
+});
+it("accepts flag reason codes supported by the database", async () => {
+  const { service } = harness();
+  const comment = await service.create(base);
+  await expect(
+    service.flag({
+      context: context(),
+      commentId: comment.id,
+      reasonCode: "policy.abuse-report",
+    }),
+  ).resolves.toBeTypeOf("string");
+});
+
+it.each([
+  "create",
+  "edit",
+  "remove",
+  "putReaction",
+  "deleteReaction",
+  "putDraft",
+  "deleteDraft",
+  "markRead",
+  "flag",
+] as const)("denies %s without mutation permission", async (method) => {
+  const { service, persistence } = harness({ deny: true });
+  await expect(
+    service[method]({
+      ...base,
+      commentId: id.comment,
+      code: "thumbs_up",
+      reasonCode: "spam",
+    } as never),
+  ).rejects.toMatchObject({ statusCode: 403 });
+  expect(persistence.inspect().comments.size).toBe(0);
+  expect(persistence.inspect().flags.size).toBe(0);
+  expect(persistence.inspect().drafts.size).toBe(0);
+  expect(persistence.inspect().cursors.size).toBe(0);
+});
+it("preserves author ownership for edit and delete", async () => {
+  const { service } = harness();
+  const comment = await service.create(base);
+  const other = { ...context(), principalId: id.mentioned };
+  await expect(
+    service.edit({
+      expectedRevision: 1,
+      context: other,
+      commentId: comment.id,
+      text: "unauthorized edit",
+    }),
+  ).rejects.toMatchObject({ statusCode: 409 });
+  await expect(
+    service.remove({ context: other, commentId: comment.id }),
+  ).resolves.toBe(false);
+});
+
+it("notifies only newly added mentions on edit with stable revision identities",async()=>{
+ const {service,events}=harness();
+ const a=await service.create({...base,mentionedPrincipalIds:[id.mentioned,id.author]});
+ const b=await service.edit({context:context(),commentId:a.id,text:"Retained mention",expectedRevision:a.revision,mentionedPrincipalIds:[id.mentioned]});
+ await service.edit({context:context(),commentId:a.id,text:"Added B",expectedRevision:b.revision,mentionedPrincipalIds:[id.mentioned,id.flag]});
+ const mentions=events.filter(e=>e.eventType==="collaboration.comment.mentioned");
+ expect(mentions.map(e=>e.payload.recipient_principal_ids)).toEqual([[id.mentioned],[id.flag]]);
+ expect(mentions.map(e=>e.eventKey)).toEqual([`comment:${a.id}:revision:1:mention:${id.mentioned}`,`comment:${a.id}:revision:3:mention:${id.flag}`]);
+});
+
+it("includes only explicitly requested pinned notification files and rejects unrelated references",async()=>{
+ const {service,events}=harness();
+ await service.create({...base,attachmentIds:[id.flag],mentionedPrincipalIds:[id.mentioned]});
+ expect(events.find(e=>e.eventType==="collaboration.comment.mentioned")?.payload.attachments).toEqual([]);
+ await service.create({...base,attachmentIds:[id.flag],notificationAttachments:[{attachmentId:id.flag,required:true}],mentionedPrincipalIds:[id.mentioned]});
+ expect(events.filter(e=>e.eventType==="collaboration.comment.mentioned").at(-1)?.payload.attachments).toEqual([{attachmentId:id.flag,attachmentVersionId:id.flag,versionPolicy:"pinned",requestedDisposition:"auto",required:true}]);
+ await expect(service.create({...base,notificationAttachments:[{attachmentId:id.flag,required:false}]})).rejects.toMatchObject({code:"INVALID_NOTIFICATION_ATTACHMENTS"});
+});

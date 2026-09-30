@@ -1,0 +1,122 @@
+{
+  "version": 2,
+  "profiles": {
+    "athyper-neon": {
+      "entryApplication": "@athyper/neon",
+      "requiredProductPackages": ["@athyper/product-neon-business-partner", "@athyper/product-neon-navigation", "@athyper/product-neon-shell"],
+      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui"],
+      "requiredServerServices": ["@athyper/server-platform-host"],
+      "environmentVariables": ["NODE_ENV", "PORT", "APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"],
+      "buildCommand": "pnpm --filter @athyper/neon... build",
+      "runtimeCommand": "pnpm --filter @athyper/neon start",
+      "healthChecks": [
+        {"path": "/livez", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200}
+      ]
+    },
+    "athyper-studio": {
+      "entryApplication": "@athyper/studio",
+      "requiredProductPackages": ["@athyper/product-studio-business-partner", "@athyper/product-studio-shell"],
+      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui"],
+      "requiredServerServices": ["@athyper/server-platform-host"],
+      "environmentVariables": ["NODE_ENV", "PORT", "APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"],
+      "buildCommand": "pnpm --filter @athyper/studio... build",
+      "runtimeCommand": "pnpm --filter @athyper/studio start",
+      "healthChecks": [
+        {"path": "/livez", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200}
+      ]
+    },
+    "athyper-mesh": {
+      "entryApplication": "@athyper/mesh",
+      "requiredProductPackages": ["@athyper/product-mesh-business-partner", "@athyper/product-mesh-shell"],
+      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui"],
+      "requiredServerServices": ["@athyper/server-platform-host"],
+      "environmentVariables": ["NODE_ENV", "PORT", "APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"],
+      "buildCommand": "pnpm --filter @athyper/mesh... build",
+      "runtimeCommand": "pnpm --filter @athyper/mesh start",
+      "healthChecks": [
+        {"path": "/livez", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200}
+      ]
+    },
+    "athyper-server": {
+      "entryApplication": "@athyper/server-platform-host",
+      "requiredProductPackages": [],
+      "requiredSharedPackages": [
+        "@athyper/server-foundation",
+        "@athyper/server-contract-audit",
+        "@athyper/server-contract-auth",
+        "@athyper/server-contract-content",
+        "@athyper/server-contract-content-extraction",
+        "@athyper/server-contract-documents",
+        "@athyper/server-contract-events",
+        "@athyper/server-contract-jobs",
+        "@athyper/server-contract-malware-scanning",
+        "@athyper/server-contract-metadata",
+        "@athyper/server-contract-notifications",
+        "@athyper/server-contract-numbering",
+        "@athyper/server-contract-object-storage",
+        "@athyper/server-contract-policy",
+        "@athyper/server-contract-publication",
+        "@athyper/server-contract-records",
+        "@athyper/server-contract-rendering",
+        "@athyper/server-contract-search",
+        "@athyper/server-contract-secrets",
+        "@athyper/server-contract-workflow"
+      ],
+      "requiredServerServices": [
+        "@athyper/server-plane-mesh",
+        "@athyper/server-plane-neon",
+        "@athyper/server-plane-studio",
+        "@athyper/server-adapter-auth-keycloak",
+        "@athyper/server-adapter-cache-redis",
+        "@athyper/server-adapter-communications",
+        "@athyper/server-adapter-db-athyper",
+        "@athyper/server-adapter-db-core",
+        "@athyper/server-adapter-db-mesh",
+        "@athyper/server-adapter-db-neon",
+        "@athyper/server-adapter-document-parser-tika",
+        "@athyper/server-adapter-malware-clamav",
+        "@athyper/server-adapter-object-storage-s3",
+        "@athyper/server-adapter-publication-signing",
+        "@athyper/server-adapter-rendering",
+        "@athyper/server-adapter-search-meilisearch",
+        "@athyper/server-adapter-secretstore-infisical",
+        "@athyper/server-adapter-telemetry-otel",
+        "@athyper/server-platform-audit",
+        "@athyper/server-platform-iam",
+        "@athyper/server-platform-jobs",
+        "@athyper/server-platform-metadata",
+        "@athyper/server-platform-notifications",
+        "@athyper/server-platform-policy",
+        "@athyper/server-platform-preferences",
+        "@athyper/server-platform-rendering",
+        "@athyper/server-platform-search",
+        "@athyper/server-platform-workflow",
+        "@athyper/server-service-attachments",
+        "@athyper/server-service-content",
+        "@athyper/server-service-document-processing",
+        "@athyper/server-service-documents",
+        "@athyper/server-service-jobs",
+        "@athyper/server-service-numbering",
+        "@athyper/server-service-publication",
+        "@athyper/server-service-records",
+        "@athyper/server-runtime-http",
+        "@athyper/server-runtime-jobs",
+        "@athyper/server-runtime-scheduling"
+      ],
+      "environmentVariables": [
+        "NODE_ENV", "ATHYPER_ENV", "MODE", "PORT", "DATABASE_URL", "MESH_DATABASE_URL",
+        "KEYCLOAK_ISSUER_URL", "KEYCLOAK_CLIENT_ID", "REDIS_URL", "REDIS_BULLMQ_URL",
+        "S3_ENDPOINT", "S3_BUCKET", "OTEL_EXPORTER_OTLP_ENDPOINT"
+      ],
+      "buildCommand": "pnpm --filter @athyper/server-platform-host... build",
+      "runtimeCommand": "pnpm --filter @athyper/server-platform-host start:api",
+      "healthChecks": [
+        {"path": "/livez", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200}
+      ]
+    }
+  }
+}

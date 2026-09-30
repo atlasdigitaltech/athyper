@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_reviewed_reset_runtime_proposal",
+  "createdAt": "2026-09-11T09:26:40.024Z",
+  "sourceArtifactHash": "81d8d9737fd50aecdcbb164ec958cd3a41b6e6d7515f79531340a04a8ea1be50",
+  "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+  "graphHash": "9587c84ccaacb5909eb258e68b8db6996710b69b1ad2cbfba5c30ca6a7bdb70a",
+  "descriptorHash": "0bfae825152704ebdfdfeb3555ec8502292aedabcbee4710f733079743f8e8cc",
+  "nativeContractHash": "9cc841028e1a5a9de9252d7021d687aa8e5f8d94cbb315cc5838c0721117d52d",
+  "nativeDescriptorHash": "159356339cdb0a395f894594e62b19cca78acef4bf256f61dfbcd389006a7723",
+  "includedOperations": [
+    "activity_read",
+    "add_role",
+    "addresses_read",
+    "amend_partner",
+    "assign_organization",
+    "attachments_read",
+    "bank_read",
+    "bank_reveal",
+    "case_create",
+    "case_decide",
+    "case_materialize",
+    "case_read",
+    "case_submit",
+    "case_update",
+    "case_validate",
+    "certificate_read",
+    "change_bank",
+    "comments_read",
+    "configure_company",
+    "contacts_read",
+    "credit_read",
+    "customer_company_read",
+    "discover",
+    "enter",
+    "export",
+    "identifier_read",
+    "identity_read",
+    "import",
+    "lifecycle",
+    "navigate_manage",
+    "navigate_overview",
+    "navigate_review",
+    "network_read",
+    "qualification",
+    "qualification_company",
+    "qualification_read",
+    "read",
+    "request_supplier",
+    "requests_read",
+    "supplier_company_read",
+    "tax_read",
+    "tax_reveal"
+  ],
+  "deferredOperations": [
+    "address_sensitive_read",
+    "certification",
+    "contact_sensitive_read",
+    "create",
+    "person_read",
+    "person_sensitive_read",
+    "section_propose_change",
+    "update",
+    "workforce_read"
+  ],
+  "nativeTests": {
+    "contractHash": "9cc841028e1a5a9de9252d7021d687aa8e5f8d94cbb315cc5838c0721117d52d",
+    "passed": true,
+    "results": [
+      {
+        "key": "atlas_preserved",
+        "passed": true
+      },
+      {
+        "key": "reset_runtime_payload_exact",
+        "passed": true
+      },
+      {
+        "key": "v2_runtime_exact",
+        "passed": true
+      }
+    ]
+  },
+  "sourceDelta": [
+    "Clear generated operation_scope_bindings for current native compilation",
+    "Replace deleted predecessor linkage with reviewed empty-target restoration marker"
+  ],
+  "freshIndependentReviewRequired": true,
+  "historicalApprovalReused": false,
+  "grantsChanged": false,
+  "activationAuthorized": false,
+  "publicationEligible": false,
+  "proposalRevision": "8c09c5f30249a382d43349e6cd06465c332c2c5c05e21a34f95bbda26a42e72b"
+}

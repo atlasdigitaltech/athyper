@@ -1,0 +1,37 @@
+{
+  "observedAt": "2026-09-10T06:46:43.339Z",
+  "images": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "athyper-runtime-server:mesh-fork-20260910",
+      "digest": "sha256:4636e9da567a3394efc0c15bf08773b18bb831807b9e832146f088a3b4f1c495",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "digest": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "passed": true,
+  "transactionRolledBack": true,
+  "checks": [
+    "new tenant key accepted with current source",
+    "global key substitution denied",
+    "existing tenant head overwrite denied",
+    "stale global source denied"
+  ]
+}

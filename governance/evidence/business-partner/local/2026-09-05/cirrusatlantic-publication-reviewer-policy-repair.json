@@ -1,0 +1,28 @@
+{
+  "schema": "athyper.development-publication-reviewer-policy-repair/1",
+  "observedAt": "2026-09-05T04:39:47.523134+00:00",
+  "environment": "dev",
+  "revisionId": "4849ea52-4e91-4c09-b06a-22e511362050",
+  "defect": "general authorizer lacked required publication SoD policy evaluator",
+  "repair": "dedicated policy reads tenant-scoped immutable revision author and checks reviewer separation",
+  "unchangedRequirements": [
+    "MFA elevated assurance",
+    "publish grant",
+    "entitlement",
+    "tenant scope",
+    "service no-self-publish check"
+  ],
+  "validation": {
+    "policyTestsPassed": 5,
+    "publicationTestsPassed": 62,
+    "hostTypecheck": "passed",
+    "imageBuild": "passed",
+    "apiLivezStatus": 200,
+    "apiContainerHealth": "healthy",
+    "authenticatedReviewerRetry": "pending"
+  },
+  "apiImage": "sha256:5aa472da6e1646b389d13a5806ccfdc54a884ab75b0b1fa5797af6fcb520255b",
+  "nativeApproval": null,
+  "signedRelease": null,
+  "consumerActivationReceipts": []
+}

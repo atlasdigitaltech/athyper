@@ -1,0 +1,13 @@
+Date: 2026-09-26
+Targeted command: pnpm --dir server/apps/platform-host test src/composition/__tests__/business-partner-backend-mapping.test.ts src/composition/__tests__/business-partner-backend-intents.test.ts src/composition/__tests__/partner-section-contract.test.ts
+Exit: 0
+Test Files: 3 passed (3)
+Tests: 24 passed (24)
+
+Full command: pnpm --dir server/apps/platform-host test
+Exit: 0
+Test Files: 72 passed | 1 skipped (73)
+Tests: 531 passed | 1 skipped (532)
+Duration: 4.92s
+
+No startup, live database, or login verification performed.

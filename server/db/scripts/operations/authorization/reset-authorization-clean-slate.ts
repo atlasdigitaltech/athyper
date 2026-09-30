@@ -2,12 +2,12 @@
 
 import pg from "pg";
 
-import { applyAuthorizationSeedPack } from "../../apply-authorization-seed-pack.js";
+import { applyAuthorizationSeedPack } from "../../provisioning/apply-authorization-seed-pack.js";
 import {
   assertDestructiveResetAllowed,
   resolveDestructiveResetCliApproval,
   type ProvisionPlane,
-} from "../../safe-provision.js";
+} from "../../provisioning/safe-provision.js";
 
 const args = process.argv.slice(2);
 const plane = option("--plane") as ProvisionPlane | undefined;

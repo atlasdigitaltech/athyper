@@ -1,0 +1,302 @@
+{
+  "stage": 6,
+  "scope": "service integration; real clamd; fixture repository, renderer, identity and private HTTP object store",
+  "startedAt": "2026-09-11T12:54:01.058Z",
+  "daemon": {
+    "host": "172.22.0.7",
+    "port": 3310
+  },
+  "faultInjection": "isolated TCP proxy; stale VERSION only, outage disconnect; INSTREAM replies never fabricated",
+  "results": [
+    {
+      "path": "upload",
+      "scenario": "clean",
+      "passed": true,
+      "admission": "active",
+      "sameUploadRetry": false,
+      "trace": [
+        "upload",
+        "copy",
+        "scan",
+        "scan:clean",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": [
+        "attachments.staged",
+        "attachments.finalized",
+        "attachments.extraction.requested",
+        "attachments.derivatives.requested"
+      ]
+    },
+    {
+      "path": "upload",
+      "scenario": "eicar",
+      "passed": true,
+      "admission": "blocked",
+      "sameUploadRetry": false,
+      "trace": ["upload", "copy", "scan", "scan:infected", "quarantine"],
+      "events": ["attachments.staged", "attachments.quarantined"]
+    },
+    {
+      "path": "upload",
+      "scenario": "outage",
+      "passed": true,
+      "failureCode": "MALWARE_SCANNER_SIGNATURE_STALE",
+      "admission": "blocked",
+      "sameUploadRetry": true,
+      "trace": [
+        "upload",
+        "copy",
+        "scan",
+        "copy",
+        "scan",
+        "scan:clean",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": [
+        "attachments.staged",
+        "attachments.finalized",
+        "attachments.extraction.requested",
+        "attachments.derivatives.requested"
+      ]
+    },
+    {
+      "path": "upload",
+      "scenario": "outage-recovery",
+      "passed": true,
+      "admission": "active",
+      "sameUploadRetry": false,
+      "trace": [
+        "upload",
+        "copy",
+        "scan",
+        "scan:clean",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": [
+        "attachments.staged",
+        "attachments.finalized",
+        "attachments.extraction.requested",
+        "attachments.derivatives.requested"
+      ]
+    },
+    {
+      "path": "upload",
+      "scenario": "scan-outage",
+      "passed": true,
+      "failureCode": "MALWARE_SCANNER_PROTOCOL",
+      "admission": "blocked",
+      "sameUploadRetry": true,
+      "trace": [
+        "upload",
+        "copy",
+        "scan",
+        "copy",
+        "scan",
+        "scan:clean",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": [
+        "attachments.staged",
+        "attachments.finalized",
+        "attachments.extraction.requested",
+        "attachments.derivatives.requested"
+      ]
+    },
+    {
+      "path": "upload",
+      "scenario": "scan-outage-recovery",
+      "passed": true,
+      "admission": "active",
+      "sameUploadRetry": false,
+      "trace": [
+        "upload",
+        "copy",
+        "scan",
+        "scan:clean",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": [
+        "attachments.staged",
+        "attachments.finalized",
+        "attachments.extraction.requested",
+        "attachments.derivatives.requested"
+      ]
+    },
+    {
+      "path": "upload",
+      "scenario": "stale",
+      "passed": true,
+      "failureCode": "MALWARE_SCANNER_SIGNATURE_STALE",
+      "admission": "blocked",
+      "sameUploadRetry": true,
+      "trace": [
+        "upload",
+        "copy",
+        "scan",
+        "copy",
+        "scan",
+        "scan:clean",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": [
+        "attachments.staged",
+        "attachments.finalized",
+        "attachments.extraction.requested",
+        "attachments.derivatives.requested"
+      ]
+    },
+    {
+      "path": "upload",
+      "scenario": "stale-recovery",
+      "passed": true,
+      "admission": "active",
+      "sameUploadRetry": false,
+      "trace": [
+        "upload",
+        "copy",
+        "scan",
+        "scan:clean",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": [
+        "attachments.staged",
+        "attachments.finalized",
+        "attachments.extraction.requested",
+        "attachments.derivatives.requested"
+      ]
+    },
+    {
+      "path": "render",
+      "scenario": "clean",
+      "passed": true,
+      "admission": "active",
+      "sameUploadRetry": false,
+      "trace": [
+        "render",
+        "scan",
+        "scan:clean",
+        "store",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": ["documents.generated"]
+    },
+    {
+      "path": "render",
+      "scenario": "eicar",
+      "passed": true,
+      "admission": "blocked",
+      "sameUploadRetry": false,
+      "trace": ["render", "scan", "scan:infected"],
+      "events": []
+    },
+    {
+      "path": "render",
+      "scenario": "outage",
+      "passed": true,
+      "failureCode": "MALWARE_SCANNER_SIGNATURE_STALE",
+      "admission": "blocked",
+      "sameUploadRetry": false,
+      "trace": ["render", "scan"],
+      "events": []
+    },
+    {
+      "path": "render",
+      "scenario": "outage-recovery",
+      "passed": true,
+      "admission": "active",
+      "sameUploadRetry": false,
+      "trace": [
+        "render",
+        "scan",
+        "scan:clean",
+        "store",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": ["documents.generated"]
+    },
+    {
+      "path": "render",
+      "scenario": "scan-outage",
+      "passed": true,
+      "failureCode": "MALWARE_SCANNER_PROTOCOL",
+      "admission": "blocked",
+      "sameUploadRetry": false,
+      "trace": ["render", "scan"],
+      "events": []
+    },
+    {
+      "path": "render",
+      "scenario": "scan-outage-recovery",
+      "passed": true,
+      "admission": "active",
+      "sameUploadRetry": false,
+      "trace": [
+        "render",
+        "scan",
+        "scan:clean",
+        "store",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": ["documents.generated"]
+    },
+    {
+      "path": "render",
+      "scenario": "stale",
+      "passed": true,
+      "failureCode": "MALWARE_SCANNER_SIGNATURE_STALE",
+      "admission": "blocked",
+      "sameUploadRetry": false,
+      "trace": ["render", "scan"],
+      "events": []
+    },
+    {
+      "path": "render",
+      "scenario": "stale-recovery",
+      "passed": true,
+      "admission": "active",
+      "sameUploadRetry": false,
+      "trace": [
+        "render",
+        "scan",
+        "scan:clean",
+        "store",
+        "activate",
+        "sign",
+        "sign"
+      ],
+      "events": ["documents.generated"]
+    }
+  ],
+  "passed": true,
+  "initialHealth": {
+    "status": "healthy",
+    "signature": {
+      "fresh": true,
+      "version": "28119",
+      "builtAt": "2026-09-10T06:24:09.000Z",
+      "ageMs": 109792066
+    }
+  },
+  "finishedAt": "2026-09-11T12:54:01.345Z"
+}

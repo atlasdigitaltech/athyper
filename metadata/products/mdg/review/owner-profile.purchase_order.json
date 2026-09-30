@@ -1,0 +1,13 @@
+{
+  "documentKind": "authoring_profile_review_input",
+  "runtimeArtifact": false,
+  "basePresentationRef": "address/presentation.section.json",
+  "ownerEntityCode": "purchase_order",
+  "overrides": {
+    "hiddenFields": [
+      "validation_status"
+    ]
+  },
+  "mergeStage": "compile_time",
+  "mayRelaxAuthorization": false
+}

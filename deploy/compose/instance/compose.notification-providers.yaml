@@ -1,0 +1,24 @@
+# stackctl selects this overlay for external notification providers.
+# Staging provider.env validation requires EMAIL_PROVIDER=ses; SMTP rollback is
+# not a supported stackctl deployment mode. A future rollback must add provider
+# validation and required-secret checks before mounting SMTP credentials.
+x-notification-provider-environment: &notification-provider-environment
+  ATHYPER_ENV: staging
+  EMAIL_PROVIDER: ${EMAIL_PROVIDER:-ses}
+  SES_REGION: ${SES_REGION:-}
+  SES_CONFIGURATION_SET: ${SES_CONFIGURATION_SET:-}
+  SES_FROM: ${SES_FROM:-}
+  SES_REPLY_TO: ${SES_REPLY_TO:-}
+  SES_EVENT_QUEUE_URL: ${SES_EVENT_QUEUE_URL:-}
+  SES_EVENT_REGION: ${SES_EVENT_REGION:-}
+  SES_EVENT_WAIT_SECONDS: ${SES_EVENT_WAIT_SECONDS:-20}
+  SES_EVENT_VISIBILITY_TIMEOUT_SECONDS: ${SES_EVENT_VISIBILITY_TIMEOUT_SECONDS:-60}
+  SES_EVENT_MAX_MESSAGES: ${SES_EVENT_MAX_MESSAGES:-10}
+  SES_EVENT_FAILURE_BACKOFF_MS: ${SES_EVENT_FAILURE_BACKOFF_MS:-1000}
+
+services:
+  api:
+    environment: *notification-provider-environment
+
+  worker:
+    environment: *notification-provider-environment

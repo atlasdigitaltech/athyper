@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-09-27T22:26:38.298Z",
+  "kind": "controlled dependency latency; actual detail service",
+  "hookDelayMs": {
+    "collaboration": 40,
+    "summary": 70
+  },
+  "runs": 12,
+  "medianMs": 70.74891200000002,
+  "p95Ms": 72.615569,
+  "samples": [
+    {
+      "totalMs": 72.615569,
+      "startSpreadMs": 0.13661399999995183,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.793200000000013,
+          "end": 41.23266000000001
+        },
+        {
+          "hook": "summary",
+          "start": 0.9298139999999648,
+          "end": 71.51714199999998
+        }
+      ]
+    },
+    {
+      "totalMs": 70.93560800000006,
+      "startSpreadMs": 0.026246000000014647,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.0584440000000086,
+          "end": 40.418227
+        },
+        {
+          "hook": "summary",
+          "start": 0.08469000000002325,
+          "end": 70.61325600000004
+        }
+      ]
+    },
+    {
+      "totalMs": 70.86546999999996,
+      "startSpreadMs": 0.022729999999910433,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.05779900000004545,
+          "end": 40.33781299999998
+        },
+        {
+          "hook": "summary",
+          "start": 0.08052899999995589,
+          "end": 70.60210400000005
+        }
+      ]
+    },
+    {
+      "totalMs": 70.74891200000002,
+      "startSpreadMs": 0.027421000000003914,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.07318899999995665,
+          "end": 40.29988800000001
+        },
+        {
+          "hook": "summary",
+          "start": 0.10060999999996056,
+          "end": 70.51780599999995
+        }
+      ]
+    },
+    {
+      "totalMs": 69.77815299999997,
+      "startSpreadMs": 0.060791999999992186,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.051567999999974745,
+          "end": 40.35996899999998
+        },
+        {
+          "hook": "summary",
+          "start": 0.11235999999996693,
+          "end": 69.53531899999996
+        }
+      ]
+    },
+    {
+      "totalMs": 70.64563799999996,
+      "startSpreadMs": 0.02323999999998705,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.04779899999994086,
+          "end": 40.2520649999999
+        },
+        {
+          "hook": "summary",
+          "start": 0.07103899999992791,
+          "end": 70.41256799999996
+        }
+      ]
+    },
+    {
+      "totalMs": 70.65605100000005,
+      "startSpreadMs": 0.020317999999974745,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.04788500000006479,
+          "end": 40.26713900000004
+        },
+        {
+          "hook": "summary",
+          "start": 0.06820300000003954,
+          "end": 70.41893100000004
+        }
+      ]
+    },
+    {
+      "totalMs": 69.65534000000002,
+      "startSpreadMs": 0.018780999999989945,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.05012300000009873,
+          "end": 40.24440900000002
+        },
+        {
+          "hook": "summary",
+          "start": 0.06890400000008867,
+          "end": 69.41775500000006
+        }
+      ]
+    },
+    {
+      "totalMs": 70.73781499999996,
+      "startSpreadMs": 0.02352799999994204,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.057859000000007654,
+          "end": 40.28004199999998
+        },
+        {
+          "hook": "summary",
+          "start": 0.0813869999999497,
+          "end": 70.45246199999997
+        }
+      ]
+    },
+    {
+      "totalMs": 70.76358699999992,
+      "startSpreadMs": 0.02304999999989832,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.06505200000003697,
+          "end": 40.27387799999997
+        },
+        {
+          "hook": "summary",
+          "start": 0.08810199999993529,
+          "end": 70.46097800000007
+        }
+      ]
+    },
+    {
+      "totalMs": 70.82076399999983,
+      "startSpreadMs": 0.036278000000038446,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.050880000000006476,
+          "end": 40.420388999999886
+        },
+        {
+          "hook": "summary",
+          "start": 0.08715800000004492,
+          "end": 70.57196199999998
+        }
+      ]
+    },
+    {
+      "totalMs": 70.58715799999982,
+      "startSpreadMs": 0.016624000000092565,
+      "calls": [
+        {
+          "hook": "collaboration",
+          "start": 0.04660199999989345,
+          "end": 40.23319399999991
+        },
+        {
+          "hook": "summary",
+          "start": 0.06322599999998602,
+          "end": 70.41062799999986
+        }
+      ]
+    }
+  ]
+}

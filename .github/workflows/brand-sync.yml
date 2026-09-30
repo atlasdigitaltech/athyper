@@ -4,9 +4,17 @@ on:
   pull_request:
     paths:
       - "packages/shared/foundation/brand/**"
-      - "stack/config/iam/themes/neon/login/_neon-brand-*.ftl"
-      - "stack/config/iam/themes/neon/login/resources/img/neon-*.svg"
-      - "scripts/brand/**"
+      - "packages/platform/foundation/brand/assets/athyper-favicon.png"
+      - "packages/platform/foundation/brand/src/**"
+      - "packages/platform/foundation/theme/src/**"
+      - "packages/platform/foundation/theme/scripts/build-iam-css.ts"
+      - "apps/*/public/brand/*/favicon.png"
+      - "deploy/config/iam/themes/neon/login/_neon-brand-*.ftl"
+      - "deploy/config/iam/themes/neon/login/resources/img/neon-*.svg"
+      - "deploy/config/iam/themes/neon/login/**/*.ftl"
+      - "deploy/config/iam/themes/neon/login/resources/img/athyper-favicon.png"
+      - "deploy/compose/*/**/status.html"
+      - "tooling/scripts/brand/**"
       - ".github/workflows/brand-sync.yml"
   push:
     branches: [main, develop]
@@ -22,17 +30,18 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.19.0
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify universal favicon sync
+        run: pnpm brand:check:favicon
 
       - name: Verify Keycloak brand sync
         run: pnpm brand:verify

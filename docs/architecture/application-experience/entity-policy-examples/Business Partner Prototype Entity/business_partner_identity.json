@@ -1,0 +1,10 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0", "contractStatus": "proposed_for_review", "planeKey": "neon", "entityCode": "business_partner_identity", "descriptorKind": "child_collection",
+  "aggregate": { "key": "business_partner", "rootEntityCode": "business_partner" }, "ownership": { "ownerEntityCode": "business_partner", "ownerIdSource": "business_partner_id", "cardinality": "one_to_many" },
+  "storage": { "sourceObjects": ["master.business_partner_alias", "master.external_reference", "master.business_partner_industry_classification"], "tenantField": "tenant_id" },
+  "fields": [{ "key": "alias", "type": "string", "sourceObject": "master.business_partner_alias", "effectiveDated": true }, { "key": "externalReference", "type": "object", "sourceObject": "master.external_reference", "restricted": true }, { "key": "industryClassification", "type": "reference", "sourceObject": "master.business_partner_industry_classification" }],
+  "businessContext": { "scopeKind": "inherited_from_owner", "requiredCoordinates": [] },
+  "operations": [{ "key": "read", "permission": "neon.business_partner.read", "scope": "tenant" }, { "key": "manage", "permission": "neon.business_partner.update", "scope": "tenant" }],
+  "handlers": { "read": "neon.business_partner.identity.read.v1", "write": "neon.business_partner.identity.write.v1" },
+  "presentation": { "section": "Identity and legal profile", "component": "business-partner-identity.v1" }, "serverPolicies": ["effective_dates", "reference_uniqueness", "restricted_value_disclosure", "audit"]
+}

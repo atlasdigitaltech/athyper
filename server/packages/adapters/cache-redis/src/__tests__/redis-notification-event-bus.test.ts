@@ -53,10 +53,11 @@ describe("Redis notification event bus", () => {
     bus.subscribe({ tenantId: "tenant-1", principalId: "principal-2" }, otherPrincipal);
 
     await bus.publish({
-      type: "notification.created",
+      type: "notification.delivery",
       tenantId: "tenant-1",
       principalId: "principal-1",
-      notificationId: "notification-1",
+      deliveryId: "delivery-1",
+      deliveryStatus: "delivered",
       occurredAt: "2026-08-09T00:00:00.000Z",
     });
     await Promise.resolve();

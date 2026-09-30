@@ -33,7 +33,7 @@ describe("saved views", () => {
       setScope: async (_scope, id, nextScope) => { const row = rows.get(id); if (!row) return false; rows.set(id, { ...row, scope: nextScope, ...(nextScope === "shared" ? { ownerPrincipalId: undefined } : {}) }); return true; },
       clone: async (_scope, _source, clone) => { rows.set(clone.id, clone); }, getPreference: async (_scope, code, surface) => preferences.get(`${code}:${surface}`), setPreference: async (_scope, code, surface, value) => { preferences.set(`${code}:${surface}`, value); }, clearPreference: async (_scope, code, surface) => { preferences.delete(`${code}:${surface}`); },
     };
-    const service = createSavedViewService(repository, () => `view-${++sequence}`), scope = { planeKey: "studio" as const, tenantId: "tenant", principalId: "principal" };
+    const service = createSavedViewService(repository, () => `view-${++sequence}`,async()=>true), scope = { planeKey: "studio" as const, tenantId: "tenant", principalId: "principal" };
     const view = await service.create(scope, { surfaceCode: "entity_list", entityCode: "supplier", code: "all", name: "All", state: {} });
     await service.setDefault(scope, "supplier", view.id); expect((await service.list(scope))[0]?.isDefault).toBe(true);
     expect(await service.toggleFlag(scope, view.id, "pinned")).toEqual({ enabled: true }); expect((await service.list(scope))[0]?.isPinned).toBe(true);

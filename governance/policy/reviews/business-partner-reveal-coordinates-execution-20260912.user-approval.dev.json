@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "decision": "approved",
+  "proposalRevision": "cd56f2c9e9219ab7a6e5e689fd8055dae4e7fba3f0f3346df14137c32af6eb25",
+  "approvedAt": "2026-09-12T09:25:31.547Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "Candidate cd56f2c9, isolated NEON qualification through 17:30 MYT"
+  },
+  "effectiveUntil": "2026-09-12T09:30:00.000Z",
+  "activationAuthorized": false,
+  "compatibilityRetirementAuthorized": false
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "policy": "policy:style-tokens:strict",
+  "capturedAtCommit": "632a992a80ee1268b7e5bf00540979b863ae16a3",
+  "capturedOn": "2026-09-20",
+  "note": "Unresolved token references predating the strict audit. Fix down; never up.",
+  "total": 203,
+  "files": {
+    "apps/neon/app/(shell)/mdg/authorization-review/review.tsx": 1,
+    "apps/neon/app/(shell)/mdg/operation-review/review.tsx": 1,
+    "apps/studio/app/(shell)/mdg/business-partner/workbench.css": 35,
+    "packages/planes/neon/business-partner/src/styles.css": 64,
+    "packages/platform/entity/runtime/list-view/src/styles.css": 10,
+    "packages/platform/foundation/surface-kit/src/public-identity-showcase.css": 1,
+    "packages/platform/foundation/ui/src/styles.css": 45,
+    "packages/platform/iam/identity-gate/src/styles.css": 21,
+    "packages/platform/shell/shell/src/styles.css": 25
+  }
+}

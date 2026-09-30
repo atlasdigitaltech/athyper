@@ -1,0 +1,20 @@
+{
+  "schema": "athyper.business-partner-r8-evidence-artifact/1",
+  "gate": "production_canary_rollback",
+  "result": "pending",
+  "environment": "production",
+  "targetRef": null,
+  "sourceRevision": null,
+  "startedAt": null,
+  "completedAt": null,
+  "evidence": {
+    "planes": [
+      "studio",
+      "neon",
+      "mesh"
+    ],
+    "exactPriorHeadsRestored": null,
+    "correlationIds": [],
+    "canaryReport": null
+  }
+}

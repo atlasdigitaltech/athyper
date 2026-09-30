@@ -1,0 +1,158 @@
+groups:
+  - name: business-partner-delivery
+    rules:
+      - alert: BusinessPartnerDeliveryFailures
+        expr: sum by (instance) (rate(athyper_business_partner_mesh_delivery_total{operation="delivery",outcome=~"retry|dead_letter|quarantined"}[5m])) > 0.05
+        for: 10m
+        labels: { severity: warning, service: business-partner }
+        annotations:
+          summary: MESH to NEON Business Partner delivery is failing
+          runbook: docs/runbooks/business-partner-production-rollout.md
+      - alert: BusinessPartnerDeliveryDeadLetter
+        expr: increase(athyper_business_partner_mesh_delivery_total{operation="delivery",outcome=~"dead_letter|quarantined"}[5m]) > 0
+        for: 1m
+        labels: { severity: critical, service: business-partner }
+        annotations:
+          summary: Business Partner event entered dead letter or quarantine
+          runbook: docs/runbooks/business-partner-production-rollout.md
+      - alert: BusinessPartnerReconciliationDrift
+        expr: increase(athyper_business_partner_mesh_delivery_total{operation="reconciliation",outcome="reopened"}[15m]) > 0
+        for: 1m
+        labels: { severity: warning, service: business-partner }
+        annotations:
+          summary: Reconciliation found a missing NEON recipient receipt
+          runbook: docs/runbooks/business-partner-production-rollout.md
+      - alert: BusinessPartnerRequestTooOld
+        expr: max by (instance) (athyper_business_partner_request_oldest_open_seconds) > 86400
+        for: 15m
+        labels: { severity: warning, service: business-partner }
+        annotations:
+          {
+            summary: Oldest open Business Partner request exceeds 24 hours,
+            runbook: docs/runbooks/business-partner-p9-qualification.md,
+          }
+      - alert: BusinessPartnerRequestFailureRate
+        expr: sum by (instance) (rate(athyper_business_partner_request_http_total{outcome="error"}[5m])) / clamp_min(sum by (instance) (rate(athyper_business_partner_request_http_total[5m])), 0.001) > 0.01
+        for: 10m
+        labels: { severity: critical, service: business-partner }
+        annotations:
+          {
+            summary: Business Partner request failure rate exceeds one percent,
+            runbook: docs/runbooks/business-partner-p9-qualification.md,
+          }
+      - alert: BusinessPartnerMaterializationFailure
+        expr: increase(athyper_business_partner_request_http_total{operation="apply",outcome="error"}[5m]) > 0
+        for: 1m
+        labels: { severity: critical, service: business-partner }
+        annotations:
+          {
+            summary: Business Partner request materialization failed,
+            runbook: docs/runbooks/business-partner-p9-qualification.md,
+          }
+      - alert: BusinessPartnerInvitationAbuse
+        expr: increase(athyper_business_partner_invitation_http_total{operation="external_guard",outcome=~"rate_limited|payload_too_large"}[5m]) > 5
+        for: 1m
+        labels: { severity: warning, service: business-partner }
+        annotations:
+          {
+            summary: External invitation guard is rejecting abusive traffic,
+            runbook: docs/runbooks/business-partner-p9-qualification.md,
+          }
+      - alert: BusinessPartnerOutboxLag
+        expr: max by (instance) (athyper_outbox_lag_seconds) > 60
+        for: 5m
+        labels: { severity: critical, service: business-partner }
+        annotations:
+          {
+            summary: Outbox lag exceeds the P9 release threshold,
+            runbook: docs/runbooks/outbox-lag.md,
+          }
+      - alert: BusinessPartnerWorkflowSlaWorkerFailure
+        expr: increase(athyper_job_dlq_total{queue="maintenance"}[5m]) > 0 or max by (instance) (athyper_schedule_lag_seconds{queue="maintenance"}) > 60
+        for: 5m
+        labels: { severity: critical, service: business-partner }
+        annotations:
+          {
+            summary: Workflow SLA maintenance is delayed or dead-lettered,
+            runbook: docs/runbooks/business-partner-p9-qualification.md,
+          }
+      - alert: BusinessPartnerIamDrift
+        expr: increase(trustiam_projection_reconciliation_total{outcome=~"drift|failed|fenced"}[15m]) > 0
+        for: 1m
+        labels: { severity: critical, service: business-partner }
+        annotations:
+          {
+            summary: IAM projection reconciliation detected drift or fencing,
+            runbook: docs/runbooks/trustiam-keycloak-identity-saga-recovery.md,
+          }
+      - alert: BusinessPartnerReadinessFailure
+        expr: min by (instance) (up{job="athyper-runtime-processes"}) < 1
+        for: 2m
+        labels: { severity: critical, service: business-partner }
+        annotations:
+          {
+            summary: A Business Partner runtime process is not scrape-ready,
+            runbook: docs/runbooks/business-partner-p9-qualification.md,
+          }
+  - name: business-partner-360
+    rules:
+      - alert: BusinessPartner360SummaryLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le, instance) (rate(athyper_bp360_duration_ms_bucket{operation="summary"}[10m]))) > 500
+        for: 10m
+        labels:
+          { severity: warning, service: business-partner-360, team: platform }
+        annotations:
+          {
+            summary: Business Partner 360 summary p95 exceeds 500 ms,
+            runbook: docs/runbooks/business-partner-360-operations.md,
+          }
+      - alert: BusinessPartner360SectionLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le, section, instance) (rate(athyper_bp360_duration_ms_bucket{operation="section"}[10m]))) > 750
+        for: 10m
+        labels:
+          { severity: warning, service: business-partner-360, team: platform }
+        annotations:
+          {
+            summary: A Business Partner 360 section p95 exceeds 750 ms,
+            runbook: docs/runbooks/business-partner-360-operations.md,
+          }
+      - alert: BusinessPartner360ErrorRateHigh
+        expr: sum by (instance) (rate(athyper_bp360_request_total{outcome="failure"}[10m])) / clamp_min(sum by (instance) (rate(athyper_bp360_request_total[10m])), 0.001) > 0.01
+        for: 10m
+        labels:
+          { severity: critical, service: business-partner-360, team: platform }
+        annotations:
+          {
+            summary: Business Partner 360 error rate exceeds one percent,
+            runbook: docs/runbooks/business-partner-360-operations.md,
+          }
+      - alert: BusinessPartner360DefinitionUnavailable
+        expr: increase(athyper_bp360_completeness_total{status="definition_unavailable"}[10m]) > 0
+        for: 1m
+        labels:
+          { severity: warning, service: business-partner-360, team: platform }
+        annotations:
+          {
+            summary: Business Partner 360 completeness definition is unavailable,
+            runbook: docs/runbooks/business-partner-360-operations.md,
+          }
+      - alert: BusinessPartner360MeshFallbackHigh
+        expr: sum by (instance) (rate(athyper_bp360_mesh_fallback_total[10m])) / clamp_min(sum by (instance) (rate(athyper_bp360_request_total{section="network"}[10m])), 0.001) > 0.05
+        for: 10m
+        labels:
+          { severity: warning, service: business-partner-360, team: platform }
+        annotations:
+          {
+            summary: Business Partner 360 Network fallback rate exceeds five percent,
+            runbook: docs/runbooks/business-partner-360-operations.md,
+          }
+      - alert: BusinessPartner360RevealFailureSpike
+        expr: increase(athyper_bp360_reveal_total{outcome="failure"}[5m]) > 5
+        for: 1m
+        labels:
+          { severity: critical, service: business-partner-360, team: security }
+        annotations:
+          {
+            summary: Purpose-bound Business Partner reveal failures are elevated,
+            runbook: docs/runbooks/business-partner-360-operations.md,
+          }

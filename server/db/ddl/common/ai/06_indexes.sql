@@ -1,5 +1,6 @@
 -- Generated from the extracted live Atlas AI contract.
--- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
+-- Maintained as canonical foundation DDL; use additive migrations for installed databases.
+-- Supported verification and maintenance: server/db/scripts/README.md (Atlas AI DDL).
 
 CREATE INDEX ai_action_policy_aap_tenant_action_idx ON ai.ai_action_policy USING btree (tenant_id, action_code, doc_class) WHERE is_active = true;
 
@@ -108,3 +109,16 @@ CREATE INDEX atlas_thread_expiry_idx ON ai.atlas_thread USING btree (expires_at)
 CREATE INDEX atlas_thread_owner_history_idx ON ai.atlas_thread USING btree (tenant_id, plane, owner_principal_id, updated_at DESC NULLS LAST, conversation_id);
 
 CREATE INDEX atlas_thread_purge_idx ON ai.atlas_thread USING btree (purge_after) WHERE purge_after IS NOT NULL AND legal_hold = false;
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+CREATE UNIQUE INDEX atlas_experience_release_draft_uq ON ai.atlas_experience_release USING btree (tenant_id, scope) WHERE (status = 'draft'::text);
+
+CREATE INDEX atlas_experience_release_history_idx ON ai.atlas_experience_release USING btree (tenant_id, scope, revision DESC);
+
+CREATE UNIQUE INDEX atlas_experience_release_published_uq ON ai.atlas_experience_release USING btree (tenant_id, scope) WHERE (status = 'published'::text);
+-- END ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+
+-- BEGIN ATLAS F4 LEARNING COMMON
+CREATE INDEX atlas_learning_candidate_retention_ix ON ai.atlas_learning_candidate(tenant_id,expires_at);
+-- END ATLAS F4 LEARNING COMMON

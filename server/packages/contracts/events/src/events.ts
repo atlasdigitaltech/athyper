@@ -31,6 +31,8 @@ export interface OutboxEventInput<Payload extends object = Readonly<Record<strin
   readonly actorId: string;
   readonly correlationId?: string;
   readonly causationId?: string;
+  /** Stable routing key used by recipient-specific or ordered event streams. */
+  readonly partitionKey?: string;
   readonly payload?: Payload;
 }
 

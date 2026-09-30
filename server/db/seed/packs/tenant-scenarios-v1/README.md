@@ -62,10 +62,10 @@ before applying authorization-v2 organization/group membership:
 
 ```powershell
 pnpm.cmd run iam:demo:functional-subjects:reconcile
-node tools/scripts/apply-realm-demo-setup.cjs --container athyper-iam-1 `
+node tooling/tools/scripts/apply-realm-demo-setup.cjs --container athyper-iam-1 `
   --admin-user $env:IAM_ADMIN --admin-password $env:IAM_ADMIN_PASSWORD `
-  --realm-file stack/config/iam/realm-athyper.json `
-  --demo-file stack/config/iam/realm-athyper-demosetup.json --fast 1
+  --realm-file deploy/config/iam/realm-athyper.json `
+  --demo-file deploy/config/iam/realm-athyper-demosetup.json --fast 1
 pnpm.cmd run iam:reconcile:authorization-v2 -- --apply `
   --user-manifest=server/db/seed/contracts/authorization/admission/compiled/keycloak-admission.v1.json `
   --tenant-manifest=server/db/seed/manifests/three-plane-demo.v1.json

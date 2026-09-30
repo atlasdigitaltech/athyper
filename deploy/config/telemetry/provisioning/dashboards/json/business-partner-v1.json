@@ -1,0 +1,96 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Governed-case p95 latency (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le,operation) (rate(athyper_business_partner_case_http_duration_ms_bucket[10m])))",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Governed-case outcomes",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (operation,outcome,status_code) (rate(athyper_business_partner_case_http_total[10m]))",
+          "legendFormat": "{{operation}} {{outcome}} {{status_code}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Oldest open case",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "athyper_business_partner_case_oldest_open_seconds"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Notification planning",
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (lifecycle,outcome) (rate(athyper_business_partner_notification_planning_total[10m]))",
+          "legendFormat": "{{lifecycle}} {{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Oldest pending notification",
+      "gridPos": { "h": 7, "w": 4, "x": 16, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "athyper_business_partner_notification_oldest_pending_seconds"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Notification dead letters",
+      "gridPos": { "h": 7, "w": 4, "x": 20, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "athyper_business_partner_notification_dead_letters"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["business-partner", "v1", "governed-case", "release-gate"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "Business Partner V1 Governed Journey",
+  "uid": "business-partner-v1-governed-journey",
+  "version": 1
+}

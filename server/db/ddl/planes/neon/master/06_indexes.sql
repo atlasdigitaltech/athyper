@@ -23,6 +23,18 @@ CREATE INDEX address_country_idx
     ON master.address (tenant_id, country_code)
     WHERE country_code IS NOT NULL;
 
+CREATE INDEX address_kind_idx
+    ON master.address (tenant_id, address_kind)
+    WHERE address_kind IS NOT NULL;
+
+CREATE INDEX address_state_region_idx
+    ON master.address (tenant_id, state_region_code)
+    WHERE state_region_code IS NOT NULL;
+
+CREATE INDEX address_timezone_idx
+    ON master.address (tenant_id, timezone_code)
+    WHERE timezone_code IS NOT NULL;
+
 CREATE INDEX address_duplicate_candidate_idx
     ON master.address
        (tenant_id, country_code, postal_code, lower(line1), lower(city))
@@ -31,6 +43,9 @@ CREATE INDEX address_duplicate_candidate_idx
 CREATE UNIQUE INDEX address_normalized_hash_uq
     ON master.address (tenant_id, normalized_hash)
     WHERE status = 'active';
+
+CREATE INDEX address_link_usage_status_idx
+    ON master.address_link (tenant_id, usage_status, purpose, role_qualifier);
 
 CREATE INDEX address_link_owner_idx
     ON master.address_link
@@ -46,7 +61,7 @@ CREATE UNIQUE INDEX address_link_current_primary_uq
     ON master.address_link
        (tenant_id, owner_type_id, owner_id, purpose, role_qualifier)
     NULLS NOT DISTINCT
-    WHERE is_primary AND effective_until IS NULL;
+    WHERE is_primary AND effective_until IS NULL AND usage_status <> 'cancelled';
 
 CREATE UNIQUE INDEX contact_link_value_uq
     ON master.contact_link
@@ -226,25 +241,24 @@ CREATE INDEX template_current_version_fk_idx
 
 -- Canonical counterparty identity and thin role lookup paths.
 CREATE UNIQUE INDEX business_partner_code_uq
-    ON master.business_partner (tenant_id, lower(code));
+    ON master.business_partner (tenant_id, lower(code) text_pattern_ops);
 
 CREATE INDEX business_partner_name_idx
+    ON master.business_partner (tenant_id, lower(name) text_pattern_ops);
+
+-- Prefix search uses the pattern-opclass indexes above.  Interactive sorting
+-- retains database-default collation through separate ordering indexes.
+CREATE INDEX business_partner_name_sort_idx
     ON master.business_partner (tenant_id, lower(name));
 
-CREATE INDEX business_partner_legal_name_idx
-    ON master.business_partner (tenant_id, lower(legal_name))
-    WHERE legal_name IS NOT NULL;
+CREATE INDEX business_partner_code_sort_idx
+    ON master.business_partner (tenant_id, lower(code));
 
-CREATE INDEX business_partner_parent_idx
-    ON master.business_partner (tenant_id, parent_business_partner_id)
-    WHERE parent_business_partner_id IS NOT NULL;
 
 CREATE INDEX business_partner_status_idx
     ON master.business_partner (tenant_id, status, code);
-
-CREATE INDEX business_partner_registration_country_idx
-    ON master.business_partner (registration_country_code)
-    WHERE registration_country_code IS NOT NULL;
+CREATE INDEX business_partner_category_ownership_idx
+    ON master.business_partner (tenant_id, partner_category, ownership_class, status);
 
 CREATE INDEX business_partner_created_by_idx
     ON master.business_partner (tenant_id, created_by);
@@ -279,10 +293,6 @@ CREATE UNIQUE INDEX customer_code_uq
 
 CREATE INDEX customer_status_type_idx
     ON master.customer (tenant_id, status, customer_type);
-
-CREATE INDEX customer_key_account_idx
-    ON master.customer (tenant_id, customer_code)
-    WHERE is_key_account AND status = 'active';
 
 CREATE INDEX customer_created_by_idx
     ON master.customer (tenant_id, created_by);
@@ -327,8 +337,8 @@ CREATE INDEX organization_tax_registration_company_idx
 CREATE INDEX operating_organization_parent_idx
     ON master.operating_organization (tenant_id, parent_operating_organization_id)
     WHERE parent_operating_organization_id IS NOT NULL;
-CREATE INDEX operating_organization_domain_status_idx
-    ON master.operating_organization (tenant_id, domain, status, code);
+CREATE INDEX operating_organization_kind_status_idx
+    ON master.operating_organization (tenant_id, organization_kind, status, code);
 CREATE INDEX operating_organization_company_active_org_idx
     ON master.operating_organization_company_assignment
        (tenant_id, operating_organization_id, effective_from, effective_until, company_code_id)
@@ -489,67 +499,52 @@ CREATE INDEX company_code_gl_account_default_cost_idx
     WHERE default_cost_center_id IS NOT NULL;
 
 -- Neon operational banking access paths.
-CREATE UNIQUE INDEX bank_party_active_bic_uq
-    ON master.bank_party (tenant_id, country_code, bic)
-    WHERE bic IS NOT NULL AND status = 'active';
-CREATE UNIQUE INDEX bank_party_active_national_code_uq
-    ON master.bank_party (
-        tenant_id, country_code, national_bank_code_type,
-        national_bank_code, COALESCE(branch_code, '')
-    )
-    WHERE national_bank_code IS NOT NULL AND status = 'active';
-CREATE INDEX bank_party_type_status_idx
-    ON master.bank_party (tenant_id, institution_type, status, name);
 
-CREATE UNIQUE INDEX bank_account_active_iban_uq
-    ON master.bank_account (tenant_id, account_id_value)
-    WHERE account_id_type = 'iban'
-      AND status NOT IN ('closed', 'retired');
-CREATE UNIQUE INDEX bank_account_active_local_uq
-    ON master.bank_account (
-        tenant_id,
-        COALESCE(bank_party_id, '00000000-0000-0000-0000-000000000000'::uuid),
-        COALESCE(bank_country_override, '  '::character(2)),
-        COALESCE(lower(bank_name_override), ''),
-        account_id_value,
-        currency_code
-    )
-    WHERE account_id_type = 'local'
-      AND status NOT IN ('closed', 'retired');
-CREATE INDEX bank_account_bank_party_idx
-    ON master.bank_account (tenant_id, bank_party_id, status)
-    WHERE bank_party_id IS NOT NULL;
+-- Identifiers cannot be duplicated by closing/reopening an instrument.
+CREATE UNIQUE INDEX bank_account_iban_uq ON master.bank_account(tenant_id,account_id_value)
+ WHERE account_id_type='iban';
+CREATE UNIQUE INDEX bank_account_local_uq ON master.bank_account
+ (tenant_id,COALESCE(bank_institution_id,provisional_bank_reference_id),account_id_value,currency_code)
+ WHERE account_id_type='local';
+CREATE INDEX bank_account_bank_institution_idx ON master.bank_account(tenant_id,bank_institution_id)
+ WHERE bank_institution_id IS NOT NULL;
+CREATE INDEX payment_instrument_status_idx ON master.payment_instrument(tenant_id,status,instrument_type_code);
 CREATE INDEX bank_account_correspondent_idx
-    ON master.bank_account (tenant_id, correspondent_bank_party_id)
-    WHERE correspondent_bank_party_id IS NOT NULL;
+    ON master.bank_account (tenant_id, correspondent_bank_institution_id)
+    WHERE correspondent_bank_institution_id IS NOT NULL;
 CREATE INDEX bank_account_provider_ref_idx
     ON master.bank_account (tenant_id, provider_account_ref)
     WHERE provider_account_ref IS NOT NULL;
-CREATE INDEX bank_account_unverified_idx
-    ON master.bank_account (tenant_id, status, created_at)
-    WHERE NOT is_verified AND status NOT IN ('closed', 'retired');
 
-CREATE INDEX bank_account_link_owner_idx
-    ON master.bank_account_link
+CREATE INDEX payment_instrument_link_owner_idx
+    ON master.payment_instrument_link
        (tenant_id, owner_type_id, owner_id, purpose, effective_from, effective_until);
-CREATE INDEX bank_account_link_owner_code_idx
-    ON master.bank_account_link
+CREATE INDEX payment_instrument_link_owner_code_idx
+    ON master.payment_instrument_link
        (tenant_id, owner_type, owner_id, purpose, effective_from, effective_until);
-CREATE INDEX bank_account_link_account_idx
-    ON master.bank_account_link (tenant_id, bank_account_id);
-CREATE INDEX bank_account_link_company_idx
-    ON master.bank_account_link (tenant_id, company_code_id, purpose)
+CREATE INDEX payment_instrument_link_account_idx
+    ON master.payment_instrument_link (tenant_id, payment_instrument_id);
+CREATE INDEX payment_instrument_link_company_idx
+    ON master.payment_instrument_link (tenant_id, company_code_id, purpose)
     WHERE company_code_id IS NOT NULL;
-CREATE INDEX bank_account_link_current_idx
-    ON master.bank_account_link
+CREATE INDEX payment_instrument_link_current_idx
+    ON master.payment_instrument_link
        (tenant_id, owner_type, owner_id, purpose, is_primary)
     WHERE effective_until IS NULL;
 
+CREATE INDEX bank_account_house_config_company_idx
+    ON master.bank_account_house_config (tenant_id, company_code_id)
+    WHERE status = 'active';
+CREATE INDEX bank_account_house_payment_method_idx
+    ON master.bank_account_house_payment_method (tenant_id, house_config_id, payment_method_id);
+CREATE UNIQUE INDEX bank_account_house_payment_method_default_uq
+    ON master.bank_account_house_payment_method (tenant_id, house_config_id)
+    WHERE is_default AND effective_until IS NULL;
 CREATE INDEX bank_account_house_config_gl_idx
     ON master.bank_account_house_config (tenant_id, gl_account_id);
 CREATE INDEX bank_account_house_config_active_idx
     ON master.bank_account_house_config
-       (tenant_id, bank_account_link_id, priority DESC)
+       (tenant_id, payment_instrument_link_id, priority DESC)
     WHERE status = 'active';
 
 CREATE INDEX payment_method_catalog_idx
@@ -748,18 +743,12 @@ CREATE INDEX employment_person_idx
 CREATE INDEX employment_employee_idx
     ON master.employment (tenant_id, employee_id)
     WHERE employee_id IS NOT NULL;
-CREATE UNIQUE INDEX employment_one_active_fulltime_per_company_uq
-    ON master.employment (tenant_id, person_id, company_code_id)
-    WHERE employment_status = 'active' AND employment_type = 'full_time';
 
 CREATE INDEX work_assignment_employee_idx
     ON master.work_assignment (tenant_id, employee_id, effective_from DESC);
 CREATE INDEX work_assignment_position_idx
     ON master.work_assignment (tenant_id, position_id)
     WHERE position_id IS NOT NULL;
-CREATE UNIQUE INDEX work_assignment_one_primary_active_uq
-    ON master.work_assignment (tenant_id, employee_id)
-    WHERE assignment_type = 'primary' AND status = 'active' AND effective_until IS NULL;
 
 CREATE INDEX leave_enrollment_employee_idx
     ON master.employee_leave_enrollment (tenant_id, employee_id, effective_from DESC);
@@ -995,8 +984,8 @@ CREATE INDEX bom_created_by_idx
 CREATE INDEX bom_component_created_by_idx
     ON master.bom_component (tenant_id, created_by);
 
-CREATE INDEX project_customer_idx
-    ON master.project (tenant_id, customer_id) WHERE customer_id IS NOT NULL;
+CREATE INDEX project_business_partner_idx
+    ON master.project (tenant_id, business_partner_id) WHERE business_partner_id IS NOT NULL;
 CREATE INDEX project_responsible_idx
     ON master.project (tenant_id, responsible_principal_id)
     WHERE responsible_principal_id IS NOT NULL;
@@ -1077,13 +1066,17 @@ CREATE UNIQUE INDEX business_partner_tax_registration_primary_uq
        (tenant_id, business_partner_id, jurisdiction_id, registration_type_code)
     WHERE is_primary AND status = 'active';
 
-CREATE UNIQUE INDEX business_partner_commodity_capability_current_uq
-    ON master.business_partner_commodity_capability
-       (tenant_id, business_partner_id, commodity_category_id, partner_role)
+CREATE UNIQUE INDEX business_partner_industry_classification_current_uq
+    ON master.business_partner_industry_classification
+       (tenant_id, business_partner_id, industry_domain_code, industry_code_id)
     WHERE effective_until IS NULL AND status = 'active';
-CREATE INDEX business_partner_commodity_capability_category_idx
-    ON master.business_partner_commodity_capability
-       (tenant_id, commodity_category_id, partner_role, status);
+CREATE UNIQUE INDEX business_partner_industry_classification_primary_uq
+    ON master.business_partner_industry_classification
+       (tenant_id, business_partner_id, industry_domain_code)
+    WHERE is_primary AND effective_until IS NULL AND status = 'active';
+CREATE INDEX business_partner_industry_classification_code_idx
+    ON master.business_partner_industry_classification
+       (industry_domain_code, industry_code_id, status);
 
 CREATE UNIQUE INDEX business_partner_operating_org_assignment_current_uq
     ON master.business_partner_operating_organization_assignment
@@ -1095,20 +1088,20 @@ CREATE INDEX business_partner_operating_org_assignment_org_idx
 
 CREATE INDEX company_code_supplier_profile_company_idx
     ON master.company_code_supplier_profile
-       (tenant_id, company_code_id, status, supplier_id);
+       (tenant_id, company_code_id, status, business_partner_id);
 CREATE INDEX company_code_supplier_profile_bank_idx
     ON master.company_code_supplier_profile
        (tenant_id, preferred_remittance_bank_link_id)
     WHERE preferred_remittance_bank_link_id IS NOT NULL;
 CREATE INDEX company_code_customer_profile_company_idx
     ON master.company_code_customer_profile
-       (tenant_id, company_code_id, status, customer_id);
+       (tenant_id, company_code_id, status, business_partner_id);
 
-CREATE UNIQUE INDEX legal_entity_business_partner_link_legal_uq
-    ON master.legal_entity_business_partner_link (tenant_id, legal_entity_id)
+CREATE UNIQUE INDEX legal_entity_internal_partner_link_legal_uq
+    ON master.legal_entity_internal_partner_link (tenant_id, legal_entity_id)
     WHERE effective_until IS NULL AND status = 'active';
-CREATE UNIQUE INDEX legal_entity_business_partner_link_partner_uq
-    ON master.legal_entity_business_partner_link (tenant_id, business_partner_id)
+CREATE UNIQUE INDEX legal_entity_internal_partner_link_partner_uq
+    ON master.legal_entity_internal_partner_link (tenant_id, business_partner_id)
     WHERE effective_until IS NULL AND status = 'active';
 
 CREATE UNIQUE INDEX intercompany_trading_pair_current_uq
@@ -1138,12 +1131,26 @@ CREATE INDEX certification_expiry_idx
   WHERE effective_until IS NOT NULL AND status = 'active'::text;
 CREATE INDEX certification_owner_idx
   ON master.certification USING btree (tenant_id, owner_type, owner_id);
+CREATE INDEX certification_current_owner_idx
+  ON master.certification (tenant_id, owner_type, owner_id, effective_from, effective_until)
+  WHERE status = 'active';
 CREATE INDEX certification_type_idx
   ON master.certification USING btree (tenant_id, certification_type_id)
   WHERE certification_type_id IS NOT NULL;
 CREATE UNIQUE INDEX legal_entity_live_canonical_party_uq ON master.legal_entity(tenant_id,canonical_party_id) WHERE canonical_party_id IS NOT NULL AND status<>'retired';
 CREATE UNIQUE INDEX business_partner_live_canonical_purpose_uq ON master.business_partner(tenant_id,canonical_party_id,representation_purpose_code) WHERE canonical_party_id IS NOT NULL AND status<>'archived';
+CREATE UNIQUE INDEX business_partner_live_person_purpose_uq ON master.business_partner(tenant_id,person_id,representation_purpose_code) WHERE person_id IS NOT NULL AND status<>'archived';
 
 
 CREATE INDEX organization_amendment_resource_idx ON master.organization_amendment(tenant_id,resource_kind,resource_id,revision_no DESC);
 CREATE INDEX organization_amendment_effective_idx ON master.organization_amendment(tenant_id,effective_at DESC);
+CREATE INDEX external_worker_status_idx
+    ON master.external_worker (tenant_id, status, worker_number);
+CREATE INDEX business_partner_alias_resolution_idx
+    ON master.business_partner_alias
+    (tenant_id, business_partner_id, effective_from, effective_until)
+    WHERE status = 'active';
+
+CREATE INDEX business_partner_alias_normalized_idx
+    ON master.business_partner_alias (tenant_id, normalized_alias)
+    WHERE status = 'active';

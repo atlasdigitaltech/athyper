@@ -1,0 +1,32 @@
+{
+  "observedAt": "2026-09-10T08:14:37.610139+00:00",
+  "passed": true,
+  "suites": [
+    {
+      "name": "runtime",
+      "command": "pnpm --filter @athyper/server-platform-ai test",
+      "passed": 370,
+      "skipped": 1,
+      "logSha256": "992feee442606f2621740f52919999bd3fb091b7ecdbf4b180e25e07e9a4c769"
+    },
+    {
+      "name": "ollama",
+      "command": "pnpm --filter @athyper/server-adapter-ai-ollama test",
+      "passed": 16,
+      "skipped": 0,
+      "logSha256": "d738244172191f652c4cfb7c454734f823b4c08c40d9b2ccb07f55dda97d0092"
+    },
+    {
+      "name": "semantic",
+      "command": "pnpm --filter @athyper/server-platform-host exec vitest run src/composition/__tests__/atlas-semantic-index.test.ts",
+      "passed": 7,
+      "skipped": 0,
+      "logSha256": "7188caf7121e80ecc877450172594e13e77bea5a57610ca18b50f5aed50861cb"
+    }
+  ],
+  "typechecks": [
+    "@athyper/server-adapter-ai-ollama",
+    "@athyper/server-platform-ai",
+    "@athyper/server-platform-host"
+  ]
+}

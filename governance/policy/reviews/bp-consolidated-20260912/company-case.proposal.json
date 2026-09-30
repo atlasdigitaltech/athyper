@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "preparedAt": "2026-09-12T03:02:49.195Z",
+  "packet": {
+    "schema": "athyper.business-partner-case-contract-review/2",
+    "mode": "initial",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "entityId": "9f3cab64-0c24-4635-960a-6488f91016e9",
+    "publicationKey": "metadata.entity.master_business_partner_company_setup_request.44444444444444448444444444444444",
+    "previous": null,
+    "candidate": {
+      "entityCode": "master.business_partner_company_setup_request",
+      "contract": {
+        "type": "object",
+        "required": [
+          "businessPartnerCode",
+          "name",
+          "ownershipClass",
+          "companyCodeId",
+          "operatingOrganizationId",
+          "requestedRole",
+          "currencyCode",
+          "paymentTermId",
+          "defaultAccountingProfileId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "businessPartnerCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "legalName": {
+            "type": "string"
+          },
+          "legalForm": {
+            "type": "string"
+          },
+          "registrationCountryCode": {
+            "type": "string"
+          },
+          "incorporationDate": {
+            "type": "string"
+          },
+          "websiteUrl": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "ownershipClass": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "external"
+            ]
+          },
+          "requestedRole": {
+            "type": "string",
+            "enum": [
+              "supplier",
+              "customer"
+            ]
+          },
+          "roleCode": {
+            "type": "string"
+          },
+          "registrationChannel": {
+            "type": "string"
+          },
+          "operatingOrganizationId": {
+            "type": "string"
+          },
+          "meshRegistrationExchangeId": {
+            "type": "string"
+          },
+          "meshRegistrationEvidenceHash": {
+            "type": "string"
+          },
+          "bankDisclosureReceiptId": {
+            "type": "string"
+          },
+          "bankDisclosurePurposeCode": {
+            "type": "string"
+          },
+          "qualificationTypeCode": {
+            "type": "string"
+          },
+          "preferenceRationale": {
+            "type": "string"
+          },
+          "companyCodeId": {
+            "type": "string"
+          },
+          "commodityCategoryId": {
+            "type": "string"
+          },
+          "preflight": {
+            "type": "object"
+          },
+          "expectedBusinessPartnerVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "priorStatus": {
+            "type": "string"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "array"
+          },
+          "bankProjectionId": {
+            "type": "string"
+          },
+          "supplierCompanyProfileId": {
+            "type": "string"
+          },
+          "expectedBankSnapshotId": {
+            "type": "string"
+          },
+          "priorBankLinkId": {
+            "type": "string"
+          },
+          "partnerCategory": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "person"
+            ]
+          },
+          "legalClassification": {
+            "type": "string"
+          },
+          "supplierType": {
+            "type": "string"
+          },
+          "customerType": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "effectiveUntil": {
+            "type": "string"
+          },
+          "currencyCode": {
+            "type": "string"
+          },
+          "paymentTermId": {
+            "type": "string"
+          },
+          "defaultAccountingProfileId": {
+            "type": "string"
+          },
+          "defaultDimensionSetId": {
+            "type": "string"
+          },
+          "preferredRemittanceBankLinkId": {
+            "type": "string"
+          },
+          "statementCycleCode": {
+            "type": "string"
+          },
+          "tenantFields": {
+            "type": "object"
+          },
+          "relationshipProposals": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "packetHash": "d8862462786255c2380371e2662fbede5e52f0b5af8a7c35a64b52387dce2a46",
+  "contractHash": "f1a280665f1bb83701043f92395443cdfb4ea8e8c750142d240a939c1ff8b494",
+  "targetPlanes": [
+    "neon"
+  ],
+  "registrationReleaseId": "7eb24e6d-b113-4d7b-a3ee-d26dc68a6213",
+  "published": false,
+  "activated": false
+}

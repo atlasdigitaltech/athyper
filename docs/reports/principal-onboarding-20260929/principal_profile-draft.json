@@ -1,0 +1,62 @@
+{
+  "publicationPolicyCandidate": {
+    "schema": "athyper.dev-entity-onboarding/1",
+    "policyId": "dev.entity.principal_profile.42a49a12b0e4",
+    "revision": 1,
+    "environment": "local",
+    "instance": "dev",
+    "preset": "devfull",
+    "changeSetId": "6f8163c4-2352-440a-a87b-4d36bddd8722",
+    "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+    "productHash": "42a49a12b0e4dcc097036b8c5ca737b0225d2e8e877402434ada7be7ed38397a",
+    "contractHash": "bc9f2915d11b89028caf958684bc9090b52ac9d82c505d9a90e7c0b34f43a331",
+    "descriptorHash": "c568d4cc060a1600e9e210a9eb09b0daffbb34e562650666b96c7d48874a59c1",
+    "targetPlanes": [
+      "studio",
+      "neon",
+      "mesh"
+    ],
+    "authorPrincipalId": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+    "publisherPrincipalId": "c0febdd1-491c-46b8-8113-160be767b88d"
+  },
+  "mode": "draft_persisted",
+  "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+  "changeSet": {
+    "id": "6f8163c4-2352-440a-a87b-4d36bddd8722",
+    "tenantId": null,
+    "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+    "entityCode": "principal_profile",
+    "branchCode": "system-entity.42a49a12b0e4dcc097036b8c5ca737b0225d2e8e877402434ada7be7ed38397a",
+    "status": "draft",
+    "revision": 1,
+    "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d"
+  },
+  "productHash": "42a49a12b0e4dcc097036b8c5ca737b0225d2e8e877402434ada7be7ed38397a",
+  "reused": false,
+  "contractHash": "bc9f2915d11b89028caf958684bc9090b52ac9d82c505d9a90e7c0b34f43a331",
+  "descriptorHash": "c568d4cc060a1600e9e210a9eb09b0daffbb34e562650666b96c7d48874a59c1",
+  "unsignedTargets": [
+    {
+      "plane": "studio",
+      "sourceContractHash": "bc9f2915d11b89028caf958684bc9090b52ac9d82c505d9a90e7c0b34f43a331",
+      "descriptorHash": "c568d4cc060a1600e9e210a9eb09b0daffbb34e562650666b96c7d48874a59c1"
+    },
+    {
+      "plane": "neon",
+      "sourceContractHash": "bc9f2915d11b89028caf958684bc9090b52ac9d82c505d9a90e7c0b34f43a331",
+      "descriptorHash": "2dfc1f53ccbbde20effebe2b5eb2fc794940e5baef3e9b4a140b7c5cc7f35628"
+    },
+    {
+      "plane": "mesh",
+      "sourceContractHash": "bc9f2915d11b89028caf958684bc9090b52ac9d82c505d9a90e7c0b34f43a331",
+      "descriptorHash": "a562fc3e026f8ca7548066c22394cf0c102058fa791e6b8da552a012252c7166"
+    }
+  ],
+  "validationIssues": 0,
+  "contractTestsPassed": true,
+  "contractTestCount": 0,
+  "contractTestRunPersisted": false,
+  "publication": "not_requested",
+  "approvalsCreated": 0,
+  "runtimeActivations": 0
+}

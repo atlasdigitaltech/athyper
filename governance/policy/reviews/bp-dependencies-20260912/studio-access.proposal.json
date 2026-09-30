@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated_bp_dependency_studio_access",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "destination": {
+    "container": "athyper-bp-enter-db",
+    "database": "athyper_studio",
+    "network": "athyper-bp-enter-isolated"
+  },
+  "effectiveFrom": "2026-09-11T22:00:00Z",
+  "effectiveUntil": "2026-09-12T01:15:00Z",
+  "batches": [
+    {
+      "account": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "purpose": "dependency_authoring",
+      "roleId": "728f090d-b187-49ba-b582-c3e3414ea845",
+      "groupId": "54858689-9633-4eab-a2b1-0c1c63f30f42",
+      "assignmentId": "40217dd5-bc36-4231-84df-aacced595b0a",
+      "code": "bp.dependency.authoring.catl.admin.20260912",
+      "scope": {
+        "id": "1d2550e6-6e20-5f74-81d9-388d1e75d20f",
+        "status": "active",
+        "scope_key": "cirrusatlantic",
+        "target_id": "44444444-4444-4444-8444-444444444444",
+        "scope_kind": "tenant"
+      },
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "9a0ffd63-cfdb-7c00-ad61-6d52c511c628",
+          "code": "studio.business_partner_definition.author",
+          "kind": "system_action",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "5c257b38-a863-1015-f033-237b773ff9bb",
+          "code": "studio.business_partner_definition.read",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-78af-97bc-f579919a9c92",
+          "code": "metadata.entity.author",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": true,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-7f89-9e5b-cc77799d3b66",
+          "code": "metadata.entity.validate",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": true,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-70e4-9ba9-5d625df67128",
+          "code": "metadata.entity.test",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": true,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-7646-b92e-9cbf8a89f7cc",
+          "code": "metadata.entity.submit",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": true,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-7ae5-83ed-05b4014ef3f6",
+          "code": "metadata.entity.publish",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "critical",
+          "requires_mfa": true,
+          "requires_sod": true
+        }
+      ]
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "purpose": "dependency_authoring",
+      "roleId": "3b5123d7-a91d-4c53-8431-061045e53d7e",
+      "groupId": "824ef0e8-8bb5-4be2-abb8-7b457ac4d181",
+      "assignmentId": "4d7698fe-2fe5-4313-9c4c-e69c1e8d93b0",
+      "code": "bp.dependency.authoring.catl.owner.20260912",
+      "scope": {
+        "id": "1d2550e6-6e20-5f74-81d9-388d1e75d20f",
+        "status": "active",
+        "scope_key": "cirrusatlantic",
+        "target_id": "44444444-4444-4444-8444-444444444444",
+        "scope_kind": "tenant"
+      },
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "5c257b38-a863-1015-f033-237b773ff9bb",
+          "code": "studio.business_partner_definition.read",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "74027553-160f-dd30-9d15-54b69e25ad55",
+          "code": "studio.business_partner_definition.publish",
+          "kind": "system_action",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "critical",
+          "requires_mfa": true,
+          "requires_sod": true
+        },
+        {
+          "id": "01a08f9d-14df-7703-9ce5-daa6b07fbca8",
+          "code": "metadata.entity.review",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "high",
+          "requires_mfa": true,
+          "requires_sod": true
+        }
+      ]
+    }
+  ],
+  "dependencyProposalRevision": "fd57fb23aa98970801bfe309930b3fbad0984e28665ae351ff8e62bdcc02f11d",
+  "conditions": {
+    "mfa": "Preserve catalog and route step-up requirements.",
+    "separationOfDuties": "Admin authors; owner independently reviews child and publishes onboarding; admin may publish only the independently reviewed child.",
+    "scope": "Tenant exact in isolated Studio. Native metadata permissions apply across this tenant; no BP-specific grant scope exists. Operator activity limited to the two named dependency candidates.",
+    "cleanup": "Revoke these new assignments and memberships after use; expire at the stated end. Never restore revoked or expired grants."
+  },
+  "excluded": [
+    "Shared Studio/DEV grants",
+    "Shared DEV activation",
+    "New BP business permissions",
+    "Case-contract bootstrap publication",
+    "Acceptance of policy dispositions",
+    "Enforcement rollout"
+  ],
+  "evidence": {
+    "inventory": "governance/policy/reports/business-partner-dependency-authoring-access-20260912.inventory.dev.json",
+    "sha256": "5c68a1ef6a357772b40ef31e081301bd1c7a148ce5564b6866a15d2dea1875ba"
+  },
+  "approved": false,
+  "applied": false,
+  "proposalRevision": "25c9f5a766f08a2d04e56c3cebc71c185e9667be9ef59dd459405e0f103627cb"
+}

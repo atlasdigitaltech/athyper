@@ -1,0 +1,1 @@
+{"result":"CA01 Studio persistence, real compilation, signature verification and local activation passed","publicationKey":"metadata.compiled_entity.ca01_example","releaseNo":1,"releaseHash":"sha256:b449f01d1dd73a36508b78bf681a97b702013014d26b80c4315d5e2fd6128648"}

@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-12T02:33:28.358204+00:00",
+  "trivyVersion": "0.74.0",
+  "syftVersion": "1.51.1",
+  "vulnerabilityDatabase": {
+    "Version": 2,
+    "NextUpdate": "2026-09-13T01:00:32.340243877Z",
+    "UpdatedAt": "2026-09-12T01:00:32.340244017Z",
+    "DownloadedAt": "2026-09-12T02:16:06.160605634Z"
+  },
+  "status": "completed_with_findings",
+  "imageCount": 11,
+  "imagesBlockedByGate": 11,
+  "fixableHighCriticalFindings": 447,
+  "note": "Counts are package findings, not unique CVEs or proof of exploitability. Java images use direct OS scans plus Syft CycloneDX library inventories scanned by Trivy; identification can differ from direct image scanning. CI retains direct image scanning.",
+  "images": [
+    {
+      "image": "apache/tika:3.3.1.0-full@sha256:d8e6ed96260ad89307a93195a1b856102987a818ac648502f8efbaf313d32470",
+      "id": "2a081a3936a69846",
+      "method": "Trivy OS image scan + Syft CycloneDX library inventory scanned by Trivy",
+      "components": 12828,
+      "mavenComponents": 125,
+      "total": 871,
+      "fixableHighCritical": 39,
+      "reports": ["tika-os.json", "tika-libraries.json", "tika.cdx.json"],
+      "reportSha256": {
+        "tika-os.json": "d8cbdc48d5841f5adeeb7a844ee7de43e653a034320a403af15c385b57d279d7",
+        "tika-libraries.json": "fbbe8a1b44254f42db86d5ea8bd186495a404d8bd62767b2884cc1db4be3dac7",
+        "tika.cdx.json": "becd7c5626bbf09adb5be23d6a907baf85c3af4144376e7e5feb9fe5a60668e7"
+      },
+      "gateResults": {
+        "tika-os.json": 1,
+        "tika-libraries.json": 1
+      }
+    },
+    {
+      "image": "axllent/mailpit:v1.30.6@sha256:7f33095f80e901f6ad08028f06ca284aa58fe84942be5496008d041d3b9f4d4d",
+      "id": "ce3d1002af66b309",
+      "scanExitCode": 0,
+      "total": 35,
+      "fixableHighCritical": 14,
+      "method": "Trivy image OS and library scan",
+      "reports": ["ce3d1002af66b309.json"],
+      "reportSha256": {
+        "ce3d1002af66b309.json": "e406d3f086c22b341abcddb3db5d1cd1705ec818810b61819ff6d65356e0a754"
+      },
+      "gateResults": {
+        "ce3d1002af66b309.json": 1
+      }
+    },
+    {
+      "image": "edoburu/pgbouncer:v1.25.1-p0@sha256:4a8371e79d6627e74f553d0aaa8e4c5ace20e30034fb296e569b71c89c99e108",
+      "id": "ee57a542ac45765a",
+      "scanExitCode": 0,
+      "total": 106,
+      "fixableHighCritical": 40,
+      "method": "Trivy image OS and library scan",
+      "reports": ["ee57a542ac45765a.json"],
+      "reportSha256": {
+        "ee57a542ac45765a.json": "bf792475fdd9137a744c1719151b995c4e3afe04ad811d5d98a420ef1c8f2669"
+      },
+      "gateResults": {
+        "ee57a542ac45765a.json": 1
+      }
+    },
+    {
+      "image": "getmeili/meilisearch:v1.13.3@sha256:bed3fb650e62da53145777204891159242f6ea4ce69e215b36223af4aa64a0ae",
+      "id": "54417fbff2dd4429",
+      "scanExitCode": 0,
+      "total": 60,
+      "fixableHighCritical": 17,
+      "method": "Trivy image OS and library scan",
+      "reports": ["54417fbff2dd4429.json"],
+      "reportSha256": {
+        "54417fbff2dd4429.json": "4c7b9f77d9876ba12efd32efba28e238847e43dd8a8f92979567aab72f538415"
+      },
+      "gateResults": {
+        "54417fbff2dd4429.json": 1
+      }
+    },
+    {
+      "image": "gotenberg/gotenberg:8.37.0@sha256:f29984bd1e226bf1b93ba90af06000afa8b315853e99d27b9aaa41b93f15c769",
+      "id": "5babedd184259ae4",
+      "method": "Trivy OS image scan + Syft CycloneDX library inventory scanned by Trivy",
+      "components": 14838,
+      "mavenComponents": 5,
+      "total": 1196,
+      "fixableHighCritical": 3,
+      "reports": [
+        "gotenberg-os.json",
+        "gotenberg-libraries.json",
+        "gotenberg.cdx.json"
+      ],
+      "reportSha256": {
+        "gotenberg-os.json": "a1bbdc66d974c2ff831fbc33aa6cb3657a28a0352a27d0e0f125ab6984f50b1c",
+        "gotenberg-libraries.json": "4159175953667a5875604b09fd38d38b728febdb0d57ece59f390b6de46fd302",
+        "gotenberg.cdx.json": "9bb41b2704a15cc49781fa778d68b2a8da1b008fe411edd42a3609fa34616381"
+      },
+      "gateResults": {
+        "gotenberg-os.json": 0,
+        "gotenberg-libraries.json": 1
+      }
+    },
+    {
+      "image": "nginxinc/nginx-unprivileged:1.27-alpine@sha256:65e3e85dbaed8ba248841d9d58a899b6197106c23cb0ff1a132b7bfe0547e4c0",
+      "id": "f876253331cd6389",
+      "scanExitCode": 0,
+      "total": 109,
+      "fixableHighCritical": 34,
+      "method": "Trivy image OS and library scan",
+      "reports": ["f876253331cd6389.json"],
+      "reportSha256": {
+        "f876253331cd6389.json": "deb98a9469a633d6668b1b2fb38b9c4c3bd1987b243f81f7c8ebea90277974ea"
+      },
+      "gateResults": {
+        "f876253331cd6389.json": 1
+      }
+    },
+    {
+      "image": "postgres:16.13-bookworm@sha256:472efd9a66f2b2f1a5aeb18b28de74332e6ef88c2b93a1a5d812fb6db67a5f60",
+      "id": "30a17baef278a8a0",
+      "scanExitCode": 0,
+      "total": 552,
+      "fixableHighCritical": 38,
+      "method": "Trivy image OS and library scan",
+      "reports": ["30a17baef278a8a0.json"],
+      "reportSha256": {
+        "30a17baef278a8a0.json": "fe367dd15b22f602dfb68f4b3beeaf541a6b9306952a747301252aeacd704ec8"
+      },
+      "gateResults": {
+        "30a17baef278a8a0.json": 1
+      }
+    },
+    {
+      "image": "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727",
+      "id": "97e3c0336644bb72",
+      "scanExitCode": 0,
+      "total": 123,
+      "fixableHighCritical": 47,
+      "method": "Trivy image OS and library scan",
+      "reports": ["97e3c0336644bb72.json"],
+      "reportSha256": {
+        "97e3c0336644bb72.json": "cd8ab58a275f17fcd0e64af2722ee6fc443da7a2da76eaa014454bf49467969d"
+      },
+      "gateResults": {
+        "97e3c0336644bb72.json": 1
+      }
+    },
+    {
+      "image": "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e",
+      "id": "1acd8e12d91a9991",
+      "scanExitCode": 0,
+      "total": 227,
+      "fixableHighCritical": 100,
+      "method": "Trivy image OS and library scan",
+      "reports": ["1acd8e12d91a9991.json"],
+      "reportSha256": {
+        "1acd8e12d91a9991.json": "9ac9e6f9cdab6417751391749ee790f84e075f753a3de7adf600cf138a8b4dfe"
+      },
+      "gateResults": {
+        "1acd8e12d91a9991.json": 1
+      }
+    },
+    {
+      "image": "redis:7.4.8-alpine@sha256:7aec734b2bb298a1d769fd8729f13b8514a41bf90fcdd1f38ec52267fbaa8ee6",
+      "id": "03d9ae562841092b",
+      "scanExitCode": 0,
+      "total": 111,
+      "fixableHighCritical": 56,
+      "method": "Trivy image OS and library scan",
+      "reports": ["03d9ae562841092b.json"],
+      "reportSha256": {
+        "03d9ae562841092b.json": "0941f7cd9fcf80246fc490d7777f37af756c862862908b47b11ceec63da11f61"
+      },
+      "gateResults": {
+        "03d9ae562841092b.json": 1
+      }
+    },
+    {
+      "image": "traefik:v3.6.13@sha256:34d5089d0b414945342848518b383f11f5b3a645504ed87b77ffeb9d683d0e48",
+      "id": "0940e38622e6e140",
+      "scanExitCode": 0,
+      "total": 145,
+      "fixableHighCritical": 59,
+      "method": "Trivy image OS and library scan",
+      "reports": ["0940e38622e6e140.json"],
+      "reportSha256": {
+        "0940e38622e6e140.json": "8e0d7ca4784d0bfbc7b0e5ae20f81d0e1e5cef2a35e9ebc98d96f1044eb6e7f7"
+      },
+      "gateResults": {
+        "0940e38622e6e140.json": 1
+      }
+    }
+  ]
+}

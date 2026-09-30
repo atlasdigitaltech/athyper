@@ -1,0 +1,574 @@
+{
+  "schema": "bp-ai-qualification/1",
+  "target": "DEV CirrusAtlantic",
+  "plane": "neon",
+  "runId": "cfb11453-ef34-415f-8942-0b43578f5238",
+  "startedAt": "2026-09-10T09:54:58.110Z",
+  "completedAt": null,
+  "enabledPackages": [
+    "BP-AI-00",
+    "BP-AI-01",
+    "BP-AI-02",
+    "BP-AI-03",
+    "BP-AI-04",
+    "BP-AI-05",
+    "BP-AI-06",
+    "BP-AI-07",
+    "BP-AI-08"
+  ],
+  "enabledExtendedCapabilities": [],
+  "extendedOwnerContracts": {},
+  "binding": {
+    "sourceTreeSha256": "32ae0b64b7836032e137509fff9517347517f03982c31fc326e62f6183f8a2b2",
+    "deploymentSha256": "3965a57dae72e1cc1f5c54fcfce021d09a168d50f2df34e29c44323e4079619e",
+    "modelSha256": "276c1d542bd4185057ed589dfb88182c34a292c5b02b256f0bd17c31053f13ea",
+    "promptSha256": null,
+    "toolsSha256": "0c7210a7123f64ce3b0e0621f4a3c3283d6d30014ac26212f3ba7fb3dbd2e09e",
+    "descriptorSha256": "fb7eac06794e7f74f9deecb951d56aba8e83332fc5694f6b37c03b1535e8f234",
+    "policySha256": null,
+    "contractsSha256": null,
+    "fixtureSetSha256": null
+  },
+  "evidence": [
+    {
+      "id": "changed-package-checks",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "r9",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "deployment",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "performance",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "operations",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "human-review",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "package:BP-AI-00",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "package:BP-AI-01",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "package:BP-AI-02",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "package:BP-AI-03",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "package:BP-AI-04",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "package:BP-AI-05",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "package:BP-AI-06",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "package:BP-AI-07",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "package:BP-AI-08",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:persona:directory-reader",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:persona:directory-reader",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:persona:scoped-onboarding",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:persona:scoped-onboarding",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:persona:submitter",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:persona:submitter",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:persona:independent-reviewer",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:persona:independent-reviewer",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:persona:sensitive-field-restricted",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:persona:sensitive-field-restricted",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:persona:record-denied",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:persona:record-denied",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:persona:other-tenant",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:persona:other-tenant",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:persona:revoked-during-run",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:persona:revoked-during-run",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "accessibility:desktop-dock",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "accessibility:desktop-fullscreen",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "accessibility:mobile-dock",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "accessibility:mobile-fullscreen",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A01",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A01",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A01",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A02",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A02",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A02",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A03",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A03",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A03",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A04",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A04",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A04",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A05",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A05",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A05",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A06",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A06",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A06",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A07",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A07",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A07",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A08",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A08",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A08",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A09",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A09",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A09",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A10",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A10",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A10",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A11",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A11",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A11",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A12",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A12",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A12",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A13",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A13",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A13",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A14",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A14",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A14",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A15",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A15",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A15",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A16",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A16",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A16",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "service:A18",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "browser:A18",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "live-model:A18",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "proactive:cache-revocation",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "proactive:distributed-coordination",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "proactive:redis-capacity",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    },
+    {
+      "id": "proactive:cancel-deduplicate",
+      "status": "pending",
+      "path": null,
+      "sha256": null
+    }
+  ]
+}

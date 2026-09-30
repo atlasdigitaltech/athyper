@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 import type { AuthorizationManagementRepository, AuthorizationManagementRepositoryProvider, AuthorizationManagementRolloutPolicySource, AuthorizationManagementRolloutSelector } from "@athyper/server-contract-auth";
 
@@ -17,8 +18,8 @@ export function createSafeAuthorizationManagementRolloutSelector(source: Authori
     }
 
     const selectedAt = now().getTime();
-    const approvedAt = policy?.approvedAt ? Date.parse(policy.approvedAt) : Number.NaN;
-    const expiresAt = policy?.expiresAt ? Date.parse(policy.expiresAt) : undefined;
+    const approvedAt = policy?.approvedAt ? parseInstant(policy.approvedAt) : Number.NaN;
+    const expiresAt = policy?.expiresAt ? parseInstant(policy.expiresAt) : undefined;
     const validMode = policy?.mode === "legacy" || policy?.mode === "shadow" || policy?.mode === "enforce";
     const validRevision = typeof policy?.revision === "string" && policy.revision.trim().length > 0;
     const validApproval = Number.isFinite(approvedAt) && approvedAt <= selectedAt;

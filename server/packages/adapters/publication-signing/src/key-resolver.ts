@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import type { SecretStore } from "@athyper/server-contract-secrets";
 
 export interface PublicationKeyConfiguration {
@@ -57,7 +58,7 @@ export class CachedPublicationKeyResolver {
     const cached = this.#cache.get(reference);
     if (cached && cached.expiresAtMs > this.now()) return cached.bytes.slice();
     const resolved = await this.secrets.resolve(reference);
-    const configuredExpiry = resolved.expiresAt ? Date.parse(resolved.expiresAt) : Number.POSITIVE_INFINITY;
+    const configuredExpiry = resolved.expiresAt ? parseInstant(resolved.expiresAt) : Number.POSITIVE_INFINITY;
     const expiresAtMs = Math.min(this.now() + this.ttlMs, Number.isFinite(configuredExpiry) ? configuredExpiry : Number.POSITIVE_INFINITY);
     this.#cache.set(reference, { bytes: resolved.bytes.slice(), expiresAtMs });
     return resolved.bytes.slice();

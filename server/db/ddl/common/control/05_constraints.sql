@@ -416,3 +416,35 @@ ALTER TABLE control.rounding_context
     ADD CONSTRAINT rounding_context_updated_by_fk
         FOREIGN KEY (tenant_id, updated_by)
             REFERENCES master.principal(tenant_id, id);
+
+ALTER TABLE control.tenant_usage_limit_override
+    ADD CONSTRAINT tenant_usage_limit_override_plan_fk FOREIGN KEY (subscription_plan_id)
+        REFERENCES control.subscription_plan(id) ON DELETE RESTRICT;
+ALTER TABLE control.tenant_module_entitlement_override
+    ADD CONSTRAINT tenant_module_entitlement_override_plan_fk FOREIGN KEY (subscription_plan_id)
+        REFERENCES control.subscription_plan(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT tenant_module_entitlement_override_module_fk FOREIGN KEY (module_id)
+        REFERENCES control.module(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT tenant_module_entitlement_override_tenant_fk FOREIGN KEY (tenant_id)
+        REFERENCES master.tenant(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT tenant_module_entitlement_override_actor_fk FOREIGN KEY (tenant_id, created_by)
+        REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT tenant_module_entitlement_override_updated_actor_fk FOREIGN KEY (tenant_id, updated_by)
+        REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT tenant_module_entitlement_override_overlap_excl EXCLUDE USING gist (
+        tenant_id WITH =, module_id WITH =,
+        tstzrange(effective_from, effective_until, '[)') WITH &&
+    ) WHERE (status = 'active');
+
+-- Exclusions protect publication even when callers use repeatable-read snapshots.
+ALTER TABLE control.process_selection_publication
+    ADD CONSTRAINT process_selection_company_period_excl EXCLUDE USING gist (
+      tenant_id WITH =, plane_key WITH =, process_family WITH =,
+      operating_organization_id WITH =, company_code_id WITH =,
+      tstzrange(effective_from,effective_until,'[)') WITH &&
+    ) WHERE (company_code_id IS NOT NULL),
+    ADD CONSTRAINT process_selection_org_period_excl EXCLUDE USING gist (
+      tenant_id WITH =, plane_key WITH =, process_family WITH =,
+      operating_organization_id WITH =,
+      tstzrange(effective_from,effective_until,'[)') WITH &&
+    ) WHERE (company_code_id IS NULL);

@@ -1,0 +1,4 @@
+apiVersion: athyper.io/v1alpha1
+kind: ResourceProfile
+metadata: { id: laptop-16 }
+spec: { hostMemoryMiB: 16384, wslMemoryMiB: 10240, maxContainerMemoryMiB: 7168, maxContainerCpu: 8, minimumFreeDiskGiB: 75, diskWarningPercent: 20, diskCriticalPercent: 10 }

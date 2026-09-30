@@ -14,3 +14,8 @@ ALTER TABLE document.work_item
         FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT work_item_status_changed_by_fk
         FOREIGN KEY (tenant_id, status_changed_by) REFERENCES master.principal(tenant_id, id);
+
+ALTER TABLE governance.cycle_subject ADD CONSTRAINT cycle_subject_case_fk
+    FOREIGN KEY(tenant_id,entity_case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE snapshot.entity_case_snapshot_lineage ADD CONSTRAINT entity_case_snapshot_lineage_case_fk
+    FOREIGN KEY(tenant_id,entity_case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT;

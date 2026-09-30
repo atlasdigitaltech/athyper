@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "browserTitle": {
+    "plane": "{plane} - {description}",
+    "page": "{page} - {plane}",
+    "status": "{plane} - {status}"
+  },
+  "planes": {
+    "neon": {
+      "applicationName": "Athyper Neon",
+      "shortName": "Neon",
+      "description": "Business Operating Platform"
+    },
+    "mesh": {
+      "applicationName": "Athyper Mesh",
+      "shortName": "Mesh",
+      "description": "Business Collaboration Network"
+    },
+    "studio": {
+      "applicationName": "Athyper Studio",
+      "shortName": "Studio",
+      "description": "Business Technology Platform"
+    }
+  }
+}

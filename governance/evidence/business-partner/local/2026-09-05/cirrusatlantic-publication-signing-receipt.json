@@ -1,0 +1,16 @@
+{
+  "schema": "athyper.publication-signing-provisioning/1",
+  "environment": "dev",
+  "sanitized": true,
+  "projectId": "ed696684-8309-4e0f-903a-8adece9246b7",
+  "identityId": "d19d2522-63c8-4dde-9075-4f72b3b22a52",
+  "keyId": "athyper-dev-publication-ed25519-20260905",
+  "privateReference": "PUBLICATION_DEV_ED25519_PRIVATE_20260905",
+  "publicReference": "PUBLICATION_DEV_ED25519_PUBLIC_20260905",
+  "publicKeySha256": "991a13cab4e7c9b916d1ac55d58a28ea6abc6612f61c0607c82a775ef6b583c9",
+  "keyReadSignVerify": true,
+  "tokenTTLSeconds": 2592000,
+  "nativeRelease": false,
+  "observedAt": "2026-09-05T03:38:40.969810+00:00",
+  "idempotentReplayVerified": true
+}

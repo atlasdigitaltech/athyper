@@ -1,0 +1,572 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/assets-facilities",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/assets-facilities/enterprise-assets",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/assets-facilities/facilities",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/assets-facilities/real-estate",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/atlas",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/commercial",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/commercial/crm",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/commercial/pricing",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/commercial/sales-orders",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/activity",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/audit",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/automation",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/content",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/documents",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/foundation",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/identity-access",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/integration",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/metadata",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/notification-services",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/policies",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/reference-data",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/core/workflows",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/finance",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/finance/accounts-payable",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/finance/accounts-receivable",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/finance/budget-control",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/finance/cash-treasury",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/finance/financial-accounting",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/finance/fixed-assets",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/finance/tax",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/home",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/inbox",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/livez",
+    "status": 200,
+    "location": null,
+    "contentType": "application/json"
+  },
+  {
+    "path": "/logout",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner/business-partners",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner/business-partners/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner/customer/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner/mesh-proposals",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner/partners",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner/person/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner/requests",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/business-partner/requests/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/data-quality",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/financial-master",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/location-address",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/organization-reference",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/mdg/product-item",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/notification-sw.js",
+    "status": 200,
+    "location": null,
+    "contentType": "text/javascript; charset=utf-8"
+  },
+  {
+    "path": "/notifications",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/operations-management",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/operations-management/maintenance",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/operations-management/manufacturing",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/operations/data-transfers",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/operations/data-transfers/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/people",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/people/core-hr",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/people/external-workforce",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/people/payroll",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/people/talent",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/people/time-attendance",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/people/workforce/requests",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/people/workforce/requests/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/people/workforce/requisitions",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/projects-services",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/projects-services/professional-services",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/projects-services/projects",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/projects-services/service-management",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/readyz",
+    "status": 200,
+    "location": null,
+    "contentType": "application/json"
+  },
+  {
+    "path": "/select-context",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/sign-in",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supplier-application",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/contracts",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/inventory",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/planning",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement/documents",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement/documents/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement/invoices",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement/invoices/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement/purchase-orders",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement/purchase-orders/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement/purchase-requests",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/procurement/purchase-requests/new",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/quality",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/strategic-sourcing",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/supplier-management",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/transport-logistics",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "path": "/supply-chain/warehouse",
+    "status": 200,
+    "location": null,
+    "contentType": "text/html; charset=utf-8"
+  }
+]

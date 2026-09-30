@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_target_read_grant_approval",
+  "reference": "conversation-target-proposals:306927d9-c767-4899-86e9-599b4ad992f4",
+  "approvedAt": "2026-09-10T17:41:35.127Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "go ahead",
+    "respondingTo": "Do you approve these three proposals?",
+    "approvedProposalRevisions": [
+      "e4f76cbdecd7962a0adf1a3584552a605f73b6419b12124540ef5cdce4fb2bc2",
+      "043ba1efdefd6863ae0a8b19111e139a8fc6f49ce80c91f3121e06da3fd14df1"
+    ]
+  },
+  "proposalPath": "governance/policy/reviews/business-partner-target-read-grants.proposal.dev.json",
+  "proposalRevision": "e4f76cbdecd7962a0adf1a3584552a605f73b6419b12124540ef5cdce4fb2bc2",
+  "proposalSha256": "b350f2ddcf17b2b1eff3c8e2158bfb10e6e18ca96a9c6e467b19151c758909ca",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "approvedAssignmentIds": ["9e8f57a6-ee13-5b75-a396-f325335706c7"],
+  "approvedPrincipalIds": [
+    "cca94907-7519-5871-8e3c-6b11aa545c93",
+    "645b6a55-3355-526a-9643-3900425bde47"
+  ],
+  "approvedPermissionIds": [
+    "01a087c3-4587-7c32-a0fe-d9b3aece9d6b",
+    "01a087c3-4587-7155-a3ba-feaf6f486941",
+    "01a087c3-4587-7561-9a76-1e59ed7d1479",
+    "01a087c3-4587-70d4-af36-ba069c3708df",
+    "01a087c3-4587-7c47-8632-805562a66672",
+    "01a087c3-4588-7421-9af1-3f4c985a6e20",
+    "01a087c3-4588-7a4f-8d97-66b7d2655584",
+    "01a087c3-4588-76aa-a777-ad2986f91b59",
+    "01a087c3-4588-7daa-ab18-605306cb8a08",
+    "01a087c3-4588-77bb-8df7-75e58a75ee0c",
+    "01a087c3-4588-77e4-a994-b35dc3fea945",
+    "01a087c3-4588-7ea5-bfbc-f28f149fdab6",
+    "01a087c3-4588-7305-b380-34827b1f9f94",
+    "01a087c3-4588-75fb-b824-80fd38f42f35",
+    "01a087c3-4588-7f88-aea8-6dc143fd4a36",
+    "01a087c3-4588-73a8-88ce-6a88856e286a",
+    "01a087c3-4588-7efb-bb31-8ed923a79d78"
+  ],
+  "effectiveFrom": "2026-09-11T00:00:00Z",
+  "effectiveUntil": "2026-12-10T00:00:00Z",
+  "tenantReadExpansionApproved": true,
+  "grantChangesAuthorized": true,
+  "activationAuthorized": false,
+  "qualificationRequired": true
+}

@@ -1,1 +1,12 @@
-import {defineConfig} from "vitest/config";export default defineConfig({test:{environment:"node",include:["src/**/__tests__/**/*.test.ts"]}});
+import { defineConfig } from "vitest/config";
+export default defineConfig({
+  test: {
+    environment: "node",
+    include: ["src/**/__tests__/**/*.test.ts"],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "src/**/__tests__/**/*.integration.test.ts",
+    ],
+  },
+});

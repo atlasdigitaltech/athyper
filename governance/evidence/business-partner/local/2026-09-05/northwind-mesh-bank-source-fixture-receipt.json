@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "development_bank_source_fixture",
+  "environment": "disposable_local",
+  "recordedAt": "2026-09-05T13:19:04.191709Z",
+  "account": {
+    "networkAccountId": "c2452ba4-5f07-5214-863f-2b5212a557bf",
+    "accountCode": "dev-northwind-supplies"
+  },
+  "bankAccount": {
+    "id": "3d025ee3-aaa0-5b29-bd06-1740788b95af",
+    "code": "northwind.settlement.gb",
+    "currencyCode": "GBP",
+    "maskedAccount": "****0001",
+    "status": "active",
+    "verified": true,
+    "verifiedAt": "2026-09-05T13:19:04.191709Z",
+    "verifiedBy": "athyper.owner",
+    "verificationReference": "local-fixture:northwind-bank:independent-owner-verification:v1",
+    "secretReference": "infisical:dev/mesh/northwind/settlement-account"
+  },
+  "settlementLink": {
+    "id": "f5ed50bb-5d6a-50ea-9206-323ff20436ee",
+    "relationshipId": "01a07108-f042-78ac-a61f-ac7979663a69",
+    "purpose": "settlement",
+    "primary": true,
+    "effectiveFrom": "2026-01-01"
+  },
+  "qualification": {
+    "sourceEligibilityEstablished": true,
+    "nativeDisclosurePending": true,
+    "nativeCheckerApprovalPending": true,
+    "consumerDeliveryPending": true
+  },
+  "retention": {
+    "containsRawBankIdentifier": false,
+    "containsCredentials": false,
+    "containsMfaMaterial": false
+  }
+}

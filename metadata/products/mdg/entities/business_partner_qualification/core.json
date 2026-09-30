@@ -1,0 +1,836 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_qualification/core",
+  "entityCode": "business_partner_qualification",
+  "plane": "neon",
+  "storage": {
+    "kind": "handler_projection",
+    "sourceObjects": [
+      "control.business_partner_qualification"
+    ],
+    "primaryObject": "control.business_partner_qualification",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "label": {
+        "labelKey": "entity.partner_decision.id",
+        "defaultText": "Reference"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "qualification_type_code",
+      "label": {
+        "labelKey": "entity.partner_decision.qualification_type_code",
+        "defaultText": "Qualification type"
+      },
+      "dataType": "enum",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "display": {
+        "lookup": {
+          "code": "control.business_partner_qualification_type"
+        }
+      }
+    },
+    {
+      "key": "context_kind",
+      "label": {
+        "labelKey": "entity.partner_decision.context_kind",
+        "defaultText": "Context"
+      },
+      "dataType": "enum",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "display": {
+        "lookup": {
+          "options": [
+            {
+              "value": "standing",
+              "label": {
+                "labelKey": "entity.partner_decision.standing",
+                "defaultText": "Standing"
+              }
+            },
+            {
+              "value": "rfp",
+              "label": {
+                "labelKey": "entity.partner_decision.rfp",
+                "defaultText": "Sourcing event"
+              }
+            },
+            {
+              "value": "engagement",
+              "label": {
+                "labelKey": "entity.partner_decision.engagement",
+                "defaultText": "Engagement"
+              }
+            },
+            {
+              "value": "contract",
+              "label": {
+                "labelKey": "entity.partner_decision.contract",
+                "defaultText": "Contract"
+              }
+            },
+            {
+              "value": "project",
+              "label": {
+                "labelKey": "entity.partner_decision.project",
+                "defaultText": "Project"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "context_reference",
+      "label": {
+        "labelKey": "entity.partner_decision.context_reference",
+        "defaultText": "Context record"
+      },
+      "dataType": "json",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "display": {
+        "itemFields": [
+          {
+            "key": "name",
+            "label": {
+              "labelKey": "entity.partner_decision.name",
+              "defaultText": "Record"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed"
+          },
+          {
+            "key": "state",
+            "label": {
+              "labelKey": "entity.partner_decision.state",
+              "defaultText": "Reference availability"
+            },
+            "dataType": "enum",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "options": [
+                  {
+                    "value": "available",
+                    "label": {
+                      "labelKey": "entity.partner_decision.available",
+                      "defaultText": "Available"
+                    }
+                  },
+                  {
+                    "value": "unavailable",
+                    "label": {
+                      "labelKey": "entity.partner_decision.unavailable",
+                      "defaultText": "Reference unavailable or not permitted"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "decision",
+      "label": {
+        "labelKey": "entity.partner_decision.decision",
+        "defaultText": "Decision"
+      },
+      "dataType": "enum",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "display": {
+        "lookup": {
+          "options": [
+            {
+              "value": "pending",
+              "label": {
+                "labelKey": "entity.partner_decision.pending",
+                "defaultText": "Pending"
+              }
+            },
+            {
+              "value": "approved",
+              "label": {
+                "labelKey": "entity.partner_decision.approved",
+                "defaultText": "Approved"
+              }
+            },
+            {
+              "value": "conditional",
+              "label": {
+                "labelKey": "entity.partner_decision.conditional",
+                "defaultText": "Conditional"
+              }
+            },
+            {
+              "value": "rejected",
+              "label": {
+                "labelKey": "entity.partner_decision.rejected",
+                "defaultText": "Rejected"
+              }
+            },
+            {
+              "value": "suspended",
+              "label": {
+                "labelKey": "entity.partner_decision.suspended",
+                "defaultText": "Suspended"
+              }
+            },
+            {
+              "value": "expired",
+              "label": {
+                "labelKey": "entity.partner_decision.expired",
+                "defaultText": "Expired"
+              }
+            },
+            {
+              "value": "revoked",
+              "label": {
+                "labelKey": "entity.partner_decision.revoked",
+                "defaultText": "Revoked"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "coverage",
+      "label": {
+        "labelKey": "entity.partner_decision.coverage",
+        "defaultText": "Stored coverage (not eligibility)"
+      },
+      "dataType": "json",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "display": {
+        "itemFields": [
+          {
+            "key": "scope_group",
+            "label": {
+              "labelKey": "entity.partner_decision.scope_group",
+              "defaultText": "Group"
+            },
+            "dataType": "integer",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed"
+          },
+          {
+            "key": "scope_mode",
+            "label": {
+              "labelKey": "entity.partner_decision.scope_mode",
+              "defaultText": "Rule"
+            },
+            "dataType": "enum",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "options": [
+                  {
+                    "value": "include",
+                    "label": {
+                      "labelKey": "entity.partner_decision.include",
+                      "defaultText": "Include"
+                    }
+                  },
+                  {
+                    "value": "exclude",
+                    "label": {
+                      "labelKey": "entity.partner_decision.exclude",
+                      "defaultText": "Exclude"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "scope_kind",
+            "label": {
+              "labelKey": "entity.partner_decision.scope_kind",
+              "defaultText": "Dimension"
+            },
+            "dataType": "enum",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "options": [
+                  {
+                    "value": "commercial_capacity",
+                    "label": {
+                      "labelKey": "entity.partner_decision.commercial_capacity",
+                      "defaultText": "Commercial capacity"
+                    }
+                  },
+                  {
+                    "value": "operating_organization",
+                    "label": {
+                      "labelKey": "entity.partner_decision.operating_organization",
+                      "defaultText": "Operating organization"
+                    }
+                  },
+                  {
+                    "value": "company_code",
+                    "label": {
+                      "labelKey": "entity.partner_decision.company_code",
+                      "defaultText": "Company"
+                    }
+                  },
+                  {
+                    "value": "commodity_category",
+                    "label": {
+                      "labelKey": "entity.partner_decision.commodity_category",
+                      "defaultText": "Commodity category"
+                    }
+                  },
+                  {
+                    "value": "commodity_classification",
+                    "label": {
+                      "labelKey": "entity.partner_decision.commodity_classification",
+                      "defaultText": "Partner commodity"
+                    }
+                  },
+                  {
+                    "value": "country",
+                    "label": {
+                      "labelKey": "entity.partner_decision.country",
+                      "defaultText": "Country"
+                    }
+                  },
+                  {
+                    "value": "tax_jurisdiction",
+                    "label": {
+                      "labelKey": "entity.partner_decision.tax_jurisdiction",
+                      "defaultText": "Tax jurisdiction"
+                    }
+                  },
+                  {
+                    "value": "organization_unit",
+                    "label": {
+                      "labelKey": "entity.partner_decision.organization_unit",
+                      "defaultText": "Organization unit"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "selection_mode",
+            "label": {
+              "labelKey": "entity.partner_decision.selection_mode",
+              "defaultText": "Selection"
+            },
+            "dataType": "enum",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "options": [
+                  {
+                    "value": "all",
+                    "label": {
+                      "labelKey": "entity.partner_decision.all",
+                      "defaultText": "All (membership not evaluated)"
+                    }
+                  },
+                  {
+                    "value": "selected",
+                    "label": {
+                      "labelKey": "entity.partner_decision.selected",
+                      "defaultText": "Selected"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "commercial_capacity_code",
+            "label": {
+              "labelKey": "entity.partner_decision.commercial_capacity_code",
+              "defaultText": "Capacity"
+            },
+            "dataType": "enum",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "options": [
+                  {
+                    "value": "supplier",
+                    "label": {
+                      "labelKey": "entity.partner_decision.supplier",
+                      "defaultText": "Supplier"
+                    }
+                  },
+                  {
+                    "value": "customer",
+                    "label": {
+                      "labelKey": "entity.partner_decision.customer",
+                      "defaultText": "Customer"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "operating_organization_id",
+            "label": {
+              "labelKey": "entity.partner_decision.operating_organization_id",
+              "defaultText": "Operating organization"
+            },
+            "dataType": "uuid",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "code": "master.operating_organization"
+              }
+            }
+          },
+          {
+            "key": "company_code_id",
+            "label": {
+              "labelKey": "entity.partner_decision.company_code_id",
+              "defaultText": "Company code"
+            },
+            "dataType": "uuid",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "code": "master.company_code"
+              }
+            }
+          },
+          {
+            "key": "commodity_category_id",
+            "label": {
+              "labelKey": "entity.partner_decision.commodity_category_id",
+              "defaultText": "Commodity category"
+            },
+            "dataType": "uuid",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "code": "master.commodity_category"
+              }
+            }
+          },
+          {
+            "key": "country_code",
+            "label": {
+              "labelKey": "entity.partner_decision.country_code",
+              "defaultText": "Country"
+            },
+            "dataType": "enum",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "code": "shared.country"
+              }
+            }
+          },
+          {
+            "key": "country_purpose",
+            "label": {
+              "labelKey": "entity.partner_decision.country_purpose",
+              "defaultText": "Country purpose"
+            },
+            "dataType": "enum",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "options": [
+                  {
+                    "value": "registration",
+                    "label": {
+                      "labelKey": "entity.partner_decision.registration",
+                      "defaultText": "Registration"
+                    }
+                  },
+                  {
+                    "value": "delivery",
+                    "label": {
+                      "labelKey": "entity.partner_decision.delivery",
+                      "defaultText": "Delivery"
+                    }
+                  },
+                  {
+                    "value": "service_performance",
+                    "label": {
+                      "labelKey": "entity.partner_decision.service_performance",
+                      "defaultText": "Service performance"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "commodity_classification_id",
+            "label": {
+              "labelKey": "entity.partner_decision.commodity_classification_id",
+              "defaultText": "Commodity declaration"
+            },
+            "dataType": "uuid",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "code": "master.business_partner_commodity_classification"
+              }
+            }
+          },
+          {
+            "key": "tax_jurisdiction_id",
+            "label": {
+              "labelKey": "entity.partner_decision.tax_jurisdiction_id",
+              "defaultText": "Tax jurisdiction"
+            },
+            "dataType": "uuid",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "code": "master.tax_jurisdiction"
+              }
+            }
+          },
+          {
+            "key": "organization_unit_id",
+            "label": {
+              "labelKey": "entity.partner_decision.organization_unit_id",
+              "defaultText": "Organization unit"
+            },
+            "dataType": "uuid",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "code": "master.org_unit"
+              }
+            }
+          },
+          {
+            "key": "hierarchy_version",
+            "label": {
+              "labelKey": "entity.partner_decision.hierarchy_version",
+              "defaultText": "Hierarchy version"
+            },
+            "dataType": "integer",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed"
+          }
+        ]
+      }
+    },
+    {
+      "key": "condition_summaries",
+      "label": {
+        "labelKey": "entity.partner_decision.condition_summaries",
+        "defaultText": "Stored conditions"
+      },
+      "dataType": "json",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "display": {
+        "itemFields": [
+          {
+            "key": "summary",
+            "label": {
+              "labelKey": "entity.partner_decision.summary",
+              "defaultText": "Condition summary"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed"
+          },
+          {
+            "key": "state",
+            "label": {
+              "labelKey": "entity.partner_decision.state",
+              "defaultText": "Evaluation"
+            },
+            "dataType": "enum",
+            "nullable": true,
+            "valueOrigin": "derived",
+            "readPolicy": "authorized_projection",
+            "writePolicy": "system_managed",
+            "display": {
+              "lookup": {
+                "options": [
+                  {
+                    "value": "recorded_not_evaluated",
+                    "label": {
+                      "labelKey": "entity.partner_decision.recorded_not_evaluated",
+                      "defaultText": "Recorded; satisfaction not evaluated"
+                    }
+                  },
+                  {
+                    "value": "summary_unavailable",
+                    "label": {
+                      "labelKey": "entity.partner_decision.summary_unavailable",
+                      "defaultText": "Summary unavailable; condition is not waived"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "recorded_condition_count",
+      "label": {
+        "labelKey": "entity.partner_decision.recorded_condition_count",
+        "defaultText": "Recorded conditions (satisfaction not evaluated)"
+      },
+      "dataType": "integer",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "effective_from",
+      "label": {
+        "labelKey": "entity.partner_decision.effective_from",
+        "defaultText": "Effective from"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "effective_until",
+      "label": {
+        "labelKey": "entity.partner_decision.effective_until",
+        "defaultText": "Effective until (exclusive)"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "next_review_at",
+      "label": {
+        "labelKey": "entity.partner_decision.next_review_at",
+        "defaultText": "Next review date"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "date_window",
+      "label": {
+        "labelKey": "entity.partner_decision.date_window",
+        "defaultText": "Date window (UTC date basis; not eligibility)"
+      },
+      "dataType": "enum",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "display": {
+        "lookup": {
+          "options": [
+            {
+              "value": "unspecified",
+              "label": {
+                "labelKey": "entity.partner_decision.date_window.unspecified",
+                "defaultText": "Not specified"
+              }
+            },
+            {
+              "value": "scheduled",
+              "label": {
+                "labelKey": "entity.partner_decision.date_window.scheduled",
+                "defaultText": "Scheduled"
+              }
+            },
+            {
+              "value": "ended",
+              "label": {
+                "labelKey": "entity.partner_decision.date_window.ended",
+                "defaultText": "Ended"
+              }
+            },
+            {
+              "value": "within_window",
+              "label": {
+                "labelKey": "entity.partner_decision.date_window.within_window",
+                "defaultText": "Within date window"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "assessed_at",
+      "label": {
+        "labelKey": "entity.partner_decision.assessed_at",
+        "defaultText": "Date window assessed at"
+      },
+      "dataType": "datetime",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": false
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "row_version",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
+}

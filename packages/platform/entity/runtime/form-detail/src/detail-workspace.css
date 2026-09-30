@@ -1,0 +1,147 @@
+.a-metadata-detail > [data-slot="page-body"] {
+  /* Keep section responsiveness local without capturing the navigation band's
+     container units: that band measures the shell's available workspace. */
+  container: metadata-detail / inline-size;
+}
+.a-metadata-detail > [data-slot="page-navigation"] {
+  position: sticky;
+  inset-block-start: var(--a-page-sticky-top, 0px);
+  z-index: var(--a-z-sticky);
+}
+.a-metadata-detail__navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--a-space-2);
+  inline-size: 100%;
+}
+.a-metadata-detail__navigation [role="tablist"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--a-space-2);
+}
+.a-metadata-detail__tab-group {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+.a-metadata-detail__tab-group .a-entity-record__group {
+  position: static;
+}
+.a-metadata-detail__tab-group .a-entity-record__group > summary {
+  min-block-size: var(--a-touch-target);
+  min-inline-size: var(--a-touch-target);
+  justify-content: center;
+}
+.a-metadata-detail__tab-group .a-entity-record__group[data-active] > summary {
+  color: var(--a-primary);
+  border-block-end-color: var(--a-primary);
+}
+.a-metadata-detail__tab-group .a-entity-record__group > div {
+  left: auto;
+  inset-inline-start: 0;
+  max-inline-size: calc(100vw - 2rem);
+}
+.a-metadata-detail__navigation [role="tab"] {
+  min-block-size: var(--a-touch-target);
+  padding: var(--a-space-2) var(--a-space-3);
+  color: var(--a-foreground);
+  background: transparent;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.a-metadata-detail__navigation [role="tab"][aria-selected="true"] {
+  border-block-end-color: var(--a-primary);
+  color: var(--a-primary);
+}
+.a-metadata-detail__navigation .a-entity-record__tabs {
+  margin: 0;
+  flex: 1;
+}
+.a-metadata-detail__layout {
+  --detail-section-offset: calc(var(--a-page-sticky-top, 0px) + var(--detail-navigation-height, 0px) + var(--a-space-4));
+  display: grid;
+  gap: var(--a-space-4);
+  min-inline-size: 0;
+}
+.a-metadata-detail__layout[hidden] {
+  display: none;
+}
+.a-metadata-detail__layout[data-rail] {
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+  align-items: start;
+}
+.a-metadata-detail__sections {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--a-space-4);
+}
+.a-metadata-detail__layout[data-summary] {
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 20rem);
+  align-items: start;
+}
+.a-metadata-detail__layout[data-summary][data-rail] {
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr) minmax(14rem, 20rem);
+}
+.a-metadata-detail__layout > .a-entity-record-summary-view {
+  position: sticky;
+  inset-block-start: var(--detail-section-offset);
+}
+@container metadata-detail (max-width: 960px) {
+  .a-metadata-detail__layout[data-summary], .a-metadata-detail__layout[data-summary][data-rail] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .a-metadata-detail__layout > .a-entity-record-summary-view {
+    position: static;
+    grid-row: 1;
+  }
+}
+.a-metadata-detail__rail {
+  position: sticky;
+  inset-block-start: var(--detail-section-offset);
+}
+.a-metadata-detail__rail .a-entity-record__links {
+  display: grid;
+}
+.a-metadata-detail__rail .a-entity-record__picker {
+  display: none;
+}
+.a-metadata-detail__selector .a-entity-record__links {
+  display: none;
+}
+.a-metadata-detail__selector .a-entity-record__picker {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-2);
+}
+.a-metadata-detail [data-detail-section] {
+  scroll-margin-block-start: var(--detail-section-offset);
+}
+.a-metadata-detail [data-detail-section]:focus-visible {
+  outline: 2px solid var(--a-primary);
+  outline-offset: 4px;
+}
+.a-metadata-detail__tail {
+  block-size: max(0px, calc(100dvh - var(--detail-section-offset)));
+}
+@container metadata-detail (max-width: 70rem) {
+  .a-metadata-detail__layout[data-tab-sections] > .a-metadata-detail__rail {
+    display: none;
+  }
+  .a-metadata-detail__layout[data-rail] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .a-metadata-detail__rail {
+    position: static;
+  }
+  .a-metadata-detail__rail .a-entity-record__links {
+    display: none;
+  }
+  .a-metadata-detail__rail .a-entity-record__picker {
+    display: flex;
+    align-items: center;
+    gap: var(--a-space-2);
+  }
+}

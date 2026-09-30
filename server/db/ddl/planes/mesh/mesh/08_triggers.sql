@@ -139,6 +139,10 @@ CREATE TRIGGER trg_document_acknowledgement_90_append_only
 BEFORE UPDATE OR DELETE ON mesh.document_acknowledgement
 FOR EACH ROW EXECUTE FUNCTION mesh.trg_guard_append_only_document_child();
 
+CREATE TRIGGER trg_document_business_status_projection_guard
+BEFORE INSERT OR UPDATE OR DELETE ON mesh.document_business_status_projection
+FOR EACH ROW EXECUTE FUNCTION mesh.trg_guard_document_business_status_projection();
+
 CREATE TRIGGER trg_network_account_profile_guard
 BEFORE UPDATE ON mesh.network_account_profile
 FOR EACH ROW EXECUTE FUNCTION mesh.trg_guard_network_identity();
@@ -163,6 +167,19 @@ CREATE TRIGGER trg_network_account_commodity_capability_updated
 BEFORE UPDATE ON mesh.network_account_commodity_capability
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
+CREATE TRIGGER trg_network_account_industry_classification_guard
+BEFORE UPDATE ON mesh.network_account_industry_classification
+FOR EACH ROW EXECUTE FUNCTION mesh.trg_guard_network_identity();
+CREATE TRIGGER trg_network_account_industry_classification_creation_evidence
+BEFORE UPDATE ON mesh.network_account_industry_classification
+FOR EACH ROW EXECUTE FUNCTION mesh.trg_guard_creation_evidence();
+CREATE TRIGGER trg_network_account_industry_classification_status
+BEFORE UPDATE OF status ON mesh.network_account_industry_classification
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+CREATE TRIGGER trg_network_account_industry_classification_updated
+BEFORE UPDATE ON mesh.network_account_industry_classification
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
 CREATE TRIGGER trg_network_account_tax_registration_validate
 BEFORE INSERT OR UPDATE OF registration_type_code, registration_number
 ON mesh.network_account_tax_registration
@@ -177,19 +194,10 @@ CREATE TRIGGER trg_network_account_tax_registration_updated
 BEFORE UPDATE ON mesh.network_account_tax_registration
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-CREATE TRIGGER trg_mesh_bank_party_normalize
-BEFORE INSERT OR UPDATE OF code, name, bic ON mesh.bank_party
-FOR EACH ROW EXECUTE FUNCTION mesh.trg_normalize_bank_identity();
-CREATE TRIGGER trg_mesh_bank_party_status
-BEFORE UPDATE OF status ON mesh.bank_party
-FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-CREATE TRIGGER trg_mesh_bank_party_updated
-BEFORE UPDATE ON mesh.bank_party
-FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 CREATE TRIGGER trg_mesh_bank_account_normalize
 BEFORE INSERT OR UPDATE OF code, name, account_holder_name,
-    account_id_value, bic_override
+    protected_value_token, identifier_fingerprint, account_last4, bic_override
 ON mesh.bank_account
 FOR EACH ROW EXECUTE FUNCTION mesh.trg_normalize_bank_identity();
 CREATE TRIGGER trg_mesh_bank_account_guard
@@ -220,6 +228,7 @@ FOR EACH ROW EXECUTE FUNCTION mesh.trg_guard_bank_disclosure();
 CREATE TRIGGER trg_bank_account_disclosure_updated
 BEFORE UPDATE ON mesh.bank_account_disclosure
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_bank_account_disclosure_event_immutable BEFORE UPDATE OR DELETE ON mesh.bank_account_disclosure_event FOR EACH ROW EXECUTE FUNCTION mesh.trg_reject_bank_disclosure_event_mutation();
 
 CREATE TRIGGER mesh_certification_type_updated_at
   BEFORE UPDATE ON mesh.certification_type
@@ -242,4 +251,13 @@ CREATE TRIGGER wave6_network_account_event AFTER INSERT OR UPDATE OF status ON m
 CREATE TRIGGER wave6_network_relationship_event AFTER INSERT OR UPDATE OF status ON mesh.network_relationship FOR EACH ROW EXECUTE FUNCTION mesh.trg_record_network_lifecycle('network_relationship');
 CREATE TRIGGER wave6_network_account_scope AFTER INSERT OR UPDATE OF display_name,status ON mesh.network_account FOR EACH ROW EXECUTE FUNCTION mesh.trg_sync_network_account_scope();
 CREATE TRIGGER wave6_network_relationship_scopes AFTER INSERT OR UPDATE OF status ON mesh.network_relationship FOR EACH ROW EXECUTE FUNCTION mesh.trg_sync_network_relationship_scopes();
+
+CREATE TRIGGER trg_network_account_profile_publication_immutable BEFORE UPDATE OR DELETE ON mesh.network_account_profile_publication FOR EACH ROW EXECUTE FUNCTION mesh.trg_reject_profile_publication_mutation();
+CREATE TRIGGER trg_network_account_profile_publication_event_immutable BEFORE UPDATE OR DELETE ON mesh.network_account_profile_publication_event FOR EACH ROW EXECUTE FUNCTION mesh.trg_reject_profile_publication_mutation();
 CREATE TRIGGER wave6_network_lifecycle_event_immutable BEFORE UPDATE OR DELETE ON mesh.network_lifecycle_event FOR EACH ROW EXECUTE FUNCTION mesh.trg_reject_network_lifecycle_event_mutation();
+
+CREATE TRIGGER delivery_acknowledgement_immutable BEFORE UPDATE OR DELETE
+  ON mesh.business_partner_delivery_acknowledgement FOR EACH ROW
+  EXECUTE FUNCTION mesh.trg_delivery_acknowledgement_immutable();
+
+CREATE TRIGGER trg_register_provisional_bank BEFORE INSERT OR UPDATE OF bank_institution_id,provisional_bank_reference_id,bank_name_override,bank_country_override,bic_override ON mesh.bank_account FOR EACH ROW EXECUTE FUNCTION mesh.trg_register_provisional_bank();

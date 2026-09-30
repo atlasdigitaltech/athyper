@@ -170,6 +170,10 @@ CREATE INDEX document_payload_created_by_idx
 
 CREATE INDEX document_event_envelope_time_idx
     ON mesh.document_event (envelope_id, occurred_at, id);
+CREATE INDEX document_business_status_projection_envelope_idx
+    ON mesh.document_business_status_projection (source_envelope_id, lifecycle_version DESC);
+CREATE INDEX document_business_status_projection_relationship_idx
+    ON mesh.document_business_status_projection (network_relationship_id, resource_kind, business_status, updated_at DESC);
 
 CREATE INDEX document_event_actor_account_idx
     ON mesh.document_event (actor_tenant_id, actor_account_id)
@@ -205,6 +209,10 @@ CREATE INDEX document_acknowledgement_created_by_idx
 CREATE INDEX network_account_profile_status_idx
     ON mesh.network_account_profile (tenant_id, status, network_account_id);
 
+CREATE INDEX network_account_profile_publication_recipient_idx ON mesh.network_account_profile_publication(recipient_tenant_id,network_relationship_id,published_at DESC);
+CREATE INDEX network_account_profile_publication_owner_idx ON mesh.network_account_profile_publication(owner_tenant_id,owner_account_id,published_at DESC);
+CREATE INDEX network_account_profile_publication_event_latest_idx ON mesh.network_account_profile_publication_event(owner_tenant_id,publication_id,lifecycle_version DESC);
+
 CREATE UNIQUE INDEX network_account_commodity_capability_current_uq
     ON mesh.network_account_commodity_capability
        (tenant_id, network_account_id, commodity_code_id, trade_role)
@@ -212,6 +220,18 @@ CREATE UNIQUE INDEX network_account_commodity_capability_current_uq
 CREATE INDEX network_account_commodity_capability_commodity_idx
     ON mesh.network_account_commodity_capability
        (commodity_code_id, trade_role, status);
+
+CREATE UNIQUE INDEX network_account_industry_classification_current_uq
+    ON mesh.network_account_industry_classification
+       (tenant_id, network_account_id, industry_domain_code, industry_code_id)
+    WHERE effective_until IS NULL AND status = 'active';
+CREATE UNIQUE INDEX network_account_industry_classification_primary_uq
+    ON mesh.network_account_industry_classification
+       (tenant_id, network_account_id, industry_domain_code)
+    WHERE is_primary AND effective_until IS NULL AND status = 'active';
+CREATE INDEX network_account_industry_classification_code_idx
+    ON mesh.network_account_industry_classification
+       (industry_domain_code, industry_code_id, status);
 
 CREATE UNIQUE INDEX network_account_tax_registration_current_uq
     ON mesh.network_account_tax_registration
@@ -223,8 +243,6 @@ CREATE UNIQUE INDEX network_account_tax_registration_primary_uq
        (tenant_id, network_account_id, country_code, registration_type_code)
     WHERE is_primary AND status = 'active';
 
-CREATE INDEX mesh_bank_party_bic_idx
-    ON mesh.bank_party (bic) WHERE bic IS NOT NULL;
 CREATE UNIQUE INDEX mesh_bank_account_code_uq
     ON mesh.bank_account (tenant_id, network_account_id, code)
     WHERE code IS NOT NULL;
@@ -246,6 +264,10 @@ CREATE UNIQUE INDEX bank_account_disclosure_active_uq
 CREATE INDEX bank_account_disclosure_recipient_idx
     ON mesh.bank_account_disclosure
        (recipient_tenant_id, recipient_account_id, status, disclosed_at DESC);
+CREATE UNIQUE INDEX bank_account_disclosure_idempotency_uq
+    ON mesh.bank_account_disclosure(owner_tenant_id,idempotency_key);
+CREATE INDEX bank_account_disclosure_event_recipient_idx
+    ON mesh.bank_account_disclosure_event(recipient_tenant_id,recorded_at DESC);
 
 CREATE UNIQUE INDEX mesh_certification_type_scope_code_uq
   ON mesh.certification_type
@@ -268,3 +290,6 @@ CREATE UNIQUE INDEX network_account_live_canonical_purpose_uq ON mesh.network_ac
 CREATE INDEX network_lifecycle_resource_idx ON mesh.network_lifecycle_event(resource_kind,resource_id,sequence_no DESC);
 CREATE INDEX network_lifecycle_owner_idx ON mesh.network_lifecycle_event(owner_tenant_id,effective_at DESC);
 CREATE INDEX network_lifecycle_counterparty_idx ON mesh.network_lifecycle_event(counterparty_tenant_id,effective_at DESC) WHERE counterparty_tenant_id IS NOT NULL;
+
+CREATE INDEX business_partner_delivery_acknowledgement_source_idx
+  ON mesh.business_partner_delivery_acknowledgement(source_tenant_id, source_network_account_id, acknowledged_at DESC, id);

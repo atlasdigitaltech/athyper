@@ -1,9 +1,13 @@
-CREATE VIEW document.active_attachment AS
+
+
+CREATE VIEW document.active_attachment
+WITH (security_invoker = true, security_barrier = true) AS
 SELECT *
   FROM document.attachment
  WHERE status NOT IN ('deleted', 'expired', 'rejected');
 
-CREATE VIEW document.active_comment AS
+CREATE VIEW document.active_comment
+WITH (security_invoker = true, security_barrier = true) AS
 SELECT *
   FROM document.comment
  WHERE deleted_at IS NULL
@@ -28,7 +32,7 @@ SELECT id,
     order_type,
     status,
     'SUPPLIER'::text AS party_type,
-    supplier_id AS party_id,
+    business_partner_id AS party_id,
     parent_commitment_id,
     release_sequence_no,
     requested_by,
@@ -83,7 +87,7 @@ SELECT id AS purchase_invoice_id,
     tenant_id,
     code,
     status AS invoice_status,
-    supplier_id,
+    business_partner_id,
     payable_amount,
     paid_amount,
     outstanding_amount,
@@ -93,6 +97,39 @@ SELECT id AS purchase_invoice_id,
    FROM document.purchase_invoice pi;
 
 COMMENT ON VIEW "document"."v_ap_invoice_summary" IS 'One row per purchase_invoice. Safe for SUM/AVG aggregation over PI columns.';
+
+CREATE OR REPLACE VIEW document.v_purchase_order_header
+WITH (security_invoker = true, security_barrier = true) AS
+SELECT c.*,
+       COALESCE((SELECT jsonb_agg(jsonb_build_object(
+           'line_id', cl.id, 'line_no', cl.line_no,
+           'address_snapshot', cl.address_snapshot,
+           'address_snapshot_hash', cl.address_snapshot_hash,
+           'captured_at', cl.address_snapshot_captured_at
+       ) ORDER BY cl.line_no)
+       FROM document.commitment_line cl
+       WHERE cl.tenant_id = c.tenant_id AND cl.commitment_id = c.id), '[]'::jsonb) AS line_address_snapshots
+  FROM document.commitment c
+ WHERE c.commitment_type = 'purchase_order';
+
+COMMENT ON VIEW document.v_purchase_order_header IS
+  'Join-light purchase-order header. Historical address display reads immutable line snapshots and never joins master.address.';
+
+CREATE OR REPLACE VIEW document.v_purchase_invoice_header
+WITH (security_invoker = true, security_barrier = true) AS
+SELECT i.*,
+       COALESCE((SELECT jsonb_agg(jsonb_build_object(
+           'line_id', il.id, 'line_no', il.line_no,
+           'address_snapshot', il.address_snapshot,
+           'address_snapshot_hash', il.address_snapshot_hash,
+           'captured_at', il.address_snapshot_captured_at
+       ) ORDER BY il.line_no)
+       FROM document.purchase_invoice_line il
+       WHERE il.tenant_id = i.tenant_id AND il.purchase_invoice_id = i.id), '[]'::jsonb) AS line_address_snapshots
+  FROM document.purchase_invoice i;
+
+COMMENT ON VIEW document.v_purchase_invoice_header IS
+  'Join-light purchase-invoice header. Historical address display reads immutable line snapshots and never joins master.address.';
 
 CREATE OR REPLACE VIEW "document"."v_ap_settlement_graph"
 WITH (security_invoker = true, security_barrier = true) AS
@@ -369,20 +406,20 @@ WITH invoice_balance AS (
     SELECT
         tenant_id,
         company_code_id,
-        supplier_id,
+        business_partner_id,
         currency_code,
         sum(payable_amount) FILTER (WHERE invoice_type='advance') AS advance_issued_amount,
         sum(retention_amount) AS retention_withheld_amount,
         count(*) FILTER (WHERE invoice_type='advance')::bigint AS advance_invoice_count,
         count(*) FILTER (WHERE retention_amount>0)::bigint AS retention_invoice_count
     FROM document.purchase_invoice
-    WHERE status='posted' AND supplier_id IS NOT NULL
-    GROUP BY tenant_id,company_code_id,supplier_id,currency_code
+    WHERE status='posted' AND business_partner_id IS NOT NULL
+    GROUP BY tenant_id,company_code_id,business_partner_id,currency_code
 ), settlement_balance AS (
     SELECT
         pi.tenant_id,
         pi.company_code_id,
-        pi.supplier_id,
+        pi.business_partner_id,
         pea.currency_code,
         sum(CASE WHEN pea.allocation_kind='reversal' THEN -pea.advance_recovery_amount ELSE pea.advance_recovery_amount END)
             AS advance_recovered_amount,
@@ -394,12 +431,12 @@ WITH invoice_balance AS (
     JOIN document.purchase_invoice pi
       ON pi.tenant_id=pea.tenant_id AND pi.id=pea.purchase_invoice_id
     WHERE pe.status IN ('posted','transmitted','cleared')
-    GROUP BY pi.tenant_id,pi.company_code_id,pi.supplier_id,pea.currency_code
+    GROUP BY pi.tenant_id,pi.company_code_id,pi.business_partner_id,pea.currency_code
 )
 SELECT
     i.tenant_id,
     i.company_code_id,
-    i.supplier_id,
+    i.business_partner_id,
     i.currency_code,
     coalesce(i.advance_issued_amount,0) AS advance_issued_amount,
     coalesce(s.advance_recovered_amount,0) AS advance_recovered_amount,
@@ -413,8 +450,76 @@ FROM invoice_balance i
 LEFT JOIN settlement_balance s
   ON s.tenant_id=i.tenant_id
  AND s.company_code_id=i.company_code_id
- AND s.supplier_id=i.supplier_id
+ AND s.business_partner_id=i.business_partner_id
  AND s.currency_code=i.currency_code;
 
 COMMENT ON VIEW document.v_party_advance_balance IS
   'Tenant-safe supplier advance and retention projection derived from posted invoices and cash-effective payment allocations. Replaces mutable document.party_advance_balance.';
+
+CREATE OR REPLACE VIEW document.external_claim_reconciliation_v
+WITH (security_invoker = true, security_barrier = true) AS
+WITH claim_source AS (
+    SELECT s.tenant_id, 'external_time_sheet'::text AS source_kind, s.id AS source_id,
+           s.worker_engagement_id, s.code, s.status,
+           COALESCE(sum(e.amount),0)::numeric(18,4) AS approved_amount
+      FROM document.external_time_sheet s
+      LEFT JOIN document.external_time_entry e ON e.tenant_id=s.tenant_id AND e.time_sheet_id=s.id
+     GROUP BY s.tenant_id,s.id,s.worker_engagement_id,s.code,s.status
+    UNION ALL
+    SELECT s.tenant_id, 'external_expense_sheet'::text, s.id,
+           s.worker_engagement_id, s.code, s.status,
+           COALESCE(sum(i.amount),0)::numeric(18,4)
+      FROM document.external_expense_sheet s
+      LEFT JOIN document.external_expense_item i ON i.tenant_id=s.tenant_id AND i.expense_sheet_id=s.id
+     GROUP BY s.tenant_id,s.id,s.worker_engagement_id,s.code,s.status
+), allocation_by_line AS (
+    SELECT a.tenant_id,
+           CASE WHEN a.external_time_sheet_id IS NOT NULL THEN 'external_time_sheet' ELSE 'external_expense_sheet' END AS source_kind,
+           COALESCE(a.external_time_sheet_id,a.external_expense_sheet_id) AS source_id,
+           a.service_sheet_line_id,
+           sum(CASE WHEN a.allocation_kind='acceptance' THEN a.accepted_amount ELSE -a.accepted_amount END)::numeric(18,4) AS accepted_amount
+      FROM document.service_sheet_source_allocation a
+     WHERE a.external_time_sheet_id IS NOT NULL OR a.external_expense_sheet_id IS NOT NULL
+     GROUP BY a.tenant_id,source_kind,source_id,a.service_sheet_line_id
+), invoice_by_service_line AS (
+    SELECT l.tenant_id,l.source_line_id AS service_sheet_line_id,
+           sum(l.net_amount)::numeric(18,4) AS invoiced_amount
+      FROM document.purchase_invoice_line l
+      JOIN document.purchase_invoice h ON h.tenant_id=l.tenant_id AND h.id=l.purchase_invoice_id
+     WHERE l.source_entity_type = 'document.service_sheet'
+       AND l.source_line_id IS NOT NULL
+       AND h.status NOT IN ('cancelled','reversed')
+     GROUP BY l.tenant_id,l.source_line_id
+), claim_totals AS (
+    SELECT a.tenant_id,a.source_kind,a.source_id,
+           sum(a.accepted_amount)::numeric(18,4) AS accepted_amount,
+           COALESCE(sum(
+               CASE WHEN sl.net_amount > 0
+                    THEN a.accepted_amount * COALESCE(i.invoiced_amount,0) / sl.net_amount
+                    ELSE 0 END
+           ),0)::numeric(18,4) AS invoiced_amount
+      FROM allocation_by_line a
+      JOIN document.service_sheet_line sl ON sl.tenant_id=a.tenant_id AND sl.id=a.service_sheet_line_id
+      LEFT JOIN invoice_by_service_line i ON i.tenant_id=a.tenant_id AND i.service_sheet_line_id=a.service_sheet_line_id
+     GROUP BY a.tenant_id,a.source_kind,a.source_id
+)
+SELECT s.tenant_id,s.source_kind,s.source_id,s.worker_engagement_id,s.code,s.status AS claim_status,
+       s.approved_amount,COALESCE(t.accepted_amount,0)::numeric(18,4) AS accepted_amount,
+       COALESCE(t.invoiced_amount,0)::numeric(18,4) AS invoiced_amount,
+       (s.approved_amount-COALESCE(t.accepted_amount,0))::numeric(18,4) AS unaccepted_amount,
+       (COALESCE(t.accepted_amount,0)-COALESCE(t.invoiced_amount,0))::numeric(18,4) AS uninvoiced_amount,
+       CASE
+         WHEN s.status='reversed' THEN 'reversed'
+         WHEN COALESCE(t.invoiced_amount,0)>=s.approved_amount AND s.approved_amount>0 THEN 'invoiced'
+         WHEN COALESCE(t.invoiced_amount,0)>0 THEN 'partially_invoiced'
+         WHEN COALESCE(t.accepted_amount,0)>=s.approved_amount AND s.approved_amount>0 THEN 'accepted'
+         WHEN COALESCE(t.accepted_amount,0)>0 THEN 'partially_accepted'
+         ELSE 'not_accepted'
+       END AS financial_status,
+       COALESCE(t.accepted_amount,0)>s.approved_amount AS over_accepted,
+       COALESCE(t.invoiced_amount,0)>COALESCE(t.accepted_amount,0) AS over_invoiced
+  FROM claim_source s
+  LEFT JOIN claim_totals t ON t.tenant_id=s.tenant_id AND t.source_kind=s.source_kind AND t.source_id=s.source_id;
+
+COMMENT ON VIEW document.external_claim_reconciliation_v IS
+  'Derived external time/expense approval, canonical service-sheet acceptance and invoice-source reconciliation; claim lifecycle is never overloaded with partial financial state.';

@@ -59,6 +59,14 @@ export class KyselyAtlasToolProposalStore implements AtlasToolProposalStore {
     return this.withTransaction(input.context, (transaction) => this.byId(input.context.tenantId, input.proposalId, transaction));
   }
 
+  list(input: { readonly context: VerifiedRequestContext; readonly limit: number }): Promise<readonly AtlasToolProposal[]> {
+    const limit = Math.min(Math.max(Math.trunc(input.limit), 1), 100);
+    return this.withTransaction(input.context, async (transaction) => {
+      const result = await sql<Row>`SELECT * FROM ai.ai_tool_invocation WHERE tenant_id=${input.context.tenantId}::uuid AND principal_id=${input.context.principalId}::uuid ORDER BY created_at DESC, id DESC LIMIT ${limit}`.execute(transaction);
+      return Object.freeze(result.rows.map(rowToProposal));
+    });
+  }
+
   confirm(input: { readonly context: VerifiedRequestContext; readonly proposalId: string; readonly tokenHash: string; readonly confirmedAt: string }): Promise<AtlasToolStoreResult> {
     return this.transition(input.context, input.proposalId, sql<Row>`
       UPDATE ai.ai_tool_invocation SET status='confirmed', confirmation_actor_id=${input.context.principalId}::uuid,
@@ -171,7 +179,9 @@ function rowToProposal(row: Row): AtlasToolProposal {
     ...(row["affected_entity_id"] ? { affectedEntityId: String(row["affected_entity_id"]) } : {}),
     confirmationRequired: requiredConfirmation, ...(row["confirmation_token_hash"] ? { confirmationTokenHash: String(row["confirmation_token_hash"]) } : {}),
     ...(row["confirmation_expires_at"] ? { expiresAt: iso(row["confirmation_expires_at"]) } : {}), status: String(row["status"]) as AtlasToolProposal["status"],
-    createdAt: iso(row["created_at"]), ...(row["execution_auth_epoch"] == null ? {} : { executionAuthEpoch: Number(row["execution_auth_epoch"]) }),
+    createdAt: iso(row["created_at"]), ...(row["confirmation_at"] ? { confirmationAt: iso(row["confirmation_at"]) } : {}),
+    ...(row["executing_at"] ? { executingAt: iso(row["executing_at"]) } : {}), ...(row["terminal_at"] ? { terminalAt: iso(row["terminal_at"]) } : {}),
+    ...(row["duration_ms"] == null ? {} : { durationMs: Number(row["duration_ms"]) }), ...(row["execution_auth_epoch"] == null ? {} : { executionAuthEpoch: Number(row["execution_auth_epoch"]) }),
     ...(row["execution_policy_revision"] ? { executionPolicyRevision: String(row["execution_policy_revision"]) } : {}),
     ...(row["downstream_command_idempotency_key"] ? { downstreamIdempotencyKey: String(row["downstream_command_idempotency_key"]) } : {}),
     ...(row["terminal_error_class"] ? { terminalErrorClass: String(row["terminal_error_class"]) } : {}), ...(row["result_hash"] ? { resultHash: String(row["result_hash"]) } : {}),

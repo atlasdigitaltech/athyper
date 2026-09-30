@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_execution_approval",
+  "decision": "approved",
+  "proposalRevision": "01d4baa18931c72025a4cea425b7b34ff111f5e76c54767d7f7c428c15fc6d45",
+  "approvedAt": "2026-09-12T05:53:49.397Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "NEON execution proposal: 52 assignments across 13 new groups, 14:00–16:00 MYT on 12 September 2026"
+  },
+  "effectiveFrom": "2026-09-12T06:00:00.000Z",
+  "effectiveUntil": "2026-09-12T08:00:00.000Z",
+  "activationAuthorized": false,
+  "compatibilityRetirementAuthorized": false,
+  "dispositionAcceptance": false
+}

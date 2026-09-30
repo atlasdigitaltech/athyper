@@ -1,0 +1,137 @@
+http:
+  routers:
+    platform-control:
+      # Human enrollment only. Do not intercept the separate workload /execute route.
+      rule: 'Host(`api.dev.athyper.test`) && (Path(`/api/platform-control/session`) || Path(`/api/studio/publication-policies`) || PathRegexp(`^/api/studio/publication-policies/[^/]+/activate$`))'
+      entryPoints: [web]
+      service: platform-control
+      priority: 200
+    iam:
+      {
+        rule: Host(`iam.dev.athyper.test`),
+        entryPoints: [web],
+        service: iam,
+        middlewares: [iam-public-origin],
+      }
+    api:
+      {
+        rule: Host(`api.dev.athyper.test`),
+        entryPoints: [web],
+        service: api-failover,
+      }
+    neon:
+      {
+        rule: Host(`neon.dev.athyper.test`),
+        entryPoints: [web],
+        service: neon-failover,
+      }
+    neon-maintenance-preview:
+      {
+        rule: "Host(`neon.dev.athyper.test`) && PathPrefix(`/__maintenance-preview`)",
+        entryPoints: [web],
+        service: maintenance,
+        priority: 10000,
+      }
+    neon-outage-preview:
+      {
+        rule: "Host(`neon.dev.athyper.test`) && PathPrefix(`/__outage-preview`)",
+        entryPoints: [web],
+        service: outage,
+        priority: 10000,
+      }
+    mesh:
+      {
+        rule: Host(`mesh.dev.athyper.test`),
+        entryPoints: [web],
+        service: mesh-failover,
+      }
+    studio:
+      {
+        rule: Host(`studio.dev.athyper.test`),
+        entryPoints: [web],
+        service: studio-failover,
+      }
+    mail:
+      { rule: Host(`mail.dev.athyper.test`), entryPoints: [web], service: mail }
+    storage-console:
+      rule: 'Host(`objects.dev.athyper.test`) && (Path(`/console`) || PathPrefix(`/console/`))'
+      entryPoints: [web]
+      service: storage-console
+      priority: 200
+    objects-browser:
+      # Only unsigned browser navigation receives HTML; S3 clients keep the API.
+      rule: 'Host(`objects.dev.athyper.test`) && Path(`/`) && Method(`GET`) && HeaderRegexp(`Accept`, `text/html`) && !HeaderRegexp(`Authorization`, `.+`) && !QueryRegexp(`X-Amz-Signature`, `.*`) && !QueryRegexp(`Signature`, `.*`)'
+      entryPoints: [web]
+      service: objects-browser
+      priority: 100
+    objects:
+      {
+        rule: Host(`objects.dev.athyper.test`),
+        entryPoints: [web],
+        service: objects,
+      }
+    fallback:
+      {
+        rule: PathPrefix(`/`),
+        entryPoints: [web],
+        service: problem,
+        priority: 1,
+      }
+  middlewares:
+    # The public ingress terminates TLS and redirects HTTP before this internal
+    # gateway. Pin the canonical DEV IAM origin instead of trusting caller-
+    # supplied forwarding headers or reporting this private HTTP hop to Keycloak.
+    # This gateway has no published web port; do not reuse on a public HTTP route.
+    iam-public-origin:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+          X-Forwarded-Port: "443"
+          X-Forwarded-Host: iam.dev.athyper.test
+  services:
+    platform-control:
+      loadBalancer:
+        servers: [{ url: http://control-api:4010 }]
+    api-failover:
+      { failover: { healthCheck: {}, service: api, fallback: problem } }
+    neon-failover:
+      { failover: { healthCheck: {}, service: neon, fallback: outage } }
+    mesh-failover:
+      { failover: { healthCheck: {}, service: mesh, fallback: outage } }
+    studio-failover:
+      { failover: { healthCheck: {}, service: studio, fallback: outage } }
+    iam: { loadBalancer: { servers: [{ url: http://iam:8080 }] } }
+    api:
+      loadBalancer:
+        healthCheck: { path: /livez, interval: 10s, timeout: 3s }
+        servers: [{ url: http://api:4000 }]
+    neon:
+      loadBalancer:
+        healthCheck: { path: /, interval: 10s, timeout: 3s }
+        servers: [{ url: http://neon-web:3000 }]
+    mesh:
+      loadBalancer:
+        healthCheck: { path: /, interval: 10s, timeout: 3s }
+        servers: [{ url: http://mesh-web:3000 }]
+    studio:
+      loadBalancer:
+        healthCheck: { path: /, interval: 10s, timeout: 3s }
+        servers: [{ url: http://studio-web:3000 }]
+    mail: { loadBalancer: { servers: [{ url: http://mailtrap:8025 }] } }
+    objects: { loadBalancer: { servers: [{ url: http://objectstorage:9000 }] } }
+    objects-browser:
+      { loadBalancer: { servers: [{ url: http://gateway-outage:8083 }] } }
+    storage-console:
+      { loadBalancer: { servers: [{ url: http://gateway-outage:8083 }] } }
+    outage:
+      loadBalancer:
+        healthCheck: { path: /healthz, interval: 10s, timeout: 3s }
+        servers: [{ url: http://gateway-outage:8080 }]
+    maintenance:
+      loadBalancer:
+        healthCheck: { path: /healthz, interval: 10s, timeout: 3s }
+        servers: [{ url: http://gateway-outage:8081 }]
+    problem:
+      loadBalancer:
+        healthCheck: { path: /healthz, interval: 10s, timeout: 3s }
+        servers: [{ url: http://gateway-outage:8082 }]

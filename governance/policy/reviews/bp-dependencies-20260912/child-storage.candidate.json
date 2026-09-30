@@ -1,0 +1,378 @@
+{
+  "contractSchema": "athyper.meta-entity-contract/2.1",
+  "entity": {
+    "entityCode": "business_partner_request",
+    "entityClass": "process",
+    "ownershipModel": "tenant"
+  },
+  "runtimeProfiles": [
+    {
+      "id": "a4295021-2452-5eb5-bbcb-fae161a9afff",
+      "profileKey": "default",
+      "backingKind": "table",
+      "storagePlane": "neon",
+      "storageSchema": "document",
+      "storageObject": "entity_case",
+      "tenantFieldKey": "tenant_id",
+      "apiExposure": "api",
+      "readMode": "generic",
+      "writeMode": "none"
+    }
+  ],
+  "fields": [
+    {
+      "id": "e33532e8-6b5c-552b-882d-46f2375782a0",
+      "fieldKey": "id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "cc1b7f03-1f1f-5a88-b84a-515d9462f052",
+      "fieldKey": "case_code",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "storagePath": "case_code",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "2587fb75-269c-587a-a546-3ee9af504e1b",
+      "fieldKey": "operation_code",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "storagePath": "operation_code",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "990303f6-1340-5d97-baa1-388a832e6da4",
+      "fieldKey": "status",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "storagePath": "status",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "d90a0fa6-875e-5a70-88d0-c690cc14d47d",
+      "fieldKey": "created_at",
+      "dataType": "datetime",
+      "typeConfig": {
+        "kind": "datetime"
+      },
+      "storagePath": "created_at",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "06fed490-7c82-5de7-8b96-c99c1154d11d",
+      "fieldKey": "updated_at",
+      "dataType": "datetime",
+      "typeConfig": {
+        "kind": "datetime"
+      },
+      "storagePath": "updated_at",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "393127d0-1726-44c3-8548-5818b8276019",
+      "fieldKey": "tenant_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "tenant_id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one",
+      "nullSemantics": "not_allowed"
+    }
+  ],
+  "operations": [
+    {
+      "id": "8acd602b-4c86-5419-bcd9-b06980ca6a7e",
+      "operationKey": "discover",
+      "operationKind": "read",
+      "label": "Discover",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "auditEventCode": "business_partner_request.discover"
+    },
+    {
+      "id": "6bf4ad53-ceae-5a71-b25a-658ec2dbbba3",
+      "operationKey": "read",
+      "operationKind": "read",
+      "label": "Read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "auditEventCode": "business_partner_request.read"
+    }
+  ],
+  "operationPermissions": [
+    {
+      "id": "9b3c658a-1201-5cee-9a5c-1a9628c7bee7",
+      "entityOperationId": "8acd602b-4c86-5419-bcd9-b06980ca6a7e",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "permissionKind": "entity_operation"
+    },
+    {
+      "id": "b24322c8-54fb-50be-835c-c39d466be627",
+      "entityOperationId": "6bf4ad53-ceae-5a71-b25a-658ec2dbbba3",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "permissionKind": "entity_operation"
+    }
+  ],
+  "operationScopeBindings": [
+    {
+      "id": "d35fb558-9693-515f-8afa-9a3b84d0a280",
+      "entityOperationId": "8acd602b-4c86-5419-bcd9-b06980ca6a7e",
+      "bindingKey": "discover_organization",
+      "targetPlane": "neon",
+      "decisionMode": "collection",
+      "scopeKind": "operating_organization",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "platform.document_relationship.v1",
+      "missingValueBehavior": "deny"
+    },
+    {
+      "id": "f7e83b22-dcd0-5bf4-bf52-b575f6b4ea00",
+      "entityOperationId": "6bf4ad53-ceae-5a71-b25a-658ec2dbbba3",
+      "bindingKey": "read_organization",
+      "targetPlane": "neon",
+      "decisionMode": "collection",
+      "scopeKind": "operating_organization",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "platform.document_relationship.v1",
+      "missingValueBehavior": "deny"
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+      "surfaceKey": "review_approval",
+      "surfaceKind": "list",
+      "title": "Review & Approval",
+      "isDefault": true,
+      "layoutKind": "grid",
+      "layoutConfig": {
+        "collectionRelationship": {
+          "schemaVersion": 1,
+          "sourceRef": "entity_case",
+          "subject": {
+            "fieldRef": "subject_entity",
+            "value": "master.business_partner"
+          },
+          "scope": {
+            "fieldRef": "current_snapshot.organization",
+            "contextRef": "operatingOrganizationId"
+          }
+        },
+        "authorization": {
+          "schemaVersion": 1,
+          "entityCode": "business_partner_request",
+          "planeKey": "neon",
+          "ownership": "organization.record.v1",
+          "directory": {
+            "operation": "discover",
+            "population": "ownership"
+          },
+          "recordReadOperation": "read",
+          "operations": [
+            {
+              "key": "discover",
+              "permissionCode": "neon.relationship.entity_case.read",
+              "scope": "organization.record.v1",
+              "target": "collection",
+              "effect": "read",
+              "requiresParentRead": false,
+              "requiresPreflight": false
+            },
+            {
+              "key": "read",
+              "permissionCode": "neon.relationship.entity_case.read",
+              "scope": "organization.record.v1",
+              "target": "existing",
+              "effect": "read",
+              "requiresParentRead": false,
+              "requiresPreflight": false
+            }
+          ],
+          "fieldPolicies": [
+            {
+              "key": "request_summary",
+              "fields": [
+                "id",
+                "case_code",
+                "operation_code",
+                "status",
+                "created_at",
+                "updated_at"
+              ],
+              "readOperation": "read",
+              "representation": "plain",
+              "writeOperations": [],
+              "queryUses": [
+                "filter",
+                "sort",
+                "search"
+              ]
+            },
+            {
+              "key": "tenant_identity",
+              "fields": [
+                "tenant_id"
+              ],
+              "readOperation": "read",
+              "representation": "plain",
+              "writeOperations": [],
+              "queryUses": []
+            }
+          ],
+          "surfaces": [
+            {
+              "key": "review_approval",
+              "level": "tab",
+              "operation": "discover"
+            }
+          ],
+          "relationships": []
+        },
+        "supportedModes": [
+          "table",
+          "compact"
+        ],
+        "defaultState": {
+          "sort": [
+            {
+              "field": "created_at",
+              "direction": "desc"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "surfaceFieldBindings": [
+    {
+      "id": "6abc487a-d467-5400-ba5d-b6df771ac0fb",
+      "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+      "entityFieldId": "e33532e8-6b5c-552b-882d-46f2375782a0",
+      "bindingKey": "id",
+      "position": 0,
+      "labelOverride": "Id",
+      "displayConfig": {
+        "defaultVisible": false
+      }
+    },
+    {
+      "id": "22471872-1164-59d0-bc44-10a906e14ebe",
+      "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+      "entityFieldId": "cc1b7f03-1f1f-5a88-b84a-515d9462f052",
+      "bindingKey": "case_code",
+      "position": 1,
+      "labelOverride": "Case code",
+      "displayConfig": {
+        "defaultVisible": true
+      }
+    },
+    {
+      "id": "3d0dff0d-6b86-5b73-98f4-0818bf37d852",
+      "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+      "entityFieldId": "2587fb75-269c-587a-a546-3ee9af504e1b",
+      "bindingKey": "operation_code",
+      "position": 2,
+      "labelOverride": "Operation code",
+      "displayConfig": {
+        "defaultVisible": true
+      }
+    },
+    {
+      "id": "9dc28c22-69eb-58c4-b7ec-ed8088a799f9",
+      "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+      "entityFieldId": "990303f6-1340-5d97-baa1-388a832e6da4",
+      "bindingKey": "status",
+      "position": 3,
+      "labelOverride": "Status",
+      "displayConfig": {
+        "defaultVisible": true
+      }
+    },
+    {
+      "id": "ab78caf9-a43e-54db-adcc-7c8456a3cd05",
+      "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+      "entityFieldId": "d90a0fa6-875e-5a70-88d0-c690cc14d47d",
+      "bindingKey": "created_at",
+      "position": 4,
+      "labelOverride": "Created at",
+      "displayConfig": {
+        "defaultVisible": true
+      }
+    },
+    {
+      "id": "1255cd37-0e47-5c72-acd4-dddcc39f9da9",
+      "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+      "entityFieldId": "06fed490-7c82-5de7-8b96-c99c1154d11d",
+      "bindingKey": "updated_at",
+      "position": 5,
+      "labelOverride": "Updated at",
+      "displayConfig": {
+        "defaultVisible": true
+      }
+    }
+  ],
+  "tests": [
+    {
+      "key": "independent_read",
+      "assertion": "path_equals",
+      "path": "surfaces.0.layoutConfig.authorization.operations.1.requiresParentRead",
+      "expected": false
+    },
+    {
+      "key": "organization_coordinate",
+      "assertion": "path_equals",
+      "path": "surfaces.0.layoutConfig.collectionRelationship.scope.contextRef",
+      "expected": "operatingOrganizationId"
+    },
+    {
+      "key": "no_direct_writes",
+      "assertion": "path_equals",
+      "path": "runtimeProfiles.0.writeMode",
+      "expected": "none"
+    }
+  ],
+  "keys": [
+    {
+      "id": "3a2a95c5-c494-599e-af2f-fbf8b76c1f5d",
+      "keyKey": "primary",
+      "keyKind": "primary",
+      "uniquenessScope": "global",
+      "nullSemantics": "not_allowed"
+    }
+  ],
+  "keyFields": [
+    {
+      "id": "ee7ab368-809f-50b0-a1e7-a02529b0f6a3",
+      "entityKeyId": "3a2a95c5-c494-599e-af2f-fbf8b76c1f5d",
+      "entityFieldId": "e33532e8-6b5c-552b-882d-46f2375782a0",
+      "position": 1
+    }
+  ]
+}

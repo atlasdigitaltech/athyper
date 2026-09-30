@@ -82,6 +82,9 @@ CREATE DOMAIN mesh.trade_role_d AS text
 CREATE DOMAIN mesh.profile_record_status_d AS text
     CHECK (VALUE IN ('active', 'inactive', 'revoked'));
 
+CREATE DOMAIN mesh.profile_publication_event_d AS text
+    CHECK (VALUE IN ('published', 'withdrawn'));
+
 CREATE DOMAIN mesh.bank_institution_type_d AS text
     CHECK (VALUE IN (
         'bank', 'correspondent_bank', 'central_bank', 'credit_union',
@@ -104,4 +107,4 @@ CREATE DOMAIN mesh.bank_verification_method_d AS text
     ));
 
 CREATE DOMAIN mesh.bank_disclosure_status_d AS text
-    CHECK (VALUE IN ('active', 'expired', 'revoked', 'superseded'));
+    CHECK (VALUE IN ('pending_approval', 'active', 'rejected', 'expired', 'revoked', 'superseded'));

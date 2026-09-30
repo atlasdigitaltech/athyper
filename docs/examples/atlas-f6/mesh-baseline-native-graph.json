@@ -1,0 +1,257 @@
+{
+  "contractSchema": "athyper.meta-entity-contract/2.1",
+  "entity": {
+    "entityCode": "network_relationship",
+    "entityClass": "configuration",
+    "ownershipModel": "overlay"
+  },
+  "runtimeProfiles": [
+    {
+      "id": "8c78f4d9-9fd1-4388-89b3-8d00b0a88a97",
+      "profileKey": "default",
+      "backingKind": "virtual",
+      "apiExposure": "catalog_only",
+      "readMode": "none",
+      "writeMode": "none"
+    }
+  ],
+  "fields": [
+    {
+      "id": "3476ff4b-5827-4609-8510-20a256ee5b75",
+      "fieldKey": "id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "id"
+    },
+    {
+      "id": "f2ed800a-7661-4023-885a-c4b73ac3be5e",
+      "fieldKey": "buyer_account_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "buyer_account_id"
+    },
+    {
+      "id": "134dc350-326d-4e39-8003-66bb16de099d",
+      "fieldKey": "supplier_account_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "supplier_account_id"
+    },
+    {
+      "id": "64f6b650-67c6-4b6f-8127-6864b1882de2",
+      "fieldKey": "relationship_kind",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "relationship_kind"
+    },
+    {
+      "id": "ac046c9e-95b0-46b2-85bd-16c9fb9958e7",
+      "fieldKey": "status",
+      "dataType": "enum",
+      "typeConfig": {
+        "kind": "enum",
+        "domain_code": "network.relationship_status_d"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "status"
+    },
+    {
+      "id": "9b62b77a-8c69-4826-83f1-d2d2bb64429c",
+      "fieldKey": "effective_from",
+      "dataType": "date",
+      "typeConfig": {
+        "kind": "date"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "effective_from"
+    },
+    {
+      "id": "cc8ad46a-6953-4573-8590-ef833ceffabe",
+      "fieldKey": "effective_until",
+      "dataType": "date",
+      "typeConfig": {
+        "kind": "date"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "effective_until"
+    },
+    {
+      "id": "6273e10e-fe95-4b9e-8fbe-a2a86c57c256",
+      "fieldKey": "created_at",
+      "dataType": "datetime",
+      "typeConfig": {
+        "kind": "datetime"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "created_at"
+    },
+    {
+      "id": "6eb06d70-4a44-4aa4-807e-7b736f809ba6",
+      "fieldKey": "updated_at",
+      "dataType": "datetime",
+      "typeConfig": {
+        "kind": "datetime"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "updated_at"
+    },
+    {
+      "id": "5c9bc7e5-9c22-4336-85e3-6b062d719395",
+      "fieldKey": "buyer_tenant_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "buyer_tenant_id"
+    },
+    {
+      "id": "d42b3147-2eaf-4799-8c91-511a3075a6d0",
+      "fieldKey": "supplier_tenant_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "supplier_tenant_id"
+    }
+  ],
+  "operations": [
+    {
+      "id": "38c44bf4-ac52-4ae1-8d67-c94383a40e36",
+      "operationKey": "read",
+      "operationKind": "read",
+      "label": "Read imported Network Relationship",
+      "permissionCode": "mesh.catalog.network_relationship.read",
+      "auditEventCode": "metadata.entity.read"
+    }
+  ],
+  "searchProfiles": [
+    {
+      "id": "f06d4f63-1c97-48ba-80bb-4b3dad2cdee0",
+      "searchKey": "default",
+      "searchKind": "keyword",
+      "minimumQueryLength": 2,
+      "isDefault": true
+    }
+  ],
+  "searchFields": [
+    {
+      "id": "b6a654e2-0001-4c1e-8f07-1bfa390d2a5f",
+      "entitySearchProfileId": "f06d4f63-1c97-48ba-80bb-4b3dad2cdee0",
+      "entityFieldId": "64f6b650-67c6-4b6f-8127-6864b1882de2",
+      "position": 1,
+      "matchMode": "contains"
+    },
+    {
+      "id": "59e8b519-70b9-4f3c-834c-cd4517639bcf",
+      "entitySearchProfileId": "f06d4f63-1c97-48ba-80bb-4b3dad2cdee0",
+      "entityFieldId": "ac046c9e-95b0-46b2-85bd-16c9fb9958e7",
+      "position": 2,
+      "matchMode": "exact"
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "a1251e2d-fedf-4a8b-8f5b-4b6d953ae7ff",
+      "surfaceKey": "atlas_baseline_ai",
+      "surfaceKind": "detail",
+      "title": "AI enablement for imported Network Relationship baseline",
+      "description": "AI-only derivative. Preserve imported Mesh contract, descriptor, global-source provenance; publish under a separate tenant identity and publication key. This authoring graph is the review carrier; runtime storage and operations come from the immutable baseline.",
+      "layoutKind": "stack",
+      "layoutConfig": {
+        "ai": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "aliases": [
+            "Network relationship",
+            "Relationship"
+          ],
+          "description": "Saved relationship identity within the selected authorized network account",
+          "summaryFieldKeys": [
+            "relationship_kind",
+            "status",
+            "effective_from",
+            "effective_until"
+          ],
+          "searchFieldKeys": [
+            "relationship_kind",
+            "status"
+          ],
+          "relationshipKeys": [],
+          "contextKinds": [
+            "record"
+          ],
+          "insightProviders": [
+            {
+              "id": "entity_read_record",
+              "version": 1
+            }
+          ],
+          "actions": [
+            {
+              "id": "open_record",
+              "version": 1,
+              "operationKey": "read"
+            }
+          ],
+          "presentationProfiles": [
+            {
+              "id": "record_brief",
+              "version": 1
+            }
+          ]
+        },
+        "baselineImport": {
+          "id": "75674873-1b92-4100-b489-b5676ef7d1dc",
+          "contentHash": "16d6ea26507c8045a211ecc29d72c1cac580b2022a9799f5c965ae48584771e3",
+          "sourceEntityId": "f75c852d-3c37-50ac-9810-3e85d3d9af9c",
+          "descriptorHash": "5020f5cf8bee69c96a8d45d6df2bab1062c6ba5671efcfe239fd0cd7f5a03383"
+        }
+      }
+    }
+  ],
+  "tests": [
+    {
+      "key": "imported_source_bound",
+      "assertion": "path_equals",
+      "path": "surfaces.0.layoutConfig.baselineImport.contentHash",
+      "expected": "16d6ea26507c8045a211ecc29d72c1cac580b2022a9799f5c965ae48584771e3"
+    },
+    {
+      "key": "reviewed_ai_enabled",
+      "assertion": "path_equals",
+      "path": "surfaces.0.layoutConfig.ai.enabled",
+      "expected": true
+    },
+    {
+      "key": "read_permission_preserved",
+      "assertion": "path_equals",
+      "path": "operations.0.permissionCode",
+      "expected": "mesh.catalog.network_relationship.read"
+    }
+  ]
+}

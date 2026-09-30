@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "named_role_approval_response",
+  "decision": "pending",
+  "requestSha256": "947cd1222bf227fb5f061702a0f03c6fbcb4aad8b9cbba7c478de2d1ad69743a",
+  "reviewerId": "catl.owner",
+  "domains": [],
+  "approvedBatchIds": [],
+  "selfReviewAcknowledgedBatchIds": [],
+  "reference": "",
+  "approvedAt": null
+}

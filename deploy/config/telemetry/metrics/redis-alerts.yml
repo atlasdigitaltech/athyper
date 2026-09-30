@@ -1,0 +1,142 @@
+groups:
+  - name: memorycache
+    rules:
+      # -----------------------------------------------------------------------
+      # Memory pressure — warn at 70%, critical at 85%
+      # With noeviction policy, Redis rejects writes when full.
+      # This fires before that happens so operators can act.
+      # -----------------------------------------------------------------------
+      - alert: RedisMemoryHigh
+        expr: >
+          redis_memory_used_bytes{service=~"memorycache|jobqueue|secretstore-cache"}
+          / redis_memory_max_bytes{service=~"memorycache|jobqueue|secretstore-cache"} > 0.70
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage above 70%"
+          description: >
+            Redis is using {{ $value | humanizePercentage }} of its configured maxmemory.
+            With noeviction policy, writes will be rejected at 100%.
+            Consider increasing REDIS_MAXMEMORY_MB within the container budget, or pruning stale keys.
+
+      - alert: RedisMemoryCritical
+        expr: >
+          redis_memory_used_bytes{service=~"memorycache|jobqueue|secretstore-cache"}
+          / redis_memory_max_bytes{service=~"memorycache|jobqueue|secretstore-cache"} > 0.85
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis memory critical — writes will be rejected imminently"
+          description: >
+            Redis is at {{ $value | humanizePercentage }} of maxmemory.
+            Writes to {{ $labels.service }} are at risk of failure.
+            Immediate action required.
+
+      # -----------------------------------------------------------------------
+      # Rejected connections — any rejection means the client connection
+      # limit (maxclients) was hit.
+      # -----------------------------------------------------------------------
+      - alert: RedisRejectedConnections
+        expr: increase(redis_rejected_connections_total{service=~"memorycache|jobqueue|secretstore-cache"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis is rejecting connections"
+          description: >
+            {{ $value }} connection(s) were rejected in the last 5 minutes.
+            Check redis_config_maxclients and investigate connection leaks in api
+            or web BFF before changing the connection limit.
+
+      # -----------------------------------------------------------------------
+      # High connected clients — warn at 80% of the configured limit
+      # -----------------------------------------------------------------------
+      - alert: RedisHighClientCount
+        expr: redis_connected_clients{service=~"memorycache|jobqueue|secretstore-cache"} / redis_config_maxclients{service=~"memorycache|jobqueue|secretstore-cache"} > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis connected client count is high"
+          description: >
+            {{ $value | humanizePercentage }} of the configured client limit is in use.
+            Investigate for connection pool misconfiguration or leaks.
+
+      # -----------------------------------------------------------------------
+      # Redis down — exporter can reach the host but Redis itself is not responding
+      # -----------------------------------------------------------------------
+      - alert: RedisDown
+        expr: redis_up{service=~"memorycache|jobqueue|secretstore-cache"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: >
+            The redis_exporter cannot connect to the Redis instance.
+            Clients of {{ $labels.service }} cannot access their store.
+            Check that container and its connection errors.
+
+      # -----------------------------------------------------------------------
+      # Keyspace misses — high ratio indicates TTLs too short or cache pollution
+      # -----------------------------------------------------------------------
+      - alert: RedisHighMissRate
+        expr: >
+          rate(redis_keyspace_misses_total{service="memorycache"}[5m])
+          / (
+            rate(redis_keyspace_hits_total{service="memorycache"}[5m]) +
+            rate(redis_keyspace_misses_total{service="memorycache"}[5m])
+            + 0.0001
+          ) > 0.50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis cache miss rate above 50%"
+          description: >
+            Cache miss rate is {{ $value | humanizePercentage }} over the last 5 minutes.
+            This may indicate TTLs are too short for the access pattern, or that
+            the cache was recently flushed / restarted.
+
+      - alert: RedisRejectedWrites
+        expr: increase(redis_errors_total{service=~"memorycache|jobqueue|secretstore-cache",err="OOM"}[5m]) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Redis rejected commands because maxmemory was reached"
+          description: "Check session creation and job enqueue failures; retain noeviction."
+
+      - alert: RedisExporterDown
+        expr: up{service=~"memorycache|jobqueue|secretstore-cache"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Redis monitoring is unavailable"
+
+  - name: application-jobs
+    rules:
+      - alert: JobFailuresGrowing
+        expr: increase(athyper_job_dlq_total[10m]) > 10
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "More than ten terminal job failures in ten minutes"
+      - alert: JobQueueBacklog
+        expr: sum by (instance, environment) (athyper_job_queue_size{state=~"wait|waiting|paused|prioritized"}) > 1000
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Application job backlog exceeds 1000"
+      - alert: SchedulerProgressStalled
+        expr: time() - athyper_scheduler_last_success_timestamp_seconds > 180
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Scheduler has not completed a job-store check for three minutes"
+      - alert: SchedulerUnavailable
+        expr: up{service="scheduler"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Scheduler heartbeat endpoint is unavailable"

@@ -12,6 +12,14 @@ CREATE TRIGGER notification_delivery_updated_at
 BEFORE UPDATE ON event.notification_delivery
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
+CREATE TRIGGER notification_provider_event_append_only
+BEFORE UPDATE OR DELETE ON event.notification_provider_event
+FOR EACH ROW EXECUTE FUNCTION event.trg_reject_append_only_mutation();
+
+CREATE TRIGGER notification_email_suppression_updated_at
+BEFORE UPDATE ON event.notification_email_suppression
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
 CREATE TRIGGER notification_inbox_state_identity_guard
 BEFORE UPDATE ON event.notification_inbox_state
 FOR EACH ROW EXECUTE FUNCTION event.trg_guard_notification_inbox_state();

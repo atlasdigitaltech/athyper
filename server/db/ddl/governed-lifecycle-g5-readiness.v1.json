@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-09-04",
+  "scenarios": [
+    {
+      "scenario": "buyer_requested_supplier",
+      "status": "clean_and_supported_upgrade_proven",
+      "owner": "Business Partner Onboarding",
+      "evidence": "The G3 buyer-request/acceptance and G4 purpose-bound disclosure commands pass alongside one release-pinned G1 case. The NEON domain materializer requires their bounded evidence coordinates, creates the external organization Business Partner, active supplier role and organization assignment, then records pending scoped qualification and preference nomination with immutable snapshot lineage, command evidence and outbox in one transaction. Clean and baseline-upgrade runs prove replay, stale/wrong-tenant denial, rollback and no legacy request writes.",
+      "exitGate": "Keep the clean and supported-upgrade scenario matrix green; MESH evidence references must remain hash-bound and must never carry protected values."
+    },
+    {
+      "scenario": "supplier_self_registration",
+      "status": "clean_and_supported_upgrade_proven",
+      "owner": "Supplier Onboarding",
+      "evidence": "The G3 self-registration/sponsor exchange passes alongside a release-pinned G1 case. NEON rejects anything except a bounded trust/rate/duplicate/sponsor-policy preflight, requires the accepted MESH exchange hash, and atomically creates the normalized supplier, active organization scope and pending qualification without section-specific request storage. Clean and baseline-upgrade matrices pass.",
+      "exitGate": "Keep bounded preflight, sponsor acceptance, replay, isolation, rollback and evidence checks green."
+    },
+    {
+      "scenario": "internal_only_business_partner",
+      "status": "clean_and_supported_upgrade_proven_compatibility_observation_open",
+      "owner": "Business Partner Governance",
+      "evidence": "Canonical and supported-upgrade migrations install the draft and lifecycle commands on Studio, NEON and MESH and the domain-owned internal Business Partner materializer on NEON. A dedicated authenticated application API owns internal draft, cycle-bound submit, maker-checker decision and atomic materialization and requires explicit entity-contract and form-template release pins; it never writes document.business_partner_request. The disposable clean three-plane/Keycloak harness executes this real Express/Kysely route path and proves create/replay, missing-pin rejection, maker denial, stale-version rejection, non-disclosing wrong-tenant rejection, approval, materialization replay, durable evidence/outbox counts, no legacy request growth, and no supplier/customer role creation. A second disposable harness reconstructs all three planes from pinned Git baseline 29ec62fa115c776b907a0eba52c67745b6e94abb, explicitly restores the baseline migration-only workforce IAM authority, applies the exact Studio 9/NEON 9/MESH 7 forward deltas, provisions current fixtures, verifies the upgraded G1 catalogs, and passes the same real HTTP probe; it emits G1_GOVERNED_INTERNAL_BUSINESS_PARTNER_SUPPORTED_UPGRADE_HTTP_OK for baseline 2026-09-03.1. Governed operations publish distinct governed_internal.* metrics. The confirmation-gated observer combines those series with registered read-only compatibility SQL, activity since the declared cutover checkpoint, source consumers, and upgrade readiness; its ledger remains intentionally empty because no production endpoints were supplied. The legacy API remains a compatibility intake for supplier/customer paths gated by G2-G4.",
+      "exitGate": "Record a governed-versus-legacy production evidence checkpoint with the observation command, migrate the remaining recorded consumers, and keep clean/supported-upgrade replay, rollback, tenant isolation and evidence green."
+    },
+    {
+      "scenario": "customer_onboarding",
+      "status": "clean_and_supported_upgrade_proven",
+      "owner": "Customer Master Data",
+      "evidence": "A release-pinned G1 case now atomically materializes an external organization Business Partner, prospect Customer role and active sales-organization assignment. The matrix composes with the G2 lifecycle certification for activate, suspend, reactivate, deactivate and archive outcomes and proves replay, stale/wrong-tenant denial, rollback and audit/outbox evidence on clean and baseline-upgrade databases.",
+      "exitGate": "Keep G1 materialization and G2 lifecycle negative/concurrency evidence green."
+    },
+    {
+      "scenario": "internal_workforce",
+      "status": "clean_and_supported_upgrade_three_plane_proven",
+      "owner": "Workforce Governance",
+      "evidence": "The retained workforce IAM projection remains a compatibility intake and now admits explicit member, suspended and deprovisioned intent. On both the populated supported-upgrade databases and one disposable clean PostgreSQL/Keycloak environment, its employment-scoped command traversed the production NEON outbox and strict Studio consumer into the IAM saga. A forced provider fault recovered on retry; Studio, NEON and MESH admission provisioned, suspended and deprovisioned with auth_epoch 0-to-1-to-2; only NEON received the workforce.employee legal-entity role; Person, employee and employment authority survived; and all fixtures rolled back or were destroyed. This execution evidence does not make the compatibility intake removal-eligible: measured production usage and the G0 migration window remain open.",
+      "exitGate": "Keep clean and supported-upgrade internal-workforce lifecycle evidence green, measure production intake usage, migrate remaining consumers and retire document.workforce_iam_projection only when its G0 removal gate is independently satisfied."
+    },
+    {
+      "scenario": "external_worker_iam",
+      "status": "clean_and_supported_upgrade_three_plane_proven",
+      "owner": "Workforce IAM",
+      "evidence": "The external-worker lifecycle now passes both the populated supported-upgrade environment and one fully disposable clean environment. The clean harness provisions canonical Studio, NEON and MESH manifests and tenant/authorization fixtures, creates a real Keycloak 26.7.2 realm/client/organization, and runs production transport, saga, provider and plane-local authority code through retry, exact replay, provisioning, suspension and deprovisioning. Every plane advances auth_epoch 0-to-1-to-2, audit/maker-checker/tenant isolation remains enforced, provider membership is not converted into unintended Studio/MESH grants, and all database/provider fixtures are rolled back or destroyed.",
+      "exitGate": "Keep this external-worker gate green while completing the remaining G5 scenario rows as their G1-G4 dependencies land."
+    },
+    {
+      "scenario": "clean_and_supported_upgrade_certification",
+      "status": "all_g5_scenarios_proven",
+      "owner": "Platform Certification",
+      "evidence": "The disposable clean harness now composes the existing Keycloak/workforce three-plane matrix with G3 registration/capability, G4 protected-value and the four-row governed Business Partner matrix. A separate guarded harness reconstructs Studio, NEON and MESH from pinned baseline 2026-09-03.1, applies the exact G1-G4/G5 forward chain, provisions current fixtures and passes the same registration, protection and Business Partner scenario probes. The independent G0/G1 production-usage window remains open and no compatibility surface is removal-eligible from this result.",
+      "exitGate": "Keep all clean and supported-upgrade scenario evidence green while G0 compatibility observation proceeds independently."
+    }
+  ]
+}

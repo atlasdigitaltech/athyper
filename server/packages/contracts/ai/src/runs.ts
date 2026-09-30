@@ -1,3 +1,4 @@
+import type { AtlasReplayInput, AtlasReplayCompletion } from "./replay.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { AtlasContentBlock, AtlasFinishReason, AtlasProviderErrorClass, AtlasProviderId, AtlasProviderUsage, AtlasPublicModelId } from "./model.js";
 
@@ -19,10 +20,12 @@ export interface AtlasRun {
   readonly promptRevision: string;
   readonly startedAt: string;
   readonly terminalAt: string | null;
+  readonly finishReason?: AtlasFinishReason;
   readonly terminalErrorClass: AtlasProviderErrorClass | null;
 }
 
 export interface AtlasBeginRunInput {
+  readonly replayInput?: AtlasReplayInput;
   readonly context: VerifiedRequestContext;
   readonly runId: string;
   readonly threadId: string;
@@ -36,13 +39,15 @@ export interface AtlasBeginRunInput {
   readonly policyRevision: string;
   readonly promptRevision: string;
   readonly startedAt: string;
+  readonly expectedLastMessageSequence?: number;
+  readonly requestFingerprint?: string;
 }
 export interface AtlasBeginRunResult { readonly replayed: boolean; readonly run: AtlasRun; readonly replayedOutput?: readonly AtlasContentBlock[] }
 
 export interface AtlasRunRepository {
   begin(input: AtlasBeginRunInput): Promise<AtlasBeginRunResult>;
   get(input: { readonly context: VerifiedRequestContext; readonly runId: string }): Promise<AtlasRun | null>;
-  complete(input: { readonly context: VerifiedRequestContext; readonly runId: string; readonly assistantContent: readonly AtlasContentBlock[]; readonly completedAt: string }): Promise<AtlasRun | null>;
+  complete(input: { readonly context: VerifiedRequestContext; readonly runId: string; readonly assistantContent: readonly AtlasContentBlock[]; readonly replayCompletion?: AtlasReplayCompletion; readonly completedAt: string }): Promise<AtlasRun | null>;
   fail(input: { readonly context: VerifiedRequestContext; readonly runId: string; readonly errorClass: AtlasProviderErrorClass; readonly failedAt: string }): Promise<AtlasRun | null>;
   cancel(input: { readonly context: VerifiedRequestContext; readonly runId: string; readonly cancelledAt: string }): Promise<AtlasRun | null>;
 }
@@ -57,8 +62,8 @@ export interface AtlasUsageLedgerEntry {
   readonly principalHash: string;
   readonly providerId: AtlasProviderId;
   readonly providerRequestId: string | null;
-  readonly credentialId: string;
-  readonly credentialRevision: string;
+  readonly credentialId: string | null;
+  readonly credentialRevision: string | null;
   readonly credentialOwnerId: string;
   readonly providerRegion: string;
   readonly publicModelId: AtlasPublicModelId;
@@ -76,7 +81,9 @@ export interface AtlasUsageLedgerEntry {
   readonly totalCostUsd: number | null;
   readonly finishReason: AtlasFinishReason;
   readonly errorClass: AtlasProviderErrorClass | null;
+  readonly errorCode?: string;
+  readonly readinessDiagnostics?: {readonly modelDigest:string;readonly queueWaitMs:number;readonly loadDurationMs:number;readonly readinessChecks:number};
   readonly durationMs: number;
   readonly recordedAt: string;
 }
-export interface AtlasUsageLedger { append(entry: AtlasUsageLedgerEntry): Promise<void> }
+export interface AtlasUsageLedger { append(entry: AtlasUsageLedgerEntry, context?: VerifiedRequestContext): Promise<void> }

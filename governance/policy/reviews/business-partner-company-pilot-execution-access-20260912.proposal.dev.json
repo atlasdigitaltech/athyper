@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "kind": "company_pilot_execution_access_review",
+  "approved": false,
+  "executable": false,
+  "reason": "Bind to consolidated signed release and image before execution-access approval",
+  "destination": {
+    "container": "athyper-bp-enter-db",
+    "network": "athyper-bp-enter-isolated",
+    "database": "athyper_neon"
+  },
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "scope": {
+    "kind": "company_code",
+    "targetId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+    "propagation": "exact",
+    "existingScopeTarget": null,
+    "scopeRegistrationRequired": true
+  },
+  "compatibleOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+  "durationMinutes": 120,
+  "effectiveFrom": null,
+  "effectiveUntil": null,
+  "batches": [
+    {
+      "account": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "permissions": [
+        "neon.relationship.bp_company_setup_request.read",
+        "neon.relationship.bp_company_setup_request.create",
+        "neon.relationship.bp_company_setup_request.update",
+        "neon.relationship.bp_company_setup_request.validate",
+        "neon.relationship.bp_company_setup_request.submit",
+        "neon.relationship.bp_company_setup_request.materialize"
+      ]
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "permissions": [
+        "neon.relationship.bp_company_setup_request.read",
+        "neon.relationship.bp_company_setup_request.decide"
+      ]
+    }
+  ],
+  "conditions": [
+    "New isolated company-specific groups/roles/memberships only; preserve all expired/revoked access",
+    "Preserve catalog MFA, SoD, deny rules and independent workflow decisions",
+    "Authorize execution only after exact release/image/binding coordinates and exact UTC window are accepted",
+    "Revoke new test memberships after revocation checks; recovery must not restore them",
+    "Retain required case, approval and command audit history; inventory synthetic records separately"
+  ],
+  "excluded": [
+    "Shared DEV",
+    "Ordinary BP access",
+    "Sensitive reveal grants",
+    "Studio publication grants",
+    "Mesh execution",
+    "66-disposition acceptance",
+    "Enforcement activation",
+    "Compatibility retirement"
+  ],
+  "inventory": {
+    "path": "governance/policy/reports/business-partner-company-access-inventory-20260912.dev.json",
+    "sha256": "fad7d5b701a2682da741b3a617966c1044ab5e5b5e5ffc505f71db191ed28ea5"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-10T01:15:12.051Z",
+  "environment": "dev",
+  "scope": "CirrusAtlantic catl.admin; Studio and Neon only",
+  "authorization": {
+    "source": "Explicit requesting-user instruction in the task conversation",
+    "instruction": "go ahead with approved permission publication and writer qualification are the remaining blockers",
+    "authenticatedReviewerApprovalClaimed": false
+  },
+  "tests": {
+    "goldenCorpus": 13,
+    "managementUnit": 61,
+    "writerDatabase": 27,
+    "epochDatabase": 3,
+    "host": 13
+  },
+  "corpusSha256": "5dcfbc1e2cf9d70c5010718b1129f7416ca8f74d3beb315261ac2132a833c679",
+  "schemaSnapshots": [
+    {
+      "plane": "studio",
+      "schemaSha256": "ab8e7c664193d420d40d19b60253365d59b6dabed38788b5af78749df9eb6eb9"
+    },
+    {
+      "plane": "neon",
+      "schemaSha256": "ece852faeddaf460d3a5a07a5891c6d09e7267c7ad7350fd04795031560ce820"
+    },
+    {
+      "plane": "mesh",
+      "schemaSha256": "259f622d23767c04d599642bbc630989a7050af783c816a8c540d1fbc4a2aeb0"
+    }
+  ],
+  "deployedWriterMatchesTestedSource": [
+    {
+      "module": "authorization-management-service",
+      "matches": true
+    },
+    {
+      "module": "kysely-authorization-management-repository",
+      "matches": true
+    },
+    {
+      "module": "kysely-authorization-unit-of-work",
+      "matches": true
+    },
+    {
+      "module": "kysely-authorization-bindings",
+      "matches": true
+    },
+    {
+      "module": "authorization-management-selection",
+      "matches": true
+    }
+  ],
+  "live": {
+    "observedAt": "2026-09-10T01:14:20.317Z",
+    "liveEffectsCommitted": false,
+    "results": [
+      {
+        "plane": "studio",
+        "targetWritable": true,
+        "epochObserved": true,
+        "rollbackVerified": true,
+        "watermark": "studio:44444444-4444-4444-8444-444444444444:0"
+      },
+      {
+        "plane": "neon",
+        "targetWritable": true,
+        "epochObserved": true,
+        "rollbackVerified": true,
+        "watermark": "neon:44444444-4444-4444-8444-444444444444:0"
+      }
+    ]
+  },
+  "watermarkMeaning": "Observed epoch of the existing exact-plane authz authority, which both current reads and the new writer use. No legacy data migration is claimed.",
+  "expiresAt": "2026-09-11T01:15:12.051Z",
+  "ordinaryRuntimeRoleChanged": false,
+  "independentMetaEntityReviewStillRequired": true
+}

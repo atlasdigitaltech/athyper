@@ -1,0 +1,103 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "uom/core",
+  "entityCode": "uom",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "primaryObject": "shared.uom",
+    "sourceObjects": [
+      "shared.uom"
+    ],
+    "idField": "code",
+    "tenantField": null,
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "code",
+      "binding": {
+        "sourceObject": "shared.uom",
+        "column": "code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.uom.core.fields.code.label",
+        "defaultText": "Code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "name",
+      "binding": {
+        "sourceObject": "shared.uom",
+        "column": "name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.uom.core.fields.name.label",
+        "defaultText": "Name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "quantityType",
+      "binding": {
+        "sourceObject": "shared.uom",
+        "column": "quantity_type"
+      },
+      "dataType": "string",
+      "storageType": "shared.uom_quantity_type_d",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.uom.core.fields.quantityType.label",
+        "defaultText": "Quantity type"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "shared_reference"
+  },
+  "referencePicker": {
+    "valueField": "code",
+    "labelField": "name",
+    "displayFormat": "{name} ({code})",
+    "allowedTokens": [
+      "name",
+      "code"
+    ],
+    "load": "bounded_lookup"
+  },
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:84ec7b949afb3fa81baec3a9935dce4211bc10c4f20c0031af320d43eb725447"
+}

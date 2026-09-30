@@ -1,0 +1,195 @@
+---
+// Overrides Starlight's default Header to add a Neon/Mesh/Studio plane
+// switcher into the right-hand group (next to the theme toggle). It
+// deliberately does NOT live inside SiteTitle/.title-wrapper — that
+// wrapper has `overflow: clip` (to stop long titles covering the search
+// box), which silently clips any dropdown menu placed inside it.
+//
+// Markup mirrors @astrojs/starlight/components/Header.astro; only the
+// PlaneSwitcher insertion in .right-group is new.
+import config from "virtual:starlight/user-config";
+import LanguageSelect from "virtual:starlight/components/LanguageSelect";
+import Search from "virtual:starlight/components/Search";
+import SiteTitle from "virtual:starlight/components/SiteTitle";
+import SocialIcons from "virtual:starlight/components/SocialIcons";
+import ThemeSelect from "virtual:starlight/components/ThemeSelect";
+
+const shouldRenderSearch =
+  config.pagefind || config.components.Search !== "@astrojs/starlight/components/Search.astro";
+
+const planes = [
+  { name: "Neon", href: "/neon/", src: "/brand/neon/identity-lockup.svg" },
+  { name: "Mesh", href: "/mesh/", src: "/brand/mesh/identity-lockup.svg" },
+  { name: "Studio", href: "/studio/", src: "/brand/studio/identity-lockup.svg" },
+];
+---
+
+<div class="header">
+  <div class="title-wrapper sl-flex">
+    <SiteTitle />
+  </div>
+  <div class="sl-flex print:hidden">
+    {shouldRenderSearch && <Search />}
+  </div>
+  <div class="sl-hidden md:sl-flex print:hidden right-group">
+    <details class="plane-switcher">
+      <summary>
+        <span>Planes</span>
+        <svg aria-hidden="true" viewBox="0 0 24 24" class="caret">
+          <path
+            d="m6 9 6 6 6-6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </summary>
+      <ul>
+        {
+          planes.map((plane) => (
+            <li>
+              <a href={plane.href}>
+                <img src={plane.src} alt={`athyper ${plane.name}`} />
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </details>
+    <div class="sl-flex social-icons">
+      <SocialIcons />
+    </div>
+    <ThemeSelect />
+    <LanguageSelect />
+  </div>
+</div>
+
+<style>
+  @layer starlight.core {
+    .header {
+      display: flex;
+      gap: var(--sl-nav-gap);
+      justify-content: space-between;
+      align-items: center;
+      height: 100%;
+    }
+
+    .title-wrapper {
+      overflow: clip;
+      padding: 0.25rem;
+      margin: -0.25rem;
+      min-width: 0;
+    }
+
+    .right-group,
+    .social-icons {
+      gap: 1rem;
+      align-items: center;
+    }
+    .social-icons::after {
+      content: "";
+      height: 2rem;
+      border-inline-end: 1px solid var(--sl-color-gray-5);
+    }
+
+    @media (min-width: 50rem) {
+      :global(:root[data-has-sidebar]) {
+        --__sidebar-pad: calc(2 * var(--sl-nav-pad-x));
+      }
+      :global(:root:not([data-has-toc])) {
+        --__toc-width: 0rem;
+      }
+      .header {
+        --__sidebar-width: max(0rem, var(--sl-content-inline-start, 0rem) - var(--sl-nav-pad-x));
+        --__main-column-fr: calc(
+          (
+              100% + var(--__sidebar-pad, 0rem) - var(--__toc-width, var(--sl-sidebar-width)) -
+                (2 * var(--__toc-width, var(--sl-nav-pad-x))) - var(--sl-content-inline-start, 0rem) -
+                var(--sl-content-width)
+            ) / 2
+        );
+        display: grid;
+        grid-template-columns:
+          minmax(
+            calc(var(--__sidebar-width) + max(0rem, var(--__main-column-fr) - var(--sl-nav-gap))),
+            auto
+          )
+          1fr
+          auto;
+        align-content: center;
+      }
+    }
+  }
+
+  /* --- Plane switcher --- */
+  .plane-switcher {
+    position: relative;
+  }
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.375rem;
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    cursor: pointer;
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary:hover {
+    color: var(--sl-color-white);
+    background: var(--sl-color-bg-inline-code);
+  }
+  .caret {
+    width: 0.9rem;
+    height: 0.9rem;
+    transition: transform 0.15s ease;
+  }
+  [open] > summary .caret {
+    transform: rotate(180deg);
+  }
+
+  .plane-switcher ul {
+    position: absolute;
+    z-index: 9999;
+    inset-block-start: calc(100% + 0.5rem);
+    inset-inline-end: 0;
+    min-width: 11rem;
+    margin: 0;
+    padding: 0.4rem;
+    list-style: none;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.5rem;
+    background: var(--sl-color-bg-nav);
+    box-shadow: var(--sl-shadow-lg);
+  }
+  .plane-switcher li + li {
+    margin-top: 0.15rem;
+  }
+  .plane-switcher ul a {
+    display: flex;
+    align-items: center;
+    padding: 0.55rem 0.6rem;
+    border-radius: 0.375rem;
+  }
+  .plane-switcher ul a:hover {
+    background: var(--sl-color-bg-inline-code);
+  }
+  .plane-switcher ul img {
+    height: 1.15rem;
+    width: auto;
+  }
+
+  /* The lockup SVGs are native brand-navy; invert to white so they read
+     against the dark header in dark mode (mirrors the app shell's own
+     `filter: brightness(0) invert(1)` treatment of the same assets on
+     its always-dark rail — see packages/platform/shell/shell/src/styles.css). */
+  :root:not([data-theme="light"]) .plane-switcher ul img {
+    filter: brightness(0) invert(1);
+  }
+</style>

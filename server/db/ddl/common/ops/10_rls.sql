@@ -130,6 +130,10 @@ CREATE POLICY record_export_request_tenant_access ON ops.record_export_request F
 CREATE POLICY record_import_session_admin_access ON ops.record_import_session FOR ALL TO athyperadmin USING(true) WITH CHECK(true);
 CREATE POLICY record_import_chunk_admin_access ON ops.record_import_chunk FOR ALL TO athyperadmin USING(true) WITH CHECK(true);
 CREATE POLICY record_export_request_admin_access ON ops.record_export_request FOR ALL TO athyperadmin USING(true) WITH CHECK(true);
+ALTER TABLE ops.record_transfer_retention_policy ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ops.record_transfer_retention_policy FORCE ROW LEVEL SECURITY;
+CREATE POLICY record_transfer_retention_policy_tenant_read ON ops.record_transfer_retention_policy FOR SELECT TO athyperapp USING(tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY record_transfer_retention_policy_admin_access ON ops.record_transfer_retention_policy FOR ALL TO athyperadmin USING(true) WITH CHECK(true);
 ALTER TABLE ops.control_runtime_command_submission ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ops.control_runtime_command_submission FORCE ROW LEVEL SECURITY;
 ALTER TABLE ops.control_runtime_command_approval_request ENABLE ROW LEVEL SECURITY;

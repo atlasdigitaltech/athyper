@@ -1,0 +1,16 @@
+{
+  "name": "@athyper/stackctl",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "athyper": "./bin/athyper.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "yaml": "2.9.0"
+  }
+}

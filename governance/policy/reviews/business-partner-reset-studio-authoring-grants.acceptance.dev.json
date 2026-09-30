@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "temporary_studio_authoring_grant_acceptance",
+  "proposalRevision": "e75d4ffc805c48c81615eca22c3ab066dadf400d829256de9629ae7638535128",
+  "acceptedAt": "2026-09-11T08:52:04.267484+00:00",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "questionProposalRevision": "e75d4ffc805c48c81615eca22c3ab066dadf400d829256de9629ae7638535128"
+  },
+  "scope": "exact_temporary_studio_assignments_only",
+  "enforcementAuthorized": false,
+  "bpGrantChangesAuthorized": false
+}

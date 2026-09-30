@@ -1,0 +1,113 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.credit",
+  "entityCode": "customer",
+  "plane": "neon",
+  "sectionKey": "credit",
+  "rendererKey": "platform.related-collection.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.credit.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/credit"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "customer/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "business_partner_id"
+    },
+    {
+      "fieldKey": "status"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_credit.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "business_partner_request/operation",
+    "customer/core"
+  ],
+  "completenessPacks": [
+    {
+      "category": "organization",
+      "code": "customer_credit",
+      "requirements": [
+        {
+          "actionCode": "configure_company",
+          "code": "customer.company",
+          "fieldCode": "company.customer.profile",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.credit.completenessPacks.customer_credit.requirements.customer.company.label",
+            "defaultText": "Configure customer company"
+          },
+          "sectionCode": "customer-company",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "customer",
+            "code": "COMPANY_PROFILE_COMPLETE"
+          },
+          "enforcement": "operation_gate",
+          "operationBindingRef": {
+            "artifactRef": "business_partner_request/operation.json",
+            "bindingKey": "customer.readiness"
+          }
+        },
+        {
+          "actionCode": "configure_company",
+          "code": "customer.credit",
+          "fieldCode": "credit.current",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.credit.completenessPacks.customer_credit.requirements.customer.credit.label",
+            "defaultText": "Open credit review"
+          },
+          "requiresVerified": true,
+          "sectionCode": "credit",
+          "severity": "recommended",
+          "factRef": {
+            "entityCode": "customer",
+            "code": "CREDIT_REVIEW_CURRENT"
+          },
+          "enforcement": "operation_gate",
+          "operationBindingRef": {
+            "artifactRef": "business_partner_request/operation.json",
+            "bindingKey": "customer.readiness"
+          }
+        }
+      ],
+      "role": "customer",
+      "scope": "company",
+      "version": 1
+    }
+  ],
+  "completenessEvaluation": {
+    "source": "server_contextual_facts",
+    "evaluate": "section_open_only",
+    "remediationActionResolution": "registered_domain_operation_to_request_flow",
+    "missingResolver": "hide_action_with_diagnostic",
+    "noImplicitOperationAuthority": true
+  },
+  "artifactHash": "sha256:ec585003bee890d858303255970e2abaed783109cf87f699851c158323d9222f"
+}

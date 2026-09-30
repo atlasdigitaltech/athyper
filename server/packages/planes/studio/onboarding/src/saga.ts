@@ -13,12 +13,23 @@ import type {
 
 export interface OnboardingSagaRepository {
   loadCase(caseId: string): Promise<OnboardingCase | undefined>;
-  listObservations(caseId: string): Promise<readonly OnboardingResourceObservation[]>;
-  recordReceipt(caseId: string, targetId: string, resourceKey: string, operation: OnboardingCommandOperation, receipt: ProvisioningCommandReceipt): Promise<void>;
+  listObservations(
+    caseId: string,
+  ): Promise<readonly OnboardingResourceObservation[]>;
+  recordReceipt(
+    caseId: string,
+    targetId: string,
+    resourceKey: string,
+    operation: OnboardingCommandOperation,
+    receipt: ProvisioningCommandReceipt,
+  ): Promise<void>;
 }
 
 export interface CommandEnvelopeFactory {
-  create(item: OnboardingCase, intent: OnboardingCommandIntent): ProvisioningCommandEnvelope;
+  create(
+    item: OnboardingCase,
+    intent: OnboardingCommandIntent,
+  ): ProvisioningCommandEnvelope;
 }
 
 export function createCommandEnvelopeFactory(input: {
@@ -62,27 +73,49 @@ export function createCommandEnvelopeFactory(input: {
   };
 }
 
-const coordinate = (targetId: string, resourceKey: string) => `${targetId}:${resourceKey}`;
+const coordinate = (targetId: string, resourceKey: string) =>
+  `${targetId}:${resourceKey}`;
 
-function operationFor(status: OnboardingCase["status"], retention: string): OnboardingCommandOperation {
+function operationFor(
+  status: OnboardingCase["status"],
+  retention: string,
+): OnboardingCommandOperation {
   if (status !== "offboarding") return "apply";
   return retention === "deletable" ? "revoke" : "retain";
 }
 
-function converged(operation: OnboardingCommandOperation, item: OnboardingCase, observed?: OnboardingResourceObservation): boolean {
+function converged(
+  operation: OnboardingCommandOperation,
+  item: OnboardingCase,
+  observed?: OnboardingResourceObservation,
+): boolean {
   if (!observed) return false;
   if (operation === "revoke") return observed.status === "revoked";
   if (operation === "retain") return observed.status === "retained";
-  return observed.status === "applied"
-    && observed.appliedVersion === item.desiredVersion
-    && observed.appliedHash === item.desiredHash;
+  return (
+    observed.status === "applied" &&
+    observed.appliedVersion === item.desiredVersion &&
+    observed.appliedHash === item.desiredHash
+  );
 }
 
 export function reconcileOnboardingCase(
   item: OnboardingCase,
   observations: readonly OnboardingResourceObservation[],
 ): OnboardingReconciliationResult {
-  const actual = new Map(observations.map((value) => [coordinate(value.targetId, value.resourceKey), value]));
+  if (
+    !["provisioning", "reconciling", "active", "offboarding"].includes(
+      item.status,
+    )
+  ) {
+    throw new Error("ONBOARDING_RECONCILIATION_STATUS_CONFLICT");
+  }
+  const actual = new Map(
+    observations.map((value) => [
+      coordinate(value.targetId, value.resourceKey),
+      value,
+    ]),
+  );
   const commands: OnboardingCommandIntent[] = [];
   const driftedResourceKeys: string[] = [];
 
@@ -112,7 +145,13 @@ export function reconcileOnboardingCase(
       });
     }
   }
-  return { caseId: item.id, desiredVersion: item.desiredVersion, converged: commands.length === 0, commands, driftedResourceKeys };
+  return {
+    caseId: item.id,
+    desiredVersion: item.desiredVersion,
+    converged: commands.length === 0,
+    commands,
+    driftedResourceKeys,
+  };
 }
 
 export function createOnboardingSaga(options: {
@@ -121,13 +160,25 @@ export function createOnboardingSaga(options: {
   envelopes: CommandEnvelopeFactory;
 }) {
   return {
-    async reconcile(caseId: string) {
+    async reconcile(caseId: string, tenantId?: string) {
       const item = await options.repository.loadCase(caseId);
-      if (!item) throw new Error(`Onboarding case not found: ${caseId}`);
-      const result = reconcileOnboardingCase(item, await options.repository.listObservations(caseId));
+      if (!item || (tenantId !== undefined && item.tenantId !== tenantId))
+        throw new Error(`Onboarding case not found: ${caseId}`);
+      const result = reconcileOnboardingCase(
+        item,
+        await options.repository.listObservations(caseId),
+      );
       for (const intent of result.commands) {
-        const receipt = await options.transport.execute(options.envelopes.create(item, intent));
-        await options.repository.recordReceipt(caseId, intent.targetId, intent.resourceKey, intent.operation, receipt);
+        const receipt = await options.transport.execute(
+          options.envelopes.create(item, intent),
+        );
+        await options.repository.recordReceipt(
+          caseId,
+          intent.targetId,
+          intent.resourceKey,
+          intent.operation,
+          receipt,
+        );
         if (receipt.status === "rejected") break;
       }
       return result;

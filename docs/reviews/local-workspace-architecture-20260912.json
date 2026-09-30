@@ -1,0 +1,114 @@
+{
+  "observedAt": "2026-09-11T23:19:44.454Z",
+  "activeMode": "source",
+  "qaProject": "athyper-qa-candidate-1789163256545",
+  "checks": [
+    {
+      "name": "api: same identity and database configuration",
+      "passed": true
+    },
+    {
+      "name": "api: same networks",
+      "passed": true
+    },
+    {
+      "name": "api: source healthy",
+      "passed": true
+    },
+    {
+      "name": "worker: same identity and database configuration",
+      "passed": true
+    },
+    {
+      "name": "worker: same networks",
+      "passed": true
+    },
+    {
+      "name": "worker: source healthy",
+      "passed": true
+    },
+    {
+      "name": "scheduler: same identity and database configuration",
+      "passed": true
+    },
+    {
+      "name": "scheduler: same networks",
+      "passed": true
+    },
+    {
+      "name": "scheduler: source healthy",
+      "passed": true
+    },
+    {
+      "name": "studio-web: same identity and database configuration",
+      "passed": true
+    },
+    {
+      "name": "studio-web: same networks",
+      "passed": true
+    },
+    {
+      "name": "studio-web: source healthy",
+      "passed": true
+    },
+    {
+      "name": "neon-web: same identity and database configuration",
+      "passed": true
+    },
+    {
+      "name": "neon-web: same networks",
+      "passed": true
+    },
+    {
+      "name": "neon-web: source healthy",
+      "passed": true
+    },
+    {
+      "name": "mesh-web: same identity and database configuration",
+      "passed": true
+    },
+    {
+      "name": "mesh-web: same networks",
+      "passed": true
+    },
+    {
+      "name": "mesh-web: source healthy",
+      "passed": true
+    },
+    {
+      "name": "api: same preview storage",
+      "passed": true
+    },
+    {
+      "name": "worker: same preview storage",
+      "passed": true
+    },
+    {
+      "name": "scheduler: same preview storage",
+      "passed": true
+    },
+    {
+      "name": "QA product and IAM database volume separate",
+      "passed": true
+    },
+    {
+      "name": "QA IAM separate and healthy",
+      "passed": true
+    },
+    {
+      "name": "QA api: no DEV preview trust",
+      "passed": true
+    },
+    {
+      "name": "QA worker: no DEV preview trust",
+      "passed": true
+    }
+  ],
+  "workspaceBoundaryVerified": true,
+  "fullyDelivered": false,
+  "remaining": [
+    "Generic Meta Entity graph preview",
+    "Complete candidate metadata dependency closure and QA BP qualification",
+    "Staging server unavailable"
+  ]
+}

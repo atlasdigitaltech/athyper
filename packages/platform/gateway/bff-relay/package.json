@@ -13,10 +13,14 @@
       "default": "./src/browser-denied.ts"
     }
   },
-  "scripts": { "typecheck": "tsc --noEmit" },
-  "dependencies": { "@athyper/contract-platform-api": "workspace:*" },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@athyper/contract-platform-api": "workspace:*"
+  },
   "devDependencies": {
-    "@types/node": "^24.10.1",
+    "@types/node": "^25.6.0",
     "@athyper/tsconfig": "workspace:*",
     "typescript": "^6.0.3"
   }

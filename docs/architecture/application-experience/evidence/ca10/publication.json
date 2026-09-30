@@ -1,0 +1,13 @@
+{
+  "mode": "applied",
+  "publicationKey": "metadata.compiled_entity.business_partner",
+  "releaseId": "2c50384b-c70b-5c70-b59a-0f1573b9209e",
+  "releaseNo": 13,
+  "appliedReleaseId": "01a0c746-992b-7b64-a316-2a2b2bfba131",
+  "artifactHash": "9e12611779c1a8c12abb7d2197d81971f56dd55bb029bfe9d5193ec5e11e5a77",
+  "compiledReleaseHash": "sha256:f9bdc342cd7eac381686d856668306d79975d2725578239bf45d731fb2d82f67",
+  "artifactCount": 95,
+  "signatureAlgorithm": "Ed25519",
+  "signingKeyId": "athyper-dev-publication-ed25519-20260905",
+  "authority": "scoped DEVFULL workload; no human review impersonated"
+}

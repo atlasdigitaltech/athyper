@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_canonical_v2_native_user_authorization",
+  "recordedAt": "2026-09-11T05:35:48.731467+00:00",
+  "proposalRevision": "0e44f59861fa5c2d7290909d2b41d366f39e3a856e7336fd0e9cf9b5ba4149f8",
+  "nativeContractHash": "3e860539e3892846d5fca4d24db1334a234ccd4820d6707f188a97423bebdd3a",
+  "changeSetId": "f533b3ec-934b-4bc0-8448-ee933847ddf2",
+  "expectedRevision": 2,
+  "reviewerAccount": "catl.owner",
+  "userResponse": "approved",
+  "authorizedActions": [
+    "independent_native_review",
+    "native_publication_signing"
+  ],
+  "bpGrantChangesAuthorized": false,
+  "activationAuthorized": false,
+  "nativeApprovalRecorded": false
+}

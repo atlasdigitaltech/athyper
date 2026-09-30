@@ -1,0 +1,18 @@
+/* Shared by Neon, Mesh, Studio and the generated Keycloak theme copy. */
+:root {
+  --a-identity-columns: minmax(0, 42%) minmax(0, 58%);
+  --a-identity-story-display: flex;
+  --a-identity-story-padding: clamp(1.5rem, 3vw, 3rem);
+  --a-identity-task-padding: clamp(1.5rem, 4vw, 5rem);
+  --a-identity-form-width: 30rem;
+}
+@media (max-width: 75rem) {
+  :root { --a-identity-columns: minmax(0, 52%) minmax(0, 48%); }
+}
+@media (max-width: 52rem) {
+  :root {
+    --a-identity-columns: minmax(0, 1fr);
+    --a-identity-story-display: none;
+    --a-identity-task-padding: max(1.5rem, env(safe-area-inset-left), env(safe-area-inset-right));
+  }
+}

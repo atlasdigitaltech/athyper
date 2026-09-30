@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-11T03:22:22.503Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "exactMessage": "approved"
+  },
+  "revision": "09c286bf20e9389437f4cb4f55feaeec03040c6a7975e5d5acc48c580dff2913",
+  "amendmentSha256": "b1bc45e2344042f505110534c557ce148892dbee215be6e83055a4d415eae1f7",
+  "accepted": true,
+  "activationAuthorized": false
+}

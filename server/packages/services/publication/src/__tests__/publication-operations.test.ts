@@ -11,8 +11,8 @@ describe("publication operational controls", () => {
     const audit = vi.fn(async input => ({ ...input, id: "audit-1", occurredAt: "2026-08-12T01:00:00.000Z", severity: input.severity ?? "info" }));
     const service = new PublicationOperationsService({ repository: repository({ recordReplayRequested }), jobs: { enqueue }, audit: { record: audit }, now: () => "2026-08-12T01:00:00.000Z" });
     const result = await service.replay({ deliveryId: "delivery-1", actorId: "operator-1", tenantId: "tenant-1", requestId: "request-1", reason: "Destination recovered" });
-    expect(result).toEqual({ deploymentId: "deployment-2", replayJobId: "publication:deployment-2:replay:request-1" });
-    expect(enqueue).toHaveBeenCalledWith("publication.apply", "publication.apply-release", { deploymentId: "deployment-2", targetPlane: "neon" }, expect.objectContaining({ jobId: "publication:deployment-2:replay:request-1" }));
+    expect(result).toEqual({ deploymentId: "deployment-2", replayJobId: "job-id" });
+    expect(enqueue).toHaveBeenCalledWith("publication.apply", "publication.apply-release", { deploymentId: "deployment-2", targetPlane: "neon" }, expect.objectContaining({ enqueueKey: "publication:deployment-2:replay:request-1" }));
     expect(recordReplayRequested).toHaveBeenCalledWith(expect.objectContaining({ deliveryId: "delivery-1", reason: "Destination recovered" }));
     expect(recordReplayRequested).toHaveBeenCalledWith(expect.objectContaining({ tenantId: "tenant-1" }));
     expect(audit).toHaveBeenCalledWith(expect.objectContaining({ eventCode: "publication.delivery.replay_requested", metadata: expect.objectContaining({ artifactHash: "a".repeat(64) }) }));

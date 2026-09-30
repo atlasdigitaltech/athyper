@@ -1,0 +1,40 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {hash,prepareNamedRoleReview} from './named-role-review.mjs';
+import {recommendNamedRoles} from './named-role-recommendations.mjs';
+import {createAuthenticatedRoleReview} from './authenticated-role-review.mjs';
+const origin='https://neon.dev.athyper.test';
+async function setup(t){const dir=await mkdtemp(join(tmpdir(),'bp-review-test-'));t.after(()=>rm(dir,{recursive:true,force:true}));const c={tenant_id:'tenant',tenant_code:'tenant',principal_id:'member',principal_code:'member',principal_status:'active',group_id:'group',group_code:'group',role_id:'role',role_code:'approver',scope_target_id:'scope',scope_entity_id:'org',scope_name:'Org',scope_key:'org',scope_kind:'operating_organization',propagation_mode:'exact',has_current_plane_membership:true,role_permission_codes:['neon.relationship.entity_case.decide']};const inventory={grantsChanged:false,grantChanges:[],candidates:[c]},bytes=JSON.stringify(inventory);const draft=prepareNamedRoleReview(inventory,hash(bytes));draft.reviewers=[{id:'catl.owner',name:'Test owner',principalId:'owner',homeTenantId:'tenant',authorityReference:'test-nomination',domains:['business','security'],tenantIds:['tenant']}];const now=Date.now(),packet=recommendNamedRoles(inventory,draft,hash(bytes),{from:new Date(now+86400000).toISOString(),until:new Date(now+86400000*91).toISOString()}),packetBytes=JSON.stringify(packet);await writeFile(join(dir,'inventory.json'),bytes);await writeFile(join(dir,'packet.json'),packetBytes);const session={tenantId:'tenant',principalId:'owner',plane:'neon',realmKey:'athyper',authEpoch:1,assurance:'elevated',acceptedCsrfTokens:['csrf']};let liveCalls=0;const options={enabled:true,origin,inventoryPath:join(dir,'inventory.json'),packetPath:join(dir,'packet.json'),packetSha256:hash(packetBytes),outputDirectory:join(dir,'output'),resolveSession:async()=>session,currentIdentity:async()=>{liveCalls++;return{tenantId:'tenant',principalId:'owner',authEpoch:1,profileHash:'profile'};}};return{dir,session,options,handler:createAuthenticatedRoleReview(options),calls:()=>liveCalls};}
+const get=()=>new Request(origin+'/api/governance/named-role-review');
+const post=(body,extra={})=>new Request(get(),{method:'POST',headers:{origin,'content-type':'application/json','x-csrf-token':'csrf',...extra},body:JSON.stringify(body)});
+async function selection(h){const r=await h(get());assert.equal(r.status,200);const b=await r.json();return{requestSha256:b.request.requestSha256,approvedBatchIds:b.request.batches.map(x=>x.batchId),selfReviewAcknowledgedBatchIds:[],confirmBusiness:true,confirmSecurity:true,submissionId:'10000000-0000-4000-8000-000000000001'};}
+test('anonymous and other principals cannot read cross-tenant review snapshot',async t=>{const s=await setup(t);s.options.resolveSession=async()=>undefined;assert.equal((await s.handler(get())).status,401);s.options.resolveSession=async()=>({...s.session,principalId:'other'});assert.equal((await s.handler(get())).status,403);});
+test('baseline assurance can review but cannot approve',async t=>{const s=await setup(t);s.session.assurance='baseline';const body=await selection(s.handler);assert.equal((await s.handler(post(body))).status,403);const state=JSON.parse(await readFile(join(s.dir,'output/state.json')));assert.equal(state.receipts.length,0);});
+test('wrong origin, bad CSRF and spoofed reviewer fields are rejected',async t=>{const s=await setup(t),body=await selection(s.handler);assert.equal((await s.handler(post(body,{origin:'https://evil.test'}))).status,403);assert.equal((await s.handler(post(body,{'x-csrf-token':'bad'}))).status,403);assert.equal((await s.handler(post({...body,reviewerId:'owner'}))).status,400);});
+test('actual server identity and approval are recorded atomically and idempotently',async t=>{const s=await setup(t),body=await selection(s.handler);const first=await s.handler(post(body));assert.equal(first.status,201);const result=await first.json();assert.equal(result.remainingRows,0);const replay=await s.handler(post(body));assert.equal(replay.status,200);assert.equal((await replay.json()).replayed,true);const state=JSON.parse(await readFile(join(s.dir,'output/state.json')));assert.equal(state.receipts.length,1);assert.equal(state.receipts[0].authenticatedReviewer,true);assert.equal(state.receipts[0].verifiedIdentity.principalId,'owner');assert.equal(state.receipts[0].activationAuthorized,false);assert.ok(!JSON.stringify(state).includes('csrf'));});
+test('revocation or profile change before commit blocks all approval writes',async t=>{const s=await setup(t),body=await selection(s.handler);let calls=0;s.options.currentIdentity=async()=>({tenantId:'tenant',principalId:'owner',authEpoch:1,profileHash:++calls===1?'original':'changed'});assert.equal((await s.handler(post(body))).status,409);const state=JSON.parse(await readFile(join(s.dir,'output/state.json')));assert.equal(state.receipts.length,0);});
+test('stale manifest and changed source fail closed',async t=>{const s=await setup(t),body=await selection(s.handler);assert.equal((await s.handler(post({...body,requestSha256:'old'}))).status,409);await writeFile(s.options.inventoryPath,'{}');assert.equal((await s.handler(get())).status,409);});
+test('two reviewers see only assigned rows and cannot approve each other batches',async t=>{
+ const s=await setup(t);const packet=JSON.parse(await readFile(s.options.packetPath));
+ const batch=packet.batches[0];packet.reviewers[0].assignedBatchIds=[];packet.reviewers[0].prohibitSelfReview=true;
+ packet.reviewers.push({...packet.reviewers[0],id:'catl.admin',name:'Test admin',principalId:'admin',assignedBatchIds:[batch.batchId]});
+ const bytes=JSON.stringify(packet);await writeFile(s.options.packetPath,bytes);s.options.packetSha256=hash(bytes);
+ const owner=await (await s.handler(get())).json();assert.equal(owner.complete,true);assert.equal(owner.platformReviewComplete,false);assert.equal(owner.request,undefined);
+ s.session.principalId='admin';s.options.currentIdentity=async()=>({tenantId:'tenant',principalId:'admin',authEpoch:1});
+ const admin=await (await s.handler(get())).json();assert.equal(admin.reviewerId,'catl.admin');assert.equal(admin.items.length,1);
+ const body=await selection(s.handler);s.session.principalId='owner';s.options.currentIdentity=async()=>({tenantId:'tenant',principalId:'owner',authEpoch:1});
+ assert.notEqual((await s.handler(post(body))).status,201);
+ s.session.principalId='admin';s.options.currentIdentity=async()=>({tenantId:'tenant',principalId:'admin',authEpoch:1});
+ assert.equal((await s.handler(post(body))).status,201);
+ const state=JSON.parse(await readFile(join(s.dir,'output/state.json')));assert.equal(state.receipts[0].reviewerId,'catl.admin');
+ const {assessNamedRoleReview}=await import('./named-role-review.mjs');const inventory=JSON.parse(await readFile(s.options.inventoryPath));state.packet.reviewers[1].assignedBatchIds=[];
+ assert.equal(assessNamedRoleReview(inventory,state.packet,state.sourceSha256).unresolvedRows,1);
+});
+test('assigned self review is prohibited even with explicit acknowledgement',async t=>{
+ const s=await setup(t);const packet=JSON.parse(await readFile(s.options.packetPath));packet.reviewers[0].principalId='member';packet.reviewers[0].prohibitSelfReview=true;packet.reviewers[0].assignedBatchIds=[packet.batches[0].batchId];
+ const {recordBatchApproval}=await import('./named-role-recommendations.mjs');const inventory=JSON.parse(await readFile(s.options.inventoryPath));
+ assert.throws(()=>recordBatchApproval(inventory,packet,packet.sourceSha256,{decision:'approve',domains:['business','security'],reviewerId:'catl.owner',reference:'test',approvedAt:new Date().toISOString(),batchId:packet.batches[0].batchId,batchSha256:packet.batches[0].batchSha256,selfReviewAcknowledged:true}),/Self review prohibited/);
+});

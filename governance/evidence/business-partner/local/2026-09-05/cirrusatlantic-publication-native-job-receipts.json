@@ -1,0 +1,181 @@
+{
+  "schema": "athyper.native-publication-job-receipts/1",
+  "observedAt": "2026-09-05T04:57:05.082414+00:00",
+  "releaseId": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+  "jobs": {
+    "studio": [
+      {
+        "id": "01a06fe8-fc67-7c8d-8411-f5406e487b92",
+        "execution_key": "athyper-e01ee2542072137b4c728fba8790a0263eba2fc0501bcccb51a10903994bc465",
+        "job_type": "publication.compile-artifact",
+        "status": "succeeded",
+        "attempt_no": 1,
+        "input_payload": {
+          "releaseId": "e0abaddf-5319-4393-a0a9-a30a9507d4ac"
+        },
+        "error_code": null,
+        "error_message": null,
+        "created_by": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f",
+        "started_at": "2026-09-05T04:52:15.077399+00:00",
+        "completed_at": "2026-09-05T04:52:15.117646+00:00"
+      },
+      {
+        "id": "01a06fe8-fc80-7f5d-bcd3-4a6a0c7dc3db",
+        "execution_key": "publication:f7416df0-3b8f-45de-a6dc-4285a7f26f31:sign:1",
+        "job_type": "publication.sign-artifact",
+        "status": "queued",
+        "attempt_no": 1,
+        "input_payload": {
+          "compilationId": "f7416df0-3b8f-45de-a6dc-4285a7f26f31"
+        },
+        "error_code": null,
+        "error_message": null,
+        "created_by": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f",
+        "started_at": null,
+        "completed_at": null
+      },
+      {
+        "id": "01a06fe8-fc83-7ddd-b6c6-63da94b20929",
+        "execution_key": "athyper-82da4d90ed6b7bc3ca5070671595479fa0dd25e9b540ce133b3146ab30c48b61",
+        "job_type": "publication.sign-artifact",
+        "status": "succeeded",
+        "attempt_no": 1,
+        "input_payload": {
+          "compilationId": "f7416df0-3b8f-45de-a6dc-4285a7f26f31"
+        },
+        "error_code": null,
+        "error_message": null,
+        "created_by": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f",
+        "started_at": "2026-09-05T04:52:15.105933+00:00",
+        "completed_at": "2026-09-05T04:52:15.194518+00:00"
+      },
+      {
+        "id": "01a06fe8-fc89-797f-9f94-3199df6774ec",
+        "execution_key": "publication:ca499ade-97ca-4624-9282-65aed7b6deaf:sign:1",
+        "job_type": "publication.sign-artifact",
+        "status": "queued",
+        "attempt_no": 1,
+        "input_payload": {
+          "compilationId": "ca499ade-97ca-4624-9282-65aed7b6deaf"
+        },
+        "error_code": null,
+        "error_message": null,
+        "created_by": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f",
+        "started_at": null,
+        "completed_at": null
+      },
+      {
+        "id": "01a06fe8-fc90-72ab-9ac7-1759dad0c106",
+        "execution_key": "athyper-df6a4ad6a976c58617fe267811979dbaa528ef1ea4c6bf8350bb7c1555bc8554",
+        "job_type": "publication.sign-artifact",
+        "status": "succeeded",
+        "attempt_no": 1,
+        "input_payload": {
+          "compilationId": "ca499ade-97ca-4624-9282-65aed7b6deaf"
+        },
+        "error_code": null,
+        "error_message": null,
+        "created_by": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f",
+        "started_at": "2026-09-05T04:52:15.118789+00:00",
+        "completed_at": "2026-09-05T04:52:15.194281+00:00"
+      },
+      {
+        "id": "01a06fe8-fcd5-7c2c-a70a-42c6d466640e",
+        "execution_key": "publication:01a06fe8-fccb-74ec-ab0f-f89b54110de9:dispatch:1",
+        "job_type": "publication.dispatch",
+        "status": "queued",
+        "attempt_no": 1,
+        "input_payload": {
+          "deploymentId": "01a06fe8-fccb-74ec-ab0f-f89b54110de9"
+        },
+        "error_code": null,
+        "error_message": null,
+        "created_by": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f",
+        "started_at": null,
+        "completed_at": null
+      },
+      {
+        "id": "01a06fe8-fcd5-792f-9319-327ff2b81434",
+        "execution_key": "publication:01a06fe8-fccb-76f6-bcf7-9582956d78eb:dispatch:1",
+        "job_type": "publication.dispatch",
+        "status": "queued",
+        "attempt_no": 1,
+        "input_payload": {
+          "deploymentId": "01a06fe8-fccb-76f6-bcf7-9582956d78eb"
+        },
+        "error_code": null,
+        "error_message": null,
+        "created_by": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f",
+        "started_at": null,
+        "completed_at": null
+      },
+      {
+        "id": "01a06fe8-fcdb-73d1-9415-ac0e85f676bb",
+        "execution_key": "athyper-4c23f8912abada9ffedace4542092c89daa243676ced4bdcc3922da3bd28abc3",
+        "job_type": "publication.dispatch",
+        "status": "dead_letter",
+        "attempt_no": 5,
+        "input_payload": {
+          "deploymentId": "01a06fe8-fccb-74ec-ab0f-f89b54110de9"
+        },
+        "error_code": "23503",
+        "error_message": "insert or update on table \"job_execution\" violates foreign key constraint \"job_execution_created_by_fk\"",
+        "created_by": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f",
+        "started_at": "2026-09-05T04:52:15.247067+00:00",
+        "completed_at": "2026-09-05T04:52:15.252569+00:00"
+      },
+      {
+        "id": "01a06fe8-fcdd-7e86-b9d4-0d28a64446d2",
+        "execution_key": "athyper-e56ec7bd97a58e8cd1cd3756e41033db7a0fb9f16d912afc2a98c438248139eb",
+        "job_type": "publication.dispatch",
+        "status": "dead_letter",
+        "attempt_no": 5,
+        "input_payload": {
+          "deploymentId": "01a06fe8-fccb-76f6-bcf7-9582956d78eb"
+        },
+        "error_code": "23503",
+        "error_message": "insert or update on table \"job_execution\" violates foreign key constraint \"job_execution_created_by_fk\"",
+        "created_by": "41f9d49a-35c6-55bd-8fb3-8074195b6c0f",
+        "started_at": "2026-09-05T04:52:15.246043+00:00",
+        "completed_at": "2026-09-05T04:52:15.25178+00:00"
+      }
+    ],
+    "neon": [
+      {
+        "id": "01a06fea-cb77-7bae-9caa-459f69a5cf64",
+        "execution_key": "athyper-d4338a7fca14d5bcccdba3017e75df951b625706cf56f72466b9d632092b3c88",
+        "job_type": "publication.apply-release",
+        "status": "succeeded",
+        "attempt_no": 1,
+        "input_payload": {
+          "targetPlane": "neon",
+          "deploymentId": "01a06fe8-fccb-74ec-ab0f-f89b54110de9"
+        },
+        "error_code": null,
+        "error_message": null,
+        "created_by": "26a55689-ab23-5bb3-a412-5de27a2962f4",
+        "started_at": "2026-09-05T04:54:13.621807+00:00",
+        "completed_at": "2026-09-05T04:54:13.727984+00:00"
+      }
+    ],
+    "mesh": [
+      {
+        "id": "01a06fea-cb76-73cf-9f94-8c527bd3d779",
+        "execution_key": "athyper-b0b4f922b6189abd3e59e7704155a90a55da2398d0f1dbcb08409990baab18da",
+        "job_type": "publication.apply-release",
+        "status": "succeeded",
+        "attempt_no": 1,
+        "input_payload": {
+          "targetPlane": "mesh",
+          "deploymentId": "01a06fe8-fccb-76f6-bcf7-9582956d78eb"
+        },
+        "error_code": null,
+        "error_message": null,
+        "created_by": "90b946af-7e21-58c1-98af-9b27a24c1174",
+        "started_at": "2026-09-05T04:54:13.621157+00:00",
+        "completed_at": "2026-09-05T04:54:13.729179+00:00"
+      }
+    ]
+  },
+  "historicalFailuresRetained": true
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "plane": "studio",
+    "code": "principal_profile",
+    "storageAndPermissions": "qualified",
+    "runtimeAndCapabilities": "covered_by_separate_tests"
+  },
+  {
+    "plane": "studio",
+    "code": "principal_notification_preference",
+    "storageAndPermissions": "qualified",
+    "runtimeAndCapabilities": "covered_by_separate_tests"
+  },
+  {
+    "plane": "studio",
+    "code": "principal",
+    "storageAndPermissions": "qualified",
+    "relationships": "awaiting_child_activation"
+  },
+  {
+    "plane": "neon",
+    "code": "principal_profile",
+    "storageAndPermissions": "qualified",
+    "runtimeAndCapabilities": "covered_by_separate_tests"
+  },
+  {
+    "plane": "neon",
+    "code": "principal_notification_preference",
+    "storageAndPermissions": "qualified",
+    "runtimeAndCapabilities": "covered_by_separate_tests"
+  },
+  {
+    "plane": "neon",
+    "code": "principal",
+    "storageAndPermissions": "qualified",
+    "relationships": "awaiting_child_activation"
+  },
+  {
+    "plane": "mesh",
+    "code": "principal_profile",
+    "storageAndPermissions": "qualified",
+    "runtimeAndCapabilities": "covered_by_separate_tests"
+  },
+  {
+    "plane": "mesh",
+    "code": "principal_notification_preference",
+    "storageAndPermissions": "qualified",
+    "runtimeAndCapabilities": "covered_by_separate_tests"
+  },
+  {
+    "plane": "mesh",
+    "code": "principal",
+    "storageAndPermissions": "qualified",
+    "relationships": "awaiting_child_activation"
+  }
+]

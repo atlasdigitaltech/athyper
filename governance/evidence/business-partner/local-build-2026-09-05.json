@@ -1,0 +1,189 @@
+{
+  "schema": "athyper.business-partner-local-build-evidence/1",
+  "recordedAt": "2026-09-05T00:48:44.250688+00:00",
+  "sourceRevision": "68600dfd3880821ec02196cd2316e660e85b1bce",
+  "workingTree": "dirty; includes pre-existing work",
+  "productionQualified": false,
+  "checks": [
+    {
+      "command": "pnpm policy:business-partner-phase0",
+      "result": "passed",
+      "operations": 39,
+      "contractDependencyBudget": "0 runtime / 0 workspace"
+    },
+    {
+      "command": "pnpm policy:plane-boundaries",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner --filter @athyper/server-service-master-data test",
+      "result": "passed",
+      "tests": 197,
+      "testFiles": 36
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner --filter @athyper/server-service-master-data --filter @athyper/contract-platform-entity-runtime --filter @athyper/platform-api-client typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm exec tsx --test tests/contracts/business-partner-phase0-contracts.test.ts tests/contracts/business-partner-r2-contracts.test.ts tests/contracts/business-partner-r3-contracts.test.ts tests/contracts/business-partner-r4-contracts.test.ts server/db/scripts/__tests__/provisioning/development-business-partner-runtime.test.ts",
+      "result": "passed",
+      "tests": 16
+    },
+    {
+      "command": "node --test tooling/scripts/verification/preflight-business-partner-environment.test.mjs",
+      "result": "passed",
+      "tests": 5
+    },
+    {
+      "command": "pnpm --dir server/db db:document-foundation:check",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --dir server/db db:foundation:plan",
+      "result": "passed",
+      "planes": [
+        "studio",
+        "neon",
+        "mesh"
+      ]
+    },
+    {
+      "command": "pnpm --dir server/db db:foundation:bs360-disposable --plane=neon --container=athyper-bs360-r4-final --confirm=APPLY-BS360-DISPOSABLE-BASELINE",
+      "result": "passed",
+      "receiptCount": 207,
+      "manifestSha256": "f46cc3f0b673f68ad3f6db88c56c60b80b59c3391bb970ce1628d07800a7b216",
+      "completedAt": "2026-09-05T00:45:35.082Z"
+    },
+    {
+      "command": "docker exec -i athyper-bs360-r4-final psql -U postgres -d athyper_neon -v ON_ERROR_STOP=1 < server/db/scripts/tests/integration/business-partner-r4-change-case.sql",
+      "result": "passed",
+      "transaction": "rolled_back",
+      "checks": [
+        "bank creates independent pending verification without remittance switch",
+        "deactivate/reactivate/archive through native BP authority",
+        "Supplier role unchanged",
+        "exact replay",
+        "conflicting idempotency key",
+        "stale case",
+        "stale aggregate",
+        "revoked bank disclosure",
+        "unapproved case denied",
+        "actor mismatch denied",
+        "direct case mutation denied",
+        "invalid terminal transition",
+        "injected outbox failure rolls back bank/lifecycle/case/evidence",
+        "bounded materialization and lineage coordinates"
+      ]
+    },
+    {
+      "command": "pnpm qualify:business-partner-v1",
+      "result": "passed",
+      "meaning": "local manifest verification only"
+    },
+    {
+      "command": "pnpm qualify:business-partner-r2",
+      "result": "passed",
+      "meaning": "local manifest verification only"
+    },
+    {
+      "command": "pnpm qualify:business-partner-r3",
+      "result": "passed",
+      "meaning": "local manifest verification only"
+    },
+    {
+      "command": "pnpm qualify:business-partner-r8",
+      "result": "passed",
+      "productionGatesPassed": 0,
+      "productionGatesTotal": 5
+    },
+    {
+      "command": "pnpm release:business-partner:certify",
+      "result": "blocked",
+      "exitCode": 2,
+      "missingReceiptGates": [
+        "database",
+        "domain-service",
+        "cross-plane",
+        "security-privacy",
+        "ux",
+        "operations",
+        "ownership"
+      ],
+      "runbooks": "prepared; rehearsal not performed"
+    }
+  ],
+  "targetQualification": {
+    "target": "local dev Neon",
+    "V1": {
+      "command": "pnpm test:e2e:bp-v1-009 --workers=1 --retries=0",
+      "result": "failed",
+      "authenticatedDistinctActors": 3,
+      "blocker": "The Supplier create surface denies create permission in the selected context, including for the chosen tenant admin. Existing scoped grants require runtime authorization/permission-projection diagnosis. No onboarding case was created.",
+      "artifacts": "tests/e2e/.playwright-bp-v1-009-output (ignored local browser output; not sanitized production evidence)"
+    },
+    "R2": {
+      "result": "blocked_before_target_run",
+      "missingFixtureCoordinates": 4,
+      "preflight": "governance/evidence/business-partner/local/2026-09-05/preflight-r2.json"
+    },
+    "R3": {
+      "result": "blocked_before_target_run",
+      "missingFixtureCoordinates": 6,
+      "preflight": "governance/evidence/business-partner/local/2026-09-05/preflight-r3.json"
+    }
+  },
+  "workforcePolicy": {
+    "reviewerGroup": "Workforce reviewer Group",
+    "BP-Q004": "pending",
+    "BP-Q006": "pending",
+    "approvalCoordinatesRecorded": false,
+    "packet": "docs/architecture/business-partner/README.md"
+  },
+  "sourceFiles": [
+    {
+      "path": "server/db/ddl/planes/neon/master/07_functions.sql",
+      "sha256": "bfbbb4d77552bd2f5d1e3e92b4d737f039f201b5b5d79fc93cc9b3f74ebaa2e9"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/master/11_grants.sql",
+      "sha256": "e57cb5c6a4cfa9541bd84f9b606311038f10f29eead0aa7ca38432703e3ec2ca"
+    },
+    {
+      "path": "server/db/ddl/common/document/07_functions.sql",
+      "sha256": "e6c40bcbd8143ee9602af4a7868c1e28c63fcdff3cd6607485b21685aaacb42a"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/document/07_functions.sql",
+      "sha256": "451c57d8d58f038cb7d81c8a77e2ff5640d25767e634cf05cc8434fcb502e776"
+    },
+    {
+      "path": "server/packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+      "sha256": "6981ea640a12e1228fc6b2fdf15f6ea43d265fb1bf31c8c34b1fe05ac7fa9fda"
+    },
+    {
+      "path": "server/db/scripts/tests/integration/business-partner-r4-change-case.sql",
+      "sha256": "3f19a712b3ad83ba5984cef171bca7685a0a1b85b645d7ad9b5d2d995c68b04a"
+    },
+    {
+      "path": "server/db/scripts/provisioning/provision-development-business-partner-runtime.ts",
+      "sha256": "2f234364b950ad16c059f54019d86b219f7fa3344e3338dfcaaabf4b4f719e4a"
+    },
+    {
+      "path": "packages/contracts/platform/entity-runtime/src/governed-workflow.ts",
+      "sha256": "cfe516ad5e9932d9bee634ccfb5f267a21220773179096272102435839a09517"
+    },
+    {
+      "path": "packages/planes/neon/business-partner/src/applicant-client.ts",
+      "sha256": "cff9c75c1671cdacf1798dd3e305f6f68eaba107961c69b0dacf8ea2ff18f316"
+    },
+    {
+      "path": "packages/platform/foundation/api-client/src/signed-upload.ts",
+      "sha256": "aacdf685386a980b384fb153b458c2f528450025a179a4d094d8a7c3610d1a04"
+    },
+    {
+      "path": "tests/e2e/business-partner/bp-v1-009.fixture.ts",
+      "sha256": "9be24842a0961fea6e82273ad0d0d949a873d79fa692c9540854d78271dfb0ce"
+    }
+  ]
+}

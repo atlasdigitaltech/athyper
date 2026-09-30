@@ -1,0 +1,6 @@
+{
+  "extends": "@athyper/config/tsconfig-react",
+  "compilerOptions": { "noEmit": true, "lib": ["ES2022", "DOM", "DOM.Iterable"] },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

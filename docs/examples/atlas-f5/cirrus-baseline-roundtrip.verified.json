@@ -1,0 +1,68 @@
+{
+  "observedAt": "2026-09-10T03:21:06.757Z",
+  "environment": "dev",
+  "status": "authenticated_publication_round_trip_complete",
+  "studio": {
+    "author": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+    "reviewer": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "publisher": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+    "releaseId": "126721f6-a2e5-45e2-91bf-0d6a1b660c56",
+    "artifactHash": "95231dee569ed4f9acb9c4b180049965e96b3ba3c680e0d8b47119c01e43db96",
+    "deploymentId": "01a08947-e13d-7a57-a548-208a89be00cd",
+    "artifactStatus": "signed",
+    "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+    "changeSetStatus": "published",
+    "nativeReleaseNo": 1,
+    "baselineImportId": "5ca0968a-f81f-42b4-8333-dd54c1b02cbb",
+    "deploymentStatus": "activated",
+    "generationEvents": 1,
+    "runtimeReleaseNo": 18,
+    "signaturePresent": true,
+    "signatureAlgorithm": "Ed25519"
+  },
+  "neon": {
+    "status": "active",
+    "entityId": "f004c70a-5de7-5ed8-ae34-68d083f92627",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "releaseId": "126721f6-a2e5-45e2-91bf-0d6a1b660c56",
+    "releaseNo": 18,
+    "artifactHash": "95231dee569ed4f9acb9c4b180049965e96b3ba3c680e0d8b47119c01e43db96",
+    "compiledHash": "700e00716fd05a782102a3666406f72929769ed11536c318e1dd3243baf894e4",
+    "baselineStatus": "superseded",
+    "operationCount": 10,
+    "globalReleaseNo": 25,
+    "appliedReleaseId": "01a0894f-b8a9-793a-9e54-504421b393aa",
+    "baselineCompiledHash": "671ec9e727e3b368c96df71df78c7ea5a23ddaedbc4cf0477c1191ec6e44f7f7",
+    "verificationEvidence": {
+      "target_plane": "neon",
+      "contract_hash": "c645af6fa4488864868844ec4d16b26556739d3ab0b65f9ae23fb21edcc9d9c2",
+      "manifest_valid": true,
+      "signing_key_id": "athyper-dev-publication-ed25519-20260905",
+      "runtime_compatible": true,
+      "signature_verified": true,
+      "signature_algorithm": "Ed25519",
+      "descriptor_source_hash": "c645af6fa4488864868844ec4d16b26556739d3ab0b65f9ae23fb21edcc9d9c2",
+      "contract_schema_version": "2.1",
+      "descriptor_schema_version": "1.0.0"
+    },
+    "nonAiDescriptorPreserved": true,
+    "baselineContractPreserved": true
+  },
+  "containers": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "athyper-runtime-server:atlas-baseline-api-20260910",
+      "imageDigest": "sha256:ed961dfc1e7bf65ffea5c34d91971fdb63ebf4bc3d85a2877213db8211692aa1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "athyper-runtime-server:atlas-baseline-worker-20260910",
+      "imageDigest": "sha256:b696741cba9449d4b7a6a89f0e613f3dec3a6ef8776d4521f765240f252b7b80",
+      "health": "healthy"
+    }
+  ],
+  "documentUploaded": false,
+  "retrievalEnabled": false
+}

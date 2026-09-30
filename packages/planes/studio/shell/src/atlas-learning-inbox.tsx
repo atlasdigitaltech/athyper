@@ -1,0 +1,27 @@
+"use client";
+import { useEffect, useState } from "react";
+import { createOperation, encodePathSegment } from "@athyper/platform-api-client";
+import { useApiClient } from "@athyper/platform-shell-app-foundation";
+interface LearningItem {id:string; revision:number; state:string; phrase:string; capabilityId:string; entityCode:string; originPlane:string; sourceDescriptorHash:string; proposalHash:string; changeSetId?:string; changeSetStatus?:string; changeSetRevision?:number; releaseId?:string; publicationStatus?:string; deployments?:readonly {plane:string;state:string}[]; evaluation?:{passed:boolean;fixtureHash:string;results:readonly {expected:string;actual:string;passed:boolean}[]}}
+const list = createOperation<{items:LearningItem[]}>({method:"GET",path:"/api/studio/atlas-learning"});
+const action = createOperation<unknown,Record<string,unknown>>({method:"POST",path:({id,action})=>`/api/studio/atlas-learning/${encodePathSegment(String(id))}/${encodePathSegment(String(action))}`,idempotency:"required"});
+export function AtlasLearningInboxWorkspace() {
+  const client=useApiClient();
+  const [items,setItems]=useState<LearningItem[]>([]),[status,setStatus]=useState("Loading corrections…");
+  const reload=async()=>{try{const result=await client.request(list);setItems(result.items);setStatus(result.items.length?"":"No corrections awaiting review.");}catch{setStatus("The learning inbox is unavailable with your current access.");}};
+  useEffect(()=>{void reload();},[client]);
+  const run=async(item:LearningItem,name:string,body:Record<string,unknown>)=>{await client.request(action,{params:{id:item.id,action:name},body,idempotencyKey:crypto.randomUUID()});await reload();};
+  return <section aria-label="Atlas learning inbox"><p>Review short terms proposed from Atlas responses. Test new wording, create a draft, then use independent approval and publication to make it available.</p><button type="button" onClick={()=>void reload()}>Refresh inbox</button><p role="status">{status}</p>{items.map(item=><AtlasLearningReviewCard key={item.id} item={item} run={run}/>)}</section>;
+}
+export function AtlasLearningReviewCard({item,run}:{item:LearningItem;run:(item:LearningItem,action:string,body:Record<string,unknown>)=>Promise<void>}) {
+  const [first,setFirst]=useState(""),[second,setSecond]=useState(""),[negative,setNegative]=useState("");
+  const [status,setStatus]=useState(""),[busy,setBusy]=useState(false);
+  const perform=async(name:string,body:Record<string,unknown>)=>{setBusy(true);setStatus("");try{await run(item,name,body);setStatus(name==="stage"?"Evaluation passed. The correction is in a draft.":name==="publish"?"Release queued. Delivery and activation are tracked separately.":"Workflow updated.");}catch{setStatus("The action could not complete. Refresh to check the current state. Review requires a different person; test questions and source definitions must still be valid.");}finally{setBusy(false);}};
+  return <article aria-label={`Correction: ${item.phrase}`}><h2>{item.phrase}</h2><p>{item.entityCode} · {item.originPlane} · Record summary</p><p>Status: {item.changeSetStatus??item.state}{item.publicationStatus?` · Publication ${item.publicationStatus}`:""}</p><fieldset disabled={busy}>
+    {item.state==="pending"?<><p>Write two new questions using this term and one question that should stay with the agent, such as an edit request. These questions test the resolver and are never added to vocabulary.</p><label>First unseen read question <input maxLength={240} value={first} onChange={event=>setFirst(event.target.value)}/></label><label>Second unseen read question <input maxLength={240} value={second} onChange={event=>setSecond(event.target.value)}/></label><label>Negative question <input maxLength={240} value={negative} onChange={event=>setNegative(event.target.value)}/></label><button type="button" disabled={!first.trim()||!second.trim()||!negative.trim()} onClick={()=>void perform("stage",{revision:item.revision,fixtures:[{question:first,expected:"read"},{question:second,expected:"read"},{question:negative,expected:"delegate"}]})}>Evaluate and create draft</button><button type="button" onClick={()=>void perform("reject",{revision:item.revision})}>Reject correction</button></>:null}
+    {item.changeSetStatus==="draft"?<button type="button" onClick={()=>void perform("submit",{expectedRevision:item.changeSetRevision})}>Submit draft for approval</button>:null}
+    {item.changeSetStatus==="in_review"?<button type="button" onClick={()=>void perform("approve",{expectedRevision:item.changeSetRevision})}>Approve draft</button>:null}
+    {item.changeSetStatus==="approved"?<button type="button" onClick={()=>void perform("publish",{expectedRevision:item.changeSetRevision})}>Publish to {item.originPlane}</button>:null}
+    {item.releaseId && item.publicationStatus==="approved"?<button type="button" onClick={()=>void perform("resume",{})}>Retry delivery</button>:null}
+  </fieldset>{item.evaluation?<p>Evaluation: {item.evaluation.results.filter(result=>result.passed).length}/{item.evaluation.results.length} questions passed.</p>:null}{item.deployments?.map((deployment,index)=><p key={index}>{deployment.plane}: {deployment.state}</p>)}<details><summary>Review evidence</summary><dl><dt>Source definition</dt><dd><code>{item.sourceDescriptorHash}</code></dd><dt>Correction receipt</dt><dd><code>{item.proposalHash}</code></dd>{item.releaseId?<><dt>Release</dt><dd><code>{item.releaseId}</code></dd></>:null}</dl></details><p role="status">{status}</p></article>;
+}

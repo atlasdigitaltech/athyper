@@ -1,0 +1,58 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0",
+  "planeKey": "neon",
+  "entityCode": "supplier_invoice",
+  "detailRouteTemplate": "/finance/supplier-invoices/:recordId",
+  "storage": {
+    "schema": "document",
+    "object": "supplier_invoice",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "versionField": "row_version",
+    "statusField": "status"
+  },
+  "fields": [
+    { "key": "id", "type": "uuid", "required": true, "storagePath": "id", "writableOn": [], "searchable": false, "filterable": false, "sortable": false },
+    { "key": "invoice_number", "type": "string", "required": true, "storagePath": "invoice_number", "writableOn": [], "searchable": true, "filterable": true, "sortable": true, "list": { "label": "Invoice", "semanticRole": "identity", "defaultOrder": 0, "defaultWidth": 160, "defaultVisible": true } },
+    { "key": "supplier_id", "type": "reference", "required": true, "storagePath": "supplier_id", "writableOn": ["create", "patch"], "searchable": true, "filterable": true, "sortable": false, "list": { "label": "Supplier", "defaultOrder": 1, "defaultWidth": 280, "defaultVisible": true } },
+    { "key": "company_code_id", "type": "reference", "required": true, "storagePath": "company_code_id", "writableOn": ["create", "patch"], "searchable": false, "filterable": true, "sortable": false, "list": { "label": "Company code", "defaultOrder": 2, "defaultWidth": 150, "defaultVisible": true } },
+    { "key": "operating_organization_id", "type": "reference", "required": true, "storagePath": "operating_organization_id", "writableOn": ["create", "patch"], "searchable": false, "filterable": true, "sortable": false, "list": { "label": "Operating organization", "defaultOrder": 3, "defaultWidth": 240, "defaultVisible": true } },
+    { "key": "currency_code", "type": "string", "required": true, "storagePath": "currency_code", "writableOn": ["create", "patch"], "searchable": false, "filterable": true, "sortable": true, "list": { "label": "Currency", "defaultOrder": 4, "defaultWidth": 100, "defaultVisible": true } },
+    { "key": "status", "type": "enum", "required": true, "storagePath": "status", "writableOn": [], "searchable": false, "filterable": true, "sortable": true, "list": { "label": "Status", "semanticRole": "status", "groupable": true, "defaultOrder": 5, "defaultWidth": 120, "defaultVisible": true } }
+  ],
+  "operations": {
+    "read": { "code": "read", "permissionCode": "neon.supplier_invoice.read", "authorizationMode": "bound_operation" },
+    "create": { "code": "create", "permissionCode": "neon.supplier_invoice.create", "authorizationMode": "bound_operation" },
+    "patch_draft": { "code": "patch_draft", "permissionCode": "neon.supplier_invoice.update", "authorizationMode": "bound_operation" },
+    "submit": { "code": "submit", "permissionCode": "neon.supplier_invoice.submit", "authorizationMode": "bound_operation" }
+  },
+  "operation_scope_bindings": [
+    { "operationKey": "read", "permissionCode": "neon.supplier_invoice.read", "scopeKind": "operating_organization", "decisionMode": "collection", "coordinateSource": "business_context", "coordinateKey": "operatingOrganizationId", "resolverKey": "neon.supplier_invoice.company_organization.v1" },
+    { "operationKey": "create", "permissionCode": "neon.supplier_invoice.create", "scopeKind": "operating_organization", "decisionMode": "command", "coordinateSource": "business_context", "coordinateKey": "operatingOrganizationId", "resolverKey": "neon.supplier_invoice.company_organization.v1" },
+    { "operationKey": "submit", "permissionCode": "neon.supplier_invoice.submit", "scopeKind": "operating_organization", "decisionMode": "record", "coordinateSource": "persisted_record", "coordinateKey": "operatingOrganizationId", "resolverKey": "neon.supplier_invoice.company_organization.v1" }
+  ],
+  "businessContext": {
+    "schemaVersion": 1,
+    "scopeKind": "company",
+    "recordOwnership": { "tenantId": "required", "legalEntityId": "derived_from_company_code", "companyCodeId": "required", "operatingOrganizationId": "required" },
+    "requiredCoordinates": ["legalEntityId", "companyCodeId", "operatingOrganizationId"],
+    "requiredCapability": "procurement",
+    "organizationEligibility": { "effectiveCompanyAssignment": true, "procurementProfileRequired": true },
+    "workspace": { "standardView": "my_documents", "supportedViews": ["my_documents", "my_team", "shared_with_me", "all_accessible"], "aggregateMode": "not_supported" },
+    "defaults": { "resolutionOrder": ["explicit_page_intent", "compatible_workspace_context", "profile_default", "tenant_domain_default", "unique_eligible_combination", "user_selection"], "revalidate": ["currency", "invoice_numbering", "tax_and_accounting_policy", "supplier_eligibility", "payment_terms", "workflow_routing"] },
+    "draftContextChanges": { "allowed": true, "until": "before_submission", "afterSubmission": "correction_or_cancellation_required" }
+  },
+  "lifecycle": { "transitions": [
+    { "code": "submit", "from": ["draft"], "to": "submitted", "permissionCode": "neon.supplier_invoice.submit" }
+  ] },
+  "listPresentation": {
+    "schemaVersion": 1,
+    "title": "Supplier Invoices",
+    "description": "Invoices in the selected Company Code and Operating Organization.",
+    "identityField": "invoice_number",
+    "supportedModes": ["table", "compact"],
+    "defaultState": { "filters": [], "sort": [{ "field": "invoice_number", "direction": "desc" }], "columns": ["invoice_number", "supplier_id", "company_code_id", "operating_organization_id", "currency_code", "status"], "density": "comfortable", "mode": "table" },
+    "filterPresentation": { "quickFields": [{ "field": "status", "defaultOperator": "eq" }, { "field": "currency_code", "defaultOperator": "eq" }], "allowUserPinning": true },
+    "limits": { "defaultPageSize": 25, "allowedPageSizes": [25, 50, 100], "maxSortLevels": 3, "countMode": "exact" }
+  }
+}

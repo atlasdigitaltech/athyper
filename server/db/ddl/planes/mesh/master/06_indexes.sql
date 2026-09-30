@@ -46,7 +46,7 @@ CREATE UNIQUE INDEX address_link_current_primary_uq
     ON master.address_link
        (tenant_id, owner_type_id, owner_id, purpose, role_qualifier)
     NULLS NOT DISTINCT
-    WHERE is_primary AND effective_until IS NULL;
+    WHERE is_primary AND effective_until IS NULL AND usage_status <> 'cancelled';
 
 CREATE UNIQUE INDEX contact_link_value_uq
     ON master.contact_link

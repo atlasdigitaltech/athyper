@@ -1,0 +1,89 @@
+{
+  "reviewPacket": "cirrusatlantic-r4-case-contract-review-scoped.json",
+  "scope": "Read-only native schema validation; no approval or activation",
+  "passed": true,
+  "results": [
+    {
+      "scenario": "deactivate",
+      "currentErrors": [
+        "MISSING_REQUIRED:requestedRole",
+        "UNKNOWN_PROPERTY:reasonCode",
+        "UNKNOWN_PROPERTY:priorStatus",
+        "UNKNOWN_PROPERTY:expectedBusinessPartnerVersion"
+      ],
+      "candidateErrors": []
+    },
+    {
+      "scenario": "reactivate",
+      "currentErrors": [
+        "MISSING_REQUIRED:requestedRole",
+        "UNKNOWN_PROPERTY:reasonCode",
+        "UNKNOWN_PROPERTY:priorStatus",
+        "UNKNOWN_PROPERTY:expectedBusinessPartnerVersion"
+      ],
+      "candidateErrors": []
+    },
+    {
+      "scenario": "archive",
+      "currentErrors": [
+        "MISSING_REQUIRED:requestedRole",
+        "UNKNOWN_PROPERTY:reasonCode",
+        "UNKNOWN_PROPERTY:priorStatus",
+        "UNKNOWN_PROPERTY:expectedBusinessPartnerVersion"
+      ],
+      "candidateErrors": []
+    },
+    {
+      "scenario": "change_bank",
+      "currentErrors": [
+        "UNKNOWN_PROPERTY:reasonCode",
+        "UNKNOWN_PROPERTY:priorStatus",
+        "UNKNOWN_PROPERTY:bankProjectionId",
+        "UNKNOWN_PROPERTY:expectedBankSnapshotId",
+        "UNKNOWN_PROPERTY:supplierCompanyProfileId",
+        "UNKNOWN_PROPERTY:expectedBusinessPartnerVersion"
+      ],
+      "candidateErrors": []
+    },
+    {
+      "scenario": "unknown_property",
+      "currentErrors": [
+        "MISSING_REQUIRED:requestedRole",
+        "UNKNOWN_PROPERTY:reasonCode",
+        "UNKNOWN_PROPERTY:priorStatus",
+        "UNKNOWN_PROPERTY:unexpectedAuthorityOverride",
+        "UNKNOWN_PROPERTY:expectedBusinessPartnerVersion"
+      ],
+      "candidateErrors": [
+        "UNKNOWN_PROPERTY:unexpectedAuthorityOverride"
+      ]
+    },
+    {
+      "scenario": "missing_identity",
+      "currentErrors": [
+        "MISSING_REQUIRED:businessPartnerCode",
+        "MISSING_REQUIRED:name",
+        "MISSING_REQUIRED:requestedRole"
+      ],
+      "candidateErrors": [
+        "MISSING_REQUIRED:businessPartnerCode",
+        "MISSING_REQUIRED:name"
+      ]
+    },
+    {
+      "scenario": "invalid_role",
+      "currentErrors": [
+        "UNKNOWN_PROPERTY:reasonCode",
+        "UNKNOWN_PROPERTY:priorStatus",
+        "UNKNOWN_PROPERTY:bankProjectionId",
+        "UNKNOWN_PROPERTY:expectedBankSnapshotId",
+        "UNKNOWN_PROPERTY:supplierCompanyProfileId",
+        "UNKNOWN_PROPERTY:expectedBusinessPartnerVersion",
+        "ENUM_MISMATCH:requestedRole"
+      ],
+      "candidateErrors": [
+        "ENUM_MISMATCH:requestedRole"
+      ]
+    }
+  ]
+}

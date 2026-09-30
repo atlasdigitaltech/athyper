@@ -58,3 +58,5 @@ CREATE INDEX record_import_session_status_idx ON ops.record_import_session(tenan
 CREATE INDEX record_import_session_owner_idx ON ops.record_import_session(tenant_id,created_by,created_at DESC);
 CREATE INDEX record_export_request_status_idx ON ops.record_export_request(tenant_id,status,requested_at);
 CREATE INDEX record_export_request_owner_idx ON ops.record_export_request(tenant_id,actor_principal_id,requested_at DESC);
+CREATE INDEX record_import_session_cleanup_idx ON ops.record_import_session(created_at) WHERE source_purged_at IS NULL OR error_report_key IS NOT NULL;
+CREATE INDEX record_export_request_cleanup_idx ON ops.record_export_request(completed_at) WHERE artifact_key IS NOT NULL;

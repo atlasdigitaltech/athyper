@@ -9,3 +9,7 @@ export * from "./cycles/kysely-cycle-execution-repository.js";
 export * from "./compliance/legal-hold-service.js";
 export * from "./compliance/report-pack-service.js";
 export * from "./compliance/kysely-compliance-repositories.js";
+export * from "./process-selection/process-selection-service.js";
+export * from "./process-selection/kysely-process-selection-evidence.js";
+export * from "./routes/process-selection-routes.js";
+export * from "./process-selection/kysely-process-document-intent.js";

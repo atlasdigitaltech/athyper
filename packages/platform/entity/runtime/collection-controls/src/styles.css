@@ -1,0 +1,7 @@
+.a-collection-fields{display:grid;gap:var(--a-space-4);padding:var(--a-space-4)}
+.a-collection-filter-row{display:grid;grid-template-columns:minmax(8rem,1fr) minmax(7rem,1fr) minmax(9rem,2fr) auto;align-items:center;gap:var(--a-space-2)}
+.a-collection-fields label{display:grid;gap:var(--a-space-2)}
+@media(max-width:40rem){.a-collection-filter-row{grid-template-columns:1fr}.a-collection-fields{padding:var(--a-space-3)}}
+.a-entity-list__controls-drawer > [data-list-drawer]:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.a-entity-list__controls-drawer > [data-list-drawer] > .a-collection-fields{flex:1;min-height:0;overflow:auto;align-content:start}
+.athyper-activity-query--compact > .a-collection-fields{max-height:40dvh;overflow:auto}

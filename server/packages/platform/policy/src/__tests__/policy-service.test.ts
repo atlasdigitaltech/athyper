@@ -28,7 +28,7 @@ describe("policy service", () => {
   it("caches by tenant, entity, date, and bound policy coordinate", async () => {
     let reads = 0;
     const cached = createCachedPolicyRepository({ repository: { findActive: async () => { reads += 1; return definitions; } }, now: () => 1, ttlMs: 100 });
-    const query = { tenantId: "tenant", entityType: "purchase_order", effectiveOn: "2026-08-09", policyDefinitionIds: [definitions[0]!.id] };
+    const query = { planeKey: "neon" as const, tenantId: "tenant", entityType: "purchase_order", effectiveOn: "2026-08-09", policyDefinitionIds: [definitions[0]!.id] };
     await cached.findActive(query, {}); await cached.findActive(query, {}); expect(reads).toBe(1);
     cached.clear("tenant"); await cached.findActive(query, {}); expect(reads).toBe(2);
   });
@@ -38,3 +38,40 @@ describe("policy service", () => {
 
 function repository(value: readonly PolicyDefinition[]): PolicyRepository<Tx> { return { findActive: async (_query, transaction) => { expect(transaction.plane).toBeDefined(); return value; } }; }
 function auditEvent(input: AuditRecordInput): AuditEvent { return { ...input, id: "audit-1", occurredAt: "2026-08-09T00:00:00.000Z", severity: input.severity ?? "info" }; }
+
+it("isolates cached policy decisions by plane and preserves trusted identity facts", async () => {
+  let reads = 0;
+  const cached = createCachedPolicyRepository<Tx>({ repository: { findActive: async (_query, tx) => {
+    reads++;
+    return [{ ...definitions[0]!, rules: [{ ...definitions[0]!.rules[0]!, action: tx.plane === "neon" ? "deny" : "allow", condition: { "==": [{ var: "plane_code" }, tx.plane] } }] }];
+  } } });
+  const service = createPolicyService({ repository: cached, transactions: { run: async (plane, _actor, work) => work({ plane }) }, audit: { record: async input => auditEvent(input) } });
+  for (const plane of ["neon", "mesh", "neon"] as const) {
+    const request = { context: context(plane), entityType: "purchase_order", facts: { plane_code: "attacker", tenant_id: "attacker", principal_id: "attacker" } };
+    expect((await service.evaluate(request)).action).toBe(plane === "neon" ? "deny" : "allow");
+    expect((await service.simulate(request)).decision.action).toBe(plane === "neon" ? "deny" : "allow");
+  }
+  expect(reads).toBe(2);
+  cached.clear(context("neon").tenantId);
+  await service.simulate({ context: context("neon"), entityType: "purchase_order", facts: {} });
+  expect(reads).toBe(3);
+});
+
+it("does not cache queries without a plane or alias empty selections to all policies", async () => {
+  let reads = 0;
+  const cached = createCachedPolicyRepository({ repository: { findActive: async query => { reads++; return query.policyDefinitionIds?.length === 0 ? [] : definitions; } } });
+  const query = { tenantId: "tenant", entityType: "order", effectiveOn: "2026-09-06" };
+  await cached.findActive(query, {});
+  await cached.findActive(query, {});
+  expect(reads).toBe(2);
+  expect(await cached.findActive({ ...query, planeKey: "neon" }, {})).toEqual(definitions);
+  expect(await cached.findActive({ ...query, planeKey: "neon", policyDefinitionIds: [] }, {})).toEqual([]);
+  expect(reads).toBe(4);
+});
+
+it("does not return a decision when the evaluation audit fails", async () => {
+  const service = createPolicyService({ repository: repository(definitions), transactions: { run: async (plane, _actor, work) => work({ plane }) }, audit: { record: async () => { throw new Error("audit unavailable"); } } });
+  const request = { context: context("neon"), entityType: "purchase_order", facts: { amount: 5 } };
+  await expect(service.evaluate(request)).rejects.toThrow("audit unavailable");
+  await expect(service.simulate(request)).resolves.toMatchObject({ audited: false, decision: { action: "allow" } });
+});

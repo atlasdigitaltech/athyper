@@ -1,0 +1,12 @@
+{
+  "schema": "athyper.dev-successor-policy-activation-receipt/1",
+  "actor": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+  "assurance": "elevated",
+  "authenticationMethods": ["pwd", "otp"],
+  "id": "50c68cb8-dc24-438b-9054-d7936eb65bca",
+  "version": 1,
+  "hash": "d2583112edeec4dc6001972f65f066d726cc55adbd5aabd8d8f11b99e708834d",
+  "status": "active",
+  "httpStatus": 200,
+  "note": "Local diagnostic receipt; policy activation is not release activation."
+}

@@ -92,6 +92,10 @@ export function createIamService(options: IamServiceOptions): Authenticator {
         await recordContextMismatch(options.audit, request, mismatches);
         if (options.config.claimContextMode === "enforce") return failure(403, "AUTH_CONTEXT_MISMATCH", "Authenticated context does not match the requested context");
       }
+      if (options.config.requireAuthorizedRole && !hasAuthorizedRole(token.claims, request.planeKey)) {
+        await recordFailure(options.audit, request, "iam.authentication.denied", "plane_role_missing");
+        return failure(403, "AUTH_ACCESS_DENIED", "Account is not authorized for this plane");
+      }
       const requiredAction = blockingRequiredAction(token.claims, request, options.config);
       if (requiredAction) {
         await recordFailure(options.audit, request, "iam.authentication.denied", "required_action", identity.context);
@@ -165,9 +169,6 @@ function identityFromClaims(
   if (request.requestedContext?.realmKey && request.requestedContext.realmKey !== (realmClaim ?? config.defaultRealmKey)) mismatches.push("realm_header");
   if (request.requestedContext?.organizationId && !organizationIds.includes(request.requestedContext.organizationId)) mismatches.push("organization_header");
   if (request.requestedContext?.authEpoch !== undefined && request.requestedContext.authEpoch !== (resolvedIdentity?.authEpoch ?? numberClaim(claims, "auth_epoch") ?? 0)) mismatches.push("auth_epoch");
-  if (mismatches.length === 0 && config.requireAuthorizedRole && !hasAuthorizedRole(claims, planeKey)) {
-    return failure(403, "AUTH_ACCESS_DENIED", "Account is not authorized for this plane");
-  }
 
   const allowed = Object.freeze([...stringArrayClaim(claims, "permissions")]);
   const entries = Object.freeze(allowed.map((code) => Object.freeze({ code, status: "allow" as const, reason: "allowed" as const })));

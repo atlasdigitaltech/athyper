@@ -1,0 +1,73 @@
+{
+  "schema": "athyper.business-partner-r5-local-review/1",
+  "asOf": "2026-09-05",
+  "scope": "WS6 / R5 Customer",
+  "evidenceKind": "local_engineering_only",
+  "productionQualified": false,
+  "productApprovalRecorded": false,
+  "finding": "Suspended Customer reactivation was blocked by order readiness and activation role-state validation.",
+  "correction": "Use activation readiness for activate/reactivate and allow suspended Customer activation checks while preserving normal order and terminal-state denial.",
+  "commands": [
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data test",
+      "result": "passed",
+      "tests": 130,
+      "files": 21
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner test",
+      "result": "passed",
+      "tests": 71,
+      "files": 16
+    },
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm exec tsx --test tests/contracts/business-partner-r5-contracts.test.ts",
+      "result": "passed",
+      "tests": 3
+    },
+    {
+      "command": "pnpm exec tsx --test server/db/scripts/__tests__/business-partner-foundation/business-partner-r5-customer-controls.test.ts",
+      "result": "passed",
+      "tests": 4
+    },
+    {
+      "command": "pnpm test:e2e:bp-r5 --list",
+      "result": "passed",
+      "tests": 2,
+      "optionalSkip": false
+    },
+    {
+      "command": "pnpm preflight:e2e:bp-r5",
+      "result": "environment_required",
+      "exitCode": 2,
+      "missingValues": 11
+    },
+    {
+      "command": "pnpm test:e2e:bp-r5",
+      "result": "environment_required",
+      "tests": 2,
+      "optionalSkip": false
+    }
+  ],
+  "targetPreflight": {
+    "ready": false,
+    "missingValueCount": 11,
+    "secretsRetained": false
+  },
+  "outstandingEvidence": [
+    "Complete BP-CUS-001 onboarding mutation lineage; existing R5 test is readback only.",
+    "R2 BP-CUS-002 and BP-CUS-003 target journey receipts.",
+    "R5 credit/designation/readiness/five-button lifecycle and reconciliation target receipt.",
+    "Lifecycle replay, wrong-tenant, authorization-denial and invalid-transition target evidence.",
+    "Consumed portal/IAM projection and notification delivery evidence."
+  ],
+  "approvalPacket": "governance/policy/reports/business-partner-customer-state-review.md"
+}

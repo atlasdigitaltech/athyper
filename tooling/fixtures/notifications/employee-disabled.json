@@ -1,0 +1,247 @@
+{
+  "contractSchema": "athyper.meta-entity-contract/2.1",
+  "entity": {
+    "entityCode": "notification_employee_example",
+    "entityClass": "configuration",
+    "ownershipModel": "tenant"
+  },
+  "runtimeProfiles": [
+    {
+      "profileKey": "default",
+      "backingKind": "virtual",
+      "apiExposure": "catalog_only",
+      "readMode": "none",
+      "writeMode": "none"
+    }
+  ],
+  "fields": [],
+  "operations": [],
+  "capabilities": [
+    {
+      "capabilityKey": "comments",
+      "declaration": {
+        "enabled": true,
+        "serviceKey": "platform.comments.v1",
+        "ownerEntityCode": "notification_employee_example",
+        "load": "lazy"
+      },
+      "binding": {
+        "schemaVersion": 1,
+        "serviceKey": "platform.comments.v1",
+        "ownerEntityCode": "notification_employee_example",
+        "admissionResolverKey": "platform.records.admission.v1",
+        "layouts": [
+          "drawer",
+          "content"
+        ],
+        "actions": [
+          {
+            "key": "read",
+            "permissionCode": "neon.collaboration.comment.read",
+            "handlerKey": "platform.comments.read.v1",
+            "concurrency": "none",
+            "idempotency": "none"
+          }
+        ],
+        "richTextSchema": "athyper.rich-text/1.0",
+        "maxTextLength": 50000,
+        "maxDepth": 5,
+        "allowedAudiences": [
+          "public",
+          "private"
+        ],
+        "defaultAudience": "public",
+        "features": {
+          "replies": false,
+          "edits": false,
+          "reactions": false,
+          "mentions": false,
+          "drafts": false,
+          "reporting": false,
+          "history": false
+        },
+        "reactionCodes": [],
+        "attachments": {
+          "allowed": false,
+          "maxCount": 0,
+          "pinVersion": true
+        },
+        "notifications": {
+          "schemaVersion": 1,
+          "mode": "disabled",
+          "defaultPolicyRef": "platform.comments.notifications.v1",
+          "templates": [],
+          "rules": [],
+          "targetEntityCode": "notification_employee_example"
+        }
+      }
+    },
+    {
+      "capabilityKey": "attachments",
+      "declaration": {
+        "enabled": true,
+        "serviceKey": "platform.attachments.v1",
+        "ownerEntityCode": "notification_employee_example",
+        "load": "lazy"
+      },
+      "binding": {
+        "schemaVersion": 1,
+        "serviceKey": "platform.attachments.v1",
+        "ownerEntityCode": "notification_employee_example",
+        "admissionResolverKey": "platform.records.admission.v1",
+        "layouts": [
+          "drawer",
+          "content"
+        ],
+        "actions": [
+          {
+            "key": "read",
+            "permissionCode": "neon.collaboration.attachment.read",
+            "handlerKey": "platform.attachments.read.v1",
+            "concurrency": "none",
+            "idempotency": "none"
+          },
+          {
+            "key": "create",
+            "permissionCode": "neon.collaboration.attachment.create",
+            "handlerKey": "platform.attachments.create.v1",
+            "concurrency": "none",
+            "idempotency": "required"
+          },
+          {
+            "key": "finalize",
+            "permissionCode": "neon.collaboration.attachment.finalize",
+            "handlerKey": "platform.attachments.finalize.v1",
+            "concurrency": "none",
+            "idempotency": "required"
+          },
+          {
+            "key": "status",
+            "permissionCode": "neon.collaboration.attachment.read",
+            "handlerKey": "platform.attachments.status.v1",
+            "concurrency": "none",
+            "idempotency": "none"
+          },
+          {
+            "key": "download",
+            "permissionCode": "neon.collaboration.attachment.download",
+            "handlerKey": "platform.attachments.download.v1",
+            "concurrency": "none",
+            "idempotency": "none"
+          },
+          {
+            "key": "version",
+            "permissionCode": "neon.collaboration.attachment.create",
+            "handlerKey": "platform.attachments.version.v1",
+            "concurrency": "revision",
+            "idempotency": "required"
+          },
+          {
+            "key": "rename",
+            "permissionCode": "neon.collaboration.attachment.create",
+            "handlerKey": "platform.attachments.rename.v1",
+            "concurrency": "revision",
+            "idempotency": "required"
+          },
+          {
+            "key": "category",
+            "permissionCode": "neon.collaboration.attachment.create",
+            "handlerKey": "platform.attachments.category.v1",
+            "concurrency": "none",
+            "idempotency": "required"
+          },
+          {
+            "key": "folder",
+            "permissionCode": "neon.collaboration.attachment.create",
+            "handlerKey": "platform.attachments.folder.v1",
+            "concurrency": "revision",
+            "idempotency": "required"
+          },
+          {
+            "key": "archive",
+            "permissionCode": "neon.collaboration.attachment.archive",
+            "handlerKey": "platform.attachments.archive.v1",
+            "concurrency": "none",
+            "idempotency": "required"
+          },
+          {
+            "key": "unlink",
+            "permissionCode": "neon.collaboration.attachment.archive",
+            "handlerKey": "platform.attachments.unlink.v1",
+            "concurrency": "none",
+            "idempotency": "required"
+          },
+          {
+            "key": "preview",
+            "permissionCode": "neon.collaboration.attachment.download",
+            "handlerKey": "platform.attachments.preview.v1",
+            "concurrency": "none",
+            "idempotency": "none"
+          },
+          {
+            "key": "extract",
+            "permissionCode": "neon.collaboration.attachment.read",
+            "handlerKey": "platform.attachments.extract.v1",
+            "concurrency": "none",
+            "idempotency": "none"
+          },
+          {
+            "key": "search",
+            "permissionCode": "neon.collaboration.attachment.read",
+            "handlerKey": "platform.attachments.search.v1",
+            "concurrency": "none",
+            "idempotency": "none"
+          }
+        ],
+        "maxFileBytes": 26214400,
+        "maxBatchCount": 10,
+        "allowedContentTypes": [
+          "application/pdf",
+          "image/jpeg",
+          "image/png"
+        ],
+        "scanRequired": true,
+        "linkKinds": [
+          "context",
+          "evidence"
+        ],
+        "categories": [
+          "general",
+          "evidence"
+        ],
+        "folders": true,
+        "versioning": true,
+        "rename": true,
+        "duplicateBehavior": "new_version",
+        "unlink": "association_only",
+        "download": "short_lived_authorized_url",
+        "processing": {
+          "preview": true,
+          "extraction": true,
+          "search": true,
+          "renditions": [
+            "thumbnail",
+            "pdf",
+            "image"
+          ]
+        },
+        "notifications": {
+          "schemaVersion": 1,
+          "mode": "disabled",
+          "defaultPolicyRef": "platform.attachments.notifications.v1",
+          "templates": [],
+          "rules": [],
+          "targetEntityCode": "notification_employee_example"
+        }
+      }
+    }
+  ],
+  "tests": [
+    {
+      "key": "notification-entity",
+      "assertion": "path_equals",
+      "path": "entity.entityCode",
+      "expected": "notification_employee_example"
+    }
+  ]
+}

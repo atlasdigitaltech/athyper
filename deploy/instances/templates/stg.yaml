@@ -1,0 +1,23 @@
+apiVersion: athyper.io/v1alpha1
+kind: Instance
+metadata:
+  id: stg
+spec:
+  mode: staging
+  composeProject: athyper-stg
+  domainSuffix: stg.athyper.test
+  preset: stg-standard
+  hostProfile: laptop-32
+  imageSet: image-sets/releases/stg-local.yaml
+  dataPolicy: sanitized
+  integrations: allowlisted
+  debugPorts:
+    postgres: 127.0.0.1:56432
+  providers:
+    search: internal
+    secrets: file
+    objectStorage: external
+    mail: external
+    push: external
+    scanner: internal
+    rendering: internal

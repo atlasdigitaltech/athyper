@@ -1,0 +1,109 @@
+{
+  "schema": "bp-ai-cache-qualification/1",
+  "observedAt": "2026-09-10T10:02:12.423Z",
+  "images": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "digest": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "digest": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "digest": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "sourceSha256": "21343efd08fd70c8d6b8c27eb74c12d93751d2550996555cf256a039ad8a33ab",
+  "productionCacheEnabled": false,
+  "passed": true,
+  "checks": [
+    "independent clients share validated storage",
+    "atomic global entry bound under competing clients",
+    "oversized entry rejected",
+    "serialized key/value bytes remain within budget",
+    "invalidation fences late writes from previous epoch",
+    "TTL expiry removes entries and resets stale epoch",
+    "total byte admission rejects excess"
+  ],
+  "memoryBefore": {
+    "used_memory": 384068680,
+    "used_memory_rss": 402640896,
+    "used_memory_overhead": 7422815,
+    "used_memory_dataset": 376645865,
+    "maxmemory": 0
+  },
+  "memoryAfter": {
+    "used_memory": 384081784,
+    "used_memory_rss": 402640896,
+    "used_memory_overhead": 7505655,
+    "used_memory_dataset": 376576129,
+    "maxmemory": 0
+  },
+  "sessionContinuityQualified": false,
+  "capacityBasis": "Synthetic bounded cache probe only; not session-continuity or accepted pilot load evidence.",
+  "finalImages": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "digest": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "digest": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "digest": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "stableDeployment": true
+}

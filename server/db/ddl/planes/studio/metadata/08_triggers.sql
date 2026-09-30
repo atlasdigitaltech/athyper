@@ -265,3 +265,11 @@ CREATE CONSTRAINT TRIGGER trg_entity_operation_scope_binding_95_graph_validate
 AFTER INSERT OR UPDATE OR DELETE ON metadata.entity_operation_scope_binding
 DEFERRABLE INITIALLY DEFERRED FOR EACH ROW
 EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred();
+CREATE TRIGGER entity_capability_graph_guard BEFORE INSERT OR UPDATE OR DELETE ON metadata.entity_capability
+ FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row('capability_key');
+CREATE TRIGGER entity_capability_updated_at BEFORE UPDATE ON metadata.entity_capability
+ FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE CONSTRAINT TRIGGER entity_capability_graph_validate
+ AFTER INSERT OR UPDATE OR DELETE ON metadata.entity_capability
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW
+ EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred();

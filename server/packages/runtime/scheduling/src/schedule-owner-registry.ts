@@ -3,6 +3,7 @@ import { createBullMqConnectionOptions } from "@athyper/server-runtime-jobs";
 import type { SchedulerLeaseConnection } from "./scheduler-leader-lease.js";
 
 export interface ScheduleOwnerRegistry {
+  listScheduleIds(): Promise<readonly string[]>;
   get(scheduleId: string): Promise<string | undefined>;
   claim(scheduleId: string, queue: string, fencingToken: string): Promise<string | undefined>;
   release(scheduleId: string, queue: string, fencingToken: string): Promise<boolean>;
@@ -16,6 +17,7 @@ export interface RedisScheduleOwnerRegistryOptions {
 }
 
 interface RegistryRedisClient {
+  hkeys(key: string): Promise<string[]>;
   hget(key: string, field: string): Promise<string | null>;
   eval(script: string, numberOfKeys: number, ...args: readonly string[]): Promise<unknown>;
 }
@@ -34,6 +36,7 @@ export function createRedisScheduleOwnerRegistry(
   const client = async (): Promise<RegistryRedisClient> =>
     await connection.client as unknown as RegistryRedisClient;
   return {
+    listScheduleIds: async () => (await client()).hkeys(key),
     async get(scheduleId) {
       return (await (await client()).hget(key, scheduleId)) ?? undefined;
     },
@@ -55,6 +58,7 @@ export function createRedisScheduleOwnerRegistry(
 export function createInMemoryScheduleOwnerRegistry(): ScheduleOwnerRegistry {
   const owners = new Map<string, string>();
   return {
+    listScheduleIds: async () => [...owners.keys()],
     get: async (scheduleId) => owners.get(scheduleId),
     async claim(scheduleId, queue) {
       const previous = owners.get(scheduleId);

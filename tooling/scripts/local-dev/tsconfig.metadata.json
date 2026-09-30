@@ -1,0 +1,21 @@
+{
+  "extends": "../../../server/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["node"],
+    "typeRoots": ["../../../server/apps/platform-host/node_modules/@types"],
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": [
+    "metadata-capture.mts",
+    "metadata-import.mts",
+    "qa-metadata-import.mts",
+    "qa-metadata-catalog.mts",
+    "workspace-inventory.mts"
+  ],
+  "exclude": []
+}

@@ -1,5 +1,5 @@
 {
-  "classes": ["a-card", "a-label", "a-input", "a-button a-button--primary a-button--medium", "a-toast a-toast--info", "a-centered-page", "a-card a-login-card", "a-skeleton", "a-skeleton", "a-skeleton", "a-shell-frame", "a-skip-link", "a-shell-frame__topbar", "a-button a-button--ghost a-button--icon", "a-shell-frame__rail", "a-shell-frame__content"],
+  "classes": ["a-card", "a-label", "a-input", "a-button a-button--primary a-button--medium", "a-toast a-toast--info", "a-centered-page", "a-card a-login-card", "a-skeleton a-login-skeleton__brand", "a-skeleton a-login-skeleton__field", "a-skeleton a-login-skeleton__field", "a-shell-frame", "a-skip-link", "a-shell-frame__topbar", "a-button a-button--ghost a-button--icon", "a-shell-frame__rail", "a-shell-frame__content"],
   "landmarks": ["main", "header", "aside", "main"],
   "roles": ["status"],
   "labels": ["Athyper Neon sign in loading", "Loading brand", "Loading identity field", "Loading sign in action", "Open account menu", "Primary navigation"]

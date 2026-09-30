@@ -28,6 +28,13 @@ versioned contract migration.
 `server/db/seed-backup` is historical source material only. Provisioners,
 checks, and generators must never read from it.
 
+The former `seed/meta-entity`, `seed/blueprints`, and
+`seed/packs/blueprints-v2` layouts are retired. Meta-entity reference state is
+installed by the canonical Studio DDL manifest; form/entity definitions are
+published through the versioned metadata/publication authority. Their obsolete
+package commands were removed so a missing historical pack cannot be mistaken
+for a release check.
+
 ## Runtime-only authorization state
 
 Production seeds must not write runtime decisions or credentials. The seed
@@ -42,10 +49,10 @@ publication and rollover lifecycle rather than seed provenance.
 
 ## Commands
 
-```powershell
-pnpm.cmd --dir server/db exec tsx scripts/seed/compile-final-authorization-seed-packs.ts
-pnpm.cmd --dir server/db run db:seed:contract:lint
-pnpm.cmd --dir server/db run db:verify:authorization:seeds
-pnpm.cmd --dir server/db run db:verify:authorization:suspension-controls
-pnpm.cmd --dir server/db run db:provision:three-plane:plan
+```sh
+pnpm --dir server/db exec tsx scripts/seed/compile-final-authorization-seed-packs.ts
+pnpm --dir server/db run db:seed:contract:lint
+pnpm --dir server/db run db:verify:authorization:seeds
+pnpm --dir server/db run db:verify:authorization:suspension-controls
+pnpm --dir server/db run db:provision:three-plane:plan
 ```

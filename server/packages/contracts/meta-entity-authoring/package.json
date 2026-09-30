@@ -3,14 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./model": "./src/model.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@athyper/server-contract-metadata": "workspace:*"
+    "@athyper/server-contract-metadata": "workspace:*",
+    "@athyper/server-contract-publication": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

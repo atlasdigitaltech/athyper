@@ -45,6 +45,19 @@ describe("createEmailAdapter", () => {
     });
   });
 
+  it("refuses to email a raw payload when nothing was rendered, and requires TLS for authenticated STARTTLS", async () => {
+    const sendMail = vi.fn();
+    const createTransport = vi.fn().mockReturnValue(transport(sendMail));
+    const adapter = createEmailAdapter(
+      { host: "smtp.example.test", user: "mailer", password: "secret", fromAddress: "no-reply@example.test" },
+      { createTransport },
+    );
+    await expect(adapter.send({ ...request, payload: { secretField: "x" } })).rejects.toMatchObject({ retryable: false });
+    expect(sendMail).not.toHaveBeenCalled();
+    await adapter.send(request).catch(() => undefined);
+    expect(createTransport).toHaveBeenCalledWith(expect.objectContaining({ requireTLS: true }));
+  });
+
   it("supports legacy rendered payload keys during migration", async () => {
     const sendMail = vi.fn().mockResolvedValue({});
     const adapter = createEmailAdapter(

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_temporary_test_grant_approval",
+  "reference": "conversation-test-grant-approval:86d1202a-5098-421b-9302-84398ff2c528",
+  "approvedAt": "2026-09-10T06:37:33.029Z",
+  "source": {
+    "channel": "user",
+    "exactMessage": "go ahead with catl.admin",
+    "respondingTo": "Exact 27-permission proposal expiring 18:35 Malaysia time, including tenant-wide DEV BP coverage"
+  },
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "proposalRevision": "a4ef0dbcc40af46758034a70698463b5f6ec9bfbbe07a43497eefad1fe5c9176",
+  "proposalSha256": "3257364cde547483e3df8876cd4a1d3fc1fe0b9f2f22fdb4ee4e9f8e6ffecf57",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+  "effectiveUntil": "2026-09-10T10:35:00.000Z",
+  "approvedAssignmentIds": [
+    "37a44e3d-1efc-5df5-a9ad-35d9b9a44fd6",
+    "74ba1e98-168d-50ff-a49f-8fb1febbc063",
+    "31c99232-7284-50af-af68-14d0abe2716b"
+  ],
+  "grantChangesAuthorized": true,
+  "activationAuthorized": false
+}

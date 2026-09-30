@@ -1,0 +1,311 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Shared Entity Framework comment admission and Neon initial-load verification",
+  "before": {
+    "capturedAt": "2026-09-30T03:02:43.270Z",
+    "plane": "neon",
+    "entity": "country",
+    "samples": [
+      {
+        "name": "history-existing-1",
+        "status": 200,
+        "durationMs": 838,
+        "serverTiming": null,
+        "requestId": "3ea32699-1223-4fe9-9115-57a9210fd4ca"
+      },
+      {
+        "name": "history-existing-2",
+        "status": 200,
+        "durationMs": 831,
+        "serverTiming": null,
+        "requestId": "0203d433-d7e5-407a-813b-59f59de43977"
+      },
+      {
+        "name": "fixture-create",
+        "status": 201,
+        "durationMs": 816,
+        "serverTiming": null,
+        "requestId": "c0dc8f8b-c768-4d7f-a7df-09d5f0fae492"
+      },
+      {
+        "name": "edit-1",
+        "status": 200,
+        "durationMs": 789,
+        "serverTiming": null,
+        "requestId": "56766ed7-ef66-4d6d-ab60-8fd0a2d9b3c5"
+      },
+      {
+        "name": "edit-2",
+        "status": 200,
+        "durationMs": 883,
+        "serverTiming": null,
+        "requestId": "6e22b1ab-797d-4861-b1fc-fecf2ee00d97"
+      },
+      {
+        "name": "edit-3",
+        "status": 200,
+        "durationMs": 831,
+        "serverTiming": null,
+        "requestId": "5236bcf3-3af5-4c2e-81f3-1215f60d9797"
+      },
+      {
+        "name": "stale-edit-denied",
+        "status": 409,
+        "durationMs": 821,
+        "serverTiming": null,
+        "requestId": "6e4694ac-1917-4088-bd1d-e0b99ddf56a8"
+      },
+      {
+        "name": "fixture-history",
+        "status": 200,
+        "durationMs": 847,
+        "serverTiming": null,
+        "requestId": "e24bb5d4-af1d-4564-bd3b-943bcb54cc01"
+      },
+      {
+        "name": "fixture-delete",
+        "status": 204,
+        "durationMs": 820,
+        "serverTiming": null,
+        "requestId": "b35fa028-4ed6-4a93-9073-32f33dcb137e"
+      }
+    ],
+    "passed": true,
+    "fixtureCleaned": true
+  },
+  "after": {
+    "capturedAt": "2026-09-30T03:07:26.220Z",
+    "plane": "neon",
+    "entity": "country",
+    "samples": [
+      {
+        "name": "history-existing-1",
+        "status": 200,
+        "durationMs": 189,
+        "serverTiming": "total;dur=105.3",
+        "requestId": "e1f569ea-18e8-486b-86d8-173fff6b54fe"
+      },
+      {
+        "name": "history-existing-2",
+        "status": 200,
+        "durationMs": 151,
+        "serverTiming": "total;dur=91.2",
+        "requestId": "84c5bf8b-5bd1-4d15-99b5-bcaafcb0986a"
+      },
+      {
+        "name": "fixture-create",
+        "status": 201,
+        "durationMs": 176,
+        "serverTiming": "total;dur=109.5",
+        "requestId": "9e9230df-a5a9-48ad-8867-3083768d23d4"
+      },
+      {
+        "name": "edit-1",
+        "status": 200,
+        "durationMs": 163,
+        "serverTiming": "total;dur=101.5",
+        "requestId": "c07e7139-df13-4b41-a600-962b1d8ba9a8"
+      },
+      {
+        "name": "edit-2",
+        "status": 200,
+        "durationMs": 181,
+        "serverTiming": "total;dur=122.6",
+        "requestId": "11c6f68f-cafe-41ad-acc1-0ad83ec8e12d"
+      },
+      {
+        "name": "edit-3",
+        "status": 200,
+        "durationMs": 162,
+        "serverTiming": "total;dur=103.3",
+        "requestId": "f1774549-82d8-4305-ae0a-593a7060fbde"
+      },
+      {
+        "name": "stale-edit-denied",
+        "status": 409,
+        "durationMs": 150,
+        "serverTiming": "total;dur=90.0",
+        "requestId": "0f4c33cc-503a-428d-9a2c-829e736551f6"
+      },
+      {
+        "name": "fixture-history",
+        "status": 200,
+        "durationMs": 162,
+        "serverTiming": "total;dur=101.3",
+        "requestId": "46dd20a8-33eb-46dd-98af-2465c0467cef"
+      },
+      {
+        "name": "fixture-delete",
+        "status": 204,
+        "durationMs": 155,
+        "serverTiming": "total;dur=91.7",
+        "requestId": "24b8700c-219e-4a96-807a-82ec943c355a"
+      }
+    ],
+    "passed": true,
+    "fixtureCleaned": true
+  },
+  "bootstrapBefore": {
+    "checkedAt": "2026-09-30T03:02:17.875Z",
+    "runs": [
+      {
+        "requests": [
+          {
+            "path": "/api/relay/neon/operating-organizations",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/detail-descriptor",
+            "status": "cancelled"
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/records/01a0d433-806b-7874-862d-49a9b955f6a1",
+            "status": "cancelled"
+          },
+          {
+            "path": "/api/relay/neon/operating-organizations",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/detail-descriptor",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/records/01a0d433-806b-7874-862d-49a9b955f6a1",
+            "status": 200
+          }
+        ],
+        "errors": []
+      },
+      {
+        "requests": [
+          {
+            "path": "/api/relay/neon/operating-organizations",
+            "status": "cancelled"
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/detail-descriptor",
+            "status": "cancelled"
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/records/01a0d433-806b-7874-862d-49a9b955f6a1",
+            "status": "cancelled"
+          },
+          {
+            "path": "/api/relay/neon/operating-organizations",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/detail-descriptor",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/records/01a0d433-806b-7874-862d-49a9b955f6a1",
+            "status": 200
+          }
+        ],
+        "errors": []
+      },
+      {
+        "requests": [
+          {
+            "path": "/api/relay/neon/operating-organizations",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/detail-descriptor",
+            "status": "cancelled"
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/records/01a0d433-806b-7874-862d-49a9b955f6a1",
+            "status": "cancelled"
+          },
+          {
+            "path": "/api/relay/neon/operating-organizations",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/detail-descriptor",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/records/01a0d433-806b-7874-862d-49a9b955f6a1",
+            "status": 200
+          }
+        ],
+        "errors": []
+      }
+    ]
+  },
+  "bootstrapAfter": {
+    "checkedAt": "2026-09-30T03:07:50.600Z",
+    "runs": [
+      {
+        "requests": [
+          {
+            "path": "/api/relay/neon/operating-organizations",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/detail-descriptor",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/records/01a0d433-806b-7874-862d-49a9b955f6a1",
+            "status": 200
+          }
+        ],
+        "errors": []
+      },
+      {
+        "requests": [
+          {
+            "path": "/api/relay/neon/operating-organizations",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/detail-descriptor",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/records/01a0d433-806b-7874-862d-49a9b955f6a1",
+            "status": 200
+          }
+        ],
+        "errors": []
+      },
+      {
+        "requests": [
+          {
+            "path": "/api/relay/neon/operating-organizations",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/detail-descriptor",
+            "status": 200
+          },
+          {
+            "path": "/api/relay/entity-runtime/country/records/01a0d433-806b-7874-862d-49a9b955f6a1",
+            "status": 200
+          }
+        ],
+        "errors": []
+      }
+    ]
+  },
+  "browser": {
+    "checkedAt": "2026-09-30T03:08:13.230Z",
+    "checks": [
+      "Country list rendered published rows",
+      "Country detail rendered record heading",
+      "Files panel opened",
+      "Comments panel opened",
+      "Activity panel opened",
+      "Notifications shell opened",
+      "Inbox shell opened"
+    ],
+    "pageErrors": [],
+    "httpErrors": [],
+    "passed": true
+  }
+}

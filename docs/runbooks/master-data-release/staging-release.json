@@ -1,0 +1,48 @@
+{
+  "schema": "athyper.master-data.environment-release.v1",
+  "environment": "staging",
+  "decisionStatus": "pending",
+  "deploymentTarget": null,
+  "plane": "neon",
+  "channels": [
+    "email"
+  ],
+  "primaryTenantId": null,
+  "negativeTestTenantId": null,
+  "tenantInventoryReference": null,
+  "accountableOwners": {
+    "domain": null,
+    "integration": null,
+    "iam": null,
+    "database": null,
+    "release": null
+  },
+  "provider": {
+    "id": null,
+    "configurationReference": null,
+    "verifiedSender": null,
+    "authorizedAcceptanceRecipients": []
+  },
+  "ownershipAttestation": {
+    "implementation": "local_only_nonlocal_integration_required",
+    "configurationReference": null,
+    "trustReference": null,
+    "keyFingerprint": null
+  },
+  "candidateImageDigest": null,
+  "rollbackImageDigest": null,
+  "acceptance": {
+    "authentication": null,
+    "sixRoutes": null,
+    "realInboxConfirmation": null,
+    "tenantAndOwnerDenials": null,
+    "databaseRollback": null,
+    "auditAndOutboxConsumers": null,
+    "keyIsolationAndRotation": null,
+    "deploymentRollback": null
+  },
+  "qualified": false,
+  "workStatus": "open",
+  "executionStatus": "deferred_by_user",
+  "deferralReason": "Environment setup, qualification and deployment will be scheduled later at the user's request."
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_catalog_installation_approval",
+  "acceptedAt": "2026-09-11T08:35:57.426454+00:00",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "Approve installing these six Studio definitions and the two source-read definitions in the isolated clone, with no grants or activation?"
+  },
+  "studioProposalRevision": "4660931d7ff9567c4c729712a30c1b97e40250382b1b8ef92d42228eadc9eb5f",
+  "sourceProposalSha256": "35fe66a6512c0feab21ce488c4bd9f38e8999088da17a825d4df97a484aebaf8",
+  "destinations": {
+    "studio": {
+      "container": "athyper-dev-db-1",
+      "database": "athyper_studio"
+    },
+    "source": {
+      "container": "athyper-bp-r20-db",
+      "database": "athyper_neon"
+    }
+  },
+  "grantChangesAuthorized": false,
+  "activationAuthorized": false,
+  "policyDifferenceAcceptance": false
+}

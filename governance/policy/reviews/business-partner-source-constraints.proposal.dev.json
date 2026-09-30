@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "business_partner_source_constraint_definitions",
+  "status": "review_required",
+  "plane": "neon",
+  "scope": "Seed-owned source constraints for the two legacy permission names already referenced by signed release 20",
+  "definitions": [
+    {
+      "code": "collaboration.comment.read",
+      "permissionKind": "capability",
+      "moduleCode": "fnd",
+      "scopeKinds": ["resource"],
+      "propagation": "exact",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "shareable": false,
+      "delegable": false,
+      "overridable": false,
+      "operation": "comments_read",
+      "targetPermission": "neon.relationship.bp_target.comments_read",
+      "rationale": "Read-source catalog constraints only. BP target read authority and stored parent ownership remain mandatory. This definition does not authorize comment creation, editing, deletion or reactions."
+    },
+    {
+      "code": "document.attachment.read",
+      "permissionKind": "capability",
+      "moduleCode": "fnd",
+      "scopeKinds": ["resource"],
+      "propagation": "exact",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "shareable": false,
+      "delegable": false,
+      "overridable": false,
+      "operation": "attachments_read",
+      "targetPermission": "neon.relationship.bp_target.attachments_read",
+      "rationale": "Legacy BP attachment-summary source constraints only. This is not an alias for neon.collaboration.attachment.read. Stored attachment/resource admission and download controls remain independent."
+    }
+  ],
+  "grantChanges": [],
+  "aliases": [],
+  "effectiveAccessImpact": "Existing target-granted reads can move from unavailable to allowed once source conditions are evaluable. This is a policy decision even with zero grant mutations.",
+  "sourceDenialsAndConditions": "Current source denials, module entitlement, assurance and policy conditions remain checked on the same resolved resource. No missing definition is treated as satisfied.",
+  "publication": "Catalog hash and authenticated runtime review must be refreshed in a compatible successor; historical release-20 approval receipts are not reusable as approval of this catalog revision.",
+  "reviewers": ["catl.owner", "catl.admin"],
+  "approvals": [],
+  "activationAuthorized": false
+}

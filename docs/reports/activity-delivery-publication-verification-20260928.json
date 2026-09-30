@@ -1,0 +1,548 @@
+{
+  "verifiedAt": "2026-09-28T12:09:18.042Z",
+  "baseline": {
+    "schema": "athyper.dev-publication-successor-baseline/1",
+    "capturedAt": "2026-09-28T12:08:46.464Z",
+    "readOnly": true,
+    "source": {
+      "entityId": "b7e5b981-2227-4720-ba5d-040a48ab6842",
+      "entityCode": "country",
+      "sourceTenantId": null,
+      "authoring": {
+        "releaseId": "7de1fe58-8782-4674-933f-228c9ec5b849",
+        "releaseNo": 10,
+        "releaseHash": "ae765f78b177f87a6c2a158a70c194a37b531e40d51eac6d9db0eb7034337eea",
+        "contractHash": "919d2dc44c519a5e94a4080135428d14d0cb6d7deb9d57f2e4e863aa1bbb3346",
+        "changeSetId": "34d81ddc-cc14-4d36-87bc-8a416ca6496a",
+        "revisionId": "01a0e7ea-c169-7548-8fcf-6639dca72c68",
+        "signingKeyId": "athyper-publication-dev-signing-v1"
+      },
+      "snapshot": {
+        "revisionId": "01a0e7ea-c169-7548-8fcf-6639dca72c68",
+        "contractHash": "919d2dc44c519a5e94a4080135428d14d0cb6d7deb9d57f2e4e863aa1bbb3346",
+        "revisionHash": "4204804a5ea44095d2a0446e82e6c3d359a3b3b788b91d99f209865b5492e409",
+        "validationStatus": "valid"
+      },
+      "publication": {
+        "releaseId": "7de1fe58-8782-4674-933f-228c9ec5b849",
+        "releaseNo": 10,
+        "releaseKey": "metadata.reference.country",
+        "releaseHash": "ae765f78b177f87a6c2a158a70c194a37b531e40d51eac6d9db0eb7034337eea",
+        "manifestHash": "ae765f78b177f87a6c2a158a70c194a37b531e40d51eac6d9db0eb7034337eea",
+        "status": "approved"
+      },
+      "actors": {
+        "maker": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+        "submitter": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+        "approver": "c0febdd1-491c-46b8-8113-160be767b88d",
+        "publisher": "c0febdd1-491c-46b8-8113-160be767b88d"
+      },
+      "targetPlanes": [
+        "studio",
+        "neon",
+        "mesh"
+      ]
+    },
+    "targets": [
+      {
+        "plane": "studio",
+        "observedEnvironment": "local",
+        "observedInstance": "dev",
+        "head": {
+          "row_version": 10,
+          "activated_at": "2026-09-28T12:08:41.873473+00:00",
+          "artifact_hash": "24d8fc9388a72856e872bfbf5ca9b72f52706fff68ad0b497ed7e5f3ae17e327",
+          "publication_key": "metadata.reference.country",
+          "source_release_no": 10,
+          "applied_release_id": "01a0e7ea-d471-7365-a257-0665194939b9"
+        },
+        "applied": {
+          "id": "01a0e7ea-d471-7365-a257-0665194939b9",
+          "sourceReleaseId": "7de1fe58-8782-4674-933f-228c9ec5b849",
+          "sourceReleaseNo": 10,
+          "status": "active",
+          "artifactHash": "24d8fc9388a72856e872bfbf5ca9b72f52706fff68ad0b497ed7e5f3ae17e327"
+        },
+        "publishedOperationBindings": 2
+      },
+      {
+        "plane": "neon",
+        "observedEnvironment": "local",
+        "observedInstance": "dev",
+        "head": {
+          "row_version": 10,
+          "activated_at": "2026-09-28T12:08:41.945638+00:00",
+          "artifact_hash": "f0ff4e2c5409fd09d8b36127ab3e4aa416be3698e57f58da7c9b887d01cadc8e",
+          "publication_key": "metadata.reference.country",
+          "source_release_no": 10,
+          "applied_release_id": "01a0e7ea-d4b2-7326-8d89-6768ff4a3e98"
+        },
+        "applied": {
+          "id": "01a0e7ea-d4b2-7326-8d89-6768ff4a3e98",
+          "sourceReleaseId": "7de1fe58-8782-4674-933f-228c9ec5b849",
+          "sourceReleaseNo": 10,
+          "status": "active",
+          "artifactHash": "f0ff4e2c5409fd09d8b36127ab3e4aa416be3698e57f58da7c9b887d01cadc8e"
+        },
+        "publishedOperationBindings": 2
+      },
+      {
+        "plane": "mesh",
+        "observedEnvironment": "local",
+        "observedInstance": "dev",
+        "head": {
+          "row_version": 10,
+          "activated_at": "2026-09-28T12:08:41.30681+00:00",
+          "artifact_hash": "375bae470a5ed4c16e8ef7bc5d5fe6f7479325bc42cac5605aeff6053fc9f2c6",
+          "publication_key": "metadata.reference.country",
+          "source_release_no": 10,
+          "applied_release_id": "01a0e7ea-d22c-7c56-9527-4f4cb5102b97"
+        },
+        "applied": {
+          "id": "01a0e7ea-d22c-7c56-9527-4f4cb5102b97",
+          "sourceReleaseId": "7de1fe58-8782-4674-933f-228c9ec5b849",
+          "sourceReleaseNo": 10,
+          "status": "active",
+          "artifactHash": "375bae470a5ed4c16e8ef7bc5d5fe6f7479325bc42cac5605aeff6053fc9f2c6"
+        },
+        "publishedOperationBindings": 2
+      }
+    ],
+    "workingFiles": [
+      {
+        "path": "server/apps/platform-host/src/composition/shared/publication/workload.ts",
+        "sha256": "b6c23da39d1149705f6e0887da7d577177b3cf6c98e8eeb5a2331d64065c7107"
+      },
+      {
+        "path": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts",
+        "sha256": "291a7c3593dae1a05a2528785772062cc57fd2638c8320d006b9c0d3e191861d"
+      },
+      {
+        "path": "server/packages/planes/studio/meta-entity-authoring/src/publication/publication-workflow.ts",
+        "sha256": "cdfbb62e35384d490de8a9449714b3da9799c20866665a7ea34b2d2f78fdf775"
+      },
+      {
+        "path": "server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts",
+        "sha256": "dfbb7ce21cdc5aa7d60c2257bec25dce727b1b6a5738ee208f93373b658f0fd9"
+      },
+      {
+        "path": "server/db/ddl/planes/studio/publication/15_system_entity_commands.sql",
+        "sha256": "0d582ed92584e07d0e52ebd803fcc8aa81311e106b14e7fbcbc4722585b1ac45"
+      },
+      {
+        "path": "server/db/ddl/common/runtime_meta/07_functions.sql",
+        "sha256": "48b35f2ee88733789880782b8546bd82d9f2b2c0f653b59fc75be303d86a7c30"
+      }
+    ],
+    "limitation": "Sequential per-database snapshots, not a distributed atomic snapshot or approval. Recheck pins under locks before publication/activation."
+  },
+  "deployments": [
+    {
+      "plane": "mesh",
+      "status": "activated",
+      "activatedAt": "2026-09-28T12:08:41.314303+00:00",
+      "artifactStatus": "signed",
+      "signingKeyId": "athyper-publication-dev-signing-v1",
+      "acknowledgement": {
+        "id": "01a0e7ea-d264-7a7b-add0-57ff6bdcc26e",
+        "evidence": {
+          "sourceReleaseNo": 10
+        },
+        "deployment_id": "01a0e7ea-cdb4-774e-8d6a-fc13aee78217",
+        "acknowledged_at": "2026-09-28T12:08:41.315942+00:00",
+        "acknowledged_by": "athyper_worker",
+        "target_instance": "*",
+        "active_release_hash": "375bae470a5ed4c16e8ef7bc5d5fe6f7479325bc42cac5605aeff6053fc9f2c6",
+        "local_applied_release_id": "01a0e7ea-d22c-7c56-9527-4f4cb5102b97"
+      }
+    },
+    {
+      "plane": "studio",
+      "status": "activated",
+      "activatedAt": "2026-09-28T12:08:41.880787+00:00",
+      "artifactStatus": "signed",
+      "signingKeyId": "athyper-publication-dev-signing-v1",
+      "acknowledgement": {
+        "id": "01a0e7ea-d49a-7714-8695-e72d47dd5fe0",
+        "evidence": {
+          "sourceReleaseNo": 10
+        },
+        "deployment_id": "01a0e7ea-d007-727d-ad7d-0b69b641d450",
+        "acknowledged_at": "2026-09-28T12:08:41.881888+00:00",
+        "acknowledged_by": "athyper_worker",
+        "target_instance": "*",
+        "active_release_hash": "24d8fc9388a72856e872bfbf5ca9b72f52706fff68ad0b497ed7e5f3ae17e327",
+        "local_applied_release_id": "01a0e7ea-d471-7365-a257-0665194939b9"
+      }
+    },
+    {
+      "plane": "neon",
+      "status": "activated",
+      "activatedAt": "2026-09-28T12:08:41.954907+00:00",
+      "artifactStatus": "signed",
+      "signingKeyId": "athyper-publication-dev-signing-v1",
+      "acknowledgement": {
+        "id": "01a0e7ea-d4e4-7916-aec1-04af0695a0d8",
+        "evidence": {
+          "sourceReleaseNo": 10
+        },
+        "deployment_id": "01a0e7ea-cebc-7295-a89a-de0fec0d957d",
+        "acknowledged_at": "2026-09-28T12:08:41.956181+00:00",
+        "acknowledged_by": "athyper_worker",
+        "target_instance": "*",
+        "active_release_hash": "f0ff4e2c5409fd09d8b36127ab3e4aa416be3698e57f58da7c9b887d01cadc8e",
+        "local_applied_release_id": "01a0e7ea-d4b2-7326-8d89-6768ff4a3e98"
+      }
+    }
+  ],
+  "planes": [
+    {
+      "plane": "studio",
+      "verification": {
+        "payload_hash": "37df3cf0518c00094f8463e9b353f2aff69afc818de8f76fc65dafdf2d74152e",
+        "target_plane": "studio",
+        "manifest_valid": true,
+        "signing_key_id": "athyper-publication-dev-signing-v1",
+        "runtime_compatible": true,
+        "signature_verified": true,
+        "signature_algorithm": "Ed25519",
+        "payload_schema_version": "2.0"
+      },
+      "activationEvents": [
+        {
+          "id": "01a0e7ea-d492-7e02-80a1-d3ac1b7fe5de",
+          "evidence": {
+            "deploymentId": "01a0e7ea-d007-727d-ad7d-0b69b641d450"
+          },
+          "activated_at": "2026-09-28T12:08:41.873473+00:00",
+          "activated_by": "athyper_worker",
+          "publication_key": "metadata.reference.country",
+          "applied_release_id": "01a0e7ea-d471-7365-a257-0665194939b9",
+          "previous_applied_release_id": "01a0e6cf-10df-72b6-9831-377b3b7f0863"
+        }
+      ],
+      "descriptors": null,
+      "activityBindings": [
+        {
+          "path": ".artifacts.1.content.capabilities.activity",
+          "value": {
+            "load": "lazy",
+            "enabled": true,
+            "serviceKey": "platform.activity.v1",
+            "ownerEntityCode": "country",
+            "includeInAggregateData": false
+          }
+        },
+        {
+          "path": ".artifacts.2.content.activityBinding",
+          "value": {
+            "query": {
+              "pageSize": 50,
+              "maxRangeDays": 90,
+              "defaultRangeDays": 30
+            },
+            "views": [
+              "timeline",
+              "auditLog",
+              "snapshots"
+            ],
+            "actions": [
+              {
+                "key": "timeline_query",
+                "handlerKey": "platform.activity.timeline_query.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.audit.event.query",
+                "servicePermissionCode": "audit.event.query"
+              },
+              {
+                "key": "audit_query",
+                "handlerKey": "platform.activity.audit_query.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.audit.event.query",
+                "servicePermissionCode": "audit.event.query"
+              },
+              {
+                "key": "snapshots_read",
+                "handlerKey": "platform.activity.snapshots_read.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_compare",
+                "handlerKey": "platform.activity.snapshots_compare.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_capture",
+                "handlerKey": "platform.activity.snapshots_capture.v1",
+                "concurrency": "none",
+                "idempotency": "required",
+                "permissionCode": "common.records.snapshot.capture",
+                "servicePermissionCode": "records.snapshot.capture"
+              }
+            ],
+            "layouts": [
+              "drawer",
+              "content"
+            ],
+            "snapshots": {
+              "manualCapture": true,
+              "retentionClass": "standard",
+              "automaticCapture": "none",
+              "captureOperations": []
+            },
+            "serviceKey": "platform.activity.v1",
+            "defaultView": "timeline",
+            "profilePolicy": {
+              "hash": "sha256:3b3d206415f1a08763728866889975d648dfc3698cc647060e40cfe97aa25692",
+              "plane": "studio",
+              "artifactKey": "country/capability-profile.activity.2"
+            },
+            "schemaVersion": 1,
+            "ownerEntityCode": "country",
+            "admissionResolverKey": "platform.records.admission.v1"
+          }
+        }
+      ]
+    },
+    {
+      "plane": "neon",
+      "verification": {
+        "payload_hash": "83f812705705997abe9de5c0500077c46a9cd625212ff05dbc6904fb4778848a",
+        "target_plane": "neon",
+        "manifest_valid": true,
+        "signing_key_id": "athyper-publication-dev-signing-v1",
+        "runtime_compatible": true,
+        "signature_verified": true,
+        "signature_algorithm": "Ed25519",
+        "payload_schema_version": "2.0"
+      },
+      "activationEvents": [
+        {
+          "id": "01a0e7ea-d4db-77ac-aa94-0493f1bc2f7c",
+          "evidence": {
+            "deploymentId": "01a0e7ea-cebc-7295-a89a-de0fec0d957d"
+          },
+          "activated_at": "2026-09-28T12:08:41.945638+00:00",
+          "activated_by": "athyper_worker",
+          "publication_key": "metadata.reference.country",
+          "applied_release_id": "01a0e7ea-d4b2-7326-8d89-6768ff4a3e98",
+          "previous_applied_release_id": "01a0e6cf-0ee7-730b-86ad-69bf9e882677"
+        }
+      ],
+      "descriptors": null,
+      "activityBindings": [
+        {
+          "path": ".artifacts.1.content.capabilities.activity",
+          "value": {
+            "load": "lazy",
+            "enabled": true,
+            "serviceKey": "platform.activity.v1",
+            "ownerEntityCode": "country",
+            "includeInAggregateData": false
+          }
+        },
+        {
+          "path": ".artifacts.2.content.activityBinding",
+          "value": {
+            "query": {
+              "pageSize": 50,
+              "maxRangeDays": 90,
+              "defaultRangeDays": 30
+            },
+            "views": [
+              "timeline",
+              "auditLog",
+              "snapshots"
+            ],
+            "actions": [
+              {
+                "key": "timeline_query",
+                "handlerKey": "platform.activity.timeline_query.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.audit.event.query",
+                "servicePermissionCode": "audit.event.query"
+              },
+              {
+                "key": "audit_query",
+                "handlerKey": "platform.activity.audit_query.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.audit.event.query",
+                "servicePermissionCode": "audit.event.query"
+              },
+              {
+                "key": "snapshots_read",
+                "handlerKey": "platform.activity.snapshots_read.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_compare",
+                "handlerKey": "platform.activity.snapshots_compare.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_capture",
+                "handlerKey": "platform.activity.snapshots_capture.v1",
+                "concurrency": "none",
+                "idempotency": "required",
+                "permissionCode": "common.records.snapshot.capture",
+                "servicePermissionCode": "records.snapshot.capture"
+              }
+            ],
+            "layouts": [
+              "drawer",
+              "content"
+            ],
+            "snapshots": {
+              "manualCapture": true,
+              "retentionClass": "standard",
+              "automaticCapture": "none",
+              "captureOperations": []
+            },
+            "serviceKey": "platform.activity.v1",
+            "defaultView": "timeline",
+            "profilePolicy": {
+              "hash": "sha256:32649fc6e1e75e09a1fa16d34091c2bc266a28615f738fb214460889c833af47",
+              "plane": "neon",
+              "artifactKey": "country/capability-profile.activity.2"
+            },
+            "schemaVersion": 1,
+            "ownerEntityCode": "country",
+            "admissionResolverKey": "platform.records.admission.v1"
+          }
+        }
+      ]
+    },
+    {
+      "plane": "mesh",
+      "verification": {
+        "payload_hash": "50a2afacc21c4cffced6d287bb70377d3e231f5d143850d8f48b8feca4376ebb",
+        "target_plane": "mesh",
+        "manifest_valid": true,
+        "signing_key_id": "athyper-publication-dev-signing-v1",
+        "runtime_compatible": true,
+        "signature_verified": true,
+        "signature_algorithm": "Ed25519",
+        "payload_schema_version": "2.0"
+      },
+      "activationEvents": [
+        {
+          "id": "01a0e7ea-d25c-71c7-810e-d63c0d5fac36",
+          "evidence": {
+            "deploymentId": "01a0e7ea-cdb4-774e-8d6a-fc13aee78217"
+          },
+          "activated_at": "2026-09-28T12:08:41.30681+00:00",
+          "activated_by": "athyper_worker",
+          "publication_key": "metadata.reference.country",
+          "applied_release_id": "01a0e7ea-d22c-7c56-9527-4f4cb5102b97",
+          "previous_applied_release_id": "01a0e6cf-1117-7c52-b6c9-9b1e5d573a9b"
+        }
+      ],
+      "descriptors": null,
+      "activityBindings": [
+        {
+          "path": ".artifacts.1.content.capabilities.activity",
+          "value": {
+            "load": "lazy",
+            "enabled": true,
+            "serviceKey": "platform.activity.v1",
+            "ownerEntityCode": "country",
+            "includeInAggregateData": false
+          }
+        },
+        {
+          "path": ".artifacts.2.content.activityBinding",
+          "value": {
+            "query": {
+              "pageSize": 50,
+              "maxRangeDays": 90,
+              "defaultRangeDays": 30
+            },
+            "views": [
+              "timeline",
+              "auditLog",
+              "snapshots"
+            ],
+            "actions": [
+              {
+                "key": "timeline_query",
+                "handlerKey": "platform.activity.timeline_query.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.audit.event.query",
+                "servicePermissionCode": "audit.event.query"
+              },
+              {
+                "key": "audit_query",
+                "handlerKey": "platform.activity.audit_query.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.audit.event.query",
+                "servicePermissionCode": "audit.event.query"
+              },
+              {
+                "key": "snapshots_read",
+                "handlerKey": "platform.activity.snapshots_read.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_compare",
+                "handlerKey": "platform.activity.snapshots_compare.v1",
+                "concurrency": "none",
+                "idempotency": "none",
+                "permissionCode": "common.records.snapshot.read",
+                "servicePermissionCode": "records.snapshot.read"
+              },
+              {
+                "key": "snapshots_capture",
+                "handlerKey": "platform.activity.snapshots_capture.v1",
+                "concurrency": "none",
+                "idempotency": "required",
+                "permissionCode": "common.records.snapshot.capture",
+                "servicePermissionCode": "records.snapshot.capture"
+              }
+            ],
+            "layouts": [
+              "drawer",
+              "content"
+            ],
+            "snapshots": {
+              "manualCapture": true,
+              "retentionClass": "standard",
+              "automaticCapture": "none",
+              "captureOperations": []
+            },
+            "serviceKey": "platform.activity.v1",
+            "defaultView": "timeline",
+            "profilePolicy": {
+              "hash": "sha256:812e84f74341799d6f5e3e57cd4d6f6e8c6830d4c2935818000454513b6df540",
+              "plane": "mesh",
+              "artifactKey": "country/capability-profile.activity.2"
+            },
+            "schemaVersion": 1,
+            "ownerEntityCode": "country",
+            "admissionResolverKey": "platform.records.admission.v1"
+          }
+        }
+      ]
+    }
+  ]
+}

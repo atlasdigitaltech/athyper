@@ -1,6 +1,16 @@
-﻿{
+{
   "extends": "@athyper/tsconfig/base.json",
-  "compilerOptions": { "noEmit": true },
-  "include": ["src"],
-  "exclude": ["node_modules"]
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": [
+      "ES2022",
+      "DOM"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

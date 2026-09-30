@@ -1,1 +1,3 @@
-export default function HomePage() { return <section aria-labelledby="page-title"><p>Entity Studio</p><h1 id="page-title">Athyper Studio</h1><p>Your permitted platform authoring workspaces are ready.</p></section>; }
+import { redirect } from "next/navigation";
+
+export default function HomePage(): never { redirect("/home"); }

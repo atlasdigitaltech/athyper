@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/stack-operation-receipt-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "StackOperationReceipt" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instance", "id"],
+      "properties": {
+        "instance": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$" },
+        "id": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[a-z]+(-[0-9]+)?$" }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "status", "project", "startedAt", "completedAt", "sourceRevision", "commands", "artifacts", "rollback"],
+      "properties": {
+        "operation": { "enum": ["up", "down", "restart", "backup", "restore"] },
+        "status": { "enum": ["succeeded", "failed", "rolled-back"] },
+        "project": { "type": "string", "pattern": "^athyper-[a-z0-9-]+$" },
+        "startedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T" },
+        "completedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T" },
+        "sourceRevision": { "type": "string", "pattern": "^(working-tree|unknown|[a-f0-9]{40})$" },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["program", "arguments", "status"],
+            "properties": {
+              "program": { "type": "string", "minLength": 1 },
+              "arguments": { "type": "array", "items": { "type": "string" } },
+              "status": { "type": "integer" }
+            }
+          }
+        },
+        "artifacts": { "type": "object", "additionalProperties": { "anyOf": [{ "type": "string" }, { "type": "integer" }, { "type": "boolean" }] } },
+        "rollback": { "type": "object", "additionalProperties": false, "required": ["attempted", "succeeded"], "properties": { "attempted": { "type": "boolean" }, "succeeded": { "type": "boolean" } } },
+        "error": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

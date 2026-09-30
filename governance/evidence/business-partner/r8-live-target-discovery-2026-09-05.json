@@ -1,0 +1,34 @@
+{
+  "schema": "athyper.business-partner-r8-target-discovery/1",
+  "asOf": "2026-09-05",
+  "status": "blocked",
+  "productionQualified": false,
+  "productionMutationExecuted": false,
+  "verifiedRepositoryCoordinates": {
+    "productionContract": "deploy/production/instance.yaml",
+    "deploymentTargetRef": "secret-manager://athyper/production/deployment-target",
+    "orchestrator": "external",
+    "secretNamespace": "athyper/production",
+    "prohibitedCredentialNamespaces": [
+      "athyper/stg",
+      "athyper/qa",
+      "athyper/dev"
+    ],
+    "historicalReleaseDescriptor": "deploy/releases/business-partner-p9.yaml",
+    "historicalReleaseRevision": "2853d624ad1b0ecd53db37f28519e09ec6c4d914"
+  },
+  "observations": [
+    "The available Docker context contains Dev, QA and shared operations containers; no production instance was observed.",
+    "No R8, publication-canary, database URL or managed-secret-store credentials are configured in the session environment.",
+    "No Infisical, Vault, AWS, gcloud, Azure or kubectl CLI is available in PATH.",
+    "No matching production, active-instance, certification or upgrade receipts were found in bounded non-secret searches of the configured runtime and qualification roots.",
+    "The historical release descriptor is not evidence that the current R8 authoring build is deployed.",
+    "No supported R8 upgrade baseline, accessibility reviewer or four named certifiers was found in the inspected repository evidence."
+  ],
+  "requiredOperatorInput": [
+    "Authorized production runner or managed-secret-store connection resolving the declared deployment target; provide a reference, not credential values.",
+    "Deployed candidate revision and supported upgrade baseline reference with distinct clean and upgraded qualification databases.",
+    "Accessibility reviewer name and four distinct product, engineering, operations and security/privacy certifier names."
+  ],
+  "nextExecutableStep": "Inject the resolved target coordinates into the authorized runner, run pnpm preflight:business-partner-r8, then perform read-only target validation before the canary operation."
+}

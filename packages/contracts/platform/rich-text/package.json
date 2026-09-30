@@ -1,0 +1,17 @@
+{
+  "name": "@athyper/contract-platform-rich-text",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@athyper/tsconfig": "workspace:*",
+    "typescript": "^6.0.3"
+  }
+}

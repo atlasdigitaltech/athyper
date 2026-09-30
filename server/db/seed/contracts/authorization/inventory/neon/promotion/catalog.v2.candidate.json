@@ -344,6 +344,19 @@
       "definitionSha256": "51a36a188e352558f74ca1f7c0fc54c7a012c741b77bc62f8769fe497b64bd77"
     },
     {
+      "permissionId": "2a295664-36f3-5dbf-860d-74789ad267cb",
+      "canonicalCode": "neon.context.catalog.read",
+      "product": "neon",
+      "domain": "context",
+      "entity": "catalog",
+      "operation": "read",
+      "permissionKind": "capability",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "lifecycle": "proposed",
+      "definitionSha256": "9200faac007f99c54dcce72313bd7dc2d6be7e78ae2dfe80cf44477ccab28557"
+    },
+    {
       "permissionId": "fcb9c010-44ba-5c3b-8bfe-0f8d6ab36545",
       "canonicalCode": "neon.organization.company_code.activate",
       "product": "neon",
@@ -881,5 +894,5 @@
       "definitionSha256": "b1b49d011ee421dc3448653c7d54c23768425d923c54a3ca31555c9699504258"
     }
   ],
-  "sha256": "1edb83c43328040c4c1ac6155b1fe10b0bcf4d56e6591344f837f1f4e9169b59"
+  "sha256": "a4a716344de4f2ea427eeabbb11f01ce9e18b25fcdfcfaad5083095adcff87a1"
 }

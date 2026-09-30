@@ -64,8 +64,8 @@ WHERE (control.workspace_module.is_primary,control.workspace_module.sort_order,c
 
 DO $assertions$ BEGIN
   IF (SELECT count(*) FROM control.workspace WHERE status='active') <> 10
-     OR (SELECT count(*) FROM control.module WHERE status='active') <> 31
-     OR (SELECT count(*) FROM control.workspace_module WHERE status='active' AND is_primary) <> 31 THEN
+     OR (SELECT count(*) FROM control.module WHERE status='active') <> 33
+     OR (SELECT count(*) FROM control.workspace_module WHERE status='active' AND is_primary) <> 33 THEN
     RAISE EXCEPTION 'athyper control catalog backfill count mismatch';
   END IF;
   IF EXISTS (SELECT 1 FROM master.workspace m JOIN control.workspace c USING(id) WHERE m.code<>c.code)

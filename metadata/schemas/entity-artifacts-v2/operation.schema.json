@@ -1,0 +1,556 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "contractStatus",
+    "artifactType",
+    "artifactKey",
+    "entityCode",
+    "plane",
+    "dependencies",
+    "artifactHash"
+  ],
+  "properties": {
+    "artifactHash": {},
+    "artifactKey": {},
+    "artifactType": {
+      "const": "operation"
+    },
+    "attachmentBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "serviceKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 127
+        },
+        "ownerEntityCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 127
+        },
+        "admissionResolverKey": {
+          "const": "platform.records.admission.v1"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 127
+              },
+              "permissionCode": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 127
+              },
+              "handlerKey": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 127
+              },
+              "concurrency": {
+                "enum": [
+                  "none",
+                  "revision"
+                ]
+              },
+              "idempotency": {
+                "enum": [
+                  "none",
+                  "required"
+                ]
+              }
+            },
+            "required": [
+              "key",
+              "permissionCode",
+              "handlerKey",
+              "concurrency",
+              "idempotency"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "layouts": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "drawer",
+              "content"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "retentionPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "artifactKey": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]*/[a-z0-9_.-]+$"
+            },
+            "hash": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "plane": {
+              "enum": [
+                "neon",
+                "mesh",
+                "studio"
+              ]
+            }
+          },
+          "required": [
+            "artifactKey",
+            "hash",
+            "plane"
+          ]
+        },
+        "maxFileBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 26214400
+        },
+        "maxBatchCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "allowedContentTypes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "application/pdf",
+              "image/jpeg",
+              "image/png",
+              "text/plain"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "scanRequired": {
+          "const": true
+        },
+        "linkKinds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "context",
+              "evidence",
+              "comment",
+              "related"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "general",
+              "evidence"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "folders": {
+          "type": "boolean"
+        },
+        "versioning": {
+          "type": "boolean"
+        },
+        "rename": {
+          "type": "boolean"
+        },
+        "duplicateBehavior": {
+          "enum": [
+            "reject",
+            "new_version"
+          ]
+        },
+        "unlink": {
+          "const": "association_only"
+        },
+        "download": {
+          "const": "short_lived_authorized_url"
+        },
+        "processing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "preview": {
+              "type": "boolean"
+            },
+            "extraction": {
+              "type": "boolean"
+            },
+            "search": {
+              "type": "boolean"
+            },
+            "renditions": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "thumbnail",
+                  "pdf",
+                  "image"
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 100,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "preview",
+            "extraction",
+            "search",
+            "renditions"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "serviceKey",
+        "ownerEntityCode",
+        "admissionResolverKey",
+        "actions",
+        "layouts",
+        "maxFileBytes",
+        "maxBatchCount",
+        "allowedContentTypes",
+        "scanRequired",
+        "linkKinds",
+        "categories",
+        "folders",
+        "versioning",
+        "rename",
+        "duplicateBehavior",
+        "unlink",
+        "download",
+        "processing"
+      ]
+    },
+    "browserProjection": {},
+    "concurrency": {},
+    "consumedBy": {},
+    "contractStatus": {},
+    "dependencies": {},
+    "disclosureBinding": {},
+    "entityCode": {},
+    "evaluationContract": {},
+    "handlerBindingStatus": {},
+    "lifecycleBinding": {},
+    "lifecycleOperationBindings": {},
+    "materialization": {},
+    "numberingBinding": {},
+    "operationDefaultsProfile": {},
+    "operationDefaultsProfileRef": {},
+    "operations": {},
+    "plane": {
+      "const": "neon"
+    },
+    "policyBindings": {},
+    "policyManifestProjection": {},
+    "printBinding": {},
+    "reasonCodeCatalog": {},
+    "schema": {},
+    "schemaVersion": {
+      "const": 2
+    },
+    "snapshotBinding": {},
+    "transactionOrder": {},
+    "validationDeclarations": {},
+    "commentBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "serviceKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 127
+        },
+        "ownerEntityCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 127
+        },
+        "admissionResolverKey": {
+          "const": "platform.records.admission.v1"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 127
+              },
+              "permissionCode": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 127
+              },
+              "handlerKey": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 127
+              },
+              "concurrency": {
+                "enum": [
+                  "none",
+                  "revision"
+                ]
+              },
+              "idempotency": {
+                "enum": [
+                  "none",
+                  "required"
+                ]
+              }
+            },
+            "required": [
+              "key",
+              "permissionCode",
+              "handlerKey",
+              "concurrency",
+              "idempotency"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "layouts": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "drawer",
+              "content"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "retentionPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "artifactKey": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]*/[a-z0-9_.-]+$"
+            },
+            "hash": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "plane": {
+              "enum": [
+                "neon",
+                "mesh",
+                "studio"
+              ]
+            }
+          },
+          "required": [
+            "artifactKey",
+            "hash",
+            "plane"
+          ]
+        },
+        "richTextSchema": {
+          "const": "athyper.rich-text/1.0"
+        },
+        "maxTextLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000
+        },
+        "maxDepth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "allowedAudiences": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "public",
+              "private",
+              "internal"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "defaultAudience": {
+          "enum": [
+            "public",
+            "private",
+            "internal"
+          ]
+        },
+        "audiencePolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "artifactKey": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_.-]*/[a-z0-9_.-]+$"
+            },
+            "hash": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "plane": {
+              "enum": [
+                "neon",
+                "mesh",
+                "studio"
+              ]
+            }
+          },
+          "required": [
+            "artifactKey",
+            "hash",
+            "plane"
+          ]
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "replies": {
+              "type": "boolean"
+            },
+            "edits": {
+              "type": "boolean"
+            },
+            "reactions": {
+              "type": "boolean"
+            },
+            "mentions": {
+              "type": "boolean"
+            },
+            "drafts": {
+              "type": "boolean"
+            },
+            "reporting": {
+              "type": "boolean"
+            },
+            "history": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "replies",
+            "edits",
+            "reactions",
+            "mentions",
+            "drafts",
+            "reporting",
+            "history"
+          ]
+        },
+        "reactionCodes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "like",
+              "love",
+              "laugh",
+              "wow",
+              "sad",
+              "angry",
+              "thumbs_up",
+              "heart",
+              "celebrate"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 100,
+          "uniqueItems": true
+        },
+        "attachments": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowed": {
+              "type": "boolean"
+            },
+            "maxCount": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "pinVersion": {
+              "const": true
+            },
+            "bindingRef": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 127
+            }
+          },
+          "required": [
+            "allowed",
+            "maxCount",
+            "pinVersion"
+          ]
+        },
+        "draftRetentionDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "serviceKey",
+        "ownerEntityCode",
+        "admissionResolverKey",
+        "actions",
+        "layouts",
+        "richTextSchema",
+        "maxTextLength",
+        "maxDepth",
+        "allowedAudiences",
+        "defaultAudience",
+        "features",
+        "reactionCodes",
+        "attachments"
+      ]
+    }
+  }
+}

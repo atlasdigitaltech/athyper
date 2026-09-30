@@ -1,0 +1,219 @@
+import assert from "node:assert/strict";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { randomUUID, createHash } from "node:crypto";
+import { request, chromium } from "@playwright/test";
+const origin = "https://neon.dev.athyper.test",
+  endpoint = "/api/relay/neon/business-partner-cases";
+const client = await request.newContext({
+  baseURL: origin,
+  storageState: "tests/e2e/.auth/dev/neon/catl.admin.json",
+  ignoreHTTPSErrors: true,
+});
+const reviewer = await request.newContext({
+  baseURL: origin,
+  storageState: "tests/e2e/.auth/dev/neon/catl.owner.json",
+  ignoreHTTPSErrors: true,
+});
+const report: any = { at: new Date().toISOString(), passed:false, cases:[], checks:[], boundary:"Fresh cases through deployed NEON owning APIs and real rendering/storage/scanning; Bound information controls through actual deployed browser commands and Mailpit capture." };
+const save=()=>writeFileSync("governance/policy/reports/task-rules-information-browser-live.dev.json",JSON.stringify(report,null,2)+"\n");
+async function call(
+  actor: any,
+  path: string,
+  data?: any,
+  method = "POST",
+  expected = 200,
+) {
+  const csrf = (await actor.storageState()).cookies.find((c: any) =>
+    /^(__Host-)?athyper-csrf$/.test(c.name),
+  );
+  assert.ok(csrf);
+  const r = await actor.fetch(path, {
+    method,
+    headers: {
+      origin,
+      "x-csrf-token": decodeURIComponent(csrf.value),
+      ...(method !== "GET"
+        ? { "Idempotency-Key": data?.idempotencyKey ?? randomUUID() }
+        : {}),
+    },
+    ...(data ? { data } : {}),
+  });
+  const body = await r.json();
+  assert.ok(
+    r.status() === expected ||
+      (expected === 201 &&
+        path.endsWith("/submit") &&
+        r.status() === 200 &&
+        body.replayed === true),
+    JSON.stringify({ path, status: r.status(), expected, body }),
+  );
+  return body;
+}
+const post = (path: string, data: any) =>
+  call(
+    client,
+    path,
+    data,
+    "POST",
+    path === endpoint ||
+      path.endsWith("/submit") ||
+      path.endsWith("/materialize")
+      ? 201
+      : 200,
+  );
+const get = (id: string) => call(client, `${endpoint}/${id}`, undefined, "GET");
+const view = (id: string) =>
+  call(
+    reviewer,
+    `/api/relay/governance/process-tasks/cases/${id}/view`,
+    undefined,
+    "GET",
+  );
+async function vote(id: string, action?: string) {
+  const v = await view(id),
+    i = v.executions.find(
+      (e: any) =>
+        e.stage_status === "active" &&
+        ["open", "claimed"].includes(e.work_item_status),
+    );
+  assert.ok(i, JSON.stringify(v));
+  const command = {
+    attemptId: v.coordinate.attemptId,
+    cycleTaskId: i.cycle_task_id,
+    workflowRequestId: i.workflow_request_id,
+    workflowStageId: i.workflow_stage_id,
+    workItemId: i.work_item_id,
+    expectedWorkItemVersion: Number(i.work_item_version),
+    idempotencyKey: randomUUID(),
+    action: action ?? i.action,
+    reason: "P7 qualification decision",
+  };
+  const receipt = await call(
+    reviewer,
+    `/api/relay/governance/process-tasks/cases/${id}/decide`,
+    command,
+  );
+  return { command, receipt };
+}
+async function pack(p: any) {
+  const r = await post(
+    `/api/relay/governance/process-documents/jobs/${p.reviewPackJobId}/process`,
+    {},
+  );
+  assert.equal(r.status, "ready", JSON.stringify(r));
+  assert.equal(r.gateStatus, "succeeded", JSON.stringify(r));
+  return r;
+}
+async function submit(id: string, concurrent = false) {
+  const c = await get(id),
+    v = await post(`${endpoint}/${id}/validate`, {
+      expectedVersion: c.request.rowVersion,
+      idempotencyKey: randomUUID(),
+    });
+  assert.equal(v.validation.valid, true, JSON.stringify(v.validation));
+  const command = {
+    expectedVersion: v.request.rowVersion,
+    idempotencyKey: randomUUID(),
+  };
+  if (!concurrent) return post(`${endpoint}/${id}/submit`, command);
+  const [a, b] = await Promise.all([
+    post(`${endpoint}/${id}/submit`, command),
+    post(`${endpoint}/${id}/submit`, command),
+  ]);
+  assert.deepEqual(a.process, b.process);
+  assert.equal(Number(a.replayed) + Number(b.replayed), 1);
+  return a;
+}
+async function create(level: string) {
+  const key = randomUUID(),
+    contactKey = randomUUID();
+  const created = await post(endpoint, {
+    idempotencyKey: key,
+    draftCapture: true,
+    kind: "new_partner",
+    source: { kind: "manual" },
+    requestedRole: "supplier",
+    operatingOrganizationId: "a478f9c0-8226-5d22-9599-b8fb27a45180",
+    companyCodeId: "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+    proposedPayload: {
+      partnerCategory: "organization",
+      registrationCountryCode: "MY",
+      name: `DEV R1 information browser ${level} ${key}`,
+      ownershipClass: "external",
+      supplierType: "general",
+      qualificationTypeCode: "compliance",
+      requestedComplianceLevel: level === "rollback" ? "standard" : level,
+      complianceRequirementReason: "Local Increment A qualification",
+      tenantFields: { profileMode: "standard" },
+    },
+    extensions: {
+      addresses: [
+        {
+          clientItemKey: randomUUID(),
+          definitionFieldCode: "address.primary",
+          purpose: "default",
+          addressKind: "street",
+          regionEntryMode: "directory",
+          line1: "10 Qualification Street",
+          city: "Kuala Lumpur",
+          postalCode: "50000",
+          countryCode: "MY",
+          normalizedHash: createHash("sha256")
+            .update("10 qualification street||kuala lumpur||50000|my")
+            .digest("hex"),
+          isPrimary: true,
+        },
+      ],
+      contactPersons: [
+        {
+          clientItemKey: contactKey,
+          definitionFieldCode: "contact.primary",
+          contactName: "Qualification contact",
+          isPrimary: true,
+        },
+      ],
+      contactChannels: [
+        {
+          clientItemKey: randomUUID(),
+          definitionFieldCode: "contact.channel.email",
+          contactClientItemKey: contactKey,
+          channelType: "email",
+          value: `p2-${key}@example.invalid`,
+          purpose: "default",
+          isPrimary: true,
+        },
+      ],
+    },
+  });
+  return created.request.id;
+}
+
+async function verifyPdf(actor:any,jobId:string,result:any){
+ const link=await call(actor,`/api/relay/governance/process-documents/jobs/${jobId}/download`,{});
+ const r=await actor.get(link.url);assert.equal(r.status(),200);const bytes=await r.body();assert.equal(bytes.subarray(0,5).toString(),"%PDF-");assert.equal(createHash("sha256").update(bytes).digest("hex"),result.sha256);
+ return {jobId,attachmentVersionId:result.attachmentVersionId,sha256:result.sha256,bytes:bytes.length};
+}
+
+const browser=await chromium.launch();
+async function delivered(id:string,milestone:string){
+ for(let n=0;n<24;n++){
+  execFileSync('node',['tooling/scripts/verification/sweep-supplier-communications-dev.mjs']);
+  const rows=JSON.parse(execFileSync('docker',['exec','athyper-dev-db-1','psql','-U','postgres','-d','athyper_neon','-At','-c',`SELECT coalesce(json_agg(x),'[]'::json) FROM (SELECT d.channel,d.status FROM event.notification_delivery d JOIN event.notification_message m ON m.id=d.message_id WHERE m.entity_id='${id}'::uuid AND m.event_code='supplier.onboarding.notice.${milestone}') x`],{encoding:'utf8'}));
+  if(rows.length===2&&rows.every((r:any)=>r.status==='delivered'))return;
+  await new Promise(r=>setTimeout(r,1500));
+ }throw Error(milestone+' did not deliver while eligible');
+}
+async function click(page:any,name:string){const response=page.waitForResponse((r:any)=>r.url().endsWith('/information')&&r.request().method()==='POST');await page.getByRole('button',{name,exact:true}).click();assert.equal((await response).status(),200);}
+try{
+ const id=await create('basic');report.caseId=id;save();const submitted=await submit(id);report.process=submitted.process;await pack(submitted.process);
+ const owner=await browser.newContext({baseURL:origin,ignoreHTTPSErrors:true,storageState:'tests/e2e/.auth/dev/neon/catl.owner.json'}),maker=await browser.newContext({baseURL:origin,ignoreHTTPSErrors:true,storageState:'tests/e2e/.auth/dev/neon/catl.admin.json'});
+ const p=await owner.newPage(),m=await maker.newPage();await p.goto(`/mdg/business-partner/requests/${id}`);
+ await p.getByLabel('Question for the requester',{exact:true}).fill('Please confirm the operating address is current.');await click(p,'Request information');
+ await delivered(id,'information_requested');report.checks.push('Reviewer browser requests information; one eligible email and inbox notice delivered');save();
+ await m.goto(`/mdg/business-partner/requests/${id}`);await m.getByLabel('Your clarification',{exact:true}).fill('The operating address is current and the submitted evidence is unchanged.');await click(m,'Send response');
+ await delivered(id,'information_answered');report.checks.push('Requester browser responds; one eligible email and inbox notice delivered');save();
+ await p.reload();await click(p,'Accept response and resume review');assert.equal((await view(id)).information.at(-1).state,'resolved');
+ mkdirSync('governance/policy/reports/task-rules-information-browser.dev',{recursive:true});await p.screenshot({path:'governance/policy/reports/task-rules-information-browser.dev/resolved.png',fullPage:true});report.checks.push('Reviewer browser accepts clarification and resumes review');
+ await vote(id);assert.equal((await get(id)).request.caseStatus,'approved');report.passed=true;
+}catch(error){report.error=String(error);throw error;}finally{save();await browser.close();await client.dispose();await reviewer.dispose();console.log(JSON.stringify(report));}

@@ -1,0 +1,216 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_identifier/core",
+  "entityCode": "business_partner_identifier",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "sourceObjects": [
+      "master.business_partner_identifier"
+    ],
+    "primaryObject": "master.business_partner_identifier",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.business_partner_identifier",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_identifier.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "business_partner_id",
+      "binding": {
+        "sourceObject": "master.business_partner_identifier",
+        "column": "business_partner_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_identifier.core.fields.business_partner_id.label",
+        "defaultText": "Business Partner Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid"
+    },
+    {
+      "key": "identifier_value",
+      "binding": {
+        "sourceObject": "master.business_partner_identifier",
+        "column": "identifier_value"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_identifier.core.fields.identifier_value.label",
+        "defaultText": "Identifier Value"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "masked_only",
+      "storageType": "text",
+      "protection": {
+        "normalProjection": {
+          "mode": "masked",
+          "maskedDisplay": "••••",
+          "plaintextInNormalQueries": false
+        },
+        "sensitivity": "restricted"
+      }
+    },
+    {
+      "key": "scheme_code",
+      "binding": {
+        "sourceObject": "master.business_partner_identifier",
+        "column": "scheme_code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_identifier.core.fields.scheme_code.label",
+        "defaultText": "Identifier Scheme"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "issuing_country_code",
+      "binding": {
+        "sourceObject": "master.business_partner_identifier",
+        "column": "issuing_country_code"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_identifier.core.fields.issuing_country_code.label",
+        "defaultText": "Issuing Country"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "character(2)"
+    },
+    {
+      "key": "issued_at",
+      "binding": {
+        "sourceObject": "master.business_partner_identifier",
+        "column": "issued_at"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_identifier.core.fields.issued_at.label",
+        "defaultText": "Issued On"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "date"
+    },
+    {
+      "key": "effective_until",
+      "binding": {
+        "sourceObject": "master.business_partner_identifier",
+        "column": "effective_until"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_identifier.core.fields.effective_until.label",
+        "defaultText": "Effective Until"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "date"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.business_partner_identifier",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_identifier",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_identifier",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:624924ca8441088e17c4c636057fdc4dccaf78344eecab51c445f495879557c1"
+}

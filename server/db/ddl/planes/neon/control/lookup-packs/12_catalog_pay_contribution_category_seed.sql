@@ -23,7 +23,7 @@ END $guard$;
 INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
-  ('master.pay_contribution_category', 'Pay Contribution Category', 'Category of statutory contribution (pension, health, social_security, housing, insurance, other). is_extensible=false ??? contribution categories map to statutory scheme types.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('master.pay_contribution_category', 'Pay Contribution Category', 'Category of statutory contribution (pension, health, social_security, housing, insurance, other). is_extensible=false — contribution categories map to statutory scheme types.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,

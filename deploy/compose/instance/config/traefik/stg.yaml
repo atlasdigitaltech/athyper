@@ -1,0 +1,42 @@
+http:
+  routers:
+    iam: { rule: Host(`iam.stg.athyper.test`), entryPoints: [web], service: iam }
+    api: { rule: Host(`api.stg.athyper.test`), entryPoints: [web], service: api-failover }
+    neon: { rule: Host(`neon.stg.athyper.test`), entryPoints: [web], service: neon-failover }
+    mesh: { rule: Host(`mesh.stg.athyper.test`), entryPoints: [web], service: mesh-failover }
+    studio: { rule: Host(`studio.stg.athyper.test`), entryPoints: [web], service: studio-failover }
+    fallback: { rule: PathPrefix(`/`), entryPoints: [web], service: problem, priority: 1 }
+  services:
+    api-failover: { failover: { healthCheck: {}, service: api, fallback: problem } }
+    neon-failover: { failover: { healthCheck: {}, service: neon, fallback: outage } }
+    mesh-failover: { failover: { healthCheck: {}, service: mesh, fallback: outage } }
+    studio-failover: { failover: { healthCheck: {}, service: studio, fallback: outage } }
+    iam: { loadBalancer: { servers: [{ url: http://iam:8080 }] } }
+    api:
+      loadBalancer:
+        healthCheck: { path: /livez, interval: 10s, timeout: 3s }
+        servers: [{ url: http://api:4000 }]
+    neon:
+      loadBalancer:
+        healthCheck: { path: /, interval: 10s, timeout: 3s }
+        servers: [{ url: http://neon-web:3000 }]
+    mesh:
+      loadBalancer:
+        healthCheck: { path: /, interval: 10s, timeout: 3s }
+        servers: [{ url: http://mesh-web:3000 }]
+    studio:
+      loadBalancer:
+        healthCheck: { path: /, interval: 10s, timeout: 3s }
+        servers: [{ url: http://studio-web:3000 }]
+    outage:
+      loadBalancer:
+        healthCheck: { path: /healthz, interval: 10s, timeout: 3s }
+        servers: [{ url: http://gateway-outage:8080 }]
+    maintenance:
+      loadBalancer:
+        healthCheck: { path: /healthz, interval: 10s, timeout: 3s }
+        servers: [{ url: http://gateway-outage:8081 }]
+    problem:
+      loadBalancer:
+        healthCheck: { path: /healthz, interval: 10s, timeout: 3s }
+        servers: [{ url: http://gateway-outage:8082 }]

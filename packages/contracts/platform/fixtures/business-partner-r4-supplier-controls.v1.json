@@ -1,0 +1,45 @@
+{
+  "$schema": "athyper.business-partner-r4-fixture/1",
+  "scenarios": [
+    {
+      "id": "BP-SUP-008",
+      "authority": "governed_duplicate_resolution",
+      "status": "foundation_required"
+    },
+    {
+      "id": "BP-SUP-009",
+      "authority": "qualification_bank_readiness_activation",
+      "status": "ui_drivable"
+    },
+    {
+      "id": "BP-SUP-010",
+      "authority": "governed_supplier_lifecycle",
+      "status": "ui_drivable"
+    }
+  ],
+  "invariants": {
+    "readinessIsNotAuthority": true,
+    "activationPinsDecisionFingerprint": true,
+    "qualificationMakerChecker": true,
+    "bankChangeUsesEntityCase": true,
+    "lifecycleUsesEntityCase": true,
+    "optimisticConcurrency": true,
+    "historyPreserved": true,
+    "scoredDuplicateResolutionAvailable": false
+  },
+  "materialization": {
+    "implementationStatus": "local_integration_tested",
+    "command": "master.command_materialize_business_partner_change_case",
+    "kinds": [
+      "change_bank",
+      "deactivate",
+      "reactivate",
+      "archive"
+    ],
+    "bankResult": "bank_verification_started",
+    "independentVerificationRequired": true,
+    "thinRolesTransitioned": false,
+    "evidence": "server/db/scripts/tests/integration/business-partner-r4-change-case.sql",
+    "productionQualified": false
+  }
+}

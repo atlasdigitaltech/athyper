@@ -1,0 +1,131 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.attachments",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "sectionKey": "attachments",
+  "rendererKey": "platform.attachments.v1",
+  "dataBinding": {
+    "serviceKey": "platform.attachments.v1",
+    "ownerEntityCode": "business_partner",
+    "includeInAggregate": false
+  },
+  "authorization": {
+    "viewPermission": "neon.collaboration.attachment.read",
+    "permissionStatus": "proposed_requires_catalog_verification",
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "load": "on_visible",
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "dependencies": [
+    "business_partner/core",
+    "business_partner/operation"
+  ],
+  "availableOperations": [
+    {
+      "key": "create",
+      "permissionCode": "neon.collaboration.attachment.create",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.attachments.create.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "finalize",
+      "permissionCode": "neon.collaboration.attachment.finalize",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.attachments.finalize.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "download",
+      "permissionCode": "neon.collaboration.attachment.download",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.attachments.download.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "version",
+      "permissionCode": "neon.collaboration.attachment.create",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.attachments.version.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "rename",
+      "permissionCode": "neon.collaboration.attachment.create",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.attachments.rename.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "category",
+      "permissionCode": "neon.collaboration.attachment.create",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.attachments.category.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "folder",
+      "permissionCode": "neon.collaboration.attachment.create",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.attachments.folder.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "archive",
+      "permissionCode": "neon.collaboration.attachment.archive",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.attachments.archive.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "unlink",
+      "permissionCode": "neon.collaboration.attachment.archive",
+      "permissionStatus": "verified_source_contract",
+      "execution": {
+        "handlerKey": "platform.attachments.unlink.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    }
+  ],
+  "artifactHash": "sha256:8c9682da244e64b2f363c9399dec80bc84ab5ab1d5d533ccecd620b64d23a74e"
+}

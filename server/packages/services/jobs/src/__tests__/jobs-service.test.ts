@@ -26,13 +26,13 @@ describe("jobs service", () => {
 
   it("reconciles plane-qualified schedules and removes stale definitions", async () => {
     const upsert = vi.fn(async () => undefined);
-    const remove = vi.fn(async () => true);
+    const remove = vi.fn(async (id: string) => id === "neon:schedule-1");
     const markReconciled = vi.fn(async () => undefined);
     let enabled = true;
     const reconciler = createJobScheduleReconciler({
       planes: ["studio", "neon", "mesh"],
       catalog: createJobDefinitionCatalog([definition]),
-      scheduler: { upsert, remove },
+      scheduler: { upsert, remove, listScheduleIds: async () => ["neon:schedule-1"] },
       repository: {
         listActive: async (planeKey) => enabled && planeKey === "neon" ? [{
           id: "schedule-1",
@@ -53,12 +53,12 @@ describe("jobs service", () => {
     });
 
     await expect(reconciler.reconcile()).resolves.toEqual({ upserted: 1, removed: 0 });
-    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ scheduleId: "neon:notification-discovery" }));
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ scheduleId: "neon:schedule-1" }));
     expect(markReconciled).toHaveBeenCalledWith(expect.objectContaining({ planeKey: "neon" }));
 
     enabled = false;
     await expect(reconciler.reconcile()).resolves.toEqual({ upserted: 0, removed: 1 });
-    expect(remove).toHaveBeenCalledWith("neon:notification-discovery");
+    expect(remove).toHaveBeenCalledWith("neon:schedule-1");
   });
 
   it("records only explicitly governed jobs during migration", async () => {
@@ -95,7 +95,7 @@ describe("jobs service", () => {
 
   it("governs retry and replay through durable command evidence", async () => {
     const recordCommand = vi.fn(async () => undefined);
-    const enqueue = vi.fn(async () => "replacement-job");
+    const enqueue = vi.fn<import("@athyper/server-contract-jobs").JobPublisher["enqueue"]>(async () => "replacement-job");
     const retry = vi.fn(async () => true);
     const service = createJobAdministrationService({
       store: {
@@ -107,6 +107,9 @@ describe("jobs service", () => {
           name: "notifications.dispatch",
           data: { tenantId: "22222222-2222-4222-8222-222222222222" },
           maxAttempts: 5,
+          attempt: 5,
+          subject: { entityCode: "notification", recordId: "record-1" },
+          payloadSchema: { name: "notification.dispatch", version: 2 },
         }),
         recordCommand,
         listDeadLetters: async () => [],
@@ -133,6 +136,13 @@ describe("jobs service", () => {
       expect.any(Object),
       expect.objectContaining({ execution: request.execution, maxAttempts: 5 }),
     );
-    expect(recordCommand).toHaveBeenCalledTimes(2);
+    expect(recordCommand).toHaveBeenCalledWith(expect.objectContaining({ command: "retry", expectedAttempt: 5 }));
+    const replayOptions = enqueue.mock.calls[0]?.[3];
+    await service.replay(request);
+    expect(enqueue).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), expect.any(Object), expect.objectContaining({
+      subject: { entityCode: "notification", recordId: "record-1" }, payloadSchema: { name: "notification.dispatch", version: 2 },
+    }));
+    expect(enqueue.mock.calls[1]?.[3]).not.toEqual(replayOptions);
+    expect(recordCommand).toHaveBeenCalledTimes(3);
   });
 });

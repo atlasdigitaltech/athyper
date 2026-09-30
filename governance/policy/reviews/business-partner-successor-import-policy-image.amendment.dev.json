@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated_qualification_execution_image_amendment",
+  "priorGrantProposalRevision": "280d21697b211092fe33b4030fd3cf6d8b08fba029dfb37438d6817e9ac469e4",
+  "priorImage": "sha256:c377e1dc9dde65cd727d4fadef8eeea936ed3ec26c12ab1b20d2e6741e606906",
+  "runtimeImage": "sha256:6d367240cc4c0252f599e45355331dcb00a40d6c50860a9f4e3a314e00c7bfe9",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "account": "catl.admin",
+  "permissions": [
+    {
+      "id": "01a087c3-4587-7c85-8beb-e83e9872f598",
+      "code": "neon.relationship.bp_target.export"
+    },
+    {
+      "id": "01a087c3-4587-7f94-9891-95324d5ab6fa",
+      "code": "neon.relationship.bp_target.import"
+    }
+  ],
+  "effectiveFrom": "2026-09-11T02:15:00Z",
+  "effectiveUntil": "2026-09-11T06:15:00Z",
+  "grantMutations": [],
+  "scopeChange": false,
+  "extendGrantWindow": false,
+  "changes": [
+    "Register the reviewed governed-import permission in the business policy gate, requiring proposal-only and maker/checker facts from the owning service.",
+    "Supply those facts from the governed-import owner; retain per-row scope, case-create authorization and validation.",
+    "Keep independent collection work coordinates in Atlas row queries; derive shared-record browsing from published directory metadata.",
+    "Persist build-time registry metadata, reduce fetch concurrency and increase timeout; external packaged dependencies unchanged."
+  ],
+  "regressionTestsPassed": 27,
+  "sharedDevActivationAuthorized": false,
+  "requiresExplicitAcceptance": true,
+  "previousExecutionAmendmentRevision": "b893dafc735cc1db22becfe920df04837bff8da7e520ecfcac9a3c2b8508f3d4",
+  "buildEvidence": "governance/policy/reports/business-partner-import-policy-successor-build.dev.json",
+  "revision": "09c286bf20e9389437f4cb4f55feaeec03040c6a7975e5d5acc48c580dff2913"
+}

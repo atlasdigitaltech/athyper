@@ -1,0 +1,641 @@
+{
+  "schema": "athyper.master-data.local-review.v1",
+  "environment": "local",
+  "status": "passed_local",
+  "findingsFixed": [
+    "missing_verification_authority_fallback",
+    "verification_authority_input_races",
+    "uuid_case_split_advisory_locks"
+  ],
+  "tests": {
+    "focusedServiceAndRouteTests": 89,
+    "postgresqlTests": 22,
+    "hostTests": 17,
+    "typescriptBuild": "passed"
+  },
+  "sixRouteAcceptance": {
+    "runId": "ef779729-72c4-45de-99f9-7d2e3b4eee7f",
+    "environment": "local",
+    "startedAt": "2026-09-06T22:21:28.331Z",
+    "complete": true,
+    "authenticationMethod": "Keycloak admin-assisted development SSO; ordinary Neon session/CSRF relay",
+    "verificationFixture": "Local Ed25519 provider test fixture; bound to stored contacts created by this run. This is API signature acceptance, not email ownership testing.",
+    "identities": [
+      {
+        "username": "catl.admin",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+        "masterDataPermissions": [
+          "neon.relationship.business_partner.activate",
+          "neon.relationship.business_partner.create",
+          "neon.relationship.business_partner.read",
+          "neon.relationship.business_partner.read_address_sensitive",
+          "neon.relationship.business_partner.read_contact_sensitive",
+          "neon.relationship.business_partner.update",
+          "neon.relationship.business_partner.verify_contact",
+          "neon.relationship.business_partner.write_address_sensitive",
+          "neon.relationship.business_partner.write_contact_sensitive"
+        ]
+      },
+      {
+        "username": "catl.owner",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+        "masterDataPermissions": [
+          "neon.relationship.business_partner.read",
+          "neon.relationship.business_partner.read_address_sensitive",
+          "neon.relationship.business_partner.read_contact_sensitive",
+          "neon.relationship.business_partner.update",
+          "neon.relationship.business_partner.verify_contact",
+          "neon.relationship.business_partner.write_address_sensitive",
+          "neon.relationship.business_partner.write_contact_sensitive"
+        ]
+      },
+      {
+        "username": "catl.finance",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "principalId": "d04198ac-53cf-5e94-969f-b6f75f176fa2",
+        "masterDataPermissions": []
+      },
+      {
+        "username": "athyper.admin",
+        "tenantId": "11111111-1111-4111-8111-111111111111",
+        "principalId": "d4250b08-6e5e-5887-b4e1-6f3eb31d7c8c",
+        "masterDataPermissions": [
+          "neon.relationship.business_partner.activate",
+          "neon.relationship.business_partner.create",
+          "neon.relationship.business_partner.read",
+          "neon.relationship.business_partner.update"
+        ]
+      },
+      {
+        "username": "athyper.owner",
+        "tenantId": "11111111-1111-4111-8111-111111111111",
+        "principalId": "71667bf5-941b-5f6d-aab0-355e39c0bbde",
+        "masterDataPermissions": []
+      }
+    ],
+    "checks": [
+      {
+        "label": "catl.admin",
+        "route": "contact.create",
+        "status": 200
+      },
+      {
+        "label": "catl.admin",
+        "route": "address.create",
+        "status": 200
+      },
+      {
+        "label": "catl.admin",
+        "route": "profile.read",
+        "status": 200
+      },
+      {
+        "label": "catl.admin",
+        "route": "contact.verify",
+        "status": 200
+      },
+      {
+        "label": "catl.admin",
+        "route": "contact.verify.replay",
+        "status": 409,
+        "code": "VERIFICATION_EVIDENCE_REPLAY"
+      },
+      {
+        "label": "catl.owner",
+        "route": "contact.create",
+        "status": 200
+      },
+      {
+        "label": "catl.owner",
+        "route": "address.create",
+        "status": 200
+      },
+      {
+        "label": "catl.owner",
+        "route": "profile.read",
+        "status": 200
+      },
+      {
+        "label": "catl.owner",
+        "route": "contact.verify",
+        "status": 200
+      },
+      {
+        "label": "catl.owner",
+        "route": "contact.verify.replay",
+        "status": 409,
+        "code": "VERIFICATION_EVIDENCE_REPLAY"
+      },
+      {
+        "label": "catl.admin outside organization scope",
+        "route": "contact.create",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.admin outside organization scope",
+        "route": "address.create",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.admin outside organization scope",
+        "route": "profile.read",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.admin outside organization scope",
+        "route": "contact.verify",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.admin outside organization scope",
+        "route": "contact.deactivate",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.admin outside organization scope",
+        "route": "address.deactivate",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.admin outside organization scope",
+        "route": "denial.effects",
+        "unchanged": true,
+        "piiNotReturned": true
+      },
+      {
+        "label": "catl.owner outside sensitive organization scope",
+        "route": "contact.create",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.owner outside sensitive organization scope",
+        "route": "address.create",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.owner outside sensitive organization scope",
+        "route": "profile.read",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.owner outside sensitive organization scope",
+        "route": "contact.deactivate",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.owner outside sensitive organization scope",
+        "route": "address.deactivate",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.owner outside sensitive organization scope",
+        "route": "denial.effects",
+        "unchanged": true,
+        "piiNotReturned": true
+      },
+      {
+        "label": "catl.owner retained organization A verification grant",
+        "route": "contact.verify",
+        "status": 409,
+        "code": "VERIFICATION_EVIDENCE_REPLAY"
+      },
+      {
+        "label": "catl.finance without sensitive permissions",
+        "route": "contact.create",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.finance without sensitive permissions",
+        "route": "address.create",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.finance without sensitive permissions",
+        "route": "profile.read",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.finance without sensitive permissions",
+        "route": "contact.verify",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.finance without sensitive permissions",
+        "route": "contact.deactivate",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.finance without sensitive permissions",
+        "route": "address.deactivate",
+        "status": 403,
+        "code": "FORBIDDEN"
+      },
+      {
+        "label": "catl.finance without sensitive permissions",
+        "route": "denial.effects",
+        "unchanged": true,
+        "piiNotReturned": true
+      },
+      {
+        "label": "athyper.admin foreign tenant",
+        "route": "contact.create",
+        "status": 404,
+        "code": "OWNER_NOT_FOUND"
+      },
+      {
+        "label": "athyper.admin foreign tenant",
+        "route": "address.create",
+        "status": 404,
+        "code": "OWNER_NOT_FOUND"
+      },
+      {
+        "label": "athyper.admin foreign tenant",
+        "route": "profile.read",
+        "status": 404,
+        "code": "OWNER_NOT_FOUND"
+      },
+      {
+        "label": "athyper.admin foreign tenant",
+        "route": "contact.verify",
+        "status": 404,
+        "code": "CONTACT_NOT_FOUND"
+      },
+      {
+        "label": "athyper.admin foreign tenant",
+        "route": "contact.deactivate",
+        "status": 404,
+        "code": "CONTACT_NOT_FOUND"
+      },
+      {
+        "label": "athyper.admin foreign tenant",
+        "route": "address.deactivate",
+        "status": 404,
+        "code": "ADDRESS_LINK_NOT_FOUND"
+      },
+      {
+        "label": "athyper.admin foreign tenant",
+        "route": "denial.effects",
+        "unchanged": true,
+        "piiNotReturned": true
+      },
+      {
+        "label": "athyper.owner foreign tenant",
+        "route": "contact.create",
+        "status": 404,
+        "code": "OWNER_NOT_FOUND"
+      },
+      {
+        "label": "athyper.owner foreign tenant",
+        "route": "address.create",
+        "status": 404,
+        "code": "OWNER_NOT_FOUND"
+      },
+      {
+        "label": "athyper.owner foreign tenant",
+        "route": "profile.read",
+        "status": 404,
+        "code": "OWNER_NOT_FOUND"
+      },
+      {
+        "label": "athyper.owner foreign tenant",
+        "route": "contact.verify",
+        "status": 404,
+        "code": "CONTACT_NOT_FOUND"
+      },
+      {
+        "label": "athyper.owner foreign tenant",
+        "route": "contact.deactivate",
+        "status": 404,
+        "code": "CONTACT_NOT_FOUND"
+      },
+      {
+        "label": "athyper.owner foreign tenant",
+        "route": "address.deactivate",
+        "status": 404,
+        "code": "ADDRESS_LINK_NOT_FOUND"
+      },
+      {
+        "label": "athyper.owner foreign tenant",
+        "route": "denial.effects",
+        "unchanged": true,
+        "piiNotReturned": true
+      },
+      {
+        "label": "anonymous",
+        "route": "contact.create",
+        "status": 401,
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      {
+        "label": "anonymous",
+        "route": "address.create",
+        "status": 401,
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      {
+        "label": "anonymous",
+        "route": "profile.read",
+        "status": 401,
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      {
+        "label": "anonymous",
+        "route": "contact.verify",
+        "status": 401,
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      {
+        "label": "anonymous",
+        "route": "contact.deactivate",
+        "status": 401,
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      {
+        "label": "anonymous",
+        "route": "address.deactivate",
+        "status": 401,
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      {
+        "label": "anonymous",
+        "route": "denial.effects",
+        "unchanged": true,
+        "piiNotReturned": true
+      },
+      {
+        "label": "catl.admin",
+        "route": "contact.create.second-target",
+        "status": 200
+      },
+      {
+        "label": "catl.admin",
+        "route": "contact.verify.wrong-target",
+        "status": 422,
+        "code": "VERIFICATION_EVIDENCE_INVALID"
+      },
+      {
+        "label": "catl.admin",
+        "route": "contact.deactivate",
+        "status": 204
+      },
+      {
+        "label": "catl.admin",
+        "route": "address.deactivate",
+        "status": 204
+      },
+      {
+        "label": "catl.admin",
+        "route": "profile.after-deactivate",
+        "status": 200
+      },
+      {
+        "label": "catl.admin",
+        "route": "profile.historical-contact",
+        "status": 200
+      },
+      {
+        "label": "catl.admin",
+        "route": "profile.historical-address",
+        "status": 200
+      },
+      {
+        "label": "catl.owner",
+        "route": "contact.deactivate",
+        "status": 204
+      },
+      {
+        "label": "catl.owner",
+        "route": "address.deactivate",
+        "status": 204
+      },
+      {
+        "label": "catl.owner",
+        "route": "profile.after-deactivate",
+        "status": 200
+      },
+      {
+        "label": "catl.owner",
+        "route": "profile.historical-contact",
+        "status": 200
+      },
+      {
+        "label": "catl.owner",
+        "route": "profile.historical-address",
+        "status": 200
+      },
+      {
+        "label": "catl.admin",
+        "route": "contact.deactivate.second-target",
+        "status": 204
+      }
+    ],
+    "fixtures": [
+      {
+        "username": "catl.admin",
+        "ownerId": "f7688c3d-8c92-5651-a469-da3f4f786375",
+        "organizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+        "contactId": "01a078cf-f1c7-79de-bcb4-c95d5359fb3f",
+        "addressLinkId": "01a078cf-f21e-75ae-8bde-3e09455a9165",
+        "effects": {
+          "audit": [
+            {
+              "count": 1,
+              "event_code": "master.address.deactivated"
+            },
+            {
+              "count": 1,
+              "event_code": "master.address.linked"
+            },
+            {
+              "count": 1,
+              "event_code": "master.contact.created"
+            },
+            {
+              "count": 1,
+              "event_code": "master.contact.deactivated"
+            },
+            {
+              "count": 1,
+              "event_code": "master.contact.verification_changed"
+            }
+          ],
+          "outbox": [
+            {
+              "count": 1,
+              "event_type": "master.address.deactivated"
+            },
+            {
+              "count": 1,
+              "event_type": "master.address.linked"
+            },
+            {
+              "count": 1,
+              "event_type": "master.contact.created"
+            },
+            {
+              "count": 1,
+              "event_type": "master.contact.deactivated"
+            },
+            {
+              "count": 1,
+              "event_type": "master.contact.verification_changed"
+            }
+          ]
+        }
+      },
+      {
+        "username": "catl.owner",
+        "ownerId": "ea76b2b4-c089-5052-8a3b-ac9917a77598",
+        "organizationId": "24267903-6196-5846-8322-43a8e35c9630",
+        "contactId": "01a078cf-f625-7eb7-8c99-a50c49eafdb1",
+        "addressLinkId": "01a078cf-f666-7b2e-8e15-d4815ff6c8d7",
+        "effects": {
+          "audit": [
+            {
+              "count": 1,
+              "event_code": "master.address.deactivated"
+            },
+            {
+              "count": 1,
+              "event_code": "master.address.linked"
+            },
+            {
+              "count": 1,
+              "event_code": "master.contact.created"
+            },
+            {
+              "count": 1,
+              "event_code": "master.contact.deactivated"
+            },
+            {
+              "count": 1,
+              "event_code": "master.contact.verification_changed"
+            }
+          ],
+          "outbox": [
+            {
+              "count": 1,
+              "event_type": "master.address.deactivated"
+            },
+            {
+              "count": 1,
+              "event_type": "master.address.linked"
+            },
+            {
+              "count": 1,
+              "event_type": "master.contact.created"
+            },
+            {
+              "count": 1,
+              "event_type": "master.contact.deactivated"
+            },
+            {
+              "count": 1,
+              "event_type": "master.contact.verification_changed"
+            }
+          ]
+        }
+      }
+    ],
+    "secondContactId": "01a078d0-0759-77ae-bfb0-2dc22cb39da4",
+    "finishedAt": "2026-09-06T22:21:35.519Z"
+  },
+  "runtimeImage": "sha256:e9b0a7f9e4fb3af0e404f2422a3fcfd2c2e1b0a7c0c802a077ebee744f434303",
+  "baseImage": "athyper/runtime-server:control-admin-local-20260907",
+  "report": "docs/runbooks/master-data-local-review-20260907.md",
+  "nonlocalDeployments": "open_deferred",
+  "mailpitAcceptance": [
+    {
+      "username": "catl.admin",
+      "contactId": "01a0783e-5c32-7e27-b261-6a033b5d063e",
+      "challengeId": "aee7f629-1b9c-4c14-b8d6-8f29e48f2b3f",
+      "requestStatus": 202,
+      "confirmation": "verified",
+      "replay": "rejected",
+      "delivery": "durable_mailpit",
+      "getConsumed": false
+    },
+    {
+      "username": "catl.owner",
+      "contactId": "01a0783e-5c33-76f8-9dac-acfad78f3f2d",
+      "challengeId": "1356db14-6719-4aae-afb5-b321837d835e",
+      "requestStatus": 202,
+      "confirmation": "verified",
+      "replay": "rejected",
+      "delivery": "durable_mailpit",
+      "getConsumed": false
+    },
+    {
+      "username": "athyper.admin",
+      "requestStatus": 403,
+      "outcome": "tenant_denied"
+    },
+    {
+      "username": "athyper.owner",
+      "requestStatus": 403,
+      "outcome": "tenant_denied"
+    }
+  ],
+  "health": {
+    "checkedAt": "2026-09-06T22:23:14.321Z",
+    "environment": "local",
+    "keys": {
+      "keyId": "local-contact-challenge-v1",
+      "trustKeyIds": [
+        "local-contact-challenge-v1"
+      ],
+      "expiresAt": "2026-12-05T19:19:53.727Z",
+      "remainingDays": 89,
+      "validNow": true
+    },
+    "queue": {
+      "pending": 0,
+      "expiredLeases": 0,
+      "expiredPending": 0,
+      "oldestPendingSeconds": 0,
+      "terminalFailuresLastDay": 0
+    },
+    "runtime": {
+      "api": {
+        "running": true,
+        "health": "healthy",
+        "image": "sha256:e9b0a7f9e4fb3af0e404f2422a3fcfd2c2e1b0a7c0c802a077ebee744f434303"
+      },
+      "worker": {
+        "running": true,
+        "health": "healthy",
+        "image": "sha256:e9b0a7f9e4fb3af0e404f2422a3fcfd2c2e1b0a7c0c802a077ebee744f434303"
+      },
+      "scheduler": {
+        "running": true,
+        "health": "healthy",
+        "image": "sha256:e9b0a7f9e4fb3af0e404f2422a3fcfd2c2e1b0a7c0c802a077ebee744f434303"
+      },
+      "neon-web": {
+        "running": true,
+        "health": "healthy",
+        "image": "sha256:bc6f2a050799b8e1ac269d034159e5dd1819aed11c3f7b059dab850e01e2ec9f"
+      }
+    },
+    "alerts": [],
+    "status": "healthy"
+  }
+}

@@ -1,11 +1,17 @@
+import { compactAtlasReplayContent } from "./message-lineage.js";
 import { randomUUID } from "node:crypto";
-import type { AtlasContentBlock, AtlasMessage, AtlasModelMessage, AtlasRetentionPolicyResolver, AtlasThread, AtlasThreadAuthorizer, AtlasThreadExport, AtlasThreadMaintenanceAuthority, AtlasThreadRepository } from "@athyper/server-contract-ai";
+import type { AtlasHistoryCitation, AtlasContentBlock, AtlasMessage, AtlasModelMessage, AtlasRetentionPolicyResolver, AtlasThread, AtlasThreadAuthorizer, AtlasThreadExport, AtlasThreadMaintenanceAuthority, AtlasThreadRepository } from "@athyper/server-contract-ai";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { assertAtlasContext } from "./context.js";
 import { AtlasServiceError } from "./errors.js";
 
 export interface AtlasThreadServiceOptions {
   readonly repository: AtlasThreadRepository;
+  /** Must load durable lineage and reauthorize every dependency, including inherited
+   * history and attachments. Missing lineage/authorizer denies further disclosure. */
+  readonly disclosure?: {
+    authorize(input: { readonly context: VerifiedRequestContext; readonly messageId: string }): Promise<boolean>;
+  };
   readonly authorizer: AtlasThreadAuthorizer;
   readonly retention: AtlasRetentionPolicyResolver;
   readonly maintenance?: AtlasThreadMaintenanceAuthority;
@@ -43,7 +49,8 @@ export class AtlasThreadService {
   }
   async messages(context: VerifiedRequestContext, threadId: string, limit?: number, beforeSequence?: number) {
     const thread = await this.requireThread(context, threadId); await this.authorize(context, "read", thread);
-    return this.options.repository.listMessages({ context, threadId, limit: boundedLimit(limit, this.maxPageSize), ...(beforeSequence === undefined ? {} : { beforeSequence }) });
+    const page = await this.options.repository.listMessages({ context, threadId, limit: boundedLimit(limit, this.maxPageSize), ...(beforeSequence === undefined ? {} : { beforeSequence }) });
+    return { ...page, items: await this.disclosable(context, page.items) };
   }
   async rename(context: VerifiedRequestContext, threadId: string, title: string, expectedRowVersion: number): Promise<AtlasThread> {
     const thread = await this.requireThread(context, threadId); await this.authorize(context, "manage", thread);
@@ -62,6 +69,7 @@ export class AtlasThreadService {
   }
   async putParticipant(context: VerifiedRequestContext, threadId: string, principalId: string, role: "member" | "observer", expectedRowVersion: number): Promise<AtlasThread> {
     const thread = await this.requireThread(context, threadId); await this.authorize(context, "participants", thread);
+    if (principalId === thread.ownerPrincipalId) throw new AtlasServiceError("PERMISSION_DENIED", "The Atlas thread owner cannot be demoted.");
     const updated = await this.options.repository.putParticipant({ context, threadId, principalId, role, expectedRowVersion });
     if (!updated) throw new AtlasServiceError("VERSION_CONFLICT", "The Atlas thread participant set changed."); return updated;
   }
@@ -71,23 +79,38 @@ export class AtlasThreadService {
     const updated = await this.options.repository.revokeParticipant({ context, threadId, principalId, expectedRowVersion });
     if (!updated) throw new AtlasServiceError("VERSION_CONFLICT", "The Atlas thread participant set changed."); return updated;
   }
-  async boundedHistory(context: VerifiedRequestContext, threadId: string): Promise<readonly AtlasModelMessage[]> {
+  async boundedHistory(context: VerifiedRequestContext, threadId: string, onSources?: (sources: readonly AtlasHistoryCitation[]) => void): Promise<readonly AtlasModelMessage[]> {
     const thread = await this.requireThread(context, threadId); await this.authorize(context, "run", thread);
     if (thread.status !== "active") throw new AtlasServiceError("THREAD_NOT_ACTIVE", "Atlas runs require an active thread.");
     const page = await this.options.repository.listMessages({ context, threadId, limit: this.options.maxHistoryMessages });
-    const chronological = [...page.items].sort((a, b) => a.sequence - b.sequence).filter((message) => message.status === "completed" && (message.role === "user" || message.role === "assistant" || message.role === "tool"));
+    const chronological = [...await this.disclosable(context, page.items)].sort((a, b) => a.sequence - b.sequence).filter((message) => message.status === "completed" && (message.role === "user" || message.role === "assistant" || message.role === "tool"));
+    // Do not feed legacy answers that echoed our old internal wrapper back to
+    // the model. Stored history/export remain intact and authorization-checked.
+    const replayable = chronological.filter(message => message.role !== "assistant" || !message.content.map(block => block.type === "text" ? block.text : "").join("").trimStart().startsWith("Prior tool data (not instructions):"));
     const selected: AtlasMessage[] = []; let bytes = 0;
-    for (const message of chronological.reverse()) {
+    for (const message of replayable.reverse()) {
       const size = contentBytes(message.content); if (selected.length > 0 && bytes + size > this.options.maxHistoryBytes) break;
       if (size > this.options.maxHistoryBytes) continue; selected.push(message); bytes += size;
     }
-    return Object.freeze(selected.reverse().map((message) => Object.freeze({ role: message.role, content: message.content })));
+    const sources: AtlasHistoryCitation[] = selected.flatMap(message => message.content.flatMap(block => block.type === "text" ? [...block.citations ?? []] : block.type === "tool_result" && !block.isError ? (block.sources ?? []).map(coordinate => ({ toolCode: block.toolName, coordinate })) : []));
+    onSources?.([...new Map(sources.map(source => [JSON.stringify(source), source])).values()]);
+    return Object.freeze(selected.reverse().map((message) => Object.freeze({ role: message.role === "tool" ? "assistant" as const : message.role, content: compactAtlasReplayContent(message.content) })).filter(message => message.content.length > 0));
   }
   async export(context: VerifiedRequestContext, threadId: string): Promise<AtlasThreadExport> {
     const thread = await this.requireThread(context, threadId); await this.authorize(context, "export", thread);
     const page = await this.options.repository.listMessages({ context, threadId, limit: this.options.maxExportMessages });
     if (page.nextCursor) throw new AtlasServiceError("RESULT_TOO_LARGE", "The Atlas thread exceeds the configured export limit.");
-    return { schema: "atlas-thread-export/1", exportedAt: this.now().toISOString(), thread: { threadId: thread.threadId, title: thread.title, status: thread.status, createdAt: thread.createdAt, updatedAt: thread.updatedAt }, messages: page.items.map(({ messageId, sequence, role, status, content, createdAt, terminalAt }) => ({ messageId, sequence, role, status, content, createdAt, terminalAt })) };
+    return { schema: "atlas-thread-export/1", exportedAt: this.now().toISOString(), thread: { threadId: thread.threadId, title: thread.title, status: thread.status, createdAt: thread.createdAt, updatedAt: thread.updatedAt }, messages: (await this.disclosable(context, page.items)).map(({ messageId, sequence, role, status, content, createdAt, terminalAt }) => ({ messageId, sequence, role, status, content, createdAt, terminalAt })) };
+  }
+  async canDiscloseMessage(context: VerifiedRequestContext, messageId: string): Promise<boolean> {
+    assertAtlasContext(context);
+    try { return await this.options.disclosure?.authorize({ context, messageId }) === true; }
+    catch { return false; }
+  }
+  private async disclosable(context: VerifiedRequestContext, messages: readonly AtlasMessage[]): Promise<readonly AtlasMessage[]> {
+    const allowed: AtlasMessage[] = [];
+    for (const message of messages) if (await this.canDiscloseMessage(context, message.messageId)) allowed.push(message);
+    return allowed;
   }
   async purge(asOf = this.now().toISOString(), batchSize = 100) { if (!this.options.maintenance) throw new AtlasServiceError("PERMISSION_DENIED", "Atlas purge authority is not configured."); return this.options.maintenance.purgeEligible({ asOf, batchSize: boundedLimit(batchSize, 1_000) }); }
   private async requireThread(context: VerifiedRequestContext, threadId: string): Promise<AtlasThread> { assertAtlasContext(context); if (!threadId.trim()) throw new AtlasServiceError("INVALID_ARGUMENT", "Atlas thread id is required."); const thread = await this.options.repository.get({ context, threadId }); if (!thread) throw new AtlasServiceError("THREAD_NOT_FOUND", "Atlas thread not found."); if (thread.tenantId !== context.tenantId || thread.planeKey !== context.planeKey) throw new AtlasServiceError("THREAD_NOT_FOUND", "Atlas thread not found."); return thread; }

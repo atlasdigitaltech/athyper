@@ -1,0 +1,4 @@
+apiVersion: athyper.io/v1alpha1
+kind: ResourceProfile
+metadata: { id: workstation-128 }
+spec: { hostMemoryMiB: 131072, wslMemoryMiB: 98304, maxContainerMemoryMiB: 81920, maxContainerCpu: 48, minimumFreeDiskGiB: 250, diskWarningPercent: 20, diskCriticalPercent: 10 }

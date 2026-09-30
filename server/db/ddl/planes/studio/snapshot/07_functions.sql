@@ -537,3 +537,21 @@ BEGIN
         USING ERRCODE = 'object_not_in_prerequisite_state';
 END;
 $$;
+CREATE OR REPLACE FUNCTION snapshot.trg_guard_business_partner_definition_revision()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN RAISE EXCEPTION 'business_partner_definition_revision is immutable' USING ERRCODE='integrity_constraint_violation'; END; $$;
+
+CREATE FUNCTION snapshot.trg_reject_case_contract_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'Case contract publication evidence is immutable'
+        USING ERRCODE = 'integrity_constraint_violation';
+END
+$$;
+
+-- Saved draft comparison history
+CREATE FUNCTION snapshot.guard_entity_draft_save() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'Draft save history is immutable'; END;
+$$;

@@ -1,0 +1,100 @@
+{
+  "schema": "athyper.business-partner-v1-manual-accessibility-review/1",
+  "status": "pending_human_review",
+  "environment": "local_dev",
+  "targetRef": "https://neon.dev.athyper.test",
+  "sourceRevision": "68600dfd3880821ec02196cd2316e660e85b1bce",
+  "caseId": "6e7af673-1eed-440e-9630-a034d064f517",
+  "startedAt": null,
+  "completedAt": null,
+  "standard": "WCAG 2.2 AA",
+  "zoomPercent": 200,
+  "viewports": ["1440x900", "412x915"],
+  "reviewer": {
+    "name": null,
+    "role": null
+  },
+  "assistiveTechnology": {
+    "name": null,
+    "version": null
+  },
+  "browser": {
+    "name": null,
+    "version": null,
+    "testedCandidate": "Google Chrome for Testing 148.0.7778.96"
+  },
+  "automatedEvidence": {
+    "path": "governance/evidence/business-partner/local/2026-09-06/cirrusatlantic-v1-bp-sup-001-e2e.json",
+    "sha256": "6b453b31d750840ec499fd728fa62b51227c12ba885041d9c328af1584fd27c6"
+  },
+  "publicationEvidence": {
+    "path": "governance/evidence/business-partner/local/2026-09-06/cirrusatlantic-v1-case-contract-release-and-activation.json",
+    "sha256": "08c2d34153d8d3998362d8960231decfd670d3f988ba25a25c53d895650baf34"
+  },
+  "checks": [
+    {
+      "id": "create_landmarks_and_names",
+      "result": "pending",
+      "expected": "The New supplier onboarding request heading, landmarks, controls, required state, and instructions are announced in a meaningful order.",
+      "notes": null
+    },
+    {
+      "id": "create_form_labels_and_values",
+      "result": "pending",
+      "expected": "Operating organization, names, country, ownership, supplier type, and qualification type expose their labels, selected values, required state, and validation errors.",
+      "notes": null
+    },
+    {
+      "id": "validation_and_submission_status",
+      "result": "pending",
+      "expected": "Validation outcome, Submit for approval availability, and Pending Approval status are discoverable without visual-only cues.",
+      "notes": null
+    },
+    {
+      "id": "workflow_evidence_navigation",
+      "result": "pending",
+      "expected": "The Workflow section exposes the definition, work item, task owner, task status, and task version with understandable relationships.",
+      "notes": null
+    },
+    {
+      "id": "approval_dialog_keyboard_and_errors",
+      "result": "pending",
+      "expected": "Approve opens from the keyboard; focus enters the dialog; its name, reason requirement, error, buttons, Escape close, and focus restoration are announced.",
+      "notes": null
+    },
+    {
+      "id": "mfa_step_up_transition",
+      "result": "pending",
+      "expected": "Verify with MFA, the authenticator prompt, errors, successful return, and restored approval context are understandable with the screen reader.",
+      "notes": null
+    },
+    {
+      "id": "decision_and_materialization_status",
+      "result": "pending",
+      "expected": "Approved and Applied state changes and Create Business Partner completion are discoverable without relying on color or toast placement.",
+      "notes": null
+    },
+    {
+      "id": "result_and_lineage_proof",
+      "result": "pending",
+      "expected": "Result coordinates, snapshot summary, lineage list, and the bounded-evidence explanation have useful headings and reading order.",
+      "notes": null
+    },
+    {
+      "id": "business_partner_360_navigation",
+      "result": "pending",
+      "expected": "The record identity, role lens, Roles & scope, Supplier role, Procurement & AP, and Accounts payable configuration are operable and announced.",
+      "notes": null
+    },
+    {
+      "id": "zoom_and_responsive_review",
+      "result": "pending",
+      "expected": "At 200% zoom and at 1440x900 and 412x915 viewports, reading order and keyboard focus remain usable without hidden controls or two-dimensional content scrolling.",
+      "notes": null
+    }
+  ],
+  "reviewAttestation": {
+    "statement": "I performed these checks with the named real assistive technology and browser and recorded every observed failure or pass.",
+    "accepted": false
+  }
+}

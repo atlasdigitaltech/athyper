@@ -1,0 +1,314 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "address_link/core",
+  "entityCode": "address_link",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "sourceObjects": [
+      "master.address_link"
+    ],
+    "primaryObject": "master.address_link",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "owner_type_id",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "owner_type_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.owner_type_id.label",
+        "defaultText": "Owner Type Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid"
+    },
+    {
+      "key": "owner_id",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "owner_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.owner_id.label",
+        "defaultText": "Owner Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid"
+    },
+    {
+      "key": "address_id",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "address_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.address_id.label",
+        "defaultText": "Address Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid"
+    },
+    {
+      "key": "purpose",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "purpose"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.purpose.label",
+        "defaultText": "Purpose"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "is_primary",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "is_primary"
+      },
+      "dataType": "boolean",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.is_primary.label",
+        "defaultText": "Is Primary"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "boolean"
+    },
+    {
+      "key": "effective_from",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "effective_from"
+      },
+      "dataType": "date",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.effective_from.label",
+        "defaultText": "Effective From"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "date"
+    },
+    {
+      "key": "effective_until",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "effective_until"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.effective_until.label",
+        "defaultText": "Effective Until"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "date"
+    },
+    {
+      "key": "role_qualifier",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "role_qualifier"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.role_qualifier.label",
+        "defaultText": "Role qualifier"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "attention_line",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "attention_line"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.attention_line.label",
+        "defaultText": "Attention"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "usage_status",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "usage_status"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.usage_status.label",
+        "defaultText": "Usage status"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "usage_denied_reason_code",
+      "binding": {
+        "sourceObject": "master.address_link",
+        "column": "usage_denied_reason_code"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address_link.core.fields.usage_denied_reason_code.label",
+        "defaultText": "Usage denial reason"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "inherited_owner",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "ownerBinding": {
+    "kind": "polymorphic",
+    "ownerTypeResolver": "platform.entity-type.v1",
+    "ownerTypeField": "owner_type_id",
+    "ownerIdField": "owner_id",
+    "tenantEqualityRequired": true,
+    "targetEntityCode": "address",
+    "targetIdField": "address_id",
+    "canonicalTargetUpdate": "explicit_shared_address_command_only"
+  },
+  "dependencies": [
+    "address/core",
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.address_link",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.address_link",
+      "column": "owner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.address_link",
+      "column": "owner_type_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.address_link",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:07c456016f258718fd3a727c041445d5000ecf0002ae97a02eea6cc533cde046"
+}

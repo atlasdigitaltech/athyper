@@ -1,4 +1,8 @@
 export type PublicationPlane = "studio" | "neon" | "mesh";
+import type {
+  CompiledEntityArtifactV2,
+  CompiledEntityReleaseEnvelopeV2,
+} from "./artifact.js";
 export type PublicationCompatibilityLevel =
   | "breaking"
   | "backward_compatible"
@@ -31,7 +35,7 @@ export interface EntityContractProjection {
 export interface EntityDescriptorProjection {
   readonly id: string;
   readonly plane: PublicationPlane;
-  readonly descriptorKind: "entity_runtime";
+  readonly descriptorKind: "entity_runtime" | "entity_case_runtime" | "entity_notifications" | "collection_configuration";
   readonly descriptorSchemaVersion: string;
   readonly sourceContractHash: string;
   readonly compiledHash: string;
@@ -44,6 +48,59 @@ export interface EntityDescriptorProjection {
 export interface EntityRuntimeProjection {
   readonly entityContract: EntityContractProjection;
   readonly entityDescriptor: EntityDescriptorProjection;
+}
+
+/** Prepared split-artifact projection. It is persisted/loaded as immutable release
+ * content; authorization and record data are resolved separately at request time. */
+export interface CompiledEntityRuntimeProjectionV2 {
+  /** Signed adoption scope. Omitted only for a global product publication. */
+  readonly tenantId?: string;
+  /** Application root selected by this publication; child artifacts may model other entities. */
+  readonly entityCode: string;
+  readonly release: CompiledEntityReleaseEnvelopeV2;
+  readonly artifacts: readonly CompiledEntityArtifactV2[];
+  readonly generatedAt: string;
+}
+
+export const BUSINESS_PARTNER_DEFINITION_BUNDLE_SCHEMA_V1 =
+  "athyper.business-partner-definition-bundle.v1" as const;
+
+export interface BusinessPartnerDefinitionBundleV1 {
+  readonly schema: typeof BUSINESS_PARTNER_DEFINITION_BUNDLE_SCHEMA_V1;
+  readonly bundleCode: string;
+  readonly semanticVersion: string;
+  readonly requestSchemas: Readonly<Record<string, unknown>>;
+  readonly fieldPolicies: Readonly<Record<string, unknown>>;
+  readonly validationDeclarations: readonly Readonly<Record<string, unknown>>[];
+  readonly duplicateRules: Readonly<Record<string, unknown>>;
+  readonly formDescriptors: Readonly<Record<string, unknown>>;
+  readonly viewDescriptors: Readonly<Record<string, unknown>>;
+  readonly mappingContracts: Readonly<Record<string, unknown>>;
+  readonly workflowDefinitions: Readonly<Record<string, unknown>>;
+  readonly evidencePolicies: Readonly<Record<string, unknown>>;
+  readonly readinessGates: Readonly<Record<string, unknown>>;
+  readonly reasonCodeCatalog: Readonly<Record<string, string>>;
+  readonly meshSafeSchemas: Readonly<Record<string, unknown>>;
+  readonly compatibilityRules: Readonly<Record<string, unknown>>;
+  readonly sourceContractHashes: Readonly<Record<string, string>>;
+}
+
+export interface BusinessPartnerDefinitionProjection {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly revisionId: string;
+  readonly releaseId: string;
+  readonly releaseNo: number;
+  readonly publicationKey: string;
+  readonly plane: PublicationPlane;
+  readonly bundleCode: string;
+  readonly semanticVersion: string;
+  readonly bundleSchemaVersion: string;
+  readonly bundleHash: string;
+  readonly sourceBundleHash?: string;
+  readonly bundle: BusinessPartnerDefinitionBundleV1;
+  readonly compileReport?: Readonly<Record<string, unknown>>;
+  readonly generatedAt: string;
 }
 
 export type AppliedReleaseStatus = "staged" | "verified" | "active" | "rejected" | "superseded";
@@ -78,7 +135,7 @@ export interface ActiveEntityProjection {
   readonly contractHash: string;
   readonly contract: Readonly<Record<string, unknown>>;
   readonly plane: PublicationPlane;
-  readonly descriptorKind: "entity_runtime";
+  readonly descriptorKind: "entity_runtime" | "entity_case_runtime" | "entity_notifications" | "collection_configuration";
   readonly compiledHash: string;
   readonly descriptor: Readonly<Record<string, unknown>>;
   readonly activatedAt: string;
@@ -91,6 +148,7 @@ export interface LocalProjectionRepository {
   findByDeployment(deploymentId: string): Promise<AppliedReleaseProjection | null>;
   findActive(publicationKey: string): Promise<ActiveReleaseProjection | null>;
   findActiveEntity(publicationKey: string): Promise<ActiveEntityProjection | null>;
+  findActiveBusinessPartnerDefinition?(publicationKey: string): Promise<BusinessPartnerDefinitionProjection | null>;
   rollback(input: RollbackReleaseInput): Promise<ActiveReleaseProjection>;
 }
 
@@ -110,10 +168,14 @@ export interface PublicationVerificationEvidence {
   readonly manifestValid: boolean;
   readonly runtimeCompatible: boolean;
   readonly targetPlane: PublicationPlane;
-  readonly contractHash: string;
-  readonly descriptorSourceHash: string;
-  readonly contractSchemaVersion: string;
-  readonly descriptorSchemaVersion: string;
+  readonly contractHash?: string;
+  readonly descriptorSourceHash?: string;
+  readonly contractSchemaVersion?: string;
+  readonly descriptorSchemaVersion?: string;
+  readonly payloadHash?: string;
+  readonly payloadSchemaVersion?: string;
+  readonly definitionBundleHash?: string;
+  readonly definitionBundleSchemaVersion?: string;
   readonly signatureAlgorithm?: string;
   readonly signingKeyId?: string;
 }

@@ -1,0 +1,23 @@
+# Local evidence stays on disk but is excluded from Git by default.
+*
+
+# Explicitly reviewed policy files and deterministic test dependencies.
+!/.gitignore
+!/README.md
+!/tracking-policy.json
+!/business-partner-accepted-operations.dev.json
+!/business-partner-activation-publication.dev.json
+!/business-partner-case-correction-decisions.dev.json
+!/business-partner-child-storage-20260912.compilation.dev.json
+!/business-partner-combined-persisted-approval.dev.json
+!/business-partner-combined-source.dev.json
+!/business-partner-combined-successor.dev.json
+!/business-partner-corrected-release.dev.json
+!/business-partner-governed-import-decisions.dev.json
+!/business-partner-operation-decisions.dev.json
+!/business-partner-target-read-grants.dry-run.dev.json
+!/authorization/
+!/authorization/inventories/
+!/authorization/inventories/authorization-source-inventory.md
+!/authorization/inventories/authorization-data-disposition-inventory.md
+!/test-reachability-retirement.json

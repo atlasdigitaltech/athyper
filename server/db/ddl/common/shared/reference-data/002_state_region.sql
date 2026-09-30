@@ -371,3 +371,24 @@ values
   ('BR-TO','BR','Tocantins','state','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
+
+-- Malaysia: source https://sdk.myinvois.hasil.gov.my/codes/state-codes/ (checked 2026-09-14).
+-- MyInvois 17 (Not Applicable) is not a subdivision and is intentionally excluded.
+INSERT INTO shared.state_region(code,country_code,name,category,metadata,created_by) VALUES
+ ('MY-01','MY','Johor','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-02','MY','Kedah','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-03','MY','Kelantan','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-04','MY','Melaka','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-05','MY','Negeri Sembilan','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-06','MY','Pahang','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-07','MY','Pulau Pinang','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-08','MY','Perak','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-09','MY','Perlis','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-10','MY','Selangor','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-11','MY','Terengganu','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-12','MY','Sabah','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-13','MY','Sarawak','state','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-14','MY','Wilayah Persekutuan Kuala Lumpur','federal territory','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-15','MY','Wilayah Persekutuan Labuan','federal territory','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000'),
+ ('MY-16','MY','Wilayah Persekutuan Putrajaya','federal territory','{"source":"https://sdk.myinvois.hasil.gov.my/codes/state-codes/","checkedOn":"2026-09-14"}'::jsonb,'00000000-0000-0000-0000-000000000000')
+ON CONFLICT (country_code,code) DO NOTHING;

@@ -1,3 +1,5 @@
+import { workItemEligibilitySql as inboxEligibility } from "./work-item-eligibility-sql.js";
+import { decodeInboxCursor, encodeInboxCursor } from "./inbox-cursor.js";
 import type { WorkflowRepository, WorkItem, WorkItemStatus } from "@athyper/server-contract-workflow";
 import { sql, type Kysely, type Transaction } from "kysely";
 
@@ -11,7 +13,7 @@ interface WorkItemRow {
   claimed_at: Date | string | null; available_at: Date | string; due_at: Date | string | null; completed_at: Date | string | null;
   priority: WorkItem["priority"]; payload: unknown; outcome: unknown; status: WorkItemStatus;
   created_at: Date | string; created_by: string;
-  row_version: number | string;
+  row_version: number | string; cursor_created_at?: string;
 }
 
 export function createKyselyWorkflowRepository(): WorkflowRepository<WorkflowTransaction> {
@@ -35,19 +37,21 @@ export function createKyselyWorkflowRepository(): WorkflowRepository<WorkflowTra
     },
     async listInbox(query, transaction) {
       const statuses = query.statuses?.length ? query.statuses : ["open", "claimed", "in_progress", "blocked"] as const;
-      const cursor = query.cursor ? decodeCursor(query.cursor) : undefined;
+      const cursor = query.cursor ? decodeInboxCursor(query.cursor) : undefined;
       const result = await sql<WorkItemRow>`
-        SELECT * FROM document.work_item
+        SELECT *, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_created_at FROM document.work_item
          WHERE tenant_id = ${query.context.tenantId}::uuid
            AND status IN (${sql.join(statuses)})
-           AND (assignee_principal_id = ${query.context.principalId}::uuid OR claimant_principal_id = ${query.context.principalId}::uuid)
+           AND ${inboxEligibility(query.context.principalId)}
            ${cursor ? sql`AND (created_at, id) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)` : sql``}
          ORDER BY created_at DESC, id DESC
-         LIMIT ${query.limit ?? 50}
+         LIMIT ${(query.limit ?? 50) + 1}
       `.execute(transaction);
-      const data = result.rows.map(mapRow);
+      const page = result.rows.slice(0, query.limit ?? 50);
+      const data = page.map(mapRow);
       const last = data.at(-1);
-      return { data, ...(last && data.length === (query.limit ?? 50) ? { nextCursor: encodeCursor(last.createdAt, last.id) } : {}) };
+      const totalCount=Number((await sql<{count:string}>`SELECT count(*)::text count FROM document.work_item WHERE tenant_id=${query.context.tenantId}::uuid AND status IN (${sql.join(statuses)}) AND ${inboxEligibility(query.context.principalId)}`.execute(transaction)).rows[0]?.count??0);
+      return { data,totalCount, ...(last && result.rows.length > data.length ? { nextCursor: encodeInboxCursor(page.at(-1)!.cursor_created_at ?? last.createdAt, last.id) } : {}) };
     },
     async get(tenantId, workItemId, transaction) {
       const result = await sql<WorkItemRow>`SELECT * FROM document.work_item WHERE tenant_id=${tenantId}::uuid AND id=${workItemId}::uuid`.execute(transaction);
@@ -57,7 +61,7 @@ export function createKyselyWorkflowRepository(): WorkflowRepository<WorkflowTra
       const requestResult = await sql<Record<string, unknown>>`SELECT * FROM document.workflow_request WHERE tenant_id=${tenantId}::uuid AND id=${requestId}::uuid`.execute(transaction);
       const request = requestResult.rows[0]; if (!request) return null;
       const stages = await sql<Record<string, unknown>>`SELECT * FROM document.workflow_stage WHERE tenant_id=${tenantId}::uuid AND workflow_request_id=${requestId}::uuid ORDER BY stage_no`.execute(transaction);
-      const items = await sql<WorkItemRow>`SELECT * FROM document.work_item WHERE tenant_id=${tenantId}::uuid AND payload->>'workflow_request_id'=${requestId} ORDER BY created_at`.execute(transaction);
+      const items = await sql<WorkItemRow>`SELECT * FROM document.work_item WHERE tenant_id=${tenantId}::uuid AND payload->>'workflow_request_id'=${requestId.toLowerCase()} ORDER BY created_at`.execute(transaction);
       const definitionCode = request["definition_code"], version = request["definition_version"], artifactHash = request["compiled_artifact_hash"];
       return { request, stages: stages.rows, items: items.rows.map(mapRow), ...(typeof definitionCode === "string" && typeof version === "number" && typeof artifactHash === "string" ? { activeRevision: { definitionCode, version, artifactHash } } : {}) };
     },
@@ -70,13 +74,14 @@ export function createKyselyWorkflowRepository(): WorkflowRepository<WorkflowTra
                claimed_at = CASE WHEN ${action} = 'claim' THEN clock_timestamp() ELSE claimed_at END,
                completed_at = CASE WHEN ${action} IN ('complete','approve','reject') THEN clock_timestamp() ELSE completed_at END,
                outcome = CASE WHEN ${action} IN ('complete','approve','reject') THEN ${JSON.stringify({ ...outcome, action })}::jsonb ELSE outcome END,
-               updated_by = ${principalId}::uuid
+               updated_by = ${principalId}::uuid, updated_at = clock_timestamp(),
+               status_changed_by = ${principalId}::uuid, status_changed_at = clock_timestamp()
          WHERE tenant_id = ${tenantId}::uuid AND id = ${workItemId}::uuid
            AND row_version = ${expectedRowVersion}
-           AND (assignee_principal_id = ${principalId}::uuid OR claimant_principal_id = ${principalId}::uuid
-             OR EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(payload->'eligibility_evidence'->'candidates','[]'::jsonb)) candidate WHERE candidate->>'principalId' = ${principalId}))
+           AND (claimant_principal_id IS NULL OR claimant_principal_id = ${principalId}::uuid)
+           AND ${inboxEligibility(principalId)}
            AND ((${action} = 'claim' AND status = 'open' AND available_at <= clock_timestamp())
-             OR (${action} IN ('complete','approve','reject') AND status IN ('open','claimed','in_progress'))
+             OR (${action} IN ('complete','approve','reject') AND status IN ('open','claimed','in_progress') AND available_at <= clock_timestamp())
              OR (${action} = 'cancel' AND status NOT IN ('completed','cancelled')))
         RETURNING *
       `.execute(transaction);
@@ -107,5 +112,3 @@ function eligibilityEvidence(payload: Readonly<Record<string, unknown>>): WorkIt
 function requiredRow(row: WorkItemRow | undefined): WorkItemRow { if (!row) throw new Error("Workflow insert did not return a work item"); return row; }
 function object(value: unknown): Readonly<Record<string, unknown>> { const parsed = typeof value === "string" ? JSON.parse(value) as unknown : value; return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Readonly<Record<string, unknown>> : {}; }
 function iso(value: Date | string): string { return value instanceof Date ? value.toISOString() : new Date(value).toISOString(); }
-function encodeCursor(createdAt: string, id: string): string { return Buffer.from(JSON.stringify({ createdAt, id }), "utf8").toString("base64url"); }
-function decodeCursor(value: string): { createdAt: string; id: string } | undefined { try { const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Record<string, unknown>; return typeof parsed["createdAt"] === "string" && typeof parsed["id"] === "string" ? { createdAt: parsed["createdAt"], id: parsed["id"] } : undefined; } catch { return undefined; } }

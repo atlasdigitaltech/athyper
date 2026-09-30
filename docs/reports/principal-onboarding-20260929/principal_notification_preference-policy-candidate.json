@@ -1,0 +1,20 @@
+{
+  "schema": "athyper.dev-entity-onboarding/1",
+  "policyId": "dev.entity.principal_notification_preference.ca62090e5bbf",
+  "revision": 1,
+  "environment": "local",
+  "instance": "dev",
+  "preset": "devfull",
+  "changeSetId": "9dcb9002-642e-455e-82e2-00c0edbc17e0",
+  "entityId": "e5ad5406-e9d0-4f47-884f-e3e1830d087b",
+  "productHash": "ca62090e5bbf3d894505bce015eb5f06ae143ce79494289a96cc30fc419b525d",
+  "contractHash": "1ee0425dd999334d8f57f41f68943a876adb89439f9297fb37f423d2a6ed0a98",
+  "descriptorHash": "82c1f1d449b2e988e9255b2cc0b5d5911f4ab02eefcf47edb1ddbcb01dbe0520",
+  "targetPlanes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
+  "authorPrincipalId": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+  "publisherPrincipalId": "c0febdd1-491c-46b8-8113-160be767b88d"
+}

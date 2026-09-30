@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import type { JobExecutionLifecycle } from "@athyper/server-contract-jobs";
 import type { MetricsRegistry } from "@athyper/server-foundation/observability";
 import { ATHYPER_METRIC_CATALOG, JOB_QUEUE_LABELS } from "./prometheus-metrics.js";
@@ -21,19 +22,19 @@ export function createMetricJobExecutionLifecycle(delegate: JobExecutionLifecycl
   return {
     enqueued: (input) => delegate.enqueued(input),
     async started(job) {
-      const lagSeconds = Math.max(0, now() - Date.parse(job.enqueuedAt)) / 1000;
+      const lagSeconds = Math.max(0, now() - parseInstant(job.enqueuedAt)) / 1000;
       latency.record(lagSeconds, { queue: metricQueue(job.queue), capability: "jobs" });
       scheduleLag.record(lagSeconds, { queue: metricQueue(job.queue), capability: "scheduling" });
       if (job.attempt > 1) retries.increment({ queue: metricQueue(job.queue), capability: "jobs" });
       await delegate.started(job);
     },
     async completed(job, result) {
-      if (metricQueue(job.queue) === "integrations") integration.record(Math.max(0, now() - Date.parse(job.enqueuedAt)) / 1000, { outcome: "delivered", capability: "integration" });
+      if (metricQueue(job.queue) === "integrations") integration.record(Math.max(0, now() - parseInstant(job.enqueuedAt)) / 1000, { outcome: "delivered", capability: "integration" });
       await delegate.completed(job, result);
     },
     async failed(job, failure) {
       if (failure.disposition === "permanent" || job.attempt >= job.maxAttempts) dlq.increment({ queue: metricQueue(job.queue), capability: "jobs" });
-      if (metricQueue(job.queue) === "integrations") integration.record(Math.max(0, now() - Date.parse(job.enqueuedAt)) / 1000, { outcome: failure.disposition === "permanent" || job.attempt >= job.maxAttempts ? "dead_letter" : "retry", capability: "integration" });
+      if (metricQueue(job.queue) === "integrations") integration.record(Math.max(0, now() - parseInstant(job.enqueuedAt)) / 1000, { outcome: failure.disposition === "permanent" || job.attempt >= job.maxAttempts ? "dead_letter" : "retry", capability: "integration" });
       await delegate.failed(job, failure);
     },
   };

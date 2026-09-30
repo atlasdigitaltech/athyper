@@ -1,0 +1,163 @@
+{
+  "runId": "866e737a-b098-440e-92fc-104c4887f795",
+  "environment": "local",
+  "authenticationMethod": "Keycloak admin-assisted development SSO; ordinary Neon session and CSRF relay",
+  "results": [
+    {
+      "username": "catl.admin",
+      "org": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+      "partner": "f7688c3d-8c92-5651-a469-da3f4f786375",
+      "contactId": "01a07875-8c74-70cc-bd5a-1e9b8e623829",
+      "addressLinkId": "01a07875-8cb7-74f1-9f8a-4a8b40c4c612",
+      "createContact": 200,
+      "createAddress": 200,
+      "resumedExistingFixture": true,
+      "profile": 200,
+      "verification": {
+        "challengeId": "d03b09f7-e678-4209-a613-c551370ab169",
+        "delivery": "durable_mailpit",
+        "getConsumed": false,
+        "replay": "rejected"
+      },
+      "patchReplay": 409,
+      "crossOrganizationDenied": 5,
+      "crossContactEvidence": 422,
+      "secondContactId": "01a07877-ebd3-705d-958c-879b3fd5086e",
+      "deactivateContact": 204,
+      "deactivateAddress": 204,
+      "audit": [
+        {
+          "count": 1,
+          "event_code": "master.address.deactivated"
+        },
+        {
+          "count": 1,
+          "event_code": "master.address.linked"
+        },
+        {
+          "count": 1,
+          "event_code": "master.contact.created"
+        },
+        {
+          "count": 1,
+          "event_code": "master.contact.deactivated"
+        },
+        {
+          "count": 1,
+          "event_code": "master.contact.verification_changed"
+        }
+      ],
+      "outbox": [
+        {
+          "count": 1,
+          "event_type": "master.address.deactivated"
+        },
+        {
+          "count": 1,
+          "event_type": "master.address.linked"
+        },
+        {
+          "count": 1,
+          "event_type": "master.contact.created"
+        },
+        {
+          "count": 1,
+          "event_type": "master.contact.deactivated"
+        },
+        {
+          "count": 1,
+          "event_type": "master.contact.verification_changed"
+        }
+      ]
+    },
+    {
+      "username": "catl.owner",
+      "org": "24267903-6196-5846-8322-43a8e35c9630",
+      "partner": "ea76b2b4-c089-5052-8a3b-ac9917a77598",
+      "contactId": "01a07875-cee8-750a-b789-65b330c25c45",
+      "addressLinkId": "01a07875-cf2c-75f2-9156-1f949d25bf20",
+      "createContact": 200,
+      "createAddress": 200,
+      "resumedExistingFixture": true,
+      "profile": 200,
+      "verification": {
+        "challengeId": "8f2b6463-230b-4861-9910-9672ea55ae3b",
+        "delivery": "durable_mailpit",
+        "getConsumed": false,
+        "replay": "rejected"
+      },
+      "patchReplay": 409,
+      "crossOrganizationDenied": 5,
+      "crossContactEvidence": 422,
+      "secondContactId": "01a07877-ed52-7c5d-91bd-650551b0bf88",
+      "deactivateContact": 204,
+      "deactivateAddress": 204,
+      "audit": [
+        {
+          "count": 1,
+          "event_code": "master.address.deactivated"
+        },
+        {
+          "count": 1,
+          "event_code": "master.address.linked"
+        },
+        {
+          "count": 1,
+          "event_code": "master.contact.created"
+        },
+        {
+          "count": 1,
+          "event_code": "master.contact.deactivated"
+        },
+        {
+          "count": 1,
+          "event_code": "master.contact.verification_changed"
+        }
+      ],
+      "outbox": [
+        {
+          "count": 1,
+          "event_type": "master.address.deactivated"
+        },
+        {
+          "count": 1,
+          "event_type": "master.address.linked"
+        },
+        {
+          "count": 1,
+          "event_type": "master.contact.created"
+        },
+        {
+          "count": 1,
+          "event_type": "master.contact.deactivated"
+        },
+        {
+          "count": 1,
+          "event_type": "master.contact.verification_changed"
+        }
+      ]
+    },
+    {
+      "username": "athyper.admin",
+      "crossTenantDenied": 6,
+      "challengeDenied": 403
+    },
+    {
+      "username": "athyper.owner",
+      "crossTenantDenied": 6,
+      "challengeDenied": 403
+    }
+  ],
+  "complete": true,
+  "images": {
+    "runtime": "athyper/runtime-server:local-master-authority-20260907-r2",
+    "neon": "athyper/neon-web:local-master-authority-20260907"
+  },
+  "limits": [
+    "Development SSO sessions; not password/MFA enrollment",
+    "Five sensitive routes exercised successfully; PATCH verification exercised for replay, target mismatch and foreign-tenant denial; positive verification uses the Mailpit challenge completion route",
+    "Resumed the same synthetic run after test wait/reporting corrections; no token, verification state or rate-limit resets",
+    "Address links use date precision; tested fixtures begin the previous day to allow nonempty same-day closure",
+    "Local qualification only"
+  ]
+}

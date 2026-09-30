@@ -1,0 +1,40 @@
+rule_files:
+  - business-partner-alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: BP360 safe synthetic failure signals reach their owning alerts
+    interval: 1m
+    input_series:
+      - series: 'athyper_bp360_request_total{outcome="failure",section="network"}'
+        values: '0+2x30'
+      - series: 'athyper_bp360_request_total{outcome="success",section="network"}'
+        values: '0+98x30'
+      - series: 'athyper_bp360_completeness_total{status="definition_unavailable",pack="organization_base"}'
+        values: '0+1x30'
+      - series: 'athyper_bp360_mesh_fallback_total{reason_code="MESH_TIMEOUT"}'
+        values: '0+10x30'
+      - series: 'athyper_bp360_reveal_total{outcome="failure",field_class="highly_restricted"}'
+        values: '0+2x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: AthyperBusinessPartner360ErrorRateHigh
+        exp_alerts:
+          - exp_labels: { severity: critical, service: business-partner-360, team: platform }
+            exp_annotations: { summary: "Business Partner 360 error rate exceeds one percent", runbook: "docs/runbooks/business-partner-360-operations.md" }
+      - eval_time: 20m
+        alertname: AthyperBusinessPartner360DefinitionUnavailable
+        exp_alerts:
+          - exp_labels: { severity: warning, service: business-partner-360, team: platform, status: definition_unavailable, pack: organization_base }
+            exp_annotations: { summary: "Business Partner 360 completeness cannot use a compatible local definition", runbook: "docs/runbooks/business-partner-360-operations.md" }
+      - eval_time: 20m
+        alertname: AthyperBusinessPartner360MeshFallbackHigh
+        exp_alerts:
+          - exp_labels: { severity: warning, service: business-partner-360, team: platform }
+            exp_annotations: { summary: "Business Partner 360 Network fallback rate exceeds five percent", runbook: "docs/runbooks/business-partner-360-operations.md" }
+      - eval_time: 20m
+        alertname: AthyperBusinessPartner360RevealFailureSpike
+        exp_alerts:
+          - exp_labels: { severity: critical, service: business-partner-360, team: security, outcome: failure, field_class: highly_restricted }
+            exp_annotations: { summary: "Purpose-bound Business Partner reveal failures are elevated", runbook: "docs/runbooks/business-partner-360-operations.md" }

@@ -1,0 +1,116 @@
+{
+  "recordedOn": "2026-09-23",
+  "environment": "local DEV",
+  "publication": {
+    "key": "metadata.compiled_entity.business_partner",
+    "releaseNo": 21,
+    "releaseId": "3133fcf7-b08e-5343-801b-0bc63845721f",
+    "appliedReleaseId": "01a0ce78-7100-76f0-b879-90393a5fb402",
+    "artifactHash": "403c08d2c0e7aa26127bed0e06ab52df28b5a136b811705cc1dd495199365f62",
+    "compiledReleaseHash": "sha256:f3849c5715acebdb40d3f8bb4f85100c0af6390afd4c7ecffb480b17ed4047f5",
+    "artifactCount": 108,
+    "signatureAlgorithm": "Ed25519"
+  },
+  "migration": {
+    "devRehearsalRolledBack": true,
+    "devApplied": true,
+    "devHistoricalCapabilities": 0,
+    "disposableOrigins": 75,
+    "disposableMergedFacts": 74,
+    "disposableQualificationReferences": 60,
+    "originalRowsPreserved": true,
+    "legacyInsertsRejectedAfterCutover": true
+  },
+  "demo": {
+    "partnerCode": "BP-DEMO-CORE-001",
+    "tenants": ["athyper", "technostat", "cirrusatlantic"],
+    "explicitRowsPerTenant": 28,
+    "activeDeclaredCommodityFactsPerTenant": 1,
+    "commodityCode": "unspsc:41100000",
+    "existingCrosswalksPerTenant": 1,
+    "customerSupplierRolesCreated": 0,
+    "companyAssignmentsCreated": 0,
+    "commercialQualificationsCreated": 0,
+    "sharedReferenceRowsCreated": 0
+  },
+  "liveCatlJourney": {
+    "classificationId": "01a0ce75-d75f-7b6c-b038-0b5c7a060dd5",
+    "maker": "catl.admin",
+    "checker": "catl.owner",
+    "declareVerifyArchive": "passed",
+    "mfaPreserved": true,
+    "auditEvents": ["business_partner.classification.declared", "business_partner.classification.verified", "business_partner.classification.archived"],
+    "exactAuditEventCount": 3,
+    "safeReplay": "passed",
+    "idempotencyConflict": 409,
+    "ownerDeclarationDenied": 403,
+    "adminVerificationDenied": 403,
+    "crossTenantPartnerReadDenied": 404,
+    "acceptanceFactFinalStatus": "archived",
+    "reusableDemoFactFinalStatus": "active"
+  },
+  "browserCatl": {
+    "commoditiesCategoryNameAndCrosswalk": "passed",
+    "independentCertificate": "passed",
+    "emptyOptionalQualifications": "passed",
+    "pageErrors": 0
+  },
+  "liveAthyperJourney": {
+    "actor": "athyper.admin",
+    "session": "authenticated",
+    "businessPartnerId": "a9d3f90c-27d5-5e02-8214-c648752def4d",
+    "nativeRead": "passed",
+    "compiledCommoditiesAndCrosswalk": "passed",
+    "releaseHash": "sha256:f3849c5715acebdb40d3f8bb4f85100c0af6390afd4c7ecffb480b17ed4047f5",
+    "crossTenantDenial": { "cirrusatlantic": 404, "technostat": 404 },
+    "classificationId": "01a0cea2-6822-7ed7-88b3-1ad557354907",
+    "declareArchive": "passed",
+    "safeReplay": "passed",
+    "idempotencyConflict": 409,
+    "verificationDenied": 403,
+    "mfaPreserved": true,
+    "auditEvents": { "business_partner.classification.declared": 1, "business_partner.classification.archived": 1 },
+    "acceptanceFactFinalStatus": "archived",
+    "reusableDemoFactFinalStatus": "active",
+    "certificatesSectionHttpStatus": 404,
+    "qualificationsSectionHttpStatus": 404,
+    "browser": "blocked: shell requires legal entity and company before opening partner workspace",
+    "permissionsChanged": false
+  },
+  "disposableChecks": [
+    "all-three-tenant native read and RLS",
+    "audit-failure rollback",
+    "independent verification and archive",
+    "expected-version conflict",
+    "actor-bound cursor pagination",
+    "permission denial on replay",
+    "commercial qualification fact reference",
+    "qualification rejection leaves fact unchanged",
+    "qualification approval then permitted expiry leaves fact unchanged",
+    "repeatable role-free demo and existing crosswalk evidence"
+  ],
+  "remainingAcceptance": [
+    "Athyper browser: shell requires legal entity/company; Certificates and Qualifications compiled sections return 404 despite successful native and compiled commodity reads",
+    "Technostat signed-in journey: tksa.admin.json absent",
+    "fresh role-free child-activation case blocked before creation: commodity activation incorrectly depends on organization-scoped relationship read; approved admin-only tenant grant rehearsal rejected by scope contract"
+  ],
+  "freshCaseAttempt": {
+    "classificationId": "bf8aeb62-97e1-4cd2-b4e9-fc34aee11c68",
+    "fixtureStatus": "draft",
+    "fixtureSetup": "direct synthetic fixture insert, not governed capture evidence",
+    "caseCreated": false,
+    "createHttpStatus": 403,
+    "missingTenantScopedPermission": "neon.relationship.business_partner.read",
+    "permissionsChanged": false,
+    "grantApproval": "CATL admin only",
+    "grantRehearsal": "rolled back: permission incompatible with tenant scope",
+    "nextCorrection": "use dedicated classification authority for commodity-only child activation; preserve relationship permission scope"
+  },
+  "bankingReadiness": {
+    "cause": "stale wildcard count required six permissions but seven legitimate permissions are published",
+    "fix": "check explicit meshAccountBankPermissions catalog including registration",
+    "readyzHttpStatus": 200,
+    "bankLinkageStatus": "healthy",
+    "platformHostTypecheck": "passed"
+  }
+}

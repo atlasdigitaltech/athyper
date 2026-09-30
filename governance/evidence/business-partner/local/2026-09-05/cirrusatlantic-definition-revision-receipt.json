@@ -1,0 +1,21 @@
+{
+  "schema": "athyper.development-definition-revision-receipt/1",
+  "observedAt": "2026-09-05T04:28:39.014680+00:00",
+  "environment": "dev",
+  "tenantCode": "cirrusatlantic",
+  "revisionId": "4849ea52-4e91-4c09-b06a-22e511362050",
+  "bundleCode": "business_partner.onboarding",
+  "semanticVersion": "2.1.1",
+  "bundleHash": "9f8de2e01d609634245993853acd46c0b2817c9098d9e32d6e3c508910d65cd5",
+  "targetPlanes": [
+    "neon",
+    "mesh"
+  ],
+  "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+  "createdAt": "2026-09-05T04:25:40.243622+00:00",
+  "matchesReviewedCandidate": true,
+  "evidenceSource": "native Studio snapshot row",
+  "nativeApproval": null,
+  "signedRelease": null,
+  "consumerActivationReceipts": []
+}

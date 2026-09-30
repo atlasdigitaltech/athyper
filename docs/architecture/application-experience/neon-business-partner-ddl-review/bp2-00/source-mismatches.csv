@@ -1,0 +1,3 @@
+origin,artifact,kind,reference,corrective_package
+draft,business_partner_request/core,missing_or_retired_source,document.business_partner_request,BF-04 / BP2-00
+active,business_partner_request/core,missing_or_retired_source,document.business_partner_request,BF-04 / BP2-00

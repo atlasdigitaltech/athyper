@@ -1,0 +1,149 @@
+{
+  "$schema": "athyper.business-partner-v1-qualification/1",
+  "asOf": "2026-09-06",
+  "stories": ["BP-V1-009", "BP-V1-010"],
+  "implementationStatus": "local_target_verified",
+  "productionQualification": "blocked",
+  "productionQualified": false,
+  "thresholds": {
+    "mutationP95Ms": 800,
+    "mutationErrorRate": 0.01,
+    "stuckCaseSeconds": 86400,
+    "notificationPendingSeconds": 300,
+    "notificationPlanningMaxAttempts": 10,
+    "wcagStandard": "WCAG 2.2 AA",
+    "zoomPercent": 200,
+    "phoneViewport": { "width": 412, "height": 915 },
+    "desktopViewport": { "width": 1440, "height": 900 }
+  },
+  "retention": {
+    "playwrightOutput": "tests/e2e/.playwright-bp-v1-009-output",
+    "attachment": "business-partner-v1-qualification-evidence.json",
+    "tracePolicy": "retain-on-failure",
+    "screenshotPolicy": "on",
+    "payloadPolicy": "sanitized operation coordinates only; credentials, request payloads and protected evidence excluded",
+    "manualAccessibilityDraft": "governance/evidence/business-partner/local/2026-09-06/cirrusatlantic-v1-manual-accessibility-review.draft.json",
+    "manualAccessibilityInstructions": "docs/runbooks/business-partner-v1-accessibility-review.md"
+  },
+  "commands": [
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data test",
+      "result": "passed",
+      "tests": 97,
+      "files": 15
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner test",
+      "result": "passed",
+      "tests": 54,
+      "files": 10
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-notifications test",
+      "result": "passed",
+      "tests": 65,
+      "files": 11
+    },
+    {
+      "command": "pnpm --dir server/db test",
+      "result": "passed",
+      "tests": 124
+    },
+    {
+      "command": "pnpm test:plane-contracts",
+      "result": "passed",
+      "tests": 157
+    },
+    {
+      "command": "pnpm test:reachability",
+      "result": "passed",
+      "rootTests": 76,
+      "excludedLegacyTests": 0
+    },
+    {
+      "command": "pnpm test:e2e:bp-v1-009",
+      "result": "passed",
+      "tests": 1,
+      "durationSeconds": 11,
+      "optionalSkip": false,
+      "evidence": "governance/evidence/business-partner/local/2026-09-06/cirrusatlantic-v1-bp-sup-001-e2e.json"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "id": "BP-SUP-001",
+      "status": "local_target_verified",
+      "evidence": [
+        "tests/e2e/business-partner/bp-v1-009.spec.ts",
+        "tests/e2e/business-partner/bp-v1-009.fixture.ts",
+        "governance/evidence/business-partner/local/2026-09-06/cirrusatlantic-v1-bp-sup-001-e2e.json",
+        "governance/evidence/business-partner/local/2026-09-06/cirrusatlantic-v1-case-contract-release-and-activation.json"
+      ]
+    },
+    {
+      "id": "BP-X-001",
+      "status": "local_verified",
+      "evidence": [
+        "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts"
+      ]
+    },
+    {
+      "id": "BP-X-002",
+      "status": "local_verified",
+      "evidence": [
+        "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts",
+        "tests/foundation/business-partner-case-experience.test.tsx"
+      ]
+    },
+    {
+      "id": "BP-X-003",
+      "status": "local_verified",
+      "evidence": [
+        "server/db/scripts/__tests__/business-partner-360/business-partner-360-security-evidence.test.ts"
+      ]
+    },
+    {
+      "id": "BP-X-005",
+      "status": "local_verified",
+      "evidence": [
+        "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts"
+      ]
+    },
+    {
+      "id": "BP-X-006",
+      "status": "local_verified",
+      "evidence": [
+        "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts"
+      ]
+    },
+    {
+      "id": "BP-X-009",
+      "status": "local_verified",
+      "evidence": [
+        "packages/planes/neon/business-partner/src/result-experience.test.ts",
+        "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts"
+      ]
+    },
+    {
+      "id": "BP-X-010",
+      "status": "implemented_environment_required",
+      "evidence": [
+        "tests/e2e/business-partner/bp-v1-009.spec.ts",
+        "tests/foundation/business-partner-case-experience.test.tsx"
+      ]
+    },
+    {
+      "id": "BP-X-012",
+      "status": "local_verified",
+      "evidence": [
+        "deploy/config/telemetry/metrics/business-partner-alerts.yml",
+        "deploy/config/telemetry/provisioning/dashboards/json/business-partner-v1.json",
+        "docs/runbooks/business-partner-v1-operations.md"
+      ]
+    }
+  ],
+  "environmentBlockers": [
+    "Named manual assistive-technology review evidence is not retained.",
+    "Production target and runbook rehearsal evidence is not retained."
+  ]
+}

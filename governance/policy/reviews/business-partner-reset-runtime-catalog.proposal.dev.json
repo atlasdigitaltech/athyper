@@ -1,0 +1,606 @@
+{
+  "schemaVersion": 1,
+  "kind": "reset_runtime_catalog_restoration_proposal",
+  "releaseId": "1b1c3f09-ea2b-4c38-82ac-14fff1d7e3e0",
+  "contractHash": "9cc841028e1a5a9de9252d7021d687aa8e5f8d94cbb315cc5838c0721117d52d",
+  "destination": {
+    "container": "athyper-dev-db-1",
+    "database": "athyper_neon"
+  },
+  "definitions": [
+    {
+      "code": "collaboration.comment.read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "resource",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "fnd",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "capability"
+    },
+    {
+      "code": "document.attachment.read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "resource",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "fnd",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "capability"
+    },
+    {
+      "code": "neon.relationship.bp_target.activity_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.addresses_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.attachments_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "fnd",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.bank_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "medium",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.bank_reveal",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "high",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": true,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.certificate_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "medium",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.comments_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "fnd",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.configure_company",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "company_code",
+          "propagation": "exact"
+        },
+        {
+          "status": "active",
+          "scopeKind": "operating_organization",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "medium",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.contacts_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.credit_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "company_code",
+          "propagation": "exact"
+        },
+        {
+          "status": "active",
+          "scopeKind": "operating_organization",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "medium",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.customer_company_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "company_code",
+          "propagation": "exact"
+        },
+        {
+          "status": "active",
+          "scopeKind": "operating_organization",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.discover",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.enter",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "fnd",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.export",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.identifier_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "medium",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.identity_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.import",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.navigate_manage",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.navigate_overview",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.network_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "company_code",
+          "propagation": "exact"
+        },
+        {
+          "status": "active",
+          "scopeKind": "operating_organization",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.qualification_company",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "company_code",
+          "propagation": "exact"
+        },
+        {
+          "status": "active",
+          "scopeKind": "operating_organization",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "critical",
+      "module_code": "fnd",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": true,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.qualification_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "medium",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.requests_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.supplier_company_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "company_code",
+          "propagation": "exact"
+        },
+        {
+          "status": "active",
+          "scopeKind": "operating_organization",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "low",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.tax_read",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "medium",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": false,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    },
+    {
+      "code": "neon.relationship.bp_target.tax_reveal",
+      "scopes": [
+        {
+          "status": "active",
+          "scopeKind": "tenant",
+          "propagation": "exact"
+        }
+      ],
+      "status": "published",
+      "risk_tier": "high",
+      "module_code": "bp",
+      "is_delegable": false,
+      "is_shareable": false,
+      "requires_mfa": true,
+      "requires_sod": false,
+      "is_overridable": false,
+      "permission_kind": "entity_operation"
+    }
+  ],
+  "definitionSource": "read-only isolated reference; requires explicit destination review",
+  "grantChanges": [],
+  "activation": false,
+  "unresolved": [
+    {
+      "code": "neon.relationship.business_partner.enter",
+      "reason": "Absent in both catalogs; original operation packet records existingId null and no source scopes. Signed graph nevertheless declares a canonical source transition.",
+      "recommendation": "Review correcting the transition in a successor to reflect a new target capability. Do not fabricate historical source constraints or silently treat them as satisfied.",
+      "blocksSigning": true
+    }
+  ],
+  "approvalRecorded": false,
+  "proposalRevision": "af245aecf93f0b164911ea00f46c61521bd1ebb6f46ab1bb6ce70a8704ad5b59"
+}

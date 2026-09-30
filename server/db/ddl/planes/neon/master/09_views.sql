@@ -83,14 +83,21 @@ CREATE INDEX mv_cpa_class_idx
 COMMENT ON MATERIALIZED VIEW master.mv_company_postable_account IS
   'Cached company-postable account set used by finance readiness and configuration. Refresh through master.fn_refresh_mv_cpa after chart/control mutations.';
 
+-- The underlying cache contains every tenant. Only this filtered projection is
+-- available to application roles; materialized views do not enforce table RLS.
+CREATE OR REPLACE VIEW master.v_company_postable_account
+WITH (security_barrier = true) AS
+SELECT * FROM master.mv_company_postable_account
+WHERE tenant_id = shared.current_tenant_id_soft();
+
 CREATE OR REPLACE VIEW master.v_bank_account_resolved
 WITH (security_barrier = true)
 AS
 SELECT
     account.id AS bank_account_id,
     account.tenant_id,
-    account.code AS bank_account_code,
-    account.name AS bank_account_name,
+    instrument.code AS bank_account_code,
+    instrument.name AS bank_account_name,
     account.account_holder_name,
     account.account_id_type,
     repeat('*', GREATEST(length(account.account_id_value) - 4, 0))
@@ -99,43 +106,42 @@ SELECT
     account.currency_code,
     account.account_nature,
     account.provider_account_ref,
-    account.is_verified,
-    account.verified_at,
-    account.verification_method,
-    account.status AS bank_account_status,
-    party.id AS bank_party_id,
-    COALESCE(party.name, account.bank_name_override) AS bank_name,
+    instrument.status AS bank_account_status,
+    party.id AS bank_institution_id,
+    account.bank_branch_id,
+    account.provisional_bank_reference_id,
+    COALESCE(party.name, provisional.submitted_name) AS bank_name,
     COALESCE(party.bic, account.bic_override) AS bic,
     COALESCE(
         party.country_code,
-        account.bank_country_override
+        provisional.submitted_country
     ) AS bank_country_code,
     party.institution_type,
     party.national_bank_code_type,
     party.national_bank_code,
     party.branch_code,
     party.branch_name,
-    correspondent.id AS correspondent_bank_party_id,
+    correspondent.id AS correspondent_bank_institution_id,
     correspondent.name AS correspondent_bank_name,
     correspondent.bic AS correspondent_bic
 FROM master.bank_account AS account
-LEFT JOIN master.bank_party AS party
-  ON party.tenant_id = account.tenant_id
- AND party.id = account.bank_party_id
-LEFT JOIN master.bank_party AS correspondent
-  ON correspondent.tenant_id = account.tenant_id
- AND correspondent.id = account.correspondent_bank_party_id
+JOIN master.payment_instrument instrument ON instrument.tenant_id=account.tenant_id AND instrument.id=account.id
+LEFT JOIN master.bank_provisional_reference provisional ON provisional.tenant_id=account.tenant_id AND provisional.id=account.provisional_bank_reference_id
+LEFT JOIN shared.v_bank_directory AS party
+  ON party.id = account.bank_institution_id AND party.branch_id IS NOT DISTINCT FROM account.bank_branch_id
+LEFT JOIN shared.v_bank_directory AS correspondent
+  ON correspondent.id = account.correspondent_bank_institution_id AND correspondent.branch_id IS NULL
 WHERE account.tenant_id = shared.current_tenant_id()
-  AND account.status NOT IN ('closed', 'retired');
+  AND instrument.status NOT IN ('closed', 'retired');
 
 COMMENT ON VIEW master.v_bank_account_resolved IS
   'Masked bank-account directory. The sensitive account identifier is never projected.';
 
-CREATE OR REPLACE VIEW master.v_bank_account_link_resolved
+CREATE OR REPLACE VIEW master.v_payment_instrument_link_resolved
 WITH (security_barrier = true)
 AS
 SELECT
-    link.id AS bank_account_link_id,
+    link.id AS payment_instrument_link_id,
     link.tenant_id,
     link.owner_type_id,
     link.owner_type,
@@ -154,8 +160,6 @@ SELECT
     account.account_last4,
     account.currency_code,
     account.account_nature,
-    account.is_verified,
-    account.verification_method,
     account.bank_name,
     account.bic,
     account.bank_country_code,
@@ -171,13 +175,13 @@ SELECT
     config.reconciliation_mode,
     config.status AS house_config_status,
     account.bank_account_status
-FROM master.bank_account_link AS link
+FROM master.payment_instrument_link AS link
 JOIN master.v_bank_account_resolved AS account
   ON account.tenant_id = link.tenant_id
- AND account.bank_account_id = link.bank_account_id
+ AND account.bank_account_id = link.payment_instrument_id
 LEFT JOIN master.bank_account_house_config AS config
   ON config.tenant_id = link.tenant_id
- AND config.bank_account_link_id = link.id
+ AND config.payment_instrument_link_id = link.id
  AND config.status = 'active'
 WHERE link.tenant_id = shared.current_tenant_id()
   AND link.effective_from <= CURRENT_DATE
@@ -186,7 +190,7 @@ WHERE link.tenant_id = shared.current_tenant_id()
       OR link.effective_until > CURRENT_DATE
   );
 
-COMMENT ON VIEW master.v_bank_account_link_resolved IS
+COMMENT ON VIEW master.v_payment_instrument_link_resolved IS
   'Currently effective masked bank-account ownership and operational-use links.';
 
 CREATE OR REPLACE VIEW master.v_employee
@@ -242,7 +246,12 @@ LEFT JOIN LATERAL (
       FROM master.employment x
      WHERE x.tenant_id = e.tenant_id
        AND (x.employee_id = e.id OR (x.employee_id IS NULL AND x.person_id = e.person_id))
+       AND x.status = 'active'
+       AND x.employment_status IN ('active', 'suspended')
+       AND x.hire_date <= CURRENT_DATE
+       AND (x.termination_date IS NULL OR x.termination_date > CURRENT_DATE)
      ORDER BY
+       x.is_primary DESC,
        (x.employment_status = 'active') DESC,
        x.hire_date DESC,
        x.id
@@ -253,8 +262,12 @@ LEFT JOIN LATERAL (
       FROM master.work_assignment x
      WHERE x.tenant_id = e.tenant_id
        AND x.employee_id = e.id
+       AND x.employment_id = em.id
+       AND x.status = 'active'
+       AND x.effective_from <= CURRENT_DATE
+       AND (x.effective_until IS NULL OR x.effective_until > CURRENT_DATE)
      ORDER BY
-       (x.assignment_type = 'primary' AND x.status = 'active') DESC,
+       (x.assignment_type = 'primary') DESC,
        x.effective_from DESC,
        x.id
      LIMIT 1
@@ -322,7 +335,7 @@ WITH supplier_role AS (
             s.created_at AS supplier_created_at,
             s.updated_at AS supplier_updated_at
            FROM master.supplier s
-             LEFT JOIN master.company_code_supplier_profile scp ON scp.tenant_id = s.tenant_id AND scp.supplier_id = s.id
+             LEFT JOIN master.company_code_supplier_profile scp ON scp.tenant_id = s.tenant_id AND scp.business_partner_id = s.business_partner_id
           GROUP BY s.tenant_id, s.business_partner_id, s.id, s.supplier_code, s.supplier_type, s.status, s.is_active, s.created_at, s.updated_at
         ), customer_role AS (
          SELECT c.tenant_id,
@@ -332,7 +345,13 @@ WITH supplier_role AS (
             c.customer_type,
             c.status AS customer_status,
             c.is_active AS customer_is_active,
-            COALESCE(c.is_key_account, false) AS is_key_account,
+            EXISTS (
+                SELECT 1 FROM control.customer_account_designation designation
+                 WHERE designation.tenant_id=c.tenant_id AND designation.customer_id=c.id
+                   AND designation.designation_type='key_account' AND designation.status='approved'
+                   AND designation.effective_from<=CURRENT_DATE
+                   AND(designation.effective_until IS NULL OR designation.effective_until>CURRENT_DATE)
+            ) AS is_key_account,
             NULL::text AS risk_rating,
             count(ccp.id)::integer AS customer_company_scope_count,
             count(ccp.id) FILTER (WHERE ccp.is_active)::integer AS customer_active_scope_count,
@@ -341,25 +360,33 @@ WITH supplier_role AS (
             c.created_at AS customer_created_at,
             c.updated_at AS customer_updated_at
            FROM master.customer c
-             LEFT JOIN master.company_code_customer_profile ccp ON ccp.tenant_id = c.tenant_id AND ccp.customer_id = c.id
-          GROUP BY c.tenant_id, c.business_partner_id, c.id, c.customer_code, c.customer_type, c.status, c.is_active, c.is_key_account, c.created_at, c.updated_at
+             LEFT JOIN master.company_code_customer_profile ccp ON ccp.tenant_id = c.tenant_id AND ccp.business_partner_id = c.business_partner_id
+          GROUP BY c.tenant_id, c.business_partner_id, c.id, c.customer_code, c.customer_type, c.status, c.is_active, c.created_at, c.updated_at
         )
  SELECT bp.id,
     bp.tenant_id,
     bp.code,
     bp.name,
-    bp.display_name,
     bp.partner_category,
-    bp.legal_name,
+    bp.ownership_class,
+    bp.legal_classification,
     bp.legal_form,
     NULL::text AS registration_no,
     bp.registration_country_code,
     NULL::character(2) AS tax_residence_country_code,
     bp.website_url,
-    bp.parent_business_partner_id,
+    (SELECT r.target_business_partner_id FROM master.business_partner_relationship r
+      WHERE r.tenant_id=bp.tenant_id AND r.source_business_partner_id=bp.id
+      AND r.relationship_type_code='parent' AND r.status='active'
+      AND (r.effective_from IS NULL OR r.effective_from<=CURRENT_DATE)
+      AND (r.effective_until IS NULL OR r.effective_until>CURRENT_DATE)) AS parent_business_partner_id,
     bp.description,
     NULL::text AS long_description,
-    bp.aliases,
+    COALESCE((SELECT array_agg(alias.alias_name ORDER BY alias.is_primary DESC,alias.alias_name)
+      FROM master.business_partner_alias alias
+      WHERE alias.tenant_id=bp.tenant_id AND alias.business_partner_id=bp.id
+        AND alias.status='active' AND alias.effective_from<=CURRENT_DATE
+        AND(alias.effective_until IS NULL OR alias.effective_until>CURRENT_DATE)),'{}'::text[]) AS aliases,
     '{}'::text[] AS tags,
     '{}'::text[] AS business_types,
     NULL::integer AS founded_year,
@@ -402,19 +429,23 @@ WITH supplier_role AS (
             WHEN sr.supplier_id IS NOT NULL AND cr.customer_id IS NOT NULL THEN 'Supplier + Customer'::text
             WHEN sr.supplier_id IS NOT NULL THEN 'Supplier'::text
             WHEN cr.customer_id IS NOT NULL THEN 'Customer'::text
-            WHEN bp.partner_category = 'internal'::text THEN 'Internal'::text
+            WHEN bp.ownership_class = 'internal'::text THEN 'Internal'::text
             ELSE 'Identity'::text
         END AS role_summary,
     COALESCE(sr.supplier_company_scope_count, 0) + COALESCE(cr.customer_company_scope_count, 0) AS company_scope_count,
     COALESCE(sr.supplier_active_scope_count, 0) + COALESCE(cr.customer_active_scope_count, 0) AS active_scope_count,
     COALESCE(sr.supplier_blocked_scope_count, 0) + COALESCE(cr.customer_blocked_scope_count, 0) AS blocked_scope_count,
-    COALESCE(sr.supplier_blocked_scope_count, 0) > 0 OR COALESCE(cr.customer_blocked_scope_count, 0) > 0 OR (sr.supplier_status::text = ANY (ARRAY['on_hold'::text, 'suspended'::text])) OR (cr.customer_status::text = ANY (ARRAY['on_hold'::text, 'credit_hold'::text])) OR (bp.status::text = ANY (ARRAY['on_hold'::text, 'blocked'::text])) AS is_blocked,
-    lower(concat_ws(' '::text, bp.code, bp.name, bp.display_name, bp.legal_name, sr.supplier_code, sr.supplier_type, cr.customer_code, cr.customer_type, array_to_string(bp.aliases, ' '::text))) AS search_text,
+    COALESCE(sr.supplier_blocked_scope_count, 0) > 0 OR COALESCE(cr.customer_blocked_scope_count, 0) > 0 OR sr.supplier_status::text = 'suspended' OR cr.customer_status::text = 'suspended' AS is_blocked,
+    lower(concat_ws(' '::text, bp.code, bp.name, sr.supplier_code, sr.supplier_type, cr.customer_code, cr.customer_type, array_to_string(COALESCE((SELECT array_agg(alias.alias_name ORDER BY alias.is_primary DESC,alias.alias_name)
+      FROM master.business_partner_alias alias
+      WHERE alias.tenant_id=bp.tenant_id AND alias.business_partner_id=bp.id
+        AND alias.status='active' AND alias.effective_from<=CURRENT_DATE
+        AND(alias.effective_until IS NULL OR alias.effective_until>CURRENT_DATE)),'{}'::text[]), ' '::text))) AS search_text,
     bp.created_at,
     bp.created_by,
     GREATEST(COALESCE(bp.updated_at, bp.created_at), COALESCE(sr.supplier_updated_at, sr.supplier_created_at, bp.created_at), COALESCE(sr.supplier_scope_updated_at, bp.created_at), COALESCE(cr.customer_updated_at, cr.customer_created_at, bp.created_at), COALESCE(cr.customer_scope_updated_at, bp.created_at)) AS updated_at,
     bp.updated_by
-   FROM master.business_partner bp
+   FROM master.business_partner_identity_current bp
      LEFT JOIN supplier_role sr ON sr.tenant_id = bp.tenant_id AND sr.business_partner_id = bp.id
      LEFT JOIN customer_role cr ON cr.tenant_id = bp.tenant_id AND cr.business_partner_id = bp.id;
 
@@ -424,7 +455,7 @@ WITH bp_scoped_link AS (
             bal_1.tenant_id,
             bal_1.owner_type,
             bal_1.owner_id,
-            bal_1.bank_account_id,
+            bal_1.payment_instrument_id AS bank_account_id,
             bal_1.company_code_id,
             bal_1.purpose,
             bal_1.is_primary,
@@ -436,14 +467,14 @@ WITH bp_scoped_link AS (
             bal_1.updated_at,
             bal_1.updated_by,
             bal_1.owner_id AS business_partner_id
-           FROM master.bank_account_link bal_1
+           FROM master.payment_instrument_link bal_1
           WHERE bal_1.owner_type = 'business_partner'::text
         UNION ALL
          SELECT bal_1.id,
             bal_1.tenant_id,
             bal_1.owner_type,
             bal_1.owner_id,
-            bal_1.bank_account_id,
+            bal_1.payment_instrument_id AS bank_account_id,
             bal_1.company_code_id,
             bal_1.purpose,
             bal_1.is_primary,
@@ -455,7 +486,7 @@ WITH bp_scoped_link AS (
             bal_1.updated_at,
             bal_1.updated_by,
             s.business_partner_id
-           FROM master.bank_account_link bal_1
+           FROM master.payment_instrument_link bal_1
              JOIN master.supplier s ON s.tenant_id = bal_1.tenant_id AND s.id = bal_1.owner_id
           WHERE bal_1.owner_type = 'supplier'::text
         UNION ALL
@@ -463,7 +494,7 @@ WITH bp_scoped_link AS (
             bal_1.tenant_id,
             bal_1.owner_type,
             bal_1.owner_id,
-            bal_1.bank_account_id,
+            bal_1.payment_instrument_id AS bank_account_id,
             bal_1.company_code_id,
             bal_1.purpose,
             bal_1.is_primary,
@@ -475,26 +506,27 @@ WITH bp_scoped_link AS (
             bal_1.updated_at,
             bal_1.updated_by,
             c.business_partner_id
-           FROM master.bank_account_link bal_1
+           FROM master.payment_instrument_link bal_1
              JOIN master.customer c ON c.tenant_id = bal_1.tenant_id AND c.id = bal_1.owner_id
           WHERE bal_1.owner_type = 'customer'::text
         )
  SELECT bal.id,
     bal.tenant_id,
     bal.business_partner_id,
-    ba.account_id_value AS account_number,
+    repeat('*', 8) || ba.account_last4 AS account_number,
     ba.currency_code,
     ba.account_holder_name,
     ba.account_id_type,
     ba.account_nature,
-    ba.is_verified,
     bal.purpose,
     bal.is_primary,
     bal.effective_from,
     bal.effective_until,
-    COALESCE(bp.name, ba.bank_name_override) AS bank_name,
+    COALESCE(bp.name, provisional.submitted_name) AS bank_name,
     ba.bic_override,
-    ba.bank_party_id,
+    ba.bank_institution_id,
+    ba.bank_branch_id,
+    ba.provisional_bank_reference_id,
     bal.bank_account_id,
     bal.created_at,
     bal.updated_at,
@@ -503,19 +535,13 @@ WITH bp_scoped_link AS (
     bal.company_code_id,
     cc.code AS company_code,
     COALESCE(cc.display_name, cc.name) AS company_code_name,
-    ba.account_id_value,
         CASE
             WHEN ba.account_last4 IS NOT NULL THEN repeat('*'::text, GREATEST(length(ba.account_id_value) - 4, 0)) || ba.account_last4
             ELSE repeat('*'::text, GREATEST(length(ba.account_id_value) - 4, 0)) || "right"(ba.account_id_value, 4)
         END AS account_id_value_masked,
     ba.account_last4,
-    ba.verified_at,
-    ba.verified_by,
-    ba.verification_method,
-    ba.bank_name_override,
     COALESCE(bp.bic, ba.bic_override) AS bic,
-    COALESCE(bp.country_code, ba.bank_country_override) AS bank_country_code,
-    ba.bank_country_override,
+    COALESCE(bp.country_code, provisional.submitted_country) AS bank_country_code,
     bp.institution_type,
     bp.branch_code,
     bp.branch_name,
@@ -532,14 +558,15 @@ WITH bp_scoped_link AS (
     ba.metadata AS account_metadata
    FROM bp_scoped_link bal
      JOIN master.bank_account ba ON ba.id = bal.bank_account_id AND ba.tenant_id = bal.tenant_id
-     LEFT JOIN master.bank_party bp ON bp.id = ba.bank_party_id AND bp.tenant_id = ba.tenant_id
-     LEFT JOIN master.bank_party cbp ON cbp.id = ba.correspondent_bank_party_id AND cbp.tenant_id = ba.tenant_id
+     LEFT JOIN master.bank_provisional_reference provisional ON provisional.tenant_id=ba.tenant_id AND provisional.id=ba.provisional_bank_reference_id
+     LEFT JOIN shared.v_bank_directory bp ON bp.id = ba.bank_institution_id AND bp.branch_id IS NOT DISTINCT FROM ba.bank_branch_id
+     LEFT JOIN shared.v_bank_directory cbp ON cbp.id = ba.correspondent_bank_institution_id AND cbp.branch_id IS NULL
      LEFT JOIN master.company_code cc ON cc.id = bal.company_code_id AND cc.tenant_id = bal.tenant_id;
 
 CREATE OR REPLACE VIEW "master"."v_business_partner_role_summary"
 WITH (security_invoker = true, security_barrier = true) AS
 WITH supplier_scope AS (
-         SELECT company_code_supplier_profile.supplier_id,
+         SELECT company_code_supplier_profile.business_partner_id,
             company_code_supplier_profile.tenant_id,
             count(*) FILTER (WHERE company_code_supplier_profile.is_active)::integer AS active_scope_count,
             count(*)::integer AS company_scope_count,
@@ -547,9 +574,9 @@ WITH supplier_scope AS (
             min(company_code_supplier_profile.currency_code) FILTER (WHERE company_code_supplier_profile.is_active AND company_code_supplier_profile.currency_code IS NOT NULL)::text AS primary_currency_code,
             max(company_code_supplier_profile.updated_at) AS last_scope_updated_at
            FROM master.company_code_supplier_profile
-          GROUP BY company_code_supplier_profile.tenant_id, company_code_supplier_profile.supplier_id
+          GROUP BY company_code_supplier_profile.tenant_id, company_code_supplier_profile.business_partner_id
         ), customer_scope AS (
-         SELECT company_code_customer_profile.customer_id,
+         SELECT company_code_customer_profile.business_partner_id,
             company_code_customer_profile.tenant_id,
             count(*) FILTER (WHERE company_code_customer_profile.is_active)::integer AS active_scope_count,
             count(*)::integer AS company_scope_count,
@@ -557,7 +584,7 @@ WITH supplier_scope AS (
             min(company_code_customer_profile.currency_code) FILTER (WHERE company_code_customer_profile.is_active AND company_code_customer_profile.currency_code IS NOT NULL)::text AS primary_currency_code,
             max(company_code_customer_profile.updated_at) AS last_scope_updated_at
            FROM master.company_code_customer_profile
-          GROUP BY company_code_customer_profile.tenant_id, company_code_customer_profile.customer_id
+          GROUP BY company_code_customer_profile.tenant_id, company_code_customer_profile.business_partner_id
         )
  SELECT s.id,
     s.tenant_id,
@@ -585,7 +612,7 @@ WITH supplier_scope AS (
     s.created_at,
     GREATEST(COALESCE(s.updated_at, s.created_at), COALESCE(ss.last_scope_updated_at, s.created_at)) AS updated_at
    FROM master.supplier s
-     LEFT JOIN supplier_scope ss ON ss.supplier_id = s.id AND ss.tenant_id = s.tenant_id
+     LEFT JOIN supplier_scope ss ON ss.business_partner_id = s.business_partner_id AND ss.tenant_id = s.tenant_id
 UNION ALL
  SELECT c.id,
     c.tenant_id,
@@ -602,7 +629,13 @@ UNION ALL
     COALESCE(cs.company_scope_count, 0) AS company_scope_count,
     COALESCE(cs.blocked_scope_count, 0) AS blocked_scope_count,
     NULL::boolean AS is_payment_ready,
-    COALESCE(c.is_key_account, false) AS is_key_account,
+    EXISTS (
+        SELECT 1 FROM control.customer_account_designation designation
+         WHERE designation.tenant_id=c.tenant_id AND designation.customer_id=c.id
+           AND designation.designation_type='key_account' AND designation.status='approved'
+           AND designation.effective_from<=CURRENT_DATE
+           AND(designation.effective_until IS NULL OR designation.effective_until>CURRENT_DATE)
+    ) AS is_key_account,
     NULL::text AS risk_rating,
     COALESCE(cs.blocked_scope_count, 0) > 0 OR (c.status::text = ANY (ARRAY['on_hold'::text, 'credit_hold'::text])) AS is_blocked,
     cs.primary_currency_code,
@@ -613,7 +646,7 @@ UNION ALL
     c.created_at,
     GREATEST(COALESCE(c.updated_at, c.created_at), COALESCE(cs.last_scope_updated_at, c.created_at)) AS updated_at
    FROM master.customer c
-     LEFT JOIN customer_scope cs ON cs.customer_id = c.id AND cs.tenant_id = c.tenant_id;
+     LEFT JOIN customer_scope cs ON cs.business_partner_id = c.business_partner_id AND cs.tenant_id = c.tenant_id;
 
 CREATE OR REPLACE VIEW "master"."v_company_code_address" WITH (security_invoker=true, security_barrier=true) AS
 SELECT al.id,
@@ -685,7 +718,7 @@ SELECT p.id AS principal_id,
     COALESCE(pui.number_format, tp.number_format) AS number_format,
     COALESCE(pui.week_start::integer, tp.week_start::integer, 1) AS week_start,
     COALESCE(pui.appearance_mode, 'system'::text) AS appearance_mode,
-    COALESCE(pui.density_code, 'compact'::text) AS density_code,
+    COALESCE(pui.density_code, 'comfortable'::text) AS density_code,
     NULL::text AS home_workspace_code,
     NULL::text AS home_module_code,
     NULL::uuid AS default_company_code_id,
@@ -860,7 +893,7 @@ WITH supplier_scoped_link AS (
             bal_1.tenant_id,
             bal_1.owner_type,
             bal_1.owner_id,
-            bal_1.bank_account_id,
+            bal_1.payment_instrument_id AS bank_account_id,
             bal_1.company_code_id,
             bal_1.purpose,
             bal_1.is_primary,
@@ -873,14 +906,14 @@ WITH supplier_scoped_link AS (
             bal_1.updated_by,
             s.id AS supplier_id
            FROM master.supplier s
-             JOIN master.bank_account_link bal_1 ON bal_1.tenant_id = s.tenant_id AND bal_1.owner_id = s.business_partner_id
+             JOIN master.payment_instrument_link bal_1 ON bal_1.tenant_id = s.tenant_id AND bal_1.owner_id = s.business_partner_id
           WHERE bal_1.owner_type = 'business_partner'::text
         UNION ALL
          SELECT bal_1.id,
             bal_1.tenant_id,
             bal_1.owner_type,
             bal_1.owner_id,
-            bal_1.bank_account_id,
+            bal_1.payment_instrument_id AS bank_account_id,
             bal_1.company_code_id,
             bal_1.purpose,
             bal_1.is_primary,
@@ -892,7 +925,7 @@ WITH supplier_scoped_link AS (
             bal_1.updated_at,
             bal_1.updated_by,
             bal_1.owner_id AS supplier_id
-           FROM master.bank_account_link bal_1
+           FROM master.payment_instrument_link bal_1
           WHERE bal_1.owner_type = 'supplier'::text
         )
  SELECT bal.id,
@@ -903,20 +936,22 @@ WITH supplier_scoped_link AS (
     ba.account_holder_name,
     ba.account_id_type,
     ba.account_nature,
-    ba.is_verified,
     bal.purpose,
     bal.is_primary,
     bal.effective_from,
     bal.effective_until,
-    COALESCE(bp.name, ba.bank_name_override) AS bank_name,
+    COALESCE(bp.name, provisional.submitted_name) AS bank_name,
     ba.bic_override,
-    ba.bank_party_id,
+    ba.bank_institution_id,
+    ba.bank_branch_id,
+    ba.provisional_bank_reference_id,
     bal.bank_account_id,
     bal.created_at,
     bal.updated_at
    FROM supplier_scoped_link bal
      JOIN master.bank_account ba ON ba.id = bal.bank_account_id AND ba.tenant_id = bal.tenant_id
-     LEFT JOIN master.bank_party bp ON bp.id = ba.bank_party_id AND bp.tenant_id = ba.tenant_id;
+     LEFT JOIN master.bank_provisional_reference provisional ON provisional.tenant_id=ba.tenant_id AND provisional.id=ba.provisional_bank_reference_id
+     LEFT JOIN shared.v_bank_directory bp ON bp.id = ba.bank_institution_id AND bp.branch_id IS NOT DISTINCT FROM ba.bank_branch_id;
 
 CREATE VIEW master.business_partner_governance_summary
 WITH (security_invoker = true, security_barrier = true) AS
@@ -961,3 +996,14 @@ COMMENT ON VIEW master.business_partner_governance_summary IS
   'Canonical governance summary over business_partner_governance_relation.';
 COMMENT ON VIEW master.entity_commodity_assignment IS
   'Canonical commodity assignment projection replacing v_entity_commodity.';
+
+CREATE VIEW master.legal_entity_business_partner_link
+WITH (security_invoker = true, security_barrier = true) AS
+SELECT id, tenant_id, legal_entity_id, business_partner_id,
+       effective_from, effective_until, notes, metadata, status, is_active,
+       status_changed_at, status_changed_by, created_at, created_by,
+       updated_at, updated_by
+FROM master.legal_entity_internal_partner_link;
+
+COMMENT ON VIEW master.legal_entity_business_partner_link IS
+  'Deprecated read-compatibility alias. New code must use master.legal_entity_internal_partner_link.';

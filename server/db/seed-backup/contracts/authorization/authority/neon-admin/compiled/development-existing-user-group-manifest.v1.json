@@ -2,7 +2,7 @@
   "contractVersion": "authorization-v2.development-user-groups.v1",
   "realm": "athyper",
   "managedBy": "athyper.authorization-v2",
-  "source": "stack/config/iam/realm-athyper-demosetup.json",
+  "source": "deploy/config/iam/realm-athyper-demosetup.json",
   "sourceSha256": "aa34194640b7186a4bc72e78059ce41e5d374cc83b91ffe69902979fd9fe4aa8",
   "unmanagedKeycloakUsers": "unchanged",
   "enabledSubjectCount": 149,

@@ -1,0 +1,47 @@
+{
+  "schema": "athyper.master-data.launch-scope.v1",
+  "decisionStatus": "scope_confirmed",
+  "environment": "staging",
+  "planes": [
+    "neon"
+  ],
+  "tenantIds": [],
+  "channels": [
+    "email"
+  ],
+  "provider": null,
+  "ownerTypes": [
+    "business_partner"
+  ],
+  "accountableOwners": {
+    "domain": null,
+    "integration": null,
+    "iam": null,
+    "database": null,
+    "release": null
+  },
+  "pilot": {
+    "dataPolicy": "synthetic_only",
+    "businessPartnerCount": 10,
+    "primaryTenantCount": 1,
+    "negativeTestTenantCount": 1,
+    "primaryTenantId": null,
+    "negativeTestTenantId": null,
+    "verificationTrustScope": "primary_tenant_only",
+    "addressCoverage": [
+      "create",
+      "profile_read",
+      "deactivate"
+    ],
+    "actorProfiles": [
+      "owner_scope_a_user",
+      "owner_scope_b_user",
+      "unauthorized_user",
+      "attestation_service"
+    ],
+    "providerSelection": "pending",
+    "signingKeys": "staging_only",
+    "authorizationDesignStatus": "proposed_not_published",
+    "deploymentAuthorized": false
+  }
+}

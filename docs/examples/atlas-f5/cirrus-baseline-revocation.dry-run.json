@@ -1,0 +1,12 @@
+{
+  "schema": "atlas-baseline-adoption-receipt/1",
+  "observedAt": "2026-09-10T02:37:49.646Z",
+  "environment": "dev",
+  "applied": false,
+  "action": "revoke_import",
+  "result": {
+    "revoked": true,
+    "baselineId": "5ca0968a-f81f-42b4-8333-dd54c1b02cbb",
+    "runtimeChanged": false
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "schema": "athyper.business-partner-r8-evidence-artifact/1",
+  "gate": "manual_accessibility",
+  "result": "pending",
+  "environment": "production",
+  "targetRef": null,
+  "sourceRevision": null,
+  "startedAt": null,
+  "completedAt": null,
+  "evidence": {
+    "standard": "WCAG 2.2 AA",
+    "zoomPercent": 200,
+    "viewports": [
+      "1440x900",
+      "412x915"
+    ],
+    "assistiveTechnologies": [],
+    "reviewer": {
+      "name": null,
+      "role": "accessibility_specialist"
+    },
+    "reviewAttestationRef": null,
+    "checks": [
+      {
+        "id": "keyboard_navigation",
+        "result": "pending",
+        "evidenceRef": null
+      },
+      {
+        "id": "focus_visibility_and_order",
+        "result": "pending",
+        "evidenceRef": null
+      },
+      {
+        "id": "form_labels_and_errors",
+        "result": "pending",
+        "evidenceRef": null
+      },
+      {
+        "id": "simulation_status_announcement",
+        "result": "pending",
+        "evidenceRef": null
+      },
+      {
+        "id": "immutable_revision_review",
+        "result": "pending",
+        "evidenceRef": null
+      },
+      {
+        "id": "approval_confirmation",
+        "result": "pending",
+        "evidenceRef": null
+      },
+      {
+        "id": "proof_table_navigation",
+        "result": "pending",
+        "evidenceRef": null
+      },
+      {
+        "id": "zoom_reflow",
+        "result": "pending",
+        "evidenceRef": null
+      },
+      {
+        "id": "desktop_viewport",
+        "result": "pending",
+        "evidenceRef": null
+      },
+      {
+        "id": "mobile_viewport",
+        "result": "pending",
+        "evidenceRef": null
+      }
+    ]
+  }
+}

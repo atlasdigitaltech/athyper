@@ -1,0 +1,21 @@
+{
+  "observedAt": "2026-09-10T06:49:31.810Z",
+  "applied": false,
+  "results": [
+    {
+      "plane": "mesh",
+      "name": "20260910_operation_projection_release_identity.sql",
+      "sha256": "d7a11980d424719a0b3703299ee8f9c9e21a8fba4e054b12c67a97cad00c0afb"
+    },
+    {
+      "plane": "mesh",
+      "name": "20260910_mesh_tenant_fork_activation.sql",
+      "sha256": "36ce6573ae3dd14b13c46f25ae1033c45cc30c5e6eed5c2af68028828b7d503d"
+    },
+    {
+      "plane": "studio",
+      "name": "20260910_mesh_tenant_fork_publication.sql",
+      "sha256": "ad7f160bef2b59b6956c6b26314b08ebd5601bc3dd4d943a69fabf267f4b0a07"
+    }
+  ]
+}

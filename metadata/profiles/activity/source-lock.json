@@ -1,0 +1,47 @@
+{
+  "schema": "athyper.capability-profile-source-lock/1",
+  "profiles": [
+    {
+      "code": "platform.activity.standard",
+      "version": 1,
+      "file": "standard.v1.json",
+      "sha256": "08c14e4221be8877792a548be0d954b6e2b8af8bc2a708146271ace15078ee15"
+    },
+    {
+      "code": "platform.activity.recorded-root",
+      "version": 1,
+      "file": "recorded-root.v1.json",
+      "sha256": "7a3fa106925fb11f58ebfae9f3f09b1067f3009fb8254abef6591a54b898ef77"
+    },
+    {
+      "code": "platform.activity.recorded-root",
+      "version": 2,
+      "file": "recorded-root.v2.json",
+      "sha256": "795674a9b841d19e6045a0a78a09a652b064af2bbc32c6ffafdfe2e430aeeb19"
+    },
+    {
+      "code": "platform.activity.recorded-owned",
+      "version": 1,
+      "file": "recorded-owned.v1.json",
+      "sha256": "17fd46cc55dca4bb21db2687661332c78351575beacf053385885a7042ef858b"
+    },
+    {
+      "code": "platform.activity.recorded-owned",
+      "version": 2,
+      "file": "recorded-owned.v2.json",
+      "sha256": "c19dbac30f097a817566147fe1e24507ffb7d4c53e279f7c3364962d1ea5e780"
+    },
+    {
+      "code": "platform.activity.recorded-owned",
+      "version": 3,
+      "file": "recorded-owned.v3.json",
+      "sha256": "acf5d3065e8527b189150773ebd147f58265b3d793326e5f74aa4ba7a3d93454"
+    },
+    {
+      "code": "platform.activity.standard",
+      "version": 2,
+      "file": "standard.v2.json",
+      "sha256": "79c5615c2831c1376c4d097ea3b2a3e22e8160433045bed060244663f7e0d8bf"
+    }
+  ]
+}

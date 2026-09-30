@@ -22,12 +22,6 @@ ALTER TABLE document.attachment
     FOREIGN KEY (tenant_id, status_changed_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE document.attachment_quota_usage ADD CONSTRAINT attachment_quota_usage_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT;
-ALTER TABLE document.attachment_quota_usage ADD CONSTRAINT attachment_quota_usage_created_by_fk FOREIGN KEY (tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
-ALTER TABLE document.attachment_quota_reservation ADD CONSTRAINT attachment_quota_reservation_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT;
-ALTER TABLE document.attachment_quota_reservation ADD CONSTRAINT attachment_quota_reservation_attachment_fk FOREIGN KEY (tenant_id,resource_id) REFERENCES document.attachment(tenant_id,id) ON DELETE RESTRICT;
-ALTER TABLE document.attachment_quota_reservation ADD CONSTRAINT attachment_quota_reservation_created_by_fk FOREIGN KEY (tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
-
 ALTER TABLE document.attachment_folder
     ADD CONSTRAINT attachment_folder_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
@@ -44,13 +38,25 @@ ALTER TABLE document.attachment_folder
     FOREIGN KEY (tenant_id, updated_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE document.attachment_workspace
+    ADD CONSTRAINT attachment_workspace_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_workspace
+    ADD CONSTRAINT attachment_workspace_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_workspace
+    ADD CONSTRAINT attachment_workspace_updated_by_fk
+    FOREIGN KEY (tenant_id, updated_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
 ALTER TABLE document.attachment_link
     ADD CONSTRAINT attachment_link_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
 ALTER TABLE document.attachment_link
-    ADD CONSTRAINT attachment_link_attachment_fk
-    FOREIGN KEY (tenant_id, attachment_id)
-    REFERENCES document.attachment (tenant_id, id) ON DELETE RESTRICT;
+    ADD CONSTRAINT attachment_link_pinned_attachment_fk
+    FOREIGN KEY (tenant_id, pinned_attachment_id, attachment_series_id)
+    REFERENCES document.attachment (tenant_id, id, series_id) ON DELETE RESTRICT;
 ALTER TABLE document.attachment_link
     ADD CONSTRAINT attachment_link_folder_fk
     FOREIGN KEY (tenant_id, folder_id)
@@ -152,37 +158,7 @@ ALTER TABLE document.comment_reaction
     FOREIGN KEY (tenant_id, created_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE document.comment_revision
-    ADD CONSTRAINT comment_revision_tenant_fk
-    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
-ALTER TABLE document.comment_revision
-    ADD CONSTRAINT comment_revision_comment_fk
-    FOREIGN KEY (tenant_id, comment_id)
-    REFERENCES document.comment (tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE document.comment_revision
-    ADD CONSTRAINT comment_revision_created_by_fk
-    FOREIGN KEY (tenant_id, created_by)
-    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE document.comment_moderation_flag
-    ADD CONSTRAINT comment_moderation_flag_tenant_fk
-    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
-ALTER TABLE document.comment_moderation_flag
-    ADD CONSTRAINT comment_moderation_flag_comment_fk
-    FOREIGN KEY (tenant_id, comment_id)
-    REFERENCES document.comment (tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE document.comment_moderation_flag
-    ADD CONSTRAINT comment_moderation_flag_reporter_fk
-    FOREIGN KEY (tenant_id, reporter_id)
-    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE document.comment_moderation_flag
-    ADD CONSTRAINT comment_moderation_flag_created_by_fk
-    FOREIGN KEY (tenant_id, created_by)
-    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE document.comment_moderation_flag
-    ADD CONSTRAINT comment_moderation_flag_resolved_by_fk
-    FOREIGN KEY (tenant_id, resolved_by)
-    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
 ALTER TABLE document.content_item
     ADD CONSTRAINT content_item_tenant_fk
@@ -305,11 +281,6 @@ ALTER TABLE document.content_item
     REFERENCES snapshot.content_item_version (tenant_id, id)
     DEFERRABLE INITIALLY DEFERRED;
 
-ALTER TABLE document.content_item_access_grant ADD CONSTRAINT content_item_access_grant_item_fk FOREIGN KEY(tenant_id,content_item_id) REFERENCES document.content_item(tenant_id,id) ON DELETE CASCADE;
-ALTER TABLE document.content_item_access_grant ADD CONSTRAINT content_item_access_grant_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
-ALTER TABLE document.content_item_access_grant ADD CONSTRAINT content_item_access_grant_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
-ALTER TABLE document.content_quota_usage ADD CONSTRAINT content_quota_usage_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
-ALTER TABLE document.content_quota_reservation ADD CONSTRAINT content_quota_reservation_item_fk FOREIGN KEY(tenant_id,content_item_id) REFERENCES document.content_item(tenant_id,id) ON DELETE CASCADE;
 
 -- attachment_series constraints
 ALTER TABLE document.attachment_series

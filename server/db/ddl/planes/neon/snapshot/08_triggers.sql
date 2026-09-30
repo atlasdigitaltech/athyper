@@ -33,3 +33,11 @@ FOR EACH ROW EXECUTE FUNCTION snapshot.trg_validate_bom_snapshot();
 CREATE TRIGGER trg_bom_component_10_source_contract
 BEFORE INSERT ON snapshot.bom_component
 FOR EACH ROW EXECUTE FUNCTION snapshot.trg_validate_bom_component_snapshot();
+
+CREATE TRIGGER trg_mesh_bp_profile_received_validate
+BEFORE INSERT ON snapshot.mesh_business_partner_profile_received
+FOR EACH ROW EXECUTE FUNCTION snapshot.trg_guard_mesh_business_partner_profile_received();
+CREATE TRIGGER trg_mesh_bp_profile_received_immutable
+BEFORE UPDATE OR DELETE ON snapshot.mesh_business_partner_profile_received
+FOR EACH ROW EXECUTE FUNCTION snapshot.trg_guard_mesh_business_partner_profile_received();
+CREATE TRIGGER trg_mesh_bank_disclosure_received_immutable BEFORE UPDATE OR DELETE ON snapshot.mesh_bank_account_disclosure_received FOR EACH ROW EXECUTE FUNCTION snapshot.trg_reject_mesh_bank_disclosure_mutation();

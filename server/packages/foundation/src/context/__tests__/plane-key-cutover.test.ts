@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { glob } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
@@ -17,7 +17,9 @@ describe("Foundation Studio plane-key cutover", () => {
     for await (const relativePath of glob("{apps,packages,server/{apps,packages}}/**/*.{ts,tsx,js,mjs,cjs,sql,yml,yaml,sh,bat}", { cwd: root })) {
       const normalized = relativePath.replaceAll("\\", "/");
       if (normalized.includes("/__tests__/") || normalized.includes("/test/") || normalized.includes("/dist/") || normalized.includes("/node_modules/")) continue;
-      const source = await readFile(new URL(normalized, root), "utf8");
+      const candidate = new URL(normalized, root);
+      if(!(await stat(candidate)).isFile())continue;
+      const source = await readFile(candidate, "utf8");
       const activeComparison = /(?:planeKey|plane_key|plane)\s*(?:===|!==|==|!=)\s*["']athyper["']|["']athyper["']\s*\|\s*["'](?:neon|mesh|studio)["']|\[\s*["']athyper["']\s*,\s*["'](?:neon|mesh|studio)["']/.test(source);
       if (activeComparison && !compatibilityFiles.has(normalized)) violations.push(normalized);
     }

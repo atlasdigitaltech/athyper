@@ -1,0 +1,28 @@
+apiVersion: athyper.io/v1alpha1
+kind: ProductionRehearsal
+metadata:
+  id: production-from-stg
+spec:
+  sourceInstance: stg
+  targetInstance: production
+  targetContract: deploy/production/instance.yaml
+  promotion:
+    rebuildAllowed: false
+    requiredImageIds: [iam, mesh-web, neon-web, runtime-server, studio-web]
+    requireImmutableDigests: true
+  credentials:
+    requireDedicatedNamespace: true
+    stagingReuseAllowed: false
+  evidence:
+    stagingQualification: production/staging-qualification.json
+    backupRestore: production/backup-restore-rehearsal.json
+    emailCanary: production/email-canary.json
+    webPushCanary: production/web-push-canary.json
+    rollbackDrill: production/rollback-drill.json
+    businessPartnerP9: production/business-partner/release-certification.json
+    releaseApproval: production/release-approval.json
+  rollout:
+    emailCanaryPercent: 1
+    pushCanaryPercent: 1
+    rollbackOwnerRequired: true
+    automaticPauseOnFailure: true

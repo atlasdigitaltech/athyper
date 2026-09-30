@@ -1,0 +1,23 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0",
+  "contractStatus": "proposed_for_review",
+  "planeKey": "neon",
+  "entityCode": "business_partner",
+  "descriptorKind": "aggregate_root",
+  "aggregate": { "key": "business_partner", "rootEntityCode": "business_partner", "detailRouteTemplate": "/mdg/business-partner/:recordId" },
+  "storage": { "sourceObjects": ["master.business_partner"], "schema": "master", "object": "business_partner", "idField": "id", "tenantField": "tenant_id", "versionField": "row_version", "statusField": "status" },
+  "identity": { "titleField": "display_name", "codeField": "code", "icon": "business-partner", "recordLabel": "Business Partner" },
+  "fields": [
+    { "key": "id", "type": "uuid", "storagePath": "id", "readOnly": true },
+    { "key": "code", "type": "string", "storagePath": "code", "requiredOn": ["create"], "searchable": true, "sortable": true },
+    { "key": "display_name", "type": "string", "storagePath": "display_name", "requiredOn": ["create", "update"], "searchable": true, "sortable": true },
+    { "key": "country_code", "type": "string", "storagePath": "country_code", "filterable": true },
+    { "key": "status", "type": "enum", "storagePath": "status", "filterable": true, "readOnly": true }
+  ],
+  "businessContext": { "scopeKind": "tenant", "recordOwnership": { "tenantId": "required", "legalEntityId": "not_applicable", "companyCodeId": "not_applicable", "operatingOrganizationId": "not_applicable" }, "globalLegalEntityEffect": "none_on_base_identity", "aggregateMode": "tenant_wide_base_identity_only", "draftContextChanges": { "allowed": false } },
+  "operations": [{ "key": "read", "permission": "neon.business_partner.read", "scope": "tenant" }, { "key": "create", "permission": "neon.business_partner.create", "scope": "tenant" }, { "key": "update", "permission": "neon.business_partner.update", "scope": "tenant" }],
+  "handlers": { "read": "neon.business_partner.read.v1", "write": "neon.business_partner.write.v1" },
+  "childDescriptorRefs": ["business_partner_identity", "business_partner_contact", "business_partner_address", "business_partner_identifier", "business_partner_relationship", "supplier", "customer", "business_partner_attachment", "business_partner_certification", "business_partner_qualification", "business_partner_commodity_capability", "business_partner_banking", "business_partner_risk", "business_partner_request"],
+  "presentation": { "list": { "defaultColumns": ["code", "display_name", "country_code", "status"], "defaultSort": [{ "field": "display_name", "direction": "asc" }] }, "detail": { "layout": "business-partner-360.v1" } },
+  "serverPolicies": ["tenant_isolation", "record_authorization", "optimistic_concurrency", "audit" ]
+}

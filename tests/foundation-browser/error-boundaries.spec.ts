@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 
 const classes = ["authentication", "required-action", "permission-denied", "context-mismatch", "conflict", "validation", "rate-limit", "service-unavailable", "network", "offline", "unexpected"] as const;
 for (const kind of classes) test(`${kind} boundary is accessible and redacted`, async ({ page }) => {
-  const markup = execFileSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/verification/render-boundary-fixture.tsx", kind], { encoding: "utf8" });
+  const markup = execFileSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "tooling/scripts/verification/render-boundary-fixture.tsx", kind], { encoding: "utf8" });
   await page.setContent(`<!doctype html><html lang="en"><body>${markup}</body></html>`);
   await page.locator("#app-error-title").focus();
   await expect(page.locator("#app-error-title")).toBeFocused();

@@ -1,7 +1,23 @@
+import type { EntityRuntimeDescriptor, EntityFieldDescriptor } from "@athyper/server-contract-metadata";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 
+export interface RecordListScopeCoordinate {
+  /** Untrusted parent reference; resolved and authorized by the server on every request. */
+  readonly parentEntityCode?: string;
+  readonly parentRecordId?: string;
+  readonly relationshipKey?: string;
+  readonly companyCodeIds?: readonly string[];
+  readonly operatingOrganizationIds?: readonly string[];
+  readonly partnerRole?: "supplier" | "customer";
+  readonly eligibleOperation?: "order" | "invoice" | "payment";
+  readonly companyCodeId?: string;
+  readonly legalEntityId?: string;
+  readonly operatingOrganizationId?: string;
+  readonly networkAccountId?: string;
+}
+
 export type RecordCountMode = "none" | "cached" | "approximate" | "exact";
-export type RecordFilterOperator = "eq" | "ne" | "in" | "gt" | "gte" | "lt" | "lte" | "is_null" | "is_not_null";
+export type RecordFilterOperator = "eq" | "ne" | "in" | "contains" | "starts_with" | "gt" | "gte" | "lt" | "lte" | "between" | "is_null" | "is_not_null" | "relative";
 
 export interface RecordFilter {
   readonly field: string;
@@ -16,15 +32,25 @@ export interface RecordSort {
 }
 
 export interface ListRecordsQuery {
+  readonly standardViewKey?: string;
+  /** Trusted, server-produced relationship predicates. Never accepted from HTTP. */
+  readonly viewRelationships?: readonly import("./ports.js").StandardViewRelationshipConstraint[];
   readonly context: VerifiedRequestContext;
   readonly entityCode: string;
   readonly limit?: number;
   readonly cursor?: string;
   readonly filters?: readonly RecordFilter[];
   readonly sort?: readonly RecordSort[];
+  /** Requested readable response fields. The server adds identity and query-internal fields as required. */
+  readonly fields?: readonly string[];
+  readonly group?: string;
   readonly search?: string;
   readonly countMode?: RecordCountMode;
   readonly hydrateReferences?: boolean;
+  /** Trusted server-only record restriction. HTTP list routes never parse this value. */
+  readonly recordIds?: readonly string[];
+  /** Untrusted explicit coordinate; authority is resolved again on every request. */
+  readonly scopeCoordinate?: RecordListScopeCoordinate;
 }
 
 export interface GetRecordQuery {
@@ -36,6 +62,7 @@ export interface GetRecordQuery {
 
 export interface RecordListResult {
   readonly data: readonly Readonly<Record<string, unknown>>[];
+  readonly groups?: readonly Readonly<{ readonly value: unknown; readonly count: number }>[];
   readonly pagination: {
     readonly pageSize: number;
     readonly hasMore: boolean;
@@ -47,4 +74,10 @@ export interface RecordListResult {
 
 export interface RecordDetailResult {
   readonly data: Readonly<Record<string, unknown>> | null;
+}
+
+/** Request-local authorized read evidence for shared presentation compilation. */
+export interface AuthorizedRecordDetailResult extends RecordDetailResult {
+  readonly descriptor: EntityRuntimeDescriptor;
+  readonly readableFields: readonly EntityFieldDescriptor[];
 }

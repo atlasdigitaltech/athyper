@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/provider-catalog-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "providers"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "ProviderCatalog" },
+    "providers": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["allowedModes", "applicationVariable", "timeoutMs", "dataOwner", "backupOwner"],
+        "properties": {
+          "allowedModes": { "type": "array", "items": { "enum": ["internal", "external", "mock", "disabled", "file"] }, "uniqueItems": true },
+          "applicationVariable": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "companionVariables": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" }, "uniqueItems": true },
+          "healthPath": { "type": "string", "pattern": "^/" },
+          "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 120000 },
+          "dataOwner": { "type": "string", "minLength": 2 },
+          "backupOwner": { "type": "string", "minLength": 2 }
+        }
+      }
+    }
+  }
+}

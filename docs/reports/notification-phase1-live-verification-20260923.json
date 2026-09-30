@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-23T01:49:21.253Z",
+  "phase": "studio-notifications-backend",
+  "samples": [
+    {
+      "name": "bp_inherit",
+      "entityCode": "business_partner_notifications",
+      "changeSetId": "37d3bf01-44e4-4ff2-9037-c3bfe7ba373f",
+      "status": "verified-in-neon",
+      "releaseId": "af1ef72d-8179-4a10-96bd-17638ed8a1bb",
+      "mode": "inherit"
+    },
+    {
+      "name": "bp_override",
+      "entityCode": "business_partner_notifications",
+      "changeSetId": "34372a1d-d016-4432-b485-d09654298cf6",
+      "status": "verified-in-neon",
+      "releaseId": "8b71091a-41a8-46de-9a77-9ae389f1d1cb",
+      "mode": "override"
+    },
+    {
+      "name": "employee_disabled",
+      "entityCode": "notification_employee_example",
+      "changeSetId": "1fef521a-040d-4770-9ad1-50a145fd445e",
+      "status": "verified-in-neon",
+      "releaseId": "fdf3afc0-935e-4522-aa36-9858a5863fe6",
+      "mode": "disabled"
+    }
+  ],
+  "completedAt": "2026-09-23T01:52:04.739Z",
+  "liveChecks": {
+    "invalidReferenceRejected": true,
+    "reviewerCannotAuthor": true,
+    "anonymousInspectionDenied": true,
+    "staleRevisionRejected": true,
+    "previewEscapesHtml": true,
+    "previewDoesNotSend": true,
+    "missingVariableRejected": true,
+    "publishedBpEmailOverrideAndSharedInApp": true,
+    "disabledCommentsAndAttachments": true
+  },
+  "temporaryAccess": {
+    "apply": {
+      "mode": "--apply",
+      "recordedAt": "2026-09-23T01:49:10.882Z",
+      "proposalSha256": "97d4ad54dacc7e9fc25bf3289dc5790dbc3f3214ff68596c2094630a84fe5acf",
+      "approval": "User: go ahead and apply",
+      "activeEdges": 7
+    },
+    "revoke": {
+      "mode": "--revoke",
+      "recordedAt": "2026-09-23T01:56:51.776Z",
+      "proposalSha256": "97d4ad54dacc7e9fc25bf3289dc5790dbc3f3214ff68596c2094630a84fe5acf",
+      "approval": "User: go ahead and apply",
+      "activeEdges": 0
+    },
+    "cleanupScope": "Only notification.phase1.local.verification.20260923 grants revoked; unrelated deployment-observer access preserved."
+  },
+  "regression": {
+    "publicationTestsPassed": 214,
+    "publicationTestFilesPassed": 27,
+    "publicationSourceAndTestTypechecks": "passed"
+  },
+  "scope": {
+    "studioFrontend": false,
+    "providerSends": false,
+    "phase2Started": false
+  }
+}

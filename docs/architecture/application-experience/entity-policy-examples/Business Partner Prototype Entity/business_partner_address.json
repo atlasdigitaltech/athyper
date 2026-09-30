@@ -1,0 +1,8 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0", "contractStatus": "proposed_for_review", "planeKey": "neon", "entityCode": "business_partner_address", "descriptorKind": "child_collection",
+  "aggregate": { "key": "business_partner", "rootEntityCode": "business_partner" }, "ownership": { "ownerEntityCode": "business_partner", "ownerIdSource": "address_link.entity_id", "entityTypes": ["business_partner", "master.business_partner"], "cardinality": "one_to_many" },
+  "storage": { "sourceObjects": ["master.address", "master.address_link", "master.address_event", "document.business_partner_request_address"], "tenantField": "tenant_id" },
+  "fields": [{ "key": "address", "type": "postal_address", "requiredOn": ["create", "update"] }, { "key": "purpose", "type": "reference" }, { "key": "isPrimary", "type": "boolean" }, { "key": "effectivePeriod", "type": "date_range" }, { "key": "normalizedAddress", "type": "object", "readOnly": true }],
+  "businessContext": { "scopeKind": "inherited_from_owner", "requiredCoordinates": [] }, "operations": [{ "key": "read", "permission": "neon.business_partner.read", "scope": "tenant" }, { "key": "manage", "permission": "neon.business_partner.address.update", "scope": "tenant" }],
+  "handlers": { "read": "neon.business_partner.address.read.v1", "write": "neon.business_partner.address.write.v1" }, "presentation": { "section": "Addresses", "component": "address-link.v1" }, "serverPolicies": ["country_subdivision_postal_validation", "normalization", "duplicate_detection", "primary_address", "effective_dates", "governed_materialization"]
+}

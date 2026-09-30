@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "kind": "company_execution_image_binding_amendment",
+  "approved": false,
+  "applied": false,
+  "originalProposalRevision": "aa00bf6a4062913c317a95ac1e2bb3894342c3ed917663fc0d31b880b0b881c0",
+  "originalApproval": "governance/policy/reviews/business-partner-company-execution-bound-20260912.user-approval.dev.json",
+  "destination": {
+    "container": "athyper-bp-enter-db",
+    "network": "athyper-bp-enter-isolated",
+    "database": "athyper_neon"
+  },
+  "previousRuntimeImage": "sha256:181476b05c51cca94905035f0a6abbb565db1e1e35b4283ee773872f074d8aef",
+  "runtimeImage": "sha256:2289573661d7025943a847aac424b3f7ffeaf7b03587f249c4655c2530f7bbbc",
+  "previousReleaseSetHash": "0a2c882cdc2e229e39d276b2df1752fb5fea9e30f6ae9b8f8b53b04755044a91",
+  "releaseSetHash": "a6ed4e71cc3fa20c4a1834d563079b6b6305b970ffc51c27b54bb815a6095dd1",
+  "candidateManifest": "governance/policy/reports/business-partner-company-correction-candidate-v2-20260912.dev.json",
+  "candidateManifestSha256": "9ad4a06e5dc10afda15a15b969eb4661e7e53e8402cf817c04b765256b6d3532",
+  "effectiveFrom": "2026-09-12T03:34:47.375Z",
+  "effectiveUntil": "2026-09-12T05:34:47.375Z",
+  "grantMutation": false,
+  "permissionsChanged": false,
+  "artifactChanges": false,
+  "scope": "Replace isolated API/worker image and bound harness only, using the already-applied eight company permissions within their original window",
+  "excluded": [
+    "Shared DEV",
+    "Ordinary BP access",
+    "Sensitive reveal grants",
+    "Studio publication grants",
+    "Mesh execution",
+    "66-disposition acceptance",
+    "Enforcement activation",
+    "Compatibility retirement"
+  ],
+  "proposalRevision": "8da1f6c3cfd737f791acdc722c31e29b0e24211a24ed62b6b0066be3c015dcb5"
+}

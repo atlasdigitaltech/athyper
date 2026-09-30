@@ -9,7 +9,7 @@
 -- seed-natural-key: control.subscription_plan_module(subscription_plan_id,module_id)
 -- seed-cross-file-ids: true
 -- seed-id-strategy: deterministic-uuid:athyper-wave2-plan-module-v2
--- seed-expected-row-count: exact:31
+-- seed-expected-row-count: exact:33
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 -- seed-assertion: expected-count
@@ -36,6 +36,6 @@ WHERE (control.subscription_plan_module.entitlement_mode,control.subscription_pl
   IS DISTINCT FROM (excluded.entitlement_mode,excluded.metadata,excluded.status);
 
 DO $assertions$ BEGIN
-  IF (SELECT count(*) FROM control.subscription_plan_module WHERE status='active') <> 31 THEN
+  IF (SELECT count(*) FROM control.subscription_plan_module WHERE status='active') <> 33 THEN
     RAISE EXCEPTION 'athyper plan-module count mismatch'; END IF;
 END $assertions$;

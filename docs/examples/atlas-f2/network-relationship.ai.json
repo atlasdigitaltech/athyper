@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "enabled": true,
+  "aliases": ["Network relationship", "Relationship"],
+  "description": "Saved relationship identity within the selected authorized network account",
+  "summaryFieldKeys": ["relationship_kind", "status", "effective_from", "effective_until"],
+  "searchFieldKeys": ["relationship_kind", "status"],
+  "relationshipKeys": [],
+  "contextKinds": ["record"],
+  "insightProviders": [{"id": "entity_read_record", "version": 1}],
+  "actions": [{"id": "open_record", "version": 1, "operationKey": "read"}],
+  "presentationProfiles": [{"id": "record_brief", "version": 1}]
+}

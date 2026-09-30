@@ -1,0 +1,81 @@
+{
+  "schema": "athyper.business-partner-publication-preflight/1",
+  "observedAt": "2026-09-05T03:03:35.696976+00:00",
+  "environment": "dev",
+  "tenantCode": "cirrusatlantic",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "sanitized": true,
+  "sourceRevision": "68600dfd3880821ec02196cd2316e660e85b1bce",
+  "worktreeDirty": true,
+  "status": "blocked",
+  "productionQualified": false,
+  "actors": [
+    {
+      "username": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "mfa": "otp_enrolled",
+      "studioMembership": "active",
+      "observedDefinitionPermissions": [
+        "read",
+        "author",
+        "publish"
+      ],
+      "requiredDefinitionPermissions": [
+        "read",
+        "author"
+      ]
+    },
+    {
+      "username": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "mfa": "not_enrolled",
+      "studioMembership": "active",
+      "observedDefinitionPermissions": [],
+      "requiredDefinitionPermissions": [
+        "read",
+        "publish"
+      ]
+    }
+  ],
+  "scope": {
+    "kind": "tenant",
+    "key": "cirrusatlantic",
+    "propagation": "exact"
+  },
+  "keycloakGroups": [
+    "studio.access.quarantine"
+  ],
+  "definitionRevisionCount": 0,
+  "worker": {
+    "container": "athyper-dev-worker-1",
+    "publicationEnvironmentConfigured": false,
+    "infisicalEnvironmentConfigured": false,
+    "preparedOverlay": "deploy/compose/instance/compose.publication.yaml",
+    "overlayApplied": false
+  },
+  "candidateReview": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-definition-publication-review.json",
+  "validation": {
+    "publicationBuild": "passed",
+    "publicationTests": {
+      "files": 10,
+      "tests": 60,
+      "failed": 0
+    },
+    "composeMerge": "passed_with_synthetic_references",
+    "missingSigningKeyRejected": true,
+    "tokenFileLoader": "valid_accepted_empty_and_missing_rejected",
+    "neonAndMeshCompilation": "deterministic"
+  },
+  "blockers": [
+    "Owner MFA enrollment and authenticated actor sessions are required",
+    "Native authorization changes must remove author publish access and grant reviewer read/publish at exact tenant scope",
+    "Development Infisical endpoint, workspace, environment, key references and token-file reference are missing",
+    "Independent review and native publication have not occurred"
+  ],
+  "nativeReceipts": {
+    "approval": null,
+    "signedRelease": null,
+    "consumerActivations": []
+  },
+  "workforcePolicyApproval": false
+}

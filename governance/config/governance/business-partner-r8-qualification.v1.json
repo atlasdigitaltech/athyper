@@ -1,0 +1,84 @@
+{
+  "$schema": "athyper.business-partner-r8-qualification/1",
+  "asOf": "2026-09-05",
+  "slice": "R8 Studio/operations",
+  "implementationStatus": "local_receipt_intake_and_proof_validation_verified",
+  "productionQualification": "blocked",
+  "productionQualified": false,
+  "evidenceDirectory": "governance/evidence/business-partner/r8",
+  "gates": [
+    {
+      "id": "target_evidence_lifecycle",
+      "scenario": "BP-X-008",
+      "status": "pending",
+      "receipt": null,
+      "requiredCommand": "pnpm qualify:business-partner-r8",
+      "requirements": {
+        "immutable": true,
+        "contentSha256": true,
+        "minimumRetentionDays": 90,
+        "sanitized": true
+      }
+    },
+    {
+      "id": "manual_accessibility",
+      "scenario": "BP-X-012",
+      "status": "pending",
+      "receipt": null,
+      "requiredCommand": "manual assistive-technology review",
+      "requirements": {
+        "standard": "WCAG 2.2 AA",
+        "zoomPercent": 200,
+        "viewports": [
+          "1440x900",
+          "412x915"
+        ],
+        "assistiveTechnologyRequired": true
+      }
+    },
+    {
+      "id": "clean_upgrade_parity",
+      "scenario": "BP-X-014",
+      "status": "pending",
+      "receipt": null,
+      "requiredCommand": "pnpm --dir server/db db:verify:business-partner-live-catalog-parity -- --json=<sanitized-report-path> (CLEAN_DATABASE_URL and UPGRADE_DATABASE_URL from secret injection)",
+      "requirements": {
+        "distinctDatabases": true,
+        "maximumDrift": 0
+      }
+    },
+    {
+      "id": "production_canary_rollback",
+      "scenario": "BP-X-013",
+      "status": "pending",
+      "receipt": null,
+      "requiredCommand": "pnpm --dir server/db db:operate:publication:canary",
+      "requirements": {
+        "planes": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "restoreExactPriorHeads": true,
+        "retainedCorrelations": true
+      }
+    },
+    {
+      "id": "named_owner_certification",
+      "scenario": "BP-X-013",
+      "status": "pending",
+      "receipt": null,
+      "requiredCommand": "named owner review and certification",
+      "requirements": {
+        "roles": [
+          "product_owner",
+          "engineering_owner",
+          "operations_owner",
+          "security_privacy_owner"
+        ],
+        "separationOfDuties": true
+      }
+    }
+  ],
+  "executionPacket": "governance/evidence/business-partner/r8/packets/production-qualification-2026-09-05/packet.json"
+}

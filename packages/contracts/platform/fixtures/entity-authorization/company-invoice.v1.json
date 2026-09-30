@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "entityCode": "qualification_company_invoice",
+  "planeKey": "neon",
+  "ownership": "company.record.v1",
+  "directory": {
+    "operation": "discover",
+    "population": "ownership"
+  },
+  "recordReadOperation": "read",
+  "operations": [
+    {
+      "key": "enter",
+      "permissionCode": "qualification.invoice.enter",
+      "scope": "tenant.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "discover",
+      "permissionCode": "qualification.invoice.read",
+      "scope": "company.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "read",
+      "permissionCode": "qualification.invoice.read",
+      "scope": "company.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "update",
+      "permissionCode": "qualification.invoice.update",
+      "scope": "company.record.v1",
+      "target": "existing",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    }
+  ],
+  "fieldPolicies": [
+    {
+      "key": "system",
+      "fields": [
+        "id",
+        "company_id"
+      ],
+      "readOperation": "read",
+      "representation": "plain",
+      "writeOperations": [],
+      "queryUses": [
+        "filter",
+        "sort",
+        "export"
+      ]
+    },
+    {
+      "key": "commercial",
+      "fields": [
+        "amount"
+      ],
+      "readOperation": "read",
+      "representation": "plain",
+      "writeOperations": [
+        "update"
+      ],
+      "queryUses": [
+        "filter",
+        "sort",
+        "export"
+      ]
+    }
+  ],
+  "surfaces": [],
+  "relationships": [
+    {
+      "key": "evidence",
+      "targetEntity": "qualification_independent_document",
+      "ownership": "independent",
+      "readOperation": "read"
+    }
+  ]
+}

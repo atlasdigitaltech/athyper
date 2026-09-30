@@ -1,0 +1,38 @@
+{
+  "schema": "athyper.dev-successor-draft-receipt/1",
+  "capturedAt": "2026-09-27T19:19:58.572Z",
+  "dryRun": false,
+  "requestId": "5fe34212-7c4c-46b6-b12a-eac421e6d322",
+  "authorityTenantId": "11111111-1111-4111-8111-111111111111",
+  "actorId": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+  "entityId": "b7e5b981-2227-4720-ba5d-040a48ab6842",
+  "predecessor": {
+    "authoringReleaseId": "2ce95226-0b30-4137-aaa0-3594ec946547",
+    "authoringReleaseNo": 4,
+    "authoringReleaseHash": "747ce6097d3acd2fb17fbd6aa5d44523bf1f441b2b959d44519302a9cf8c027f",
+    "publicationReleaseId": "2ce95226-0b30-4137-aaa0-3594ec946547",
+    "publicationReleaseNo": 4,
+    "publicationReleaseHash": "747ce6097d3acd2fb17fbd6aa5d44523bf1f441b2b959d44519302a9cf8c027f",
+    "revisionId": "01a0e38c-1b26-77a4-a032-ede8fc89880f",
+    "contractHash": "bbe7f9f21328c7759c5006957af889255e710f05c0a52f93cb0fb0cd101a6fe4"
+  },
+  "changeSet": {
+    "id": "9758c69e-142a-4524-ba59-be9afe350d59",
+    "tenantId": null,
+    "entityId": "b7e5b981-2227-4720-ba5d-040a48ab6842",
+    "entityCode": "country",
+    "branchCode": "publication.successor.5fe34212-7c4c-46b6-b12a-eac421e6d322",
+    "status": "draft",
+    "revision": 2,
+    "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d"
+  },
+  "contractHash": "81cc7f2c627813eeacb045b8b8c02d7a76950aa2d4f5ab6ca061536279863d60",
+  "descriptorHash": "1e469476b544e7aff0fa869a9cbe616e55f040e16bbe084b4aef5800ab9d6017",
+  "capabilityProfilesEnrolled": true,
+  "effectiveCapabilityBehaviorPreserved": true,
+  "reused": false,
+  "idempotencyVerified": true,
+  "stalePredecessorDenied": true,
+  "approvalCreated": false,
+  "releaseCreated": false
+}

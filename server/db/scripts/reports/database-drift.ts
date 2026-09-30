@@ -2,13 +2,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { extname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
-
-type CatalogRow = { object_key: string; definition: string };
-type Drift = {
-  missing_in_live: string[];
-  extra_in_live: string[];
-  changed: Array<{ object_key: string; target: string; live: string }>;
-};
+import { catalogQueries, catalogMap, compare, type CatalogRow, type Drift } from "../lib/database-catalog.js";
 
 const repoRoot = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const args = new Map(
@@ -22,7 +16,7 @@ if (args.has("--help")) {
   console.log([
     "Usage: tsx scripts/reports/database-drift.ts \\",
     "  --target-url=<clean desired-state database> \\",
-    "  --live-url=<current live database> [--plane=neon|mesh|athyper] \\",
+    "  --live-url=<current live database> [--plane=studio|neon|mesh] \\",
     "  [--schemas=document,audit,event,ledger,control,master] [--strict] [--json=<path>]",
     "",
     "Environment fallbacks: TARGET_DATABASE_URL and LIVE_DATABASE_URL.",
@@ -47,124 +41,9 @@ const strict = args.has("--strict");
 const target = postgres(targetUrl, { max: 1, prepare: false });
 const live = postgres(liveUrl, { max: 1, prepare: false });
 
-const catalogQueries: Record<string, string> = {
-  columns: `
-    SELECT format('%I.%I.%I', n.nspname, c.relname, a.attname) AS object_key,
-           concat_ws('|',
-             format_type(a.atttypid, a.atttypmod),
-             CASE WHEN a.attnotnull THEN 'not_null' ELSE 'nullable' END,
-             coalesce(pg_get_expr(d.adbin, d.adrelid), ''),
-             a.attidentity, a.attgenerated,
-             coalesce(coll.collname, '')
-           ) AS definition
-      FROM pg_attribute a
-      JOIN pg_class c ON c.oid = a.attrelid
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
-      LEFT JOIN pg_collation coll ON coll.oid = a.attcollation AND a.attcollation <> 0
-     WHERE n.nspname = ANY($1::text[])
-       AND c.relkind IN ('r','p','v','m')
-       AND a.attnum > 0 AND NOT a.attisdropped
-     ORDER BY 1`,
-  domains: `
-    SELECT format('%I.%I', n.nspname, t.typname) AS object_key,
-           concat_ws('|', format_type(t.typbasetype, t.typtypmod),
-             t.typnotnull::text, coalesce(pg_get_expr(t.typdefaultbin, 0), ''),
-             coalesce(string_agg(pg_get_constraintdef(con.oid, true), ';' ORDER BY con.conname), '')
-           ) AS definition
-      FROM pg_type t
-      JOIN pg_namespace n ON n.oid = t.typnamespace
-      LEFT JOIN pg_constraint con ON con.contypid = t.oid
-     WHERE n.nspname = ANY($1::text[]) AND t.typtype = 'd'
-     GROUP BY n.nspname, t.typname, t.typbasetype, t.typtypmod,
-              t.typnotnull, t.typdefaultbin
-     ORDER BY 1`,
-  constraints: `
-    SELECT format('%I.%I.%I', n.nspname, c.relname, con.conname) AS object_key,
-           concat_ws('|', con.contype, con.convalidated::text,
-             con.condeferrable::text, con.condeferred::text,
-             pg_get_constraintdef(con.oid, true)) AS definition
-      FROM pg_constraint con
-      JOIN pg_class c ON c.oid = con.conrelid
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-     WHERE n.nspname = ANY($1::text[])
-     ORDER BY 1`,
-  indexes: `
-    SELECT format('%I.%I.%I', n.nspname, c.relname, i.relname) AS object_key,
-           pg_get_indexdef(i.oid) AS definition
-      FROM pg_index x
-      JOIN pg_class c ON c.oid = x.indrelid
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      JOIN pg_class i ON i.oid = x.indexrelid
-     WHERE n.nspname = ANY($1::text[])
-     ORDER BY 1`,
-  rls: `
-    SELECT format('%I.%I', n.nspname, c.relname) AS object_key,
-           concat_ws('|', c.relrowsecurity::text, c.relforcerowsecurity::text) AS definition
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-     WHERE n.nspname = ANY($1::text[]) AND c.relkind IN ('r','p')
-     ORDER BY 1`,
-  policies: `
-    SELECT format('%I.%I.%I', n.nspname, c.relname, p.polname) AS object_key,
-           concat_ws('|', p.polcmd, p.polpermissive::text,
-             array_to_string(ARRAY(
-               SELECT rolname FROM pg_roles WHERE oid = ANY(p.polroles) ORDER BY rolname
-             ), ','),
-             coalesce(pg_get_expr(p.polqual, p.polrelid), ''),
-             coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '')
-           ) AS definition
-      FROM pg_policy p
-      JOIN pg_class c ON c.oid = p.polrelid
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-     WHERE n.nspname = ANY($1::text[])
-     ORDER BY 1`,
-  functions: `
-    SELECT format('%I.%I(%s)', n.nspname, p.proname,
-             pg_get_function_identity_arguments(p.oid)) AS object_key,
-           concat_ws('|', pg_get_function_result(p.oid), l.lanname,
-             p.prosecdef::text, p.provolatile, p.proparallel,
-             coalesce(array_to_string(p.proconfig, ','), ''),
-             pg_get_functiondef(p.oid)) AS definition
-      FROM pg_proc p
-      JOIN pg_namespace n ON n.oid = p.pronamespace
-      JOIN pg_language l ON l.oid = p.prolang
-     WHERE n.nspname = ANY($1::text[])
-     ORDER BY 1`,
-  triggers: `
-    SELECT format('%I.%I.%I', n.nspname, c.relname, t.tgname) AS object_key,
-           concat_ws('|', t.tgenabled, pg_get_triggerdef(t.oid, true)) AS definition
-      FROM pg_trigger t
-      JOIN pg_class c ON c.oid = t.tgrelid
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-     WHERE n.nspname = ANY($1::text[]) AND NOT t.tgisinternal
-     ORDER BY 1`,
-};
-
-function normalize(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-async function capture(
-  sql: postgres.Sql,
-  query: string,
-): Promise<Map<string, string>> {
+async function capture(sql: postgres.Sql, query: string): Promise<Map<string, string>> {
   const rows = await sql.unsafe<CatalogRow[]>(query, [schemas]);
-  return new Map(rows.map((row) => [row.object_key, normalize(row.definition)]));
-}
-
-function compare(targetMap: Map<string, string>, liveMap: Map<string, string>): Drift {
-  const missing_in_live = [...targetMap.keys()].filter((key) => !liveMap.has(key)).sort();
-  const extra_in_live = [...liveMap.keys()].filter((key) => !targetMap.has(key)).sort();
-  const changed = [...targetMap.entries()]
-    .filter(([key, value]) => liveMap.has(key) && liveMap.get(key) !== value)
-    .map(([object_key, targetDefinition]) => ({
-      object_key,
-      target: targetDefinition,
-      live: liveMap.get(object_key)!,
-    }))
-    .sort((a, b) => a.object_key.localeCompare(b.object_key));
-  return { missing_in_live, extra_in_live, changed };
+  return catalogMap(rows);
 }
 
 const skippedDirectories = new Set([
@@ -219,7 +98,10 @@ async function runtimeReferences(targetRelations: Set<string>) {
       exists_in_target: targetRelations.has(relation),
       deprecated: deprecated.has(relation),
     }))
-    .filter((item) => item.deprecated || !item.exists_in_target)
+    .filter((item) => {
+      const schema = item.relation.split(".", 1)[0]!;
+      return item.deprecated || (schemas.includes(schema) && !item.exists_in_target);
+    })
     .sort((a, b) => a.relation.localeCompare(b.relation));
 }
 
@@ -268,10 +150,13 @@ try {
     console.log(`report=${output}`);
   }
 
+  // Source-reference findings are migration/hygiene hints, not differences
+  // between the two database catalogs. Keep them in the report without making
+  // an identical target/live comparison fail strict catalog parity.
   const driftCount = Object.values(drift).reduce(
     (sum, item) => sum + item.missing_in_live.length + item.extra_in_live.length + item.changed.length,
     0,
-  ) + runtime_sql_references.length;
+  );
   if (strict && driftCount > 0) process.exitCode = 1;
 } finally {
   await Promise.all([target.end(), live.end()]);

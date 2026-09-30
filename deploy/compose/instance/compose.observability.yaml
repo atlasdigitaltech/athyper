@@ -1,0 +1,17 @@
+# Apply only with compose.optional.yaml and the observability profile.
+# Export asynchronously: unavailable telemetry must not block application startup.
+x-traces: &traces
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${ATHYPER_OTLP_ENDPOINT:-http://tracing:4317}
+services:
+  api:
+    environment:
+      <<: *traces
+      OTEL_SERVICE_NAME: athyper-${ATHYPER_INSTANCE:-dev}-api
+  worker:
+    environment:
+      <<: *traces
+      OTEL_SERVICE_NAME: athyper-${ATHYPER_INSTANCE:-dev}-worker
+  scheduler:
+    environment:
+      <<: *traces
+      OTEL_SERVICE_NAME: athyper-${ATHYPER_INSTANCE:-dev}-scheduler

@@ -20,11 +20,11 @@ export interface AtlasAdmissionOptions {
   readonly profiles: Readonly<Record<VerifiedRequestContext["planeKey"], AtlasPlaneCapabilityProfile>>;
 }
 
-const permission = "ai.agent.use";
 export function createAtlasPlaneAdmissionResolver(options: AtlasAdmissionOptions): AtlasPlaneAdmissionResolver {
   return {
     async resolve(context) {
       assertAtlasContext(context);
+      const permission = `${context.planeKey}.ai.agent.use`;
       const profile = options.profiles[context.planeKey];
       const global = await options.featureFlags.isEnabled({ tenantId: context.tenantId, key: "atlas_agent_enabled", strict: true });
       const plane = global && await options.featureFlags.isEnabled({ tenantId: context.tenantId, key: `atlas_agent_${context.planeKey}_enabled`, strict: true });

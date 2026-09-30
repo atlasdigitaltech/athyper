@@ -1,5 +1,6 @@
 ﻿-- Generated from the extracted live Atlas AI contract.
--- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
+-- Maintained as canonical foundation DDL; use additive migrations for installed databases.
+-- Supported verification and maintenance: server/db/scripts/README.md (Atlas AI DDL).
 
 ALTER TABLE ONLY "ai"."ai_action_policy"
   ADD CONSTRAINT "ai_action_policy_aap_pkey" PRIMARY KEY (id);
@@ -437,7 +438,7 @@ ALTER TABLE ONLY "ai"."ai_agent_run"
   ADD CONSTRAINT "ai_agent_run_aar_binding_chk" CHECK (resolved_binding_id IS NULL OR btrim(resolved_binding_id) <> ''::text);
 
 ALTER TABLE ONLY "ai"."ai_agent_run"
-  ADD CONSTRAINT "ai_agent_run_aar_completed_usage_chk" CHECK (outcome <> 'completed'::text OR usage_source = 'provider_final'::text);
+  ADD CONSTRAINT "ai_agent_run_aar_completed_usage_chk" CHECK (outcome <> 'completed'::text OR usage_source = 'provider_final'::text OR (usage_source = 'unavailable'::text AND model_call_count = 0 AND (tool_call_count > 0 OR guidance_code IS NOT NULL) AND resolved_provider_id IS NULL AND actual_model_id IS NULL));
 
 ALTER TABLE ONLY "ai"."ai_agent_run"
   ADD CONSTRAINT "ai_agent_run_aar_cost_chk" CHECK (cost_amount IS NULL OR cost_amount >= 0::numeric);
@@ -834,3 +835,52 @@ ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
   ADD CONSTRAINT "atlas_tenant_quota_reservation_created_by_fk" FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
 ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
   ADD CONSTRAINT "atlas_tenant_quota_reservation_updated_by_fk" FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY "ai"."atlas_provider_usage"
+  ADD CONSTRAINT "atlas_provider_usage_pkey" PRIMARY KEY (provider_call_id);
+
+ALTER TABLE ONLY "ai"."atlas_provider_usage"
+  ADD CONSTRAINT "atlas_provider_usage_provider_id_check" CHECK (provider_id IN ('openai', 'anthropic', 'gemini', 'ollama'));
+
+ALTER TABLE ONLY "ai"."atlas_provider_usage"
+  ADD CONSTRAINT "atlas_provider_usage_entry_check" CHECK (jsonb_typeof(entry) = 'object');
+
+ALTER TABLE ONLY "ai"."atlas_provider_usage"
+  ADD CONSTRAINT "atlas_provider_usage_tenant_id_run_id_fkey" FOREIGN KEY (tenant_id, run_id) REFERENCES ai.atlas_run(tenant_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_usage_source_check" CHECK (usage_source IN ('provider_final', 'estimated'));
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+ALTER TABLE ONLY ai.atlas_experience_release
+    ADD CONSTRAINT atlas_experience_release_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY ai.atlas_experience_release
+    ADD CONSTRAINT atlas_experience_release_revision_uq UNIQUE (tenant_id, scope, revision);
+
+ALTER TABLE ONLY ai.atlas_experience_release
+    ADD CONSTRAINT atlas_experience_release_tenant_id_uq UNIQUE (tenant_id, id);
+-- END ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+
+-- F3: exact response feedback binding and explicit zero-model guidance metering.
+ALTER TABLE ai.atlas_run ADD CONSTRAINT atlas_run_response_coordinate_uq
+  UNIQUE (tenant_id, id, plane, output_message_id, principal_id);
+ALTER TABLE ai.ai_feedback_log ADD CONSTRAINT ai_feedback_response_coordinate_chk CHECK (
+  (atlas_response_message_id IS NULL AND atlas_response_plane IS NULL) OR
+  (atlas_response_message_id IS NOT NULL AND atlas_response_plane IS NOT NULL AND target_id IS NOT NULL AND feedback_type = 'atlas_agent'));
+ALTER TABLE ai.ai_feedback_log ADD CONSTRAINT ai_feedback_response_coordinate_fk
+  FOREIGN KEY (tenant_id, target_id, atlas_response_plane, atlas_response_message_id, submitted_by)
+  REFERENCES ai.atlas_run (tenant_id, id, plane, output_message_id, principal_id) ON DELETE CASCADE;
+ALTER TABLE ai.ai_agent_run ADD CONSTRAINT ai_agent_run_guidance_chk CHECK (
+  guidance_code IS NULL OR (guidance_code IN ('ambiguous', 'missing_scope', 'access_denied')
+    AND outcome = 'completed' AND usage_source = 'unavailable'
+    AND model_call_count = 0 AND retrieval_call_count = 0
+    AND resolved_provider_id IS NULL AND actual_model_id IS NULL
+    AND input_tokens IS NULL AND output_tokens IS NULL AND cache_read_tokens IS NULL AND cost_amount IS NULL));
+
+-- BEGIN ATLAS F4 LEARNING COMMON
+ALTER TABLE ai.ai_feedback_log ADD CONSTRAINT atlas_learning_feedback_coordinate_uq UNIQUE(tenant_id,id,submitted_by);
+ALTER TABLE ai.atlas_learning_candidate ADD CONSTRAINT atlas_learning_feedback_fk FOREIGN KEY(tenant_id,feedback_id,submitted_by) REFERENCES ai.ai_feedback_log(tenant_id,id,submitted_by) ON DELETE CASCADE;
+ALTER TABLE ai.atlas_learning_candidate ADD CONSTRAINT atlas_learning_source_payload_chk CHECK ((proposal->>'candidateId'=id::text AND proposal->>'feedbackId'=feedback_id::text AND proposal->>'tenantId'=tenant_id::text AND proposal->>'submittedBy'=submitted_by::text AND proposal->>'originPlane'=origin_plane) IS TRUE);
+-- END ATLAS F4 LEARNING COMMON

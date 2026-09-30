@@ -1,4 +1,5 @@
-import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
+import type { EntityFieldType, EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
+import { compileFieldPattern, FIELD_PATTERN_INPUT_LIMIT } from "@athyper/server-contract-metadata";
 import type { MutationFieldViolations } from "@athyper/server-contract-records";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 
@@ -14,37 +15,58 @@ export function validateRecordInput(descriptor: EntityRuntimeDescriptor, action:
   }
   for (const [key, value] of Object.entries(input)) {
     const field = fields.get(key);
+    if(field?.required && value === null) add(violations,key,"FIELD_REQUIRED","Field is required");
     if (!field || value === null || value === undefined) continue;
     if (!matchesType(field.type, value)) add(violations, key, "FIELD_TYPE_INVALID", `Expected ${field.type}`);
     const config = field.validation;
+    if(Array.isArray(config?.["options"])&&!config["options"].includes(value))add(violations,key,"FIELD_OPTION_INVALID","Choose an available option");
+    if(typeof value==="number"){
+      if(typeof config?.["minimum"]==="number"&&value<config["minimum"])add(violations,key,"FIELD_MINIMUM","Value is below the minimum");
+      if(typeof config?.["maximum"]==="number"&&value>config["maximum"])add(violations,key,"FIELD_MAXIMUM","Value exceeds the maximum");
+    }
     if (typeof value === "string") {
       const min = number(config?.["minLength"]); const max = number(config?.["maxLength"]); const pattern = typeof config?.["pattern"] === "string" ? config["pattern"] : undefined;
       if (min !== undefined && value.length < min) add(violations, key, "FIELD_TOO_SHORT", `Minimum length is ${min}`);
-      if (max !== undefined && value.length > max) add(violations, key, "FIELD_TOO_LONG", `Maximum length is ${max}`);
-      if (pattern && !new RegExp(pattern, "u").test(value)) add(violations, key, "FIELD_PATTERN_INVALID", "Field does not match its required pattern");
+      const effectiveMax = pattern ? Math.min(max ?? FIELD_PATTERN_INPUT_LIMIT, FIELD_PATTERN_INPUT_LIMIT) : max;
+      if (effectiveMax !== undefined && value.length > effectiveMax) {
+        add(violations, key, "FIELD_TOO_LONG", `Maximum length is ${effectiveMax}`);
+        continue;
+      }
+      if (pattern && !compileFieldPattern(pattern).test(value)) add(violations, key, "FIELD_PATTERN_INVALID", "Field does not match its required pattern");
     }
+  }
+  for(const predicate of descriptor.recordPredicates??[]){
+    const value=input[predicate.field];
+    if(value!==undefined && (predicate.operator==="eq" ? value!==predicate.value : value===predicate.value))add(violations,predicate.field,"RECORD_SCOPE_INVALID","Value is outside the published record scope");
   }
   return violations;
 }
 
-export async function validateFieldWriteAuthorization(authorizer: Authorizer, context: VerifiedRequestContext, descriptor: EntityRuntimeDescriptor, input: Readonly<Record<string, unknown>>): Promise<MutationFieldViolations> {
+export function fieldWriteAuthorizationResource(context: VerifiedRequestContext, entityCode: string, operationKey: "create" | "patch", field: string) {
+  return { tenantId: context.tenantId, entityCode, operationKey, field };
+}
+
+export async function validateFieldWriteAuthorization(authorizer: Authorizer, context: VerifiedRequestContext, descriptor: EntityRuntimeDescriptor, input: Readonly<Record<string, unknown>>, operationKey: "create" | "patch"): Promise<MutationFieldViolations> {
   const fields = new Map(descriptor.fields.map((field) => [field.key, field]));
   const violations: Record<string, { code: string; message: string }[]> = {};
   await Promise.all(Object.keys(input).map(async (key) => {
     const permissionCode = fields.get(key)?.writePermissionCode;
-    if (permissionCode && !(await authorizer.authorize({ context, permissionCode, resource: { entityCode: descriptor.entityCode, field: key } })).allowed) add(violations, key, "FIELD_WRITE_FORBIDDEN", "Field write is not permitted");
+    if (permissionCode && !(await authorizer.authorize({ context, permissionCode, resource: fieldWriteAuthorizationResource(context, descriptor.entityCode, operationKey, key) })).allowed) add(violations, key, "FIELD_WRITE_FORBIDDEN", "Field write is not permitted");
   }));
   return violations;
 }
 
 export function mergeFieldViolations(...sources: readonly MutationFieldViolations[]): MutationFieldViolations { const merged: Record<string, { code: string; message: string }[]> = {}; for (const source of sources) for (const [field, items] of Object.entries(source)) (merged[field] ??= []).push(...items); return merged; }
 
-function matchesType(type: string, value: unknown): boolean {
-  if (["string","text","date","datetime","uuid","enum","reference"].includes(type)) return typeof value === "string";
-  if (["integer","decimal"].includes(type)) return typeof value === "number" && Number.isFinite(value) && (type !== "integer" || Number.isInteger(value));
-  if (type === "boolean") return typeof value === "boolean";
-  if (type === "json") return typeof value === "object";
-  return false;
+function matchesType(type: EntityFieldType, value: unknown): boolean {
+  switch (type) {
+    case "string": case "text": case "date": case "datetime": case "uuid": case "enum": case "reference": return typeof value === "string";
+    case "integer": return typeof value === "number" && Number.isSafeInteger(value);
+    case "decimal": case "money": return typeof value === "number" && Number.isFinite(value);
+    case "boolean": return typeof value === "boolean";
+    case "json": return typeof value === "object";
+    default: { const unsupported: never = type; return unsupported; }
+  }
 }
 function add(target: Record<string, { code: string; message: string }[]>, field: string, code: string, message: string): void { (target[field] ??= []).push({ code, message }); }
 function number(value: unknown): number | undefined { return typeof value === "number" && Number.isFinite(value) ? value : undefined; }

@@ -1,0 +1,8 @@
+
+> athyper@ dev:publish /home/chandravel_natarajan/src/athyper
+> node tooling/scripts/local-dev/dev-publish.mjs --dry-run
+
+{
+  "error": "DEV_PUBLICATION_INTAKE_SURFACES_NOT_PUBLISHED"
+}
+ ELIFECYCLE  Command failed with exit code 1.

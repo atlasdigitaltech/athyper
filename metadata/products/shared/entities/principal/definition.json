@@ -1,0 +1,1254 @@
+{
+  "schema": "athyper.table-entity-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
+  "definition": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "principal",
+      "entityClass": "business",
+      "ownershipModel": "system"
+    },
+    "runtimeProfiles": [
+      {
+        "id": "fe058168-6c06-5bbe-aeb9-6543e3fc6d4c",
+        "profileKey": "default",
+        "backingKind": "table",
+        "storagePlane": "studio",
+        "storageSchema": "master",
+        "storageObject": "principal",
+        "tenantFieldKey": "tenant_id",
+        "apiExposure": "api",
+        "readMode": "generic",
+        "writeMode": "none",
+        "createMode": "form_only",
+        "concurrencyMode": "none"
+      }
+    ],
+    "fields": [
+      {
+        "id": "ecfc72c7-46b6-5fc7-82f4-fd13bcc8f7c5",
+        "fieldKey": "id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "c5565241-3d94-5606-89a4-cf942cf08d24",
+        "fieldKey": "tenant_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "tenant_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "fac08bd5-2580-5407-b3fe-c5f77e8350ee",
+        "fieldKey": "code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "code",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "f1cb503d-8692-5835-8d77-4538f902b279",
+        "fieldKey": "name",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "name",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "e659d952-700d-59b6-aba1-0eb74b5a6e28",
+        "fieldKey": "principal_type",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.principal_type"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "principal_type",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "468d24b3-1ffe-5537-b6a9-7bf6895a46f8",
+        "fieldKey": "provisioning_source",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.principal_provisioning_source"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "provisioning_source",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "f1130c5c-e357-500e-b703-be89293e659d",
+        "fieldKey": "status",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.principal_status"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "status",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "d3c78dd0-60c9-5f99-bbad-cdad279a95eb",
+        "fieldKey": "created_at",
+        "dataType": "datetime",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "created_at",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "f2fe3884-f7ae-5364-bf64-5f6349f117e8",
+        "fieldKey": "updated_at",
+        "dataType": "datetime",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "updated_at",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "040235bd-9fe9-5b31-b35b-ab1bd91b06d6",
+        "fieldKey": "created_by",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "created_by",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "cac6a9e0-088a-5c43-ab52-6c3f4f0018d3",
+        "fieldKey": "updated_by",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "updated_by",
+        "dataClassification": "internal",
+        "status": "active"
+      }
+    ],
+    "keys": [
+      {
+        "id": "7d1467f3-07ae-556e-b206-6e9158d7343c",
+        "keyKey": "primary",
+        "keyKind": "primary",
+        "uniquenessScope": "global"
+      },
+      {
+        "id": "55e4596d-002a-5981-95be-46865c0ed191",
+        "keyKey": "natural",
+        "keyKind": "natural",
+        "uniquenessScope": "tenant"
+      }
+    ],
+    "keyFields": [
+      {
+        "entityKeyId": "7d1467f3-07ae-556e-b206-6e9158d7343c",
+        "entityFieldId": "ecfc72c7-46b6-5fc7-82f4-fd13bcc8f7c5",
+        "position": 1,
+        "id": "99e6cbcd-2182-5f9b-a83b-4bfbb7cdbb50"
+      },
+      {
+        "entityKeyId": "55e4596d-002a-5981-95be-46865c0ed191",
+        "entityFieldId": "c5565241-3d94-5606-89a4-cf942cf08d24",
+        "position": 1,
+        "id": "b03baf47-68cb-561d-a852-e0203c24c78a"
+      },
+      {
+        "entityKeyId": "55e4596d-002a-5981-95be-46865c0ed191",
+        "entityFieldId": "fac08bd5-2580-5407-b3fe-c5f77e8350ee",
+        "position": 2,
+        "id": "9a61bc5a-9339-52f7-b816-425d4e4a7309"
+      }
+    ],
+    "operations": [
+      {
+        "id": "6e0b9f52-e48e-50d3-823e-9ce74232164e",
+        "operationKey": "list",
+        "operationKind": "read",
+        "label": "Principals",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "code",
+          "name",
+          "principal_type",
+          "provisioning_source",
+          "status",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
+        ],
+        "auditEventCode": "principal.list"
+      },
+      {
+        "id": "a053d69c-a5a1-5fcb-8ae9-e81ad9140b12",
+        "operationKey": "read",
+        "operationKind": "read",
+        "label": "View record",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "code",
+          "name",
+          "principal_type",
+          "provisioning_source",
+          "status",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
+        ],
+        "auditEventCode": "principal.read"
+      }
+    ],
+    "operationPermissions": [
+      {
+        "entityOperationId": "6e0b9f52-e48e-50d3-823e-9ce74232164e",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal.read",
+        "permissionKind": "capability",
+        "id": "b80dc084-3560-5090-a530-9578c1906425"
+      },
+      {
+        "entityOperationId": "a053d69c-a5a1-5fcb-8ae9-e81ad9140b12",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal.read",
+        "permissionKind": "capability",
+        "id": "34b95b3f-3417-5a8b-bcdd-847e9a71ca07"
+      }
+    ],
+    "operationScopeBindings": [
+      {
+        "entityOperationId": "6e0b9f52-e48e-50d3-823e-9ce74232164e",
+        "bindingKey": "list_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "collection",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "69557a4a-bbb4-5994-91eb-11ee1be014c5"
+      },
+      {
+        "entityOperationId": "a053d69c-a5a1-5fcb-8ae9-e81ad9140b12",
+        "bindingKey": "read_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "f4bb37da-5034-5a0e-83c1-3dc5b4800564"
+      }
+    ],
+    "searchProfiles": [
+      {
+        "id": "0a224ede-f212-5749-95fb-ec83f06e73a4",
+        "searchKey": "default",
+        "searchKind": "keyword",
+        "minimumQueryLength": 1,
+        "isDefault": true
+      }
+    ],
+    "searchFields": [
+      {
+        "entitySearchProfileId": "0a224ede-f212-5749-95fb-ec83f06e73a4",
+        "entityFieldId": "fac08bd5-2580-5407-b3fe-c5f77e8350ee",
+        "position": 1,
+        "matchMode": "contains",
+        "id": "4dd03dcd-a0e2-5695-b268-47c694c6e86f"
+      },
+      {
+        "entitySearchProfileId": "0a224ede-f212-5749-95fb-ec83f06e73a4",
+        "entityFieldId": "f1cb503d-8692-5835-8d77-4538f902b279",
+        "position": 2,
+        "matchMode": "contains",
+        "id": "3d68636c-14fb-5100-bbc6-88eb222ef217"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "surfaceKey": "list",
+        "surfaceKind": "list",
+        "title": "Principals",
+        "isDefault": true,
+        "layoutConfig": {
+          "identityField": "code",
+          "defaultState": {
+            "sort": [
+              {
+                "field": "name",
+                "direction": "asc"
+              }
+            ],
+            "density": "comfortable",
+            "mode": "table"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "limits": {
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              10,
+              25,
+              50,
+              100
+            ],
+            "maxSortLevels": 3,
+            "countMode": "exact"
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "principal",
+            "planeKey": "studio",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "permissionCode": "common.identity.principal.read",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "permissionCode": "common.identity.principal.read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "code",
+                "fields": [
+                  "code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "name",
+                "fields": [
+                  "name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "principal_type",
+                "fields": [
+                  "principal_type"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "provisioning_source",
+                "fields": [
+                  "provisioning_source"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "created_at",
+                "fields": [
+                  "created_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "updated_at",
+                "fields": [
+                  "updated_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "created_by",
+                "fields": [
+                  "created_by"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "updated_by",
+                "fields": [
+                  "updated_by"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "ownerAccess": {
+            "schemaVersion": 1,
+            "ownerField": "id",
+            "administerPermission": "common.identity.principal.administer",
+            "createdByField": "created_by",
+            "updatedByField": "updated_by"
+          },
+          "localizedLabels": {
+            "entity": {
+              "labelKey": "entity.principal.label",
+              "defaultText": "Principal"
+            },
+            "title": {
+              "labelKey": "entity.principal.title",
+              "defaultText": "Principals"
+            },
+            "fields": {
+              "id": {
+                "labelKey": "entity.principal.fields.id",
+                "defaultText": "Record ID"
+              },
+              "tenant_id": {
+                "labelKey": "entity.principal.fields.tenant_id",
+                "defaultText": "Tenant"
+              },
+              "code": {
+                "labelKey": "entity.principal.fields.code",
+                "defaultText": "Code"
+              },
+              "name": {
+                "labelKey": "entity.principal.fields.name",
+                "defaultText": "Name"
+              },
+              "principal_type": {
+                "labelKey": "entity.principal.fields.principal_type",
+                "defaultText": "Principal type"
+              },
+              "provisioning_source": {
+                "labelKey": "entity.principal.fields.provisioning_source",
+                "defaultText": "Provisioning source"
+              },
+              "status": {
+                "labelKey": "entity.principal.fields.status",
+                "defaultText": "Status"
+              },
+              "created_at": {
+                "labelKey": "entity.principal.fields.created_at",
+                "defaultText": "Created"
+              },
+              "updated_at": {
+                "labelKey": "entity.principal.fields.updated_at",
+                "defaultText": "Updated"
+              },
+              "created_by": {
+                "labelKey": "entity.principal.fields.created_by",
+                "defaultText": "Created by"
+              },
+              "updated_by": {
+                "labelKey": "entity.principal.fields.updated_by",
+                "defaultText": "Updated by"
+              }
+            },
+            "options": {
+              "principal_type": {
+                "user": {
+                  "labelKey": "entity.principal.options.principal_type.user",
+                  "defaultText": "User"
+                },
+                "service_account": {
+                  "labelKey": "entity.principal.options.principal_type.service_account",
+                  "defaultText": "Service account"
+                },
+                "bot": {
+                  "labelKey": "entity.principal.options.principal_type.bot",
+                  "defaultText": "Bot"
+                },
+                "integration": {
+                  "labelKey": "entity.principal.options.principal_type.integration",
+                  "defaultText": "Integration"
+                },
+                "support": {
+                  "labelKey": "entity.principal.options.principal_type.support",
+                  "defaultText": "Support"
+                }
+              },
+              "provisioning_source": {
+                "internal": {
+                  "labelKey": "entity.principal.options.provisioning_source.internal",
+                  "defaultText": "Internal"
+                },
+                "jit": {
+                  "labelKey": "entity.principal.options.provisioning_source.jit",
+                  "defaultText": "JIT"
+                },
+                "sync": {
+                  "labelKey": "entity.principal.options.provisioning_source.sync",
+                  "defaultText": "Sync"
+                },
+                "import": {
+                  "labelKey": "entity.principal.options.provisioning_source.import",
+                  "defaultText": "Import"
+                },
+                "api": {
+                  "labelKey": "entity.principal.options.provisioning_source.api",
+                  "defaultText": "API"
+                }
+              },
+              "status": {
+                "active": {
+                  "labelKey": "entity.principal.options.status.active",
+                  "defaultText": "Active"
+                },
+                "suspended": {
+                  "labelKey": "entity.principal.options.status.suspended",
+                  "defaultText": "Suspended"
+                },
+                "deactivated": {
+                  "labelKey": "entity.principal.options.status.deactivated",
+                  "defaultText": "Deactivated"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "surfaceKey": "detail",
+        "surfaceKind": "detail",
+        "title": "Principals",
+        "layoutConfig": {
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "name",
+            "sections": [
+              {
+                "key": "overview",
+                "label": "Overview",
+                "fields": [
+                  "code",
+                  "name",
+                  "principal_type",
+                  "provisioning_source",
+                  "status"
+                ],
+                "localizedLabel": {
+                  "labelKey": "entity.principal.sections.overview",
+                  "defaultText": "Overview"
+                }
+              },
+              {
+                "key": "profile",
+                "label": "Profile",
+                "fields": [],
+                "relationshipKey": "profile",
+                "localizedLabel": {
+                  "labelKey": "entity.principal.sections.profile",
+                  "defaultText": "Profile"
+                }
+              },
+              {
+                "key": "notifications",
+                "label": "Notifications",
+                "fields": [],
+                "relationshipKey": "notifications",
+                "localizedLabel": {
+                  "labelKey": "entity.principal.sections.notifications",
+                  "defaultText": "Notifications"
+                }
+              }
+            ],
+            "actions": [],
+            "codeField": "code",
+            "entityRelationships": [
+              {
+                "key": "profile",
+                "targetEntity": "principal_profile",
+                "cardinality": "zero_or_one",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "principal_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              },
+              {
+                "key": "notifications",
+                "targetEntity": "principal_notification_preference",
+                "cardinality": "many",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "principal_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              }
+            ],
+            "navigation": {
+              "mode": "scroll",
+              "tabs": [
+                {
+                  "key": "overview",
+                  "label": "Overview",
+                  "sectionKeys": [
+                    "overview"
+                  ],
+                  "localizedLabel": {
+                    "labelKey": "entity.principal.sections.overview",
+                    "defaultText": "Overview"
+                  }
+                },
+                {
+                  "key": "profile",
+                  "label": "Profile",
+                  "sectionKeys": [
+                    "profile"
+                  ],
+                  "localizedLabel": {
+                    "labelKey": "entity.principal.sections.profile",
+                    "defaultText": "Profile"
+                  }
+                },
+                {
+                  "key": "notifications",
+                  "label": "Notifications",
+                  "sectionKeys": [
+                    "notifications"
+                  ],
+                  "localizedLabel": {
+                    "labelKey": "entity.principal.sections.notifications",
+                    "defaultText": "Notifications"
+                  }
+                }
+              ]
+            },
+            "localizedLabels": {
+              "entity": {
+                "labelKey": "entity.principal.label",
+                "defaultText": "Principal"
+              },
+              "title": {
+                "labelKey": "entity.principal.title",
+                "defaultText": "Principals"
+              },
+              "fields": {
+                "id": {
+                  "labelKey": "entity.principal.fields.id",
+                  "defaultText": "Record ID"
+                },
+                "tenant_id": {
+                  "labelKey": "entity.principal.fields.tenant_id",
+                  "defaultText": "Tenant"
+                },
+                "code": {
+                  "labelKey": "entity.principal.fields.code",
+                  "defaultText": "Code"
+                },
+                "name": {
+                  "labelKey": "entity.principal.fields.name",
+                  "defaultText": "Name"
+                },
+                "principal_type": {
+                  "labelKey": "entity.principal.fields.principal_type",
+                  "defaultText": "Principal type"
+                },
+                "provisioning_source": {
+                  "labelKey": "entity.principal.fields.provisioning_source",
+                  "defaultText": "Provisioning source"
+                },
+                "status": {
+                  "labelKey": "entity.principal.fields.status",
+                  "defaultText": "Status"
+                },
+                "created_at": {
+                  "labelKey": "entity.principal.fields.created_at",
+                  "defaultText": "Created"
+                },
+                "updated_at": {
+                  "labelKey": "entity.principal.fields.updated_at",
+                  "defaultText": "Updated"
+                },
+                "created_by": {
+                  "labelKey": "entity.principal.fields.created_by",
+                  "defaultText": "Created by"
+                },
+                "updated_by": {
+                  "labelKey": "entity.principal.fields.updated_by",
+                  "defaultText": "Updated by"
+                }
+              },
+              "options": {
+                "principal_type": {
+                  "user": {
+                    "labelKey": "entity.principal.options.principal_type.user",
+                    "defaultText": "User"
+                  },
+                  "service_account": {
+                    "labelKey": "entity.principal.options.principal_type.service_account",
+                    "defaultText": "Service account"
+                  },
+                  "bot": {
+                    "labelKey": "entity.principal.options.principal_type.bot",
+                    "defaultText": "Bot"
+                  },
+                  "integration": {
+                    "labelKey": "entity.principal.options.principal_type.integration",
+                    "defaultText": "Integration"
+                  },
+                  "support": {
+                    "labelKey": "entity.principal.options.principal_type.support",
+                    "defaultText": "Support"
+                  }
+                },
+                "provisioning_source": {
+                  "internal": {
+                    "labelKey": "entity.principal.options.provisioning_source.internal",
+                    "defaultText": "Internal"
+                  },
+                  "jit": {
+                    "labelKey": "entity.principal.options.provisioning_source.jit",
+                    "defaultText": "JIT"
+                  },
+                  "sync": {
+                    "labelKey": "entity.principal.options.provisioning_source.sync",
+                    "defaultText": "Sync"
+                  },
+                  "import": {
+                    "labelKey": "entity.principal.options.provisioning_source.import",
+                    "defaultText": "Import"
+                  },
+                  "api": {
+                    "labelKey": "entity.principal.options.provisioning_source.api",
+                    "defaultText": "API"
+                  }
+                },
+                "status": {
+                  "active": {
+                    "labelKey": "entity.principal.options.status.active",
+                    "defaultText": "Active"
+                  },
+                  "suspended": {
+                    "labelKey": "entity.principal.options.status.suspended",
+                    "defaultText": "Suspended"
+                  },
+                  "deactivated": {
+                    "labelKey": "entity.principal.options.status.deactivated",
+                    "defaultText": "Deactivated"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "entitySurfaceId": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "entityFieldId": "ecfc72c7-46b6-5fc7-82f4-fd13bcc8f7c5",
+        "bindingKey": "list_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "15c1a8d2-7e9c-5eb1-9a19-6bca1edf77ce"
+      },
+      {
+        "entitySurfaceId": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "entityFieldId": "c5565241-3d94-5606-89a4-cf942cf08d24",
+        "bindingKey": "list_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "dc608461-08f7-5a21-900a-a6380aaa491b"
+      },
+      {
+        "entitySurfaceId": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "entityFieldId": "fac08bd5-2580-5407-b3fe-c5f77e8350ee",
+        "bindingKey": "list_code",
+        "position": 2,
+        "labelOverride": "Code",
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "id": "8385e864-044a-52a1-942a-097eb7fcead6"
+      },
+      {
+        "entitySurfaceId": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "entityFieldId": "f1cb503d-8692-5835-8d77-4538f902b279",
+        "bindingKey": "list_name",
+        "position": 3,
+        "labelOverride": "Name",
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "id": "6c671d8b-d61a-57ba-a1bf-ed3e4ebc44fd"
+      },
+      {
+        "entitySurfaceId": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "entityFieldId": "e659d952-700d-59b6-aba1-0eb74b5a6e28",
+        "bindingKey": "list_principal_type",
+        "position": 4,
+        "labelOverride": "Principal type",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "user",
+                "label": "User"
+              },
+              {
+                "value": "service_account",
+                "label": "Service account"
+              },
+              {
+                "value": "bot",
+                "label": "Bot"
+              },
+              {
+                "value": "integration",
+                "label": "Integration"
+              },
+              {
+                "value": "support",
+                "label": "Support"
+              }
+            ]
+          }
+        },
+        "id": "90293062-397f-55c9-963c-74fd97d2aed5"
+      },
+      {
+        "entitySurfaceId": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "entityFieldId": "468d24b3-1ffe-5537-b6a9-7bf6895a46f8",
+        "bindingKey": "list_provisioning_source",
+        "position": 5,
+        "labelOverride": "Provisioning source",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "internal",
+                "label": "Internal"
+              },
+              {
+                "value": "jit",
+                "label": "JIT"
+              },
+              {
+                "value": "sync",
+                "label": "Sync"
+              },
+              {
+                "value": "import",
+                "label": "Import"
+              },
+              {
+                "value": "api",
+                "label": "API"
+              }
+            ]
+          }
+        },
+        "id": "3dfa607d-b061-5c67-8f0d-c27dc3a7c33b"
+      },
+      {
+        "entitySurfaceId": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "entityFieldId": "f1130c5c-e357-500e-b703-be89293e659d",
+        "bindingKey": "list_status",
+        "position": 6,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "suspended",
+                "label": "Suspended"
+              },
+              {
+                "value": "deactivated",
+                "label": "Deactivated"
+              }
+            ]
+          }
+        },
+        "id": "5949de35-9ab5-5b65-ad14-ca0b81aab3a9"
+      },
+      {
+        "entitySurfaceId": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "entityFieldId": "d3c78dd0-60c9-5f99-bbad-cdad279a95eb",
+        "bindingKey": "list_created_at",
+        "position": 7,
+        "labelOverride": "Created",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "025d640c-70d9-5f38-b6ab-645019272298"
+      },
+      {
+        "entitySurfaceId": "b966b656-847b-5509-84f5-b73709cc0fc4",
+        "entityFieldId": "f2fe3884-f7ae-5364-bf64-5f6349f117e8",
+        "bindingKey": "list_updated_at",
+        "position": 8,
+        "labelOverride": "Updated",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "23c803d2-bdfb-5595-9cba-0db81563c6d8"
+      },
+      {
+        "entitySurfaceId": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "entityFieldId": "ecfc72c7-46b6-5fc7-82f4-fd13bcc8f7c5",
+        "bindingKey": "detail_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "4d6466bd-cc7e-5c01-b929-5eca330fbd54"
+      },
+      {
+        "entitySurfaceId": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "entityFieldId": "c5565241-3d94-5606-89a4-cf942cf08d24",
+        "bindingKey": "detail_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "071568d2-be63-5847-ae06-6ca9b9aa3ff5"
+      },
+      {
+        "entitySurfaceId": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "entityFieldId": "fac08bd5-2580-5407-b3fe-c5f77e8350ee",
+        "bindingKey": "detail_code",
+        "position": 2,
+        "labelOverride": "Code",
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "id": "1df51745-d306-5486-a44c-28824f75cf49"
+      },
+      {
+        "entitySurfaceId": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "entityFieldId": "f1cb503d-8692-5835-8d77-4538f902b279",
+        "bindingKey": "detail_name",
+        "position": 3,
+        "labelOverride": "Name",
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "id": "b95e8db8-14b3-5295-a715-82ab09ce3340"
+      },
+      {
+        "entitySurfaceId": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "entityFieldId": "e659d952-700d-59b6-aba1-0eb74b5a6e28",
+        "bindingKey": "detail_principal_type",
+        "position": 4,
+        "labelOverride": "Principal type",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "user",
+                "label": "User"
+              },
+              {
+                "value": "service_account",
+                "label": "Service account"
+              },
+              {
+                "value": "bot",
+                "label": "Bot"
+              },
+              {
+                "value": "integration",
+                "label": "Integration"
+              },
+              {
+                "value": "support",
+                "label": "Support"
+              }
+            ]
+          }
+        },
+        "id": "87f017ee-482a-557a-993f-be70306e10ea"
+      },
+      {
+        "entitySurfaceId": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "entityFieldId": "468d24b3-1ffe-5537-b6a9-7bf6895a46f8",
+        "bindingKey": "detail_provisioning_source",
+        "position": 5,
+        "labelOverride": "Provisioning source",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "internal",
+                "label": "Internal"
+              },
+              {
+                "value": "jit",
+                "label": "JIT"
+              },
+              {
+                "value": "sync",
+                "label": "Sync"
+              },
+              {
+                "value": "import",
+                "label": "Import"
+              },
+              {
+                "value": "api",
+                "label": "API"
+              }
+            ]
+          }
+        },
+        "id": "93165448-24ba-59f9-85bc-f288a68edab9"
+      },
+      {
+        "entitySurfaceId": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "entityFieldId": "f1130c5c-e357-500e-b703-be89293e659d",
+        "bindingKey": "detail_status",
+        "position": 6,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "suspended",
+                "label": "Suspended"
+              },
+              {
+                "value": "deactivated",
+                "label": "Deactivated"
+              }
+            ]
+          }
+        },
+        "id": "171bf89b-48a4-5edc-ab48-85b5072b6673"
+      },
+      {
+        "entitySurfaceId": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "entityFieldId": "d3c78dd0-60c9-5f99-bbad-cdad279a95eb",
+        "bindingKey": "detail_created_at",
+        "position": 7,
+        "labelOverride": "Created",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "e068c335-c846-59da-a2d0-11fd6db9a8bd"
+      },
+      {
+        "entitySurfaceId": "41d28eb4-174f-52ca-8eb3-0675631b3d61",
+        "entityFieldId": "f2fe3884-f7ae-5364-bf64-5f6349f117e8",
+        "bindingKey": "detail_updated_at",
+        "position": 8,
+        "labelOverride": "Updated",
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "id": "87c889e5-bc74-50e3-bd61-fa732cab390d"
+      }
+    ]
+  }
+}

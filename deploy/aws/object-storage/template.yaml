@@ -1,0 +1,354 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Athyper isolated STG or PROD S3 storage; provision explicitly after review.
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [stg, prod]
+  DocumentsBucketName:
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+  ArtifactsBucketName:
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+  TransfersBucketName:
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+  AuthenticationMode:
+    Type: String
+    AllowedValues: [roles-anywhere, aws-principal]
+    Default: roles-anywhere
+  TrustedAppRoleArn:
+    Type: String
+    Default: ""
+    Description: Existing AWS application IAM role; unused for Roles Anywhere.
+  TrustedWriterRoleArn:
+    Type: String
+    Default: ""
+    Description: Separate existing artifacts-writer IAM role; unused for Roles Anywhere.
+  CertificateAuthorityPem:
+    Type: String
+    Default: ""
+    Description: Public CA certificate bundle for Roles Anywhere, never a private key.
+  AppCertificateCommonName:
+    Type: String
+    Default: ""
+  WriterCertificateCommonName:
+    Type: String
+    Default: ""
+Rules:
+  DistinctBuckets:
+    Assertions:
+      - Assert:
+          !Not [!Equals [!Ref DocumentsBucketName, !Ref ArtifactsBucketName]]
+        AssertDescription: Documents and artifacts must use different buckets.
+      - Assert:
+          !Not [!Equals [!Ref DocumentsBucketName, !Ref TransfersBucketName]]
+        AssertDescription: Documents and transfers must use different buckets.
+      - Assert:
+          !Not [!Equals [!Ref ArtifactsBucketName, !Ref TransfersBucketName]]
+        AssertDescription: Artifacts and transfers must use different buckets.
+  ExternalAuthentication:
+    RuleCondition: !Equals [!Ref AuthenticationMode, roles-anywhere]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref CertificateAuthorityPem, ""]]
+        AssertDescription: Supply a public certificate authority bundle.
+      - Assert: !Not [!Equals [!Ref AppCertificateCommonName, ""]]
+        AssertDescription: Supply an application certificate subject CN.
+      - Assert: !Not [!Equals [!Ref WriterCertificateCommonName, ""]]
+        AssertDescription: Supply an artifacts-writer certificate subject CN.
+      - Assert:
+          !Not [
+            !Equals [
+              !Ref AppCertificateCommonName,
+              !Ref WriterCertificateCommonName,
+            ],
+          ]
+        AssertDescription: Use separate application and artifacts-writer identities.
+  AwsAuthentication:
+    RuleCondition: !Equals [!Ref AuthenticationMode, aws-principal]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref TrustedAppRoleArn, ""]]
+        AssertDescription: Supply the exact trusted application IAM role ARN.
+      - Assert: !Not [!Equals [!Ref TrustedWriterRoleArn, ""]]
+        AssertDescription: Supply the exact trusted artifacts-writer IAM role ARN.
+      - Assert:
+          !Not [!Equals [!Ref TrustedAppRoleArn, !Ref TrustedWriterRoleArn]]
+        AssertDescription: Application and writer workload identities must differ.
+Conditions:
+  External: !Equals [!Ref AuthenticationMode, roles-anywhere]
+Resources:
+  EncryptionKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      EnableKeyRotation: true
+      Description: !Sub "${Environment} Athyper object storage"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              { AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root" }
+            Action: "kms:*"
+            Resource: "*"
+  Documents:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Ref DocumentsBucketName
+      VersioningConfiguration: { Status: Enabled }
+      OwnershipControls: { Rules: [{ ObjectOwnership: BucketOwnerEnforced }] }
+      PublicAccessBlockConfiguration:
+        {
+          BlockPublicAcls: true,
+          BlockPublicPolicy: true,
+          IgnorePublicAcls: true,
+          RestrictPublicBuckets: true,
+        }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              {
+                SSEAlgorithm: "aws:kms",
+                KMSMasterKeyID: !GetAtt EncryptionKey.Arn,
+              }
+  Artifacts:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Ref ArtifactsBucketName
+      VersioningConfiguration: { Status: Enabled }
+      OwnershipControls: { Rules: [{ ObjectOwnership: BucketOwnerEnforced }] }
+      PublicAccessBlockConfiguration:
+        {
+          BlockPublicAcls: true,
+          BlockPublicPolicy: true,
+          IgnorePublicAcls: true,
+          RestrictPublicBuckets: true,
+        }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              {
+                SSEAlgorithm: "aws:kms",
+                KMSMasterKeyID: !GetAtt EncryptionKey.Arn,
+              }
+  Transfers:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Ref TransfersBucketName
+      VersioningConfiguration: { Status: Enabled }
+      OwnershipControls: { Rules: [{ ObjectOwnership: BucketOwnerEnforced }] }
+      PublicAccessBlockConfiguration:
+        {
+          BlockPublicAcls: true,
+          BlockPublicPolicy: true,
+          IgnorePublicAcls: true,
+          RestrictPublicBuckets: true,
+        }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              {
+                SSEAlgorithm: "aws:kms",
+                KMSMasterKeyID: !GetAtt EncryptionKey.Arn,
+              }
+  DocumentsTransportPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Documents
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource: [!GetAtt Documents.Arn, !Sub "${Documents.Arn}/*"]
+            Condition: { Bool: { "aws:SecureTransport": "false" } }
+  ArtifactsPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Artifacts
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource: [!GetAtt Artifacts.Arn, !Sub "${Artifacts.Arn}/*"]
+            Condition: { Bool: { "aws:SecureTransport": "false" } }
+          - Effect: Deny
+            Principal: { AWS: !GetAtt WriterRole.Arn }
+            Action: ["s3:DeleteObject", "s3:DeleteObjectVersion"]
+            Resource: !Sub "${Artifacts.Arn}/*"
+  TransfersTransportPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Transfers
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource: [!GetAtt Transfers.Arn, !Sub "${Transfers.Arn}/*"]
+            Condition: { Bool: { "aws:SecureTransport": "false" } }
+  TrustAnchor:
+    Type: AWS::RolesAnywhere::TrustAnchor
+    Condition: External
+    Properties:
+      Name: !Sub "${AWS::StackName}-storage"
+      Enabled: true
+      Source:
+        SourceType: CERTIFICATE_BUNDLE
+        SourceData: { X509CertificateData: !Ref CertificateAuthorityPem }
+  AppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - !If
+            - External
+            - Effect: Allow
+              Principal: { Service: rolesanywhere.amazonaws.com }
+              Action:
+                ["sts:AssumeRole", "sts:TagSession", "sts:SetSourceIdentity"]
+              Condition:
+                ArnEquals:
+                  { "aws:SourceArn": !GetAtt TrustAnchor.TrustAnchorArn }
+                StringEquals:
+                  "aws:SourceAccount": !Ref AWS::AccountId
+                  "aws:PrincipalTag/x509Subject/CN": !Ref AppCertificateCommonName
+            - Effect: Allow
+              Principal: { AWS: !Ref TrustedAppRoleArn }
+              Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: application-storage
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  [
+                    "s3:ListBucket",
+                    "s3:GetBucketLocation",
+                    "s3:ListBucketMultipartUploads",
+                  ]
+                Resource: [!GetAtt Documents.Arn, !GetAtt Transfers.Arn]
+              - Effect: Allow
+                Action:
+                  [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject",
+                    "s3:AbortMultipartUpload",
+                    "s3:ListMultipartUploadParts",
+                  ]
+                Resource: [!Sub "${Documents.Arn}/*", !Sub "${Transfers.Arn}/*"]
+              - Effect: Allow
+                Action: "s3:GetObject"
+                Resource: !Sub "${Artifacts.Arn}/*"
+              - Effect: Allow
+                Action: ["kms:Decrypt", "kms:GenerateDataKey"]
+                Resource: !GetAtt EncryptionKey.Arn
+                Condition:
+                  {
+                    StringEquals:
+                      {
+                        "kms:ViaService": !Sub "s3.${AWS::Region}.${AWS::URLSuffix}",
+                      },
+                  }
+  WriterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - !If
+            - External
+            - Effect: Allow
+              Principal: { Service: rolesanywhere.amazonaws.com }
+              Action:
+                ["sts:AssumeRole", "sts:TagSession", "sts:SetSourceIdentity"]
+              Condition:
+                ArnEquals:
+                  { "aws:SourceArn": !GetAtt TrustAnchor.TrustAnchorArn }
+                StringEquals:
+                  "aws:SourceAccount": !Ref AWS::AccountId
+                  "aws:PrincipalTag/x509Subject/CN": !Ref WriterCertificateCommonName
+            - Effect: Allow
+              Principal: { AWS: !Ref TrustedWriterRoleArn }
+              Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: artifacts-writer
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  [
+                    "s3:ListBucket",
+                    "s3:GetBucketLocation",
+                    "s3:ListBucketMultipartUploads",
+                  ]
+                Resource: !GetAtt Artifacts.Arn
+              - Effect: Allow
+                Action:
+                  [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:AbortMultipartUpload",
+                    "s3:ListMultipartUploadParts",
+                  ]
+                Resource: !Sub "${Artifacts.Arn}/*"
+              - Effect: Allow
+                Action: ["kms:Decrypt", "kms:GenerateDataKey"]
+                Resource: !GetAtt EncryptionKey.Arn
+                Condition:
+                  {
+                    StringEquals:
+                      {
+                        "kms:ViaService": !Sub "s3.${AWS::Region}.${AWS::URLSuffix}",
+                      },
+                  }
+  AppProfile:
+    Type: AWS::RolesAnywhere::Profile
+    Condition: External
+    Properties:
+      Name: !Sub "${AWS::StackName}-app"
+      Enabled: true
+      DurationSeconds: 3600
+      RoleArns: [!GetAtt AppRole.Arn]
+  WriterProfile:
+    Type: AWS::RolesAnywhere::Profile
+    Condition: External
+    Properties:
+      Name: !Sub "${AWS::StackName}-writer"
+      Enabled: true
+      DurationSeconds: 3600
+      RoleArns: [!GetAtt WriterRole.Arn]
+Outputs:
+  Region: { Value: !Ref AWS::Region }
+  Account: { Value: !Ref AWS::AccountId }
+  DocumentsBucket: { Value: !Ref Documents }
+  ArtifactsBucket: { Value: !Ref Artifacts }
+  TransfersBucket: { Value: !Ref Transfers }
+  AppRoleArn: { Value: !GetAtt AppRole.Arn }
+  WriterRoleArn: { Value: !GetAtt WriterRole.Arn }
+  TrustAnchorArn:
+    { Condition: External, Value: !GetAtt TrustAnchor.TrustAnchorArn }
+  AppProfileArn: { Condition: External, Value: !GetAtt AppProfile.ProfileArn }
+  WriterProfileArn:
+    { Condition: External, Value: !GetAtt WriterProfile.ProfileArn }

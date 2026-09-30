@@ -4,6 +4,26 @@
   "semanticPermissionContract": {
     "contractVersion": "athyper.authorization.semantic.v1",
     "permissionIdentity": "plane.domain.entity.operation",
+    "sharedCapabilities": {
+      "common.platform.reference.view": {
+        "namespace": "common",
+        "permissionKind": "capability",
+        "planes": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "scope": "tenant",
+        "propagation": "exact",
+        "enrollment": "published_public_read_only_shared_reference_graph",
+        "allowedOperations": [
+          "list",
+          "read",
+          "view"
+        ],
+        "grants": "plane_local_only"
+      }
+    },
     "defaultDecision": "deny",
     "rules": {
       "keycloak": "authentication_client_admission_and_assurance_only",
@@ -30,6 +50,38 @@
   "permissionCatalog": {
     "version": "2.0.0",
     "operations": [
+      {
+        "permissionId": "51f45819-773a-566d-a4bc-69784c28afb2",
+        "canonicalPermissionCode": "common.platform.reference.view",
+        "plane": "studio",
+        "entityCode": "reference",
+        "operationCode": "view",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "62eeccb95220b38bf2bc138394ec753a6e9bc59be6a1a3d43a9a43c373bdb608",
+        "permissionKind": "capability",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "62980311-c596-5942-a5cf-69a97b2ac50a",
+        "canonicalPermissionCode": "studio.ai.agent.use",
+        "plane": "studio",
+        "entityCode": "agent",
+        "operationCode": "use",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "3e77e9ff164c90bc53024a46cdca9999f13ba2f3812fe061cfd7dbe65b035d8d",
+        "permissionKind": "capability",
+        "moduleCode": "aig"
+      },
       {
         "permissionId": "37a1fe0e-8a21-5139-a783-61cbaeed9ce9",
         "canonicalPermissionCode": "studio.iam.application_projection.read",
@@ -239,6 +291,22 @@
         "moduleCode": "meta"
       },
       {
+        "permissionId": "c32e3f0b-aaf0-50a2-bdf5-602e9406c9cf",
+        "canonicalPermissionCode": "studio.metadata.contract.publish_automated",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "publish_automated",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": false,
+        "requiresSod": true,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "1aefcd3a2d5a96973cc612efd161221f13bd0b8fe82a92311b8de66bf07b2cfe",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
         "permissionId": "508a16bb-e32c-552e-afd3-086d2789018d",
         "canonicalPermissionCode": "studio.metadata.contract.review",
         "plane": "studio",
@@ -315,6 +383,38 @@
         "shareable": false,
         "delegable": false,
         "definitionSha256": "896506bf3a5cfab8450980d5b18908721c9fac9b9128c222c00c84661066c1ed",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "5068e865-a499-5d06-8704-de3e16bc4e90",
+        "canonicalPermissionCode": "studio.metadata.publication_policy.activate",
+        "plane": "studio",
+        "entityCode": "publication_policy",
+        "operationCode": "activate",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": true,
+        "requiresSod": true,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "46bf67cb39294b5af51704a352dd163d6b25ec15dc1fded606447c2e88b5ce03",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "676e3fdb-526e-5b3a-b06c-724d168fb57c",
+        "canonicalPermissionCode": "studio.metadata.publication_policy.create",
+        "plane": "studio",
+        "entityCode": "publication_policy",
+        "operationCode": "create",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "6265d3ce214027ef992a70bf64a37ea584b955a968b45992bdff8b997b3d5f2b",
         "permissionKind": "system_action",
         "moduleCode": "meta"
       },
@@ -455,6 +555,24 @@
     "defaultScopeBehavior": "deny_undeclared",
     "permissions": [
       {
+        "permissionCode": "common.platform.reference.view",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.ai.agent.use",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
         "permissionCode": "studio.iam.application_projection.read",
         "scopes": [
           {
@@ -583,6 +701,15 @@
         ]
       },
       {
+        "permissionCode": "studio.metadata.contract.publish_automated",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
         "permissionCode": "studio.metadata.contract.review",
         "scopes": [
           {
@@ -656,6 +783,24 @@
           },
           {
             "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.publication_policy.activate",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.publication_policy.create",
+        "scopes": [
+          {
+            "kind": "tenant",
             "propagation": "exact"
           }
         ]
@@ -757,7 +902,7 @@
         ]
       }
     ],
-    "sha256": "8d04b85b5f9fe13dcb32758e7ee9d20cabd6df44fde772bf99a29e85694f5176"
+    "sha256": "0425cc24654a98a13a8f25d584eda9e9fb56fdf0aee6c3e355f8e78822ff0eba"
   },
   "authority": {
     "version": "authorization.clean-slate.v1",
@@ -1918,7 +2063,7 @@
   },
   "identityContract": {
     "realm": "athyper",
-    "sourceSha256": "6a7f06733d4ac0ac0440faa40494f4b7e658f416e0cd802a89811eccae056b8a",
+    "sourceSha256": "47bdffb78e9dde8bc7bad9fe6425ebc6c2702f2fdb032f0e84d7177029605c3a",
     "enabledSubjectCount": 161,
     "mappedSubjectCount": 161,
     "unmanagedKeycloakUsers": "deny",

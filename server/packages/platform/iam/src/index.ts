@@ -18,3 +18,17 @@ export * from "./kysely-identity-provisioning-attempt-repository.js";
 export * from "./legacy-compatibility.js";
 export * from "./projection-reconciliation.js";
 export * from "./kysely-projection-reconciliation.js";
+export * from "./identity-saga.js";
+export * from "./kysely-identity-saga.js";
+export * from "./external-worker-identity-intent.js";
+export * from "./external-worker-identity-delivery.js";
+export * from "./keycloak-identity-provider.js";
+
+export { CUSTOMER_PORTAL_QUEUE, CUSTOMER_PORTAL_JOB, CustomerPortalIntentConsumer, KyselyCustomerPortalDeliveryRepository, createCustomerPortalDeliveryHandler, planCustomerPortalProjection } from "./customer-portal-delivery.js";
+
+export * from "./identity-replay-approval.js";
+export * from "./kysely-identity-replay-approval.js";
+export * from "./identity-replay-routes.js";
+export * from "./shadow-authorizer.js";
+
+export * from "./kysely-context-refresh.js";

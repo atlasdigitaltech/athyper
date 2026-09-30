@@ -1,0 +1,15 @@
+{
+  "apiVersion": "athyper.io/v1alpha1",
+  "kind": "NotificationProviderReadiness",
+  "target": "staging",
+  "emailProvider": "ses",
+  "push": "none",
+  "ready": false,
+  "checks": [
+    {
+      "name": "email.ses-v2",
+      "status": "fail",
+      "problem": "SES_REGION is required"
+    }
+  ]
+}

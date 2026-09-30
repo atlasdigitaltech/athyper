@@ -289,6 +289,14 @@ ALTER TABLE mesh.document_acknowledgement
     FOREIGN KEY (responder_tenant_id, responder_principal_id)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE mesh.document_business_status_projection
+    ADD CONSTRAINT document_business_status_projection_envelope_fk
+    FOREIGN KEY (source_envelope_id) REFERENCES mesh.document_envelope(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT document_business_status_projection_relationship_fk
+    FOREIGN KEY (network_relationship_id) REFERENCES mesh.network_relationship(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT document_business_status_projection_event_fk
+    FOREIGN KEY (last_event_id) REFERENCES mesh.document_event(id) ON DELETE RESTRICT;
+
 ALTER TABLE mesh.document_acknowledgement
     ADD CONSTRAINT document_acknowledgement_created_by_fk
     FOREIGN KEY (responder_tenant_id, created_by)
@@ -316,6 +324,32 @@ ALTER TABLE mesh.network_account_commodity_capability
     FOREIGN KEY (tenant_id, created_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE mesh.network_account_industry_classification
+    ADD CONSTRAINT network_account_industry_classification_account_fk
+    FOREIGN KEY (tenant_id, network_account_id)
+    REFERENCES mesh.network_account (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT network_account_industry_classification_code_fk
+    FOREIGN KEY (industry_domain_code, industry_code_id)
+    REFERENCES shared.industry_code (domain_code, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT network_account_industry_classification_verified_by_fk
+    FOREIGN KEY (tenant_id, verified_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT network_account_industry_classification_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        network_account_id WITH =,
+        industry_domain_code WITH =,
+        industry_code_id WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active'),
+    ADD CONSTRAINT network_account_industry_classification_primary_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        network_account_id WITH =,
+        industry_domain_code WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (is_primary AND status = 'active');
+
 ALTER TABLE mesh.network_account_tax_registration
     ADD CONSTRAINT network_account_tax_registration_account_fk
     FOREIGN KEY (tenant_id, network_account_id)
@@ -329,22 +363,14 @@ ALTER TABLE mesh.network_account_tax_registration
     FOREIGN KEY (tenant_id, verified_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE mesh.bank_party
-    ADD CONSTRAINT mesh_bank_party_tenant_fk
-    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT,
-    ADD CONSTRAINT mesh_bank_party_country_fk
-    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT,
-    ADD CONSTRAINT mesh_bank_party_created_by_fk
-    FOREIGN KEY (tenant_id, created_by)
-    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
 ALTER TABLE mesh.bank_account
     ADD CONSTRAINT mesh_bank_account_owner_fk
     FOREIGN KEY (tenant_id, network_account_id)
     REFERENCES mesh.network_account (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT mesh_bank_account_bank_party_fk
-    FOREIGN KEY (tenant_id, bank_party_id)
-    REFERENCES mesh.bank_party (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT mesh_bank_account_bank_institution_fk
+    FOREIGN KEY (bank_institution_id)
+    REFERENCES shared.bank_institution (id) ON DELETE RESTRICT,
     ADD CONSTRAINT mesh_bank_account_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code) ON DELETE RESTRICT,
     ADD CONSTRAINT mesh_bank_account_country_fk
@@ -393,6 +419,24 @@ ALTER TABLE mesh.bank_account_disclosure
     FOREIGN KEY (owner_tenant_id, revoked_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE mesh.bank_account_disclosure
+    ADD CONSTRAINT bank_account_disclosure_snapshot_fk
+    FOREIGN KEY (owner_tenant_id, snapshot_id)
+    REFERENCES snapshot.bank_account_disclosure(owner_tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT bank_account_disclosure_approved_by_fk
+    FOREIGN KEY (owner_tenant_id, approved_by)
+    REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE mesh.bank_account_disclosure_event
+    ADD CONSTRAINT bank_account_disclosure_event_owner_fk
+    FOREIGN KEY(owner_tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT bank_account_disclosure_event_recipient_fk
+    FOREIGN KEY(recipient_tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT bank_account_disclosure_event_disclosure_fk
+    FOREIGN KEY(disclosure_id) REFERENCES mesh.bank_account_disclosure(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT bank_account_disclosure_event_actor_fk
+    FOREIGN KEY(owner_tenant_id,recorded_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
 ALTER TABLE mesh.certification_type
   ADD CONSTRAINT mesh_certification_type_pkey PRIMARY KEY (id),
   ADD CONSTRAINT mesh_certification_type_code_chk CHECK (code ~ '^[a-z][a-z0-9_-]*$'),
@@ -426,3 +470,23 @@ ALTER TABLE mesh.certification
 ALTER TABLE mesh.network_lifecycle_event
   ADD CONSTRAINT network_lifecycle_owner_tenant_fk FOREIGN KEY(owner_tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
   ADD CONSTRAINT network_lifecycle_counterparty_tenant_fk FOREIGN KEY(counterparty_tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT;
+
+ALTER TABLE mesh.network_account_profile_publication
+  ADD CONSTRAINT network_account_profile_publication_owner_fk FOREIGN KEY(owner_tenant_id,owner_account_id) REFERENCES mesh.network_account(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT network_account_profile_publication_recipient_fk FOREIGN KEY(recipient_tenant_id,recipient_account_id) REFERENCES mesh.network_account(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT network_account_profile_publication_relationship_fk FOREIGN KEY(network_relationship_id) REFERENCES mesh.network_relationship(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT network_account_profile_publication_snapshot_fk FOREIGN KEY(owner_tenant_id,snapshot_id) REFERENCES snapshot.network_account_profile_publication(owner_tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT network_account_profile_publication_previous_fk FOREIGN KEY(owner_tenant_id,previous_publication_id) REFERENCES mesh.network_account_profile_publication(owner_tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT network_account_profile_publication_published_by_fk FOREIGN KEY(owner_tenant_id,published_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE mesh.network_account_profile_publication_event
+  ADD CONSTRAINT network_account_profile_publication_event_publication_fk FOREIGN KEY(owner_tenant_id,publication_id) REFERENCES mesh.network_account_profile_publication(owner_tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT network_account_profile_publication_event_recorded_by_fk FOREIGN KEY(owner_tenant_id,recorded_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE mesh.bank_account
+ ADD CONSTRAINT bank_account_branch_fk FOREIGN KEY(bank_institution_id,bank_branch_id) REFERENCES shared.bank_branch(institution_id,id),
+ ADD CONSTRAINT bank_account_branch_parent_chk CHECK(bank_branch_id IS NULL OR bank_institution_id IS NOT NULL),
+ ADD CONSTRAINT bank_account_provisional_fk FOREIGN KEY(tenant_id,provisional_bank_reference_id) REFERENCES mesh.bank_provisional_reference(tenant_id,id),
+ ADD CONSTRAINT bank_account_reference_choice_chk CHECK ((bank_institution_id IS NOT NULL AND provisional_bank_reference_id IS NULL) OR (bank_institution_id IS NULL AND provisional_bank_reference_id IS NOT NULL));
+
+ALTER TABLE mesh.bank_account ADD CONSTRAINT bank_account_canonical_routing_chk CHECK(bank_institution_id IS NULL OR bic_override IS NULL);

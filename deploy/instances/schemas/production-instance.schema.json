@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/production-instance-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "ProductionInstance" },
+    "metadata": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "const": "production" } } },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "domainSuffix", "deploymentTargetRef", "orchestrator", "secretAuthority", "providers", "dataClassification"],
+      "properties": {
+        "mode": { "const": "production" },
+        "domainSuffix": { "type": "string", "pattern": "^[a-z0-9.-]+$", "not": { "pattern": "\\.test$" } },
+        "deploymentTargetRef": { "type": "string", "pattern": "^secret-manager://[a-zA-Z0-9/_.-]+$" },
+        "orchestrator": { "enum": ["kubernetes", "external"] },
+        "secretAuthority": {
+          "type": "object", "additionalProperties": false, "required": ["provider", "namespace", "prohibitedNamespaces"],
+          "properties": {
+            "provider": { "type": "string", "minLength": 3 },
+            "namespace": { "type": "string", "pattern": "^[a-zA-Z0-9/_.-]+$" },
+            "prohibitedNamespaces": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } }
+          }
+        },
+        "providers": {
+          "type": "object", "additionalProperties": false, "required": ["mail", "push"],
+          "properties": { "mail": { "const": "external" }, "push": { "const": "external" } }
+        },
+        "dataClassification": { "const": "production" }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "endpoint": "http://atlas-inference:11434",
+  "model": "nomic-embed-text:v1.5",
+  "digest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+  "dimensions": 768,
+  "indexUid": "atlas_attachment_passages_neon_nomic_v15_0a109f",
+  "semanticRatio": 0.75,
+  "scoreThreshold": 0.78
+}

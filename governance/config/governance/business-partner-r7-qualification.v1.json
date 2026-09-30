@@ -1,0 +1,90 @@
+{
+  "$schema": "athyper.business-partner-r7-qualification/1",
+  "asOf": "2026-09-05",
+  "slice": "R7 Supplier Workforce",
+  "scenarios": ["BP-WRK-001"],
+  "partialScenarios": ["BP-WRK-007", "BP-WRK-008", "BP-WRK-010"],
+  "implementationStatus": "local_verified",
+  "productionQualification": "blocked",
+  "productionQualified": false,
+  "policyCoordinates": {
+    "BP-Q004": null,
+    "BP-Q006": null
+  },
+  "blockedScenarios": {
+    "BP-Q006": ["BP-WRK-002", "BP-WRK-003", "BP-WRK-004", "BP-WRK-006"],
+    "BP-Q004_and_BP-Q006": [
+      "BP-WRK-005",
+      "BP-WRK-007",
+      "BP-WRK-008",
+      "BP-WRK-009",
+      "BP-WRK-010"
+    ]
+  },
+  "activationRequirements": {
+    "coordinateFields": [
+      "decisionId",
+      "version",
+      "hash",
+      "approvedAt",
+      "approvalEvidenceId",
+      "approvedByRoles"
+    ],
+    "hashAlgorithm": "sha256",
+    "candidateCommandsEnabledWithoutBPQ006": false,
+    "commercialOrIamCommandsEnabledWithoutBothCoordinates": false
+  },
+  "commands": [
+    {
+      "command": "pnpm --filter @athyper/server-contract-master-data test",
+      "result": "passed",
+      "tests": 17
+    },
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data test",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-workforce test",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm test:e2e:bp-r7",
+      "result": "environment_required",
+      "tests": 2,
+      "optionalSkip": false
+    },
+    {
+      "command": "pnpm --dir server/db db:foundation:plan",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --dir server/db test:integration:business-partner-r7-lifecycle",
+      "result": "passed",
+      "tests": 1
+    },
+    {
+      "command": "disposable Neon foundation apply",
+      "result": "passed",
+      "receiptCount": 207
+    }
+  ],
+  "evidence": [
+    "packages/contracts/platform/fixtures/business-partner-r7-supplier-workforce.v1.json",
+    "server/packages/services/master-data/src/supplier-workforce-requisition-service.ts",
+    "server/packages/contracts/master-data/src/supplier-workforce.ts",
+    "server/packages/services/master-data/src/worker-engagement-iam-service.ts",
+    "server/packages/services/master-data/src/worker-engagement-lifecycle-service.ts",
+    "server/packages/services/master-data/src/__tests__/worker-engagement-lifecycle-service.test.ts",
+    "server/db/scripts/provisioning/provision-business-partner-r7-fixtures.ts",
+    "server/db/scripts/tests/integration/business-partner-r7-lifecycle-command.sql",
+    "server/packages/services/master-data/src/__tests__/worker-engagement-iam-service.test.ts",
+    "server/db/ddl/planes/neon/document/07_functions.sql",
+    "packages/planes/neon/workforce/src/supplier-requisitions.tsx",
+    "tests/e2e/business-partner/bp-r7.spec.ts"
+  ],
+  "environmentBlockers": [
+    "A reachable Neon target, authorized actor credentials, a resettable approved requisition, an eligible Supplier backed by the external MESH eligibility endpoint, a resettable active engagement in an approved placement window, and retained Playwright output are required.",
+    "Candidate processing remains blocked by BP-Q006; commercial engagement and downstream IAM require applicable BP-Q004 and BP-Q006 coordinates."
+  ]
+}

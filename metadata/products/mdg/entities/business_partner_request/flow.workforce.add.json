@@ -1,0 +1,67 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "flow",
+  "artifactKey": "business_partner_request/flow.workforce.add",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "flowKey": "workforce.add",
+  "journey": "workforce",
+  "requestContract": {
+    "kind": "required_path_contract",
+    "requestKind": "workforce.add",
+    "domainOperation": "add_workforce",
+    "requiredPaths": [
+      "targetBusinessPartnerId",
+      "person.firstName",
+      "person.lastName",
+      "person.personalEmail",
+      "person.phone",
+      "person.consent",
+      "scope.legalEntityId",
+      "scope.companyCodeId",
+      "scope.orgUnitId",
+      "employment.startDate"
+    ],
+    "payloadSchemaAuthority": "registered_governed_request_validator",
+    "rejectUnknownPaths": true,
+    "fullPayloadSchemaNotImpliedByRequiredPaths": true,
+    "requiredCoordinates": [
+      "legalEntityId",
+      "companyCodeId",
+      "orgUnitId"
+    ]
+  },
+  "supportedSources": [
+    "internal",
+    "portal",
+    "import",
+    "api"
+  ],
+  "dependencies": [
+    "business_partner_request/core",
+    "business_partner_request/flow.base",
+    "business_partner_request/operation",
+    "business_partner_request/presentation.review",
+    "business_partner_request/presentation.section.evidence",
+    "business_partner_request/presentation.section.form.workforceReview"
+  ],
+  "sourceMappingKeys": [
+    "internal",
+    "portal",
+    "import",
+    "api"
+  ],
+  "presentationSlots": {
+    "capture": "business_partner_request/presentation.section.form.workforceReview.json"
+  },
+  "flowKind": "variant",
+  "baseFlowRef": "business_partner_request/flow.base.json",
+  "composition": {
+    "stage": "artifact_preparation",
+    "cacheKey": "base_hash_and_variant_hash",
+    "securityOverride": "forbidden"
+  },
+  "artifactHash": "sha256:16c4a137b72d32532b5cb718847ec4da0db0f2416fe05dfbfc1bd77883e311d5"
+}

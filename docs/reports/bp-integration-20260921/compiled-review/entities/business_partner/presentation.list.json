@@ -1,0 +1,69 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_surface",
+  "artifactKey": "business_partner/presentation.list",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "surfaceKey": "list",
+  "columns": [
+    "code",
+    "name",
+    "registration_country_code",
+    "status"
+  ],
+  "sort": [
+    {
+      "field": "name",
+      "direction": "asc"
+    }
+  ],
+  "pageSizes": [
+    25,
+    50,
+    100
+  ],
+  "actions": [
+    {
+      "operationKey": "request_change",
+      "placement": "primary",
+      "interaction": "start_flow"
+    }
+  ],
+  "dependencies": [
+    "business_partner/core"
+  ],
+  "queryPresentation": {
+    "search": {
+      "fieldKeys": [
+        "name",
+        "code"
+      ],
+      "mode": "prefix_casefold",
+      "placeholder": {
+        "labelKey": "entity.business_partner.presentation.list.search.placeholder",
+        "defaultText": "Search name or code"
+      }
+    },
+    "quickFilters": [
+      {
+        "fieldKey": "status",
+        "control": "select",
+        "label": {
+          "labelKey": "entity.business_partner.presentation.list.filters.status.label",
+          "defaultText": "Status"
+        }
+      },
+      {
+        "fieldKey": "registration_country_code",
+        "control": "select",
+        "label": {
+          "labelKey": "entity.business_partner.presentation.list.filters.registration_country_code.label",
+          "defaultText": "Registration country"
+        }
+      }
+    ]
+  },
+  "artifactHash": "sha256:ecfff25ebfdc44a07d8945686c96a1de85c18be79db75deafc6f9f5872e32638"
+}

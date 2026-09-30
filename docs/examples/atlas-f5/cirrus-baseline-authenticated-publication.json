@@ -1,0 +1,338 @@
+{
+  "schema": "atlas-baseline-authenticated-publication/1",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "changeSetId": "28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb",
+  "steps": [
+    {
+      "step": "stage",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:47:44.320Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/graph",
+        "code": "INTERNAL_ERROR",
+        "requestId": "975d9219-d0ce-475e-96ed-327f5c39ee4f"
+      }
+    },
+    {
+      "step": "stage",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:48:54.107Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/graph",
+        "code": "INTERNAL_ERROR",
+        "requestId": "778895d7-f143-42f9-9796-e2397e01d02a"
+      }
+    },
+    {
+      "step": "stage",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:49:27.276Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/graph",
+        "code": "INTERNAL_ERROR",
+        "requestId": "69673f8a-b23e-4cd1-b0ba-bd152a416bf0"
+      }
+    },
+    {
+      "step": "stage",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:49:51.564Z",
+      "status": 200,
+      "body": {
+        "id": "28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "entityId": "8e409dca-cb54-5110-9ed4-6174889cef82",
+        "entityCode": "business_partner",
+        "branchCode": "atlas-f5-retrieval",
+        "status": "draft",
+        "revision": 1,
+        "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13"
+      }
+    },
+    {
+      "step": "validate",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:49:59.161Z",
+      "status": 200,
+      "body": {
+        "deterministic": true,
+        "contractHash": "d8dab64e0cd79a4acd04db3856eddd032d4b81bd4d6d95571e32148ee9d1a352",
+        "issues": []
+      }
+    },
+    {
+      "step": "test",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:49:59.757Z",
+      "status": 200,
+      "body": {
+        "contractHash": "d8dab64e0cd79a4acd04db3856eddd032d4b81bd4d6d95571e32148ee9d1a352",
+        "passed": true,
+        "results": [
+          {
+            "key": "imported_source_bound",
+            "passed": true
+          },
+          {
+            "key": "read_permission_preserved",
+            "passed": true
+          },
+          {
+            "key": "reviewed_ai_enabled",
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "step": "submit",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:50:10.223Z",
+      "status": 200,
+      "body": {
+        "id": "28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "entityId": "8e409dca-cb54-5110-9ed4-6174889cef82",
+        "entityCode": "unknown",
+        "branchCode": "atlas-f5-retrieval",
+        "status": "in_review",
+        "revision": 2,
+        "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+        "submittedBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13"
+      }
+    },
+    {
+      "step": "approve",
+      "actor": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "observedAt": "2026-09-10T02:50:13.780Z",
+      "status": 403,
+      "body": {
+        "error": "FORBIDDEN"
+      }
+    },
+    {
+      "step": "approve",
+      "actor": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "observedAt": "2026-09-10T02:53:29.435Z",
+      "status": 401,
+      "body": {
+        "type": "urn:athyper:problem:auth-token-invalid",
+        "title": "Unauthorized",
+        "status": 401,
+        "detail": "Authentication token is invalid",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/approve",
+        "code": "AUTH_TOKEN_INVALID",
+        "requestId": "d6a76349-77ed-4937-9d82-ff73dd71e336"
+      }
+    },
+    {
+      "step": "approve",
+      "actor": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "observedAt": "2026-09-10T02:53:59.940Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/approve",
+        "code": "INTERNAL_ERROR",
+        "requestId": "ffd8a490-f29f-4e36-a662-78700cedc26d"
+      }
+    },
+    {
+      "step": "approve",
+      "actor": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "observedAt": "2026-09-10T02:54:55.448Z",
+      "status": 200,
+      "body": {
+        "id": "28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "entityId": "8e409dca-cb54-5110-9ed4-6174889cef82",
+        "entityCode": "unknown",
+        "branchCode": "atlas-f5-retrieval",
+        "status": "approved",
+        "revision": 3,
+        "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+        "submittedBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+        "reviewedBy": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+        "approvedBy": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d"
+      }
+    },
+    {
+      "step": "publish",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:55:00.931Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/publish",
+        "code": "INTERNAL_ERROR",
+        "requestId": "3eda3b15-9f5a-4a12-a068-7e614a7331c1"
+      }
+    },
+    {
+      "step": "publish",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:55:49.284Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/publish",
+        "code": "INTERNAL_ERROR",
+        "requestId": "072e3efa-8f47-4344-9e5b-506a98693094"
+      }
+    },
+    {
+      "step": "publish",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:57:23.470Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/publish",
+        "code": "INTERNAL_ERROR",
+        "requestId": "4855cc89-1bf9-4e86-af98-d0036c68fda9"
+      }
+    },
+    {
+      "step": "publish",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T02:58:36.065Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/publish",
+        "code": "INTERNAL_ERROR",
+        "requestId": "ecda2166-f7d7-4807-aef8-0ed909c34315"
+      }
+    },
+    {
+      "step": "publish",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T03:00:41.411Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/change-sets/28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb/publish",
+        "code": "INTERNAL_ERROR",
+        "requestId": "41ce9499-a99f-4596-8253-600e9318b918"
+      }
+    },
+    {
+      "step": "redispatch",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T03:03:58.214Z",
+      "status": 202,
+      "body": {
+        "releaseId": "126721f6-a2e5-45e2-91bf-0d6a1b660c56",
+        "queued": true
+      }
+    },
+    {
+      "step": "redispatch",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T03:06:24.371Z",
+      "status": 202,
+      "body": {
+        "releaseId": "126721f6-a2e5-45e2-91bf-0d6a1b660c56",
+        "queued": true
+      }
+    },
+    {
+      "step": "activate",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T03:15:12.341Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/releases/126721f6-a2e5-45e2-91bf-0d6a1b660c56/activate",
+        "code": "INTERNAL_ERROR",
+        "requestId": "abb71b80-5b08-48cc-ab45-b57ac1017e66"
+      }
+    },
+    {
+      "step": "activate",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T03:16:30.613Z",
+      "status": 500,
+      "body": {
+        "type": "urn:athyper:problem:internal-error",
+        "title": "Internal Server Error",
+        "status": 500,
+        "detail": "An unexpected error occurred",
+        "instance": "/api/meta-entity-authoring/releases/126721f6-a2e5-45e2-91bf-0d6a1b660c56/activate",
+        "code": "INTERNAL_ERROR",
+        "requestId": "f6354952-f15d-42f1-a053-a8e6534f2332"
+      }
+    },
+    {
+      "step": "activate",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "observedAt": "2026-09-10T03:17:44.746Z",
+      "status": 200,
+      "body": {
+        "eventId": "648ffe1b-4d9d-4cd3-9a28-546d3d6bc3eb",
+        "planeKey": "neon",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "entityCode": "business_partner",
+        "generation": 18,
+        "releaseId": "126721f6-a2e5-45e2-91bf-0d6a1b660c56"
+      }
+    }
+  ]
+}

@@ -691,3 +691,134 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION control.fn_provision_external_workforce_exchange(
+    p_tenant_id uuid,
+    p_network_account_id uuid,
+    p_actor_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog, control, mesh, runtime_meta
+AS $$
+DECLARE
+    v_document record;
+    v_contract runtime_meta.entity_contract%ROWTYPE;
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM mesh.network_account
+         WHERE tenant_id=p_tenant_id AND id=p_network_account_id
+    ) OR NOT EXISTS (
+        SELECT 1 FROM master.principal
+         WHERE tenant_id=p_tenant_id AND id=p_actor_id
+    ) THEN
+        RAISE EXCEPTION 'External-workforce exchange provisioning requires a tenant-local account and actor'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    FOR v_document IN
+        SELECT * FROM (VALUES
+          ('external_time_sheet.submit.v1','External time sheet submission','inbound'),
+          ('external_time_sheet.revise.v1','External time sheet revision','inbound'),
+          ('external_time_sheet.withdraw.v1','External time sheet withdrawal','inbound'),
+          ('external_expense_sheet.submit.v1','External expense sheet submission','inbound'),
+          ('external_expense_sheet.revise.v1','External expense sheet revision','inbound'),
+          ('external_expense_sheet.withdraw.v1','External expense sheet withdrawal','inbound'),
+          ('supplier_invoice.submit.v1','Supplier invoice submission','inbound'),
+          ('external_time_sheet.accepted.v1','External time sheet intake status','outbound'),
+          ('external_time_sheet.rejected.v1','External time sheet rejection','outbound'),
+          ('external_time_sheet.approved.v1','External time sheet approval','outbound'),
+          ('external_expense_sheet.accepted.v1','External expense sheet intake status','outbound'),
+          ('external_expense_sheet.rejected.v1','External expense sheet rejection','outbound'),
+          ('external_expense_sheet.approved.v1','External expense sheet approval','outbound'),
+          ('service_sheet.status.v1','Service sheet safe status','outbound'),
+          ('invoice_match.status.v1','Invoice match safe status','outbound')
+        ) AS required(code,name,direction_scope)
+    LOOP
+        SELECT * INTO v_contract
+          FROM runtime_meta.entity_contract
+         WHERE entity_code=v_document.code
+           AND status='published'
+           AND tenant_id IS NULL
+         ORDER BY release_no DESC
+         LIMIT 1;
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'Published global Entity contract % is required before MESH document publication', v_document.code
+                USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+
+        INSERT INTO control.network_document_type(
+            code,name,direction_scope,entity_id,entity_code,entity_version_policy,
+            metadata,status,status_changed_at,status_changed_by,created_by
+        ) VALUES (
+            v_document.code,v_document.name,v_document.direction_scope::control.network_document_direction_d,
+            v_contract.entity_id,v_contract.entity_code,'latest_published',
+            jsonb_build_object('dataClass','external_workforce','payloadPolicy','governed_content_only','provisioner','external_workforce_exchange_v1'),
+            'active',clock_timestamp(),p_actor_id,p_actor_id
+        ) ON CONFLICT (code) DO NOTHING;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM control.network_document_type
+             WHERE code=v_document.code AND entity_id=v_contract.entity_id
+               AND entity_code=v_contract.entity_code AND status='active'
+        ) THEN
+            RAISE EXCEPTION 'Existing MESH document publication % does not match its published Entity contract', v_document.code
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END LOOP;
+
+    INSERT INTO control.delivery_policy(
+        tenant_id,network_account_id,code,name,delivery_type,destination_type,
+        max_attempts,initial_delay_seconds,max_delay_seconds,backoff_strategy,
+        timeout_ms,dlq_enabled,redaction_policy,metadata,created_by
+    ) VALUES
+      (p_tenant_id,p_network_account_id,'external_workforce.claim.inbound','External workforce claim intake',
+       'document','neon_workforce_claim_inbox',8,15,3600,'exponential',30000,true,
+       '{"deny":["person","worker_name","email","phone","rate","merchant","receipt","accounting","budget","approver_comment"],"allowMetadata":["business_key","correlation_id","idempotency_key","payload_hash","contract_hash"]}'::jsonb,
+       '{"handler":"neon.workforce_claim.intake","payloadMode":"governed_content"}'::jsonb,p_actor_id),
+      (p_tenant_id,p_network_account_id,'external_workforce.status.outbound','External workforce safe status projection',
+       'event','mesh_business_status_projection',8,15,3600,'exponential',30000,true,
+       '{"allow":["resource_kind","resource_ref","lifecycle_version","business_status","safe_reason_code","submitted_at","decided_at","event_hash"],"default":"deny"}'::jsonb,
+       '{"handler":"mesh.workforce_status.project","payloadMode":"safe_projection"}'::jsonb,p_actor_id)
+    ON CONFLICT (tenant_id,network_account_id,code) DO UPDATE
+       SET redaction_policy=EXCLUDED.redaction_policy,metadata=EXCLUDED.metadata,
+           is_enabled=true,updated_at=clock_timestamp(),updated_by=p_actor_id;
+
+    INSERT INTO control.routing_rule(
+        tenant_id,network_account_id,code,name,route_type,event_type,
+        document_type_code,handler_key,condition_expr,metadata,status,
+        status_changed_at,status_changed_by,created_by
+    )
+    SELECT p_tenant_id,p_network_account_id,
+           'external_workforce.'||replace(required.code,'.','_')||'.route',
+           required.name||' route','handler','document.delivered',required.code,
+           CASE WHEN required.direction_scope='inbound'
+                THEN 'neon.workforce_claim.intake'
+                ELSE 'mesh.workforce_status.project' END,
+           '{}'::jsonb,
+           jsonb_build_object('deliveryPolicyCode',CASE WHEN required.direction_scope='inbound'
+                THEN 'external_workforce.claim.inbound' ELSE 'external_workforce.status.outbound' END),
+           'active',clock_timestamp(),p_actor_id,p_actor_id
+      FROM (VALUES
+          ('external_time_sheet.submit.v1','External time sheet submission','inbound'),
+          ('external_time_sheet.revise.v1','External time sheet revision','inbound'),
+          ('external_time_sheet.withdraw.v1','External time sheet withdrawal','inbound'),
+          ('external_expense_sheet.submit.v1','External expense sheet submission','inbound'),
+          ('external_expense_sheet.revise.v1','External expense sheet revision','inbound'),
+          ('external_expense_sheet.withdraw.v1','External expense sheet withdrawal','inbound'),
+          ('supplier_invoice.submit.v1','Supplier invoice submission','inbound'),
+          ('external_time_sheet.accepted.v1','External time sheet intake status','outbound'),
+          ('external_time_sheet.rejected.v1','External time sheet rejection','outbound'),
+          ('external_time_sheet.approved.v1','External time sheet approval','outbound'),
+          ('external_expense_sheet.accepted.v1','External expense sheet intake status','outbound'),
+          ('external_expense_sheet.rejected.v1','External expense sheet rejection','outbound'),
+          ('external_expense_sheet.approved.v1','External expense sheet approval','outbound'),
+          ('service_sheet.status.v1','Service sheet safe status','outbound'),
+          ('invoice_match.status.v1','Invoice match safe status','outbound')
+      ) AS required(code,name,direction_scope)
+    ON CONFLICT (tenant_id,network_account_id,code) DO UPDATE
+       SET document_type_code=EXCLUDED.document_type_code,handler_key=EXCLUDED.handler_key,
+           metadata=EXCLUDED.metadata,status='active',status_changed_at=clock_timestamp(),
+           status_changed_by=p_actor_id,updated_at=clock_timestamp(),updated_by=p_actor_id;
+END;
+$$;

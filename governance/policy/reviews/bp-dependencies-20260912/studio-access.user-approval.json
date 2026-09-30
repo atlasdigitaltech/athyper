@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-11T22:04:06.702553+00:00",
+  "decision": "approved",
+  "proposalRevision": "25c9f5a766f08a2d04e56c3cebc71c185e9667be9ef59dd459405e0f103627cb",
+  "source": "Explicit user approval in this conversation",
+  "authenticatedReviewerReceipt": false,
+  "scope": "Ten temporary isolated Studio assignments only; normal MFA and independent publication review remain required.",
+  "effectiveFrom": "2026-09-11T22:00:00Z",
+  "effectiveUntil": "2026-09-12T01:15:00Z",
+  "publicationApproved": false,
+  "enforcementActivated": false
+}

@@ -26,6 +26,18 @@ BEGIN
 END;
 $$;
 
+ALTER TABLE snapshot.mesh_business_partner_profile_received ENABLE ROW LEVEL SECURITY;
+ALTER TABLE snapshot.mesh_business_partner_profile_received FORCE ROW LEVEL SECURITY;
+CREATE POLICY mesh_bp_profile_received_tenant_read
+    ON snapshot.mesh_business_partner_profile_received FOR SELECT
+    USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY mesh_bp_profile_received_tenant_insert
+    ON snapshot.mesh_business_partner_profile_received FOR INSERT
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY mesh_bp_profile_received_owner_access
+    ON snapshot.mesh_business_partner_profile_received FOR ALL TO CURRENT_USER
+    USING (true) WITH CHECK (true);
+
 DO $$
 DECLARE
     v_table text;
@@ -63,3 +75,7 @@ BEGIN
     END IF;
 END;
 $$;
+ALTER TABLE snapshot.mesh_bank_account_disclosure_received ENABLE ROW LEVEL SECURITY;
+ALTER TABLE snapshot.mesh_bank_account_disclosure_received FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON snapshot.mesh_bank_account_disclosure_received USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON snapshot.mesh_bank_account_disclosure_received FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);

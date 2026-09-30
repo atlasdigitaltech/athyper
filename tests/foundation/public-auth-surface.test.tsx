@@ -7,12 +7,14 @@ import { ContextGatePage, LoginGatePage, LogoutGatePage } from "../../packages/p
 import { getPlaneBrand, getPlaneWebMetadata } from "../../packages/platform/foundation/brand/src/index";
 
 describe("production identity-gate experience", () => {
-  it("renders one focused identity card with the approved wordmark in every plane", () => {
+  it("renders the shared Atlas Modern identity shell with the approved pre-authentication lockup in every plane", () => {
     for (const plane of ["neon", "mesh", "studio"] as const) {
       const brand = getPlaneBrand(plane); const html = renderToStaticMarkup(<LoginGatePage plane={plane} />);
-      assert.match(html, new RegExp(brand.wordmark.src.replaceAll("/", "\\/"))); assert.match(html, new RegExp(`alt="${brand.wordmark.alt}"`));
+      assert.match(html, new RegExp(brand.identityLockup.src.replaceAll("/", "\\/"))); assert.match(html, new RegExp(`alt="${brand.identityLockup.alt}"`));
       assert.equal((html.match(/a-presentation-card/g) ?? []).length, 1); assert.match(html, /Continue securely/);
-      assert.doesNotMatch(html, /a-identity-story|a-identity-signal|Server-managed sessions|No browser tokens|a-auth-wordmark/);
+      assert.match(html, /a-public-identity__story/); assert.match(html, new RegExp(brand.description));
+      assert.match(html, /Atlas Digital Technology Solutions/); assert.match(html, /Secured by Athyper Identity/);
+      assert.doesNotMatch(html, /Server-managed sessions|No browser tokens|a-auth-wordmark/);
     }
   });
 
@@ -21,7 +23,7 @@ describe("production identity-gate experience", () => {
     assert.match(failure, /Access could not be confirmed/); assert.match(failure, /Use a different account/); assert.match(failure, /Try this account again/); assert.match(failure, /req-safe-42/); assert.match(failure, /returnTo=%2F/);
     assert.match(failure, /mode=switch/); assert.match(failure, /mode=retry/); assert.doesNotMatch(failure, /active membership|evil\.example|auth\.invalid_identity/);
     assert.match(renderToStaticMarkup(<ContextGatePage plane="mesh" />), /No active context is available/);
-    const logout = renderToStaticMarkup(<LogoutGatePage plane="studio" csrfToken="csrf-safe" />); assert.match(logout, /Sign out of Studio/); assert.match(logout, /Sign out of Athyper everywhere/); assert.match(logout, /name="_csrf" value="csrf-safe"/);
+    const logout = renderToStaticMarkup(<LogoutGatePage plane="studio" csrfToken="csrf-safe" />); assert.match(logout, /Sign out of Studio/); assert.match(logout, /Sign out of all Athyper applications/); assert.match(logout, /name="_csrf" value="csrf-safe"/);
   });
 
   it("renders exact-plane context choices with plane-specific work-scope summaries", () => {
@@ -38,13 +40,26 @@ describe("production identity-gate experience", () => {
     }
   });
 
+  it("keeps public plane stories short and immediately understandable", () => {
+    const stories = {
+      neon: ["Govern Business Partner data.", "Create, validate, approve, and maintain trusted partner records."],
+      mesh: ["Connect your Business Partner network.", "Manage governed partner relationships and shared profiles."],
+      studio: ["Define Business Partner governance.", "Author and publish the definitions used by Neon and Mesh."],
+    } as const;
+    for (const [plane, copy] of Object.entries(stories) as [keyof typeof stories, readonly [string, string]][]) {
+      const html = renderToStaticMarkup(<LoginGatePage plane={plane} />);
+      assert.match(html, new RegExp(copy[0].replace(".", "\\.")));
+      assert.match(html, new RegExp(copy[1].replace(".", "\\.")));
+    }
+  });
+
   it("uses the same recovery structure for every supported reason, including pasted trailing punctuation", () => {
     for (const reason of ["access", "service", "retry", "expired", "signed-out", "signed-out-everywhere", "logout-incomplete", "access;"] as const) {
       for (const plane of ["neon", "mesh", "studio"] as const) {
         const html = renderToStaticMarkup(<LoginGatePage plane={plane} reason={reason} />);
         assert.equal((html.match(/a-presentation-card/g) ?? []).length, 1);
         assert.equal((html.match(/a-notice/g) ?? []).length >= 1, true);
-        assert.match(html, new RegExp(getPlaneBrand(plane).wordmark.src.replaceAll("/", "\\/")));
+        assert.match(html, new RegExp(getPlaneBrand(plane).identityLockup.src.replaceAll("/", "\\/")));
       }
     }
   });
@@ -61,5 +76,31 @@ describe("production identity-gate experience", () => {
     const source = readFileSync("packages/platform/iam/identity-gate/src/index.tsx", "utf8");
     assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(/i);
     assert.doesNotMatch(`${css}\n${source}`, /apps-backup|packages-backup/);
+  });
+
+  it("centers the public identity composition on mobile while preserving readable form alignment", () => {
+    const appCss = readFileSync("packages/platform/iam/identity-gate/src/styles.css", "utf8");
+    const iamCss = readFileSync("deploy/config/iam/themes/neon/login/resources/css/login.css", "utf8");
+    assert.match(appCss, /@media\(max-width:52rem\)\{\.a-identity-panel\{text-align:center\}/);
+    assert.match(iamCss, /\.kc-page-header\s*\{\s*justify-content:\s*center;/);
+    assert.match(iamCss, /\.kc-panel-right\s*\{\s*justify-content:\s*center;/);
+    assert.match(iamCss, /\.kc-form,\s*\.kc-field,[\s\S]*text-align:\s*left;/);
+    assert.match(iamCss, /\.kc-footer\s*\{\s*justify-content:\s*center;[\s\S]*text-align:\s*center;/);
+  });
+
+  it("uses concise page-specific IAM and application browser titles", () => {
+    const context = readFileSync("deploy/config/iam/themes/neon/login/_iam-context.ftl", "utf8");
+    const resolver = readFileSync("deploy/config/iam/themes/neon/login/_theme-resolver.ftl", "utf8");
+    assert.match(context, /<\#return "\$\{pageTitle\} \$\{iamProductName\}">/);
+    assert.doesNotMatch(context, /Athyper (?:Neon|Mesh|Studio) -/);
+    assert.doesNotMatch(resolver, /document\.title/);
+    for (const plane of ["neon", "mesh", "studio"] as const) {
+      const layout = readFileSync(`apps/${plane}/app/layout.tsx`, "utf8");
+      assert.match(layout, /template: brand\.titleTemplate/);
+      for (const [route, title] of [["sign-in", "Sign in"], ["logout", "Sign out"], ["select-context", "Choose context"]] as const) {
+        const page = readFileSync(`apps/${plane}/app/(public)/${route}/page.tsx`, "utf8");
+        assert.match(page, new RegExp(`title: "${title}"`));
+      }
+    }
   });
 });

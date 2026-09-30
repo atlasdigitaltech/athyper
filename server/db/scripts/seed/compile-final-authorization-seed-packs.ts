@@ -172,7 +172,7 @@ for (const target of ["studio", "neon", "mesh"] as const) {
     delegable: false,
     definitionSha256: permission.definitionSha256,
     permissionKind: permission.permissionKind,
-    moduleCode: moduleCode(target, permission.domain),
+    moduleCode: permission.canonicalCode.startsWith("common.identity.") || permission.canonicalCode === "common.platform.reference.view" ? "fnd" : moduleCode(target, permission.domain),
   }));
   const tenantAuthorityProjection = compileTenantAuthorityProjection({
     plane: target,
@@ -295,6 +295,7 @@ function compileAdmissions(
 function moduleCode(plane: "studio" | "neon" | "mesh", domain: string): string {
   if (plane !== "studio") return "fnd";
   const moduleByDomain: Readonly<Record<string, string>> = {
+    ai: "aig",
     iam: "iam",
     jobs: "job",
     metadata: "meta",

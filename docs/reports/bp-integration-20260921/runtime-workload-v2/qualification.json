@@ -1,0 +1,2404 @@
+{
+  "schemaVersion": 1,
+  "kind": "devfull_runtime_qualification",
+  "coordinate": {
+    "releaseId": "7bdb29f6-6b01-4385-867d-06357504f6ca",
+    "releaseNo": 1,
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "plane": "neon",
+    "entityCode": "business_partner",
+    "contractHash": "8e4a532a796720a47977b60ffc85d563bd04a598338345feba9a60ba8f2454c0",
+    "profileHash": "d5e78989b884897f077edb0e2d07ba767862f77c16bf764d59752cc6fcfe1b1a",
+    "runtimeHash": "9721e98a51a93ea43ce3118be29641d5018cd5c2d89b2513efa262c827803e6f",
+    "catalogHash": "ebda24158270f114ba817430f6c896559a26de6a13b03edbc218d315eaef2998",
+    "operationKeys": [
+      "activity_read",
+      "add_role",
+      "addresses_read",
+      "amend_partner",
+      "assign_organization",
+      "attachments_read",
+      "bank_read",
+      "bank_reveal",
+      "case_create",
+      "case_decide",
+      "case_materialize",
+      "case_read",
+      "case_submit",
+      "case_update",
+      "case_validate",
+      "certificate_read",
+      "change_bank",
+      "comments_read",
+      "configure_company",
+      "contacts_read",
+      "credit_read",
+      "customer_company_read",
+      "discover",
+      "enter",
+      "export",
+      "identifier_read",
+      "identity_read",
+      "import",
+      "lifecycle",
+      "navigate_manage",
+      "navigate_overview",
+      "navigate_review",
+      "network_read",
+      "qualification",
+      "qualification_company",
+      "qualification_read",
+      "read",
+      "request_supplier",
+      "requests_read",
+      "supplier_company_read",
+      "tax_read",
+      "tax_reveal"
+    ]
+  },
+  "signingKeyId": "athyper-dev-publication-ed25519-20260905",
+  "qualifiedAt": "2026-09-21T09:26:45.623Z",
+  "expiresAt": "2026-09-22T09:26:45.623Z",
+  "checks": [
+    {
+      "kind": "build",
+      "path": "/home/chandravel_natarajan/src/athyper/docs/reports/bp-integration-20260921/runtime-workload-v2/build.log",
+      "sha256": "5f21331159d060970b5871ff49268a89dbba8f561f32e5501fe2ab80046f32dc"
+    },
+    {
+      "kind": "tests",
+      "path": "/home/chandravel_natarajan/src/athyper/docs/reports/bp-integration-20260921/runtime-workload-v2/publication-services.log",
+      "sha256": "0d8887cb8af8f0c45c66c2d6f5e96ca14abdab3d83fb354c39f8acd08348130b"
+    },
+    {
+      "kind": "tests",
+      "path": "/home/chandravel_natarajan/src/athyper/docs/reports/bp-integration-20260921/runtime-workload-v2/runtime-authority.log",
+      "sha256": "c1cad7b3d42adde745b586e72cfe97b7a37b746c04b1b30fae87f2098a4c95df"
+    },
+    {
+      "kind": "tests",
+      "path": "/home/chandravel_natarajan/src/athyper/docs/reports/bp-integration-20260921/runtime-workload-v2/workload-configuration.log",
+      "sha256": "a117646957cc94f389da2abca24c7bbfc1f5bca399e38eae4f4c1141adf838fb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/access-decision.ts",
+      "sha256": "11dc0d34d3e0361816551bb8af9929d9e5843a0b2571342293e759b32d2d48ed"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/entity-lookup.ts",
+      "sha256": "30a6cee1f4f25814953680cec55af00eed9ae779fdb7895ecd9c5744518937ac"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/governed-workflow.ts",
+      "sha256": "cfe516ad5e9932d9bee634ccfb5f267a21220773179096272102435839a09517"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/index.ts",
+      "sha256": "2247d61e8936aea7360dfbdb43add9099132ff186fa9001a3f943b014373ecce"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/intake-data-values.ts",
+      "sha256": "174e8a21f2f10c57c1038162984076d180fe51ad9ce243e193c76ad0f705af46"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/intake-data.ts",
+      "sha256": "5309dfb3423828aa16662bb612adf112b158196b0d76a2efff4a74054466d2ec"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/intake-flow-authoring.ts",
+      "sha256": "6f0775c0cf2b96a849052178797282dbe7bc9c3af1c666d05ab6f50333400101"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/intake-operation.ts",
+      "sha256": "9690974dc25e654aa7103f8877cb25c7c7e4cf270cc254e1ab59f94fcf6a2f1c"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/intake-surface-authoring.ts",
+      "sha256": "de592fbc06c2d01c7af1ac8128b2dafd08a9afb219c6a5b62e186d13f530a32a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/intake-surface.ts",
+      "sha256": "2d107763de17b506999a44c8843b94535cd27e26177e50f1017a7151205b1c9b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/intake.ts",
+      "sha256": "e940dabd158215f9d0be6cb20de6001fab6f970ae1f2a3d568206b83a7ad710e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/lookup-options.ts",
+      "sha256": "751dc30866d7adbbedb60aa42696512369a0c350ddfe6092366fd90227f4b3d9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/recent-choice.ts",
+      "sha256": "093f72639178ea6171dfed139cb45f79dc75fabbacc391fe37b4baa01f64d873"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/record-360-panel.ts",
+      "sha256": "07ae13ba6c4dd9ba05dac9682c51728fb761a2f4a60f495113c5596b762adea3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/record-presentation.ts",
+      "sha256": "ad9f54397e19bcb41ec0c42e84bbfcecf04e3e67695742925626070d7984bbb3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/related-presentation.ts",
+      "sha256": "394bb815c227530c2602792183df5519d2e7b3bff9bd2c95e7b02322dc673455"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/runtime-resource.ts",
+      "sha256": "f22c871f646fbeac203a0138ba76a7aed86a7efd8d309b9179405f637eb7d0a4"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/packages/contracts/platform/entity-runtime/src/validation-messages.ts",
+      "sha256": "68a5c581f49ad637c5f449d9b31e77a61b290b5c30c65f8f0f2aa3b60fde50a6"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/__tests__/config.test.ts",
+      "sha256": "8db8f8bcfb89d51887fe1d951e148094f08a791430de87103bfd9280162866fe"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/__tests__/lifecycle.test.ts",
+      "sha256": "2bfbf518c11b60f110de130114fcf32a56d242e955bc31fc7076ba120f16f07e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts",
+      "sha256": "3100d9a6540188262a306677e26a7067cc99ca45d943058b513f9995f6714d99"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/atlas-attachment-knowledge.test.ts",
+      "sha256": "c7a3bed2c27a9846ee5795961d4f5c92c46451b117b6d361a68153824ac32591"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/atlas-document-grounding.test.ts",
+      "sha256": "f7492af6d81764d1f574bfcdf228a7c13069e537d30f28b8401b430d5d327633"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
+      "sha256": "44e0b109449b040c17e831bcc665afdfc52a6cd9941f0344c0a4c1ceb62de824"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/atlas-retrieval-disconnect.test.ts",
+      "sha256": "8784d12aa25a887e0b498015bdb9df3e1da174be47e458d12cfc1306b6257c91"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/atlas-semantic-index.test.ts",
+      "sha256": "291317b60dd6e48df366075033813de1156e9c38720ab08d8e8ee967aa407542"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/authorization-management-api.test.ts",
+      "sha256": "fd5e2a14167beaa86c98047ea96f54b131ff7e260ab12846b969dc48cbaac2e2"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/authorization-management-config.test.ts",
+      "sha256": "f650d1cbe0e9e8e5422cca5274e9be92ee6147fb158801b6bbd4c5db33c09d62"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/authorization-writer-databases.test.ts",
+      "sha256": "1733d0c06a02c118c6710ded617459f9bf487e1b700c800cad377a129ccef581"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts",
+      "sha256": "9ce4bd1a26be51a90b9d4b975a9525616a2c24674a764d8f83f951f2de7be32f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-action-runtime.test.ts",
+      "sha256": "b8e36b2ca5655fea0ab7cac7131ca4544b97c5a487db34f1589e4cd4d41a80f2"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-authorization-deployment.test.ts",
+      "sha256": "64448fce94cbe20ed400b7e293a378ad6c037d74aec890d669916f4d38a3b828"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts",
+      "sha256": "13b4cdda3fac2b56c8e0198dd626a8b441bd19015b5c369ac63ea3e7ba8148ff"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-backend-intents.test.ts",
+      "sha256": "85739e299e0f1469dfd6841f55338b5182f19e3b84acfff333239342b5f6ac89"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-backend-mapping.test.ts",
+      "sha256": "2fe62a82469eb257d5bd36c5cdfd2a43be124310c85bf1e8760c76ff70d44d3a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-bound-import.test.ts",
+      "sha256": "293b3988df0e9a371ca59f72e56272cb30f2a7cf9a5fc52296221b5b6e773cde"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-case-authority.test.ts",
+      "sha256": "7eb69051e173763c0d4f0472f93ba54aa84363672a1dea348c5bd1712171fe26"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-case-runtime.test.ts",
+      "sha256": "08a7678d02c003688f09dbc79542a43e49ac1b91c4921fc8f6c01735f7b87b4a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts",
+      "sha256": "cadef456cd621cdb36c107870d9d3cce4567b1b658783a4cd7156e8eb6ca9115"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-export-runtime.test.ts",
+      "sha256": "53946352e75ab5108f9d81f70a882172087f6c38fb386d40a5f5926e1ae383ef"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts",
+      "sha256": "96a6dc9d376a7d5bede4eee44e0b763e1376bfaf726c5048a0ebcc6f7f86df76"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-qualification-runtime.test.ts",
+      "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-read-runtime.test.ts",
+      "sha256": "7e5201c783ef69cd5d9373ce1319c3b150e1c80ad410d0ba037abe4ba3994f25"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-reveal-runtime.test.ts",
+      "sha256": "e3bc31fa0f979de0133aaea387bf7b7d4a82c437c69d87dfba48df3b27717425"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-stored-scopes.test.ts",
+      "sha256": "3885b6cb8d1188824ddf68a5a427d9af821852e675f2de68acf0f7ed8f2aeb53"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts",
+      "sha256": "e93eff27c7f200af28869781d4ec579f6e4220a1a6b2fe6f21d0380ec713d4fe"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts",
+      "sha256": "023b7b74bdc13f4a381912c52bcb7a276fc2831fc4e27c8ad71c755a2f2fcdc2"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/capability-registry.test.ts",
+      "sha256": "4e43c7c7e0d0b061b8da4ac18f5443bba618c9ef60bb72f04671c0573d959437"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/control-runtime-command-composition.test.ts",
+      "sha256": "276b51794a8d6e71692564ddd89703c0db1e079088dd40c133f11d7431ed73c2"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/customer-portal-scheduler.test.ts",
+      "sha256": "319be7bb4ee19cb0110deb2b6594349b01ec2a0aac8ea98ab81d8f3c06b5b899"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/database-qualification.test.ts",
+      "sha256": "63e077529bcd20c835171f46d8bfcb380d2c56fd4804b21eb524887fbd185070"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/document-extraction-wiring.test.ts",
+      "sha256": "b223bc57f8132f3abebf66342915b2678b498956df1392137c11118842c25364"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts",
+      "sha256": "8cc56ebf0bc78df3c02aa55886052ae02ab4ff82ed0a9695d8558301a4f87258"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts",
+      "sha256": "8e4fe1e90fddef0706114b22b89df252372184f2d50e08b9656342e2f58ad71f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/finance-plane-import-boundary.test.ts",
+      "sha256": "591020e2b82f2209384c1f5aaf260651191f6e59319f89b8ae19f18ba5d1aa0e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/governance-plane-boundary.test.ts",
+      "sha256": "5c82b12b53ac136f847c0d7060b45322019551d0013863b5e0b3067249184a14"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/graph-preview-ai-bindings.test.ts",
+      "sha256": "bf56b417138fc826c57573b4c1044146e65d77968803d6d2e2d13b37b0e0b3cd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts",
+      "sha256": "5f3396bc4cabfe6dc8d206384c67821c1b4cf8f8c3d48b797d040e63cc216c9e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/iam-audit-vertical.test.ts",
+      "sha256": "0dc1a34959a86dc058e785da4fc8c792088f6b7ce53d93cb064a8847e08acdee"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/local-verification-delivery.test.ts",
+      "sha256": "608606b72eecc81763e142d24dc9fc3f061d5591130cde260c92956693dbb3ca"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts",
+      "sha256": "30e735b35f1b1d62251441e77920a3f8b80bda53f262c8c35f2bcfd1a69d43d7"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts",
+      "sha256": "83f0fae21844a800e368bfce824c4ce280984f988e00b33c6ff7df9e88d7a2c0"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.postgres.test.ts",
+      "sha256": "18bc83a43eb0da0818ab251abf4617d90e2f33fa1e97dd9323e3fb1968fa1a46"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.test.ts",
+      "sha256": "69a830844b5d7f520b778e183a16064cdbd28683ac60638641bf084375ffbedb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts",
+      "sha256": "e9b9f3f26d689bad9b82d35cd084cba66560b6ded256b10718fe43f6f1ccdab3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts",
+      "sha256": "6f0d385e2046cf855da50b7d7d1f54ed07f86181324de834303031abf1f24fc0"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/notification-capture.test.ts",
+      "sha256": "7ce43830499c7041eb109d96031c1d8689ed2e05752ae4975ac1e8aac5ea9d3a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/notification-vertical.test.ts",
+      "sha256": "4c57296544895dffbfc8491fe5e3d1fbe3b71349323baba49220c9b01ea04f20"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/optional-capability-readiness.test.ts",
+      "sha256": "ab141c3fc2111dfccaa1defc5984bb026f9c33fe10589bc283053395be1bea3d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/plane-transaction-coordinator.test.ts",
+      "sha256": "6c43d7bad9abd4a959e261e08717a52309bba2e2405fc8eb20cddc86aaaae325"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/policy-vertical.test.ts",
+      "sha256": "1b9ff6c0f76ce11c27a80d9ad8f3423f554713d0b5f87691a0fbe31f8e505036"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/publication-api-signer.test.ts",
+      "sha256": "683e7e6c763d09432bdf6420580004f4ff31dddb0415015890ed4c07e92fa2fa"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/publication-plane.test.ts",
+      "sha256": "8c1960f7135ec9bd774e8934deeb4312ac34bbcd65bd47e7a58965d481517ed7"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/register-adapters.test.ts",
+      "sha256": "3b6a9598f4985c94c5108552ad1a400f5f169f332d0497cfd63bfe4c2799932b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/register-runtimes.test.ts",
+      "sha256": "fe7a438f0310a981b065fda19990d6b33e33e7d0f5c01313884a9f71dc34b582"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts",
+      "sha256": "7275fae4dc23a8eb912cd82c4aac16e08ed2df0ca4ed6b29400011932e8b5188"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts",
+      "sha256": "8b78ad259a75fb6249be2b9edd6a504f1f9818360f6efe3e07ccf18604573292"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts",
+      "sha256": "7d3263b08d63d91f99a1dfaeed07ec0cb8ac4dc8729fda3929ba20ef2296516d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/atlas-document-grounding.ts",
+      "sha256": "22a09f50010c3739f409955c30f5d71225244d8577d2629af8faa85d491ed8e0"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/atlas-inference-admission.ts",
+      "sha256": "3d240842997ec53a3cd8ec77f8f389a0d85d2b25f8a557f9914c9ce29af670d9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/atlas-record-question.ts",
+      "sha256": "648c9aefb01bc0c14ff15bd4c54408817d4f2264545eb95c9418fa0898d96251"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/atlas-semantic-index.ts",
+      "sha256": "c322d37afba0eb747d7242ea1d333a134d682cacd9a18bcb95707ed071a499a5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/authorization-management-config.ts",
+      "sha256": "3f85fa9e54c87e2903f27a3476f6483d609bc4e71931006ca3e957f60763af5b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/authorization-writer-databases.ts",
+      "sha256": "d27507a189a4287fe069fca0b948183bcff84ce705034dd03c2f830f241b1549"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-action-runtime.ts",
+      "sha256": "c89da03487794723970b9a708055c82b830f1848c8c2dcf6f6e3d96a5b654a95"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-authorization-deployment.ts",
+      "sha256": "54f72eb425d73523dcf44004dd96b739e0271bb0f3fc232f42e42f7d413afb75"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts",
+      "sha256": "db2916e498900479d6f143e38cd91d545b3424467c68b58a097b15b64ec340dd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-backend-mapping.ts",
+      "sha256": "5793a09c69b189bbbc9367e0590c8084b0dac97cd77e704e3c23b1a3b219dfdb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-bound-import.ts",
+      "sha256": "1aa1731c7354c50a10d0755072e70cee93a304fd88293d8526ba8933c330b622"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-case-authority.ts",
+      "sha256": "e72eafaee9ae1c8e2e72f071e809c9992ec1d93ac0618ed62575542de233be42"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-case-runtime.ts",
+      "sha256": "b60829a52c2dcbfa532d95f6ba9ee65c2a2cb2d3f4463308de8a2a1d6f36bed9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts",
+      "sha256": "74f9ffe325cd3e228f27837ecc4c77b2d0b746a5e92a084cc01712f5c28a3c57"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts",
+      "sha256": "c70eb0bb57cb7417c2538e39b982404936e0d0105049e6a52600bcbad5ffa523"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-export-runtime.ts",
+      "sha256": "d11bad6cf9843fd038b9c7314c889d8c61994f30fdaf063c700ad31365180e2a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-import-runtime.ts",
+      "sha256": "3ea40ff4056ee989866336bc2137aa4b81753bcdbc8b61fbdd23ea3f4a7e6e7e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-permission-transitions.ts",
+      "sha256": "cc8d11c963e9be6da67243152fb8cd8a9f5126e03b67a10ac4925e0539e51cf5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-qualification-runtime.ts",
+      "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-read-runtime.ts",
+      "sha256": "70e4ffeec7c20c827402d0c461343202f13430b8822f4fd00bfc49022a7a5c12"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-reveal-runtime.ts",
+      "sha256": "414c8bc359d5f6fac3d69bd0c33f665eea606c9eb3c900f67346b11b92170b30"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-stored-scopes.ts",
+      "sha256": "111c29a46c07a7ea605dcc910d6136d654b8b7088aa1663f80719868a05a4e16"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/business-partner-target-read-policy.ts",
+      "sha256": "035b28fd3f173d330d74679eb5cc4c10324b9d1b6e1bf83fa67683616a4220fc"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/capability-registry.ts",
+      "sha256": "7d15096b88e0b67d625eebb25516f0e0a0e02c2150786a602ee5b3d568a9b644"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/kernel/container.ts",
+      "sha256": "5795b09a7f064f17eecab0b5d4dfd5241ee698e83b0a71db46f45e601bd95efa"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/database-qualification.ts",
+      "sha256": "936b2b0dc2f5b8e1530caa0be8405b68f3a6b756881f7065edcd35fae8b8f50e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/publication.test.ts",
+      "sha256": "a812c1817480478a4c45f5d873f844c589b1a58359a3ab8192b565092a63480c"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/publication.ts",
+      "sha256": "d145b1796b0a3379259324fb7eaa6a73ee758e4f764192fc12cd898750ed882e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/runtime-publication.test.ts",
+      "sha256": "b3e09caae3e89113f3dbedd510cd78228146910910fa0e6ad2aff59eb5d3f6d2"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/runtime-publication.ts",
+      "sha256": "3f7f861eef78c3d86c0027fb9ae6ace71c12eca04359d9f1d44fc02a5313f9bd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/spaces/neon/entity-case-backend-mapping.ts",
+      "sha256": "777c190496553f42da14137fae4ea494e96d4762cf17a667ac9ace9073073f02"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entity-case-preflight.ts",
+      "sha256": "b7a9c3c380f221438fd0bf57ff101cbd68b2c84ab1b975734b92569eda3cef9b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/entity-release-review-deployment.ts",
+      "sha256": "174fa8b97361de7bec337f674e8092363d1c665678f750a6e15d4c9806132658"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/finance-routes.ts",
+      "sha256": "d12c9d441654c54d5c4cfb5b71ea380cd29284172f421e460e9d5d40a77ce400"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/graph-preview-ai-bindings.ts",
+      "sha256": "195b8566a2c7b6a3877c4ac8452eedd944b939ca244959b922127333d02c81f5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/graph-preview.ts",
+      "sha256": "54cf1367f3075d080ce419f7e405570e02209a0995812ded57df840d2e3d75df"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/development/verification-delivery.ts",
+      "sha256": "c0b6da0d39a8a8f8faf1603c246edab79a1ee48133889c1108fcfca3b27328ea"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/mesh-exchange-readiness.ts",
+      "sha256": "85d26c01f4d3d704b165f3a1a2555542872d5eae5483dd60c0b2d337005abc43"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/meta-entity-activation-inspection.ts",
+      "sha256": "20f4de1a111d756d69da7a7974e14f9703672f8ce93a37eddc40cb2c1ab3fb32"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/meta-entity-authoring-authorizer.ts",
+      "sha256": "b94ba175ec4523cc350a4592fc11cdd206e11c53dfa79d835a2ae6740aeabd84"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/publication/plane.ts",
+      "sha256": "fd493f6ce2e8ae520a0ce73928a072de84d8d74f16ef1ad20296d89382391315"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-adapters.ts",
+      "sha256": "6583a9ebb0af9a7c016aff1b21a39f430a1a6c15b54b30dd2fc889cfa0590d40"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-business-partner-metrics.ts",
+      "sha256": "9367335fb3fcfff0c70b104811454356b952b09eb53dc5a72c901eef023a28ed"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-invalidation-workers.ts",
+      "sha256": "4ea41200260d12352b02084e70929f66b392298b185c75254f99431726105cd5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-master-data.ts",
+      "sha256": "ef5c5f15fda8f1af0b2d3298d857594ea0256fd61867ae6c0565a3b1a97a922b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-platform.ts",
+      "sha256": "7375fd79ec04542d1acff09daa869096da7851310e2793ccef186ed7e5541127"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-runtimes.ts",
+      "sha256": "884b831e2ae33e3c43481fd18bf3a155556f8f194fc5c12a5202dfe84f32359f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-services.ts",
+      "sha256": "22e9cb2689e6f8357f14c4d0d6cdcd2fb6bcc9354484cfc0cf20ab322c2813c3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/scoped-meta-entity-authoring.ts",
+      "sha256": "9fbe6e99f19f295c2e1edaabde41226470515ded437d6b9b33aa9de6609a1541"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-information-sla.ts",
+      "sha256": "216bafe9e59e983e2a31e2c1bf93723f334b92984829a4f381dde82316e90540"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-communications.ts",
+      "sha256": "76b4cb3167db1592e1145340a8e1fdfabca6b58d6263719bf8b8f2012558e210"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-document-projection.test.ts",
+      "sha256": "6430516971e12fd8ff1c82eed9b522be12555153b4230a93ab8d3617b7ff6ea3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-document-routes.test.ts",
+      "sha256": "c14f630034b91b039179c907f9a9a9ffebc0a9fb7a4ecbd27b81935fccfd2f4f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-document-runtime.ts",
+      "sha256": "b64239245fd08f15c1534d1bceca0ca1ec06ddf176d40cc4c682617e326c04ce"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-documents.ts",
+      "sha256": "4b9b7f1fef8611f191b9a1d31d64dc52a03cd3fc1be021b2d4a4a9eeeecadbf1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-edit-policy.ts",
+      "sha256": "a3b2bca2eb2a27af751bbe7b5364243da6a3960b9ced9fcb312cc5d60ccf3b11"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-selection.ts",
+      "sha256": "46c207fe52c0faef18355c87812a7063f33a4ab4d085cc7eaaf10ebc69d6c1ba"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-submission.ts",
+      "sha256": "4e9852ec84aadd6269e87348547d51d4790eace4f895534b3d90e9936c0a1c7a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-task-authority.test.ts",
+      "sha256": "28b09675811fc665148220aa805136d79c2ba394a520575d872bad3c58732a43"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-task-routes.test.ts",
+      "sha256": "2b65af65eb4baa692d57d85a69de232ef6fad6b86284d6adee327c399825af36"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-task-routes.ts",
+      "sha256": "65ba6b21b8c9da5e85b35f67a1636d4fb5a416bdf17a58d5a553ed6f79b01651"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-tasks.ts",
+      "sha256": "6c9ae49822c7608e8dc9ed54baacbe2477d6437684a097af33a67bdd751313f1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/supplier-process-workflow.ts",
+      "sha256": "4a7e9c3c8d51dfd33da884f761f3f3ea2ffff81e2a22785f642fd874a7f0a0a0"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/task-edit-policy-authoring.ts",
+      "sha256": "4b85e7f70a21c90e1e07d110be45540309b2851a97b694ead07c73a6560917bd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/task-rule-publication.ts",
+      "sha256": "68f41d5b212c24f3fab239fac46dec1040e67ec7fb7507e371df98151a26bdeb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/publication/tenant-orchestrator.ts",
+      "sha256": "9509f9fd09fddb9689ede1a2450ba7f83a404f67666c25b177774583f059ebf5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/verification-routes.ts",
+      "sha256": "b24e34f7f28c042b6d3f2dc296a7fa04828b5dfab23d0f0e7ca6c3575fce1acd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/config/authorization-management.test.ts",
+      "sha256": "a9818f7484960edbcde745175f5e229b0a0a629dc08bb81f211165b8d7656f8e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/config/environment.ts",
+      "sha256": "bd1ae33e720461a71021dca7feef2c711e18e0a61d104266200270a9a6ecedf8"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/config/master-data-verification.test.ts",
+      "sha256": "60ef4ea7544582568db5699382b14168d2d619fc4c3f02b451f67ec91597e9bf"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/main.ts",
+      "sha256": "b7bbdcae1bdd87183eb74bf7276f7b18cdbcad8f739ccacc42dbe13727b72a08"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/monitoring/__tests__/business-partner-metrics.test.ts",
+      "sha256": "039a359368f1eda5bf9bd186ffc9e9a75c143eb6d7e61b01ee419818e55f7309"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/telemetry/__tests__/error-collector.test.ts",
+      "sha256": "e7245189e3939b485fdbdf4c765396d594b2aa5757e8957ce399400884d8f682"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/monitoring/business-partner-metrics.ts",
+      "sha256": "9c1c5db996183c3b21e8fc9133d70db70620398d30b06c934bd25c18588a6be5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/telemetry/error-collector.ts",
+      "sha256": "0be91310ca20bd8cc3a8a446a2df5b55cd4c5d1d54fab5bbfe3d6c606a3739a9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/health/__tests__/process-heartbeat.test.ts",
+      "sha256": "6ed97f4de5819fbc46543546544b7f67330a9bcfffe39b30e70c59b18860c8de"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/telemetry/__tests__/process-metrics-endpoint.test.ts",
+      "sha256": "5b2b3f7ceb9549ad95bca82955eedf9957aee734ae7a04d42d5d711291bb9c74"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/runtimes/http.ts",
+      "sha256": "f10df519dce2f08e0483db2d89ae753ba76954aa0e3124da0480ba2f6fde2f97"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/health/process-heartbeat.ts",
+      "sha256": "8948aac741b608ea31f7f07ea4e35596ebc5565032c15ab9c902d6361b659017"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/diagnostics/telemetry/process-metrics-endpoint.ts",
+      "sha256": "723ba0a412eb2d3e2b833d8fc32a3edeee172eb77aa25739d62dd33e13ceb3de"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/runtimes/scheduler.ts",
+      "sha256": "f00d9bc96480d8b2bb21a02a0b827a0b6c5690994fe8f3452f02961fa4285278"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/runtimes/workers.ts",
+      "sha256": "20fe05929e29ccaefdf143ea0f6221bd955f01fa39a716bbd2976baf11e0e0d6"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/provisioning/supplier-process-catalog.ts",
+      "sha256": "8b3953d18c825cc1aed506b1e1f63c60e6d807236a335c0b1d89ff08a75dafda"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts",
+      "sha256": "9e533f79b0f66531f28734e9df0379f5843dc6aaf099f838a6f816cbe381c46b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/scripts/qualify-document-malware.ts",
+      "sha256": "0e5a981e450fcc5263ba4df056bef51a5fc727ef8218c84785a3651591018c1e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/scripts/submit-derivative-scan-backfill.test.ts",
+      "sha256": "374897e4b1f288340664c99bee1574e92eee702b18e6892b88b080e9cfea5ee5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/scripts/submit-derivative-scan-backfill.ts",
+      "sha256": "2caac4b7a5cd060976044a71ceb22f5a08cd3779416dee9c155c4d95c5cfdfbb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/__tests__/api.test.ts",
+      "sha256": "04ed820b4984510c01e2007779b5d3cadfaf8c6d220825ed3bb19d5c37171d5f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/__tests__/atlas-learning.test.ts",
+      "sha256": "33b2aa66d52fed23825887b8b0467a8daa595a6c61cda5d96a046b2775024948"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/__tests__/entity-ai.test.ts",
+      "sha256": "dcd95ecf6ed8e19db6c1ac9b5dc6025cbbfb2539ed5b94329df67c73eb1028e9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/__tests__/entity-authorization.test.ts",
+      "sha256": "59ada0fb4bbc556694bbed6354e54405ff28e78854d5a18a12087eb0865f1388"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/__tests__/entity-canonical-read-admission.test.ts",
+      "sha256": "ff8896cfb95e03a59dd15e787bd307114fb06a313abfe27ae3e3860082c629c5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/atlas-learning.ts",
+      "sha256": "708f5a206fa0e70c1f3267f1d691b548ae9f28b7e500eb894e28cf72e4fe4e48"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/collection-relationship.ts",
+      "sha256": "9aba3e60b1eacb431ef0e8d9d842bbc32f9b1e8a141a7e0464095a757fc789dd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/descriptors.ts",
+      "sha256": "5549f1cdfef231e09da853f74f115abc896f7ee4e4eefb7606b16cae9ceb9276"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/directory-scope.ts",
+      "sha256": "b222b21ef3081d10dc37895a793bf8131e5d514acfab30f9cc06986eecc3db86"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/entity-ai.ts",
+      "sha256": "cd2d5edbc2b750c5a64b35ccb691785d70a6336f1388938176b88961981b6b1e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/entity-authorization-registry.ts",
+      "sha256": "b6fb55028df22b6bc673bca37374642055db161622017794a5af509c82fcdea4"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/entity-authorization-runtime.ts",
+      "sha256": "44f7697a5eff7c57b8203af5c31a2a0911f4b39e7a4d5c103c1bdb27291f9271"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/entity-authorization.ts",
+      "sha256": "34d2a072901c6df54a89f47fc00820abf56413da4934de4fb5b0062ffc23ec12"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/entity-canonical-read-admission.ts",
+      "sha256": "fe3747bf1aae94f0d0c15f10c52214bb8f81fd469008e7aea956c7f513e6b2f8"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/index.ts",
+      "sha256": "2013ba2ce2bde5c4c29950fb722008d480e49d4007404b04ba3c1f5418840d3a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/contracts/metadata/src/ports.ts",
+      "sha256": "48b0fa004a812ea37a5fab7324303dfb97ed93e5faf2912d2e6fe691fadd6700"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/authorization-successor.test.ts",
+      "sha256": "297cda048f05af1864cfaf6f7214cefd0d8187d9d750351817f676724408faac"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/baseline-publication.test.ts",
+      "sha256": "a0880792c9358d0fd79e1f931a654222ceabb69cb524754027304473e07d977d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/business-partner-intake-presentation.test.ts",
+      "sha256": "46f1236da5180a29c1b327999d5822a364f0e41e7b36ed53d13d2add7fd8d87f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/canonical-v2-successor.test.ts",
+      "sha256": "637f45007c416446c58ae628338a3cb471f40a576085fe0ab3661bb83c75c969"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/collection-relationship.test.ts",
+      "sha256": "fe026c3a01089c6a810bd2981f200ec020fc1ebaa21a25fc62953a4f9330434b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/configuration-editor-qualification.test.ts",
+      "sha256": "e0a52c2447383edad2a64fa9c72fcba6434d23d28192180209d1ac16b7b5f0ab"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/deterministic.test.ts",
+      "sha256": "1aabfd33feef838c90bcecc2e35e20dbb03476ccc599ac3e4d33a04431a9408e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/development-publication-source.test.ts",
+      "sha256": "89430b0b9b8786c541065c2952edb38a66715e4792fd69fbb47370e30ea59dbb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/development-publication.test.ts",
+      "sha256": "06517ab7c8d85dc96d43c1b7b5d643bbc68be0de0c1c0a7f0fd73fe0134afe5a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/durable-graph-preview.test.ts",
+      "sha256": "6b5a33f14cf164f4a2b4d07285ae44fa798b948ae1f2f30166fee030ce86ff69"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/durable-preview-adapter.test.ts",
+      "sha256": "e9f24f4273d0c0414d1c49edeb70a370c0292e38e4045e02e562bd3d7f012c5c"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/entity-ai.test.ts",
+      "sha256": "aa7881f0662dc5ff4919efba8b141669c7328c7de556447d727097bddeff42bb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/entity-authorization.test.ts",
+      "sha256": "207769018c05c9999a63da610f487f239516c47d79c6376d5f0aed5a855965c4"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/entity-registration.test.ts",
+      "sha256": "87936c180d0c5793050d5db95592977b8f46ef77d4ec433fe201b33f947a256b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-editor-routes.test.ts",
+      "sha256": "b692f49972b626edd9cf76b66b28c5e18e51e1de8cb7f2fead5d42b2383e3aa8"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-preview-hook.test.ts",
+      "sha256": "7aa581d57a84610d650e4e5619ca5548fb0d4b90da5ed79596ade033aba6cd55"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-preview.test.ts",
+      "sha256": "0a4dbb2c2fbe10198ea030e452af222c49ee378a25ff71d517b734cbb0c6b24b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/independent-review.test.ts",
+      "sha256": "dd0bd92c5b2ed96f558ec9702b95dd844bf78fe09a01d103b0c5ccade8a822da"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-inbox.test.ts",
+      "sha256": "9078d598d3a5a0193c213ca9e4a6e9559550b260946a129a878c413d773e1f2d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-route-scope.test.ts",
+      "sha256": "9e483194aeaa2363218879758a65220be7354247fe1e82951a11db4eedfc0e11"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/list-experience.test.ts",
+      "sha256": "f04281b4676805e48f683b151a808a6b7e3b3e0b42ea65db83742dfdbb087f24"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/publication-adapter.test.ts",
+      "sha256": "3a8bbc6f592b36454fc11e0b943fbaa8eb1ab5f46c30458d3b7fbb98a4d06994"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/release-inspection-repository.test.ts",
+      "sha256": "6d9f680387a30e74f17939c2ab230110a9ba82abb940bdaff991f22c795f2d62"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/release-inspection-routes.test.ts",
+      "sha256": "2889b01f288e1bd1f4c2ae773412170c149fabbb504cd682c4f7245c0134d6e1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/restoration-publication-conflict.test.ts",
+      "sha256": "bccd9856b0631630b7a9b19d0dcde1bddb49e9f822f08b265b3f7fb86c554a1d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/reviewer-read-routes.test.ts",
+      "sha256": "076c32030d42500f5f2d2f831fff7cda48d2d0e29180e854012140fb50746a9d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/runtime-restoration.test.ts",
+      "sha256": "3c6756ddd6ca12a00a6073e145895b212e9539c162045ec58b4b22db7a542c4f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/__tests__/structural-editor-qualification.test.ts",
+      "sha256": "43cb06ef27d6c7b9880bad248d1b865d6c87a0c9ea68ef66792f4d627135dcee"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/authoring-service.ts",
+      "sha256": "0d723e052ad91ff79cb613998fbf8a5e9fbd5d6b00b7351a20c7a6cb02c8b472"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/authorization-successor-publication.ts",
+      "sha256": "0b0fab3cd79548e8412593122f9654a357ff695e066ca9798ebfb8842c536057"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/authorization-successor.ts",
+      "sha256": "c860391e40931f38c57b83c15d36a17130777a78a3efc8ac54a29962c8baf6fd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/baseline-publication.ts",
+      "sha256": "5fe93061ca8d5019babf2f9ce60be97c255e0f708ff13be65d79978d64be4839"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/business-partner-intake-presentation.ts",
+      "sha256": "24ac828cda531b3d9cf9d485d7370446a9037301fee95dbffc8746395ebf544d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/collection-relationship.ts",
+      "sha256": "8cd559ca4f990ba9f9c7514dc0a258ffca76173849f8d7ce0183b5256f2125eb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts",
+      "sha256": "b67a7887abc271000b4eea3ea680d321c7082488663180ebd1b72d0da5a5656f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/development-publication.ts",
+      "sha256": "48dd8c01c091e6ba91f4ea10518aad391d3016c36b5fe6c9b717408b31d778d1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/document-collection-publication.ts",
+      "sha256": "3e2ec762d4853566452bf54fe5115001bb1fa423e5da822dd8c9ff310738645e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/durable-graph-preview-adapter.ts",
+      "sha256": "2c3d7a5151fb4aead3c890f65c0f26c870338dc70d9b2a092cc10ff187795123"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/durable-graph-preview.ts",
+      "sha256": "ace2b6b045ffb5f2e6f8418e0e95b2a2e68b33ad06740cb44901a6f821584e22"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/entity-ai.ts",
+      "sha256": "c8be7f49de3ac893d8c516e4626c952206f5877476f6da9a373cb9eb1e2de173"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/entity-authorization.ts",
+      "sha256": "bf0e4d8c36ab2f61fc69921c88e9a8c7782c6808196a12127f8b34003dd6bd28"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/entity-registration.ts",
+      "sha256": "1562fbc37e593ebfe7c4e660cd40aa92cf01aee2d4260d9cbaa1b840032702b5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/graph-dependencies.ts",
+      "sha256": "9005534e147e74399988e431d8124339574def6283342871ea3fa3f88505def0"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/graph-identity.ts",
+      "sha256": "d37be58b574a228287c994960568547a497669e347e564770ba2b08e671dfc3d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/graph-preview.ts",
+      "sha256": "c0f99f187e888dedea40f500f7dacd22e44f7c8e1cd19824276407732785a5d8"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/graph-storage-order.ts",
+      "sha256": "01145826dc5a04c0fbe7bbbb1f91c063842cd85a4e80519156cf20f5fe5c7f40"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/index.ts",
+      "sha256": "b967da05c089fa7cc75e28b32024677688d542a047597a171259a8873caf8912"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts",
+      "sha256": "ed12b6cd3a64e5ae0fde05f705ed22b54869cfecbbfceff8ffdfee0f8a7ca865"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/learning-inbox.ts",
+      "sha256": "45073026a288ae4683661ebf23792ef2fe701518ded8670141358db8272db281"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/learning-publication.ts",
+      "sha256": "f7ea234afd7be8f58e424794528926054f204a47a7710befe0e2b5f2d2d83cf8"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts",
+      "sha256": "b05192307bd72b4dc6c475d5cbbe2916042ca13fc3005d15e8ad9e40562458a1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/list-experience.ts",
+      "sha256": "751c030eef7f1ae3460f4e8c71e2e6a9a364aab65902bd6d0bf5f87f2d6328aa"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/publication-adapter.ts",
+      "sha256": "cce6a9f8f044cf5bcecaafd6c07c46a0694872edbaa8a571b9834eb000b8a1bd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
+      "sha256": "7a4d0817e40560ee989580bfbcd4ade8c2c811556e5c219f49c99fb13ce8c1bd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/runtime-restoration-publication.ts",
+      "sha256": "4ebc383e0d8ede7b4db1f1c3773c12ccce7c172f514540f95a2511c65fec157b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/planes/studio/meta-entity-authoring/src/runtime-restoration.ts",
+      "sha256": "cb53b5454ee5104b6342265fb01165176a10da03800bb8d2eba4d723e4e261cc"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/authorized-browser-projection.test.ts",
+      "sha256": "a5309f0e925a921e8d8caf75f9502e54c53c7c7a1cf3f8b1db85eafa0bde5513"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/collection-relationship.test.ts",
+      "sha256": "a024030008a6926a71aea26471cf0e0522ecea51209f796265da3527286eefe9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/compiled-entity-reader.test.ts",
+      "sha256": "eea1eb318ef01a4926fc6dc2db4dfc6a8914469b56c973ab6480cff3f387ad4a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/directory-scope.test.ts",
+      "sha256": "a90d5f1ecb641d73c72431961519a3d1072882cd9e72f87637394fd9191951c3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/entity-ai.test.ts",
+      "sha256": "a426a92c6f29cddb2a7ea0fbc2ef1956a0a19a4d8ba9bd2dd5fd7d043c05cfe3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/entity-authorization.test.ts",
+      "sha256": "b43e650070b07ffb980beddd5512426afa87f6cb8af0fad9cfdd1aa533ec9363"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/fixtures/intake-choice-graphs.json",
+      "sha256": "ea578d3d6aa3b67ee858d9b7505eed8194be3fcf9e87169fdadeaae438db847d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/intake-projection.test.ts",
+      "sha256": "5b43a5d3a087b1aaaeadb772a2216a800deef345ec459b49286f899371a028de"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/intake-surface-projection.test.ts",
+      "sha256": "45f2233ad62b68beb4fff722b6deaa61ec4fdd5067b00dc845f6b7bb4a200231"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/invalidation.test.ts",
+      "sha256": "64d501f72ea55563cc28bb17b370a9646035458c2aaf31ba2ca84430e79f49b3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/metadata-service.test.ts",
+      "sha256": "1784ef810015db508932751d2ca8dcf2c2e22d07505874ec45a7feb747a0c592"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/__tests__/native-list-application.test.ts",
+      "sha256": "170c68d4393089d59f005ccfa054ca01ccb9da90a276628160624b86a4610fdd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/artifact-resolution.ts",
+      "sha256": "48869c032084a6a6cdc5d757fa9b682b0b57f7b45458f1fe8498fc0da52b1f92"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/authorized-browser-projection.ts",
+      "sha256": "0ada94241d794601a8243ac6cbcf77115b48462ea5d15bb5cbad3d2b14d9a29d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/compiled-entity-flow-reader.ts",
+      "sha256": "00c2ccef1c51553b64e12b0a5b04fd2644554d91310acec543f41cfeab0a8619"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/compiled-entity-reader.ts",
+      "sha256": "77f20e4380ef7884215d2eeecac6737dc58a63f95890df1d52761d64e3c79f85"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/descriptor-parser.ts",
+      "sha256": "c1675984ffb18fb6b77570c942313c64c153688f3ef7875c6a8cff24fb848428"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts",
+      "sha256": "993d4110714c669f39bc94c8f63d1642bed1079c0e0fce870008ac0cec66044a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/distributed-descriptor-cache.ts",
+      "sha256": "cf938098b1064b378b74c4ea19fc9e7b6e883243d9fc5d8ba73f6db9a67d46fa"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/index.ts",
+      "sha256": "3f1eebd57dc18cb586316e7298df4eb1ab8cedbf5b71e8d468dc0983b39b71e1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/intake-projection.ts",
+      "sha256": "7bc5dc6c6309944aebd10c62b95993bbabeef47995760f28041ac0b0a438bb8f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/intake-surface-projection.ts",
+      "sha256": "ab64e3f67ad358937f9694f02dda7b2747c05919c381c4cab0794035511778fa"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/invalidation.ts",
+      "sha256": "16e9beade6a71151f9bd22054181356953d8bf6c5e000ed3165669b4db602561"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/metadata-service.ts",
+      "sha256": "93fe00ec4d2c670cbab4de67bd4a06e1c02484beb49b35a8bddf011305d6b618"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/native-runtime-projection.ts",
+      "sha256": "22eebb4c1c7b74b819159f895bcfe08edc48b27661958ee34934affca3e1e57e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/platform/metadata/src/runtime-descriptor-repository.ts",
+      "sha256": "954e5731e5b4c10a1d370e4284a9063891ee4aad329807a1649e1fa6206fe21a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-activity-mapper.test.ts",
+      "sha256": "8545549b2b82376b0f9249341600c2b64ab5a016dfa9567e39631d15e527cf70"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts",
+      "sha256": "597c75e52765d1475b160975d86d1b7476d8710033698b6adb317d5c337220ed"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-completeness.test.ts",
+      "sha256": "d144f14112ab9518b89e575b39dd7d71f607bd82ddaeed31c869cc6e750cbe3d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-explainability.test.ts",
+      "sha256": "4ef52e94a93cd22fb8a4fc1d9622625e969fe0c4a02f48b2fa7ed31a86bb21b6"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-mesh-network-adapter.test.ts",
+      "sha256": "d1654e1c296e10b85732d7d46f08321078997b2e04a21cd43f5576f43c43ac9c"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts",
+      "sha256": "0aedcf58523e07b3a070b0ecc30fb4d91267f9e2bb38735b463d1eaefa500619"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-production-integrations.test.ts",
+      "sha256": "f7b5a6be6f93788cd3e19d6e726596d4d527972aec4bfea9d77d89165f6fd3d7"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-release-gates.test.ts",
+      "sha256": "e26f15c7fcde9355a3d1718cf5fb6fec937c726fe90c5132e69cea1db3c42f2d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts",
+      "sha256": "0dd3284f77095af3809d674514b9db5e6f0c0a3a438b4148cd7301b8202daf13"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-route-contracts.test.ts",
+      "sha256": "997b215770d1fa4231ca13d23766c739fb93712ac1c320b4e3a88ce5805fa7ac"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts",
+      "sha256": "71ef5b750b29d5d0f3e027e7b307b025a614b492537c30fe5491ffcdbb155177"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-bank-disclosure-card.test.ts",
+      "sha256": "39f6d4545610e44e5fc17ada0950ca07a630e2d6c385e4c7762b27c47cdc120a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-case-explanation.test.ts",
+      "sha256": "ebb2ee84ec9b4045ce70cabc9fc8236254e1f4e12bf579f369466e140731b194"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts",
+      "sha256": "6311abbb8683d8a690c9b1ccb4cd94bf24331315e3cc7d5bd74ad7dafe024ddb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts",
+      "sha256": "bbb837129538f76dc6d0f46654474b66bbd08bbef7fef62b839755413ea7b7b5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-company-relationships.test.ts",
+      "sha256": "df663a9c1e897a61d5139fe146c0193819628e751a7fcdf767165253c3414aba"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-display-references.test.ts",
+      "sha256": "e6938c50bf7d7ddbce746a99b01550f72c6943e0e03be7c9be19ccccb02e06b3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-edit-guard.test.ts",
+      "sha256": "4e6de0de0316ad6e1952708839302305c366fd922a54721089332e8758c6c327"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts",
+      "sha256": "a4f1e0c3a54884b758a6f3b51dc5ffa32e8aed58e4c44c9eae63ef608c11ac50"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-governed-import-routes.test.ts",
+      "sha256": "a30f8226ea2911095def49d0f4dfc037d296b0c2df66aa339a4cb9cf636af151"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-governed-import.test.ts",
+      "sha256": "405dd24acf76c67eb047c52dd56962e78bd407fae7548d63aa453676d25546e2"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-intake-operation-provider.test.ts",
+      "sha256": "b929723474048e586a250c7ca59eaa682aa27f6a12650b44771b2a967260ed12"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-intake-profile.test.ts",
+      "sha256": "d986e2eea4347032d8cc35aef06aeb27975c505b532113cb459e4905aaca7fe9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts",
+      "sha256": "e196da5fd4c02444c8b203c6dc0ac731ccd8c6c45617e4bdd1c0dc1f39a5d367"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-notifications.test.ts",
+      "sha256": "1524c22b0cc9a897407dfa9936570d1811a4e784ac26245956b393663eec8d6e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-onboarding-cycle.test.ts",
+      "sha256": "464caca9dbac07aed48165b516daa9b1e32d1d9e18294e4a5fa4b1d980ea7a83"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-profile-validation.test.ts",
+      "sha256": "1bceea3b5fccf1b0312feb8bf2e7d78e6efa012416b55beb72b87493122646a8"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-provider-projection.test.ts",
+      "sha256": "9058db6713fc7583466ff2a6b97f57a4b8d7c7aa14e135d24ba9c93a436048ac"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-qualification-preflight.test.ts",
+      "sha256": "b5a3d169b2e16a12df38b1e3c4c915f2358d78de778bd709590d799c56f52afb"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-record-header.test.ts",
+      "sha256": "5dd9e73af183d779a9c6d8fc9cb469dae5b2a8413a1700d3c092aabbd00e4d7e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-related-presentation.test.ts",
+      "sha256": "a4d3c8febdb51b7fc028fc06a41f327d4c8b1fbfd65208046590ffff17d343d6"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-request-capture-routes.test.ts",
+      "sha256": "26202a6f4eb375882ee1038c0b381e14cf49ac270184435dd3b75b1806d77d6a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-request-capture.test.ts",
+      "sha256": "c6515140c9f22d8c04a24b2768c63d82a7d742a9f76ed50f4571d8db3bc17054"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-reveal-affordances.test.ts",
+      "sha256": "80eb1d106e3f3e71dcdaa2d4425d7d394cba6da3fbcf400ad3a0cbd89ae26a5a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-reveal-preflight.test.ts",
+      "sha256": "cc0dd521954d0f765c9fbc67a1403a01d3143a26f7c5123f7d719a32674b2ae7"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/business-partner-reveal-revocation.test.ts",
+      "sha256": "fafcfe62860c1d6f08708cc6ff16971e3144be0d3d6586129c625c24a916e5fa"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts",
+      "sha256": "f84b950e5866b0669f6dbbde4c5619e1eb181fc7cb47b4b89fa90091dd88aced"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/customer-readiness-repository.test.ts",
+      "sha256": "7df24f754cdfac4c24344ff0ec5f2820fa0005142feab13193ceb047ed88f12a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/governed-import-creation-replay.test.ts",
+      "sha256": "b414db7a2cb1b32a122849d96eb981e4d672b977d505c0bb7b71570aa55f4eec"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts",
+      "sha256": "b0064c1551cfb9da047caa8575b497c11c595cd4ccf851554c7d6150313ef1f5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/local-contact-challenge-routes.test.ts",
+      "sha256": "88ca8831cefa5bcd0955e0ba780b59d50f623a8e66e1bdce3061fb9acce03dfe"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts",
+      "sha256": "5bdd372625fb124f60d4af9a7e57483182043ca527113c89968b7064dd12e990"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/master-data-routes.test.ts",
+      "sha256": "6a8f0c894818a4694a3e0e0c3ab6d31b75d328071973ded51b70b484284b87c5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/master-data-services.test.ts",
+      "sha256": "00f80a415f35acfd565ca5f0560aa0705d762ef6603071d165d1775a11483f89"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/master-data.test.ts",
+      "sha256": "2902e8ee2e998ea001a95fe28f2b22efd37924d6a468e0714143a0c12e13284d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/neon-route-review.test.ts",
+      "sha256": "46ba80d1be8eb2163f176eb9523a2aa873faf92f3bf19b508088348e5aa4f356"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/provider-evidence-verifier.test.ts",
+      "sha256": "f863959d7c992673ec62a49f70ab0690eb2abfbf639fffcd505585e992343ad3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/supplier-workforce-command-guard.test.ts",
+      "sha256": "3f6a4dac0caab6919769de9ee9b0ef1966f1235317e0aa07efba95ee59d698bf"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/supplier-workforce-requisition-service.test.ts",
+      "sha256": "252b44b485e105a241d41b17bf9395fdbd1b35ddb37d0e141b59761848c1fa32"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/worker-engagement-iam-service.test.ts",
+      "sha256": "490c348fb0245d12b9fe1978bda11cb20f26bb9f99fab6f3e7255cf2cdf6bce9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/worker-engagement-lifecycle-service.test.ts",
+      "sha256": "8ad7b331a1cdd4ee3250bd8af563f12320bacdfba2a35e0982968aae7c73dd13"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/__tests__/workforce-service.test.ts",
+      "sha256": "efc52ef05f319cf61cc8746ac60a3306c07486f78b1e53dc4dfa078803826b04"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-activity-mapper.ts",
+      "sha256": "1890a9f78ce3360669465fa6cae360130838b42c71893bed1a746c8ee9e0b454"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-business-activity-providers.ts",
+      "sha256": "96002862d5dcbe90298e25687576b09551735d09c88f9c06d776e9cb0dae3b54"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-completeness.ts",
+      "sha256": "13ccc95157712ca4436b7112d5caa26580c0cf722ae70e97642e5e1bcdbbd5fe"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-definition-resolver.ts",
+      "sha256": "6b6f04a36ebc25e837d2f925cf9f00579d380f484eb665c5f4aa6f584a82da79"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-mesh-http-transport.ts",
+      "sha256": "afc3d61b6c38718ed264398a422519bddb9e9b5cef36b983d028faf8d5092f28"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts",
+      "sha256": "1aec21550fbdd44c83e122ac34eda0ddf1e27229d01527411b6445c80c4e6679"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-policy.ts",
+      "sha256": "b5ca295fa77a740f7414fd8516b05348fcd1bfbfd636f1409dcedc8acac0c746"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-release-gates.ts",
+      "sha256": "96ce0d4723299df5dd1eb3c9044e2f1098e40476bcfd85b217406969d34faaf3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-response-schemas.ts",
+      "sha256": "1422ac52a29b453bac7a4268d484ba16e46b557976bff67bf6e9ac455870e1fd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
+      "sha256": "97dae6051d4fb3ab624aafe9f5d1dc764d9905b97da7648bba028793f8f5d20e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-routes.ts",
+      "sha256": "1a084e4aedf375df5fcee54e7d6ba7cfcb55fa84d7ff9aff680b2a8874ee4efe"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-360-service.ts",
+      "sha256": "02d3c93c107d42486e9891434d3d2350ffcf5a19c84b708a00dd1058777ad37e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-atlas-addresses.test.ts",
+      "sha256": "df8219a26a981ebe953a1053f1725be1295129c95bca98760f239ab4ed8716ce"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-atlas-addresses.ts",
+      "sha256": "86065d812dafc0d452e736df8dde7c094a3ce4c7d0ebdd7f6bee41146ceb68be"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-atlas-contacts.test.ts",
+      "sha256": "6622f3410fb2ed3923387b653e951075a89731d8dda68a9dee6ff67898de6bc4"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-atlas-contacts.ts",
+      "sha256": "90f7e1decd0e6b4ce7d36b0d0a288c488dac3bd0a5b8ce6ae11e798ba2b02176"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-atlas-insights.test.ts",
+      "sha256": "059d7a8c80254119ea200607bb44608c09e32f11506732589ff88814dfdf07cf"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-atlas-insights.ts",
+      "sha256": "145a6eb4dab68d5ac678dc4ae720165292b6781125e0773619c95c0b8874a6a5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-bank-disclosure-card.ts",
+      "sha256": "db61038640d526701cc204825e6cc1f5ff7e31b11dc23e66367eb82686053324"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-case-explanation.ts",
+      "sha256": "245186f4f37096f25971a3f84e9bc91d9137061ec4413651778e39cd2d4b1ac6"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-case-view.ts",
+      "sha256": "3873747555b4fdea739bba7e40ad1b85355f1a0468bcb723cef4bb186ba23e54"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-company-pilot.ts",
+      "sha256": "70133e76255538333ea69c483385dc0b6141c915386771001642ff3e061511b7"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-display-references.ts",
+      "sha256": "c30f05d094e4523d5e7051f0603f9b01e7efc31e7b92534b606dbf091ea3b6ae"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
+      "sha256": "5559ade2ae60a8f3f18df96794165c143fa7ae1878c5d1c35786a68d3057de17"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-eligibility-service.ts",
+      "sha256": "5d7e4826149b9a018bfb17013d0380e9c5eb0b48f2efff5f58326981ed723525"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-governed-import-routes.ts",
+      "sha256": "04fd64db265580b15b7256d8337b6bda3cba8158fe9d67a705e35445ba3506db"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-governed-import.ts",
+      "sha256": "a7701776454c5e4110c8440de276b0d4869faece057af0c260b1f9496baab471"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-intake-command-mapper.ts",
+      "sha256": "402045ba4861a42a1dc5f9b828c0998ecfb41b3cfaf03da0096702b7dbf03388"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-intake-operation-provider.ts",
+      "sha256": "a8f1772bbaf3e8cc3dbc5133388ff8dcf2dd3dddc857a009b079aac9dbc30a90"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-intake-profile.ts",
+      "sha256": "b7b13e4bd29746ba78de21d46b768790d56f8dcd02cb4c2a211c359b64fd4a42"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-invitation-jobs.ts",
+      "sha256": "b5a833d48ad2914436e4661dd14011899f4d83108870425217d12f3c3f5f238d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-invitation-routes.ts",
+      "sha256": "d10357a0b82e522478c0a598043dcd4546fe6b98b78f78327a0fe85cd3a2efb5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-invitation-service.ts",
+      "sha256": "254bbb6ab5b9601b1dc4e89eac551636cf0827d482a68716fa33e131c909dbd9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-notifications.ts",
+      "sha256": "d0c893473db4b4fd99f0a223c0e40ef904e3d09f52d4c158dfb3baa11dfdc247"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-onboarding-cycle.ts",
+      "sha256": "bf9160b44b998dd546ba4f01ed85dfa53768c6c779ef34ebe2bd97674534bcc1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-profile-validation.ts",
+      "sha256": "daee123884ae80451d938a1dd77b4f51a51b0d5e88974ff322c6ccb66f9cce51"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-provider-projection.ts",
+      "sha256": "70b2c7e2f2191bf366e00045df7c65ad8ed04da30c7c947eaaff03ba91e81ac5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-readiness-jobs.ts",
+      "sha256": "dd694d28494bdc7ab21621fdb0d144ca28ef061a30abeb1e707c6ecf78cf8154"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-record-header.ts",
+      "sha256": "26b31028c3511b88c1ceabec2e6a0c1a21d9a858e62dc6f92116b06b5da98671"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-request-capture.ts",
+      "sha256": "4b6d554375f5e3a5f6a638b12ad7f8c01fcae5a51c121dbe478e074fdc956094"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-request-routes.ts",
+      "sha256": "dc2743e30b4570d58c6dd9508f60968e1df3b208382a93874d0ee2c78ddb40da"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-request-service.ts",
+      "sha256": "fd1e3cd151d9100f23e5d8b27c98962f46cfbf5dcd83dd859cc2c7b3c0a15947"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/business-partner-request-validator.ts",
+      "sha256": "f6074284075bb003dfd1a8b27434ae5bd60f06d6df117b1f80c2e2f6e46cdaee"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/errors.ts",
+      "sha256": "1fdfd7ff34965ab95bbf84f44bf8b0ebda95a21603604310f01161127137d428"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/governed-internal-business-partner-routes.ts",
+      "sha256": "e1c2f786f013c5c3c90ddc2e94ba2616af2d7691ec326c9480c786ec744a368f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/governed-internal-business-partner-service.ts",
+      "sha256": "489b6e7c53297e26509ffb42eed899ddbfa0a349e88aecc7ee85a3f238608c43"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/index.ts",
+      "sha256": "57b0fd10803d6cd8a0b89d3c44a1e803e64ee7a04e1e14a6cf5d94ec9ed5563a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-bank-reveal.ts",
+      "sha256": "e1e96a81baf1ff7027e70d89bb9cb7fbdb0d13bb3647dc455ef273eea1a638e0"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
+      "sha256": "9ea4e2c1419821dffcc266f78dc09e82f06f44cb81d951a210fc48b0fd780364"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts",
+      "sha256": "806b88551275353ad683b674759f45dfc6a5d4da9804ea168b873b616fc4c0ce"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-network.ts",
+      "sha256": "0b3e666675d8cb3cb221a6d0ab76a3562e86b7511e41e8942a2680d6a6ffd601"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+      "sha256": "89cd765283b5b61a7af832e5e7f90363e0b8c474764f8cba716d8440b0b7c9d1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
+      "sha256": "e4dea163d76f1dfcd48172f0d1327dfe42cc789a1fab2c00de43d89d3297802b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+      "sha256": "64db39f9295900dac3af7c060c9daec4c088d14846c0559192c6a93c58550e44"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+      "sha256": "e44291c79d26766945f47fb590e61e25d078586d2be23cce75527063bbb53fb4"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+      "sha256": "fc8c69b69c96a1c55482d6a783b580f027c405de378122b88fcb658d592f1c82"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-business-partner-invitation-repository.ts",
+      "sha256": "5d120b105944d4ca6c43ad740d5d82deb226b96d8490516dc794c18777e63e2b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-contact-challenge.ts",
+      "sha256": "d063128944636d84b6bb67605683a2910735ac92c479790430b6bf23e298e923"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-governed-internal-business-partner-repository.ts",
+      "sha256": "6a3275e28bb3fb633e0ef58ac29b70d162e7ad4c4eba46e080632ca9d9add8de"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-master-data-repository.ts",
+      "sha256": "7971fc645a2f64467c935347248aec6242b946fa9678dbc6b94f96f13f26b6f6"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-workforce-repository.ts",
+      "sha256": "3b9b1a58aba58b65be0b0ae902356cf765ef9498163b4571a2534d187555b090"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/kysely-workforce-request-repository.ts",
+      "sha256": "b6d98b8406e56f3e105a69b65ee818dd9f59d6b708fe7ebbb5a3d900b10ee183"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/local-contact-challenge-routes.ts",
+      "sha256": "96a60c0f0dc2443000211332a24f75d00e15ec91a9d49ae3ce03332a713112c2"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/local-contact-challenge.ts",
+      "sha256": "dbc6f2991f6755b5dcc596a6588c03b2666240d46cf546ecc6d45343f2619a42"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/master-data-authority.ts",
+      "sha256": "aafc7b922257c9636f56cfa4a1734dc606c7b64484d0b84a03a9638d64c0896c"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/master-data-locks.ts",
+      "sha256": "e38b6a97bbf7268f86c4edbb74f363ec76a1a6ee54d1e94e105d03604971655f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/master-data-routes.ts",
+      "sha256": "f933515ada87b01e6ae2d931abcdc34b35342beb08b0a16d2ecf3f1304df08dd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/normalization.ts",
+      "sha256": "d3c285f49999619a47d10abe311716920a2d93f47048b8fadbe1e0e59861e508"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/provider-evidence-verifier.ts",
+      "sha256": "2173887348a0f028afe65671d743efa84d97d753a795f6b73408c602886accb8"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/secret-store-protected-value-resolver.ts",
+      "sha256": "a8b6e5bcb74ab17e38e9ccad36b82d42d08a383f11aa4d2a745532d8e8a875da"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/services.ts",
+      "sha256": "9d0480ccef18fc33cb0637a3c339aa97f46cbbfe3909d2270c2403b3754f6e70"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-activation-readiness.ts",
+      "sha256": "5899e8fdaa14fb713ad656e858358f2867120c8263bc0e896bdfb0d096c2eef1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-onboarding-completion.ts",
+      "sha256": "44e253d5158711d0e0859494dbae64470df79a547fc44b327f6cd6852d8586bc"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-onboarding-requirement.ts",
+      "sha256": "675a349dd1a622425035fe103dc8b7e50476b60af0b3701986d35c1d67ffa483"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-workforce-command-guard.ts",
+      "sha256": "aaa1e073d3d267e799a02788a1ed52f879d1d81d46e8c792636dd996760a955c"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-workforce-distribution-http-adapter.ts",
+      "sha256": "ea90c59cf750dfe05cae040cb6dec66d5eb4f63fdeffd7c4f6ef85d2c0d31e84"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-workforce-requisition-repository.ts",
+      "sha256": "e33659adb01629795f240a5e9300b8e4e2ff724166ce1c0b60dca2d666212553"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts",
+      "sha256": "91647b0d1a2ef2afd473c522b83a5a2e8f5b9da1907bdbe37b434576641c4441"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/supplier-workforce-requisition-service.ts",
+      "sha256": "b7cbf3d0aec7968af79d7f2373afb742d1a9fffef902cc93e67be492058ac107"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/validation.ts",
+      "sha256": "2172d431e3d67081cf5da697d550d20d66ddfca21c131a6d97683c4ff2793364"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/verification-authority.ts",
+      "sha256": "28575d161156fe639ff2076a2b3312a158f077ea61bf0ac476f688d8e2861285"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/worker-engagement-iam-repository.ts",
+      "sha256": "4f8c8904fe334ccae23754f5cf1cc4f7da371ec3ad99e6c0a73a6bbc2aeaf2c1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/worker-engagement-iam-routes.ts",
+      "sha256": "66d1c6999349bfe9b7f6b47ad053fca1843f4d135b5a88a08175c8717cfc596c"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/worker-engagement-iam-service.ts",
+      "sha256": "5a02540f0609de4e32aaf47d9f8a31c83b778fd938b3a0180c40ad0f91ded849"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/worker-engagement-lifecycle-repository.ts",
+      "sha256": "076ac468f4a95f4e00f01c26b227f6a4acb63623eb6d02810c00fcbfc29a0932"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts",
+      "sha256": "738f2ada2525f64420c6d80314407fc00fd2a15da74c65a959fc08a4bc05f6be"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/worker-engagement-lifecycle-service.ts",
+      "sha256": "e025f94efadaa05f75e76fb8aa06bec947dd1b30c4bcc6d9950a52aa8ed8c311"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/workforce-routes.ts",
+      "sha256": "5f7693dfbf6aeee5dff9bea28ec2d8704a03d652702c19981622b6953d3bf14b"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/master-data/src/workforce-service.ts",
+      "sha256": "4b253e374d5e8808cea3488af687068c7a60c4bbf24cc9c0d9a4528a50ab5fd5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/authenticated-entity-release-review.test.ts",
+      "sha256": "c432c13aa2072bcad38711af3f3ac8b06462b39d69e78301561fe37fede4bcf0"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/authority-api.test.ts",
+      "sha256": "4f6114d1b19bbf5fe2bc3af6b496a16c3e1463a75f3bf4328f96d046f33ca1d1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/authorization-activation-hold.test.ts",
+      "sha256": "dc25180bece38e7bafa19b0513d06aef0bac2a639e36645eaff9e57bd7e639bc"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/baseline-artifact.test.ts",
+      "sha256": "b5f3ba160bee612519cf8fe61446817a7bc4b79c52b02111bba868e389d0538a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/bp2-source-admission.test.ts",
+      "sha256": "93e07ae0bd68abc1f2a12b73be4eecd4958b3f5baff97dbd1b2a3ebd60bb1d6d"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/business-partner-case-contract-routes.test.ts",
+      "sha256": "d5f5f5146b4bed33132dfebbc94f6326e6d777ee7fb257e64a2ff69e29343069"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/business-partner-case-contract.test.ts",
+      "sha256": "74753ca131f38c36d19defd58eb1e12ef837cb8a28db511501b92f57599df56e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/business-partner-company-case-contract.test.ts",
+      "sha256": "9ab3431945fefd2574c747c4de44d9ceadcf2528e605f88aacb770ea2e74570f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/business-partner-definition-routes.test.ts",
+      "sha256": "eb23f885be59240427cd0a1099a9699ba87d3266edda314e2802cd14f646cf67"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/business-partner-definition.test.ts",
+      "sha256": "3641895aae977c5dc9dd79bc9e2cae13b6a8c20ec9850df078e96398b6b83b6f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/canonical-read-catalog.test.ts",
+      "sha256": "123a58dc570b04c256dc768ba7a1990e19c6ddac1c66911be1ab48aaaab44a24"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/characterization/publication-characterization.test.ts",
+      "sha256": "fd0dc3d302e21a7be17fcdaf81d5afd734542bde67ee2778fd2a8bcf654ff323"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/characterization/temporary-interfaces.ts",
+      "sha256": "523dbf53c4aa94b98e6171217f8b74830c2f3b0f46e345d60f7adecb0b3ee2c3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/compiled-entity-artifact-compiler.test.ts",
+      "sha256": "05847c0f681e15d544a96e30c0dc5171ef921b5ec5ce487888d9bbbe8b176f88"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/compiled-entity-collection-compiler.test.ts",
+      "sha256": "aa0c420952e3ac69162feee052e7f41c4acbc0562104df8852a838859bac5290"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/entity-authorization-compiler.test.ts",
+      "sha256": "4bf3b3f9fdbf8c26dc02860a864ad88ad207966b546fc926611b2722a5e953cc"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/entity-authorization-publication-review.test.ts",
+      "sha256": "0de9b1225f08d476c7a091f95ffa8befe9b551b08ce6c9824dfc2a9e0dd76c3e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/file-entity-release-review-store.test.ts",
+      "sha256": "d9b0a211b312106d56d18877e11d8981f2cb1a5a088d297f806a4ae9a5b5de2c"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/integration/business-partner-case-contract-publication.ts",
+      "sha256": "5dc24f188f178c2e62658fa9805f10e0616d0746c3193139574a7a3e46dab9b9"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/integration/runtime-contract-package/package.json",
+      "sha256": "c888113e3675385deb1cf745c637a1fd0428ee963848bb50182efe4949aa7b0a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/local-definition-preview.test.ts",
+      "sha256": "1eb9e9e82848f33b7cfb4233e9f6b9be5670b2cdbdaa350adff0c19b46c745f6"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/publication-artifact-store.test.ts",
+      "sha256": "945485791d3453e9c2414cb2ce6f3fdaa31579cb49291bc284a3ac61fb04f014"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/publication-jobs.test.ts",
+      "sha256": "9f8bb070b88884beb2d91be08f12eef6ce26523cb2ffe77dd851df89b7238a9e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/publication-operations.test.ts",
+      "sha256": "b118824be4cb60ae0214a620d03a7876f586f7df5b51ddd2938249ed4fccbcdc"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/publication-orchestrator.test.ts",
+      "sha256": "3236545da55fabe93b6bd22158f1b8f2e1b84d10132df7a0cfb9bb83c5388488"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/publication-runtime-review.test.ts",
+      "sha256": "0b5837ce283d2fac391de2bf28542e7d4e1fac149175c508c9696a2c5b795f12"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/release-promotion.test.ts",
+      "sha256": "b54808be5bb766d73e3f78fbce04680d463a1a2565a800c3ce8a5d80888941f3"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/studio-authority-ddl.test.ts",
+      "sha256": "3e4ec5061e0363a2f118131ce593067e76c237686034bf461f1064bb04d4fae4"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/__tests__/target-projection-ddl.test.ts",
+      "sha256": "b846c45d072f0fa70a3caee277f6905316770085370111e99e9858894adbea71"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/authenticated-entity-release-review.ts",
+      "sha256": "0e1284a4199c39f498f84ccfd65e53d2a33cc9a67eebef76f0919ef2ace2c890"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/business-partner-case-contract-routes.ts",
+      "sha256": "26cc7779ba9d98e75ad061378f83a09d5d368ac0f8f3c26dcf5085d082a69847"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/business-partner-case-contract-service.ts",
+      "sha256": "5e88afb3c7867ff57ab70b9f4a361186a98f2d100b83a8b9b912e13c63fbd914"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/business-partner-company-case-contract.ts",
+      "sha256": "d5320b282e642df07ce2e7a427a0a549b50f3b2f48259548f28acceefd302477"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/business-partner-definition-compiler.ts",
+      "sha256": "563faa401c5969681fe3bfd47fc68e7c7d31e53041f514a06e2fe25108644c20"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/business-partner-definition-consumer.ts",
+      "sha256": "9d0a1326b4104b74b79a18c4653778dd009eb99ef34d8b1e12599bf702cf967a"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/business-partner-definition-routes.ts",
+      "sha256": "6e553b9830cbc7639e89abf3f845016a006392180e2555cda938dad289eae188"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/business-partner-definition-service.ts",
+      "sha256": "224daaed8d0bbc9d574c9ef45a35edd933d0dfc87486afc38692610493834842"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/business-partner-foundation-definition.ts",
+      "sha256": "bfe6cbe147e7c526eb343bf2ac58bfc517a11aa48319ce51ee43fc92b6728de6"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/business-partner-initial-case-schema.ts",
+      "sha256": "2b4e7aa734201f762a0088d218554c46f041c3c94a5e9357b964a06ed5ee98dd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/canonical-read-catalog.ts",
+      "sha256": "1d743af84a9b69d4614daa8406eb59d8aa074a3c3ed247d602823fb5ad1b1edf"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/compiled-entity-artifact-compiler.ts",
+      "sha256": "20f6cbde75de37eaad2af1680dabfdaac4f0421fb71e8dba1eb6e785c2e35451"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/compiled-entity-collection-compiler.ts",
+      "sha256": "61f891b1877c2ae425d40abaeafd375e8037f727d376d05f6ea58d9ca4c80dce"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/entity-authorization-compiler.ts",
+      "sha256": "5bf7299c79e4c29de835d0da79418c89240e2f137ccf2e065831bcf386e029c1"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/entity-authorization-publication-review.ts",
+      "sha256": "cd72c539d79286691254ee98e4790f8adcd088e31fe43048a60a1887cf9e18bd"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/entity-definition-source.ts",
+      "sha256": "3730cd7ca0d269bc13c86b93db00c4dc3eb5aae0fdb00c06ecfa7f412f99fc25"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/file-entity-release-review-store.ts",
+      "sha256": "0dc3312eb676622a54b1982346bd35aad9016f3de576b01c266a4241226d4fc6"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/index.ts",
+      "sha256": "59da29ec99d9c6d932576668a9102643838a06b82950062abf3cd4a01c5a2c1f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/kysely-authority-repository.ts",
+      "sha256": "6a24e7a96ea597dbc62bf94d9e306f83966cf2ecede6c1559f3cf7b53f089944"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/kysely-local-projection-repository.ts",
+      "sha256": "80577381b4756839d03d04cdf0ebcd4a24005ce27e0894cea908a7e1c8ffb342"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/kysely-publication-authority-work.ts",
+      "sha256": "48242bf4d1056624d96e1aea33b8bf492f453416662d8f07fedff0f0cf403541"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/kysely-publication-operations-repository.ts",
+      "sha256": "390cd5da8b6b44ededc5606302836d122d8247c8bd6d580a19fa2314b88e6898"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/local-definition-preview-policy.ts",
+      "sha256": "cf8c607f842e0887de372b210975d2a6d18b8f832f0d6caef9693d6b0bf2def0"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/local-definition-preview.ts",
+      "sha256": "cdd2770ee3c4579f260051b96874ae1d22dbdb16c24d9a1f0845a7dd0f776ac5"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/publication-artifact-loader.ts",
+      "sha256": "ba7a290dcfce1f76b55ceddb3fba56266503574d30c6cc18684eecd58fc7f86f"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/publication-artifact-store.ts",
+      "sha256": "34fe9cc045b3c366d8f56a2f314372961c2b182258cb5dbbe04acc1fac75c618"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/publication-jobs.ts",
+      "sha256": "a8a260c8f039779972a9846c89abb6b94b3565c5b1606985020aff686889f9ec"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/publication-operations.ts",
+      "sha256": "5090cbd24e3dca078cce9a349cee7ad931c0cb73fe0da702d3a30887376e9841"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/publication-orchestrator.ts",
+      "sha256": "79eb1d009cb6a122b87e08157ece6d6ecdbb9d477e9d4f9a3b68e4d95934ec7e"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/publication-routes.ts",
+      "sha256": "99884782a6ae2e26f975ffae9103315349edc363b7803c1f3bd5e1a456128c13"
+    },
+    {
+      "kind": "source",
+      "path": "/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/release-promotion.ts",
+      "sha256": "63f4706afb13fe5ed7d000cc285af12bfdef90a5eef658bf09a9cde7e266130c"
+    }
+  ]
+}

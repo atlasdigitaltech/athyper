@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-09-05T07:25:52.182086+00:00",
+  "error": "BUSINESS_PARTNER_DEFINITION_LOCAL_ACTIVE_REQUIRED",
+  "cause": "Local projection payload join executed outside tenant-scoped transaction",
+  "repair": [
+    "Request and invitation schema lookup use verified caller transaction context",
+    "Workflow definition lookup reuses existing tenant transaction"
+  ],
+  "validation": {
+    "publicationTestsPassed": 80,
+    "platformHostTypecheck": "passed",
+    "nativeReadChecks": {
+      "unscopedRows": 0,
+      "cirrusatlanticSchema": "supplier.company in 2.1.1",
+      "otherTenantRows": 0
+    }
+  },
+  "browserRetest": "pending",
+  "definitionRepublished": false,
+  "deployment": {
+    "apiHealth": "healthy",
+    "imageId": "sha256:5a70b8e44a43c8679b4d7d3602a0a1855872eabdd7793675f3a02f2d19235c3f"
+  }
+}

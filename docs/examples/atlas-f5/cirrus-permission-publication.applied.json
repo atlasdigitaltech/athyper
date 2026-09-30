@@ -1,0 +1,22 @@
+{
+  "observedAt": "2026-09-10T01:05:38.823Z",
+  "environment": "dev",
+  "applied": true,
+  "packetSha256": "e77975b03312e118fa0989af2335a66a49d29c7819713ba7fd3b4a1d57b4745d",
+  "receipts": [
+    {
+      "count": 9,
+      "plane": "studio",
+      "grantsUnchanged": true,
+      "protectedTables": 19
+    },
+    {
+      "count": 2,
+      "plane": "neon",
+      "grantsUnchanged": true,
+      "protectedTables": 19
+    }
+  ],
+  "metadataReleasePublished": false,
+  "writerEnabled": false
+}

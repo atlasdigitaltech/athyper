@@ -7,8 +7,7 @@ export function createWorkflowAuthoringService(store: WorkflowDefinitionStore, n
     async compileAndPublish(tenantId: string, draft: WorkflowDefinitionDraft): Promise<CompiledWorkflowDefinition> {
       validate(draft);
       const version = await store.nextVersion(tenantId, draft.code);
-      const canonical = canonicalJson({ ...draft, version });
-      const definition: CompiledWorkflowDefinition = { ...draft, version, artifactHash: createHash("sha256").update(canonical).digest("hex"), compiledAt: now().toISOString() };
+      const definition: CompiledWorkflowDefinition = { ...draft, version, artifactHash: workflowDefinitionHash(draft, version), compiledAt: now().toISOString() };
       await store.saveImmutable(tenantId, definition);
       return definition;
     },
@@ -27,3 +26,8 @@ function validate(draft: WorkflowDefinitionDraft): void {
   }
 }
 function canonicalJson(value: unknown): string { if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`; if (value && typeof value === "object") return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`; return JSON.stringify(value); }
+
+/** Hash exactly the owner-compiled draft and version, excluding compilation time. */
+export function workflowDefinitionHash(draft: WorkflowDefinitionDraft, version: number): string {
+  return createHash("sha256").update(canonicalJson({ ...draft, version })).digest("hex");
+}

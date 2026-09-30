@@ -1,0 +1,79 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Turbo
+**/.turbo
+
+# Builds
+**/dist/**
+**/build/**
+**/out/**
+**/coverage/**
+
+# Next.js
+.next
+**/.next*/**
+
+# Docker / Mesh
+mesh/data
+mesh/volumes
+mesh/tmp
+
+# Logs
+*.log
+
+# Generated — produced by a generator and byte-exact validated by *:check scripts
+**/generated/**
+**/*.gen.ts
+**/generated-*.ts
+**/*.generated.*
+governance/catalog/generated/**
+governance/policy/reports/**
+# Retained evidence and release receipts are hash-bound historical artifacts.
+governance/policy/reviews/**
+governance/evidence/**
+docs/architecture/**/evidence/**
+docs/examples/**/*.json
+# Inventories are regenerated and compared byte-for-byte by their policy checks.
+governance/config/governance/authorization-inventory.v1.json
+docs/architecture/server-platform-host-legacy-inventory.json
+docs/architecture/server-platform-host-parity-matrix.md
+
+# IAM config — Keycloak realm exports, login theme resources, FTL templates:
+# externally-managed artifacts, not app source. Substring-validated, not byte.
+deploy/config/iam/**
+
+# Prisma
+**/prisma/migrations
+**/prisma/generated
+**/.prisma/**
+
+# Design-system stylesheets are authored in a deliberate compact form (they read
+# as token systems, not verbose CSS) and enforced by policy:style-tokens. Prettier
+# would 10-100x their line count and bury the token diffs.
+packages/**/src/styles.css
+packages/platform/foundation/theme/src/tailwind.css
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+
+# Lock files
+pnpm-lock.yaml
+
+# TypeScript build info
+**/*.tsbuildinfo
+
+# Byte-exact route artifacts; checked by routes:server-manifest:check and urls:check
+docs/architecture/server-route-manifest.json
+docs/architecture/server-route-manifest.md
+docs/architecture/business-partner/development-url-catalogue.md
+artifacts/

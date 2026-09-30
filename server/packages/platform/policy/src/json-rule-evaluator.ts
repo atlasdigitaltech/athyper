@@ -54,7 +54,7 @@ function evaluate(node: unknown, facts: Readonly<Record<string, unknown>>, curre
   }
 }
 
-function getVariable(root: unknown, path: string, fallback: unknown): unknown { if (!path) return root; let value = root; for (const segment of path.split(".")) { if (["__proto__", "prototype", "constructor"].includes(segment) || !value || typeof value !== "object" || Array.isArray(value) && !/^\d+$/.test(segment)) return fallback; value = (value as Record<string, unknown>)[segment]; } return value === undefined ? fallback : value; }
+function getVariable(root: unknown, path: string, fallback: unknown): unknown { if (!path) return root; let value = root; for (const segment of path.split(".")) { if (["__proto__", "prototype", "constructor"].includes(segment) || !value || typeof value !== "object" || Array.isArray(value) && !/^\d+$/.test(segment)) return fallback; if (!Object.hasOwn(value, segment)) return fallback; value = (value as Record<string, unknown>)[segment]; } return value === undefined ? fallback : value; }
 function truthy(value: unknown): boolean { return Array.isArray(value) ? value.length > 0 : Boolean(value); }
 function comparable(value: unknown): string | number | boolean | null | undefined { if (value === null || value === undefined || typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value; return JSON.stringify(value); }
 function number(value: unknown): number { const result = Number(value); if (!Number.isFinite(result)) throw new PolicyExpressionError("POLICY_NUMBER_INVALID", "Policy expression requires a finite number"); return result; }

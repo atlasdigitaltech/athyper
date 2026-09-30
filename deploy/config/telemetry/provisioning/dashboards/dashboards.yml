@@ -1,0 +1,20 @@
+# Grafana dashboard provisioning — PRODUCTION-SAFE DEFAULT
+#
+# Applied when no env-specific override shadows this file. Local and
+# staging compose overrides bind-mount a relaxed variant from
+# deploy/config/telemetry/provisioning.env/dashboards.{local,staging}.yml
+# over this path so dashboards can be edited in non-prod. Production
+# keeps these defaults: dashboards are immutable in the UI and only
+# change via the JSON files in provisioning/dashboards/json/.
+apiVersion: 1
+
+providers:
+  - name: athyper
+    orgId: 1
+    folder: Athyper
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: false

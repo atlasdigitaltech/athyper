@@ -11,22 +11,36 @@ describe("push transports", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ access_token: "access", expires_in: 3600 }), { status: 200 }),
+        new Response(
+          JSON.stringify({ access_token: "access", expires_in: 3600 }),
+          { status: 200 },
+        ),
       )
       .mockResolvedValue(
-        new Response(JSON.stringify({ name: "projects/project/messages/message-1" }), { status: 200 }),
+        new Response(
+          JSON.stringify({ name: "projects/project/messages/message-1" }),
+          { status: 200 },
+        ),
       );
     const transport = createFcmPushAdapter(
       {
         projectId: "project",
         clientEmail: "service@example.test",
-        privateKey: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+        privateKey: privateKey
+          .export({ type: "pkcs8", format: "pem" })
+          .toString(),
       },
       { fetch: fetchMock, now: () => 1_800_000_000_000 },
     );
 
-    await transport.send(mobileSubscription(), { title: "Alert", body: "Review" });
-    await transport.send(mobileSubscription(), { title: "Alert", body: "Review" });
+    await transport.send(mobileSubscription(), {
+      title: "Alert",
+      body: "Review",
+    });
+    await transport.send(mobileSubscription(), {
+      title: "Alert",
+      body: "Review",
+    });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[1]?.[0]).toContain("fcm.googleapis.com");
   });
@@ -61,7 +75,9 @@ describe("push transports", () => {
 describe("Meta WhatsApp adapter", () => {
   it("sends an approved template through the Graph API", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ messages: [{ id: "wamid.1" }] }), { status: 200 }),
+      new Response(JSON.stringify({ messages: [{ id: "wamid.1" }] }), {
+        status: 200,
+      }),
     );
     const adapter = createMetaWhatsAppAdapter(
       { apiVersion: "v23.0", phoneNumberId: "phone-1", accessToken: "secret" },
@@ -95,21 +111,31 @@ describe("Meta WhatsApp adapter", () => {
       { apiVersion: "v23.0", phoneNumberId: "phone-1", accessToken: "secret" },
       { fetch: vi.fn().mockResolvedValue(new Response("{}", { status: 429 })) },
     );
-    await expect(adapter.send({
+    await expect(
+      adapter.send({
+        channel: "whatsapp",
+        recipientAddress: "+14155550101",
+        templateKey: "notice",
+        planeKey: "neon",
+        payload: {},
+      }),
+    ).rejects.toThrow("whatsappTemplate");
+    const error = await adapter
+      .send({
+        channel: "whatsapp",
+        recipientAddress: "+14155550101",
+        templateKey: "notice",
+        planeKey: "neon",
+        payload: {
+          whatsappTemplate: { name: "notice", languageCode: "en_US" },
+        },
+      })
+      .catch((caught: unknown) => caught);
+    expect(error).toMatchObject({
       channel: "whatsapp",
-      recipientAddress: "+14155550101",
-      templateKey: "notice",
-      planeKey: "neon",
-      payload: {},
-    })).rejects.toThrow("whatsappTemplate");
-    const error = await adapter.send({
-      channel: "whatsapp",
-      recipientAddress: "+14155550101",
-      templateKey: "notice",
-      planeKey: "neon",
-      payload: { whatsappTemplate: { name: "notice", languageCode: "en_US" } },
-    }).catch((caught: unknown) => caught);
-    expect(error).toMatchObject({ channel: "whatsapp", retryable: true, statusCode: 429 });
+      retryable: true,
+      statusCode: 429,
+    });
   });
 });
 

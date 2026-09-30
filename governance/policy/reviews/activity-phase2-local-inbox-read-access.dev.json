@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "status": "proposed_not_applied",
+  "purpose": "Verify authorized Activity Inbox reads in the two additional local planes; retain recipient and assignment restrictions.",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "durationMinutes": 120,
+  "revokeAfterVerification": true,
+  "permissions": [
+    "workflow.work_item.read"
+  ],
+  "assignments": [
+    {
+      "plane": "mesh",
+      "account": "catl.owner",
+      "principalId": "3dd93048-ac4b-54a7-b820-32d0c457691b",
+      "scopeTargetId": "5284c9ea-33aa-54ce-99b3-ab1c796ad34c"
+    },
+    {
+      "plane": "studio",
+      "account": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "scopeTargetId": "1d2550e6-6e20-5f74-81d9-388d1e75d20f"
+    }
+  ],
+  "constraints": [
+    "Exact local tenant scopes; no cross-plane session reuse.",
+    "No create, complete, claim or cancel task permissions.",
+    "No changes to record access or task recipient/assignment eligibility."
+  ]
+}

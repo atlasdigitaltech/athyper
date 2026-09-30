@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "decision": "approved",
+  "proposalRevision": "25c4b763da2faecf22a457d41795be93421550521d9a5b8ba396ba5fc40f6d1b",
+  "approvedAt": "2026-09-12T08:20:32.192Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "Fresh execution proposal 25c4b763, 16:30–17:30 MYT, same 44 permissions in nine new groups"
+  },
+  "effectiveUntil": "2026-09-12T09:30:00.000Z",
+  "activationAuthorized": false,
+  "compatibilityRetirementAuthorized": false
+}

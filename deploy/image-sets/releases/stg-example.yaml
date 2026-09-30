@@ -1,0 +1,10 @@
+apiVersion: athyper.io/v1alpha1
+kind: ImageSet
+metadata:
+  id: stg-contract-example
+  channel: release
+spec:
+  sourceRevision: "0000000000000000000000000000000000000000"
+  images:
+    - id: runtime-server
+      reference: ghcr.io/atlasdigitaltech/athyper-runtime-server@sha256:0000000000000000000000000000000000000000000000000000000000000000

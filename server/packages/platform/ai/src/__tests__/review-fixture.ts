@@ -1,0 +1,25 @@
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+export const context: VerifiedRequestContext = {
+  tenantId: "10000000-0000-4000-8000-000000000001",
+  principalId: "10000000-0000-4000-8000-000000000002",
+  planeKey: "neon",
+  realmKey: "neon",
+  authEpoch: 1,
+  requestId: "r",
+  profileHash: "p",
+  permissions: {
+    tenantId: "10000000-0000-4000-8000-000000000001",
+    principalId: "10000000-0000-4000-8000-000000000002",
+    planeKey: "neon",
+    profileHash: "p",
+    principalFingerprint: "f",
+    schemaHash: "s",
+    resolvedAt: 1,
+    allowed: ["atlas.admin.manage"],
+    denied: [],
+    planLocked: [],
+    planeExcluded: [],
+    entries: [],
+    authorizationScopes: [],
+  },
+};

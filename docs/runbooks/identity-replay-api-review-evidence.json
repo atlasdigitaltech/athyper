@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "suite": "durable-identity-replay",
+  "startedAt": "2026-09-06T15:33:41.856Z",
+  "checks": [
+    "isolated PostgreSQL ready",
+    "isolated Keycloak container started",
+    "Keycloak rejects an invalid real OTP",
+    "Studio forward migration installs the canonical approval schema",
+    "all approval routes preserve Unicode reasons, reject NUL, and isolate tenant reads",
+    "self-approval rejected without mutation",
+    "cross-tenant approval rejected",
+    "baseline Keycloak token cannot approve",
+    "missing permission rejected",
+    "unapproved replay rejected",
+    "only the original requester can consume approval",
+    "concurrent approved replay succeeds exactly once with one audit event",
+    "database guard rejects forged direct replay updates",
+    "database rejects non-atomic approval consumption",
+    "worker claims the approved attempt and real Keycloak provisioning is idempotent",
+    "concurrent revoke and consume produce one consistent outcome",
+    "revoked approval cannot replay",
+    "changed desired state rejects approval without consumption",
+    "approval is bound to the exact attempt",
+    "audit failure rolls back approval and replay; retry succeeds",
+    "expiry between UPDATE predicate and database guard returns 409 without mutation or audit",
+    "real database-clock expiry rejects approval and replay",
+    "approval authority remains Studio-only; Neon/Mesh unchanged"
+  ],
+  "postgres": "16.13 (Debian 16.13-1.pgdg12+1)",
+  "keycloak": "Keycloak 26.7.2",
+  "isolatedDatabases": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
+  "realOtp": true,
+  "images": [
+    {
+      "component": "postgres",
+      "id": "sha256:472efd9a66f2b2f1a5aeb18b28de74332e6ef88c2b93a1a5d812fb6db67a5f60"
+    },
+    {
+      "component": "keycloak",
+      "id": "sha256:b6c57848164e6cd5fe0d7e5341dd968b2b819376c06a8d69ff926718f7f9b72d"
+    }
+  ],
+  "sourceHashes": {
+    "db/ddl/planes/studio/trustiam/12_identity_replay_approval.sql": "66b335aad655470f6527dca96b549f497e792357bacb912f469c915621ecd638",
+    "packages/platform/iam/src/identity-replay-approval.ts": "1d8e6b69ea64e5e5bf3611b407653c93d74f12f0409437380da2737bca90fead",
+    "packages/platform/iam/src/kysely-identity-replay-approval.ts": "656837da99bc45700f9d20a519f04a002e5ecb39b8c954d3553e5f27222cfec9",
+    "packages/platform/iam/src/identity-replay-routes.ts": "8db1f78bc40d3a764f6fd7e5e22de736ef3245de7b557506c06680b57c4fa4c8",
+    "packages/platform/iam/src/kysely-identity-saga.ts": "549fd0e7e8e1aad57266a7c9da059c6d14a639ffc0f29d1fde2c030d4699b5be",
+    "db/scripts/tests/integration/identity-replay-live.mjs": "fd0e76043d8b50780694298810c290e41d063c53297dd29c01ac15328ea49bf8"
+  },
+  "status": "passed",
+  "finishedAt": "2026-09-06T15:35:04.114Z"
+}

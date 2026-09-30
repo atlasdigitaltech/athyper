@@ -1,0 +1,17 @@
+{
+  "compatibility": "read_only_until_360_cutover",
+  "panels": [
+    "identity",
+    "roles",
+    "organizationAssignments",
+    "companyConfiguration",
+    "qualification",
+    "credit",
+    "workforce",
+    "bankVerification",
+    "readinessWithoutRisk",
+    "sourceProvenance"
+  ],
+  "retirementSignal": "bp360_legacy_aggregate_consumers_zero",
+  "version": "2.1.0"
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AtlasModelBinding, AtlasRegisteredTool } from "@athyper/server-contract-ai";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import { AtlasBindingRegistry, AtlasServiceError, AtlasToolRegistry, AtlasToolService, createAtlasRecordDataGateway } from "../index.js";
+import { AtlasBindingRegistry, AtlasRegisteredToolCoordinator, AtlasServiceError, AtlasToolRegistry, AtlasToolService, createAtlasRecordDataGateway } from "../index.js";
 import { MemoryToolStore } from "./tool-store-fixture.js";
 
 const context: VerifiedRequestContext = {
@@ -28,5 +28,19 @@ describe("Atlas governance", () => {
     expect(preview.confirmationRequired).toBe(true);
     await expect(service.run({ context, proposalId: preview.proposalId, arguments: { recordId: "i1" }, confirmationToken: "confirmed" })).rejects.toMatchObject({ code: "TOOL_DENIED" } satisfies Partial<AtlasServiceError>);
     expect(authority.authorize).toHaveBeenCalledTimes(2); expect(commands.execute).not.toHaveBeenCalled();
+  });
+  it("does not expose or execute mutation tools when mutation admission is disabled", async () => {
+    const mutation: AtlasRegisteredTool = { manifest: { schema: "atlas-tool-manifest/1", toolCode: "invoice_intake", version: "1", displayName: "Prepare invoice intake", description: "Runs the registered intake command.", access: "mutation", risk: "high", allowedPlanes: ["neon"], requiredPermissions: ["ai.agent.tools.read"], featureKey: "atlas_tools_mutation_enabled", inputSchema: {}, resultSchema: {}, timeoutMs: 1000, maxResultBytes: 1000, commandBinding: "finance.invoice.intake", confirmation: "explicit_user" } };
+    const registry = new AtlasToolRegistry([mutation]);
+    const service = new AtlasToolService({ registry, authority: { authorize: vi.fn(async () => ({ allowed: true, policyRevision: "policy-1" })) }, proposals: new MemoryToolStore(), records: { query: vi.fn() }, confirmations: { verify: vi.fn(async () => true) }, commands: { execute: vi.fn() } });
+    const coordinator = new AtlasRegisteredToolCoordinator(registry, service);
+    await expect(coordinator.definitions(context, { readToolsAllowed: true, mutationToolsAllowed: false })).resolves.toEqual([]);
+    await expect(coordinator.handle({ context, threadId: "thread-1", runId: "run-1", callId: "call-1", toolCode: "invoice_intake", arguments: {}, mutationToolsAllowed: false })).rejects.toThrow(/not admitted/i);
+  });
+  it("applies a configured agent tool allowlist in addition to admission", async () => {
+    const read:AtlasRegisteredTool={manifest:{schema:"atlas-tool-manifest/1",toolCode:"invoice_read",version:"1",displayName:"Read invoice",description:"Reads one invoice.",access:"read",risk:"low",allowedPlanes:["neon"],requiredPermissions:["ai.agent.tools.read"],featureKey:"atlas_tools_read_enabled",inputSchema:{},resultSchema:{},timeoutMs:1000,maxResultBytes:1000,confirmation:"none"},readHandler:{execute:vi.fn()}};
+    const registry=new AtlasToolRegistry([read]),service=new AtlasToolService({registry,authority:{authorize:vi.fn()},proposals:new MemoryToolStore(),records:{query:vi.fn()},confirmations:{verify:vi.fn()},commands:{execute:vi.fn()}}),coordinator=new AtlasRegisteredToolCoordinator(registry,service);
+    await expect(coordinator.definitions(context,{readToolsAllowed:true,mutationToolsAllowed:false},[])).resolves.toEqual([]);
+    await expect(coordinator.handle({context,threadId:"thread-1",runId:"run-1",callId:"call-1",toolCode:"invoice_read",arguments:{},mutationToolsAllowed:false,allowedToolCodes:[]})).rejects.toThrow(/agent profile/i);
   });
 });

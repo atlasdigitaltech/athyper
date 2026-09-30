@@ -1,0 +1,118 @@
+{
+  "capturedAt": "2026-09-27T14:14:38.714Z",
+  "scope": "Read-only actual repository/reader against DEV Postgres as database owner. Validates resolution and pinned artifacts, not authenticated API/browser access.",
+  "evidence": [
+    {
+      "plane": "neon",
+      "tenant": "athyper",
+      "entity": "country",
+      "releaseId": "934dae8a-0ded-459c-a9ea-349beaccf155",
+      "list": {
+        "code": "list",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      },
+      "read": {
+        "code": "read",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      }
+    },
+    {
+      "plane": "neon",
+      "tenant": "athyper",
+      "entity": "business_partner",
+      "releaseId": "b0515908-244d-40e9-b518-12116ddb7354",
+      "releaseNo": 2,
+      "coreHash": "sha256:fce6d2dd0aba55381fe0ebfee8c9d867f7fbb8ca9ee5f1c1f012b2d89a324b33"
+    },
+    {
+      "plane": "neon",
+      "tenant": "cirrusatlantic",
+      "entity": "country",
+      "releaseId": "934dae8a-0ded-459c-a9ea-349beaccf155",
+      "list": {
+        "code": "list",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      },
+      "read": {
+        "code": "read",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      }
+    },
+    {
+      "plane": "neon",
+      "tenant": "cirrusatlantic",
+      "entity": "business_partner",
+      "releaseId": "28bf5bff-caba-5a16-b971-dfc376b2b501",
+      "releaseNo": 22,
+      "coreHash": "sha256:8a8b1bebb864e9759a1086b0692da29ee9c29753ab4c074deff89463c111da10"
+    },
+    {
+      "plane": "mesh",
+      "tenant": "athyper",
+      "entity": "country",
+      "releaseId": "934dae8a-0ded-459c-a9ea-349beaccf155",
+      "list": {
+        "code": "list",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      },
+      "read": {
+        "code": "read",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      }
+    },
+    {
+      "plane": "mesh",
+      "tenant": "cirrusatlantic",
+      "entity": "country",
+      "releaseId": "934dae8a-0ded-459c-a9ea-349beaccf155",
+      "list": {
+        "code": "list",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      },
+      "read": {
+        "code": "read",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      }
+    },
+    {
+      "plane": "studio",
+      "tenant": "athyper",
+      "entity": "country",
+      "releaseId": "934dae8a-0ded-459c-a9ea-349beaccf155",
+      "list": {
+        "code": "list",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      },
+      "read": {
+        "code": "read",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      }
+    },
+    {
+      "plane": "studio",
+      "tenant": "cirrusatlantic",
+      "entity": "country",
+      "releaseId": "934dae8a-0ded-459c-a9ea-349beaccf155",
+      "list": {
+        "code": "list",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      },
+      "read": {
+        "code": "read",
+        "permissionCode": "common.platform.reference.view",
+        "authorizationMode": "bound_operation"
+      }
+    }
+  ]
+}

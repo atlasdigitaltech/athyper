@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "status": "completed_and_access_revoked",
+  "approvedBy": "User: go ahead",
+  "verification": [
+    {
+      "plane": "neon",
+      "collectionKey": "activity.notifications",
+      "releaseId": "de278fe7-503f-4cdb-bff1-771f7bdaf8b8",
+      "releaseNo": 1,
+      "density": "comfortable"
+    },
+    {
+      "plane": "neon",
+      "collectionKey": "activity.inbox",
+      "releaseId": "75a3c3e4-464f-43bc-a059-9ee8a2979601",
+      "releaseNo": 2,
+      "density": "compact"
+    },
+    {
+      "plane": "mesh",
+      "collectionKey": "activity.notifications",
+      "releaseId": "de278fe7-503f-4cdb-bff1-771f7bdaf8b8",
+      "releaseNo": 1,
+      "density": "comfortable"
+    },
+    {
+      "plane": "mesh",
+      "collectionKey": "activity.inbox",
+      "releaseId": "75a3c3e4-464f-43bc-a059-9ee8a2979601",
+      "releaseNo": 2,
+      "density": "compact"
+    },
+    {
+      "plane": "studio",
+      "collectionKey": "activity.notifications",
+      "releaseId": "de278fe7-503f-4cdb-bff1-771f7bdaf8b8",
+      "releaseNo": 1,
+      "density": "comfortable"
+    },
+    {
+      "plane": "studio",
+      "collectionKey": "activity.inbox",
+      "releaseId": "75a3c3e4-464f-43bc-a059-9ee8a2979601",
+      "releaseNo": 2,
+      "density": "compact"
+    }
+  ],
+  "accessApplied": {
+    "mode": "--apply",
+    "recordedAt": "2026-09-23T05:55:15.296Z",
+    "proposalSha256": "5e1cb368dc1d925ef162aaae536b2b667631904a89d86e94f989a81ca94633bf",
+    "approval": "User: go ahead and apply",
+    "activeEdges": 6
+  },
+  "accessRevoked": {
+    "mode": "--revoke",
+    "recordedAt": "2026-09-23T05:55:57.715Z",
+    "proposalSha256": "5e1cb368dc1d925ef162aaae536b2b667631904a89d86e94f989a81ca94633bf",
+    "approval": "User: go ahead and apply",
+    "activeEdges": 0
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema": "athyper.dev-successor-policy-proposal-receipt/1",
+  "recordedAt": "2026-09-27T07:17:52.423Z",
+  "actor": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+  "policyId": "entity.successor.b7e5b981-2227-4720-ba5d-040a48ab6842.2",
+  "changeSetId": "f1135ec8-d2f9-4a90-ac3a-b28b0ca97c45",
+  "id": "50c68cb8-dc24-438b-9054-d7936eb65bca",
+  "version": 1,
+  "hash": "d2583112edeec4dc6001972f65f066d726cc55adbd5aabd8d8f11b99e708834d",
+  "status": "pending_approval"
+}

@@ -1,0 +1,12 @@
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://metrics:9090
+    isDefault: true
+  # Logs are collected and queried in shared operations Grafana.
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tracing:3200
