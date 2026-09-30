@@ -4,17 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./business-partner/record/sections": "./src/business-partner/record/section-readers.ts",
-    "./kysely-business-partner-case-repository": "./src/kysely-business-partner-case-repository.ts",
-    "./kysely-business-partner-invitation-repository": "./src/kysely-business-partner-invitation-repository.ts",
-    "./business-partner/record/repository": "./src/business-partner/record/repository.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "vitest run",
-    "test:integration:governed-internal-business-partner-http": "tsx src/__tests__/integration/governed-internal-business-partner-http.mjs"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit"
   },
   "dependencies": {
     "@athyper/contract-neon-party": "workspace:*",

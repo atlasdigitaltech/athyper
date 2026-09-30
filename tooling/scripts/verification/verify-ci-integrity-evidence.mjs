@@ -47,7 +47,16 @@ export const requiredChecks = [
   "studio: fixtures/publication-authority.sql",
   "studio: ci-entity-release-contract.sql",
   "neon: fixtures/runtime-entity-projection.sql",
-  "neon: business-partner-profile-projection.sql",
+  // Bespoke BP projection was removed; require the actual shared lifecycle evidence.
+  "publication: signed Principal baseline activated on three disposable targets",
+  "publication: partial target activation preserves failed target head and survives lost acknowledgement",
+  "publication: least-privilege scheduler discovery and apply handler recover both interrupted activation and acknowledgement",
+  "publication: durable partial-activation recovery, idempotent heads and exactly one acknowledgement",
+  "publication: superseded deployment cannot regress active metadata",
+  ...["studio", "neon", "mesh"].map(
+    (plane) =>
+      `${plane}: live signed-identity HTTP masked list/detail/forms, inference denial, unavailable export, anonymous denial and grant revocation`,
+  ),
   "required service PostgreSQL suites",
   "PgBouncer transaction stamping: commit, rollback, no-context denial and tenant switch",
 ];

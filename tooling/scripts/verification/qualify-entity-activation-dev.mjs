@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { artifactDirectory } from "../artifact-paths.mjs";
 const container = "athyper-dev-db-1";
 const probe = process.argv.includes("--probe");
+const references = process.argv.includes("--references");
 const docker = (args) => execFileSync("docker", args, { encoding: "utf8" });
 const info = JSON.parse(docker(["inspect", container]))[0];
 assert.equal(info.Config.Labels["com.docker.compose.project"], "athyper-dev");
@@ -32,7 +33,8 @@ try {
       LEFT JOIN runtime_meta.applied_release_payload p ON p.applied_release_id=a.id
       WHERE h.publication_key IN ('metadata.reference.country','metadata.entity.principal',
         'metadata.entity.principal_profile','metadata.entity.principal_notification_preference'
-        ${probe ? ", 'metadata.entity.principal_disclosure_probe'" : ""})
+        ${probe ? ", 'metadata.entity.principal_disclosure_probe'" : ""}
+        ${references ? ", 'metadata.reference.currency', 'metadata.reference.language'" : ""})
       ORDER BY h.publication_key) r`;
     const rows = JSON.parse(
       docker([
@@ -56,7 +58,7 @@ try {
     report.planes.push({ plane, releases: rows });
     assert.equal(
       rows.length,
-      probe ? 5 : 4,
+      4 + Number(probe) + (references ? 2 : 0),
       `${plane}: missing entity activation`,
     );
     for (const row of rows) {

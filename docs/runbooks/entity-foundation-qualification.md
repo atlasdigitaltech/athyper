@@ -415,5 +415,8 @@ Draft/policy evidence is under
 normal maker/checker enrollment before execution. Run the existing read-only
 browser qualifier with `--entity=currency` or `--entity=language`; this reuses
 Country's pagination, search, filter, sort, detail and anonymous-denial checks.
-Publication and live browser completion are recorded separately from source
-qualification; draft readiness alone does not close onboarding.
+Both policies subsequently completed independent owner activation and workload
+execution. Currency and Language are active on all three planes and passed the
+standard Neon browser/API qualifier. See
+[release evidence](../reports/entity-foundation-release-20260930.md) for receipts,
+required-check enforcement and the remaining remote CI blockers.

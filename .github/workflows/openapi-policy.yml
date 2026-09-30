@@ -43,6 +43,7 @@ jobs:
       - run: pnpm test:openapi-policy
       - run: pnpm test:url-catalogue
       - run: pnpm --filter @athyper/server-runtime-http test
-      - run: pnpm --filter @athyper/server-service-master-data test src/__tests__/business-partner-360-route-contracts.test.ts
+      # The bespoke BP 360 route was removed; qualify the shared Entity routes.
+      - run: pnpm --fail-if-no-match --filter @athyper/server-service-records test src/__tests__/entity-list-read-routes.test.ts src/transfer/transfer-routes.test.ts
       - run: pnpm urls:check
       - run: pnpm openapi:check

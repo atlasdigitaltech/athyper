@@ -54,7 +54,7 @@ import {
   createRecordTransferService,
   registerRecordTransferRoutes,
 } from "@athyper/server-service-records";
-import { createRecordOwnerAccessAdapter } from "../../../../packages/services/records/src/record-owner-access.ts";
+import { createRecordOwnerAccessAdapter } from "@athyper/server-service-records";
 import { createEntityAuthorizationRegistrations } from "../../src/composition/shared/entity-runtime/read-registrations.ts";
 import { createPublicationRuntimeQualification } from "../../src/composition/shared/publication/runtime-qualification.ts";
 import { KyselyTransactionRunner } from "@athyper/server-adapter-db-core/transaction";

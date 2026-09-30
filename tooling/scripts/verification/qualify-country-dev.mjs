@@ -28,8 +28,7 @@ const report = {
   checkedAt: new Date().toISOString(),
   passed: false,
   checks: [],
-  scope:
-    "Authenticated published Country list/detail, search/filter/sort APIs, pagination and anonymous denial; no mutation, embedded-scope or isolated deployment qualification",
+  scope: `Authenticated published ${entity} list/detail, search/filter/sort APIs, pagination and anonymous denial; no mutation, embedded-scope or isolated deployment qualification`,
 };
 const browser = await chromium.launch({ headless: true });
 let stage = "session";
