@@ -1,3 +1,24 @@
+-- seed-contract-version: 1
+-- seed-pack: common.control.banking
+-- seed-pack-version: 1.0.0
+-- seed-dataset: control.bank_account_validation_rule
+-- seed-data-class: production_reference
+-- seed-provenance: {"source":"existing-repository-reference-data","publisher":"Athyper","source_version":"1","retrieved_at":"2026-09-30","license":"internal"}
+-- seed-plane: common
+-- seed-tenant-scope: none
+-- seed-natural-key: control.bank_account_validation_rule(code)
+-- seed-cross-file-ids: false
+-- seed-id-strategy: database-generated
+-- seed-expected-row-count: minimum:261
+-- seed-assertions: expected-count,orphan,uniqueness,semantic
+-- seed-demo-data: false
+
+DO $seed_plane_guard$ BEGIN
+ IF COALESCE(current_setting('app.database_plane', true),'') NOT IN ('studio','neon','mesh') THEN
+  RAISE EXCEPTION 'common.control.banking: invalid database plane';
+ END IF;
+END $seed_plane_guard$;
+
 INSERT INTO control.bank_account_validation_rule (
     code, name, country_code, payment_rail_code, direction,
     account_identifier_type, bank_identifier_type,
@@ -18,15 +39,17 @@ VALUES
     ('US.ACH', 'United States ACH', 'US', 'ach', 'both', 'local', 'aba', false, '00000000-0000-0000-0000-000000000000'),
     ('US.WIRE', 'United States wire transfer', 'US', 'local_transfer', 'both', 'local', 'aba', false, '00000000-0000-0000-0000-000000000000'),
     ('US.SWIFT', 'United States SWIFT', 'US', 'swift', 'outbound', 'local', 'bic', false, '00000000-0000-0000-0000-000000000000')
-ON CONFLICT (code) DO UPDATE
-SET name = EXCLUDED.name,
+ON CONFLICT (code) DO UPDATE SET
+    name = EXCLUDED.name,
     country_code = EXCLUDED.country_code,
     payment_rail_code = EXCLUDED.payment_rail_code,
     direction = EXCLUDED.direction,
     account_identifier_type = EXCLUDED.account_identifier_type,
     bank_identifier_type = EXCLUDED.bank_identifier_type,
     is_checksum_validated = EXCLUDED.is_checksum_validated,
-    status = 'active';
+    status = 'active'
+WHERE (control.bank_account_validation_rule.name, control.bank_account_validation_rule.country_code, control.bank_account_validation_rule.payment_rail_code, control.bank_account_validation_rule.direction, control.bank_account_validation_rule.account_identifier_type, control.bank_account_validation_rule.bank_identifier_type, control.bank_account_validation_rule.is_checksum_validated, control.bank_account_validation_rule.status)
+ IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.country_code, EXCLUDED.payment_rail_code, EXCLUDED.direction, EXCLUDED.account_identifier_type, EXCLUDED.bank_identifier_type, EXCLUDED.is_checksum_validated, 'active');
 
 -- Country account capture profiles, one active row per shared.country entry.
 -- IBAN jurisdictions carry the registry pattern and hide the format selector;
@@ -282,9 +305,10 @@ VALUES
 ('ZA.CAPTURE','South Africa account capture','ZA','account_capture','local','branch_code',NULL,NULL,false,true,10,'{"capture": {"accountType": "local_account", "typeWidget": "hidden", "accountPattern": "", "routingWidget": "text", "routingLabel": "Branch code", "routingPattern": "^[0-9]{6}$", "routingRequired": true}}'::jsonb,'{"source": "https://www.pasa.org.za/", "checkedOn": "2026-09-20", "scope": "Account capture; payment-rail eligibility is evaluated separately."}'::jsonb,'00000000-0000-0000-0000-000000000000'),
 ('ZM.CAPTURE','Zambia account capture','ZM','account_capture','local','none',NULL,NULL,false,false,10,'{"capture": {"accountType": "local_account", "typeWidget": "hidden", "accountPattern": "", "routingWidget": "hidden", "routingLabel": "Local routing code", "routingPattern": "", "routingRequired": false}}'::jsonb,'{"scope": "Account capture; payment-rail eligibility is evaluated separately.", "note": "No single national account or routing standard recorded; capture is unrestricted."}'::jsonb,'00000000-0000-0000-0000-000000000000'),
 ('ZW.CAPTURE','Zimbabwe account capture','ZW','account_capture','local','none',NULL,NULL,false,false,10,'{"capture": {"accountType": "local_account", "typeWidget": "hidden", "accountPattern": "", "routingWidget": "hidden", "routingLabel": "Local routing code", "routingPattern": "", "routingRequired": false}}'::jsonb,'{"scope": "Account capture; payment-rail eligibility is evaluated separately.", "note": "No single national account or routing standard recorded; capture is unrestricted."}'::jsonb,'00000000-0000-0000-0000-000000000000')
-ON CONFLICT (code) DO UPDATE
-SET name = EXCLUDED.name,
+ON CONFLICT (code) DO UPDATE SET
+    name = EXCLUDED.name,
     country_code = EXCLUDED.country_code,
+    payment_rail_code = EXCLUDED.payment_rail_code,
     account_identifier_type = EXCLUDED.account_identifier_type,
     bank_identifier_type = EXCLUDED.bank_identifier_type,
     account_pattern = EXCLUDED.account_pattern,
@@ -294,4 +318,17 @@ SET name = EXCLUDED.name,
     priority = EXCLUDED.priority,
     validation_schema = EXCLUDED.validation_schema,
     metadata = EXCLUDED.metadata,
-    status = 'active';
+    status = 'active'
+WHERE (control.bank_account_validation_rule.name, control.bank_account_validation_rule.country_code, control.bank_account_validation_rule.payment_rail_code, control.bank_account_validation_rule.account_identifier_type, control.bank_account_validation_rule.bank_identifier_type, control.bank_account_validation_rule.account_pattern, control.bank_account_validation_rule.iban_country_prefix, control.bank_account_validation_rule.is_checksum_validated, control.bank_account_validation_rule.is_bank_identifier_required, control.bank_account_validation_rule.priority, control.bank_account_validation_rule.validation_schema, control.bank_account_validation_rule.metadata, control.bank_account_validation_rule.status)
+ IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.country_code, EXCLUDED.payment_rail_code, EXCLUDED.account_identifier_type, EXCLUDED.bank_identifier_type, EXCLUDED.account_pattern, EXCLUDED.iban_country_prefix, EXCLUDED.is_checksum_validated, EXCLUDED.is_bank_identifier_required, EXCLUDED.priority, EXCLUDED.validation_schema, EXCLUDED.metadata, 'active');
+
+DO $seed_assertions$ BEGIN
+ -- seed-assertion: expected-count
+ IF (SELECT count(*) FROM control.bank_account_validation_rule WHERE code LIKE '%.CAPTURE')<>247 OR (SELECT count(*) FROM control.bank_account_validation_rule WHERE code IN ('AE.LOCAL','AU.LOCAL','DE.SEPA','DE.SWIFT','GB.LOCAL','IN.LOCAL','IN.SWIFT','IN.UPI','KE.MPESA','MY.LOCAL','SG.LOCAL','US.ACH','US.WIRE','US.SWIFT'))<>14 THEN RAISE EXCEPTION 'common.control.banking: expected-count failed'; END IF;
+ -- seed-assertion: orphan
+ IF EXISTS(SELECT 1 FROM control.bank_account_validation_rule r LEFT JOIN shared.country c ON c.code=r.country_code WHERE c.id IS NULL) THEN RAISE EXCEPTION 'common.control.banking: orphan failed'; END IF;
+ -- seed-assertion: uniqueness
+ IF EXISTS(SELECT code FROM control.bank_account_validation_rule GROUP BY code HAVING count(*)>1) THEN RAISE EXCEPTION 'common.control.banking: uniqueness failed'; END IF;
+ -- seed-assertion: semantic
+ IF EXISTS(SELECT 1 FROM control.bank_account_validation_rule WHERE code LIKE '%.CAPTURE' AND (payment_rail_code<>'account_capture' OR status<>'active')) THEN RAISE EXCEPTION 'common.control.banking: semantic failed'; END IF;
+END $seed_assertions$;

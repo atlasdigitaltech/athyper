@@ -61,6 +61,7 @@ function recordProfileSupported(value: unknown, owned: boolean): boolean {
         ...["create", "patch"].filter((key) => d.operations[key]),
       ]
     : ["list", "read"];
+  if (d.operations.export) keys.push("export");
   if (p.operations.length !== keys.length) return false;
   if (owned) {
     const owner = d.ownerAccess!;
@@ -88,7 +89,7 @@ function recordProfileSupported(value: unknown, owned: boolean): boolean {
       operation.effect !==
         (["create", "patch"].includes(key) ? "write" : "read") ||
       operation.target !==
-        (key === "list"
+        (["list", "export"].includes(key)
           ? "collection"
           : key === "create"
             ? "proposed"
@@ -113,7 +114,14 @@ function recordProfileSupported(value: unknown, owned: boolean): boolean {
           !owned || !["create", "patch"].includes(key) || !keys.includes(key),
       ) ||
       policy.queryUses.some(
-        (use) => !["search", "filter", "sort", "group"].includes(use),
+        (use) =>
+          ![
+            "search",
+            "filter",
+            "sort",
+            "group",
+            ...(keys.includes("export") ? ["export"] : []),
+          ].includes(use),
       )
     )
       return false;

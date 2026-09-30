@@ -1,0 +1,137 @@
+{
+  "schema": "athyper.shared-reference-product/1",
+  "moduleCode": "ent",
+  "planes": ["studio", "neon", "mesh"],
+  "definition": {
+    "runtimeBindings": [
+      {
+        "operation": "list",
+        "handler": "entity.record.list.v1",
+        "resolver": "tenant.record.v1"
+      },
+      {
+        "operation": "read",
+        "handler": "entity.record.read.v1",
+        "resolver": "tenant.record.v1"
+      }
+    ],
+    "entityCode": "currency",
+    "title": {
+      "labelKey": "entity.currency.title",
+      "defaultText": "Currencies"
+    },
+    "entityLabel": {
+      "labelKey": "entity.currency.label",
+      "defaultText": "Currency"
+    },
+    "storageObject": "currency",
+    "codeField": "code",
+    "titleField": "name",
+    "fields": [
+      {
+        "key": "id",
+        "label": {
+          "labelKey": "entity.currency.fields.id",
+          "defaultText": "Record ID"
+        },
+        "type": "uuid",
+        "required": true
+      },
+      {
+        "key": "code",
+        "label": {
+          "labelKey": "entity.currency.fields.code",
+          "defaultText": "Code"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "name",
+        "label": {
+          "labelKey": "entity.currency.fields.name",
+          "defaultText": "Name"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "symbol",
+        "label": {
+          "labelKey": "entity.currency.fields.symbol",
+          "defaultText": "Symbol"
+        },
+        "type": "string"
+      },
+      {
+        "key": "minor_units",
+        "label": {
+          "labelKey": "entity.currency.fields.minor_units",
+          "defaultText": "Minor units"
+        },
+        "type": "integer"
+      },
+      {
+        "key": "numeric3",
+        "label": {
+          "labelKey": "entity.currency.fields.numeric3",
+          "defaultText": "ISO numeric code"
+        },
+        "type": "string"
+      },
+      {
+        "key": "status",
+        "label": {
+          "labelKey": "entity.currency.fields.status",
+          "defaultText": "Status"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "created_at",
+        "label": {
+          "labelKey": "entity.currency.fields.created_at",
+          "defaultText": "Created"
+        },
+        "type": "datetime",
+        "required": true
+      },
+      {
+        "key": "updated_at",
+        "label": {
+          "labelKey": "entity.currency.fields.updated_at",
+          "defaultText": "Updated"
+        },
+        "type": "datetime"
+      }
+    ],
+    "columns": ["code", "name", "symbol", "minor_units", "numeric3", "status"],
+    "searchFields": ["code", "name"],
+    "sections": [
+      {
+        "key": "overview",
+        "label": {
+          "labelKey": "entity.currency.sections.overview",
+          "defaultText": "Currency"
+        },
+        "fields": [
+          "code",
+          "name",
+          "symbol",
+          "minor_units",
+          "numeric3",
+          "status"
+        ]
+      },
+      {
+        "key": "audit",
+        "label": {
+          "labelKey": "entity.currency.sections.audit",
+          "defaultText": "Audit"
+        },
+        "fields": ["created_at", "updated_at"]
+      }
+    ]
+  }
+}

@@ -13,6 +13,7 @@ CREATE TABLE publication.deployment (
   id uuid PRIMARY KEY, artifact_id uuid NOT NULL, target_plane text NOT NULL,
   status text NOT NULL, created_at timestamptz NOT NULL
 );
+CREATE TABLE publication.deployment_acknowledgement(deployment_id uuid PRIMARY KEY);
 ALTER TABLE publication.release ENABLE ROW LEVEL SECURITY;
 ALTER TABLE publication.release FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_access ON publication.release
@@ -31,3 +32,10 @@ INSERT INTO publication.deployment VALUES
   ('30000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','neon','pending',now()-interval '10 minutes'),
   ('30000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000002','mesh','verified',now()-interval '9 minutes'),
   ('30000000-0000-0000-0000-000000000003','20000000-0000-0000-0000-000000000002','mesh','pending',now());
+
+INSERT INTO publication.deployment VALUES
+ ('30000000-0000-0000-0000-000000000004','20000000-0000-0000-0000-000000000002','mesh','activated',now()-interval '8 minutes'),
+ ('30000000-0000-0000-0000-000000000005','20000000-0000-0000-0000-000000000002','mesh','activated',now()-interval '7 minutes'),
+ ('30000000-0000-0000-0000-000000000006','20000000-0000-0000-0000-000000000002','mesh','failed',now()-interval '6 minutes'),
+ ('30000000-0000-0000-0000-000000000007','20000000-0000-0000-0000-000000000002','mesh','activated',now());
+INSERT INTO publication.deployment_acknowledgement VALUES ('30000000-0000-0000-0000-000000000005');

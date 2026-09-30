@@ -1,24 +1,30 @@
 # Canonical development baseline and future upgrades
 
-The development baseline has no automatic SQL migrations. Fresh databases install
-`../ddl/planes/<plane>/_manifest.txt`; the three upgrade manifests are intentionally
-comment-only and `runner-transactions.sha256` is empty. Keep these files in Git:
-the startup runner requires them and safely handles an empty sequence.
-
+Fresh databases install `../ddl/planes/<plane>/_manifest.txt`. Existing databases
+apply only the reviewed forward upgrades listed in `manifests/<plane>.txt` through
+the startup runner, which verifies checksums and records receipts. Keep all three
+manifests and `runner-transactions.sha256` in Git.
 Maintain final tables, constraints, indexes, functions, triggers, RLS, grants and
 reference seeds in their owning canonical DDL files. Do not replay foundation DDL
 on populated DEV/QA databases or reset their migration receipts.
 
-The reviewed 64-file inventory now records:
+The current 95-entry inventory records:
 
-| Disposition                     | Count | Location / purpose                                                                                                          |
-| ------------------------------- | ----: | --------------------------------------------------------------------------------------------------------------------------- |
-| Canonical retirement            |     8 | Redundant copies retired; canonical mappings retained.                                                                      |
-| Legacy upgrade                  |    43 | `../scripts/operations/upgrades/legacy-baseline-20260914/`; exact SQL retained for reviewed legacy upgrade/rehearsal paths. |
-| Operational upgrade             |     5 | `../scripts/operations/upgrades/publication/`; explicit installers.                                                         |
-| Historical fixture              |     6 | `../scripts/tests/integration/fixtures/legacy-upgrades/`; staged test schemas.                                              |
-| Operational repair              |     2 | `../scripts/operations/repair/reference-permissions/`.                                                                      |
-| Automatic post-baseline upgrade |     0 | Add only new, reviewed changes here.                                                                                        |
+| Disposition                     | Count | Purpose                                              |
+| ------------------------------- | ----: | ---------------------------------------------------- |
+| Canonical retirement            |     8 | Removed copies mapped to canonical sources.          |
+| Legacy upgrade                  |    43 | Preserved legacy upgrade/rehearsal SQL.              |
+| Operational upgrade             |    11 | Explicit installation; not automatic startup replay. |
+| Historical fixture              |     6 | Staged test schemas.                                 |
+| Operational repair              |     2 | Explicit reference-permission repairs.               |
+| Automatic post-baseline upgrade |    25 | Reviewed entries in applicable plane manifests.      |
+
+Compiled runtime publication source and capability-profile authoring upgrades remain
+operational because they are absent from the automatic manifests. Their original
+SQL checksums are preserved. Removed callers are recorded as historical callers,
+not executable entrypoints. The record-mutation audit contract upgrade has a
+three-plane disposable-schema rehearsal via `pnpm qualify:entity-audit-upgrade`;
+this proves that specific upgrade, not all historical upgrade combinations.
 
 `inventory.json` maps original filenames/checksums to current locations, original
 planes, canonical files and callers. Historical receipts retain their original
@@ -39,6 +45,6 @@ it does not prove database compatibility. Validate fresh foundation plus startup
 runner, and test actual upgrades separately with disposable legacy fixtures.
 
 Existing databases needing pre-baseline changes require a reviewed legacy upgrade
-plan. An empty automatic manifest is not proof that an existing database has the
-canonical schema. The archive is not a standalone alphabetical upgrade sequence.
+plan. A successful automatic upgrade sequence is not proof that an existing database
+has every canonical schema capability. The archive is not a standalone alphabetical upgrade sequence.
 See [consolidation and recovery](../../../docs/runbooks/sql-ddl-consolidation.md).

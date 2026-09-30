@@ -35,6 +35,7 @@ import type {
 } from "./kysely-transfer-store.js";
 import type { GovernedImportAdapterRegistry } from "./import-adapter-registry.js";
 import { createXlsxExport, xlsxArtifact } from "./xlsx-workbook-codec.js";
+import { assertExportFieldAdmission } from "./export-admission.js";
 import { assertBoundedExportScope } from "./export-scope.js";
 
 export const RECORD_TRANSFER_QUEUE = "records.transfer";
@@ -456,6 +457,7 @@ export function createRecordExportHandler(options: {
         );
         assertBoundedExportScope(request.exactFilter);
         const transfer = exportSettings(request.exactFilter, descriptor);
+        assertExportFieldAdmission(descriptor, transfer.fields);
         let rowCount = 0;
         if (
           usesEntityBackendAuthorization(

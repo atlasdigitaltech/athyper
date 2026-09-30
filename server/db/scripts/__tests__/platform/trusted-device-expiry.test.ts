@@ -31,7 +31,7 @@ test("runtime remembered-device lookup is exact-plane, exact-principal, and expi
   const platform = await readFile(
     resolve(
       repositoryRoot,
-      "server/apps/platform-host/src/composition/register-platform.ts",
+      "server/apps/platform-host/src/composition/shared/identity/trusted-device-routes.ts",
     ),
     "utf8",
   );

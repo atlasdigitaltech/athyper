@@ -4,26 +4,56 @@ import { createRegistrationPlan } from "../kernel/registration-plan.js";
 import { readDeploymentProfile } from "../config/deployment-profile.js";
 import type { RegistrationPlan } from "../kernel/registration-plan.js";
 import { createPublicationTargets } from "./shared/publication/targets.js";
-import { createHostAuthorizationManagement, type AuthorizationManagementDependencies } from "./shared/entity-governance/authorization-management.js";
+import {
+  createHostAuthorizationManagement,
+  type AuthorizationManagementDependencies,
+} from "./shared/entity-governance/authorization-management.js";
 import { createGovernancePersistence } from "./shared/entity-governance/persistence.js";
 import { createEntityExperienceRuntime } from "./shared/entity-runtime/experience.js";
 import { createEntityResourceServices } from "./shared/entity-runtime/resources.js";
 import { createEntityTransferRuntime } from "./shared/entity-runtime/transfers.js";
-import { createEntityServices, type EntityServices } from "./shared/entity-runtime/services.js";
+import {
+  createEntityServices,
+  type EntityServices,
+} from "./shared/entity-runtime/services.js";
 import { createPublishedTenantRecordAuthorizer } from "@athyper/server-service-records";
-import { createEntityExperienceHttpRegistrar, createEntityHttpRegistrars, createEntityResourceHttpRegistrar } from "./shared/entity-runtime/http-registrars.js";
+import {
+  createEntityExperienceHttpRegistrar,
+  createEntityHttpRegistrars,
+  createEntityResourceHttpRegistrar,
+} from "./shared/entity-runtime/http-registrars.js";
 
 import { assertEntityAuthorizationEnforceable } from "./shared/publication/entity-authorization-activation.js";
-import { createTenantRollbackExecutor, hasTenantRollbackTarget } from "./shared/publication/tenant-rollback.js";
-import { readCompiledRuntimeContract, parseCompiledRuntimeContract } from "@athyper/server-platform-metadata";
+import {
+  createTenantRollbackExecutor,
+  hasTenantRollbackTarget,
+} from "./shared/publication/tenant-rollback.js";
+import {
+  readCompiledRuntimeContract,
+  parseCompiledRuntimeContract,
+} from "@athyper/server-platform-metadata";
 import { parseActivityBinding } from "@athyper/server-contract-publication";
-import { qualifyActivityRecordingGraph, resolveRecordHistoryBinding } from "./shared/entity-runtime/activity-recording.js";
+import {
+  qualifyActivityRecordingGraph,
+  resolveRecordHistoryBinding,
+} from "./shared/entity-runtime/activity-recording.js";
 import { qualifyRecordHistoryDescriptor } from "@athyper/server-service-records";
-import { createEntityActivityPolicy, createEntityActivityService, type EntityActivityProvider } from "@athyper/server-platform-experience";
+import {
+  createEntityActivityPolicy,
+  createEntityActivityService,
+  type EntityActivityProvider,
+} from "@athyper/server-platform-experience";
 
-import { collaborationEntityCode, collaborationEntityTypes } from "@athyper/server-platform-collaboration";
+import {
+  collaborationEntityCode,
+  collaborationEntityTypes,
+} from "@athyper/server-platform-collaboration";
 import { parseCollectionState } from "@athyper/contract-platform-collection";
-import { activityCollectionState, collectionActivityQuery, type ActivityQuery } from "@athyper/contract-platform-activity";
+import {
+  activityCollectionState,
+  collectionActivityQuery,
+  type ActivityQuery,
+} from "@athyper/contract-platform-activity";
 import { createActivityPresentation } from "./shared/entity-runtime/activity-presentation.js";
 import { createCollaborationSectionProviders } from "./shared/collaboration/section-providers.js";
 import { registerStudioOnboarding } from "./spaces/studio/onboarding/register-studio-onboarding.js";
@@ -35,18 +65,34 @@ import { createPublishedParentAdmission } from "./shared/entity-runtime/publishe
 import { createPublishedRecordHeader } from "./shared/entity-runtime/published-record-header.js";
 
 import { createPlaneTransactionCoordinator } from "./infrastructure/transactions.js";
-import { createEntityAttachmentAdmission, type AttachmentCapabilitySubject } from "./shared/documents/attachment-admission.js";
-import { createAttachmentDiscoveryService, registerAttachmentDiscoveryRoutes } from "@athyper/server-service-attachments";
+import {
+  createEntityAttachmentAdmission,
+  type AttachmentCapabilitySubject,
+} from "./shared/documents/attachment-admission.js";
+import {
+  createAttachmentDiscoveryService,
+  registerAttachmentDiscoveryRoutes,
+} from "@athyper/server-service-attachments";
 import { createRecordParticipantResolver } from "@athyper/server-platform-experience";
 import { createKyselyPermissionResolver } from "@athyper/server-platform-iam";
 import { expireCommentDrafts } from "@athyper/server-platform-collaboration";
-import { createEntityCapabilityPolicy, EntityCapabilityPolicyError, canReplyAtDepth } from "@athyper/server-platform-experience";
+import {
+  createEntityCapabilityPolicy,
+  EntityCapabilityPolicyError,
+  canReplyAtDepth,
+} from "@athyper/server-platform-experience";
 import { createMetaEntityActivationInspector } from "./shared/entity-governance/meta-entity-activation-inspection.js";
 import { HttpError } from "@athyper/server-runtime-http";
-import { addressFormChoices, createSharedReferenceDirectory } from "@athyper/server-service-records";
+import {
+  addressFormChoices,
+  createSharedReferenceDirectory,
+} from "@athyper/server-service-records";
 import { createEntityPresentationChoiceResolvers } from "./shared/entity-runtime/presentation-choice-resolvers.js";
 import { registeredRecordScopeSqlCompilers } from "./shared/entity-runtime/record-scope-sql.js";
-import { readPublishedNotificationConfiguration, readPublishedCollectionConfiguration } from "@athyper/server-service-publication";
+import {
+  readPublishedNotificationConfiguration,
+  readPublishedCollectionConfiguration,
+} from "@athyper/server-service-publication";
 import { localGraphPreview } from "../development/graph-preview.js";
 import { prepareDocumentCollectionRelease } from "@athyper/server-plane-studio";
 import { RedisInferenceAdmission } from "./spaces/neon/ai/atlas-inference-admission.js";
@@ -54,11 +100,21 @@ import { parseAtlasSemanticConfig } from "./spaces/neon/ai/atlas-semantic-index.
 import { createAtlasDocumentGrounding } from "./spaces/neon/ai/atlas-document-grounding.js";
 import { registerAtlasAttachmentKnowledge } from "./spaces/neon/ai/atlas-attachment-knowledge.js";
 import { createAuthenticatedEntityReleaseReview } from "@athyper/server-service-publication";
-import { getRequestContext as authoringRequestContext, tryGetRequestContext, withReadEvidence } from "@athyper/server-foundation/context";
-import { createMetaEntityAuthoringAuthorizer, createMetaEntityInspectionAuthorizer } from "./shared/entity-governance/meta-entity-authoring-authorizer.js";
+import {
+  getRequestContext as authoringRequestContext,
+  tryGetRequestContext,
+  withReadEvidence,
+} from "@athyper/server-foundation/context";
+import {
+  createMetaEntityAuthoringAuthorizer,
+  createMetaEntityInspectionAuthorizer,
+} from "./shared/entity-governance/meta-entity-authoring-authorizer.js";
 import { createScopedMetaEntityAuthoringRepository } from "./shared/entity-governance/scoped-meta-entity-authoring.js";
 import { createDevRuntimePublication } from "../development/runtime-publication.js";
-import { loadDevPublicationConfiguration, registerDevPublicationRoutes } from "../development/publication.js";
+import {
+  loadDevPublicationConfiguration,
+  registerDevPublicationRoutes,
+} from "../development/publication.js";
 import { registerPublicationWorkloadRoutes } from "./shared/publication/workload-routes.js";
 import { createCapabilityQualification } from "./shared/publication/capability-qualification.js";
 import { qualifyPreviewRenderer } from "@athyper/server-adapter-preview-renderer";
@@ -84,8 +140,14 @@ import {
   baselineJsonHash,
   sha256 as baselineContentHash,
 } from "@athyper/server-plane-studio";
-import { createEntityScopeRegistry, type EntityScopeBinding } from "./shared/entity-runtime/scope-registry.js";
-import { createEntityParentAdmission, type EntityParentScopeBinding } from "./shared/entity-runtime/parent-admission.js";
+import {
+  createEntityScopeRegistry,
+  type EntityScopeBinding,
+} from "./shared/entity-runtime/scope-registry.js";
+import {
+  createEntityParentAdmission,
+  type EntityParentScopeBinding,
+} from "./shared/entity-runtime/parent-admission.js";
 import { createEntityCaseBackendMapping } from "./spaces/neon/entity-case-backend-mapping.js";
 import { checkMeshExchangeReadiness } from "./spaces/mesh/exchange-readiness.js";
 import { createKyselyContextRefresh } from "@athyper/server-platform-iam";
@@ -99,7 +161,10 @@ import {
   createAtlasLocalGenerationServices,
   parseAtlasLocalConfiguration,
 } from "@athyper/server-platform-ai";
-import { registerContactVerification, type ContactVerificationFactory } from "./shared/identity/contact-verification.js";
+import {
+  registerContactVerification,
+  type ContactVerificationFactory,
+} from "./shared/identity/contact-verification.js";
 import { createKyselyEntitlementRuntime } from "@athyper/server-platform-entitlements";
 import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
 
@@ -180,8 +245,16 @@ import type {
   ParameterRepository,
   RoundingRepository,
 } from "@athyper/server-contract-control-admin";
-import { createIamAuthenticationMiddleware, createShadowAuthorizer, readVerifiedRequestContext } from "@athyper/server-platform-iam";
-import { createEntityRuntimeResourceService, EntityRuntimeOperationError, registerEntityIntakeOperationRoutes } from "@athyper/server-platform-experience";
+import {
+  createIamAuthenticationMiddleware,
+  createShadowAuthorizer,
+  readVerifiedRequestContext,
+} from "@athyper/server-platform-iam";
+import {
+  createEntityRuntimeResourceService,
+  EntityRuntimeOperationError,
+  registerEntityIntakeOperationRoutes,
+} from "@athyper/server-platform-experience";
 import {
   createCachedPolicyRepository,
   createKyselyPolicyRepository,
@@ -220,12 +293,106 @@ import {
   createKyselyPrincipalDirectory,
   registerCollaborationRoutes,
 } from "@athyper/server-platform-collaboration";
-import { REPORT_PACK_JOB, REPORT_PACK_QUEUE, REPORT_PACK_RECOVERY_JOB, createCycleCertificationService, createCycleDeviationService, createCycleRunService, createCycleTaskService, createLegalHoldService, createReportPackJobHandler, createReportPackRecoveryHandler, createReportPackService, registerGovernanceComplianceRoutes, registerGovernanceRoutes } from "@athyper/server-platform-governance";
-import { assertControlServiceRoutePlaneSafety, controlAdminFoundation, createKyselyControlRepositories, createBankValidationService, createConnectorControlService, createCycleConfigService, createEntitlementControlService, createFeatureFlagService, createLookupService, createKyselyParameterRepositories, createExperienceParameterConsumer, createParameterService, createRoundingService, createRuntimeCommandService, KyselyCycleTemplateRepository, createKyselyEntitlementRepositories, createKyselyFeatureFlagRepositories, KyselyRuntimeCommandStore, registerAuthorizationManagementRoutes, registerControlServiceRoutes, registerParameterRoutes, registerCycleConfigRoutes, registerRuntimeCommandRoutes, type ControlServiceRouteFlags, type RuntimeCommandExecutor } from "@athyper/server-platform-control-admin";
-import { ATLAS_KNOWLEDGE_QUEUE, ATLAS_MONITORING_QUEUE, INGEST_ATLAS_KNOWLEDGE_JOB, RUN_ATLAS_DRIFT_JOB, AtlasAgentRuntime, AtlasBindingRegistry, AtlasProviderRegistry, AtlasRegisteredToolCoordinator, AtlasResponseFeedbackService, KyselyAtlasResponseFeedbackStore, createAtlasEntityRecordTool, AtlasSurfaceDraftGenerator, AtlasThreadService, AtlasToolRegistry, createAtlasRecordDataGateway, AtlasToolService, AtlasExperienceConfigurationService, KyselyAtlasAttachmentContextResolver, KyselyAtlasExperienceConfigurationRepository, KyselyAtlasTenantQuotaManager, createAtlasA2Services, createAtlasConversationServices, createAtlasDriftHandler, createAtlasKnowledgeIngestionHandler, KyselyAtlasToolProposalStore, registerAtlasAdminRoutes, hasPermission as hasAtlasPermission, registerAtlasExperienceRoutes, registerAtlasRoutes, registerAtlasSurfaceDraftRoutes, type AtlasKnowledgeJobAuthority, type AtlasPromptResolver } from "@athyper/server-platform-ai";
-import { createStudioCatalogMetadataReader, createStudioMetadataDraftImportAdapter, createStudioRecordCollectionScopeResolver, KyselyMetaEntityAuthoringRepository, MetaEntityAuthoringService, PublicationServiceMetaEntityAdapter, registerMetaEntityAuthoringRoutes, prepareNotificationConfigurationRelease, prepareCollectionConfigurationRelease } from "@athyper/server-plane-studio";
-import { createMeshRecordCollectionScopeResolver, createMeshRelationshipRequestImportAdapter } from "@athyper/server-plane-mesh";
-import { createNeonRecordCollectionScopeResolver, financeJobDefinitions, financeSliceOrder, registerFinance as registerNeonFinance, registerFinanceHttpRoutes, registerFinanceJobHandlers, type FinanceRegistrationPorts } from "@athyper/server-plane-neon";
+import {
+  REPORT_PACK_JOB,
+  REPORT_PACK_QUEUE,
+  REPORT_PACK_RECOVERY_JOB,
+  createCycleCertificationService,
+  createCycleDeviationService,
+  createCycleRunService,
+  createCycleTaskService,
+  createLegalHoldService,
+  createReportPackJobHandler,
+  createReportPackRecoveryHandler,
+  createReportPackService,
+  registerGovernanceComplianceRoutes,
+  registerGovernanceRoutes,
+} from "@athyper/server-platform-governance";
+import {
+  assertControlServiceRoutePlaneSafety,
+  controlAdminFoundation,
+  createKyselyControlRepositories,
+  createBankValidationService,
+  createConnectorControlService,
+  createCycleConfigService,
+  createEntitlementControlService,
+  createFeatureFlagService,
+  createLookupService,
+  createKyselyParameterRepositories,
+  createExperienceParameterConsumer,
+  createParameterService,
+  createRoundingService,
+  createRuntimeCommandService,
+  KyselyCycleTemplateRepository,
+  createKyselyEntitlementRepositories,
+  createKyselyFeatureFlagRepositories,
+  KyselyRuntimeCommandStore,
+  registerAuthorizationManagementRoutes,
+  registerControlServiceRoutes,
+  registerParameterRoutes,
+  registerCycleConfigRoutes,
+  registerRuntimeCommandRoutes,
+  type ControlServiceRouteFlags,
+  type RuntimeCommandExecutor,
+} from "@athyper/server-platform-control-admin";
+import {
+  ATLAS_KNOWLEDGE_QUEUE,
+  ATLAS_MONITORING_QUEUE,
+  INGEST_ATLAS_KNOWLEDGE_JOB,
+  RUN_ATLAS_DRIFT_JOB,
+  AtlasAgentRuntime,
+  AtlasBindingRegistry,
+  AtlasProviderRegistry,
+  AtlasRegisteredToolCoordinator,
+  AtlasResponseFeedbackService,
+  KyselyAtlasResponseFeedbackStore,
+  createAtlasEntityRecordTool,
+  AtlasSurfaceDraftGenerator,
+  AtlasThreadService,
+  AtlasToolRegistry,
+  createAtlasRecordDataGateway,
+  AtlasToolService,
+  AtlasExperienceConfigurationService,
+  KyselyAtlasAttachmentContextResolver,
+  KyselyAtlasExperienceConfigurationRepository,
+  KyselyAtlasTenantQuotaManager,
+  createAtlasA2Services,
+  createAtlasConversationServices,
+  createAtlasDriftHandler,
+  createAtlasKnowledgeIngestionHandler,
+  KyselyAtlasToolProposalStore,
+  registerAtlasAdminRoutes,
+  hasPermission as hasAtlasPermission,
+  registerAtlasExperienceRoutes,
+  registerAtlasRoutes,
+  registerAtlasSurfaceDraftRoutes,
+  type AtlasKnowledgeJobAuthority,
+  type AtlasPromptResolver,
+} from "@athyper/server-platform-ai";
+import {
+  createStudioCatalogMetadataReader,
+  createStudioMetadataDraftImportAdapter,
+  createStudioRecordCollectionScopeResolver,
+  KyselyMetaEntityAuthoringRepository,
+  MetaEntityAuthoringService,
+  PublicationServiceMetaEntityAdapter,
+  registerMetaEntityAuthoringRoutes,
+  prepareNotificationConfigurationRelease,
+  prepareCollectionConfigurationRelease,
+} from "@athyper/server-plane-studio";
+import {
+  createMeshRecordCollectionScopeResolver,
+  createMeshRelationshipRequestImportAdapter,
+} from "@athyper/server-plane-mesh";
+import {
+  createNeonRecordCollectionScopeResolver,
+  financeJobDefinitions,
+  financeSliceOrder,
+  registerFinance as registerNeonFinance,
+  registerFinanceHttpRoutes,
+  registerFinanceJobHandlers,
+  type FinanceRegistrationPorts,
+} from "@athyper/server-plane-neon";
 import {
   createDeliverySweepHandler,
   createDurableNotificationDeliveryRepository,
@@ -353,9 +520,34 @@ import {
   createKyselyNumberingRepository,
   DefaultNumberingService,
 } from "@athyper/server-service-numbering";
-import { BookPeriodService, CloseReadinessService, FinanceNumberingService, FinancePostingGuard, KyselyBookPeriodRepository, KyselyCloseReadinessRepository, KyselyFinanceFoundationReader, KyselyFinanceNumberingPolicyReader, KyselyFinanceNumberingRepository, KyselyRoundingPolicyReader, RoundingResolver, SnapshotFinanceSourceDocumentReader, financeFoundation, snapshotFinancePermissionChecker } from "@athyper/server-service-finance";
+import {
+  BookPeriodService,
+  CloseReadinessService,
+  FinanceNumberingService,
+  FinancePostingGuard,
+  KyselyBookPeriodRepository,
+  KyselyCloseReadinessRepository,
+  KyselyFinanceFoundationReader,
+  KyselyFinanceNumberingPolicyReader,
+  KyselyFinanceNumberingRepository,
+  KyselyRoundingPolicyReader,
+  RoundingResolver,
+  SnapshotFinanceSourceDocumentReader,
+  financeFoundation,
+  snapshotFinancePermissionChecker,
+} from "@athyper/server-service-finance";
 import { registerFinanceRoutes } from "./spaces/neon/finance-routes.js";
-import { scopeRecordOwnerRead, createRecordOwnerAccessAdapter, createKyselyRecordRepository, createKyselyCommandExecutionStore, createEntityBackendAuthorizer, GovernedImportAdapterRegistry, MAINTAIN_RECORD_TRANSFERS_JOB, RECORD_TRANSFER_MAINTENANCE_QUEUE, createRecordTransferMaintenanceHandler } from "@athyper/server-service-records";
+import {
+  scopeRecordOwnerRead,
+  createRecordOwnerAccessAdapter,
+  createKyselyRecordRepository,
+  createKyselyCommandExecutionStore,
+  createEntityBackendAuthorizer,
+  GovernedImportAdapterRegistry,
+  MAINTAIN_RECORD_TRANSFERS_JOB,
+  RECORD_TRANSFER_MAINTENANCE_QUEUE,
+  createRecordTransferMaintenanceHandler,
+} from "@athyper/server-service-records";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import {
@@ -363,7 +555,27 @@ import {
   MetaEntityArtifactSigner,
   sha256,
 } from "@athyper/server-adapter-publication-signing";
-import { APPLY_PUBLICATION_RELEASE_JOB, COMPILE_PUBLICATION_ARTIFACT_JOB, SIGN_PUBLICATION_ARTIFACT_JOB, DISPATCH_PUBLICATION_JOB, createPublicationAuthorityHandlers, createPublicationApplyHandler, createPublicationRecoveryHandler, createPublicationRollbackHandler, KyselyPublicationAuthorityRepository, KyselyPublicationRecoveryDiscovery, KyselyPublicationAuthorityWork, KyselyPublicationOperationsRepository, PublicationOperationsService, PUBLICATION_APPLY_QUEUE, PUBLICATION_AUTHORITY_QUEUE, PUBLICATION_MAINTENANCE_QUEUE, RECOVER_STALLED_PUBLICATIONS_JOB, ROLLBACK_PUBLICATION_RELEASE_JOB, registerPublicationRoutes } from "@athyper/server-service-publication";
+import {
+  APPLY_PUBLICATION_RELEASE_JOB,
+  COMPILE_PUBLICATION_ARTIFACT_JOB,
+  SIGN_PUBLICATION_ARTIFACT_JOB,
+  DISPATCH_PUBLICATION_JOB,
+  createPublicationAuthorityHandlers,
+  createPublicationApplyHandler,
+  createPublicationRecoveryHandler,
+  createPublicationRollbackHandler,
+  KyselyPublicationAuthorityRepository,
+  KyselyPublicationRecoveryDiscovery,
+  KyselyPublicationAuthorityWork,
+  KyselyPublicationOperationsRepository,
+  PublicationOperationsService,
+  PUBLICATION_APPLY_QUEUE,
+  PUBLICATION_AUTHORITY_QUEUE,
+  PUBLICATION_MAINTENANCE_QUEUE,
+  RECOVER_STALLED_PUBLICATIONS_JOB,
+  ROLLBACK_PUBLICATION_RELEASE_JOB,
+  registerPublicationRoutes,
+} from "@athyper/server-service-publication";
 
 import type { HostConfig } from "../config/environment.js";
 import type { Container } from "../kernel/container.js";
@@ -374,16 +586,31 @@ type RecordTransaction = Transaction<Record<string, never>>;
 
 export interface ServiceRegistrationDependencies {
   readonly activityAdapters?: readonly import("./shared/entity-runtime/activity-recording.js").ActivityAdapterRegistration[];
-  readonly compiledRuntimePublication?: ConstructorParameters<typeof KyselyPublicationAuthorityWork>[0]["compiledRuntimePublication"];
+  readonly compiledRuntimePublication?: ConstructorParameters<
+    typeof KyselyPublicationAuthorityWork
+  >[0]["compiledRuntimePublication"];
   readonly entityParentScopeBindings?: readonly EntityParentScopeBinding[];
   readonly entityScopeBindings?: readonly EntityScopeBinding[];
-  readonly entityBackends?: readonly Omit<Parameters<typeof createEntityBackendAuthorizer>[0], "authority">[];
-  readonly documentBindings?: Pick<Parameters<typeof createDocumentService<RecordTransaction>>[0], "resolveTrustedSource" | "authorizeArtifact">;
-  readonly notificationPolicy?: Parameters<typeof createCollaborationNotificationPolicy>[0]["fallback"];
+  readonly entityBackends?: readonly Omit<
+    Parameters<typeof createEntityBackendAuthorizer>[0],
+    "authority"
+  >[];
+  readonly documentBindings?: Pick<
+    Parameters<typeof createDocumentService<RecordTransaction>>[0],
+    "resolveTrustedSource" | "authorizeArtifact"
+  >;
+  readonly notificationPolicy?: Parameters<
+    typeof createCollaborationNotificationPolicy
+  >[0]["fallback"];
   /** Shared signing material for cursor continuity across replicas; absent means process-local cursors. */
   readonly entityActivityCursorKey?: Uint8Array;
-  readonly entityResourceProviders?: Pick<Parameters<typeof createEntityRuntimeResourceService>[0], "headers" | "sections" | "summaries">;
-  readonly entityIntakeProviders?: Parameters<typeof registerEntityIntakeOperationRoutes>[1]["providers"];
+  readonly entityResourceProviders?: Pick<
+    Parameters<typeof createEntityRuntimeResourceService>[0],
+    "headers" | "sections" | "summaries"
+  >;
+  readonly entityIntakeProviders?: Parameters<
+    typeof registerEntityIntakeOperationRoutes
+  >[1]["providers"];
   /** Actual callable host bindings. Published metadata cannot populate this list. */
   readonly entityAuthorizationRuntimeRegistrations?: readonly EntityAuthorizationRuntimeRegistration[];
   /** Read-only, bounded observer. No grant changes or enforce selection through this port. */
@@ -527,13 +754,20 @@ export function registerServices(
   plan?: RegistrationPlan,
 ): void {
   // Explicit entrypoints validate MODE. Direct composition callers retain API defaults.
-  const role = config?.mode === "worker" || config?.mode === "scheduler" ? config.mode : "api";
-  const capabilityRegistration = createCapabilityRegistration(plan ?? createRegistrationPlan(readDeploymentProfile({ MODE: role }, role)));
+  const role =
+    config?.mode === "worker" || config?.mode === "scheduler"
+      ? config.mode
+      : "api";
+  const capabilityRegistration = createCapabilityRegistration(
+    plan ?? createRegistrationPlan(readDeploymentProfile({ MODE: role }, role)),
+  );
   const servedPlanes = capabilityRegistration.planes;
   if (servedPlanes.includes("mesh") && container.adapters.meshDatabase)
     container.runtimes.health.register("mesh.exchange", () =>
       checkMeshExchangeReadiness(
-        container.adapters.meshDatabase!.database as unknown as Kysely<Record<string, never>>,
+        container.adapters.meshDatabase!.database as unknown as Kysely<
+          Record<string, never>
+        >,
       ),
     );
   const { iam, authorizer: baseAuthorizer, audit } = container.platform;
@@ -554,7 +788,8 @@ export function registerServices(
   });
   const observeAuthority = (authority: typeof baseAuthorizer) => {
     const entityAuthority = (dependencies.entityBackends ?? []).reduce(
-      (current, binding) => createEntityBackendAuthorizer({ ...binding, authority: current }),
+      (current, binding) =>
+        createEntityBackendAuthorizer({ ...binding, authority: current }),
       authority,
     );
     const backend = dependencies.entityCaseBackendAuthorization
@@ -564,7 +799,8 @@ export function registerServices(
             dependencies.entityCaseBackendAuthorization.profile,
           ),
           scopes:
-            dependencies.entityCaseBackendAuthorization.scopes ?? createEntityScopeRegistry(
+            dependencies.entityCaseBackendAuthorization.scopes ??
+            createEntityScopeRegistry(
               dependencies.entityCaseBackendAuthorization.profile,
               dependencies.entityScopeBindings ?? [],
             ),
@@ -585,36 +821,65 @@ export function registerServices(
   const authorizer = createPublishedTenantRecordAuthorizer({
     ownerAccess: true,
     ownerAuthority: createPublishedOwnerAdministrationAuthorizer({
-      getEntityDescriptor: (context, entityCode) => metadata.getEntityDescriptor(context, entityCode),
+      getEntityDescriptor: (context, entityCode) =>
+        metadata.getEntityDescriptor(context, entityCode),
     }),
     authority: observeAuthority(baseAuthorizer),
-    metadata: { getEntityDescriptor: (context, entityCode) => metadata.getEntityDescriptor(context, entityCode) },
+    metadata: {
+      getEntityDescriptor: (context, entityCode) =>
+        metadata.getEntityDescriptor(context, entityCode),
+    },
     refreshContext: refreshEntityContext,
-    exists: (context, descriptor, recordId) => transactions.run(context.planeKey, context, async tx => {
-      const repository = dependencies.repository ?? createKyselyRecordRepository({ databases: recordDatabases, scopeCompilers: registeredRecordScopeSqlCompilers });
-      const ownerValues = await createRecordOwnerAccessAdapter(authorizer).prepare({ context, descriptor, operation: "read" }, tx);
-      return Boolean(await repository.get(scopeRecordOwnerRead(descriptor, ownerValues), context.tenantId, recordId, [descriptor.storage.idField], tx));
-    }),
+    exists: (context, descriptor, recordId) =>
+      transactions.run(context.planeKey, context, async (tx) => {
+        const repository =
+          dependencies.repository ??
+          createKyselyRecordRepository({
+            databases: recordDatabases,
+            scopeCompilers: registeredRecordScopeSqlCompilers,
+          });
+        const ownerValues = await createRecordOwnerAccessAdapter(
+          authorizer,
+        ).prepare({ context, descriptor, operation: "read" }, tx);
+        return Boolean(
+          await repository.get(
+            scopeRecordOwnerRead(descriptor, ownerValues),
+            context.tenantId,
+            recordId,
+            [descriptor.storage.idField],
+            tx,
+          ),
+        );
+      }),
   });
   // Filled with the very same service instance mounted by the generic record routes.
   // The publication callback resolves it when a job runs, not during bootstrap.
   let installedRecordMutations: EntityServices["mutations"] | undefined;
+  let installedTransfers:
+    | NonNullable<ReturnType<typeof createEntityTransferRuntime>>["transfers"]
+    | undefined;
   let installedReadQueries: EntityServices["queries"] | undefined;
 
-  const recordDatabases = capabilityRegistration.databases("entity.persistence", {
-    ...(container.adapters.neonDatabase
-      ? { neon: container.adapters.neonDatabase.database }
-      : {}),
-    ...(container.adapters.meshDatabase
-      ? { mesh: container.adapters.meshDatabase.database }
-      : {}),
-  } as unknown as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>);
-  const metadataDatabases = capabilityRegistration.databases("entity.persistence", {
-    ...recordDatabases,
-    ...(container.adapters.athyperDatabase
-      ? { studio: container.adapters.athyperDatabase.database }
-      : {}),
-  } as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>);
+  const recordDatabases = capabilityRegistration.databases(
+    "entity.persistence",
+    {
+      ...(container.adapters.neonDatabase
+        ? { neon: container.adapters.neonDatabase.database }
+        : {}),
+      ...(container.adapters.meshDatabase
+        ? { mesh: container.adapters.meshDatabase.database }
+        : {}),
+    } as unknown as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>,
+  );
+  const metadataDatabases = capabilityRegistration.databases(
+    "entity.persistence",
+    {
+      ...recordDatabases,
+      ...(container.adapters.athyperDatabase
+        ? { studio: container.adapters.athyperDatabase.database }
+        : {}),
+    } as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>,
+  );
   const parameterRepositories =
     dependencies.controlAdmin?.parameters ??
     createKyselyParameterRepositories(metadataDatabases);
@@ -630,23 +895,31 @@ export function registerServices(
         ? { studio: container.adapters.athyperDatabase }
         : {}),
     };
-    const experience = capabilityRegistration.register("entity.experience", () => createEntityExperienceRuntime({
-      databases: metadataDatabases,
-      metadata: () => container.platform.metadata,
-      run: (planeKey, work) => {
-        const adapter = experienceAdapters[planeKey];
-        if (!adapter) throw new Error(`Experience database adapter is missing for ${planeKey}`);
-        return adapter.withTenantTransaction(transaction =>
-          work(transaction as unknown as Kysely<Record<string, never>>));
-      },
-      ...(config?.wave0.controlAdminParametersEnabled
-        ? {
-            readRuntimeDefaults: createExperienceParameterConsumer(
-              parameterRepositories,
-            ),
-          }
-        : {}),
-    }));
+    const experience = capabilityRegistration.register(
+      "entity.experience",
+      () =>
+        createEntityExperienceRuntime({
+          databases: metadataDatabases,
+          metadata: () => container.platform.metadata,
+          run: (planeKey, work) => {
+            const adapter = experienceAdapters[planeKey];
+            if (!adapter)
+              throw new Error(
+                `Experience database adapter is missing for ${planeKey}`,
+              );
+            return adapter.withTenantTransaction((transaction) =>
+              work(transaction as unknown as Kysely<Record<string, never>>),
+            );
+          },
+          ...(config?.wave0.controlAdminParametersEnabled
+            ? {
+                readRuntimeDefaults: createExperienceParameterConsumer(
+                  parameterRepositories,
+                ),
+              }
+            : {}),
+        }),
+    );
     container.platform.experience = {
       service: experience.service,
       invalidation: experience.invalidation,
@@ -716,13 +989,24 @@ export function registerServices(
           const runtime = {
             qualify(profile: unknown, bindings: unknown) {
               if (dependencies.entityAuthorizationPublication) {
-                dependencies.entityAuthorizationPublication.runtime.qualify(profile, bindings);
+                dependencies.entityAuthorizationPublication.runtime.qualify(
+                  profile,
+                  bindings,
+                );
                 return;
               }
               createPublicationRuntimeQualification({
                 registrations: [
-                  ...(dependencies.entityAuthorizationRuntimeRegistrations ?? []),
-                  ...(installedReadQueries ? createEntityAuthorizationRegistrations(installedReadQueries, profile, installedRecordMutations) : []),
+                  ...(dependencies.entityAuthorizationRuntimeRegistrations ??
+                    []),
+                  ...(installedReadQueries
+                    ? createEntityAuthorizationRegistrations(
+                        installedReadQueries,
+                        profile,
+                        installedRecordMutations,
+                        installedTransfers,
+                      )
+                    : []),
                 ],
                 sourceConstraints: baseAuthorizer.checkSourceConstraints,
               }).qualify(profile, bindings);
@@ -756,18 +1040,28 @@ export function registerServices(
             return rows;
           }),
       },
-      dependencies.compiledRuntimePublication ?? (() => {
-        if (config.mode !== "worker") return undefined;
-        const configuration = loadPublicationWorkloadConfiguration(process.env, config.env);
-        if (!configuration) return undefined;
-        const authority = metadataDatabases.studio;
-        if (!authority) throw Error("PUBLICATION_AUTHORITY_DATABASE_UNAVAILABLE");
-        return createCompiledRuntimePublication({ authority, configuration, targets() {
-          const targets = publicationTargetQualifications.get(container);
-          if (!targets) throw Error("PUBLICATION_TARGET_QUALIFICATION_UNAVAILABLE");
-          return targets;
-        } });
-      })(),
+      dependencies.compiledRuntimePublication ??
+        (() => {
+          if (config.mode !== "worker") return undefined;
+          const configuration = loadPublicationWorkloadConfiguration(
+            process.env,
+            config.env,
+          );
+          if (!configuration) return undefined;
+          const authority = metadataDatabases.studio;
+          if (!authority)
+            throw Error("PUBLICATION_AUTHORITY_DATABASE_UNAVAILABLE");
+          return createCompiledRuntimePublication({
+            authority,
+            configuration,
+            targets() {
+              const targets = publicationTargetQualifications.get(container);
+              if (!targets)
+                throw Error("PUBLICATION_TARGET_QUALIFICATION_UNAVAILABLE");
+              return targets;
+            },
+          });
+        })(),
     );
   }
   if (
@@ -780,7 +1074,11 @@ export function registerServices(
       ),
       { code: "CONTROL_ADMIN_RUNTIME_STORE_REQUIRED" },
     );
-  registerContactVerification(container, config?.contactVerification, dependencies.contactVerification);
+  registerContactVerification(
+    container,
+    config?.contactVerification,
+    dependencies.contactVerification,
+  );
   if (!dependencies.metadata && Object.keys(metadataDatabases).length === 0) {
     return;
   }
@@ -1004,9 +1302,22 @@ export function registerServices(
     };
   const exactTransactions =
     createExactPlaneTransactionCoordinator(transactions);
-  const { governanceDatabases, executionRepositories, legalHoldRepositories, reportPackRepositories, hasGovernanceDatabase, consent, moderation } = capabilityRegistration.register("entity.governance", () => createGovernancePersistence({
-    databases: metadataDatabases, transactions, audit, outbox: createDatabaseOutboxWriter("governance"),
-  }));
+  const {
+    governanceDatabases,
+    executionRepositories,
+    legalHoldRepositories,
+    reportPackRepositories,
+    hasGovernanceDatabase,
+    consent,
+    moderation,
+  } = capabilityRegistration.register("entity.governance", () =>
+    createGovernancePersistence({
+      databases: metadataDatabases,
+      transactions,
+      audit,
+      outbox: createDatabaseOutboxWriter("governance"),
+    }),
+  );
   const controlDatabases = createExactPlaneRepositoryProvider(
     metadataDatabases,
     {
@@ -1319,11 +1630,18 @@ export function registerServices(
           storeFor: (context) => runtimeCommandStores.require(context.planeKey),
         })
       : undefined;
-  const authorizationManagement = capabilityRegistration.register("entity.authorization", () => createHostAuthorizationManagement({
-    policy: config?.wave0 ?? {}, supplied: dependencies.authorizationManagement,
-    writerDatabases: container.adapters.authorizationWriterDatabases,
-    metadataDatabases, authorizer, audit,
-  }));
+  const authorizationManagement = capabilityRegistration.register(
+    "entity.authorization",
+    () =>
+      createHostAuthorizationManagement({
+        policy: config?.wave0 ?? {},
+        supplied: dependencies.authorizationManagement,
+        writerDatabases: container.adapters.authorizationWriterDatabases,
+        metadataDatabases,
+        authorizer,
+        audit,
+      }),
+  );
   const authorizationRoutesEnabled =
     config?.wave0.authorizationManagementRoutesEnabled ?? false;
   container.platform.controlAdmin = {
@@ -1372,7 +1690,9 @@ export function registerServices(
       }),
     );
   for (const planeKey of servedPlanes)
-    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
+    capabilityRegistration.registerHealth(
+      container.runtimes.health,
+      planeKey,
       `control.${planeKey}.cycle-config`,
       async () => {
         const result = await controlDatabases.health(planeKey);
@@ -1387,7 +1707,9 @@ export function registerServices(
     );
   if (controlOptions && controlRoutesEnabled)
     for (const planeKey of servedPlanes)
-      capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
+      capabilityRegistration.registerHealth(
+        container.runtimes.health,
+        planeKey,
         `control.${planeKey}.administration`,
         async () => {
           const results = await Promise.all([
@@ -1412,7 +1734,9 @@ export function registerServices(
       );
   if (runtimeCommandRoutesEnabled)
     for (const planeKey of servedPlanes)
-      capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
+      capabilityRegistration.registerHealth(
+        container.runtimes.health,
+        planeKey,
         `control.${planeKey}.runtime-commands`,
         async () => {
           try {
@@ -1430,20 +1754,27 @@ export function registerServices(
         },
       );
   for (const planeKey of servedPlanes)
-    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,`governance.${planeKey}`, async () => {
-      const result = await governanceDatabases.health(planeKey);
-      return result.status === "healthy"
-        ? { status: "healthy" }
-        : {
-            status: "unhealthy",
-            message:
-              result.message ??
-              `Governance repository is unavailable: ${planeKey}`,
-          };
-    });
+    capabilityRegistration.registerHealth(
+      container.runtimes.health,
+      planeKey,
+      `governance.${planeKey}`,
+      async () => {
+        const result = await governanceDatabases.health(planeKey);
+        return result.status === "healthy"
+          ? { status: "healthy" }
+          : {
+              status: "unhealthy",
+              message:
+                result.message ??
+                `Governance repository is unavailable: ${planeKey}`,
+            };
+      },
+    );
   for (const planeKey of servedPlanes) {
     const database = metadataDatabases[planeKey];
-    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
+    capabilityRegistration.registerHealth(
+      container.runtimes.health,
+      planeKey,
       `governance.${planeKey}.compliance-ddl`,
       async () => {
         if (!database)
@@ -1462,7 +1793,9 @@ export function registerServices(
         }
       },
     );
-    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
+    capabilityRegistration.registerHealth(
+      container.runtimes.health,
+      planeKey,
       `governance.${planeKey}.object-storage`,
       async () =>
         dependencyHealth(
@@ -1472,7 +1805,9 @@ export function registerServices(
           "Immutable object storage is unavailable",
         ),
     );
-    capabilityRegistration.registerHealth(container.runtimes.health, planeKey,
+    capabilityRegistration.registerHealth(
+      container.runtimes.health,
+      planeKey,
       `governance.${planeKey}.retention`,
       async () => {
         if (!(config?.wave0.governanceRoutesEnabled ?? false))
@@ -1645,100 +1980,292 @@ export function registerServices(
           access: dependencies.notificationAttachmentAccessPolicy,
         })
       : undefined);
-  const metadata = registerEntityMetadata(container, config, metadataDatabases, transactions, dependencies.metadata);
-  let readPublishedParent: Parameters<typeof createPublishedParentAdmission>[0]["read"] | undefined;
-  let readPublishedHeader: Parameters<typeof createPublishedRecordHeader>[0]["read"] | undefined;
-  const publishedParent = createPublishedParentAdmission({ reader: container.platform.compiledEntityReader!,
-    read: (input, descriptor) => readPublishedParent ? readPublishedParent(input, descriptor) : Promise.resolve(false),
+  const metadata = registerEntityMetadata(
+    container,
+    config,
+    metadataDatabases,
+    transactions,
+    dependencies.metadata,
+  );
+  let readPublishedParent:
+    Parameters<typeof createPublishedParentAdmission>[0]["read"] | undefined;
+  let readPublishedHeader:
+    Parameters<typeof createPublishedRecordHeader>[0]["read"] | undefined;
+  const publishedParent = createPublishedParentAdmission({
+    reader: container.platform.compiledEntityReader!,
+    read: (input, descriptor) =>
+      readPublishedParent
+        ? readPublishedParent(input, descriptor)
+        : Promise.resolve(false),
   });
   const registeredParent = createEntityParentAdmission({
     bindings: dependencies.entityParentScopeBindings ?? [],
     async read({ context, entityCode, recordId }) {
-      const descriptor = await metadata.getEntityDescriptor(context, entityCode);
+      const descriptor = await metadata.getEntityDescriptor(
+        context,
+        entityCode,
+      );
       const records = container.services.records?.queries;
-      if (!descriptor?.operations.read || !records || descriptor.planeKey !== context.planeKey) return false;
-      const found = await records.list({ context, entityCode, recordIds: [recordId],
-        fields: [descriptor.storage.idField], limit: 1, countMode: "none", hydrateReferences: false });
-      return found.data.length === 1 && String(found.data[0]?.[descriptor.storage.idField]) === recordId;
+      if (
+        !descriptor?.operations.read ||
+        !records ||
+        descriptor.planeKey !== context.planeKey
+      )
+        return false;
+      const found = await records.list({
+        context,
+        entityCode,
+        recordIds: [recordId],
+        fields: [descriptor.storage.idField],
+        limit: 1,
+        countMode: "none",
+        hydrateReferences: false,
+      });
+      return (
+        found.data.length === 1 &&
+        String(found.data[0]?.[descriptor.storage.idField]) === recordId
+      );
     },
   });
-  const authorizeCapabilityParent = (input: Parameters<ReturnType<typeof createEntityCapabilityPolicy>["resolve"]>[0], release?: Parameters<typeof publishedParent>[1]) =>
-    (dependencies.entityParentScopeBindings ?? []).some(binding => binding.entityCode === input.entityCode && binding.planeKey === input.context.planeKey)
-      ? registeredParent(input) : publishedParent(input, release);
-  const participantPermissions = createKyselyPermissionResolver({run:(identity,work)=>transactions.run(identity.planeKey,identity,work)});
+  const authorizeCapabilityParent = (
+    input: Parameters<
+      ReturnType<typeof createEntityCapabilityPolicy>["resolve"]
+    >[0],
+    release?: Parameters<typeof publishedParent>[1],
+  ) =>
+    (dependencies.entityParentScopeBindings ?? []).some(
+      (binding) =>
+        binding.entityCode === input.entityCode &&
+        binding.planeKey === input.context.planeKey,
+    )
+      ? registeredParent(input)
+      : publishedParent(input, release);
+  const participantPermissions = createKyselyPermissionResolver({
+    run: (identity, work) =>
+      transactions.run(identity.planeKey, identity, work),
+  });
   const recordParticipants = createRecordParticipantResolver({
-    async candidates(input,query,limit) {
-      return transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{id:string;displayName:string;username:string}>`SELECT id::text,display_name AS "displayName",username FROM document.collaboration_mention_candidates(${query}) LIMIT ${limit}`.execute(tx)).rows);
+    async candidates(input, query, limit) {
+      return transactions.run(
+        input.context.planeKey,
+        input.context,
+        async (tx) =>
+          (
+            await sql<{
+              id: string;
+              displayName: string;
+              username: string;
+            }>`SELECT id::text,display_name AS "displayName",username FROM document.collaboration_mention_candidates(${query}) LIMIT ${limit}`.execute(
+              tx,
+            )
+          ).rows,
+      );
     },
-    async admit(input,principalId) {
-      const row=await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{auth_epoch:number}>`SELECT auth_epoch::int FROM document.collaboration_principal_candidates('',${principalId}::uuid)`.execute(tx)).rows[0]);
-      if(!row) return false;
+    async admit(input, principalId) {
+      const row = await transactions.run(
+        input.context.planeKey,
+        input.context,
+        async (tx) =>
+          (
+            await sql<{
+              auth_epoch: number;
+            }>`SELECT auth_epoch::int FROM document.collaboration_principal_candidates('',${principalId}::uuid)`.execute(
+              tx,
+            )
+          ).rows[0],
+      );
+      if (!row) return false;
       // Build a fresh, baseline authorization subject. Never copy the requester's
       // permissions, organization scope, or elevated authentication to a recipient.
-      const identity={planeKey:input.context.planeKey,realmKey:input.context.realmKey,tenantId:input.context.tenantId,principalId,authEpoch:row.auth_epoch,assurance:"baseline" as const};
+      const identity = {
+        planeKey: input.context.planeKey,
+        realmKey: input.context.realmKey,
+        tenantId: input.context.tenantId,
+        principalId,
+        authEpoch: row.auth_epoch,
+        assurance: "baseline" as const,
+      };
       try {
-        const permissions=await participantPermissions.resolve(identity);
-        const context={...identity,permissions,profileHash:permissions.profileHash,requestId:input.context.requestId};
-        return Boolean(await authorizeCapabilityParent({...input,context}));
-      } catch { return false; }
-    }
+        const permissions = await participantPermissions.resolve(identity);
+        const context = {
+          ...identity,
+          permissions,
+          profileHash: permissions.profileHash,
+          requestId: input.context.requestId,
+        };
+        return Boolean(await authorizeCapabilityParent({ ...input, context }));
+      } catch {
+        return false;
+      }
+    },
   });
   const capabilityPolicy = createEntityCapabilityPolicy({
-    reader: container.platform.compiledEntityReader!, authorizer,
+    reader: container.platform.compiledEntityReader!,
+    authorizer,
     operationalControls: async () => ({
       revision: `object-storage.max-upload-mb:${config?.objectStorage.maxUploadMb ?? 25}`,
-      maxFileBytes: Math.floor((config?.objectStorage.maxUploadMb ?? 25) * 1024 * 1024),
+      maxFileBytes: Math.floor(
+        (config?.objectStorage.maxUploadMb ?? 25) * 1024 * 1024,
+      ),
     }),
     authorizeParent: authorizeCapabilityParent,
     audience: {
-      async loadComment({context,entityCode,recordId,commentId,includeDeleted}) {
-        return transactions.run(context.planeKey,context,async tx => (await sql<{id:string;entity_type:string;entity_id:string;commenter_id:string;visibility:"public"|"internal"|"private";parent_comment_id:string|null}>`SELECT id::text,entity_type,entity_id,commenter_id::text,visibility,parent_comment_id::text FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} ${includeDeleted ? sql`` : sql`AND status<>'deleted'`}`.execute(tx)).rows[0] ?? null).then(row => row ? ({commentId:row.id,entityCode:collaborationEntityCode(row.entity_type),recordId:row.entity_id,authorId:row.commenter_id,visibility:row.visibility,...(row.parent_comment_id ? {parentCommentId:row.parent_comment_id} : {})}) : null);
+      async loadComment({
+        context,
+        entityCode,
+        recordId,
+        commentId,
+        includeDeleted,
+      }) {
+        return transactions
+          .run(
+            context.planeKey,
+            context,
+            async (tx) =>
+              (
+                await sql<{
+                  id: string;
+                  entity_type: string;
+                  entity_id: string;
+                  commenter_id: string;
+                  visibility: "public" | "internal" | "private";
+                  parent_comment_id: string | null;
+                }>`SELECT id::text,entity_type,entity_id,commenter_id::text,visibility,parent_comment_id::text FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} ${includeDeleted ? sql`` : sql`AND status<>'deleted'`}`.execute(
+                  tx,
+                )
+              ).rows[0] ?? null,
+          )
+          .then((row) =>
+            row
+              ? {
+                  commentId: row.id,
+                  entityCode: collaborationEntityCode(row.entity_type),
+                  recordId: row.entity_id,
+                  authorId: row.commenter_id,
+                  visibility: row.visibility,
+                  ...(row.parent_comment_id
+                    ? { parentCommentId: row.parent_comment_id }
+                    : {}),
+                }
+              : null,
+          );
       },
-      isCurrentRecordParticipant: async (input) => Boolean(await authorizeCapabilityParent(input)),
-      validateMentions:(input,ids)=>recordParticipants.validate(input,ids),
+      isCurrentRecordParticipant: async (input) =>
+        Boolean(await authorizeCapabilityParent(input)),
+      validateMentions: (input, ids) => recordParticipants.validate(input, ids),
     },
   });
-  let attachmentDiscovery: ReturnType<typeof createAttachmentDiscoveryService> | undefined;
+  let attachmentDiscovery:
+    ReturnType<typeof createAttachmentDiscoveryService> | undefined;
   let qualifyAttachmentPreview: (() => Promise<void>) | undefined;
   let qualifyAttachmentExtraction: (() => Promise<void>) | undefined;
-  let publishedSummaries: ReturnType<typeof createEntityResourceServices>["summaries"] | undefined;
+  let publishedSummaries:
+    ReturnType<typeof createEntityResourceServices>["summaries"] | undefined;
   let activityProvider: EntityActivityProvider | undefined;
   let recordHistory: EntityServices["recordHistory"] | undefined;
-  let activityDomainActions: EntityServices["activityDomainActions"] | undefined;
-  const activityRegistrations = new Map((dependencies.activityAdapters ?? []).map(r => [r.adapter.key,r]));
-  if (activityRegistrations.size !== (dependencies.activityAdapters ?? []).length) throw Error("ACTIVITY_ADAPTER_DUPLICATE");
-  const historyAdapters = new Map([...activityRegistrations].map(([key,r]) => [key,r.adapter]));
-  const activityDomainHandlers = new Map<string, import("@athyper/server-service-records").TransactionalRecordActionHandler<RecordTransaction>>();
-  for (const registration of activityRegistrations.values()) for (const [key,handler] of registration.domainHandlers ?? []) {
-    if (activityDomainHandlers.has(key)) throw Error("ACTIVITY_DOMAIN_HANDLER_DUPLICATE");
-    activityDomainHandlers.set(key,handler);
-  }
-  const activityPolicy = createEntityActivityPolicy({reader:container.platform.compiledEntityReader!,authorizer,
-    authorizeParent:async (input,release)=>{
-      if (await publishedParent(input,release)) return true;
+  let activityDomainActions:
+    EntityServices["activityDomainActions"] | undefined;
+  const activityRegistrations = new Map(
+    (dependencies.activityAdapters ?? []).map((r) => [r.adapter.key, r]),
+  );
+  if (
+    activityRegistrations.size !== (dependencies.activityAdapters ?? []).length
+  )
+    throw Error("ACTIVITY_ADAPTER_DUPLICATE");
+  const historyAdapters = new Map(
+    [...activityRegistrations].map(([key, r]) => [key, r.adapter]),
+  );
+  const activityDomainHandlers = new Map<
+    string,
+    import("@athyper/server-service-records").TransactionalRecordActionHandler<RecordTransaction>
+  >();
+  for (const registration of activityRegistrations.values())
+    for (const [key, handler] of registration.domainHandlers ?? []) {
+      if (activityDomainHandlers.has(key))
+        throw Error("ACTIVITY_DOMAIN_HANDLER_DUPLICATE");
+      activityDomainHandlers.set(key, handler);
+    }
+  const activityPolicy = createEntityActivityPolicy({
+    reader: container.platform.compiledEntityReader!,
+    authorizer,
+    authorizeParent: async (input, release) => {
+      if (await publishedParent(input, release)) return true;
       if (!readPublishedParent) return false;
-      const descriptor = await readCompiledRuntimeContract(container.platform.compiledEntityReader!,release);
-      const operation = await container.platform.compiledEntityReader!.operation(release);
-      const binding = parseActivityBinding(operation.content.activityBinding,input.entityCode);
+      const descriptor = await readCompiledRuntimeContract(
+        container.platform.compiledEntityReader!,
+        release,
+      );
+      const operation =
+        await container.platform.compiledEntityReader!.operation(release);
+      const binding = parseActivityBinding(
+        operation.content.activityBinding,
+        input.entityCode,
+      );
       if (!binding.recording) return false;
-      try { qualifyRecordHistoryDescriptor(descriptor,resolveRecordHistoryBinding(descriptor,binding),binding.recording.adapterKey ? historyAdapters.get(binding.recording.adapterKey) : undefined); } catch { return false; }
-      return readPublishedParent(input,descriptor);
-    }});
-  const entityActivity = createEntityActivityService({policy:activityPolicy,provider:()=>activityProvider,cursorKey:dependencies.entityActivityCursorKey});
-  const entityCollaboration = createEntityCollaborationService({ reader: container.platform.compiledEntityReader!, capabilities: capabilityPolicy,
-    providers: createCollaborationSectionProviders(transactions) });
+      try {
+        qualifyRecordHistoryDescriptor(
+          descriptor,
+          resolveRecordHistoryBinding(descriptor, binding),
+          binding.recording.adapterKey
+            ? historyAdapters.get(binding.recording.adapterKey)
+            : undefined,
+        );
+      } catch {
+        return false;
+      }
+      return readPublishedParent(input, descriptor);
+    },
+  });
+  const entityActivity = createEntityActivityService({
+    policy: activityPolicy,
+    provider: () => activityProvider,
+    cursorKey: dependencies.entityActivityCursorKey,
+  });
+  const entityCollaboration = createEntityCollaborationService({
+    reader: container.platform.compiledEntityReader!,
+    capabilities: capabilityPolicy,
+    providers: createCollaborationSectionProviders(transactions),
+  });
   const authorizeAttachmentCapability = createEntityAttachmentAdmission({
-    load: (context, attachmentId) => transactions.run(context.planeKey, context, async tx =>
-      (await sql<AttachmentCapabilitySubject>`SELECT attachment.metadata->>'entity_type' entity_type,attachment.metadata->>'entity_id' entity_id,attachment.admitted_policy_hash,attachment.content_type,attachment.size_bytes,attachment.draft_id::text,attachment.uploaded_by::text,EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id AND link.entity_type=attachment.metadata->>'entity_type' AND link.entity_id=attachment.metadata->>'entity_id') has_record_link,(SELECT link.entity_id FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.pinned_attachment_id=attachment.id AND link.entity_type='document.comment' AND link.link_kind='comment' LIMIT 1) comment_id FROM document.attachment attachment WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.id=${attachmentId}::uuid`.execute(tx)).rows[0]),
-    ownsDraft: (context, draftId, entityCode, recordId) => transactions.run(context.planeKey, context, async tx =>
-      Boolean((await sql`SELECT id FROM document.comment_draft WHERE tenant_id=${context.tenantId}::uuid AND id=${draftId}::uuid AND principal_id=${context.principalId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} AND expires_at>clock_timestamp()`.execute(tx)).rows[0])),
-    resolve: input => capabilityPolicy.resolve(input),
-    authorizeOwner: async ({context, entityType, entityId, action, uploadedBy, attachmentId}) => {
+    load: (context, attachmentId) =>
+      transactions.run(
+        context.planeKey,
+        context,
+        async (tx) =>
+          (
+            await sql<AttachmentCapabilitySubject>`SELECT attachment.metadata->>'entity_type' entity_type,attachment.metadata->>'entity_id' entity_id,attachment.admitted_policy_hash,attachment.content_type,attachment.size_bytes,attachment.draft_id::text,attachment.uploaded_by::text,EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id AND link.entity_type=attachment.metadata->>'entity_type' AND link.entity_id=attachment.metadata->>'entity_id') has_record_link,(SELECT link.entity_id FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.pinned_attachment_id=attachment.id AND link.entity_type='document.comment' AND link.link_kind='comment' LIMIT 1) comment_id FROM document.attachment attachment WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.id=${attachmentId}::uuid`.execute(
+              tx,
+            )
+          ).rows[0],
+      ),
+    ownsDraft: (context, draftId, entityCode, recordId) =>
+      transactions.run(context.planeKey, context, async (tx) =>
+        Boolean(
+          (
+            await sql`SELECT id FROM document.comment_draft WHERE tenant_id=${context.tenantId}::uuid AND id=${draftId}::uuid AND principal_id=${context.principalId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} AND expires_at>clock_timestamp()`.execute(
+              tx,
+            )
+          ).rows[0],
+        ),
+      ),
+    resolve: (input) => capabilityPolicy.resolve(input),
+    authorizeOwner: async ({
+      context,
+      entityType,
+      entityId,
+      action,
+      uploadedBy,
+      attachmentId,
+    }) => {
       if (entityType === "atlas.prompt") {
-        if (!attachmentId) return action === "create" && /^[0-9a-f-]{36}$/i.test(entityId);
+        if (!attachmentId)
+          return action === "create" && /^[0-9a-f-]{36}$/i.test(entityId);
         if (uploadedBy !== context.principalId) return false;
         // Match the Atlas context resolver's uploader and prompt-link ownership.
-        return transactions.run(context.planeKey, context, async tx => Boolean((await sql`
+        return transactions.run(context.planeKey, context, async (tx) =>
+          Boolean(
+            (
+              await sql`
           SELECT a.id FROM document.attachment a
           WHERE a.tenant_id=${context.tenantId}::uuid AND a.id=${attachmentId}::uuid
             AND a.uploaded_by=${context.principalId}::uuid
@@ -1750,12 +2277,26 @@ export function registerServices(
                 AND (l.pinned_attachment_id IS NULL OR l.pinned_attachment_id=a.id))
               OR (a.status IN ('pending','uploading','uploaded','processing','quarantined','rejected','failed')
                 AND ${["finalize", "status", "archive"].includes(action)}))
-        `.execute(tx)).rows.length));
+        `.execute(tx)
+            ).rows.length,
+          ),
+        );
       }
       const acl = container.services.content?.acl;
       if (!acl) return false;
-      return acl.authorize({ context, contentItemId: entityId,
-        required: ["download", "preview", "extract", "search", "status"].includes(action) ? "read" : "write" });
+      return acl.authorize({
+        context,
+        contentItemId: entityId,
+        required: [
+          "download",
+          "preview",
+          "extract",
+          "search",
+          "status",
+        ].includes(action)
+          ? "read"
+          : "write",
+      });
     },
   });
 
@@ -1781,7 +2322,8 @@ export function registerServices(
       headers: resourceHeaders,
       sections: {
         get: (key) => dependencies.entityResourceProviders?.sections.get(key),
-        getService: createCollaborationSectionProviders(transactions).getService,
+        getService:
+          createCollaborationSectionProviders(transactions).getService,
       },
       summaries: dependencies.entityResourceProviders?.summaries,
       createHandlers: (entityRuntime) =>
@@ -2200,9 +2742,13 @@ export function registerServices(
                     );
                   const operation = input.operation;
                   if (
-                    !["create", "update", "upsert", "delete", "replace"].includes(
-                      String(operation),
-                    )
+                    ![
+                      "create",
+                      "update",
+                      "upsert",
+                      "delete",
+                      "replace",
+                    ].includes(String(operation))
                   )
                     throw new EntityRuntimeOperationError(
                       400,
@@ -2253,25 +2799,61 @@ export function registerServices(
     transactions,
     {
       databases: metadataDatabases,
-      mutationPolicies:new Set(["platform.notifications.preferences.v1"]),
-      runtime: { qualify(profile, bindings) {
-        const runtime = localGraphRuntimeQualifiers.get(container);
-        if (!runtime) throw Error("PUBLICATION_RUNTIME_REGISTRY_UNAVAILABLE");
-        runtime.qualify(profile, bindings);
-      } },
-      qualifyCapabilities: createCapabilityQualification({ databases: metadataDatabases, providers: () => ({
-        parentRead: Boolean(readPublishedParent),
-        resourceHeader: Boolean(dependencies.entityResourceProviders?.headers || readPublishedHeader),
-        section: key => key === "platform.activity.v1" ? (activityProvider ? {read:entityActivity.describe} : undefined) : createCollaborationSectionProviders(transactions).getService(key),
-        recordHistory: recordHistory ? {prepare:recordHistory.prepare,qualify:async target=>qualifyActivityRecordingGraph(target.graph,activityRegistrations)} : undefined,
-        activity: activityProvider ? {timeline_query:entityActivity.page,versions_read:entityActivity.page,audit_query:entityActivity.page,snapshots_read:entityActivity.snapshot,snapshots_compare:entityActivity.compare,snapshots_capture:entityActivity.capture} : undefined,
-        comments: container.services.collaboration,
-        attachments: container.services.attachments,
-        discovery: attachmentDiscovery,
-        processing: { qualifyPreview: qualifyAttachmentPreview, qualifyExtraction: qualifyAttachmentExtraction },
-        storage: container.adapters.objectStorageDocuments,
-        scanner: container.adapters.malwareScanner,
-      }) }),
+      mutationPolicies: new Set(["platform.notifications.preferences.v1"]),
+      runtime: {
+        qualify(profile, bindings) {
+          const runtime = localGraphRuntimeQualifiers.get(container);
+          if (!runtime) throw Error("PUBLICATION_RUNTIME_REGISTRY_UNAVAILABLE");
+          runtime.qualify(profile, bindings);
+        },
+      },
+      qualifyCapabilities: createCapabilityQualification({
+        databases: metadataDatabases,
+        providers: () => ({
+          parentRead: Boolean(readPublishedParent),
+          resourceHeader: Boolean(
+            dependencies.entityResourceProviders?.headers ||
+            readPublishedHeader,
+          ),
+          section: (key) =>
+            key === "platform.activity.v1"
+              ? activityProvider
+                ? { read: entityActivity.describe }
+                : undefined
+              : createCollaborationSectionProviders(transactions).getService(
+                  key,
+                ),
+          recordHistory: recordHistory
+            ? {
+                prepare: recordHistory.prepare,
+                qualify: async (target) =>
+                  qualifyActivityRecordingGraph(
+                    target.graph,
+                    activityRegistrations,
+                  ),
+              }
+            : undefined,
+          activity: activityProvider
+            ? {
+                timeline_query: entityActivity.page,
+                versions_read: entityActivity.page,
+                audit_query: entityActivity.page,
+                snapshots_read: entityActivity.snapshot,
+                snapshots_compare: entityActivity.compare,
+                snapshots_capture: entityActivity.capture,
+              }
+            : undefined,
+          comments: container.services.collaboration,
+          attachments: container.services.attachments,
+          discovery: attachmentDiscovery,
+          processing: {
+            qualifyPreview: qualifyAttachmentPreview,
+            qualifyExtraction: qualifyAttachmentExtraction,
+          },
+          storage: container.adapters.objectStorageDocuments,
+          scanner: container.adapters.malwareScanner,
+        }),
+      }),
     },
   );
   registerStudioOnboarding(
@@ -2280,7 +2862,9 @@ export function registerServices(
     dependencies.onboardingTransport,
     iam,
     authorizer,
-    config?.mode === "api" || config?.mode === "worker" || config?.mode === "scheduler"
+    config?.mode === "api" ||
+      config?.mode === "worker" ||
+      config?.mode === "scheduler"
       ? config.mode
       : undefined,
   );
@@ -2294,24 +2878,94 @@ export function registerServices(
     createKyselyNotificationRepositories(transactions);
   if (Object.keys(metadataDatabases).length > 0) {
     const collaboration = createCollaborationService({
-      participants: input=>recordParticipants.search({context:input.context,entityCode:input.entityType,recordId:input.entityId,kind:"comments",action:"mention",input:{visibility:input.visibility}},input.query),
+      participants: (input) =>
+        recordParticipants.search(
+          {
+            context: input.context,
+            entityCode: input.entityType,
+            recordId: input.entityId,
+            kind: "comments",
+            action: "mention",
+            input: { visibility: input.visibility },
+          },
+          input.query,
+        ),
       async authorizeCapability(action, input, value) {
-        let entityCode=input.entityType, recordId=input.entityId;
-        if(input.commentId) {
-          const row=await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{entity_type:string;entity_id:string}>`SELECT entity_type,entity_id FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${input.commentId}::uuid`.execute(tx)).rows[0]);
-          entityCode=row?.entity_type;recordId=row?.entity_id;
+        let entityCode = input.entityType,
+          recordId = input.entityId;
+        if (input.commentId) {
+          const row = await transactions.run(
+            input.context.planeKey,
+            input.context,
+            async (tx) =>
+              (
+                await sql<{
+                  entity_type: string;
+                  entity_id: string;
+                }>`SELECT entity_type,entity_id FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${input.commentId}::uuid`.execute(
+                  tx,
+                )
+              ).rows[0],
+          );
+          entityCode = row?.entity_type;
+          recordId = row?.entity_id;
         }
         if (entityCode) entityCode = collaborationEntityCode(entityCode);
-        if(entityCode === "content.item") { if(action === "mention" || action === "history") throw new EntityCapabilityPolicyError(); return; }
-        if(!entityCode || !recordId) throw new EntityCapabilityPolicyError();
+        if (entityCode === "content.item") {
+          if (action === "mention" || action === "history")
+            throw new EntityCapabilityPolicyError();
+          return;
+        }
+        if (!entityCode || !recordId) throw new EntityCapabilityPolicyError();
         // Only the admission reads share evidence. The subsequent command
         // transaction, revision checks and writes run outside this boundary.
-        const resolved=await withReadEvidence(() => capabilityPolicy.resolve({context:input.context,entityCode:entityCode!,recordId:recordId!,kind:"comments",action,input:value,actionOnly:true}));
-        if ("maxDepth" in resolved.binding && typeof value.parentCommentId === "string") {
-          const parent = await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{thread_depth:number}>`SELECT thread_depth FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${value.parentCommentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} AND status<>'deleted'`.execute(tx)).rows[0]);
-          if(!parent || !canReplyAtDepth("active", parent.thread_depth, resolved.binding.maxDepth)) throw new EntityCapabilityPolicyError();
+        const resolved = await withReadEvidence(() =>
+          capabilityPolicy.resolve({
+            context: input.context,
+            entityCode: entityCode!,
+            recordId: recordId!,
+            kind: "comments",
+            action,
+            input: value,
+            actionOnly: true,
+          }),
+        );
+        if (
+          "maxDepth" in resolved.binding &&
+          typeof value.parentCommentId === "string"
+        ) {
+          const parent = await transactions.run(
+            input.context.planeKey,
+            input.context,
+            async (tx) =>
+              (
+                await sql<{
+                  thread_depth: number;
+                }>`SELECT thread_depth FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${value.parentCommentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} AND status<>'deleted'`.execute(
+                  tx,
+                )
+              ).rows[0],
+          );
+          if (
+            !parent ||
+            !canReplyAtDepth(
+              "active",
+              parent.thread_depth,
+              resolved.binding.maxDepth,
+            )
+          )
+            throw new EntityCapabilityPolicyError();
         }
-        return {defaultAudience: "defaultAudience" in resolved.binding ? resolved.binding.defaultAudience : undefined,draftRetentionDays: "draftRetentionDays" in resolved.binding ? resolved.binding.draftRetentionDays : undefined};
+        return {
+          defaultAudience:
+            "defaultAudience" in resolved.binding
+              ? resolved.binding.defaultAudience
+              : undefined,
+          draftRetentionDays:
+            "draftRetentionDays" in resolved.binding
+              ? resolved.binding.draftRetentionDays
+              : undefined,
+        };
       },
       authorizer,
       principals: createKyselyPrincipalDirectory(),
@@ -2398,19 +3052,65 @@ export function registerServices(
       }),
     );
   }
-  const effectiveCollection = async (context: VerifiedRequestContext, key:string) => {
-    if(!["activity.notifications","activity.inbox"].includes(key))throw new HttpError(404,"COLLECTION_NOT_FOUND","Unknown activity collection");
-    if(key==="activity.inbox" && !(await authorizer.authorize({context,permissionCode:"workflow.work_item.read"})).allowed)throw new HttpError(403,"COLLECTION_ACCESS_REQUIRED","Workflow inbox access is required");
-    const value=await exactTransactions.run(context.planeKey,context,tx=>readPublishedCollectionConfiguration(tx as unknown as Kysely<Record<string,never>>,context.tenantId,context.planeKey,key));
-    if(!value)throw new HttpError(404,"COLLECTION_CONFIGURATION_NOT_PUBLISHED","Activity configuration is not published for this workspace");
+  const effectiveCollection = async (
+    context: VerifiedRequestContext,
+    key: string,
+  ) => {
+    if (!["activity.notifications", "activity.inbox"].includes(key))
+      throw new HttpError(
+        404,
+        "COLLECTION_NOT_FOUND",
+        "Unknown activity collection",
+      );
+    if (
+      key === "activity.inbox" &&
+      !(
+        await authorizer.authorize({
+          context,
+          permissionCode: "workflow.work_item.read",
+        })
+      ).allowed
+    )
+      throw new HttpError(
+        403,
+        "COLLECTION_ACCESS_REQUIRED",
+        "Workflow inbox access is required",
+      );
+    const value = await exactTransactions.run(context.planeKey, context, (tx) =>
+      readPublishedCollectionConfiguration(
+        tx as unknown as Kysely<Record<string, never>>,
+        context.tenantId,
+        context.planeKey,
+        key,
+      ),
+    );
+    if (!value)
+      throw new HttpError(
+        404,
+        "COLLECTION_CONFIGURATION_NOT_PUBLISHED",
+        "Activity configuration is not published for this workspace",
+      );
     return value;
   };
-  const validateActivityCollection = async(context:VerifiedRequestContext,kind:"notifications"|"inbox",query:ActivityQuery,limit:number) => {
-    const {configuration:c}=await effectiveCollection(context,`activity.${kind}`);
-    if(limit>c.maxPageSize)throw new TypeError("Page size exceeds published collection limit");
-    const state=activityCollectionState(kind,query,c);
-    if(state.query&&!c.searchFields.length)throw new TypeError("Search is unavailable for this collection");
-    return {...collectionActivityQuery(kind,state,query.timeZone),searchFields:c.searchFields};
+  const validateActivityCollection = async (
+    context: VerifiedRequestContext,
+    kind: "notifications" | "inbox",
+    query: ActivityQuery,
+    limit: number,
+  ) => {
+    const { configuration: c } = await effectiveCollection(
+      context,
+      `activity.${kind}`,
+    );
+    if (limit > c.maxPageSize)
+      throw new TypeError("Page size exceeds published collection limit");
+    const state = activityCollectionState(kind, query, c);
+    if (state.query && !c.searchFields.length)
+      throw new TypeError("Search is unavailable for this collection");
+    return {
+      ...collectionActivityQuery(kind, state, query.timeZone),
+      searchFields: c.searchFields,
+    };
   };
   const savedViews = createSavedViewService(
     createKyselySavedViewRepository(transactions),
@@ -2428,7 +3128,22 @@ export function registerServices(
       });
       return decision.allowed && (!decision.scope || decision.scope.tenantWide);
     },
-    async(scope,view)=>{if(view.entityCode.startsWith("activity.")){if(view.surfaceCode!=="activity_center")throw new TypeError("Activity view surface mismatch");const {configuration:c}=await effectiveCollection(scope as VerifiedRequestContext,view.entityCode);const state=view.state as Record<string,unknown>;if(state.schemaVersion!==c.viewVersion)throw new TypeError("Saved view version is incompatible; recreate the view");parseCollectionState(state.collection,c.fields);}},
+    async (scope, view) => {
+      if (view.entityCode.startsWith("activity.")) {
+        if (view.surfaceCode !== "activity_center")
+          throw new TypeError("Activity view surface mismatch");
+        const { configuration: c } = await effectiveCollection(
+          scope as VerifiedRequestContext,
+          view.entityCode,
+        );
+        const state = view.state as Record<string, unknown>;
+        if (state.schemaVersion !== c.viewVersion)
+          throw new TypeError(
+            "Saved view version is incompatible; recreate the view",
+          );
+        parseCollectionState(state.collection, c.fields);
+      }
+    },
   );
   container.platform.httpRegistrars.push((application) =>
     registerSavedViewRoutes(application, {
@@ -2437,11 +3152,54 @@ export function registerServices(
       savedViews,
     }),
   );
-  container.platform.httpRegistrars.push(application=>application.get("/api/collections/:collectionKey/descriptor",createIamAuthenticationMiddleware(iam),async(req,res,next)=>{try{const value=await effectiveCollection(readVerifiedRequestContext(res),String(req.params.collectionKey));res.setHeader("Cache-Control","private, no-store");res.json(value);}catch(e){next(e);}}));
-  container.platform.httpRegistrars.push(application=>registerViewCollectionRoutes(application,{
-    path:"/api/collections/:entityCode/views",surface:"activity_center",authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:savedViews,
-    descriptor:async(context,key)=>{const {configuration:c}=await effectiveCollection(context,key);return {standardViews:c.views.map(v=>({key:v.key,label:v.label,state:{schemaVersion:c.viewVersion,collection:v.state}})),validate:(raw:unknown)=>{const v=raw as {schemaVersion?:number;collection?:unknown};if(v?.schemaVersion!==c.viewVersion)throw new TypeError("Saved view is incompatible; recreate it using current fields");return {schemaVersion:c.viewVersion,collection:parseCollectionState(v.collection,c.fields)};}};}
-  }));
+  container.platform.httpRegistrars.push((application) =>
+    application.get(
+      "/api/collections/:collectionKey/descriptor",
+      createIamAuthenticationMiddleware(iam),
+      async (req, res, next) => {
+        try {
+          const value = await effectiveCollection(
+            readVerifiedRequestContext(res),
+            String(req.params.collectionKey),
+          );
+          res.setHeader("Cache-Control", "private, no-store");
+          res.json(value);
+        } catch (e) {
+          next(e);
+        }
+      },
+    ),
+  );
+  container.platform.httpRegistrars.push((application) =>
+    registerViewCollectionRoutes(application, {
+      path: "/api/collections/:entityCode/views",
+      surface: "activity_center",
+      authenticate: createIamAuthenticationMiddleware(iam),
+      readContext: readVerifiedRequestContext,
+      service: savedViews,
+      descriptor: async (context, key) => {
+        const { configuration: c } = await effectiveCollection(context, key);
+        return {
+          standardViews: c.views.map((v) => ({
+            key: v.key,
+            label: v.label,
+            state: { schemaVersion: c.viewVersion, collection: v.state },
+          })),
+          validate: (raw: unknown) => {
+            const v = raw as { schemaVersion?: number; collection?: unknown };
+            if (v?.schemaVersion !== c.viewVersion)
+              throw new TypeError(
+                "Saved view is incompatible; recreate it using current fields",
+              );
+            return {
+              schemaVersion: c.viewVersion,
+              collection: parseCollectionState(v.collection, c.fields),
+            };
+          },
+        };
+      },
+    }),
+  );
   const notificationEvents =
     container.adapters.notificationEvents ?? createNotificationEventBus();
   const sesDeliveryRepository =
@@ -2500,66 +3258,248 @@ export function registerServices(
   });
   container.services.notifications = notifications;
 
-  const notificationRecipientContext=async(source:import("@athyper/server-contract-notifications").NotificationSourceEvent,principalId:string)=>{
-    const row=await transactions.run(source.planeKey,{tenantId:source.tenantId,principalId},async tx=>(await sql<{auth_epoch:number}>`SELECT auth_epoch FROM master.principal WHERE tenant_id=${source.tenantId}::uuid AND id=${principalId}::uuid AND status='active'`.execute(tx)).rows[0]);
-    if(!row)return null;
-    const identity={planeKey:source.planeKey,realmKey:"athyper",tenantId:source.tenantId,principalId,authEpoch:row.auth_epoch,assurance:"baseline" as const};
-    const permissions=await participantPermissions.resolve(identity);
-    return {...identity,permissions,profileHash:permissions.profileHash,requestId:source.id};
+  const notificationRecipientContext = async (
+    source: import("@athyper/server-contract-notifications").NotificationSourceEvent,
+    principalId: string,
+  ) => {
+    const row = await transactions.run(
+      source.planeKey,
+      { tenantId: source.tenantId, principalId },
+      async (tx) =>
+        (
+          await sql<{
+            auth_epoch: number;
+          }>`SELECT auth_epoch FROM master.principal WHERE tenant_id=${source.tenantId}::uuid AND id=${principalId}::uuid AND status='active'`.execute(
+            tx,
+          )
+        ).rows[0],
+    );
+    if (!row) return null;
+    const identity = {
+      planeKey: source.planeKey,
+      realmKey: "athyper",
+      tenantId: source.tenantId,
+      principalId,
+      authEpoch: row.auth_epoch,
+      assurance: "baseline" as const,
+    };
+    const permissions = await participantPermissions.resolve(identity);
+    return {
+      ...identity,
+      permissions,
+      profileHash: permissions.profileHash,
+      requestId: source.id,
+    };
   };
-  const authorizeNotificationRecipient = async (source:import("@athyper/server-contract-notifications").NotificationSourceEvent,principalId:string) => {
-    const entityCode=source.payload.entity_type,recordId=source.payload.entity_id;
-    if(typeof entityCode!=="string"||typeof recordId!=="string")return false;
-    const context=await notificationRecipientContext(source,principalId);
-    if(!context)return false;
+  const authorizeNotificationRecipient = async (
+    source: import("@athyper/server-contract-notifications").NotificationSourceEvent,
+    principalId: string,
+  ) => {
+    const entityCode = source.payload.entity_type,
+      recordId = source.payload.entity_id;
+    if (typeof entityCode !== "string" || typeof recordId !== "string")
+      return false;
+    const context = await notificationRecipientContext(source, principalId);
+    if (!context) return false;
     try {
-      const commentId=source.payload.comment_id??source.payload.resource_id;
-      await capabilityPolicy.resolve({context,entityCode,recordId,kind:source.eventCode.startsWith("collaboration.comment.")?"comments":"attachments",action:"read",input:typeof commentId==="string"&&source.eventCode.startsWith("collaboration.comment.")?{commentId}:{}});
+      const commentId = source.payload.comment_id ?? source.payload.resource_id;
+      await capabilityPolicy.resolve({
+        context,
+        entityCode,
+        recordId,
+        kind: source.eventCode.startsWith("collaboration.comment.")
+          ? "comments"
+          : "attachments",
+        action: "read",
+        input:
+          typeof commentId === "string" &&
+          source.eventCode.startsWith("collaboration.comment.")
+            ? { commentId }
+            : {},
+      });
       return true;
-    } catch(error) {if(error instanceof EntityCapabilityPolicyError)return false;throw error;}
-  };
-  if(!notificationAttachmentResolver&&objectStorage)notificationAttachmentResolver=createNotificationAttachmentResolver({transactions,artifacts:dependencies.documentArtifactRepository??createKyselyDocumentArtifactRepository(),storage:objectStorage,access:{async authorize(input){
-    const {request,attachment}=input;
-    if(request.planeKey!=="neon"||request.versionPolicy!=="pinned"||request.attachmentVersionId!==attachment.attachmentVersionId)return false;
-    // Restrict access to the delivery's parent/comment, not any unrelated file link.
-    return exactTransactions.run("neon",{tenantId:request.tenantId,principalId:request.recipientPrincipalId},async tx=>{
-      const row=(await sql<{payload:Record<string,unknown>}>`SELECT m.payload FROM event.notification_delivery d JOIN event.notification_message m ON m.tenant_id=d.tenant_id AND m.id=d.message_id WHERE d.tenant_id=${request.tenantId}::uuid AND d.id=${request.deliveryId}::uuid AND d.recipient_id=${request.recipientPrincipalId}::uuid`.execute(tx)).rows[0];
-      const data=row?.payload;if(!data||typeof data.resource_id!=="string"||typeof data.notification_event_code!=="string")return false;
-      if(!attachment.links.some(link=>link.entityType==="document.comment"&&link.entityId===data.resource_id))return false;
-      return authorizeNotificationRecipient({id:request.deliveryId,planeKey:"neon",tenantId:request.tenantId,actorPrincipalId:request.actorPrincipalId,eventCode:data.notification_event_code,entityId:data.resource_id,payload:data},request.recipientPrincipalId);
-    });
-  }}});
-  const activityPresentation=createActivityPresentation(async(context,coordinate)=>{
-    try {
-      let threadRootId:string|undefined;
-      if(coordinate.commentId){
-        await capabilityPolicy.resolve({context,entityCode:coordinate.entityCode,recordId:coordinate.recordId,kind:"comments",action:"read",input:{commentId:coordinate.commentId}});
-        threadRootId=await exactTransactions.run(context.planeKey,{tenantId:context.tenantId,principalId:context.principalId},async tx=>(await sql<{id:string}>`WITH RECURSIVE parents AS (SELECT id,parent_comment_id,0 depth FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${coordinate.commentId}::uuid UNION ALL SELECT c.id,c.parent_comment_id,p.depth+1 FROM document.comment c JOIN parents p ON c.id=p.parent_comment_id WHERE c.tenant_id=${context.tenantId}::uuid AND p.depth<32) SELECT id::text FROM parents WHERE parent_comment_id IS NULL LIMIT 1`.execute(tx)).rows[0]?.id);
-      }
-      const descriptor=await metadata.getEntityDescriptor(context,coordinate.entityCode);
-      if(!descriptor?.detailRouteTemplate)return undefined;
-      const record=await container.services.records?.queries.get({context,entityCode:coordinate.entityCode,recordId:coordinate.recordId});
-      if(!record?.data)return undefined;
-      const label=(descriptor.recordPresentation?record.data[descriptor.recordPresentation.titleField]:undefined)??record.data.name??record.data.display_name??record.data.code;
-      const recordHref=descriptor.detailRouteTemplate.replace(":recordId",encodeURIComponent(coordinate.recordId));
-      const href=threadRootId?`${recordHref}${recordHref.includes("?")?"&":"?"}threadRootId=${encodeURIComponent(threadRootId)}`:recordHref;
-      return {href,recordLabel:[coordinate.entityCode.replaceAll("_"," "),typeof label==="string"?label:undefined].filter(Boolean).join(" · "),actionLabel:"View record"};
-    } catch(error) {
-      const status=error&&typeof error==="object"?("statusCode" in error?error.statusCode:"status" in error?error.status:undefined):undefined;
-      if(status===403||status===404)return undefined;
+    } catch (error) {
+      if (error instanceof EntityCapabilityPolicyError) return false;
       throw error;
     }
-  });
-  const collaborationNotificationPolicy=createCollaborationNotificationPolicy({fallback:dependencies.notificationPolicy ?? {async prepare(){return null;},async authorizeRecipient(){return false;}},authorize:authorizeNotificationRecipient,async recordHref(source){
-    const context=await notificationRecipientContext(source,source.actorPrincipalId);
-    if(!context)return undefined;
-    const descriptor=await metadata.getEntityDescriptor(context,String(source.payload.entity_type));
-    const path=descriptor?.detailRouteTemplate?.replace(":recordId",encodeURIComponent(String(source.payload.entity_id)));
-    return path?.startsWith("/")&&!path.startsWith("//")&&!path.includes("\\")?path:undefined;
-  }});
+  };
+  if (!notificationAttachmentResolver && objectStorage)
+    notificationAttachmentResolver = createNotificationAttachmentResolver({
+      transactions,
+      artifacts:
+        dependencies.documentArtifactRepository ??
+        createKyselyDocumentArtifactRepository(),
+      storage: objectStorage,
+      access: {
+        async authorize(input) {
+          const { request, attachment } = input;
+          if (
+            request.planeKey !== "neon" ||
+            request.versionPolicy !== "pinned" ||
+            request.attachmentVersionId !== attachment.attachmentVersionId
+          )
+            return false;
+          // Restrict access to the delivery's parent/comment, not any unrelated file link.
+          return exactTransactions.run(
+            "neon",
+            {
+              tenantId: request.tenantId,
+              principalId: request.recipientPrincipalId,
+            },
+            async (tx) => {
+              const row = (
+                await sql<{
+                  payload: Record<string, unknown>;
+                }>`SELECT m.payload FROM event.notification_delivery d JOIN event.notification_message m ON m.tenant_id=d.tenant_id AND m.id=d.message_id WHERE d.tenant_id=${request.tenantId}::uuid AND d.id=${request.deliveryId}::uuid AND d.recipient_id=${request.recipientPrincipalId}::uuid`.execute(
+                  tx,
+                )
+              ).rows[0];
+              const data = row?.payload;
+              if (
+                !data ||
+                typeof data.resource_id !== "string" ||
+                typeof data.notification_event_code !== "string"
+              )
+                return false;
+              if (
+                !attachment.links.some(
+                  (link) =>
+                    link.entityType === "document.comment" &&
+                    link.entityId === data.resource_id,
+                )
+              )
+                return false;
+              return authorizeNotificationRecipient(
+                {
+                  id: request.deliveryId,
+                  planeKey: "neon",
+                  tenantId: request.tenantId,
+                  actorPrincipalId: request.actorPrincipalId,
+                  eventCode: data.notification_event_code,
+                  entityId: data.resource_id,
+                  payload: data,
+                },
+                request.recipientPrincipalId,
+              );
+            },
+          );
+        },
+      },
+    });
+  const activityPresentation = createActivityPresentation(
+    async (context, coordinate) => {
+      try {
+        let threadRootId: string | undefined;
+        if (coordinate.commentId) {
+          await capabilityPolicy.resolve({
+            context,
+            entityCode: coordinate.entityCode,
+            recordId: coordinate.recordId,
+            kind: "comments",
+            action: "read",
+            input: { commentId: coordinate.commentId },
+          });
+          threadRootId = await exactTransactions.run(
+            context.planeKey,
+            { tenantId: context.tenantId, principalId: context.principalId },
+            async (tx) =>
+              (
+                await sql<{
+                  id: string;
+                }>`WITH RECURSIVE parents AS (SELECT id,parent_comment_id,0 depth FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${coordinate.commentId}::uuid UNION ALL SELECT c.id,c.parent_comment_id,p.depth+1 FROM document.comment c JOIN parents p ON c.id=p.parent_comment_id WHERE c.tenant_id=${context.tenantId}::uuid AND p.depth<32) SELECT id::text FROM parents WHERE parent_comment_id IS NULL LIMIT 1`.execute(
+                  tx,
+                )
+              ).rows[0]?.id,
+          );
+        }
+        const descriptor = await metadata.getEntityDescriptor(
+          context,
+          coordinate.entityCode,
+        );
+        if (!descriptor?.detailRouteTemplate) return undefined;
+        const record = await container.services.records?.queries.get({
+          context,
+          entityCode: coordinate.entityCode,
+          recordId: coordinate.recordId,
+        });
+        if (!record?.data) return undefined;
+        const label =
+          (descriptor.recordPresentation
+            ? record.data[descriptor.recordPresentation.titleField]
+            : undefined) ??
+          record.data.name ??
+          record.data.display_name ??
+          record.data.code;
+        const recordHref = descriptor.detailRouteTemplate.replace(
+          ":recordId",
+          encodeURIComponent(coordinate.recordId),
+        );
+        const href = threadRootId
+          ? `${recordHref}${recordHref.includes("?") ? "&" : "?"}threadRootId=${encodeURIComponent(threadRootId)}`
+          : recordHref;
+        return {
+          href,
+          recordLabel: [
+            coordinate.entityCode.replaceAll("_", " "),
+            typeof label === "string" ? label : undefined,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          actionLabel: "View record",
+        };
+      } catch (error) {
+        const status =
+          error && typeof error === "object"
+            ? "statusCode" in error
+              ? error.statusCode
+              : "status" in error
+                ? error.status
+                : undefined
+            : undefined;
+        if (status === 403 || status === 404) return undefined;
+        throw error;
+      }
+    },
+  );
+  const collaborationNotificationPolicy = createCollaborationNotificationPolicy(
+    {
+      fallback: dependencies.notificationPolicy ?? {
+        async prepare() {
+          return null;
+        },
+        async authorizeRecipient() {
+          return false;
+        },
+      },
+      authorize: authorizeNotificationRecipient,
+      async recordHref(source) {
+        const context = await notificationRecipientContext(
+          source,
+          source.actorPrincipalId,
+        );
+        if (!context) return undefined;
+        const descriptor = await metadata.getEntityDescriptor(
+          context,
+          String(source.payload.entity_type),
+        );
+        const path = descriptor?.detailRouteTemplate?.replace(
+          ":recordId",
+          encodeURIComponent(String(source.payload.entity_id)),
+        );
+        return path?.startsWith("/") &&
+          !path.startsWith("//") &&
+          !path.includes("\\")
+          ? path
+          : undefined;
+      },
+    },
+  );
   const notificationPlanner = createNotificationPlanner({
-    entityRoute:(source,tx)=>resolveEntityNotificationRoute(source,entityCode=>readPublishedNotificationConfiguration(tx,source.tenantId,entityCode)),
-    policy:collaborationNotificationPolicy,
+    entityRoute: (source, tx) =>
+      resolveEntityNotificationRoute(source, (entityCode) =>
+        readPublishedNotificationConfiguration(tx, source.tenantId, entityCode),
+      ),
+    policy: collaborationNotificationPolicy,
     transactions: exactTransactions,
     consent: consent ?? denyAllConsent,
   });
@@ -2657,7 +3597,23 @@ export function registerServices(
       NOTIFICATION_MAINTENANCE_QUEUE,
       DELIVERY_SWEEP_JOB,
       createDeliverySweepHandler({
-        authorizeDelivery:createEntityNotificationDeliveryGuard({transactions:exactTransactions,consent:consent??denyAllConsent,policy:collaborationNotificationPolicy,route:(source,tx)=>resolveEntityNotificationRoute(source,entityCode=>readPublishedNotificationConfiguration(tx,source.tenantId,entityCode)),fallback:async()=>({allowed:false,reason:"NOTIFICATION_ROUTE_UNAVAILABLE"})}),
+        authorizeDelivery: createEntityNotificationDeliveryGuard({
+          transactions: exactTransactions,
+          consent: consent ?? denyAllConsent,
+          policy: collaborationNotificationPolicy,
+          route: (source, tx) =>
+            resolveEntityNotificationRoute(source, (entityCode) =>
+              readPublishedNotificationConfiguration(
+                tx,
+                source.tenantId,
+                entityCode,
+              ),
+            ),
+          fallback: async () => ({
+            allowed: false,
+            reason: "NOTIFICATION_ROUTE_UNAVAILABLE",
+          }),
+        }),
         repository: durableDelivery,
         handlers: notificationHandlers,
         events: notificationEvents,
@@ -2734,15 +3690,58 @@ export function registerServices(
         });
   }
   if (container.runtimes.jobs && Object.keys(metadataDatabases).length) {
-    const name = "references.history.expire", queue = "references.history.maintenance";
-    container.runtimes.jobs.register(queue, name, { async handle(job) {
-      const planeKey = (job.data as {planeKey?: PlaneKey}).planeKey;
-      if (!planeKey || !["neon", "studio", "mesh"].includes(planeKey) || !metadataDatabases[planeKey]) return {status:"discarded",reason:"plane_database_unavailable"};
-      const result = await sql<{removed:string|number}>`SELECT master.purge_expired_reference_choices(5000) AS removed`.execute(metadataDatabases[planeKey]!);
-      return {status:"completed",output:{removed:Number(result.rows[0]?.removed??0)}};
-    }});
-    container.runtimes.jobDefinitions.push({code:name,owner:"@athyper/server-platform-preferences",queue,name,scope:"plane",payloadSchema:{name,version:1},timeoutMs:60000,maxAttempts:3,executionRetentionDays:7});
-    if(container.runtimes.scheduler)for(const planeKey of Object.keys(metadataDatabases) as PlaneKey[])container.runtimes.scheduledJobs.push({scheduleId:`reference-history-expiry-${planeKey}`,queue,name,data:{planeKey},pattern:{kind:"interval",everyMs:300000},options:{jobId:`references:history:expire:${planeKey}`,maxAttempts:3,payloadSchema:{name,version:1},execution:{planeKey,scope:"plane",principalId:"reference-history-maintenance"}}});
+    const name = "references.history.expire",
+      queue = "references.history.maintenance";
+    container.runtimes.jobs.register(queue, name, {
+      async handle(job) {
+        const planeKey = (job.data as { planeKey?: PlaneKey }).planeKey;
+        if (
+          !planeKey ||
+          !["neon", "studio", "mesh"].includes(planeKey) ||
+          !metadataDatabases[planeKey]
+        )
+          return { status: "discarded", reason: "plane_database_unavailable" };
+        const result = await sql<{
+          removed: string | number;
+        }>`SELECT master.purge_expired_reference_choices(5000) AS removed`.execute(
+          metadataDatabases[planeKey]!,
+        );
+        return {
+          status: "completed",
+          output: { removed: Number(result.rows[0]?.removed ?? 0) },
+        };
+      },
+    });
+    container.runtimes.jobDefinitions.push({
+      code: name,
+      owner: "@athyper/server-platform-preferences",
+      queue,
+      name,
+      scope: "plane",
+      payloadSchema: { name, version: 1 },
+      timeoutMs: 60000,
+      maxAttempts: 3,
+      executionRetentionDays: 7,
+    });
+    if (container.runtimes.scheduler)
+      for (const planeKey of Object.keys(metadataDatabases) as PlaneKey[])
+        container.runtimes.scheduledJobs.push({
+          scheduleId: `reference-history-expiry-${planeKey}`,
+          queue,
+          name,
+          data: { planeKey },
+          pattern: { kind: "interval", everyMs: 300000 },
+          options: {
+            jobId: `references:history:expire:${planeKey}`,
+            maxAttempts: 3,
+            payloadSchema: { name, version: 1 },
+            execution: {
+              planeKey,
+              scope: "plane",
+              principalId: "reference-history-maintenance",
+            },
+          },
+        });
   }
   if (container.runtimes.scheduler) {
     const scheduler = container.runtimes.scheduler;
@@ -2805,7 +3804,8 @@ export function registerServices(
       authenticate: createIamAuthenticationMiddleware(iam),
       readContext: readVerifiedRequestContext,
       inbox: notificationRepositories,
-      validateActivityQuery:(context,query,limit)=>validateActivityCollection(context,"notifications",query,limit),
+      validateActivityQuery: (context, query, limit) =>
+        validateActivityCollection(context, "notifications", query, limit),
       presentInbox: activityPresentation.notifications,
       push: notificationRepositories,
       webPushPublicKey: config?.webPush.publicKey,
@@ -2814,11 +3814,43 @@ export function registerServices(
       ),
       events: notificationEvents,
       preferences: notificationPreferences,
-      ...(consent ? { recordEmailConsent: async (context: VerifiedRequestContext, consented: boolean) => {
-        const destination = await transactions.run(context.planeKey, context, async tx => (await sql<{value:string}>`SELECT link.value FROM master.contact_link link JOIN control.owner_type owner ON owner.id=link.owner_type_id WHERE link.tenant_id=${context.tenantId}::uuid AND link.owner_id=${context.principalId}::uuid AND owner.code='principal' AND link.status='active' AND link.effective_from<=now() AND (link.effective_until IS NULL OR link.effective_until>now()) AND link.channel_type='email' ORDER BY link.is_verified DESC,link.is_primary DESC,link.created_at LIMIT 1`.execute(tx)).rows[0]?.value);
-        if (!destination) throw new HttpError(409,"NOTIFICATION_EMAIL_UNAVAILABLE","No current email contact is available");
-        return consent.record({context,subjectType:"principal",subjectId:context.principalId,channel:"email",destination,consented,sourceCode:"notification_preferences",evidence:{selfService:true}});
-      }} : {}),
+      ...(consent
+        ? {
+            recordEmailConsent: async (
+              context: VerifiedRequestContext,
+              consented: boolean,
+            ) => {
+              const destination = await transactions.run(
+                context.planeKey,
+                context,
+                async (tx) =>
+                  (
+                    await sql<{
+                      value: string;
+                    }>`SELECT link.value FROM master.contact_link link JOIN control.owner_type owner ON owner.id=link.owner_type_id WHERE link.tenant_id=${context.tenantId}::uuid AND link.owner_id=${context.principalId}::uuid AND owner.code='principal' AND link.status='active' AND link.effective_from<=now() AND (link.effective_until IS NULL OR link.effective_until>now()) AND link.channel_type='email' ORDER BY link.is_verified DESC,link.is_primary DESC,link.created_at LIMIT 1`.execute(
+                      tx,
+                    )
+                  ).rows[0]?.value,
+              );
+              if (!destination)
+                throw new HttpError(
+                  409,
+                  "NOTIFICATION_EMAIL_UNAVAILABLE",
+                  "No current email contact is available",
+                );
+              return consent.record({
+                context,
+                subjectType: "principal",
+                subjectId: context.principalId,
+                channel: "email",
+                destination,
+                consented,
+                sourceCode: "notification_preferences",
+                evidence: { selfService: true },
+              });
+            },
+          }
+        : {}),
       operations: notificationOperations,
     }),
   );
@@ -2846,7 +3878,10 @@ export function registerServices(
   if (dependencies.repository || Object.keys(recordDatabases).length > 0) {
     const repository =
       dependencies.repository ??
-      createKyselyRecordRepository({ databases: recordDatabases, scopeCompilers: registeredRecordScopeSqlCompilers });
+      createKyselyRecordRepository({
+        databases: recordDatabases,
+        scopeCompilers: registeredRecordScopeSqlCompilers,
+      });
     const outbox = dependencies.outbox ?? createDatabaseOutboxWriter("records");
     const commandExecutions =
       dependencies.commandExecutions ?? createKyselyCommandExecutionStore();
@@ -2872,29 +3907,34 @@ export function registerServices(
           createStudioRecordCollectionScopeResolver(),
         )
       : undefined;
-    const entityServices = capabilityRegistration.register("entity.persistence", () => createEntityServices({
-      common,
-      listMetadata,
-      reader: container.platform.compiledEntityReader!,
-      fallbackCollectionScopes: existingCollectionScopes,
-      presentation: {
-        collaboration: (input) => entityCollaboration.describe(input),
-        activity: async (input) => Boolean(await entityActivity.describe(input)),
-        summary: async (input) => publishedSummaries?.describe(input),
-        ...createEntityPresentationChoiceResolvers(metadataDatabases),
-      },
-      bookmarkCache: container.adapters.redisCache,
-      activityRegistrations,
-      historyAdapters,
-      activityDomainHandlers,
-      mutationPolicies: new Map([
-        [
-          "platform.notifications.preferences.v1",
-          createNotificationPreferenceRecordPolicy(),
-        ],
-      ]),
-      snapshotsEnabled: config?.wave0.recordSnapshotRoutesEnabled,
-    }));
+    const entityServices = capabilityRegistration.register(
+      "entity.persistence",
+      () =>
+        createEntityServices({
+          common,
+          listMetadata,
+          reader: container.platform.compiledEntityReader!,
+          fallbackCollectionScopes: existingCollectionScopes,
+          presentation: {
+            collaboration: (input) => entityCollaboration.describe(input),
+            activity: async (input) =>
+              Boolean(await entityActivity.describe(input)),
+            summary: async (input) => publishedSummaries?.describe(input),
+            ...createEntityPresentationChoiceResolvers(metadataDatabases),
+          },
+          bookmarkCache: container.adapters.redisCache,
+          activityRegistrations,
+          historyAdapters,
+          activityDomainHandlers,
+          mutationPolicies: new Map([
+            [
+              "platform.notifications.preferences.v1",
+              createNotificationPreferenceRecordPolicy(),
+            ],
+          ]),
+          snapshotsEnabled: config?.wave0.recordSnapshotRoutesEnabled,
+        }),
+    );
     const { queries, lists, mutations, snapshots, collectionScopes } =
       entityServices;
     installedReadQueries = queries;
@@ -2924,6 +3964,7 @@ export function registerServices(
       metrics: container.adapters.processMetrics,
     });
     const transfers = transferRuntime?.transfers;
+    installedTransfers = transfers;
     container.services.records = {
       surfaces: lists,
       lists,
@@ -3001,20 +4042,36 @@ export function registerServices(
       container.runtimes.jobs.register(
         WORKFLOW_MAINTENANCE_QUEUE,
         SWEEP_WORKFLOW_SLA_JOB,
-        createWorkflowSlaSweepHandler({async sweep(scope) {
-          if(scope.principalId!==SYSTEM_PRINCIPAL_ID)return workflowSla.sweep(scope);
-          // Discovery uses the global scheduler identity; tenant writes require
-          // the same tenant-local maintenance identity used by notifications.
-          const principalId=await transactions.run(scope.planeKey,scope,async tx=>(await sql<{id:string}>`SELECT event.fn_notification_worker_principal(${scope.tenantId}::uuid) id`.execute(tx)).rows[0]?.id);
-          if(!principalId)throw Error("WORKFLOW_MAINTENANCE_PRINCIPAL_UNAVAILABLE");
-          return workflowSla.sweep({...scope,principalId});
-        }}),
+        createWorkflowSlaSweepHandler({
+          async sweep(scope) {
+            if (scope.principalId !== SYSTEM_PRINCIPAL_ID)
+              return workflowSla.sweep(scope);
+            // Discovery uses the global scheduler identity; tenant writes require
+            // the same tenant-local maintenance identity used by notifications.
+            const principalId = await transactions.run(
+              scope.planeKey,
+              scope,
+              async (tx) =>
+                (
+                  await sql<{
+                    id: string;
+                  }>`SELECT event.fn_notification_worker_principal(${scope.tenantId}::uuid) id`.execute(
+                    tx,
+                  )
+                ).rows[0]?.id,
+            );
+            if (!principalId)
+              throw Error("WORKFLOW_MAINTENANCE_PRINCIPAL_UNAVAILABLE");
+            return workflowSla.sweep({ ...scope, principalId });
+          },
+        }),
       );
     }
     container.services.workflow = workflow;
     container.platform.httpRegistrars.push((application) =>
       registerWorkflowRoutes(application, {
-        validateActivityQuery:(context,query,limit)=>validateActivityCollection(context,"inbox",query,limit),
+        validateActivityQuery: (context, query, limit) =>
+          validateActivityCollection(context, "inbox", query, limit),
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
         workflow,
@@ -3037,11 +4094,7 @@ export function registerServices(
   const searchIndex =
     dependencies.searchIndex ?? container.adapters.searchIndex;
   let extractionScheduler = dependencies.extractionScheduler;
-  if (
-    container.runtimes.jobs &&
-    contentExtractor &&
-    objectStorage
-  ) {
+  if (container.runtimes.jobs && contentExtractor && objectStorage) {
     const processing = createDocumentProcessingHandler({
       repository:
         dependencies.documentProcessingRepository ??
@@ -3065,8 +4118,14 @@ export function registerServices(
       // Alphanumeric sentinel survives parser text/markup normalization (some
       // providers escape underscores even in their text response).
       const marker = "ATHYPERCONTENTQUALIFICATION";
-      const result = await contentExtractor.extract({ content: new TextEncoder().encode(marker), contentType: "text/plain", fileName: "qualification.txt", signal: AbortSignal.timeout(30000) });
-      if (!result.text.includes(marker)) throw Error("PUBLICATION_CAPABILITY_EXTRACTION_PROBE_FAILED");
+      const result = await contentExtractor.extract({
+        content: new TextEncoder().encode(marker),
+        contentType: "text/plain",
+        fileName: "qualification.txt",
+        signal: AbortSignal.timeout(30000),
+      });
+      if (!result.text.includes(marker))
+        throw Error("PUBLICATION_CAPABILITY_EXTRACTION_PROBE_FAILED");
     };
   }
   if (searchIndex) {
@@ -3075,13 +4134,30 @@ export function registerServices(
       index: searchIndex,
       authorizeHit: async (context, hit) => {
         if (!hit.attachmentId) return false;
-        const live = await transactions.run(context.planeKey, context, async tx => (await sql`
+        const live = await transactions.run(
+          context.planeKey,
+          context,
+          async (tx) =>
+            (
+              await sql`
           SELECT 1 FROM document.attachment_link l JOIN document.attachment_series s ON s.tenant_id=l.tenant_id AND s.id=l.attachment_series_id
           JOIN document.attachment a ON a.tenant_id=s.tenant_id AND a.id=coalesce(l.pinned_attachment_id,s.current_attachment_id)
           WHERE l.tenant_id=${context.tenantId}::uuid AND l.entity_type=${hit.entityType} AND l.entity_id=${hit.entityId}
-          AND a.id=${hit.attachmentId}::uuid AND a.status='active' AND a.is_active AND a.is_virus_scanned LIMIT 1`.execute(tx)).rows.length > 0);
+          AND a.id=${hit.attachmentId}::uuid AND a.status='active' AND a.is_active AND a.is_virus_scanned LIMIT 1`.execute(
+                tx,
+              )
+            ).rows.length > 0,
+        );
         if (!live) return false;
-        try { return Boolean(await authorizeAttachmentCapability(context,"download",{attachmentId:hit.attachmentId})); } catch { return false; }
+        try {
+          return Boolean(
+            await authorizeAttachmentCapability(context, "download", {
+              attachmentId: hit.attachmentId,
+            }),
+          );
+        } catch {
+          return false;
+        }
       },
     });
     container.platform.search = search;
@@ -3188,15 +4264,40 @@ export function registerServices(
       });
     }
     if (container.runtimes.jobs && searchIndex) {
-      container.runtimes.jobs.register("documents.search-removal", "documents.search-remove", {
-        async handle(job) {
-          const value = job.data as { planeKey: string; tenantId: string; attachmentId: string };
-          if (!["neon", "studio", "mesh"].includes(value.planeKey) || !/^[0-9a-f-]{36}$/i.test(value.tenantId) || !/^[0-9a-f-]{36}$/i.test(value.attachmentId)) throw new Error("Invalid search removal scope");
-          await searchIndex.remove(`${value.planeKey}:${value.tenantId}:${value.attachmentId}`);
-          return {status:"completed"};
+      container.runtimes.jobs.register(
+        "documents.search-removal",
+        "documents.search-remove",
+        {
+          async handle(job) {
+            const value = job.data as {
+              planeKey: string;
+              tenantId: string;
+              attachmentId: string;
+            };
+            if (
+              !["neon", "studio", "mesh"].includes(value.planeKey) ||
+              !/^[0-9a-f-]{36}$/i.test(value.tenantId) ||
+              !/^[0-9a-f-]{36}$/i.test(value.attachmentId)
+            )
+              throw new Error("Invalid search removal scope");
+            await searchIndex.remove(
+              `${value.planeKey}:${value.tenantId}:${value.attachmentId}`,
+            );
+            return { status: "completed" };
+          },
         },
+      );
+      container.runtimes.jobDefinitions.push({
+        code: "documents.search-remove",
+        owner: "@athyper/server-service-attachments",
+        queue: "documents.search-removal",
+        name: "documents.search-remove",
+        scope: "tenant",
+        payloadSchema: { name: "documents.search-remove", version: 1 },
+        timeoutMs: 30000,
+        maxAttempts: 10,
+        executionRetentionDays: 30,
       });
-      container.runtimes.jobDefinitions.push({code:"documents.search-remove",owner:"@athyper/server-service-attachments",queue:"documents.search-removal",name:"documents.search-remove",scope:"tenant",payloadSchema:{name:"documents.search-remove",version:1},timeoutMs:30000,maxAttempts:10,executionRetentionDays:30});
     }
     const attachments = createAttachmentLifecycle({
       transactions,
@@ -3210,7 +4311,25 @@ export function registerServices(
       scheduler: {
         scheduleSearchRemoval: async (identity) => {
           if (!container.runtimes.jobs || !searchIndex) return;
-          await container.runtimes.jobs.enqueue("documents.search-removal", "documents.search-remove", identity, {execution:{planeKey:identity.planeKey,scope:"tenant",tenantId:identity.tenantId,principalId:identity.principalId},payloadSchema:{name:"documents.search-remove",version:1},timeoutMs:30000,maxAttempts:10,backoff:{kind:"exponential",delayMs:1000},removeOnComplete:1000,removeOnFail:5000});
+          await container.runtimes.jobs.enqueue(
+            "documents.search-removal",
+            "documents.search-remove",
+            identity,
+            {
+              execution: {
+                planeKey: identity.planeKey,
+                scope: "tenant",
+                tenantId: identity.tenantId,
+                principalId: identity.principalId,
+              },
+              payloadSchema: { name: "documents.search-remove", version: 1 },
+              timeoutMs: 30000,
+              maxAttempts: 10,
+              backoff: { kind: "exponential", delayMs: 1000 },
+              removeOnComplete: 1000,
+              removeOnFail: 5000,
+            },
+          );
         },
         scheduleExtraction: async (identity) => {
           await extractionScheduler?.schedule({ ...identity });
@@ -3275,17 +4394,27 @@ export function registerServices(
     lifecycle?.onShutdown(() => attachments.close());
     container.services.attachments = attachments;
     attachmentDiscovery = createAttachmentDiscoveryService({
-      authorizeCapability:authorizeAttachmentCapability,transactions,storage:objectStorage,
-      ...(derivativeScheduler ? {schedule:input => derivativeScheduler.schedule(input)} : {}),
-      ...(extractionScheduler ? {extract:input => extractionScheduler.schedule(input)} : {}),
+      authorizeCapability: authorizeAttachmentCapability,
+      transactions,
+      storage: objectStorage,
+      ...(derivativeScheduler
+        ? { schedule: (input) => derivativeScheduler.schedule(input) }
+        : {}),
+      ...(extractionScheduler
+        ? { extract: (input) => extractionScheduler.schedule(input) }
+        : {}),
     });
     if (derivativeScheduler && container.adapters.previewRenderer) {
       const renderer = container.adapters.previewRenderer;
       qualifyAttachmentPreview = () => qualifyPreviewRenderer(renderer);
     }
-    container.platform.httpRegistrars.push(application => registerAttachmentDiscoveryRoutes(application, {
-      authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:attachmentDiscovery!,
-    }));
+    container.platform.httpRegistrars.push((application) =>
+      registerAttachmentDiscoveryRoutes(application, {
+        authenticate: createIamAuthenticationMiddleware(iam),
+        readContext: readVerifiedRequestContext,
+        service: attachmentDiscovery!,
+      }),
+    );
     container.platform.httpRegistrars.push((application) =>
       registerAttachmentRoutes(application, {
         authorizeCapability: authorizeAttachmentCapability,
@@ -3332,8 +4461,28 @@ export function registerServices(
             const limit = Math.min(500, Math.max(1, batchSize ?? 100));
             return database.transaction().execute(async (tx) => {
               const expiredDraftAttachments = await expireCommentDrafts(tx);
-              for (const item of expiredDraftAttachments) await createDatabaseOutboxWriter("collaboration").append({tenantId:item.tenantId,topic:"attachments.lifecycle",eventType:"attachments.orphaned",eventKey:`draft-expiry:${item.attachmentId}`,entityType:"document.attachment",entityId:item.attachmentId,aggregateType:"document.attachment",aggregateId:item.attachmentId,actorId:item.principalId,payload:{...item,planeKey,reason:"draft_expired"}},tx);
-              const result = await sql<{ tenant_id: string; id: string }>`SELECT attachment.tenant_id::text,attachment.id::text FROM document.attachment attachment WHERE attachment.status IN('expired','deleted','orphaned') AND attachment.storage_key<>'purged/'||attachment.id::text AND NOT EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id) AND NOT EXISTS(SELECT 1 FROM document.attachment_series series WHERE series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id AND series.retention_until>clock_timestamp()) AND COALESCE(attachment.retention_until,'-infinity'::timestamptz)<=clock_timestamp() AND NOT EXISTS(SELECT 1 FROM document.attachment_legal_hold hold WHERE hold.tenant_id=attachment.tenant_id AND hold.attachment_series_id=attachment.series_id AND hold.released_at IS NULL) ORDER BY attachment.status_changed_at NULLS LAST,attachment.created_at LIMIT ${limit} FOR UPDATE SKIP LOCKED`.execute(tx);
+              for (const item of expiredDraftAttachments)
+                await createDatabaseOutboxWriter("collaboration").append(
+                  {
+                    tenantId: item.tenantId,
+                    topic: "attachments.lifecycle",
+                    eventType: "attachments.orphaned",
+                    eventKey: `draft-expiry:${item.attachmentId}`,
+                    entityType: "document.attachment",
+                    entityId: item.attachmentId,
+                    aggregateType: "document.attachment",
+                    aggregateId: item.attachmentId,
+                    actorId: item.principalId,
+                    payload: { ...item, planeKey, reason: "draft_expired" },
+                  },
+                  tx,
+                );
+              const result = await sql<{
+                tenant_id: string;
+                id: string;
+              }>`SELECT attachment.tenant_id::text,attachment.id::text FROM document.attachment attachment WHERE attachment.status IN('expired','deleted','orphaned') AND attachment.storage_key<>'purged/'||attachment.id::text AND NOT EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id) AND NOT EXISTS(SELECT 1 FROM document.attachment_series series WHERE series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id AND series.retention_until>clock_timestamp()) AND COALESCE(attachment.retention_until,'-infinity'::timestamptz)<=clock_timestamp() AND NOT EXISTS(SELECT 1 FROM document.attachment_legal_hold hold WHERE hold.tenant_id=attachment.tenant_id AND hold.attachment_series_id=attachment.series_id AND hold.released_at IS NULL) ORDER BY attachment.status_changed_at NULLS LAST,attachment.created_at LIMIT ${limit} FOR UPDATE SKIP LOCKED`.execute(
+                tx,
+              );
               return result.rows.map((row) => ({
                 planeKey,
                 tenantId: row.tenant_id,
@@ -3746,7 +4895,11 @@ export function registerAtlas(
               );
             },
           },
-          commands: { async execute() { throw new Error("Unregistered local Atlas command."); } },
+          commands: {
+            async execute() {
+              throw new Error("Unregistered local Atlas command.");
+            },
+          },
         })
       : undefined;
     const localCoordinator = localTools
@@ -4145,8 +5298,12 @@ const localGraphRuntimeQualifiers = new WeakMap<
   Container,
   { qualify(profile: unknown, bindings: unknown): void }
 >();
-const publicationTargetQualifications = new WeakMap<Container,
-  Parameters<typeof registerPublicationWorkloadRoutes>[1]["dependencies"]["targets"]>();
+const publicationTargetQualifications = new WeakMap<
+  Container,
+  Parameters<
+    typeof registerPublicationWorkloadRoutes
+  >[1]["dependencies"]["targets"]
+>();
 const atlasLearningInboxes = new WeakMap<Container, AtlasLearningInbox>();
 
 function registerStudioAuthoring(
@@ -4156,18 +5313,30 @@ function registerStudioAuthoring(
   iam: NonNullable<Container["platform"]["iam"]>,
   authorizer: NonNullable<Container["platform"]["authorizer"]>,
   transactions: PlaneTransactionCoordinator<RecordTransaction>,
-  publicationTargets: Parameters<typeof registerPublicationWorkloadRoutes>[1]["dependencies"]["targets"],
+  publicationTargets: Parameters<
+    typeof registerPublicationWorkloadRoutes
+  >[1]["dependencies"]["targets"],
 ): void {
   publicationTargetQualifications.set(container, publicationTargets);
-  const devPublication = config?.mode === "api"
-    ? loadDevPublicationConfiguration(process.env, config.env)
-    : undefined;
-  const publicationWorkload = config?.mode === "api"
-    ? loadPublicationWorkloadConfiguration(process.env, config.env)
-    : undefined;
-  if (publicationWorkload && (!config?.publication.authoringEnabled || !container.platform.audit || !container.adapters.publicationVerifier))
+  const devPublication =
+    config?.mode === "api"
+      ? loadDevPublicationConfiguration(process.env, config.env)
+      : undefined;
+  const publicationWorkload =
+    config?.mode === "api"
+      ? loadPublicationWorkloadConfiguration(process.env, config.env)
+      : undefined;
+  if (
+    publicationWorkload &&
+    (!config?.publication.authoringEnabled ||
+      !container.platform.audit ||
+      !container.adapters.publicationVerifier)
+  )
     throw Error("PUBLICATION_WORKLOAD_AUTHORING_AND_TRUST_REQUIRED");
-  if (devPublication && (!config?.publication.authoringEnabled || !container.platform.audit))
+  if (
+    devPublication &&
+    (!config?.publication.authoringEnabled || !container.platform.audit)
+  )
     throw Error("DEV_PUBLICATION_AUTHORING_AND_AUDIT_REQUIRED");
   if (
     config?.publication.authoringEnabled &&
@@ -4431,19 +5600,36 @@ function registerStudioAuthoring(
     ),
     publication,
   });
-  if (devPublication) container.platform.httpRegistrars.push(application =>
-    registerDevPublicationRoutes(application, {
-      config: devPublication, database, service, audit: container.platform.audit!,
-    }));
+  if (devPublication)
+    container.platform.httpRegistrars.push((application) =>
+      registerDevPublicationRoutes(application, {
+        config: devPublication,
+        database,
+        service,
+        audit: container.platform.audit!,
+      }),
+    );
   if (publicationWorkload && container.adapters.publicationVerifier) {
     // Human policy enrollment belongs exclusively to the isolated control API.
     // Workload execution remains separately authenticated and requires an enrolled pin.
-    container.platform.httpRegistrars.push(application => registerPublicationWorkloadRoutes(application, {
-      configuration: publicationWorkload,
-      dependencies: { database, service, audit: container.platform.audit!, authorizer, targets: publicationTargets, jobs: container.runtimes.jobs,
-        policyAuthority: { async assertAuthorized() { throw Error("MACHINE_PUBLICATION_ENROLLED_POLICY_REQUIRED"); } },
-      },
-    }));
+    container.platform.httpRegistrars.push((application) =>
+      registerPublicationWorkloadRoutes(application, {
+        configuration: publicationWorkload,
+        dependencies: {
+          database,
+          service,
+          audit: container.platform.audit!,
+          authorizer,
+          targets: publicationTargets,
+          jobs: container.runtimes.jobs,
+          policyAuthority: {
+            async assertAuthorized() {
+              throw Error("MACHINE_PUBLICATION_ENROLLED_POLICY_REQUIRED");
+            },
+          },
+        },
+      }),
+    );
   }
   container.platform.httpRegistrars.push((application) =>
     registerAtlasLearningInboxRoutes(application, {
@@ -4484,13 +5670,37 @@ function registerStudioAuthoring(
   );
   container.platform.httpRegistrars.push((application) =>
     registerMetaEntityAuthoringRoutes(application, {
-      inspectNotificationConfiguration: (context, entityCode) => transactions.run("neon", {tenantId:context.tenantId,principalId:context.principalId}, tx=>readPublishedNotificationConfiguration(tx as unknown as Kysely<Record<string,never>>,context.tenantId,entityCode)),
-      addressPreviewChoices: context => transactions.run("studio", {tenantId: context.tenantId, principalId: context.principalId}, async tx => ({
-        "iso.country": await addressFormChoices(tx, "iso.country"),
-        "shared.state_region": await addressFormChoices(tx, "shared.state_region"),
-      })),
-      inspectActivation: createMetaEntityActivationInspector((plane, context, work) =>
-        transactions.run(plane, {tenantId:context.tenantId,principalId:context.principalId}, tx=>work(tx as unknown as Kysely<Record<string,never>>))),
+      inspectNotificationConfiguration: (context, entityCode) =>
+        transactions.run(
+          "neon",
+          { tenantId: context.tenantId, principalId: context.principalId },
+          (tx) =>
+            readPublishedNotificationConfiguration(
+              tx as unknown as Kysely<Record<string, never>>,
+              context.tenantId,
+              entityCode,
+            ),
+        ),
+      addressPreviewChoices: (context) =>
+        transactions.run(
+          "studio",
+          { tenantId: context.tenantId, principalId: context.principalId },
+          async (tx) => ({
+            "iso.country": await addressFormChoices(tx, "iso.country"),
+            "shared.state_region": await addressFormChoices(
+              tx,
+              "shared.state_region",
+            ),
+          }),
+        ),
+      inspectActivation: createMetaEntityActivationInspector(
+        (plane, context, work) =>
+          transactions.run(
+            plane,
+            { tenantId: context.tenantId, principalId: context.principalId },
+            (tx) => work(tx as unknown as Kysely<Record<string, never>>),
+          ),
+      ),
       authenticate: createIamAuthenticationMiddleware(iam),
       readContext: readVerifiedRequestContext,
       authorizer: authoringAuthorizer,
@@ -4499,7 +5709,6 @@ function registerStudioAuthoring(
     }),
   );
 }
-
 
 function registerPublication(
   container: Container,
@@ -4511,17 +5720,33 @@ function registerPublication(
   authorizationCompilation?: ConstructorParameters<
     typeof KyselyPublicationAuthorityWork
   >[0]["authorizationCompilation"],
-  compiledRuntimePublication?: ConstructorParameters<typeof KyselyPublicationAuthorityWork>[0]["compiledRuntimePublication"],
+  compiledRuntimePublication?: ConstructorParameters<
+    typeof KyselyPublicationAuthorityWork
+  >[0]["compiledRuntimePublication"],
 ): void {
   const authorityDatabase = databases.studio;
   if (!authorityDatabase)
     throw new Error("Publication requires the Studio authority database");
-  const devConfiguration = loadDevPublicationConfiguration(process.env, config.env);
-  const devRuntime = devConfiguration?.runtimeApproval && authorizationCompilation
-    ? createDevRuntimePublication({ environment: config.env, database: (container.adapters.athyperDatabase?.database ?? authorityDatabase) as Kysely<Record<string, never>>,
-        signingKeyId: config.publication.signingKeyId!, audit, compilation: authorizationCompilation })
-    : undefined;
-  if (devRuntime && authorizationCompilation) authorizationCompilation = { ...authorizationCompilation, review: devRuntime.review };
+  const devConfiguration = loadDevPublicationConfiguration(
+    process.env,
+    config.env,
+  );
+  const devRuntime =
+    devConfiguration?.runtimeApproval && authorizationCompilation
+      ? createDevRuntimePublication({
+          environment: config.env,
+          database: (container.adapters.athyperDatabase?.database ??
+            authorityDatabase) as Kysely<Record<string, never>>,
+          signingKeyId: config.publication.signingKeyId!,
+          audit,
+          compilation: authorizationCompilation,
+        })
+      : undefined;
+  if (devRuntime && authorizationCompilation)
+    authorizationCompilation = {
+      ...authorizationCompilation,
+      review: devRuntime.review,
+    };
   const artifactRuntimeEnabled =
     config.publication.applyEnabled ||
     config.publication.compileEnabled ||
@@ -4536,42 +5761,84 @@ function registerPublication(
   const { projections, orchestrators, loaders } = createPublicationTargets({
     authorityDatabase,
     databases,
-    targetPlanes: config.publication.applyEnabled ? config.publication.targetPlanes : [],
+    targetPlanes: config.publication.applyEnabled
+      ? config.publication.targetPlanes
+      : [],
     artifactLoader: {
       store: container.adapters.publicationArtifactStore!,
       verifier: container.adapters.publicationVerifier!,
       canonicalizer: { canonicalBytes, sha256 },
       runtimeVersion: config.publication.runtimeVersion,
-      ...(authorizationCompilation ? { authorizationRuntime: authorizationCompilation.runtime } : {}),
+      ...(authorizationCompilation
+        ? { authorizationRuntime: authorizationCompilation.runtime }
+        : {}),
     },
     activationGuard: async (deployment, loaded, authorityTransaction) => {
       const tenantContext = tryGetRequestContext();
-      if (!tenantContext?.tenantId) throw new Error("PUBLICATION_APPLIER_TENANT_REQUIRED");
+      if (!tenantContext?.tenantId)
+        throw new Error("PUBLICATION_APPLIER_TENANT_REQUIRED");
       // Reuse the stamped authority transaction. Opening another transaction
       // here exhausts the worker pool during same-plane publication.
-      const approved = (await sql`SELECT id FROM publication.release WHERE id=${deployment.sourceReleaseId}::uuid
-          AND tenant_id=${tenantContext.tenantId}::uuid AND status IN ('approved','published')`.execute(authorityTransaction)).rows.length === 1;
-      if (!approved) throw new Error("PUBLICATION_ACTIVATION_APPROVAL_REQUIRED");
+      const approved =
+        (
+          await sql`SELECT id FROM publication.release WHERE id=${deployment.sourceReleaseId}::uuid
+          AND tenant_id=${tenantContext.tenantId}::uuid AND status IN ('approved','published')`.execute(
+            authorityTransaction,
+          )
+        ).rows.length === 1;
+      if (!approved)
+        throw new Error("PUBLICATION_ACTIVATION_APPROVAL_REQUIRED");
       const envelope = loaded.document.envelope;
-      const descriptors = envelope.artifactKind === "entity_runtime" &&
+      const descriptors =
+        envelope.artifactKind === "entity_runtime" &&
         envelope.payload.entityDescriptor.descriptorKind === "entity_runtime"
-        ? [envelope.payload.entityDescriptor.descriptor as unknown as import("@athyper/server-contract-metadata").EntityRuntimeDescriptor]
-        : envelope.artifactKind === "compiled_entity_runtime"
-          ? envelope.payload.artifacts.filter(item => item.artifactType === "runtime_contract")
-              .map(item => parseCompiledRuntimeContract(item, {
-                releaseId: envelope.releaseId, releaseNo: envelope.releaseNo,
-              }))
-          : [];
-      assertEntityAuthorizationEnforceable(descriptors, deployment.targetPlane, authorizer);
-      if (loaded.document.manifest.evidence?.authorizationReviewMode !== "development_auto_approval") return;
-      if (!devRuntime || deployment.targetEnvironment !== "local" || deployment.signingKeyId !== config.publication.signingKeyId)
+          ? [
+              envelope.payload.entityDescriptor
+                .descriptor as unknown as import("@athyper/server-contract-metadata").EntityRuntimeDescriptor,
+            ]
+          : envelope.artifactKind === "compiled_entity_runtime"
+            ? envelope.payload.artifacts
+                .filter((item) => item.artifactType === "runtime_contract")
+                .map((item) =>
+                  parseCompiledRuntimeContract(item, {
+                    releaseId: envelope.releaseId,
+                    releaseNo: envelope.releaseNo,
+                  }),
+                )
+            : [];
+      assertEntityAuthorizationEnforceable(
+        descriptors,
+        deployment.targetPlane,
+        authorizer,
+      );
+      if (
+        loaded.document.manifest.evidence?.authorizationReviewMode !==
+        "development_auto_approval"
+      )
+        return;
+      if (
+        !devRuntime ||
+        deployment.targetEnvironment !== "local" ||
+        deployment.signingKeyId !== config.publication.signingKeyId
+      )
         throw Error("DEV_RUNTIME_ACTIVATION_DENIED");
-      const receipt = await devRuntime.authorizeActivation(deployment.sourceReleaseId, loaded);
-      if (receipt.receiptSha256 !== loaded.document.manifest.evidence.authorizationReviewReceiptSha256)
+      const receipt = await devRuntime.authorizeActivation(
+        deployment.sourceReleaseId,
+        loaded,
+      );
+      if (
+        receipt.receiptSha256 !==
+        loaded.document.manifest.evidence.authorizationReviewReceiptSha256
+      )
         throw Error("DEV_RUNTIME_APPROVAL_CHANGED");
     },
   });
-  container.services.publication = { authority, projections, orchestrators, loaders };
+  container.services.publication = {
+    authority,
+    projections,
+    orchestrators,
+    loaders,
+  };
   container.runtimes.health.register("publication.database", async () => {
     try {
       await sql`SELECT 1`.execute(authorityDatabase);
@@ -4596,60 +5863,119 @@ function registerPublication(
       PUBLICATION_APPLY_QUEUE,
       ROLLBACK_PUBLICATION_RELEASE_JOB,
       createPublicationRollbackHandler(
-        Object.fromEntries((config.publication.targetPlanes as readonly ("studio" | "neon" | "mesh")[])
-          .filter(plane => Boolean(databases[plane]))
-          .map(plane => [plane, createTenantRollbackExecutor(databases[plane]!, authorityDatabase, plane)])),
+        Object.fromEntries(
+          (
+            config.publication.targetPlanes as readonly (
+              "studio" | "neon" | "mesh"
+            )[]
+          )
+            .filter((plane) => Boolean(databases[plane]))
+            .map((plane) => [
+              plane,
+              createTenantRollbackExecutor(
+                databases[plane]!,
+                authorityDatabase,
+                plane,
+              ),
+            ]),
+        ),
         container.adapters.openTelemetry?.metrics,
       ),
     );
     if (config.publication.recoveryEnabled) {
-      const recoveryDatabase = container.adapters.publicationRecoveryDatabase?.database;
-      if (!recoveryDatabase) throw new Error("PUBLICATION_RECOVERY_DATABASE_REQUIRED");
-    container.runtimes.jobs.register(
-      PUBLICATION_MAINTENANCE_QUEUE,
-      RECOVER_STALLED_PUBLICATIONS_JOB,
-      createPublicationRecoveryHandler(
-        new KyselyPublicationRecoveryDiscovery(recoveryDatabase as unknown as Kysely<Record<string, never>>),
-        container.runtimes.jobs,
-        async (coordinate) => {
-          // The definer function reveals only coordinates. Recheck the exact
-          // deployment under tenant RLS before selecting a target worker.
-          const visible = await authorityDatabase.transaction().execute(async tx => {
-            await sql`SELECT set_config('app.current_tenant_id',${coordinate.tenantId},true)`.execute(tx);
-            const deployment = await new KyselyPublicationAuthorityRepository(tx).getDeployment(coordinate.deploymentId);
-            if (!deployment) return null;
-            const approved = (await sql`SELECT id FROM publication.release WHERE id=${deployment.sourceReleaseId}::uuid
-              AND tenant_id=${coordinate.tenantId}::uuid AND status IN ('approved','published')`.execute(tx)).rows.length === 1;
-            return approved ? deployment : null;
-          });
-          if (!visible || visible.targetPlane !== coordinate.targetPlane ||
-            !["pending", "dispatched", "received", "staged", "verified"].includes(visible.deploymentStatus))
-            return null;
-          const database = databases[coordinate.targetPlane];
-          if (!database) throw new Error("PUBLICATION_APPLIER_DATABASE_UNAVAILABLE");
-          const principalId = await database.transaction().execute(async tx => {
-            await sql`SELECT set_config('app.current_tenant_id',${coordinate.tenantId},true)`.execute(tx);
-            const rows = (await sql<{ id: string }>`SELECT id FROM master.principal
+      const recoveryDatabase =
+        container.adapters.publicationRecoveryDatabase?.database;
+      if (!recoveryDatabase)
+        throw new Error("PUBLICATION_RECOVERY_DATABASE_REQUIRED");
+      container.runtimes.jobs.register(
+        PUBLICATION_MAINTENANCE_QUEUE,
+        RECOVER_STALLED_PUBLICATIONS_JOB,
+        createPublicationRecoveryHandler(
+          new KyselyPublicationRecoveryDiscovery(
+            recoveryDatabase as unknown as Kysely<Record<string, never>>,
+          ),
+          container.runtimes.jobs,
+          async (coordinate) => {
+            // The definer function reveals only coordinates. Recheck the exact
+            // deployment under tenant RLS before selecting a target worker.
+            const visible = await authorityDatabase
+              .transaction()
+              .execute(async (tx) => {
+                await sql`SELECT set_config('app.current_tenant_id',${coordinate.tenantId},true)`.execute(
+                  tx,
+                );
+                const deployment =
+                  await new KyselyPublicationAuthorityRepository(
+                    tx,
+                  ).getDeployment(coordinate.deploymentId);
+                if (!deployment) return null;
+                const approved =
+                  (
+                    await sql`SELECT id FROM publication.release WHERE id=${deployment.sourceReleaseId}::uuid
+              AND tenant_id=${coordinate.tenantId}::uuid AND status IN ('approved','published')`.execute(
+                      tx,
+                    )
+                  ).rows.length === 1;
+                return approved ? deployment : null;
+              });
+            if (
+              !visible ||
+              visible.targetPlane !== coordinate.targetPlane ||
+              ![
+                "pending",
+                "dispatched",
+                "received",
+                "staged",
+                "verified",
+              ].includes(visible.deploymentStatus)
+            )
+              return null;
+            const database = databases[coordinate.targetPlane];
+            if (!database)
+              throw new Error("PUBLICATION_APPLIER_DATABASE_UNAVAILABLE");
+            const principalId = await database
+              .transaction()
+              .execute(async (tx) => {
+                await sql`SELECT set_config('app.current_tenant_id',${coordinate.tenantId},true)`.execute(
+                  tx,
+                );
+                const rows = (
+                  await sql<{ id: string }>`SELECT id FROM master.principal
               WHERE tenant_id=${coordinate.tenantId}::uuid
                 AND code=${process.env["PUBLICATION_APPLIER_PRINCIPAL_CODE"] ?? "publication.worker"}
-                AND principal_type='service_account' AND status='active'`.execute(tx)).rows;
-            if (rows.length !== 1) throw new Error("PUBLICATION_APPLIER_SERVICE_PRINCIPAL_REQUIRED");
-            return rows[0]!.id;
-          });
-          return { planeKey: coordinate.targetPlane, tenantId: coordinate.tenantId,
-            principalId, scope: "tenant" as const };
-        },
-        container.adapters.openTelemetry?.metrics,
-        async (coordinate, outcome) => {
-          await audit.record({ eventCode: `publication.recovery.${outcome}`, action: "publication_recovery",
-            outcome: outcome === "enqueue_failed" ? "failure" : "success", severity: "info",
-            tenantId: coordinate.tenantId, actor: { kind: "service", principalId: SYSTEM_PRINCIPAL_ID },
-            entityType: "publication.deployment", entityId: coordinate.deploymentId,
-            metadata: { targetPlane: coordinate.targetPlane },
-          });
-        },
-      ),
-    );
+                AND principal_type='service_account' AND status='active'`.execute(
+                    tx,
+                  )
+                ).rows;
+                if (rows.length !== 1)
+                  throw new Error(
+                    "PUBLICATION_APPLIER_SERVICE_PRINCIPAL_REQUIRED",
+                  );
+                return rows[0]!.id;
+              });
+            return {
+              planeKey: coordinate.targetPlane,
+              tenantId: coordinate.tenantId,
+              principalId,
+              scope: "tenant" as const,
+            };
+          },
+          container.adapters.openTelemetry?.metrics,
+          async (coordinate, outcome) => {
+            await audit.record({
+              eventCode: `publication.recovery.${outcome}`,
+              action: "publication_recovery",
+              outcome: outcome === "enqueue_failed" ? "failure" : "success",
+              severity: "info",
+              tenantId: coordinate.tenantId,
+              actor: { kind: "service", principalId: SYSTEM_PRINCIPAL_ID },
+              entityType: "publication.deployment",
+              entityId: coordinate.deploymentId,
+              metadata: { targetPlane: coordinate.targetPlane },
+            });
+          },
+        ),
+      );
     }
     container.runtimes.jobDefinitions.push({
       code: APPLY_PUBLICATION_RELEASE_JOB,
@@ -4735,7 +6061,13 @@ function registerPublication(
       },
       ...(authorizationCompilation ? { authorizationCompilation } : {}),
       ...(compiledRuntimePublication ? { compiledRuntimePublication } : {}),
-      ...(devRuntime ? { authorizeEntityActivation: async (releaseId: string) => { await devRuntime.authorizeActivation(releaseId); } } : {}),
+      ...(devRuntime
+        ? {
+            authorizeEntityActivation: async (releaseId: string) => {
+              await devRuntime.authorizeActivation(releaseId);
+            },
+          }
+        : {}),
       database: authorityDatabase,
       authority,
       store: container.adapters.publicationArtifactStore!,
@@ -4827,13 +6159,12 @@ function registerPublication(
         jobs: container.runtimes.jobs!,
         apiEnabled: true,
         operations,
-        authorizeRollbackTarget: input => hasTenantRollbackTarget(authorityDatabase, input),
+        authorizeRollbackTarget: (input) =>
+          hasTenantRollbackTarget(authorityDatabase, input),
       });
     });
   }
 }
-
-
 
 function combineRecordCollectionScopeResolvers(
   neon: RecordCollectionScopeResolver,
@@ -4929,7 +6260,5 @@ const denyAllConsent = {
   checkAt: async () => null,
   history: async () => ({ items: [], hasMore: false }),
 } satisfies ChannelConsentService<RecordTransaction>;
-
-
 
 /** BP domain mapping stays at composition; generic metadata never knows request kinds. */

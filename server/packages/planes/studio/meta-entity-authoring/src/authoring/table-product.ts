@@ -16,7 +16,10 @@ export interface TableEntityProduct {
   readonly definition: MetaEntityGraph;
 }
 
-export function parseTableEntityProduct(value: unknown, localization?: unknown): TableEntityProduct {
+export function parseTableEntityProduct(
+  value: unknown,
+  localization?: unknown,
+): TableEntityProduct {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw Error("TABLE_PRODUCT_OBJECT_REQUIRED");
   const source = value as Record<string, unknown>;
@@ -32,12 +35,20 @@ export function parseTableEntityProduct(value: unknown, localization?: unknown):
     source.planes.some((plane) => !["studio", "neon", "mesh"].includes(plane))
   )
     throw Error("TABLE_PRODUCT_INVALID");
-  const labels = localization === undefined ? undefined : parseProductLocalization(localization);
+  const labels =
+    localization === undefined
+      ? undefined
+      : parseProductLocalization(localization);
   const hydrate = (value: unknown): unknown => {
     if (Array.isArray(value)) return value.map(hydrate);
     if (!value || typeof value !== "object") return value;
-    if ("labelKey" in value && "defaultText" in value) return labels ? labels.localize(parseEntityRuntimeLocalizedText(value)) : value;
-    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, hydrate(child)]));
+    if ("labelKey" in value && "defaultText" in value)
+      return labels
+        ? labels.localize(parseEntityRuntimeLocalizedText(value))
+        : value;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, hydrate(child)]),
+    );
   };
   const graph = hydrate(structuredClone(source.definition)) as MetaEntityGraph;
   if (
@@ -126,6 +137,8 @@ export function targetTableEntityGraph(
   plane: AuthoringPlane,
 ): MetaEntityGraph {
   const graph = structuredClone(source);
+  const permission = (code: string) =>
+    code.startsWith("studio.") ? `${plane}.${code.slice(7)}` : code;
   return {
     ...graph,
     runtimeProfiles: graph.runtimeProfiles?.map((profile) => ({
@@ -135,6 +148,7 @@ export function targetTableEntityGraph(
     operationPermissions: graph.operationPermissions?.map((binding) => ({
       ...binding,
       targetPlane: plane,
+      permissionCode: permission(binding.permissionCode),
     })),
     operationScopeBindings: graph.operationScopeBindings?.map((binding) => ({
       ...binding,
@@ -154,7 +168,18 @@ export function targetTableEntityGraph(
         ...surface,
         layoutConfig: {
           ...surface.layoutConfig,
-          authorization: { ...authorization, planeKey: plane },
+          authorization: {
+            ...authorization,
+            planeKey: plane,
+            operations: (
+              Reflect.get(authorization, "operations") as {
+                permissionCode: string;
+              }[]
+            ).map((operation) => ({
+              ...operation,
+              permissionCode: permission(operation.permissionCode),
+            })),
+          },
         },
       };
     }),

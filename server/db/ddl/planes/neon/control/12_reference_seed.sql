@@ -117,7 +117,7 @@ SELECT ot.id, p.capability, p.purpose_code,
  ) AS p(capability, purpose_code)
  WHERE ot.tenant_id IS NULL
    AND (ot.code = 'tenant' OR (ot.code = 'principal' AND p.capability = 'contact'))
-ON CONFLICT(owner_type_id,capability,purpose_code) DO NOTHING;
+ON CONFLICT (owner_type_id, capability, purpose_code) DO NOTHING;
 
 -- Canonical business-partner identity and its thin commercial roles.
 INSERT INTO control.owner_type (
@@ -172,7 +172,7 @@ SELECT owner_type.id, purpose.capability, purpose.purpose_code,
  ) AS purpose(capability, purpose_code)
  WHERE owner_type.tenant_id IS NULL
    AND owner_type.code IN ('business_partner', 'supplier', 'customer')
-ON CONFLICT(owner_type_id,capability,purpose_code) DO NOTHING;
+ON CONFLICT (owner_type_id, capability, purpose_code) DO NOTHING;
 
 INSERT INTO control.owner_type_purpose (
     owner_type_id, capability, purpose_code, created_by
@@ -189,7 +189,7 @@ SELECT owner_type.id, 'bank_account', purpose.purpose_code,
  ) AS purpose(purpose_code)
  WHERE owner_type.tenant_id IS NULL
    AND owner_type.code = 'business_partner'
-ON CONFLICT(owner_type_id,capability,purpose_code) DO NOTHING;
+ON CONFLICT (owner_type_id, capability, purpose_code) DO NOTHING;
 
 INSERT INTO control.owner_type (
     tenant_id, code, name, description, category, source_type,
@@ -245,7 +245,7 @@ SELECT ot.id, purpose.capability, purpose.purpose_code,
    AND ot.code IN (
        'legal_entity', 'company_code', 'operating_organization', 'org_unit'
    )
-ON CONFLICT(owner_type_id,capability,purpose_code) DO NOTHING;
+ON CONFLICT (owner_type_id, capability, purpose_code) DO NOTHING;
 
 INSERT INTO control.owner_type_purpose (
     owner_type_id, capability, purpose_code, created_by
@@ -266,7 +266,7 @@ SELECT ot.id, 'bank_account', purpose.purpose_code,
  ) AS purpose(purpose_code)
  WHERE ot.tenant_id IS NULL
    AND ot.code IN ('legal_entity', 'company_code')
-ON CONFLICT(owner_type_id,capability,purpose_code) DO NOTHING;
+ON CONFLICT (owner_type_id, capability, purpose_code) DO NOTHING;
 
 DO $publish$
 DECLARE seed_actor text := current_setting('app.current_principal_id',true);
@@ -427,6 +427,5 @@ DO $seed_assertions$ BEGIN
  IF EXISTS(SELECT 1 FROM control.owner_type WHERE tenant_id IS NULL AND code IN ('tenant','principal') AND (status<>'active' OR target_schema<>'master' OR target_table<>code)) THEN RAISE EXCEPTION 'Identity owner contract drift'; END IF;
 END $seed_assertions$;
 
--- Local Increment A purchasing activation policy; payment readiness remains independently enforceable.
-INSERT INTO control.supplier_activation_policy(id,tenant_id,operating_organization_id,company_code_id,version,operation_code,rationale,effective_from,published_by)
-VALUES('e008eb56-7d4a-47f6-a122-b66149330d71','44444444-4444-4444-8444-444444444444','a478f9c0-8226-5d22-9599-b8fb27a45180','793b6cb3-3c61-57c0-9562-2cbc288bd4cf',1,'purchasing','Local supplier pilot activates purchasing eligibility. Payment use independently requires approved commercial setup and a verified remittance bank.','2026-09-14','cca94907-7519-5871-8e3c-6b11aa545c93') ON CONFLICT DO NOTHING;
+-- Tenant-specific supplier pilot policy is retained under
+-- scripts/operations/reference-seeds/neon-supplier-pilot.sql, not fresh foundation.

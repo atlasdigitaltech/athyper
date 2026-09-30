@@ -70,6 +70,9 @@ export function registerEntityListRoutes(
         context,
         entityCodeParameter(request.params["entityCode"]),
         formMode(request.query["mode"]),
+        request.query["recordId"] === undefined
+          ? undefined
+          : recordId(request.query["recordId"]),
       ),
   );
   registerReadRoute(
@@ -86,8 +89,18 @@ export function registerEntityListRoutes(
         timing,
       ),
   );
-  registerReadRoute(application, options, contracts.detailRead, (request, context, timing) =>
-    options.lists.detailRead(context, entityCodeParameter(request.params["entityCode"]), recordId(request.params["recordId"]), timing));
+  registerReadRoute(
+    application,
+    options,
+    contracts.detailRead,
+    (request, context, timing) =>
+      options.lists.detailRead(
+        context,
+        entityCodeParameter(request.params["entityCode"]),
+        recordId(request.params["recordId"]),
+        timing,
+      ),
+  );
   registerReadRoute(
     application,
     options,
@@ -146,11 +159,14 @@ function registerReadRoute(
       const stages: string[] = [];
       const timing = (stage: string, durationMs: number) => {
         stages.push(`${stage};dur=${durationMs.toFixed(1)}`);
-        if (options.diagnostics === true) response.setHeader("Server-Timing", stages.join(", "));
+        if (options.diagnostics === true)
+          response.setHeader("Server-Timing", stages.join(", "));
       };
       try {
         response.setHeader("Cache-Control", "private, no-store");
-        const result = await withReadEvidence(() => read(request, options.readContext(response), timing));
+        const result = await withReadEvidence(() =>
+          read(request, options.readContext(response), timing),
+        );
         timing("total", performance.now() - started);
         response.json(result);
       } catch (error) {
@@ -283,7 +299,17 @@ const query = {
         },
       ],
     },
-    recordIds: { oneOf: [{ type: "string" }, { type: "array", minItems: 1, maxItems: 100, items: { type: "string" } }] },
+    recordIds: {
+      oneOf: [
+        { type: "string" },
+        {
+          type: "array",
+          minItems: 1,
+          maxItems: 100,
+          items: { type: "string" },
+        },
+      ],
+    },
     countMode: {
       type: "string",
       enum: ["none", "cached", "approximate", "exact"],
@@ -337,7 +363,10 @@ const contracts = {
         type: "object",
         additionalProperties: false,
         required: ["mode"],
-        properties: { mode: { enum: ["create", "edit"] } },
+        properties: {
+          mode: { enum: ["create", "edit"] },
+          recordId: { type: "string", format: "uuid" },
+        },
       },
     },
     responses: {
@@ -374,13 +403,21 @@ const contracts = {
     method: "get",
     path: "/api/entity-runtime/:entityCode/records/:recordId/detail",
     operationId: "entityDetail.read",
-    summary: "Read an authorized detail descriptor and projected record together",
+    summary:
+      "Read an authorized detail descriptor and projected record together",
     tags: ["Entity runtime"],
     authenticated: true,
     request: {},
     responses: {
-      200: { description: "Authorized detail read", body: { type: "object", additionalProperties: false,
-        required: ["descriptor", "record"], properties: { descriptor: body, record: body } } },
+      200: {
+        description: "Authorized detail read",
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["descriptor", "record"],
+          properties: { descriptor: body, record: body },
+        },
+      },
       403: { description: "Forbidden" },
       404: { description: "Record not found" },
       409: { description: "Detail operation unavailable" },

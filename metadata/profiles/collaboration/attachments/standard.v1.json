@@ -1,0 +1,38 @@
+{
+  "schema": "athyper.capability-profile/1",
+  "profileCode": "platform.collaboration.attachments.standard",
+  "profileVersion": 1,
+  "capabilityKey": "attachments",
+  "defaults": {
+    "maxFileBytes": 5242880,
+    "maxBatchCount": 3,
+    "allowedContentTypes": [
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "text/plain"
+    ],
+    "categories": [],
+    "folders": true,
+    "versioning": true,
+    "rename": true,
+    "processing": {
+      "preview": true,
+      "extraction": true,
+      "search": true,
+      "renditions": ["thumbnail", "pdf", "image"]
+    }
+  },
+  "permittedOverrides": {
+    "maxFileBytes": { "minimum": 1, "maximum": 5242880 },
+    "maxBatchCount": { "minimum": 1, "maximum": 3 },
+    "allowedContentTypes": {
+      "allowedSubset": [
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "text/plain"
+      ]
+    }
+  }
+}

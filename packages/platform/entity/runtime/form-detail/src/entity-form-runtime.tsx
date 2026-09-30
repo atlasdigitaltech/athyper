@@ -19,7 +19,10 @@ import { Button, Card, InlineStatus } from "@athyper/platform-ui";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { FormFields } from "./field-input";
 import { isFormDirty } from "./form-dirty";
-import { isUntouchedOptionalCreateField, normalizeFieldValue } from "./form-values";
+import {
+  isUntouchedOptionalCreateField,
+  normalizeFieldValue,
+} from "./form-values";
 import { useAsyncResource } from "./use-async-resource";
 
 type FormValues = Readonly<Record<string, unknown>>;
@@ -53,7 +56,7 @@ export function EntityFormRuntime({
     `${entityCode}:${mode}:${recordId ?? ""}`,
     async () => {
       const [descriptor, record] = await Promise.all([
-        entityDescriptorClient.form(client, entityCode, mode),
+        entityDescriptorClient.form(client, entityCode, mode, recordId),
         recordId
           ? entityDescriptorClient.record(client, entityCode, recordId)
           : Promise.resolve(undefined),
@@ -62,7 +65,13 @@ export function EntityFormRuntime({
     },
     [client, entityCode, mode, recordId],
   );
-  const descriptor = useMemo(() => loaded.data?.descriptor ? localizeEntityLabels(loaded.data.descriptor, intl) : undefined, [loaded.data?.descriptor, intl]);
+  const descriptor = useMemo(
+    () =>
+      loaded.data?.descriptor
+        ? localizeEntityLabels(loaded.data.descriptor, intl)
+        : undefined,
+    [loaded.data?.descriptor, intl],
+  );
   const record = loaded.data?.record;
 
   const [values, setValues] = useState<FormValues>({});
@@ -86,7 +95,8 @@ export function EntityFormRuntime({
     setSaveStatus("");
   }, [loaded.data]);
 
-  const dirty = !!descriptor && isFormDirty(descriptor.fields, values, baseline);
+  const dirty =
+    !!descriptor && isFormDirty(descriptor.fields, values, baseline);
   useAtlasBusinessContextPublisher(
     recordId
       ? {
@@ -175,11 +185,18 @@ export function EntityFormRuntime({
   }
 
   const fields = (
-    <FormFields fields={descriptor.fields} values={values} onChange={setValue} />
+    <FormFields
+      fields={descriptor.fields}
+      values={values}
+      onChange={setValue}
+    />
   );
   const submitButton = (
     <Button type="submit" loading={saving}>
-      {intl.message(descriptor.mode === "create" ? "form.submitCreate" : "form.submitEdit", { entity: descriptor.entity.label })}
+      {intl.message(
+        descriptor.mode === "create" ? "form.submitCreate" : "form.submitEdit",
+        { entity: descriptor.entity.label },
+      )}
     </Button>
   );
   if (contentOnly)
@@ -200,8 +217,16 @@ export function EntityFormRuntime({
             : "form.contextEdit",
           { entity: descriptor.entity.label },
         )}
-        title={intl.message(descriptor.mode === "create" ? "form.titleCreate" : "form.titleEdit", { entity: descriptor.entity.label })}
-        description={intl.message(descriptor.mode === "create" ? "form.descriptionCreate" : "form.descriptionEdit", { entity: descriptor.entity.label })}
+        title={intl.message(
+          descriptor.mode === "create" ? "form.titleCreate" : "form.titleEdit",
+          { entity: descriptor.entity.label },
+        )}
+        description={intl.message(
+          descriptor.mode === "create"
+            ? "form.descriptionCreate"
+            : "form.descriptionEdit",
+          { entity: descriptor.entity.label },
+        )}
         metadata={
           <span>
             {intl.message("form.release", {

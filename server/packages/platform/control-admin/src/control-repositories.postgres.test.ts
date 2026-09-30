@@ -776,9 +776,28 @@ describe.runIf(enabled)(
       }
     });
     it("reads seeded bank rules without losing direction", async () => {
-      const rules = await repositories.bankValidation.require(plane).list();
-      expect(rules.length).toBeGreaterThan(0);
-      expect(rules.some((r) => r.direction === "outbound")).toBe(true);
+      const repo = repositories.bankValidation.require(plane);
+      const rules = await repo.listApplicable({
+        countryCode: "DE",
+        railCode: "swift",
+        direction: "outbound",
+      });
+      expect(rules).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: "DE.SWIFT", direction: "outbound" }),
+        ]),
+      );
+      expect(
+        await repo.listApplicable({
+          countryCode: "DE",
+          railCode: "swift",
+          direction: "inbound",
+        }),
+      ).toEqual([]);
+      // Capture schemas have native requirements this API cannot represent.
+      await expect(repo.list()).rejects.toMatchObject({
+        code: "CONTROL_ADMIN_BANK_NATIVE_RULE_UNSUPPORTED",
+      });
     });
     if (plane === "studio")
       it("publishes bank fixtures with version checks", async () => {
@@ -815,7 +834,10 @@ describe.runIf(enabled)(
         const repo = repositories.bankValidation.require(plane);
         expect((await repo.publish(rule, actor, tenant)).version).toBe(1);
         expect(
-          verifyBankRules(await repo.list(), rule.fixtures[0]!.input).valid,
+          verifyBankRules(
+            await repo.listApplicable(rule.fixtures[0]!.input),
+            rule.fixtures[0]!.input,
+          ).valid,
         ).toBe(true);
         await expect(repo.publish(rule, actor, tenant)).rejects.toMatchObject({
           statusCode: 409,

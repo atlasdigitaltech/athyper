@@ -1,22 +1,34 @@
 import { expect, it } from "vitest";
-import { configurationEdit } from "../../../../../../../packages/planes/studio/business-partner/src/composition-configuration";
-import { configurationFixture } from "../../../../../../../packages/planes/studio/business-partner/src/composition-configuration.fixture";
 import {
-  validateGraph,
   compileGraph,
   runContractTests,
-} from "../deterministic";
-it("validates and compiles qualified rule and workflow edits through authoring", () => {
-  let graph = configurationEdit(
-    configurationFixture,
-    "surfaceFieldBindings",
-    "placement-role",
-    "required",
-    true,
+  validateGraph,
+} from "../deterministic.js";
+import { authoringGraph } from "../testing/authoring-graph.js";
+
+it("validates and compiles declarative field and flow configuration without a product editor", () => {
+  const before = authoringGraph();
+  const graph = {
+    ...before,
+    surfaceFieldBindings: before.surfaceFieldBindings!.map((binding) => ({
+      ...binding,
+      showRequiredIndicator: true,
+    })),
+    flows: before.flows!.map((flow) => ({ ...flow, navigationMode: "free" })),
+    flowSteps: before.flowSteps!.map((step) => ({ ...step, isOptional: true })),
+  };
+  expect(validateGraph(graph).issues).toEqual([]);
+  expect(runContractTests(graph).passed).toBe(true);
+  expect(compileGraph(graph).contractHash).not.toBe(
+    compileGraph(before).contractHash,
   );
-  graph = configurationEdit(graph, "flows", "flow", "navigationMode", "free");
-  graph = configurationEdit(graph, "flowSteps", "step", "isOptional", true);
-  expect(validateGraph(graph as never).issues).toEqual([]);
-  expect(runContractTests(graph as never).passed).toBe(true);
-  expect(compileGraph(graph as never).contractHash).toBeTruthy();
+  expect(
+    validateGraph({
+      ...graph,
+      flowSteps: graph.flowSteps.map((step) => ({
+        ...step,
+        entitySurfaceId: "missing",
+      })),
+    }).issues.length,
+  ).toBeGreaterThan(0);
 });
