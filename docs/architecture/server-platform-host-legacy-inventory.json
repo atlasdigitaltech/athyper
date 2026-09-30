@@ -18,7 +18,7 @@
     "compose-services:new": 51,
     "configuration:deferred": 113,
     "configuration:migrated": 162,
-    "configuration:new": 226,
+    "configuration:new": 227,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 98,
@@ -4095,6 +4095,18 @@
       "disposition": "migrated",
       "owner": "platform-host",
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+    },
+    {
+      "identity": "configuration:entity_read_diagnostics",
+      "category": "configuration",
+      "key": "entity_read_diagnostics",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/shared/entity-runtime/http-registrars.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "configuration:entity_release_review_config_path",
