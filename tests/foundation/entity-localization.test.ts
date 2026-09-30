@@ -85,6 +85,15 @@ describe("localized entity vertical slice",()=>{
     assert.equal(intl("ms").message("list.searchLabel",{entity:"Negara"}),"Cari Negara");
     assert.equal(intl("ar").message("list.activeFilters",{count:2}),"2 عوامل تصفية نشطة");
   });
+  it("preserves negative decimals, negative zero and locale bidi signs", () => {
+    for (const locale of ["en", "ms", "ar", "fa"]) {
+      for (const value of ["-0.25", "-0", "-1.5", "0.25"]) {
+        assert.equal(formatEntityValue(value, { valueKind: "decimal" }, intl(locale)),
+          new Intl.NumberFormat(locale, { numberingSystem: intl(locale).localization.numberingSystem }).format(Number(value)));
+      }
+    }
+    assert.equal(formatEntityValue("-0.2500", { valueKind: "money" }, intl("en")), "-0.2500");
+  });
   it("preserves only validated metadata status tones in list descriptors",async()=>{
     const descriptor=await referenceList();
     const key=descriptor.fields[0]!.key;

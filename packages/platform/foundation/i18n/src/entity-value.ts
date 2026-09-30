@@ -64,7 +64,9 @@ export function formatExactDecimal(value: string, intl: IntlRuntime): string {
     numberingSystem: intl.localization.numberingSystem,
     maximumFractionDigits: 0,
   });
-  const integer = formatter.format(BigInt(`${negative ? "-" : ""}${whole}`));
+  // Number -0 preserves the locale's sign and bidi literals; BigInt -0 does not.
+  const integer = formatter.format(negative && BigInt(whole!) === 0n
+    ? -0 : BigInt(`${negative ? "-" : ""}${whole}`));
   if (fraction === undefined) return integer;
   const decimal = new Intl.NumberFormat(intl.localization.formatLocale, { numberingSystem: intl.localization.numberingSystem }).formatToParts(1.1).find(part => part.type === "decimal")?.value ?? ".";
   const digits = Array.from({ length: 10 }, (_, digit) => new Intl.NumberFormat(intl.localization.formatLocale, { numberingSystem: intl.localization.numberingSystem, useGrouping: false }).format(digit));

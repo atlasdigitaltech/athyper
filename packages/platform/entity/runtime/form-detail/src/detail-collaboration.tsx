@@ -9,6 +9,7 @@ import { EntityCollaborationSurface } from "./collaboration-surface";
 import type { ActivityPresentation } from "./activity-comparison-model";
 import { ActivityWorkspace } from "./activity-workspace";
 import { CompiledEntitySectionContent } from "./compiled-section-content";
+import { sectionAvailability } from "./section-availability";
 import { mergeSectionPages } from "./use-section-resource";
 
 type Kind = "comments" | "attachments";
@@ -47,6 +48,7 @@ function CapabilityContent({ entityCode, recordId, kind }: { entityCode: string;
   const client = useApiClient();
   const [resource, setResource] = useState<EntityRuntimeSectionResource>(), [error, setError] = useState(false), [busy, setBusy] = useState(false);
   const request = useRef<AbortController | undefined>(undefined);
+  const failedCursor = useRef<string | undefined>(undefined);
   const load = async (cursor?: string) => {
     request.current?.abort();
     const controller = new AbortController(); request.current = controller;
@@ -56,18 +58,25 @@ function CapabilityContent({ entityCode, recordId, kind }: { entityCode: string;
     try {
       const next = await entityRuntimeClient.collaboration(client, { entityCode, recordId, kind, cursor, signal: controller.signal });
       if (!controller.signal.aborted) setResource(previous => cursor && previous?.releaseHash === next.releaseHash ? mergeSectionPages(previous, next) : next);
-    } catch {
-      if (!controller.signal.aborted) { setResource(undefined); setError(true); }
+    } catch (cause) {
+      if (!controller.signal.aborted) {
+        failedCursor.current = cursor;
+        // Retain drafts on transient failures, but clear revoked/context-bound data.
+        if (sectionAvailability(cause) || (cause as { status?: number } | null)?.status === 401)
+          setResource(undefined);
+        setError(true);
+      }
     } finally { if (!controller.signal.aborted) setBusy(false); }
   };
   useEffect(() => { setResource(undefined); void load(); return () => request.current?.abort(); }, [client, entityCode, recordId, kind]);
-  if (error) return <div role="status">{intl.message("collaboration.unavailable")}<Button onClick={() => void load()}>{intl.message("action.retry")}</Button></div>;
+  const failure = error ? <div role="status">{intl.message("collaboration.unavailable")}<Button disabled={busy} onClick={() => void load(failedCursor.current)}>{intl.message("action.retry")}</Button></div> : null;
+  if (!resource && error) return failure;
   if (!resource) return <p role="status">{intl.message("collaboration.loading")}</p>;
-  return <CompiledEntitySectionContent resource={resource} entityCode={entityCode} recordId={recordId} onChanged={() => void load()}
+  return <>{failure}<CompiledEntitySectionContent key="workspace" resource={resource} entityCode={entityCode} recordId={recordId} onChanged={() => void load()}
     onLoadThreadPage={(threadRootId, cursor) => entityRuntimeClient.collaboration(client, { entityCode, recordId, kind, threadRootId, cursor })}
     onLoadMentionsPage={(cursor, signal) => entityRuntimeClient.collaboration(client, { entityCode, recordId, kind, commentFilter: "mentions", cursor, signal })}
     loadingMore={busy} onLoadMore={() => {
       const data = resource.data as { nextCursor?: unknown };
       if (typeof data?.nextCursor === "string") void load(data.nextCursor);
-    }} />;
+    }} /></>;
 }

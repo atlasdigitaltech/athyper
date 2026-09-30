@@ -1,4 +1,5 @@
 "use client";
+import { groupedRows } from "./grouped-rows";
 import { SurfaceErrorBoundary } from "@athyper/platform-ui";
 import { rollbackBookmarks } from "./bookmark-state";
 import { entityLocationSearch } from "./entity-location";
@@ -4172,13 +4173,13 @@ function EntityRows({
       else next.add(label);
       return next;
     });
-  const groupHeading = (item: { label: string; count: number }) => (
+  const groupHeading = (item: { key: string; label: string; count: number }) => (
     <button
       type="button"
       className="a-entity-list__group-toggle"
-      aria-expanded={!collapsedGroups.has(item.label)}
-      aria-label={`${collapsedGroups.has(item.label) ? "Expand" : "Collapse"} ${item.label} group`}
-      onClick={() => toggleGroup(item.label)}
+      aria-expanded={!collapsedGroups.has(item.key)}
+      aria-label={`${collapsedGroups.has(item.key) ? "Expand" : "Collapse"} ${item.label} group`}
+      onClick={() => toggleGroup(item.key)}
     >
       <ChevronDownIcon size={16} />
       <strong>{item.label}</strong>
@@ -4303,9 +4304,9 @@ function EntityRows({
     return group ? (
       <div className="a-entity-list__groups">
         {groups.map((item) => (
-          <section key={item.label}>
+          <section key={item.key}>
             <h2>{groupHeading(item)}</h2>
-            {collapsedGroups.has(item.label) ? null : cards(item.rows)}
+            {collapsedGroups.has(item.key) ? null : cards(item.rows)}
           </section>
         ))}
       </div>
@@ -4497,13 +4498,13 @@ function EntityRows({
             ? groups.flatMap((item) => [
                 <tr
                   className="a-entity-list__group-row"
-                  key={`group-${item.label}`}
+                  key={`group-${item.key}`}
                 >
                   <th colSpan={columnCount} scope="rowgroup">
                     {groupHeading(item)}
                   </th>
                 </tr>,
-                ...(collapsedGroups.has(item.label)
+                ...(collapsedGroups.has(item.key)
                   ? []
                   : tableRows(item.rows)),
               ])
@@ -5075,40 +5076,6 @@ function listHeaderInformation(
       ) : null}
     </>
   );
-}
-function groupedRows(
-  page: EntityListResultV1,
-  group: string | undefined,
-  descriptor: EntityListDescriptorV1,
-  intl: ReturnType<typeof useEntityI18n>,
-): readonly {
-  readonly label: string;
-  readonly count: number;
-  readonly rows: readonly EntityListRowV1[];
-}[] {
-  if (!group)
-    return [{ label: intl.message("list.group.allRecords"), count: page.rows.length, rows: page.rows }];
-  const field = descriptor.fields.find((candidate) => candidate.key === group),
-    authoritativeCounts = new Map(
-      (page.groups ?? []).map((bucket) => [
-        formatFieldValue(bucket.value, field, intl),
-        bucket.count ?? 0,
-      ]),
-    ),
-    buckets = new Map<string, EntityListRowV1[]>();
-  for (const row of page.rows) {
-    const label = formatFieldValue(row.values[group], field, intl),
-      bucket = buckets.get(label) ?? [];
-    bucket.push(row);
-    buckets.set(label, bucket);
-  }
-  return [...buckets]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([label, grouped]) => ({
-      label,
-      count: authoritativeCounts.get(label) ?? grouped.length,
-      rows: grouped,
-    }));
 }
 function nextSort(
   current: readonly ListSortV1[],

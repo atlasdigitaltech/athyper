@@ -26,7 +26,7 @@ const bundle = build({
   plugins: [{ name: "session-fixture", setup(builder) {
     builder.onResolve({ filter: /^@athyper\/platform-shell-app-foundation$/ }, () => ({ path: "session", namespace: "fixture" }));
     builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `
-      const client={request:async(op,input)=>{const path=typeof op.path==='function'?op.path(input?.params??{}):op.path;window.requests.push(path);if(window.denied)throw Error('Forbidden');const kind=path.endsWith('/attachments')?'attachments':'comments';return {releaseId:'release',releaseHash:'a'.repeat(64),revision:'1',sectionKey:kind,presentation:{rendererKey:'platform.'+kind+'.v1',fields:[],childCollections:[]},capability:{schemaVersion:1,layouts:['drawer','content'],actions:(window.writable?['read','create','finalize']:['read']).map(key=>({key,concurrency:'none',idempotency:key==='read'?'none':'required'})),maxTextLength:5000,maxAttachments:3,maxFileBytes:5242880,maxBatchCount:3,allowedContentTypes:['text/plain'],maxDepth:0,allowedAudiences:['private'],defaultAudience:'private'},data:{items:window.commentItems??[],totalCount:window.commentItems?.length??0}}}};
+      const client={request:async(op,input)=>{const path=typeof op.path==='function'?op.path(input?.params??{}):op.path;window.requests.push(path);(window.requestCursors??=[]).push(input?.query?.cursor);if(window.denied)throw Object.assign(Error('Forbidden'),{status:403});if(window.readFailure)throw Error('Unavailable');const kind=path.endsWith('/attachments')?'attachments':'comments';return {releaseId:'release',releaseHash:'a'.repeat(64),revision:'1',sectionKey:kind,presentation:{rendererKey:'platform.'+kind+'.v1',fields:[],childCollections:[]},capability:{schemaVersion:1,layouts:['drawer','content'],actions:(window.writable?['read','create','finalize']:['read']).map(key=>({key,concurrency:'none',idempotency:key==='read'?'none':'required'})),maxTextLength:5000,maxAttachments:3,maxFileBytes:5242880,maxBatchCount:3,allowedContentTypes:['text/plain'],maxDepth:0,allowedAudiences:['private'],defaultAudience:'private'},data:{items:window.commentItems??[],nextCursor:window.nextCursor,totalCount:window.commentItems?.length??0}}}};
       export const useApiClient=()=>client;
       export const useSessionIdentity=()=>({scope:{tenantId:window.testTenant,principalId:'actor',authEpoch:1}});
       export const useToasts=()=>({push:()=>{}});
@@ -411,4 +411,26 @@ for (const width of [390, 768, 1440]) for (const theme of ['light','dark']) test
  }
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:`/tmp/record-tools-${width}-${theme}.png`});
+});
+
+test("failed comment pagination preserves draft and retries the same page; denial clears content", async ({page}) => {
+  await mount(page, ["comments"]);
+  await page.evaluate(() => Object.assign(window, { writable: true, nextCursor: "page-2" }));
+  await page.getByRole("button", { name: "Comments", exact: true }).click();
+  await page.locator("[data-action-dock-trigger]:visible").click();
+  const editor = page.locator('[contenteditable="true"]').first();
+  await editor.fill("Keep this draft after a failed page");
+  await page.evaluate(() => { (window as any).readFailure = true; });
+  await page.getByRole("button", { name: /Load more comments/i }).click();
+  await expect(page.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
+  await expect(editor).toHaveText("Keep this draft after a failed page");
+  await page.evaluate(() => { (window as any).readFailure = false; });
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
+  await expect(editor).toHaveText("Keep this draft after a failed page");
+  expect(await page.evaluate(() => (window as any).requestCursors.slice(-2))).toEqual(["page-2", "page-2"]);
+  await page.evaluate(() => { (window as any).denied = true; });
+  await page.getByRole("button", { name: /Load more comments/i }).click();
+  await expect(page.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
+  await expect(editor).toHaveCount(0);
 });
