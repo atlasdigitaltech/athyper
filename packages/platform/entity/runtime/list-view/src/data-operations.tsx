@@ -1,4 +1,5 @@
 "use client";
+import { useEntityNavigate } from "./entity-navigation";
 
 import type { EntityListDescriptorV1, EntityListResultV1, EntityListRowV1, EntityListScopeCoordinateV1, ListLocationStateV1, RecordExportFormat, RecordImportFormat } from "@athyper/contract-platform-entity-list";
 import { beginRecordImportOperation, commitRecordImportOperation, completeRecordImportFileOperation,downloadRecordImportWorkbookTemplateOperation,prepareRecordImportFileOperation, previewRecordImportOperation, requestRecordExportOperation, validateRecordImportOperation, type HttpClient, type RecordImportPreviewReceipt } from "@athyper/platform-api-client";
@@ -18,6 +19,7 @@ const transferActivityHref = "/operations/data-transfers";
 export interface DataOperationsControlProps { readonly client: HttpClient; readonly descriptor: EntityListDescriptorV1; readonly state: ListLocationStateV1; readonly page?: EntityListResultV1; readonly selectedRows: readonly EntityListRowV1[]; readonly scopeCoordinate?: EntityListScopeCoordinateV1; readonly activeViewName?: string; readonly onStatus: (status: string) => void; readonly open: boolean; readonly launch: DataOperationLaunch; readonly onOpenChange: (open: boolean) => void; }
 
 export function DataOperationsControl(props: DataOperationsControlProps) {
+  const navigate = useEntityNavigate();
   const policy = props.descriptor.dataOperations;
   const [requestedExportScope, setRequestedExportScope] = useState<Scope>();
   if (!policy || !hasVisibleOperation(policy)) return null;
@@ -29,8 +31,8 @@ export function DataOperationsControl(props: DataOperationsControlProps) {
   return <>
     <Dialog open={pickerOpen} onOpenChange={(open) => { if (!open) close(); }}><DialogContent title="Data operations" description="Import authorized records or export a precisely defined result set." className="a-entity-list__data-dialog"><div className="a-entity-list__dialog-body a-entity-list__data-options">
       <section><h3>Export records</h3><OperationButton label="Selected records" count={selectedCount} operation={policy.export.selected} disabled={!selectedCount} onClick={() => setRequestedExportScope("selected")}/><OperationButton label="All filtered records" count={total} operation={policy.export.filtered} onClick={() => setRequestedExportScope("filtered")}/><OperationButton label="Current page" count={pageCount} operation={policy.export.currentPage} disabled={!pageCount} onClick={() => setRequestedExportScope("page")}/>{policy.export.all.state !== "hidden" ? <OperationButton label="Entire authorized entity" operation={policy.export.all} onClick={() => setRequestedExportScope("all")}/> : null}</section>
-      {hasVisibleImport(policy) ? <section><h3>Import records</h3><OperationButton label="Import from file" operation={effectiveImportLaunch(policy)} onClick={() => window.location.assign(guidedImportHref(props.descriptor.entity.code, props.scopeCoordinate))}/><OperationButton label="Download import template" operation={policy.import.downloadTemplate} onClick={() => void downloadTemplate(props.client,props.descriptor, policy.import.defaultFormat).catch(cause=>props.onStatus(cause instanceof Error?cause.message:"Template download failed"))}/></section> : null}
-      <section><h3>Recent Jobs</h3><Button variant="secondary" size="small" onClick={() => window.location.assign(transferActivityHref)}>View imports and exports</Button></section>
+      {hasVisibleImport(policy) ? <section><h3>Import records</h3><OperationButton label="Import from file" operation={effectiveImportLaunch(policy)} onClick={() => navigate(guidedImportHref(props.descriptor.entity.code, props.scopeCoordinate))}/><OperationButton label="Download import template" operation={policy.import.downloadTemplate} onClick={() => void downloadTemplate(props.client,props.descriptor, policy.import.defaultFormat).catch(cause=>props.onStatus(cause instanceof Error?cause.message:"Template download failed"))}/></section> : null}
+      <section><h3>Recent Jobs</h3><Button variant="secondary" size="small" onClick={() => navigate(transferActivityHref)}>View imports and exports</Button></section>
     </div><div className="a-entity-list__dialog-actions"><DialogClose className="a-button a-button--secondary a-button--small">Close</DialogClose></div></DialogContent></Dialog>
     <ExportDialog {...props} open={props.open && Boolean(exportScope)} onOpenChange={(open) => { if (!open) close(); }} initialScope={exportScope ?? "filtered"}/>
   </>;
@@ -84,6 +86,7 @@ function scopeChoices(policy: EntityListDescriptorV1["dataOperations"] extends i
 }
 
 export function ImportWizard({ client, descriptor, scopeCoordinate, open, onOpenChange, onStatus }: { readonly client: HttpClient; readonly descriptor: EntityListDescriptorV1; readonly scopeCoordinate?: EntityListScopeCoordinateV1; readonly open: boolean; readonly onOpenChange: (value: boolean) => void; readonly onStatus: (value: string) => void }) {
+  const navigate = useEntityNavigate();
   const policy = descriptor.dataOperations!.import;
   const operationPolicy=(value:ImportOperation)=>policy[value]??{state:"hidden"as const,requiresPreflight:false,requiresApproval:false};
   const operations = (["create", "update", "upsert","delete","replace"] as const).filter((value) => operationPolicy(value).state !== "hidden"), initialOperation = operations.find((value) => operationPolicy(value).state === "enabled") ?? "create";
@@ -100,7 +103,7 @@ export function ImportWizard({ client, descriptor, scopeCoordinate, open, onOpen
     {step === "map" ? <><p><strong>{file?.name}</strong> · inspected securely on the server</p><div className="a-entity-list__transfer-summary"><strong>Governed file intake</strong><span>{format==="xlsx"?"The Data worksheet":"Column headers"} must use the field keys supplied in the downloaded template.</span><span>The file will be quarantined, malware-scanned, structurally parsed, and size/row limited before validation.</span>{policy.draftOnly?<span>Studio contract input creates or updates governed drafts.</span>:null}</div><Button size="small" loading={busy} disabled={!file} onClick={validate}>Upload and validate {formatLabel(format)}</Button></> : null}
     {step === "validate" ? <ValidationSummary preview={preview}/>: null}
     {step === "review" ? <><ValidationSummary preview={preview}/><div className="a-entity-list__transfer-summary"><strong>Dry-run summary</strong><span>{operation === "create" ? "Creates" : operation === "update" ? "Updates" : "Creates or updates"}: {preview?.validCount ?? 0}</span><span>Skipped: 0</span><span>Errors: {preview?.invalidCount ?? 0}</span></div></> : null}
-    {step === "results" ? <div className="a-entity-list__transfer-summary"><strong>Import queued</strong><span>The permanent receipt and downloadable results will appear in notifications when processing completes.</span><Button variant="secondary" size="small" onClick={() => window.location.assign(transferActivityHref)}>View imports and exports</Button></div> : null}
+    {step === "results" ? <div className="a-entity-list__transfer-summary"><strong>Import queued</strong><span>The permanent receipt and downloadable results will appear in notifications when processing completes.</span><Button variant="secondary" size="small" onClick={() => navigate(transferActivityHref)}>View imports and exports</Button></div> : null}
     {error ? <p role="alert" className="a-entity-list__transfer-error">{error}</p> : null}
   </div><div className="a-entity-list__dialog-actions"><DialogClose className="a-button a-button--secondary a-button--small">{step === "results" ? "Close" : "Cancel"}</DialogClose>{step === "validate" ? <Button size="small" loading={busy} disabled={Boolean(preview?.invalidCount)} onClick={review}>Review import</Button> : null}{step === "review" ? <Button size="small" loading={busy} disabled={Boolean(preview?.invalidCount)} onClick={commit}>Start import</Button> : null}</div></DialogContent></Dialog>;
 }

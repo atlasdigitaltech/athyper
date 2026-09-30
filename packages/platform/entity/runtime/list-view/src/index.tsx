@@ -1,4 +1,5 @@
 "use client";
+import { EntityLink, EntityNavigationProvider, useEntityNavigate } from "./entity-navigation";
 import { groupedRows } from "./grouped-rows";
 import { SurfaceErrorBoundary } from "@athyper/platform-ui";
 import { rollbackBookmarks } from "./bookmark-state";
@@ -347,18 +348,21 @@ export function EntityListRuntime(props: EntityListRuntimeProps) {
   const [selection, setSelection] = useState<{
     entityCode: string;
     value?: EntityListScopeCoordinateV1;
+    parentScope: string;
   }>();
+  const parentScope = JSON.stringify(props.scopeCoordinate ?? null);
+  useEffect(() => setSelection(undefined), [props.entityCode, parentScope]);
   const effective = {
     ...props,
     scopeCoordinate:
-      selection?.entityCode === props.entityCode
+      !props.onScopeCoordinateChange && selection?.entityCode === props.entityCode && selection.parentScope === parentScope
         ? selection.value
         : props.scopeCoordinate,
     onScopeCoordinateChange: (value: EntityListScopeCoordinateV1 | undefined) =>
-      setSelection({ entityCode: props.entityCode, value }),
+      props.onScopeCoordinateChange ? props.onScopeCoordinateChange(value) : setSelection({ entityCode: props.entityCode, value, parentScope }),
   };
   return (
-    <SurfaceErrorBoundary
+    <EntityNavigationProvider navigate={props.onNavigate}><SurfaceErrorBoundary
       resetKey={props.entityCode}
       message={intl.message("error.unavailable")}
       retryLabel={intl.message("entity.retry")}
@@ -368,7 +372,7 @@ export function EntityListRuntime(props: EntityListRuntimeProps) {
       ) : (
         <EntityCollectionRuntime {...effective} />
       )}
-    </SurfaceErrorBoundary>
+    </SurfaceErrorBoundary></EntityNavigationProvider>
   );
 }
 function EntityApplicationRuntime(props: EntityListRuntimeProps) {
@@ -538,26 +542,13 @@ function EntityApplicationContent({
                       ? resolveEntityText(action.localizedLabel, locale)
                       : action.label;
                     return action.state === "enabled" && action.href ? (
-                      <a
+                      <EntityLink
                         key={action.key}
                         className={`a-button a-button--${action.placement}`}
                         href={action.href}
-                        onClick={(event) => {
-                          if (
-                            onNavigate &&
-                            event.button === 0 &&
-                            !event.metaKey &&
-                            !event.ctrlKey &&
-                            !event.shiftKey &&
-                            !event.altKey
-                          ) {
-                            event.preventDefault();
-                            onNavigate(action.href!);
-                          }
-                        }}
                       >
                         {label}
-                      </a>
+                      </EntityLink>
                     ) : (
                       <span
                         className="a-entity-list__unavailable-action"
@@ -655,6 +646,8 @@ function EntityCollectionRuntime({
     );
   const [state, setState] = useState<ListLocationStateV1>();
   const [page, setPage] = useState<EntityListResultV1>();
+  const [pageState, setPageState] = useState<ListLocationStateV1>();
+  const [loadedClient, setLoadedClient] = useState<HttpClient>();
   const [pageContextKey, setPageContextKey] = useState<string>();
   const [error, setError] = useState<ApiTransportError>();
   const [loading, setLoading] = useState(true);
@@ -741,6 +734,7 @@ function EntityCollectionRuntime({
     setPage(undefined);
     setCursorHistory([]);
     setLoadedAuthorityKey(undefined);
+    setLoadedClient(undefined);
     setSelectedIds(new Set());
     setAllMatchingSelected(false);
     setDataOperationsLaunch(undefined);
@@ -869,6 +863,7 @@ function EntityCollectionRuntime({
           pathname: window.location.pathname,
         };
         setLoadedAuthorityKey(authorityKey);
+        setLoadedClient(client);
       })
       .catch((cause) => {
         if (!controller.signal.aborted) setError(asTransportError(cause));
@@ -903,10 +898,8 @@ function EntityCollectionRuntime({
     embedding?.onResults?.(false);
     setLoading(true);
     setError(undefined);
-    // A cursor belongs to exactly one server query. Do not let a failed refresh
-    // expose its predecessor's rows or allow its cursor to paginate new state.
-    setPage(undefined);
-    setPageContextKey(undefined);
+    // Retain same-authority rows while their replacement loads. The query key
+    // below keeps old cursors and mutations disabled until fresh results arrive.
     client
       .request(entityListOperation, {
         params: { entityCode },
@@ -924,10 +917,15 @@ function EntityCollectionRuntime({
           );
         embedding?.onResults?.(true, next.rows.length === 0);
         setPage(next);
+        setPageState(state);
         setPageContextKey(`${authorityKey}:${serverQueryKey}`);
       })
       .catch((cause) => {
-        if (!controller.signal.aborted) setError(asTransportError(cause));
+        if (!controller.signal.aborted) {
+          const failure = asTransportError(cause);
+          if (retryRequiresDescriptor(failure)) { setPage(undefined); setPageState(undefined); setPageContextKey(undefined); }
+          setError(failure);
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -1082,6 +1080,7 @@ function EntityCollectionRuntime({
       ? resolveEntityText(descriptor.surface.header.description, locale)
       : undefined
     : descriptor?.surface.description;
+  const resultsCurrent = !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`;
   const availableCount =
     !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`
       ? (listCountLabel(page) ??
@@ -1120,7 +1119,7 @@ function EntityCollectionRuntime({
     ) : (
       <EntityNavigation sections={descriptor.navigation} />
     );
-  if (scopePending || !descriptor || loadedAuthorityKey !== authorityKey)
+  if (scopePending || !descriptor || loadedAuthorityKey !== authorityKey || loadedClient !== client)
     return (
       <>
         {error ? scopeControl : null}
@@ -1195,13 +1194,13 @@ function EntityCollectionRuntime({
             </small>
           </span>
         ) : (
-          <a
+          <EntityLink
             className={`a-button a-button--${action.variant ?? "secondary"}`}
             href={action.href}
             key={action.key}
           >
             {action.label}
-          </a>
+          </EntityLink>
         ),
       )}
     </>
@@ -1259,7 +1258,7 @@ function EntityCollectionRuntime({
     operation: "add" | "remove",
     rows: readonly EntityListRowV1[],
   ) => {
-    if (!rows.length || allMatchingSelected) return;
+    if (!resultsCurrent || !rows.length || allMatchingSelected) return;
     const epoch = bookmarkEpoch;
     rows = rows.filter((row) => bookmarkRequests.current.get(row.id) !== epoch);
     if (!rows.length) return;
@@ -1426,13 +1425,14 @@ function EntityCollectionRuntime({
             scopeControl={scopeControl}
             pageActions={pageActions}
             loading={loading}
+            resultsCurrent={resultsCurrent}
             actionNotice={actionNotice}
             onActionNotice={setActionNotice}
-            onOpenDataOperations={() => setDataOperationsLaunch("picker")}
+            onOpenDataOperations={() => { if (resultsCurrent) setDataOperationsLaunch("picker"); }}
             onRefresh={() => setRefreshAttempt((value) => value + 1)}
             onChange={resetAndUpdate}
           />
-          {dataOperationsLaunch ? (
+          {dataOperationsLaunch && resultsCurrent ? (
             <DataOperationsControl
               client={client}
               descriptor={descriptor}
@@ -1474,26 +1474,26 @@ function EntityCollectionRuntime({
                 page={page}
                 fields={fields}
                 mode={state.mode}
-                filters={state.filters}
+                filters={pageState?.filters ?? state.filters}
                 onFilters={(filters) => resetAndUpdate({ filters }, "push")}
-                sort={state.sort}
-                group={state.group}
-                query={state.query}
-                filtered={state.filters.length > 0}
-                loading={loading}
+                sort={pageState?.sort ?? state.sort}
+                group={pageState?.group}
+                query={pageState?.query}
+                filtered={(pageState?.filters ?? state.filters).length > 0}
+                loading={loading || (!error && !resultsCurrent)}
                 emptyContent={embedding?.emptyContent}
                 emptyAction={embedding?.emptyAction}
                 recordLink={embedding?.recordHref}
                 singleSelection={embedding?.options.selectionMode === "single"}
                 chooser={Boolean(embedding)}
-                selectionEnabled={selectionEnabled}
+                selectionEnabled={selectionEnabled && resultsCurrent}
                 selectedIds={
                   embedding
                     ? new Set(embedding.selectedRows.map((row) => row.id))
                     : selectedIds
                 }
                 bookmarkedIds={bookmarkedIds}
-                pendingBookmarkIds={pendingBookmarkIds}
+                pendingBookmarkIds={resultsCurrent ? pendingBookmarkIds : new Set(page.rows.map(row => row.id))}
                 onBookmark={(row, favourite) =>
                   !embedding &&
                   void mutateBookmarks(favourite ? "add" : "remove", [row])
@@ -1532,11 +1532,13 @@ function EntityCollectionRuntime({
           {page ? (
             <EntityListPagination
               descriptor={descriptor}
-              state={state}
+              state={pageState ?? state}
               page={page}
-              loading={loading}
+              loading={!resultsCurrent}
+              onFirst={() => resetAndUpdate({}, "push")}
               cursorHistory={cursorHistory}
               onPrevious={() => {
+                if (!resultsCurrent) return;
                 const cursor = cursorHistory.at(-1);
                 setCursorHistory(cursorHistory.slice(0, -1));
                 setSelectedIds(new Set());
@@ -1554,6 +1556,7 @@ function EntityCollectionRuntime({
                 );
               }}
               onNext={() => {
+                if (!resultsCurrent) return;
                 setCursorHistory([...cursorHistory, state.cursor]);
                 setSelectedIds(new Set());
                 setAllMatchingSelected(false);
@@ -1572,7 +1575,7 @@ function EntityCollectionRuntime({
             <LoadingFooter />
           ) : null}
         </div>
-        {!embedding && selectionEnabled && selectedIds.size ? (
+        {!embedding && resultsCurrent && selectionEnabled && selectedIds.size ? (
           <SelectionBar
             descriptor={descriptor}
             page={page}
@@ -1615,6 +1618,7 @@ function ListChrome({
   scopeControl,
   pageActions,
   loading,
+  resultsCurrent,
   actionNotice,
   onActionNotice,
   onOpenDataOperations,
@@ -1631,6 +1635,7 @@ function ListChrome({
   readonly scopeControl?: ReactNode;
   readonly pageActions: readonly EntityListPageAction[];
   readonly loading: boolean;
+  readonly resultsCurrent: boolean;
   readonly actionNotice?: ListNotice;
   readonly onActionNotice: (notice: ListNotice | undefined) => void;
   readonly onOpenDataOperations: () => void;
@@ -1640,6 +1645,7 @@ function ListChrome({
     history?: "replace" | "push",
   ) => void;
 }) {
+  const navigate = useEntityNavigate();
   const generatedSearchId = useId();
   const searchId = embedding ? generatedSearchId : "entity-list-search";
   const preferenceNamespace = embedding
@@ -2073,7 +2079,7 @@ function ListChrome({
                   value={action.reason}
                   onClick={() => {
                     if (action.href && !action.disabled)
-                      window.location.assign(action.href);
+                      navigate(action.href);
                   }}
                 />
               ))}
@@ -2086,7 +2092,7 @@ function ListChrome({
                   <ListMenuItem
                     icon={<DownloadIcon size={16} />}
                     label={entityIntl.message("list.dataOperations")}
-                    disabled={Boolean(state.standardViewKey)}
+                    disabled={!resultsCurrent || Boolean(state.standardViewKey)}
                     value={
                       state.standardViewKey
                         ? entityIntl.message("list.standardViewExportUnavailable")
@@ -4161,6 +4167,7 @@ function EntityRows({
   readonly onSelectionChange: (ids: ReadonlySet<string>) => void;
   readonly onSort: (field: string, additive: boolean) => void;
 }) {
+  const navigate = useEntityNavigate();
   const selectionName = useId();
   const intl = useEntityI18n();
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
@@ -4263,9 +4270,9 @@ function EntityRows({
               </div>
               <h2>
                 {href ? (
-                  <a className="a-entity-list__record-link" href={href}>
+                  <EntityLink className="a-entity-list__record-link" href={href}>
                     {highlightText(identity, query)}
-                  </a>
+                  </EntityLink>
                 ) : (
                   highlightText(identity, query)
                 )}
@@ -4280,14 +4287,14 @@ function EntityRows({
                       <dt>{field.label}</dt>
                       <dd>
                         {href && isRecordLinkField(field, descriptor) ? (
-                          <a className="a-entity-list__record-link" href={href}>
+                          <EntityLink className="a-entity-list__record-link" href={href}>
                             {renderFieldValue(
                               row.values[field.key],
                               field,
                               query,
                               intl,
                             )}
-                          </a>
+                          </EntityLink>
                         ) : (
                           renderFieldValue(row.values[field.key], field, query, intl)
                         )}
@@ -4315,7 +4322,7 @@ function EntityRows({
     );
   const openRecord = (row: EntityListRowV1) => {
     const href = chooser ? recordLink?.(row) : recordHref(descriptor, row);
-    if (href) window.location.assign(href);
+    if (href) navigate(href);
   };
   const tableRows = (rows: readonly EntityListRowV1[]) =>
     rows.map((row) => {
@@ -4369,9 +4376,9 @@ function EntityRows({
               title={formatFieldValue(row.values[field.key], field, intl)}
             >
               {href && isRecordLinkField(field, descriptor) ? (
-                <a className="a-entity-list__record-link" href={href}>
+                <EntityLink className="a-entity-list__record-link" href={href}>
                   {renderFieldValue(row.values[field.key], field, query, intl)}
-                </a>
+                </EntityLink>
               ) : (
                 renderFieldValue(row.values[field.key], field, query, intl)
               )}
@@ -4643,6 +4650,7 @@ function RowMenu({
   readonly row: EntityListRowV1;
   readonly intl: ReturnType<typeof useEntityI18n>;
 }) {
+  const navigate = useEntityNavigate();
   const identity = formatFieldValue(
       row.values[descriptor.entity.identityField],
       descriptor.fields.find(
@@ -4661,7 +4669,7 @@ function RowMenu({
       </MenuTrigger>
       <MenuContent portal className="a-entity-list__row-menu">
         {href ? (
-          <MenuItem onClick={() => window.location.assign(href)}>
+          <MenuItem onClick={() => navigate(href)}>
             <EyeIcon size={16} />
             View
           </MenuItem>

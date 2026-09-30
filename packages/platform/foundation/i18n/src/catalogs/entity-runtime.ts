@@ -24,6 +24,7 @@ export const entityRuntimeMessages = {
   "list.sort": ["Sort", "Isih", "ترتيب"],
   "list.sortRules": ["{count, plural, one {# sort rule} other {# sort rules}}", "{count, plural, other {# aturan isih}}", "{count, plural, other {# قواعد ترتيب}}"],
   "list.visibleColumns": ["{count, plural, one {# visible column} other {# visible columns}}", "{count, plural, other {# lajur kelihatan}}", "{count, plural, other {# أعمدة مرئية}}"],
+  "list.firstPage": ["First page", "Halaman pertama", "الصفحة الأولى"],
   "list.refresh": ["Refresh", "Segar semula", "تحديث"],
   "list.refreshing": ["Refreshing…", "Menyegarkan…", "جارٍ التحديث…"],
   "list.copyViewLink": ["Copy link to this view", "Salin pautan ke paparan ini", "نسخ رابط هذا العرض"],

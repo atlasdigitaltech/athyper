@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useEntityNavigate } from "./entity-navigation";
 import { ManagementNavigation } from "@athyper/platform-shell";
 import {
   resolveEntityText,
@@ -33,6 +34,7 @@ export function EntityNavigation({
   readonly activePath?: string;
   readonly onNavigate?: (href: string) => void;
 }) {
+  const navigate = useEntityNavigate();
   const locale = useOptionalI18n()?.localization.uiLocale;
   if (!sections.length) return null;
   const pathname =
@@ -47,5 +49,5 @@ export function EntityNavigation({
         (href) => href.replace(/\/$/, "") === pathname,
       ),
     )?.surfaceKey;
-  return <ManagementNavigation label={resolveEntityText({defaultLocale:"en",values:{en:"Entity sections",ms:"Bahagian entiti"}},locale)} moreLabel={resolveEntityText({defaultLocale:"en",values:{en:"More",ms:"Lagi"}},locale)} items={sections.map(section=>({key:section.key,label:resolveEntityText(section.label,locale),href:section.href,count:section.attentionCount,overflow:section.placement==="overflow"}))} currentKey={sections.find(section=>section.surfaceKey===current)?.key} onNavigate={onNavigate}/>;
+  return <ManagementNavigation label={resolveEntityText({defaultLocale:"en",values:{en:"Entity sections",ms:"Bahagian entiti"}},locale)} moreLabel={resolveEntityText({defaultLocale:"en",values:{en:"More",ms:"Lagi"}},locale)} items={sections.map(section=>({key:section.key,label:resolveEntityText(section.label,locale),href:section.href,count:section.attentionCount,overflow:section.placement==="overflow"}))} currentKey={sections.find(section=>section.surfaceKey===current)?.key} onNavigate={onNavigate ?? navigate}/>;
 }

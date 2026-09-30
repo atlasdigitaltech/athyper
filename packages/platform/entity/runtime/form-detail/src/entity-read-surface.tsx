@@ -1,7 +1,7 @@
 "use client";
 
 import { EntityListRuntime } from "@athyper/platform-entity-list-view";
-import { useApiClient } from "@athyper/platform-shell-app-foundation";
+import { useApiClient, useApplicationNavigation } from "@athyper/platform-shell-app-foundation";
 import { EntityDetailRuntime } from "./entity-detail-runtime";
 
 /** Shared plane-neutral read surface. The APIs resolve the active descriptor and
@@ -15,9 +15,10 @@ export function EntityReadSurface({
   readonly recordId?: string;
 }) {
   const client = useApiClient();
+  const navigation = useApplicationNavigation();
   return recordId ? (
     <EntityDetailRuntime entityCode={entityCode} recordId={recordId} />
   ) : (
-    <EntityListRuntime client={client} entityCode={entityCode} />
+    <EntityListRuntime client={client} entityCode={entityCode} onNavigate={navigation.push} />
   );
 }
