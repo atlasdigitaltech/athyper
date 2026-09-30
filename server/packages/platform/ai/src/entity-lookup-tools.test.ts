@@ -440,3 +440,94 @@ it("keeps natural-language grammar from flooding the bounded catalogue with unre
   expect(JSON.stringify(result.data)).toContain("Calling code");
   expect(JSON.stringify(result.data)).not.toContain("iso_format_");
 });
+
+it("reads all explicit targets through Records and excludes denied summary fields", async () => {
+  const f = fixture();
+  f.query.mockImplementation(async (input: any) => {
+    const value = input.request.filters[0].value;
+    return {
+      rows: value === "Missing" ? [] : [{ name: value, dial_code: "123" }],
+      sources:
+        value === "Missing"
+          ? []
+          : [
+              {
+                entityCode: "nation",
+                recordId: value === "First" ? id : related,
+                descriptorHash: "published-nation",
+                revision: "1",
+              },
+            ],
+      responseBytes: 100,
+      authorizationProfileHash: context.profileHash,
+    };
+  });
+  const result = await f.execute("entity_lookup", {
+    entityCode: "nation",
+    descriptorHash: "published-nation",
+    searchField: "name",
+    value: ["First", "Second", "Missing"],
+    fields: [],
+  });
+  expect(result.data).toMatchObject({
+    summary: true,
+    matches: [
+      { value: "First", match: "one" },
+      { value: "Second", match: "one" },
+      { value: "Missing", match: "no_authorized_match" },
+    ],
+  });
+  expect(result.sources.map((s) => s.coordinate.recordId)).toEqual([
+    id,
+    related,
+  ]);
+  expect(f.query.mock.calls).toHaveLength(3);
+  for (const [input] of f.query.mock.calls) {
+    expect(input.context).toBe(context);
+    expect(input.request.fields).not.toContain("private");
+  }
+  for (const value of [
+    [],
+    ["First", "First"],
+    ["A", "B", "C", "D"],
+    ["First", 1],
+  ])
+    await expect(
+      f.execute("entity_lookup", {
+        entityCode: "nation",
+        descriptorHash: "published-nation",
+        searchField: "name",
+        value,
+        fields: [],
+      }),
+    ).rejects.toThrow();
+});
+
+it("rejects the batch if a later target returns evidence from another authorization profile", async () => {
+  const f = fixture();
+  const result = (recordId: string, authorizationProfileHash: string) => ({
+    rows: [{ name: "Example", dial_code: "1" }],
+    sources: [
+      {
+        entityCode: "nation",
+        recordId,
+        revision: "1",
+        descriptorHash: "published-nation",
+      },
+    ],
+    responseBytes: 10,
+    authorizationProfileHash,
+  });
+  f.query.mockResolvedValueOnce(result(id, context.profileHash));
+  f.query.mockResolvedValueOnce(result(related, "other-profile"));
+  await expect(
+    f.execute("entity_lookup", {
+      entityCode: "nation",
+      descriptorHash: "published-nation",
+      searchField: "name",
+      value: ["First", "Second"],
+      fields: [],
+    }),
+  ).rejects.toThrow();
+  expect(f.query).toHaveBeenCalledTimes(2);
+});

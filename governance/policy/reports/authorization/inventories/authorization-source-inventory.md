@@ -1701,11 +1701,11 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/ai/src/__tests__/structured-intent.test.ts | 295 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15, 57 |
-| `denied` | runtime | server/packages/platform/ai/src/agent-runtime.ts | 339, 807, 1375 |
+| `denied` | runtime | server/packages/platform/ai/src/agent-runtime.ts | 343, 813, 1427 |
 | `denied` | runtime | server/packages/platform/ai/src/context.ts | 23 |
 | `denied` | test | server/packages/platform/ai/src/entity-context-tools.test.ts | 209 |
 | `denied` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 99, 102, 103 |
-| `denied` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 49, 58, 73, 527 |
+| `denied` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 49, 58, 73, 557 |
 | `denied` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 128 |
 | `denied` | runtime | server/packages/platform/ai/src/tool-service.ts | 93, 136, 245 |
 | `denied` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
@@ -3054,8 +3054,8 @@ Capture DDLs:
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 14, 15 |
 | `profileHash` | runtime | server/packages/platform/ai/src/context.ts | 10, 16 |
 | `profileHash` | test | server/packages/platform/ai/src/entity-context-tools.test.ts | 53 |
-| `profileHash` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 125, 227, 412 |
-| `profileHash` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 393, 525, 559 |
+| `profileHash` | test | server/packages/platform/ai/src/entity-lookup-tools.test.ts | 125, 227, 412, 462, 521 |
+| `profileHash` | runtime | server/packages/platform/ai/src/entity-lookup-tools.ts | 416, 555, 589 |
 | `profileHash` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 204 |
 | `profileHash` | runtime | server/packages/platform/ai/src/entity-section-tool.ts | 25 |
 | `profileHash` | runtime | server/packages/platform/ai/src/insight-reuse-policy.ts | 45 |

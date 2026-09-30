@@ -146,7 +146,7 @@ export function createAtlasEntityLookupTools(
   const discover: AtlasRegisteredTool = {
     manifest: manifest(
       ENTITY_DISCOVER,
-      "Find published Entity fields/relationships by business terms. Metadata only; use returned keys/hash for reads.",
+      "Discover available published Entity fields and relationships. Metadata only.",
       { query: { type: "string", minLength: 1, maxLength: 200 } },
       ["query"],
     ),
@@ -261,7 +261,6 @@ export function createAtlasEntityLookupTools(
           items.push({
             entityCode: d.entityCode,
             descriptorHash: d.compiledHash,
-            aliases: d.ai!.aliases.slice(0, 4),
             fields: selected,
             relationships,
             capabilities: [
@@ -294,8 +293,7 @@ export function createAtlasEntityLookupTools(
               candidates.length > 256 || items.length > selectedItems.length
                 ? "partial"
                 : "matching metadata",
-            guidance:
-              "Metadata only. Refine query if partial. Absence does not prove nonexistence.",
+            guidance: "Metadata only; partial coverage may need refinement.",
           },
           sources: [],
         };
@@ -305,14 +303,25 @@ export function createAtlasEntityLookupTools(
   const lookup: AtlasRegisteredTool = {
     manifest: manifest(
       ENTITY_LOOKUP,
-      "Read named records using discovered keys/hash. Prefer exact match. Clarify multiple matches.",
+      "Read authorized named records and their published summaries.",
       {
         entityCode: string,
         descriptorHash: string,
         searchField: string,
         matchMode: { type: "string", enum: ["exact", "contains"] },
-        value: { type: "string", minLength: 1, maxLength: 200 },
-        fields: requestedFields,
+        value: {
+          oneOf: [
+            { type: "string", minLength: 1, maxLength: 200 },
+            {
+              type: "array",
+              minItems: 1,
+              maxItems: 3,
+              uniqueItems: true,
+              items: { type: "string", minLength: 1, maxLength: 200 },
+            },
+          ],
+        },
+        fields: { ...requestedFields, minItems: 0 },
       },
       ["entityCode", "descriptorHash", "searchField", "value", "fields"],
     ),
@@ -336,11 +345,15 @@ export function createAtlasEntityLookupTools(
         !codePattern.test(args.searchField) ||
         (args.matchMode !== undefined &&
           !["exact", "contains"].includes(String(args.matchMode))) ||
-        typeof args.value !== "string" ||
-        !args.value.trim() ||
-        args.value.length > 200 ||
+        !(typeof args.value === "string" || Array.isArray(args.value)) ||
+        (Array.isArray(args.value) &&
+          (!args.value.length ||
+            args.value.length > 3 ||
+            new Set(args.value).size !== args.value.length)) ||
+        (Array.isArray(args.value) ? args.value : [args.value]).some(
+          (v) => typeof v !== "string" || !v.trim() || v.length > 200,
+        ) ||
         !Array.isArray(args.fields) ||
-        !args.fields.length ||
         args.fields.length > 8 ||
         args.fields.some(
           (k) => typeof k !== "string" || !codePattern.test(k),
@@ -367,55 +380,63 @@ export function createAtlasEntityLookupTools(
           (args.fields as string[]).some((k) => !readable.includes(k))
         )
           return denied();
-        const selected = [
-          ...new Set([search.key, ...(args.fields as string[])]),
-        ];
-        const result = await context.records.query({
-          context: context.context,
-          request: {
-            entityCode: d.entityCode,
-            fields: selected,
-            filters: [
-              {
-                field: search.key,
-                operator:
-                  args.matchMode === "contains" &&
-                  ["string", "text"].includes(search.type)
-                    ? "contains"
-                    : "eq",
-                value: args.value,
-              },
-            ],
-            limit: 3,
-          },
-        });
-        if (
-          result.authorizationProfileHash !== context.context.profileHash ||
-          result.rows.length > 3 ||
-          result.sources.length !== result.rows.length ||
-          result.sources.some(
-            (s) =>
-              s.entityCode !== d.entityCode ||
-              s.descriptorHash !== d.compiledHash ||
-              !s.recordId ||
-              !s.revision,
+        const projection = (args.fields as string[]).length
+          ? (args.fields as string[])
+          : d
+              .ai!.summaryFieldKeys.filter((key) => readable.includes(key))
+              .slice(0, 8);
+        const selected = [...new Set([search.key, ...projection])];
+        const values = Array.isArray(args.value)
+          ? (args.value as string[])
+          : [args.value as string];
+        const matches = [];
+        const sources = [];
+        for (const value of values) {
+          context.signal.throwIfAborted();
+          const result = await context.records.query({
+            context: context.context,
+            request: {
+              entityCode: d.entityCode,
+              fields: selected,
+              filters: [
+                {
+                  field: search.key,
+                  operator:
+                    args.matchMode === "contains" &&
+                    ["string", "text"].includes(search.type)
+                      ? "contains"
+                      : "eq",
+                  value,
+                },
+              ],
+              limit: 3,
+            },
+          });
+          if (
+            result.authorizationProfileHash !== context.context.profileHash ||
+            result.rows.length > 3 ||
+            result.sources.length !== result.rows.length ||
+            result.sources.some(
+              (s) =>
+                s.entityCode !== d.entityCode ||
+                s.descriptorHash !== d.compiledHash ||
+                !s.recordId ||
+                !s.revision,
+            )
           )
-        )
-          return denied();
-        const items = result.rows.map((row, i) => ({
-          recordId: result.sources[i]?.recordId,
-          fields: selected
-            .filter((key) => Object.hasOwn(row, key))
-            .map((key) => ({
-              key,
-              label: d.fields.find((f) => f.key === key)?.list?.label ?? key,
-              value: row[key],
-            })),
-        }));
-        return {
-          data: {
-            kind: "entity_lookup",
-            entityCode: d.entityCode,
+            return denied();
+          const items = result.rows.map((row, i) => ({
+            recordId: result.sources[i]?.recordId,
+            fields: selected
+              .filter((key) => Object.hasOwn(row, key))
+              .map((key) => ({
+                key,
+                label: d.fields.find((f) => f.key === key)?.list?.label ?? key,
+                value: row[key],
+              })),
+          }));
+          matches.push({
+            value,
             match:
               items.length === 1
                 ? "one"
@@ -423,10 +444,19 @@ export function createAtlasEntityLookupTools(
                   ? "ambiguous"
                   : "no_authorized_match",
             items,
+          });
+          sources.push(...result.sources.map((coordinate) => ({ coordinate })));
+        }
+        return {
+          data: {
+            kind: "entity_lookup",
+            entityCode: d.entityCode,
+            ...(Array.isArray(args.value) ? { matches } : matches[0]),
+            summary: !(args.fields as string[]).length,
             coverage:
-              "At most three authorized matches; not a total count. Ask the user to choose when ambiguous.",
+              "Up to three authorized candidates per requested value; not a total count. Summary includes up to eight permitted published fields. Ambiguous matches require a choice.",
           },
-          sources: result.sources.map((coordinate) => ({ coordinate })),
+          sources,
         };
       },
     },

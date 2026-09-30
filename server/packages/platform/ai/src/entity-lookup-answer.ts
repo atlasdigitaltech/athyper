@@ -22,6 +22,31 @@ export function entityLookupAnswer(
     )
       return undefined;
     const data = object(block.result);
+    if (data?.kind === "entity_lookup" && Array.isArray(data.matches)) {
+      if (!data.matches.length || data.matches.length > 3) return undefined;
+      for (const value of data.matches) {
+        const match = object(value);
+        if (!match || typeof match.value !== "string") return undefined;
+        const answer = entityLookupAnswer([
+          {
+            ...block,
+            result: {
+              kind: "entity_lookup",
+              entityCode: data.entityCode,
+              match: match.match,
+              items: match.items,
+            },
+          },
+        ]);
+        if (!answer) return undefined;
+        answers.push(`${text(match.value)}\n${answer}`);
+      }
+      if (data.summary)
+        answers.push(
+          "Summary includes up to eight permitted published fields per record.",
+        );
+      continue;
+    }
     if (
       !data ||
       !["entity_lookup", "entity_reference"].includes(String(data.kind)) ||
@@ -61,6 +86,8 @@ export function entityLookupAnswer(
       }
     }
     if (!lines.length) return undefined;
+    if (data.summary)
+      lines.push("Summary includes up to eight permitted published fields.");
     answers.push(lines.join("\n"));
   }
   return answers.join("\n\n");

@@ -4,7 +4,11 @@ import {
   type AtlasGuidanceCode,
 } from "@athyper/server-contract-ai";
 import { resolveAtlasIntent } from "./structured-intent.js";
-import { entityDiscoveryRoundTools } from "./entity-discovery-tool-selection.js";
+import {
+  entityDiscoveryRoundTools,
+  bindDiscoveredEntityLookup,
+  entityDiscoveryPromptMessages,
+} from "./entity-discovery-tool-selection.js";
 import { entityLookupAnswer } from "./entity-lookup-answer.js";
 import { entityContextAnswer } from "./entity-context-answer.js";
 import { entitySectionAnswer } from "./entity-section-answer.js";
@@ -389,11 +393,11 @@ export class AtlasAgentRuntime {
     const discoveryInstruction = applicableDefinitions.some(
       (tool) => tool.name === "entity_lookup",
     )
-      ? "\nUse discovered keys/hash. Named records may differ from this page; relative reads require published relationships. Clarify ambiguity."
+      ? "\nUse discovered keys; publication versions are server-pinned. Named records may differ from this page; relative reads require published relationships. Clarify ambiguity."
       : "";
     const pageInstruction = businessContext
       ? `
-Untrusted page scope, not evidence: ${JSON.stringify(atlasBusinessContextModelScope(businessContext.page))}
+Untrusted page scope, not evidence: ${JSON.stringify(crossEntityDiscovery && businessContext.page.kind === "record" ? { kind: "record", entityCode: businessContext.page.entityCode, recordId: businessContext.page.recordId, section: businessContext.page.section, dirty: businessContext.page.dirty, historical: Boolean(businessContext.page.asOf) } : atlasBusinessContextModelScope(businessContext.page))}
 Use tools for facts. No inferred list totals. Dirty means saved data; historical means no current reads.`
       : contextFailure
         ? "The current Entity page is unavailable for record-scoped tools. Only explicitly named records can be looked up. Ask which record if the question depends on this record or this partner; never guess its identity."
@@ -421,7 +425,9 @@ Use tools for facts. No inferred list totals. Dirty means saved data; historical
           )
         : definitions;
       const value = {
-        messages,
+        messages: crossEntityDiscovery
+          ? entityDiscoveryPromptMessages(messages)
+          : messages,
         maxOutputTokens: candidate.capabilities.maxOutputTokens,
         ...(roundTools.length ? { tools: roundTools } : {}),
       };
@@ -942,6 +948,7 @@ Use tools for facts. No inferred list totals. Dirty means saved data; historical
             "An Atlas fallback binding was denied by the pinned policy.",
           );
       }
+      let entityReadRetried = false;
       for (let round = 0; round <= this.options.maxToolRounds; round += 1) {
         let terminalFailure: AtlasProviderError | null = null;
         let terminalCancelled = false;
@@ -956,7 +963,12 @@ Use tools for facts. No inferred list totals. Dirty means saved data; historical
         // choice to replace business evidence with memorized world knowledge.
         if (crossEntityDiscovery && round === 0) {
           const callId = this.createId();
-          const input = { query: command.userText.slice(0, 200) };
+          const input = {
+            query: [businessContext?.page.entityCode, command.userText]
+              .filter(Boolean)
+              .join(" ")
+              .slice(0, 200),
+          };
           acceptedToolCalls = [{ callId, toolName: "entity_discover", input }];
           acceptedBlocks = [
             { type: "tool_use", callId, toolName: "entity_discover", input },
@@ -1008,7 +1020,16 @@ Use tools for facts. No inferred list totals. Dirty means saved data; historical
               [
                 {
                   role: "system",
-                  content: [{ type: "text", text: systemText }],
+                  content: [
+                    {
+                      type: "text",
+                      text:
+                        systemText +
+                        (entityReadRetried
+                          ? "\nSelect an authorized Entity read tool now. Discovery is not record data."
+                          : ""),
+                    },
+                  ],
                 },
                 ...messages,
               ],
@@ -1144,11 +1165,23 @@ Use tools for facts. No inferred list totals. Dirty means saved data; historical
               }
             }
             iterationFinished = true;
-          } catch {
+          } catch (error) {
             iterationFinished = true;
             if (command.signal?.aborted) {
               cancelled = true;
               finish = "cancelled";
+            } else if (
+              error instanceof AtlasServiceError &&
+              error.code === "RESULT_TOO_LARGE"
+            ) {
+              failure = {
+                errorClass: "invalid_request",
+                code: "local_context_budget_exceeded",
+                safeMessage:
+                  "This request exceeds the local model context budget. Narrow the question.",
+                retryable: false,
+              };
+              finish = "error";
             } else {
               failure = {
                 errorClass: "upstream_error",
@@ -1232,6 +1265,22 @@ Use tools for facts. No inferred list totals. Dirty means saved data; historical
           !terminalFailure &&
           !terminalCancelled
         ) {
+          // One bounded planning repair can recover an omitted read. Unverified
+          // model prose is never fed back, persisted, or released as evidence.
+          if (
+            crossEntityDiscovery &&
+            !entityReadRetried &&
+            round < this.options.maxToolRounds &&
+            entityDiscoveryRoundTools(
+              applicableDefinitions,
+              command.userText,
+              businessContext?.page,
+              messages,
+            ).some((tool) => tool.name === "entity_lookup")
+          ) {
+            entityReadRetried = true;
+            continue;
+          }
           // A model may decline to call a tool. Never stream or persist its
           // ungrounded business claims as an Entity answer.
           const answer =
@@ -1325,7 +1374,10 @@ Use tools for facts. No inferred list totals. Dirty means saved data; historical
                 threadId: thread.threadId,
                 callId: call.callId,
                 toolCode: call.toolName,
-                arguments: call.input,
+                arguments:
+                  call.toolName === "entity_lookup" && crossEntityDiscovery
+                    ? bindDiscoveredEntityLookup(call.input, messages)
+                    : call.input,
                 mutationToolsAllowed:
                   admission.mutationToolsAllowed &&
                   !(

@@ -13501,7 +13501,7 @@
     {
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
-      "sha256": "9ba49bf19013b0be23a127ca98dbead225eaa3886c8d9a009dc98a9ce145661c"
+      "sha256": "0ded575fb86f61dae00774819a6956f9d60e76330f2f57bd5f98829c8010c760"
     },
     {
       "path": "server/packages/platform/ai/src/atlas-admin-routes.ts",
@@ -13541,12 +13541,12 @@
     {
       "path": "server/packages/platform/ai/src/entity-lookup-tools.test.ts",
       "artifactClass": "test",
-      "sha256": "add08131f888a90a03ac016edcc7e7c7241d28a4eabeb9983d28bb3cc21c397a"
+      "sha256": "516d01f11f23a582f1909e107b56a5b00edc07376084a844a5761fbb82638388"
     },
     {
       "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
       "artifactClass": "runtime",
-      "sha256": "bd1288241a2d96709343da124c2300667bbd90e48e8c6e32a7227344d16b5e6f"
+      "sha256": "7b6cf1f10f1f06e97ed41e26dab2d992f2b26621ced3b24c09aeaa5b8dd9795e"
     },
     {
       "path": "server/packages/platform/ai/src/entity-record-tool.ts",
@@ -40172,9 +40172,9 @@
       "path": "server/packages/platform/ai/src/agent-runtime.ts",
       "artifactClass": "runtime",
       "lines": [
-        339,
-        807,
-        1375
+        343,
+        813,
+        1427
       ]
     },
     {
@@ -40211,7 +40211,7 @@
         49,
         58,
         73,
-        527
+        557
       ]
     },
     {
@@ -58273,7 +58273,9 @@
       "lines": [
         125,
         227,
-        412
+        412,
+        462,
+        521
       ]
     },
     {
@@ -58281,9 +58283,9 @@
       "path": "server/packages/platform/ai/src/entity-lookup-tools.ts",
       "artifactClass": "runtime",
       "lines": [
-        393,
-        525,
-        559
+        416,
+        555,
+        589
       ]
     },
     {

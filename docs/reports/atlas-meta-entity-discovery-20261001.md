@@ -14,7 +14,9 @@ Discovery resolves active tenant/plane publications, not draft graphs. It limits
 candidate enumeration to 256 entities, returns at most three matching descriptors within 1,000 serialized bytes,
 and explicitly reports partial coverage. Each lookup is pinned to its discovered
 descriptor hash, projects at most eight requested fields plus the search field,
-and returns at most three authorized matches. Multiple matches require user
+and accepts up to three explicit names/codes in one batch, with at most three
+authorized candidates per value. Empty field selection uses up to eight permitted
+published summary fields. Multiple candidates for a value require user
 clarification; absence is not proof of nonexistence.
 
 Metadata discovery runs as an authorized server step. A model that offers a
@@ -44,7 +46,7 @@ can opt in through publication without model retraining or another tool handler.
 
 ## Verification and publication state
 
-- Atlas: 282 tests passed; package source/test typechecks passed.
+- Atlas: 290 tests passed; package source/test typechecks passed.
 - Metadata: 93 tests passed; two optional database tests skipped; typechecks passed.
 - Studio authoring: 238 tests passed; source/test typechecks passed.
 - Real Entity authorization/Records integration test passed, including revoked
@@ -78,7 +80,7 @@ can opt in through publication without model retraining or another tool handler.
   server step; ungrounded model prose is neither streamed nor persisted. The
   exact existing overview/summary command retains its authorized direct route;
   a named alternative record cannot match that anchored command shape.
-- Remote CI at `23b8069fd` reports OpenAPI contract failures. No green release
+- Remote CI at `6dbf8eb89` reports OpenAPI contract and Quality Gate failures. No green release
   claim is made. Code tests and active heads do not prove model/browser behavior.
 
 DEV changes were merged against the previous feature commit to preserve unrelated
@@ -96,3 +98,48 @@ revocation, ambiguity, denied fields, stale metadata, caller isolation and
 ungrounded model responses; they do not replace live negative-policy journeys. Declare and
 publish the real Business Partner relationships before enabling relative
 country/address traversal; never guess a default address.
+
+## Named-record summary regression (2026-10-01)
+
+The reported `provider_adapter_failed` occurred after discovery, before any
+requested record read. Browser reproduction identified a local context-budget
+overflow misclassified as a provider failure. Broad section aliases such as
+"summary" also exposed irrelevant current-record tools. Discovery now uses the
+current Entity as a metadata hint without binding named records to the open
+record. The context limit remains unchanged; overflow now reports
+`local_context_budget_exceeded` as a non-retryable invalid request.
+
+The model-facing lookup requires an explicit array of requested names/codes and
+a summary/fields projection choice. Summary projection selects permitted fields
+from the published metadata, rather than a model-selected search-field subset.
+The server pins the publication hash from successful discovery in the current
+turn; old conversation discovery and forged hashes cannot authorize a read.
+If the model skips a read after successful discovery, one bounded planning
+retry requests the authorized read; neither attempt can release unverified prose.
+These server pins are omitted from the model prompt without modifying the
+original discovery evidence, preserving budget for subsequent field questions.
+Internal single-value calls remain valid for replay. Every batch member uses
+Records with caller authorization. Missing and ambiguous matches are reported
+separately; mismatched evidence rejects the batch. No Country names, codes or
+answers were added to runtime logic.
+
+Live Neon browser evidence from the India record, in one conversation and in
+the reported question order (India code, two-country summary, then Afghanistan):
+
+- Malaysia and Qatar: separate summaries, eight permitted published fields each,
+  with distinct current-run Country citations.
+- `Official name of Country Code IN`: `Republic of India`, with an India citation.
+- Afghanistan calling code: `93`, with an Afghanistan citation despite India
+  remaining the current page.
+- All three ran `entity_discover` then `entity_lookup`, completed successfully,
+  and requested no Atlas step-up.
+
+Private evidence: `atlas-lookup-20261001/qualified-named-batch` under the DEV
+evidence directory. The qualifier checks actual posted page context, answer text,
+distinct new citations and successful tool outcomes. Unit regressions cover batch
+bounds, denied summary fields, mismatched later-target evidence, missing/ambiguous
+matches, current-turn publication binding and prompt-budget error classification.
+
+This runtime correction uses the already activated Country release 12. No new
+permission grants or publication-policy changes were made. The Business Partner
+relationship, other-plane browser and live negative-policy limits above remain.

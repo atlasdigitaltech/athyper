@@ -50,6 +50,16 @@ context.on("request", (request) => {
   if (request.url().startsWith(origin + "/api/auth/step-up/"))
     report.atlasStepUpRequested = true;
 });
+let page;
+report.http = [];
+context.on("response", (r) => {
+  const u = new URL(r.url());
+  if (
+    u.pathname.includes("/api/relay/atlas/") &&
+    r.request().method() !== "GET"
+  )
+    report.http.push({ path: u.pathname, status: r.status() });
+});
 try {
   const session = await context.request.get(origin + "/api/auth/session");
   assert.equal(
@@ -57,7 +67,7 @@ try {
     "authenticated",
     "Saved DEV browser session required",
   );
-  const page = await context.newPage();
+  page = await context.newPage();
   await page.goto(origin + pagePath);
   if (process.env.ATHYPER_CURRENT_RECORD_LABEL)
     await page
@@ -76,84 +86,123 @@ try {
   await workspace
     .getByRole("button", { name: "New Atlas conversation", exact: true })
     .click();
-  await workspace
-    .locator('[contenteditable="true"]')
-    .fill("What is Afghanistan's calling code?");
-  const pending = page.waitForResponse(
-    (r) => r.url().endsWith("/runs") && r.request().method() === "POST",
-    { timeout: 120000 },
-  );
-  await workspace
-    .getByRole("button", { name: "Send message", exact: true })
-    .click();
-  const response = await pending;
-  const raw = await response.text();
-  const sent = response.request().postDataJSON();
-  report.currentPage = sent.businessContext
-    ? {
-        kind: sent.businessContext.kind,
-        entityCode: sent.businessContext.entityCode,
-        recordId: sent.businessContext.recordId,
-      }
-    : null;
-  assert.equal(
-    report.currentPage?.entityCode,
-    pagePath.split("/")[3],
-    "Expected the actual current Entity page context",
-  );
-  report.httpStatus = response.status();
-  if (!response.ok())
-    writeFileSync(join(out, "http-error.json"), raw, { mode: 0o600 });
-  assert.equal(response.status(), 200);
-  const events = raw.split(/\r?\n\r?\n/).flatMap((frame) => {
-    const data = frame
-      .split(/\r?\n/)
-      .filter((line) => line.startsWith("data:"))
-      .map((line) => line.slice(5).trim())
-      .join("\n");
-    return data ? [JSON.parse(data)] : [];
-  });
-  writeFileSync(join(out, "events.json"), JSON.stringify(events, null, 2), {
-    mode: 0o600,
-  });
-  report.tools = events
-    .filter((e) => e.event?.type === "tool.completed")
-    .map((e) => ({ code: e.event.toolCode, outcome: e.event.outcome }));
-  assert.ok(
-    events.some((e) => e.event?.type === "run.completed"),
-    "Run did not complete",
-  );
-  assert.ok(!events.some((e) => e.event?.type === "run.failed"), "Run failed");
-  for (const code of ["entity_discover", "entity_lookup"])
-    assert.ok(
-      report.tools.some((t) => t.code === code && t.outcome === "completed"),
-      `Missing successful ${code}`,
+  const scenarios = process.env.ATHYPER_LOOKUP_SCENARIOS
+    ? JSON.parse(process.env.ATHYPER_LOOKUP_SCENARIOS)
+    : [
+        {
+          question: "What is Afghanistan's calling code?",
+          names: ["Afghanistan"],
+          includes: ["Calling code: 93"],
+          recordIds: [recordId],
+        },
+      ];
+  report.scenarios = [];
+  for (const [index, scenario] of scenarios.entries()) {
+    await workspace.locator('[contenteditable="true"]').fill(scenario.question);
+    const pending = page.waitForResponse(
+      (r) => r.url().endsWith("/runs") && r.request().method() === "POST",
+      { timeout: 120000 },
     );
-  assert.ok(
-    events.some(
-      (e) =>
-        e.event?.type === "source.cited" &&
-        e.event.callId !== "history" &&
-        e.event.toolCode === "entity_lookup" &&
-        e.event.coordinate?.entityCode === "country" &&
-        e.event.coordinate?.recordId === recordId,
-    ),
-    "Expected Afghanistan source citation",
-  );
-  const answer = events
-    .filter((e) => e.event?.type === "message.delta")
-    .map((e) => e.event.text ?? "")
-    .join("");
-  assert.match(answer, /Afghanistan/i);
-  assert.match(answer, /Calling code:\s*\+?93\b/i);
-  await workspace
-    .locator('[data-role="assistant"][data-status="completed"]')
-    .last()
-    .waitFor();
-  await page.screenshot({ path: join(out, "lookup.png"), fullPage: true });
+    await workspace
+      .getByRole("button", { name: "Send message", exact: true })
+      .click();
+    const response = await pending;
+    const raw = await response.text();
+    const sent = response.request().postDataJSON();
+    report.currentPage = sent.businessContext
+      ? {
+          kind: sent.businessContext.kind,
+          entityCode: sent.businessContext.entityCode,
+          recordId: sent.businessContext.recordId,
+        }
+      : null;
+    assert.equal(
+      report.currentPage?.entityCode,
+      pagePath.split("/")[3],
+      "Expected the actual current Entity page context",
+    );
+    report.httpStatus = response.status();
+    if (!response.ok())
+      writeFileSync(join(out, "http-error.json"), raw, { mode: 0o600 });
+    assert.equal(response.status(), 200);
+    const events = raw.split(/\r?\n\r?\n/).flatMap((frame) => {
+      const data = frame
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+        .join("\n");
+      return data ? [JSON.parse(data)] : [];
+    });
+    writeFileSync(
+      join(out, `events-${index}.json`),
+      JSON.stringify(events, null, 2),
+      {
+        mode: 0o600,
+      },
+    );
+    report.tools = events
+      .filter((e) => e.event?.type === "tool.completed")
+      .map((e) => ({ code: e.event.toolCode, outcome: e.event.outcome }));
+    assert.ok(
+      events.some((e) => e.event?.type === "run.completed"),
+      "Run did not complete",
+    );
+    assert.ok(
+      !events.some((e) => e.event?.type === "run.failed"),
+      "Run failed",
+    );
+    for (const code of ["entity_discover", "entity_lookup"])
+      assert.ok(
+        report.tools.some((t) => t.code === code && t.outcome === "completed"),
+        `Missing successful ${code}`,
+      );
+    const citations = events
+      .filter(
+        (e) =>
+          e.event?.type === "source.cited" &&
+          e.event.callId !== "history" &&
+          e.event.toolCode === "entity_lookup",
+      )
+      .map((e) => e.event.coordinate);
+    const answer = events
+      .filter((e) => e.event?.type === "message.delta")
+      .map((e) => e.event.text ?? "")
+      .join("");
+    for (const name of [...scenario.names, ...(scenario.includes ?? [])])
+      assert.ok(answer.includes(name), `Answer missing ${name}`);
+    for (const id of scenario.recordIds ?? [])
+      assert.ok(
+        citations.some((c) => c.recordId === id),
+        `Missing source ${id}`,
+      );
+    assert.ok(
+      new Set(citations.map((c) => c.recordId)).size >= scenario.names.length,
+      "Missing distinct sources for named records",
+    );
+    assert.ok(citations.every((c) => c.entityCode === "country"));
+    report.scenarios.push({
+      question: scenario.question,
+      tools: report.tools,
+      citations,
+      answer,
+      passed: true,
+    });
+    await workspace
+      .locator('[data-role="assistant"][data-status="completed"]')
+      .last()
+      .waitFor();
+    await page.screenshot({
+      path: join(out, `lookup-${index}.png`),
+      fullPage: true,
+    });
+  }
   assert.equal(report.atlasStepUpRequested, false);
   report.passed = true;
 } finally {
+  if (page && !report.passed)
+    await page
+      .screenshot({ path: join(out, "failure.png"), fullPage: true })
+      .catch(() => {});
   writeFileSync(join(out, "report.json"), JSON.stringify(report, null, 2), {
     mode: 0o600,
   });

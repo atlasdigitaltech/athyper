@@ -2,12 +2,14 @@ import { expect, it } from "vitest";
 import { AtlasAgentRuntime } from "./agent-runtime.js";
 import { context } from "./__tests__/review-fixture.js";
 it.each([
-  { read: false, lookup: true },
-  { read: true, lookup: true },
-  { read: false, lookup: false },
+  { read: false, lookup: true, overflow: false, retry: false },
+  { read: true, lookup: true, overflow: false, retry: false },
+  { read: false, lookup: false, overflow: false, retry: false },
+  { read: false, lookup: true, overflow: true, retry: false },
+  { read: true, lookup: true, overflow: false, retry: true },
 ])(
   "requires Entity evidence before releasing business facts (tool read: %s)",
-  async ({ read, lookup }) => {
+  async ({ read, lookup, overflow, retry }) => {
     const page = {
       schemaVersion: 1,
       kind: "record",
@@ -33,6 +35,7 @@ it.each([
     };
     const seen: string[] = [];
     let persisted: any[] = [];
+    let providerCalls = 0;
     const runtime = new AtlasAgentRuntime({
       businessContexts: {
         resolve: async () => ({
@@ -62,6 +65,12 @@ it.each([
       providers: {
         resolve: () => ({
           async *invoke({ prompt }: any) {
+            providerCalls += 1;
+            const performRead = read && (!retry || providerCalls > 1);
+            if (retry && providerCalls > 1)
+              expect(JSON.stringify(prompt.messages)).toContain(
+                "Select an authorized Entity read tool now",
+              );
             if (lookup) {
               expect(JSON.stringify(prompt.messages)).toContain(
                 "entity_catalogue",
@@ -78,12 +87,12 @@ it.each([
               actualModelId: "qwen",
             };
             yield { kind: "text_delta", text: "UNVERIFIED_MODEL_FACT" };
-            if (read)
+            if (performRead)
               yield {
                 kind: "tool_call_complete",
                 callId: "read",
                 toolName: "entity_lookup",
-                input: {},
+                input: { entityCode: "example" },
               };
             yield {
               kind: "usage",
@@ -91,7 +100,10 @@ it.each([
               final: true,
               usage: { inputTokens: 100, outputTokens: 10 },
             };
-            yield { kind: "completed", reason: read ? "tool_call" : "stop" };
+            yield {
+              kind: "completed",
+              reason: performRead ? "tool_call" : "stop",
+            };
           },
         }),
       },
@@ -163,7 +175,13 @@ it.each([
                 toolCode === "entity_discover"
                   ? {
                       kind: "entity_catalogue",
-                      items: [{ entityCode: "example" }],
+                      items: [
+                        {
+                          entityCode: "example",
+                          descriptorHash: "published",
+                          ...(overflow ? { excess: "x".repeat(5000) } : {}),
+                        },
+                      ],
                     }
                   : {
                       kind: "entity_lookup",
@@ -206,7 +224,17 @@ it.each([
     else expect(seen).toEqual([]);
     expect(JSON.stringify(events)).not.toContain("UNVERIFIED_MODEL_FACT");
     expect(JSON.stringify(persisted)).not.toContain("UNVERIFIED_MODEL_FACT");
+    if (overflow) {
+      expect(events.at(-1)).toMatchObject({
+        type: "run.failed",
+        errorClass: "invalid_request",
+        code: "local_context_budget_exceeded",
+        retryable: false,
+      });
+      return;
+    }
     expect(events.at(-1)?.type).toBe("run.completed");
+    if (retry) expect(providerCalls).toBe(2);
     if (read) {
       expect(seen).toEqual(["entity_discover", "entity_lookup"]);
       expect(JSON.stringify(events)).toContain("Calling code: 999");

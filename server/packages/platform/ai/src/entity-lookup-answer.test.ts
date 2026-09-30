@@ -57,3 +57,35 @@ it("never finalizes metadata discovery, failed reads or mixed results as a recor
     entityLookupAnswer([{ ...result({ items: [] }), isError: true }]),
   ).toBeUndefined();
 });
+
+it("renders every requested value separately, preserving ambiguity and missing matches", () => {
+  const answer = entityLookupAnswer([
+    result({
+      kind: "entity_lookup",
+      entityCode: "example",
+      summary: true,
+      matches: [
+        {
+          value: "First",
+          match: "one",
+          items: [
+            { recordId: "1", fields: [{ label: "Name", value: "First" }] },
+          ],
+        },
+        {
+          value: "Second",
+          match: "ambiguous",
+          items: [
+            { recordId: "2", fields: [{ label: "Name", value: "Second" }] },
+          ],
+        },
+        { value: "Missing", match: "no_authorized_match", items: [] },
+      ],
+    }),
+  ]);
+  expect(answer).toContain("Name: First");
+  expect(answer).toContain("Name: Second");
+  expect(answer).toContain("Which one do you mean?");
+  expect(answer).toContain("Missing\nNo matching authorized record");
+  expect(answer).toContain("up to eight permitted published fields");
+});
