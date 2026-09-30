@@ -11,16 +11,25 @@ test("Phase 1 Neon, Mesh and Studio list publications are deterministic and plan
     mesh,
     buildDevelopmentPhase1ListProjection("mesh", permission),
   );
-  assert.deepEqual(neon, buildDevelopmentPhase1ListProjection("neon", permission));
+  assert.deepEqual(
+    neon,
+    buildDevelopmentPhase1ListProjection("neon", permission),
+  );
   assert.equal(neon.projection.descriptor.compiled_json.entityCode, "currency");
-  assert.equal(neon.projection.descriptor.compiled_json.storage.schema, "shared");
+  assert.equal(
+    neon.projection.descriptor.compiled_json.storage.schema,
+    "shared",
+  );
   assert.deepEqual(neon.projection.contract.contract_json.operations, [
     { code: "read", permissionCode: "neon.reference.currency.read" },
   ]);
   assert.deepEqual(neon.projection.descriptor.compiled_json.operations, {
     read: { code: "read", permissionCode: "neon.reference.currency.read" },
   });
-  assert.equal(neon.projection.descriptor.compiled_json.listPresentation.dataOperations, undefined);
+  assert.equal(
+    neon.projection.descriptor.compiled_json.listPresentation.dataOperations,
+    undefined,
+  );
   assert.equal(neon.releaseNo, 1);
   assert.equal(
     mesh.projection.descriptor.compiled_json.entityCode,
@@ -32,13 +41,13 @@ test("Phase 1 Neon, Mesh and Studio list publications are deterministic and plan
     10,
   );
   assert.equal(
-    mesh.projection.descriptor.compiled_json.listPresentation.dataOperations
+    mesh.projection.descriptor.compiled_json.listPresentation.dataOperations!
       .importAdapterKey,
     "mesh.network_relationship.request.v1",
   );
   assert.equal(mesh.releaseNo, 5);
   assert.deepEqual(
-    mesh.projection.descriptor.compiled_json.listPresentation.dataOperations
+    mesh.projection.descriptor.compiled_json.listPresentation.dataOperations!
       .importFormats,
     ["xlsx", "csv", "json"],
   );
@@ -68,12 +77,12 @@ test("Phase 1 Neon, Mesh and Studio list publications are deterministic and plan
     "entity_code",
   );
   assert.equal(
-    studio.projection.descriptor.compiled_json.listPresentation.dataOperations
+    studio.projection.descriptor.compiled_json.listPresentation.dataOperations!
       .importAdapterKey,
     "studio.metadata_entity.draft.v1",
   );
   assert.deepEqual(
-    studio.projection.descriptor.compiled_json.listPresentation.dataOperations
+    studio.projection.descriptor.compiled_json.listPresentation.dataOperations!
       .importFormats,
     ["xlsx", "csv", "json"],
   );

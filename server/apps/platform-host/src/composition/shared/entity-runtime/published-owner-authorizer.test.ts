@@ -10,7 +10,10 @@ import {
   compileCompiledEntityArtifacts,
 } from "@athyper/server-service-publication";
 import { parseCompiledRuntimeContract } from "@athyper/server-platform-metadata";
-import { createPublishedTenantRecordAuthorizer } from "@athyper/server-service-records";
+import {
+  createEntityListService,
+  createPublishedTenantRecordAuthorizer,
+} from "@athyper/server-service-records";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { assertEntityAuthorizationEnforceable } from "../publication/entity-authorization-activation.js";
 const digest = (value: Uint8Array) =>
@@ -536,3 +539,25 @@ it("requires the published owner policy for high-risk administration and preserv
       }),
     ).toMatchObject({ allowed: false });
 });
+
+it.each(["principal_profile", "principal_notification_preference"])(
+  "authorizes edit form metadata against the existing %s record",
+  async (code) => {
+    const f = setup(code);
+    const service = createEntityListService({
+      metadata: f.options.metadata,
+      authorizer: f.authorizer,
+      queries: {} as never,
+      listExecutor: {} as never,
+    });
+    await expect(
+      service.formDescriptor(f.context, code, "edit", self),
+    ).resolves.toMatchObject({ mode: "edit" });
+    await expect(
+      service.formDescriptor(f.context, code, "edit", other),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    await expect(
+      service.formDescriptor(f.context, code, "edit"),
+    ).rejects.toMatchObject({ statusCode: 403 });
+  },
+);

@@ -1,3 +1,5 @@
+import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
+import { exportableClassification } from "./transfer/export-admission.js";
 import { resolveIntakeFormChoices } from "./intake-form-choices.js";
 import { authorizeListContextDiscovery } from "./list-context-discovery.js";
 import { readablePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
@@ -91,6 +93,7 @@ export interface EntityListService {
     context: VerifiedRequestContext,
     entityCode: string,
     mode: "create" | "edit",
+    recordId?: string,
   ): Promise<EntityFormDescriptorV1>;
   detailDescriptor(
     context: VerifiedRequestContext,
@@ -98,8 +101,12 @@ export interface EntityListService {
     recordId?: string,
     timing?: (stage: string, durationMs: number) => void,
   ): Promise<EntityDetailDescriptorV1>;
-  detailRead(context: VerifiedRequestContext, entityCode: string, recordId: string,
-    timing?: (stage: string, durationMs: number) => void): Promise<EntityDetailReadV1>;
+  detailRead(
+    context: VerifiedRequestContext,
+    entityCode: string,
+    recordId: string,
+    timing?: (stage: string, durationMs: number) => void,
+  ): Promise<EntityDetailReadV1>;
   record(
     context: VerifiedRequestContext,
     entityCode: string,
@@ -111,7 +118,16 @@ export interface EntityListService {
 export const ENTITY_LIST_MAX_SORT_LEVELS = 3;
 
 export function createEntityListService(options: {
-  readonly formChoices?: (context: VerifiedRequestContext, sourceKey: string) => Promise<readonly {value:string;label:string;data?:Readonly<Record<string,string|boolean|readonly string[]>>}[]>;
+  readonly formChoices?: (
+    context: VerifiedRequestContext,
+    sourceKey: string,
+  ) => Promise<
+    readonly {
+      value: string;
+      label: string;
+      data?: Readonly<Record<string, string | boolean | readonly string[]>>;
+    }[]
+  >;
   readonly filterChoices?: (
     context: VerifiedRequestContext,
     fields: readonly EntityFieldDescriptor[],
@@ -121,9 +137,25 @@ export function createEntityListService(options: {
     >
   >;
   readonly standardViewSources?: StandardViewSources;
-  readonly activity?: (input: { context: VerifiedRequestContext; entityCode: string; recordId: string }) => Promise<boolean>;
-  readonly collaboration?: (input: { context: VerifiedRequestContext; entityCode: string; recordId: string }) => Promise<readonly ("comments" | "attachments")[]>;
-  readonly summary?: (input: { context: VerifiedRequestContext; entityCode: string; recordId: string; releaseId: string }) => Promise<import("@athyper/contract-platform-entity-runtime").EntityRecordSummaryViewV1 | undefined>;
+  readonly activity?: (input: {
+    context: VerifiedRequestContext;
+    entityCode: string;
+    recordId: string;
+  }) => Promise<boolean>;
+  readonly collaboration?: (input: {
+    context: VerifiedRequestContext;
+    entityCode: string;
+    recordId: string;
+  }) => Promise<readonly ("comments" | "attachments")[]>;
+  readonly summary?: (input: {
+    context: VerifiedRequestContext;
+    entityCode: string;
+    recordId: string;
+    releaseId: string;
+  }) => Promise<
+    | import("@athyper/contract-platform-entity-runtime").EntityRecordSummaryViewV1
+    | undefined
+  >;
   readonly metadata: MetadataReader;
   readonly authorizer: Authorizer;
   readonly listExecutor: RecordListExecutor;
@@ -138,178 +170,249 @@ export function createEntityListService(options: {
     ...options.standardViewSources,
   };
   async function compileDetail(
-      context: VerifiedRequestContext,
-      entityCode: string,
-      recordId?: string,
-      timing: (stage: string, durationMs: number) => void = () => {},
-    ) {
-      let previous = performance.now();
-      const stage = (name: string) => {
-        const now = performance.now();
-        timing(name, now - previous);
-        previous = now;
-      };
-      const measured = async <T>(name: string, work: () => Promise<T> | T): Promise<T> => {
-        const started = performance.now();
-        try { return await work(); } finally { timing(name, performance.now() - started); }
-      };
-      if (recordId && !options.queries)
-        throw new RecordServiceError(503, "ENTITY_RECORD_ADAPTER_UNAVAILABLE", "The record adapter is unavailable");
-      const admitted = recordId && options.queries?.getWithProjection
-        ? await options.queries.getWithProjection({ context, entityCode, recordId }) : undefined;
-      const descriptor = admitted?.descriptor ?? await descriptorFor(options.metadata, context, entityCode);
-      stage(admitted ? "authorized_record" : "metadata");
-      if (!admitted) await requireOperation(
+    context: VerifiedRequestContext,
+    entityCode: string,
+    recordId?: string,
+    timing: (stage: string, durationMs: number) => void = () => {},
+  ) {
+    let previous = performance.now();
+    const stage = (name: string) => {
+      const now = performance.now();
+      timing(name, now - previous);
+      previous = now;
+    };
+    const measured = async <T>(
+      name: string,
+      work: () => Promise<T> | T,
+    ): Promise<T> => {
+      const started = performance.now();
+      try {
+        return await work();
+      } finally {
+        timing(name, performance.now() - started);
+      }
+    };
+    if (recordId && !options.queries)
+      throw new RecordServiceError(
+        503,
+        "ENTITY_RECORD_ADAPTER_UNAVAILABLE",
+        "The record adapter is unavailable",
+      );
+    const admitted =
+      recordId && options.queries?.getWithProjection
+        ? await options.queries.getWithProjection({
+            context,
+            entityCode,
+            recordId,
+          })
+        : undefined;
+    const descriptor =
+      admitted?.descriptor ??
+      (await descriptorFor(options.metadata, context, entityCode));
+    stage(admitted ? "authorized_record" : "metadata");
+    if (!admitted)
+      await requireOperation(
         options.authorizer,
         context,
         descriptor,
         "read",
         recordId,
       );
-      stage("authorization");
-      let data = admitted?.data;
-      if (recordId) {
-        data = admitted ? admitted.data : (await options.queries!.get({ context, entityCode, recordId })).data;
-        if (!data)
-          throw new RecordServiceError(
-            404,
-            "ENTITY_RECORD_NOT_FOUND",
-            "The governed record was not found",
-          );
-      }
-      stage("record");
-      const readable = admitted?.readableFields ?? await readableRecordFields(
+    stage("authorization");
+    let data = admitted?.data;
+    if (recordId) {
+      data = admitted
+        ? admitted.data
+        : (await options.queries!.get({ context, entityCode, recordId })).data;
+      if (!data)
+        throw new RecordServiceError(
+          404,
+          "ENTITY_RECORD_NOT_FOUND",
+          "The governed record was not found",
+        );
+    }
+    stage("record");
+    const readable =
+      admitted?.readableFields ??
+      (await readableRecordFields(options.authorizer, context, descriptor));
+    stage("fields");
+    if (!readable.length)
+      throw new RecordServiceError(
+        403,
+        "ENTITY_DETAIL_FIELDS_FORBIDDEN",
+        "No fields are readable for this entity detail",
+      );
+    const actions: {
+      code: string;
+      label: string;
+      kind: "edit" | "transition";
+    }[] = [];
+    if (
+      descriptor.operations["patch"] &&
+      (await operationAllowed(
         options.authorizer,
         context,
         descriptor,
-      );
-      stage("fields");
-      if (!readable.length)
-        throw new RecordServiceError(
-          403,
-          "ENTITY_DETAIL_FIELDS_FORBIDDEN",
-          "No fields are readable for this entity detail",
-        );
-      const actions: {
-        code: string;
-        label: string;
-        kind: "edit" | "transition";
-      }[] = [];
+        "patch",
+        recordId,
+      ))
+    )
+      actions.push({ code: "edit", label: "Edit", kind: "edit" });
+    for (const transition of descriptor.lifecycle?.transitions ?? [])
       if (
-        descriptor.operations["patch"] &&
-        (await operationAllowed(
-          options.authorizer,
-          context,
-          descriptor,
-          "patch",
-          recordId,
-        ))
+        (
+          await options.authorizer.authorize({
+            context,
+            permissionCode: transition.permissionCode,
+            resource: {
+              tenantId: context.tenantId,
+              entityCode,
+              operationKey: "transition",
+              transitionCode: transition.code,
+            },
+          })
+        ).allowed
       )
-        actions.push({ code: "edit", label: "Edit", kind: "edit" });
-      for (const transition of descriptor.lifecycle?.transitions ?? [])
+        actions.push({
+          code: transition.code,
+          label: humanizeIdentifier(transition.code),
+          kind: "transition",
+        });
+    stage("actions");
+    const fields = readable.map((field) =>
+      surfaceField(field, true, descriptor),
+    );
+    const identity = descriptor.listPresentation?.identityField;
+    const titleField =
+      identity && readable.some((field) => field.key === identity)
+        ? identity
+        : (readable.find(
+            (field) => field.storagePath === descriptor.storage.idField,
+          )?.key ?? readable[0]!.key);
+    const authorizedRelationships: string[] = [];
+    const relationshipCapabilities: Record<string, { create: boolean }> = {};
+    if (recordId)
+      for (const relation of descriptor.recordPresentation
+        ?.entityRelationships ?? []) {
+        const child = await options.metadata.getEntityDescriptor(
+          context,
+          relation.targetEntity,
+        );
         if (
-          (
-            await options.authorizer.authorize({
-              context,
-              permissionCode: transition.permissionCode,
-              resource: {
-                tenantId: context.tenantId,
-                entityCode,
-                operationKey: "transition",
-                transitionCode: transition.code,
-              },
-            })
-          ).allowed
-        )
-          actions.push({
-            code: transition.code,
-            label: humanizeIdentifier(transition.code),
-            kind: "transition",
-          });
-      stage("actions");
-      const fields = readable.map((field) => surfaceField(field, true));
-      const identity = descriptor.listPresentation?.identityField;
-      const titleField =
-        identity && readable.some((field) => field.key === identity)
-          ? identity
-          : (readable.find(
-              (field) => field.storagePath === descriptor.storage.idField,
-            )?.key ?? readable[0]!.key);
-      const authorizedRelationships: string[] = [];
-      const relationshipCapabilities: Record<string, { create: boolean }> = {};
-      if (recordId) for (const relation of descriptor.recordPresentation?.entityRelationships ?? []) {
-        const child = await options.metadata.getEntityDescriptor(context, relation.targetEntity);
-        if (child && await operationAllowed(options.authorizer, context, child, "list")) {
+          child &&
+          (await operationAllowed(options.authorizer, context, child, "list"))
+        ) {
           authorizedRelationships.push(relation.key);
           // Parent admission has succeeded. The mutation endpoint independently
           // locks relationship fields and rechecks create permission.
-          relationshipCapabilities[relation.key] = { create: await operationAllowed(options.authorizer, context, child, "create") };
+          relationshipCapabilities[relation.key] = {
+            create: await operationAllowed(
+              options.authorizer,
+              context,
+              child,
+              "create",
+            ),
+          };
         }
       }
-      stage("relationships");
-      const presentation = readableRecordPresentation(
-        descriptor.recordPresentation ??
-          parseEntityRecordPresentation({
-            schemaVersion: 1,
-            titleField,
-            iconKey: descriptor.listPresentation?.experience?.header.iconKey,
-            sections: [
-              {
-                key: "overview",
-                label: "Overview",
-                localizedLabel: {labelKey: "detail.overview", defaultText: "Overview"},
-                fields: fields.map((field) => field.key),
-              },
-            ],
-            actions: [
-              {
-                key: "edit",
-                label: "Edit",
-                operationKey: "patch",
-                placement: "primary",
-              },
-            ],
-          }),
-        fields.map((field) => field.key),
-        actions.map((action) =>
-          action.kind === "edit" ? "patch" : action.code,
-        ),
-        titleField,
-        authorizedRelationships,
-      );
-      // These read-only hooks are independent, but none may run before record
-      // admission and readable-field projection have succeeded. No transaction
-      // is passed between these independently scoped read providers.
-      const [collaboration, summaryView, activity] = await Promise.all([
-        measured("collaboration", () => recordId && options.collaboration ? options.collaboration({ context, entityCode, recordId }) : []),
-        measured("summary", () => recordId && options.summary ? options.summary({ context, entityCode, recordId, releaseId: descriptor.releaseId }) : undefined),
-        measured("activity", () => recordId && options.activity ? options.activity({context,entityCode,recordId}) : false),
-      ]);
-      const detail = parseEntityDetailDescriptor({
-        schema: "athyper.entity-detail-descriptor/1",
-        ...(entityLabels(descriptor).localization ? { localizedLabels: readablePresentationLocalization(entityLabels(descriptor).localization, fields.map(field => field.key)) } : {}),
-        collaboration,
-        relationshipCapabilities,
-        activity,
-        presentation: { ...presentation, summaryView },
-        plane: descriptor.planeKey,
-        entity: {
-          code: entityCode,
-          label: entityLabels(descriptor).singular,
-          pluralLabel: entityLabels(descriptor).plural,
-        },
-        revision: surfaceRevision(descriptor, {
-          entityCode,
-          fields,
-          actions,
+    stage("relationships");
+    const presentation = readableRecordPresentation(
+      descriptor.recordPresentation ??
+        parseEntityRecordPresentation({
+          schemaVersion: 1,
           titleField,
-          presentation,
+          iconKey: descriptor.listPresentation?.experience?.header.iconKey,
+          sections: [
+            {
+              key: "overview",
+              label: "Overview",
+              localizedLabel: {
+                labelKey: "detail.overview",
+                defaultText: "Overview",
+              },
+              fields: fields.map((field) => field.key),
+            },
+          ],
+          actions: [
+            {
+              key: "edit",
+              label: "Edit",
+              operationKey: "patch",
+              placement: "primary",
+            },
+          ],
         }),
-        titleField,
+      fields.map((field) => field.key),
+      actions.map((action) => (action.kind === "edit" ? "patch" : action.code)),
+      titleField,
+      authorizedRelationships,
+    );
+    // These read-only hooks are independent, but none may run before record
+    // admission and readable-field projection have succeeded. No transaction
+    // is passed between these independently scoped read providers.
+    const [collaboration, summaryView, activity] = await Promise.all([
+      measured("collaboration", () =>
+        recordId && options.collaboration
+          ? options.collaboration({ context, entityCode, recordId })
+          : [],
+      ),
+      measured("summary", () =>
+        recordId && options.summary
+          ? options.summary({
+              context,
+              entityCode,
+              recordId,
+              releaseId: descriptor.releaseId,
+            })
+          : undefined,
+      ),
+      measured("activity", () =>
+        recordId && options.activity
+          ? options.activity({ context, entityCode, recordId })
+          : false,
+      ),
+    ]);
+    const detail = parseEntityDetailDescriptor({
+      schema: "athyper.entity-detail-descriptor/1",
+      ...(entityLabels(descriptor).localization
+        ? {
+            localizedLabels: readablePresentationLocalization(
+              entityLabels(descriptor).localization,
+              fields.map((field) => field.key),
+            ),
+          }
+        : {}),
+      collaboration,
+      relationshipCapabilities,
+      activity,
+      presentation: { ...presentation, summaryView },
+      plane: descriptor.planeKey,
+      entity: {
+        code: entityCode,
+        label: entityLabels(descriptor).singular,
+        pluralLabel: entityLabels(descriptor).plural,
+      },
+      revision: surfaceRevision(descriptor, {
+        entityCode,
         fields,
         actions,
-      });
-      return { descriptor: detail, record: data ? normalizeRecord(descriptor, data, readable.map(field => field.key)) : undefined };
+        titleField,
+        presentation,
+      }),
+      titleField,
+      fields,
+      actions,
+    });
+    return {
+      descriptor: detail,
+      record: data
+        ? normalizeRecord(
+            descriptor,
+            data,
+            readable.map((field) => field.key),
+          )
+        : undefined,
+    };
   }
   return Object.freeze({
     async applicationDescriptor(
@@ -366,10 +469,18 @@ export function createEntityListService(options: {
         );
       const title = experience
         ? resolveEntityText(experience.header.title)
-        : (descriptor.listPresentation?.title ?? humanizeIdentifier(entityCode));
+        : (descriptor.listPresentation?.title ??
+          humanizeIdentifier(entityCode));
       return Object.freeze({
         schemaVersion: 1 as const,
-        ...(descriptor.listPresentation?.localizedLabels ? { localizedLabels: readablePresentationLocalization(descriptor.listPresentation.localizedLabels, []) } : {}),
+        ...(descriptor.listPresentation?.localizedLabels
+          ? {
+              localizedLabels: readablePresentationLocalization(
+                descriptor.listPresentation.localizedLabels,
+                [],
+              ),
+            }
+          : {}),
         plane: descriptor.planeKey,
         entity: Object.freeze({
           code: entityCode,
@@ -386,8 +497,19 @@ export function createEntityListService(options: {
             : {}),
         }),
         actions,
-        ...(descriptor.intakeFlows?.length ? {intakeFlows: descriptor.intakeFlows} : {}),
-        ...(descriptor.intakeSurfaces?.length ? {intakeSurfaces: await resolveIntakeFormChoices(descriptor.intakeSurfaces,options.formChoices?source=>options.formChoices!(context,source):undefined)} : {}),
+        ...(descriptor.intakeFlows?.length
+          ? { intakeFlows: descriptor.intakeFlows }
+          : {}),
+        ...(descriptor.intakeSurfaces?.length
+          ? {
+              intakeSurfaces: await resolveIntakeFormChoices(
+                descriptor.intakeSurfaces,
+                options.formChoices
+                  ? (source) => options.formChoices!(context, source)
+                  : undefined,
+              ),
+            }
+          : {}),
         navigation,
         ...(experience?.application
           ? { application: experience.application }
@@ -475,15 +597,15 @@ export function createEntityListService(options: {
         collectionScope,
         options.attentionCounts,
       );
-      const choices = filterChoiceField
-        ? ((await options.filterChoices?.(
-            context,
-            readable.filter(
-              (field) => field.filterable && field.key === filterChoiceField,
-            ),
-          )) ?? {})
-        : {};
-      const filterFields = readable.map((field) =>
+      const queryFields = queryableListFields(descriptor, readable);
+      const choiceFields = queryFields.filter(
+        (field) => field.filterable && field.key === filterChoiceField,
+      );
+      const choices =
+        filterChoiceField && choiceFields.length
+          ? ((await options.filterChoices?.(context, choiceFields)) ?? {})
+          : {};
+      const filterFields = queryFields.map((field) =>
         choices[field.key]
           ? {
               ...field,
@@ -513,6 +635,7 @@ export function createEntityListService(options: {
       context: VerifiedRequestContext,
       entityCode: string,
       mode: "create" | "edit",
+      recordId?: string,
     ) {
       const descriptor = await descriptorFor(
         options.metadata,
@@ -525,9 +648,16 @@ export function createEntityListService(options: {
         context,
         descriptor,
         operation,
+        mode === "edit" ? recordId : undefined,
       );
       if (mode === "edit")
-        await requireOperation(options.authorizer, context, descriptor, "read");
+        await requireOperation(
+          options.authorizer,
+          context,
+          descriptor,
+          "read",
+          recordId,
+        );
       const readable = new Set(
         (
           await readableRecordFields(options.authorizer, context, descriptor)
@@ -542,11 +672,16 @@ export function createEntityListService(options: {
                 await options.authorizer.authorize({
                   context,
                   permissionCode: field.writePermissionCode,
-                  resource: fieldWriteAuthorizationResource(context, entityCode, operation, field.key),
+                  resource: fieldWriteAuthorizationResource(
+                    context,
+                    entityCode,
+                    operation,
+                    field.key,
+                  ),
                 })
               ).allowed);
           if (!readable.has(field.key) && !writable) return undefined;
-          return surfaceField(field, !writable);
+          return surfaceField(field, !writable, descriptor);
         }),
       );
       const visible = fields.filter((field): field is EntitySurfaceFieldV1 =>
@@ -563,7 +698,14 @@ export function createEntityListService(options: {
         projection = { entityCode, mode, fields: visible, operation };
       return parseEntityFormDescriptor({
         schema: "athyper.entity-form-descriptor/1",
-        ...(labels.localization ? { localizedLabels: readablePresentationLocalization(labels.localization, visible.map(field => field.key)) } : {}),
+        ...(labels.localization
+          ? {
+              localizedLabels: readablePresentationLocalization(
+                labels.localization,
+                visible.map((field) => field.key),
+              ),
+            }
+          : {}),
         plane: descriptor.planeKey,
         entity: {
           code: entityCode,
@@ -581,7 +723,9 @@ export function createEntityListService(options: {
         },
       });
     },
-    async detailDescriptor(...args: Parameters<EntityListService["detailDescriptor"]>) {
+    async detailDescriptor(
+      ...args: Parameters<EntityListService["detailDescriptor"]>
+    ) {
       return (await compileDetail(...args)).descriptor;
     },
     async detailRead(...args: Parameters<EntityListService["detailRead"]>) {
@@ -672,13 +816,11 @@ export function createEntityListService(options: {
           if (value !== undefined) values[field.key] = value;
         }
         if (!identity.published) values[identity.key] = String(rawId);
-        const versionField = descriptor.storage.versionField;
-        const version =
-          versionField &&
-          Number.isInteger(source[versionField]) &&
-          Number(source[versionField]) >= 0
-            ? Number(source[versionField])
-            : undefined;
+        const version = recordVersion(
+          descriptor.storage.versionField
+            ? source[descriptor.storage.versionField]
+            : undefined,
+        );
         return Object.freeze({
           id: String(rawId),
           ...(version !== undefined ? { version } : {}),
@@ -790,16 +932,27 @@ async function operationAllowed(
 }
 function enumOptionLabel(field: EntityFieldDescriptor, value: string): string {
   const labels = field.validation?.["optionLabels"];
-  const label = labels && typeof labels === "object" ? Reflect.get(labels, value) : undefined;
-  return typeof label === "string" && label.trim() ? label : humanizeIdentifier(value);
+  const label =
+    labels && typeof labels === "object"
+      ? Reflect.get(labels, value)
+      : undefined;
+  return typeof label === "string" && label.trim()
+    ? label
+    : humanizeIdentifier(value);
 }
 function surfaceField(
   field: EntityFieldDescriptor,
   readOnly: boolean,
+  descriptor: EntityRuntimeDescriptor,
 ): EntitySurfaceFieldV1 {
-  const raw = Array.isArray(field.validation?.["options"])
-    ? field.validation["options"]
-    : [];
+  const masked = descriptor.authorization?.fieldPolicies.some(
+    (policy) =>
+      policy.representation === "masked" && policy.fields.includes(field.key),
+  );
+  const raw =
+    !masked && Array.isArray(field.validation?.["options"])
+      ? field.validation["options"]
+      : [];
   const options = raw.flatMap((candidate) =>
     typeof candidate === "string"
       ? [{ value: candidate, label: enumOptionLabel(field, candidate) }]
@@ -838,6 +991,33 @@ function surfaceRevision(
   });
 }
 
+/** Presentation and choice providers must honor the same published query-use
+ * boundary as the executor. Masked values cannot become filter enumerations. */
+function queryableListFields(
+  descriptor: EntityRuntimeDescriptor,
+  fields: readonly EntityFieldDescriptor[],
+): readonly EntityFieldDescriptor[] {
+  if (!descriptor.authorization) return fields;
+  return fields.map((field) => {
+    const policy = descriptor.authorization!.fieldPolicies.find((policy) =>
+      policy.fields.includes(field.key),
+    );
+    const allowed = (use: "filter" | "sort" | "group" | "search") =>
+      policy?.representation === "plain" && policy.queryUses.includes(use);
+    return {
+      ...field,
+      filterable: field.filterable === true && allowed("filter"),
+      sortable: field.sortable === true && allowed("sort"),
+      searchable: field.searchable === true && allowed("search"),
+      list: {
+        ...field.list,
+        groupable: field.list?.groupable === true && allowed("group"),
+        ...(!allowed("group") ? { aggregations: [] } : {}),
+      },
+    };
+  });
+}
+
 export function compileEntityListDescriptor(
   context: VerifiedRequestContext,
   descriptor: EntityRuntimeDescriptor,
@@ -848,6 +1028,16 @@ export function compileEntityListDescriptor(
   actions: readonly EffectiveListActionV1[] = [],
   navigation: readonly EffectiveEntitySectionV1[] = [],
 ): EntityListDescriptorV1 {
+  readableFields = queryableListFields(descriptor, readableFields);
+  // The executor searches the published search profile as a whole. Do not
+  // advertise a partial profile that would still query a forbidden member.
+  const searchAdmitted = descriptor.fields
+    .filter((field) => field.searchable)
+    .every((field) =>
+      readableFields.some(
+        (visible) => visible.key === field.key && visible.searchable,
+      ),
+    );
   if (!readableFields.length)
     throw new RecordServiceError(
       403,
@@ -871,14 +1061,20 @@ export function compileEntityListDescriptor(
   // reuse it as the `title` role so record cards need no second declaration.
   const recordTitleKey = descriptor.recordPresentation?.titleField;
   const fields: ListFieldDescriptorV1[] = readableFields.map((field, index) => {
-    const options = filterOptions(field);
+    const options = field.filterable ? filterOptions(field) : [];
     const semanticRole =
       field.list?.semanticRole ??
-      (field.key === recordTitleKey && field.key !== identityKey ? "title" : undefined);
-    const statusTones = field.list?.statusTones ?? descriptor.recordPresentation?.badges.find(badge => badge.field === field.key)?.tones;
+      (field.key === recordTitleKey && field.key !== identityKey
+        ? "title"
+        : undefined);
+    const statusTones =
+      field.list?.statusTones ??
+      descriptor.recordPresentation?.badges.find(
+        (badge) => badge.field === field.key,
+      )?.tones;
     return Object.freeze({
       key: field.key,
-    label: field.list?.label ?? humanizeIdentifier(field.key),
+      label: field.list?.label ?? humanizeIdentifier(field.key),
       ...(field.list?.columnGroup
         ? { columnGroup: field.list.columnGroup }
         : {}),
@@ -1021,7 +1217,14 @@ export function compileEntityListDescriptor(
   return Object.freeze({
     schemaVersion: 1,
     serverViews: true,
-    ...(descriptor.listPresentation?.localizedLabels ? { localizedLabels: readablePresentationLocalization(descriptor.listPresentation.localizedLabels, fields.map(field => field.key)) } : {}),
+    ...(descriptor.listPresentation?.localizedLabels
+      ? {
+          localizedLabels: readablePresentationLocalization(
+            descriptor.listPresentation.localizedLabels,
+            fields.map((field) => field.key),
+          ),
+        }
+      : {}),
     plane: descriptor.planeKey,
     entity: Object.freeze({
       code: descriptor.entityCode,
@@ -1049,7 +1252,9 @@ export function compileEntityListDescriptor(
         ? { description: descriptor.listPresentation.description }
         : {}),
       defaultState: Object.freeze({
-        ...(configuredState?.query ? { query: configuredState.query } : {}),
+        ...(searchAdmitted && configuredState?.query
+          ? { query: configuredState.query }
+          : {}),
         filters: defaultFilters,
         sort: defaultSort,
         ...(defaultGroup ? { group: defaultGroup } : {}),
@@ -1062,7 +1267,7 @@ export function compileEntityListDescriptor(
       }),
       supportedModes: modes,
       search: Object.freeze({
-        ...(descriptor.listPresentation?.search?.profileKey
+        ...(searchAdmitted && descriptor.listPresentation?.search?.profileKey
           ? { profileKey: descriptor.listPresentation.search.profileKey }
           : {}),
         minimumQueryLength,
@@ -1136,7 +1341,20 @@ async function effectiveDataOperations(
             await authorizer.authorize({
               context,
               permissionCode: permission,
-              resource,
+              resource: {
+                ...resource,
+                ...(usesEntityBackendAuthorization(
+                  authorizer,
+                  context,
+                  descriptor,
+                )
+                  ? {
+                      entityCode: descriptor.entityCode,
+                      operationKey: operation,
+                      authorizationDescriptorHash: descriptor.compiledHash,
+                    }
+                  : {}),
+              },
               observation: {
                 entityCode: descriptor.entityCode,
                 operationKey: operation,
@@ -1186,25 +1404,38 @@ async function effectiveDataOperations(
   const config = descriptor.listPresentation?.dataOperations;
   const exportMax = config?.exportMaxRecords ?? 250_000,
     importMax = config?.importMaxRows ?? 50_000;
-  const serverExport = exportAuthority?.allowed
-    ? enabled(exportAuthority.permission, exportMax, true)
-    : hidden;
+  const exportable = readable.filter(
+    (field) =>
+      exportableClassification(field.classification) &&
+      (!usesEntityBackendAuthorization(authorizer, context, descriptor) ||
+        descriptor.authorization!.fieldPolicies.some(
+          (policy) =>
+            policy.fields.includes(field.key) &&
+            policy.representation === "plain" &&
+            policy.queryUses.includes("export"),
+        )),
+  );
+  const serverExport =
+    exportAuthority?.allowed && exportable.length
+      ? enabled(exportAuthority.permission, exportMax, true)
+      : hidden;
   const adapterReady = Boolean(config?.importAdapterKey);
   const parentScoped =
     collectionScope?.status === "ready" &&
     (collectionScope.constraints ?? []).some(
       (constraint) => constraint.kind === "entity.parent.v1",
     );
-  const serverImport = !importAuthority?.allowed || parentScoped
-    ? hidden
-    : !adapterReady
-      ? disabled(
-          importAuthority.permission,
-          "GOVERNED_IMPORT_ADAPTER_REQUIRED",
-          "A tested plane-owned import adapter has not been published for this entity.",
-          true,
-        )
-      : enabled(importAuthority.permission, importMax, true);
+  const serverImport =
+    !importAuthority?.allowed || parentScoped
+      ? hidden
+      : !adapterReady
+        ? disabled(
+            importAuthority.permission,
+            "GOVERNED_IMPORT_ADAPTER_REQUIRED",
+            "A tested plane-owned import adapter has not been published for this entity.",
+            true,
+          )
+        : enabled(importAuthority.permission, importMax, true);
   const createFields = readable
       .filter((field) => field.writableOn.includes("create"))
       .map((field) => field.key),
@@ -1251,7 +1482,9 @@ async function effectiveDataOperations(
       : (["csv", "json"] as const),
   );
   return Object.freeze({
-    ...(entityTransferWorkspaces[descriptor.planeKey] ? { workspaceHref: entityTransferWorkspaces[descriptor.planeKey] } : {}),
+    ...(entityTransferWorkspaces[descriptor.planeKey]
+      ? { workspaceHref: entityTransferWorkspaces[descriptor.planeKey] }
+      : {}),
     export: Object.freeze({
       currentPage: serverExport,
       selected: serverExport,
@@ -1264,7 +1497,7 @@ async function effectiveDataOperations(
           : hidden,
       formats: exportFormats,
       defaultFormat: exportFormats[0]!,
-      exportableFields: Object.freeze(readable.map((field) => field.key)),
+      exportableFields: Object.freeze(exportable.map((field) => field.key)),
       asynchronousThreshold: config?.asynchronousThreshold ?? 5_000,
     }),
     import: Object.freeze({
@@ -1500,9 +1733,16 @@ function jsonValue(value: unknown): JsonValue | undefined {
 }
 
 function entityLabels(descriptor: EntityRuntimeDescriptor) {
-  const localization = descriptor.listPresentation?.localizedLabels ?? descriptor.recordPresentation?.localizedLabels;
-  const singular = localization?.entity?.defaultText ?? humanizeIdentifier(descriptor.entityCode);
-  const plural = localization?.title?.defaultText ?? descriptor.listPresentation?.title ?? pluralize(singular);
+  const localization =
+    descriptor.listPresentation?.localizedLabels ??
+    descriptor.recordPresentation?.localizedLabels;
+  const singular =
+    localization?.entity?.defaultText ??
+    humanizeIdentifier(descriptor.entityCode);
+  const plural =
+    localization?.title?.defaultText ??
+    descriptor.listPresentation?.title ??
+    pluralize(singular);
   return { singular, plural, localization };
 }
 
@@ -1551,8 +1791,17 @@ async function resolveCollectionScope(
   descriptor: EntityRuntimeDescriptor,
   coordinate?: ListRecordsQuery["scopeCoordinate"],
 ): Promise<RecordCollectionScopeResolution> {
-  if (!resolver && (coordinate?.parentEntityCode || coordinate?.parentRecordId || coordinate?.relationshipKey))
-    throw new RecordServiceError(403, "ENTITY_PARENT_ACCESS_DENIED", "Related record scope is unavailable");
+  if (
+    !resolver &&
+    (coordinate?.parentEntityCode ||
+      coordinate?.parentRecordId ||
+      coordinate?.relationshipKey)
+  )
+    throw new RecordServiceError(
+      403,
+      "ENTITY_PARENT_ACCESS_DENIED",
+      "Related record scope is unavailable",
+    );
   if (resolver)
     return resolver.resolve({
       context,
@@ -1569,31 +1818,44 @@ async function resolveCollectionScope(
   });
 }
 
-function normalizeRecord(descriptor: EntityRuntimeDescriptor, data: Readonly<Record<string, unknown>>, readable?: readonly string[]): EntityRecordV1 {
-      const rawId = data[descriptor.storage.idField];
-      if (typeof rawId !== "string" && typeof rawId !== "number")
-        throw new RecordServiceError(
-          500,
-          "RECORD_IDENTITY_INVALID",
-          "The record has no serializable identity",
-        );
-      const values = Object.fromEntries(
-        descriptor.fields.filter(field => !readable || readable.includes(field.key)).flatMap((field) =>
-          Object.hasOwn(data, field.key) ? [[field.key, data[field.key]]] : [],
-        ),
-      );
-      const rawVersion = descriptor.storage.versionField
-          ? data[descriptor.storage.versionField]
-          : undefined,
-        version =
-          typeof rawVersion === "number" &&
-          Number.isInteger(rawVersion) &&
-          rawVersion >= 0
-            ? rawVersion
-            : undefined;
-      return Object.freeze({
-        id: String(rawId),
-        ...(version === undefined ? {} : { version }),
-        values: Object.freeze(values),
-      });
+function normalizeRecord(
+  descriptor: EntityRuntimeDescriptor,
+  data: Readonly<Record<string, unknown>>,
+  readable?: readonly string[],
+): EntityRecordV1 {
+  const rawId = data[descriptor.storage.idField];
+  if (typeof rawId !== "string" && typeof rawId !== "number")
+    throw new RecordServiceError(
+      500,
+      "RECORD_IDENTITY_INVALID",
+      "The record has no serializable identity",
+    );
+  const values = Object.fromEntries(
+    descriptor.fields
+      .filter((field) => !readable || readable.includes(field.key))
+      .flatMap((field) =>
+        Object.hasOwn(data, field.key) ? [[field.key, data[field.key]]] : [],
+      ),
+  );
+  const version = recordVersion(
+    descriptor.storage.versionField
+      ? data[descriptor.storage.versionField]
+      : undefined,
+  );
+  return Object.freeze({
+    id: String(rawId),
+    ...(version === undefined ? {} : { version }),
+    values: Object.freeze(values),
+  });
+}
+
+// PostgreSQL bigint columns arrive as decimal strings. Preserve optimistic
+// concurrency coordinates without rounding an unsafe integer.
+function recordVersion(value: unknown): number | undefined {
+  const numeric =
+    typeof value === "number" ||
+    (typeof value === "string" && /^[0-9]+$/.test(value))
+      ? Number(value)
+      : NaN;
+  return Number.isSafeInteger(numeric) && numeric >= 0 ? numeric : undefined;
 }

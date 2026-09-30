@@ -1,0 +1,31 @@
+{
+  "schema": "athyper.capability-profile/1",
+  "profileCode": "platform.collaboration.comments.standard",
+  "profileVersion": 1,
+  "capabilityKey": "comments",
+  "defaults": {
+    "defaultAudience": "private",
+    "allowedAudiences": ["public", "private"],
+    "maxTextLength": 5000,
+    "maxDepth": 5,
+    "draftRetentionDays": 30,
+    "reactionCodes": ["thumbs_up", "heart", "celebrate"],
+    "features": {
+      "replies": true,
+      "edits": true,
+      "reactions": true,
+      "mentions": true,
+      "drafts": true,
+      "reporting": true,
+      "history": true
+    },
+    "attachments": { "allowed": true, "maxCount": 3 }
+  },
+  "permittedOverrides": {
+    "defaultAudience": { "allowedValues": ["public", "private"] },
+    "allowedAudiences": { "allowedSubset": ["public", "private"] },
+    "maxTextLength": { "minimum": 1, "maximum": 5000 },
+    "maxDepth": { "minimum": 1, "maximum": 5 },
+    "attachments.maxCount": { "minimum": 0, "maximum": 3 }
+  }
+}

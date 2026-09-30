@@ -77,3 +77,6 @@ docs/architecture/server-route-manifest.json
 docs/architecture/server-route-manifest.md
 docs/architecture/business-partner/development-url-catalogue.md
 artifacts/
+
+# Published capability profile source bytes are pinned by source-lock.json.
+metadata/profiles/collaboration/**/*.json

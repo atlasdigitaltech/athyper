@@ -26,11 +26,11 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 337,
+    "operational-scripts:new": 334,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
-    "routes:new": 141,
+    "routes:new": 142,
     "schedules:migrated": 1,
     "schedules:new": 5
   },
@@ -13357,54 +13357,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "operational-scripts:business-partner-labels.test",
-      "category": "operational-scripts",
-      "key": "business-partner-labels.test",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/__tests__/provisioning/business-partner-labels.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:business-partner-r2-fixtures.test",
-      "category": "operational-scripts",
-      "key": "business-partner-r2-fixtures.test",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/__tests__/provisioning/business-partner-r2-fixtures.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:business-partner-r5-fixtures.test",
-      "category": "operational-scripts",
-      "key": "business-partner-r5-fixtures.test",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/__tests__/provisioning/business-partner-r5-fixtures.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:business-partner-r7-fixtures.test",
-      "category": "operational-scripts",
-      "key": "business-partner-r7-fixtures.test",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/__tests__/provisioning/business-partner-r7-fixtures.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "operational-scripts:cache-invalidation-backlog",
       "category": "operational-scripts",
       "key": "cache-invalidation-backlog",
@@ -14363,30 +14315,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "operational-scripts:development-business-partner-fixtures.test",
-      "category": "operational-scripts",
-      "key": "development-business-partner-fixtures.test",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/__tests__/provisioning/development-business-partner-fixtures.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:development-business-partner-runtime.test",
-      "category": "operational-scripts",
-      "key": "development-business-partner-runtime.test",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/__tests__/provisioning/development-business-partner-runtime.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "operational-scripts:development-phase1-list-runtimes.test",
       "category": "operational-scripts",
       "key": "development-phase1-list-runtimes.test",
@@ -14567,6 +14495,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/entity-collaboration-ca02.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:entity-foundation-lifecycle",
+      "category": "operational-scripts",
+      "key": "entity-foundation-lifecycle",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -15622,6 +15562,18 @@
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
     },
     {
+      "identity": "operational-scripts:masked-export-product",
+      "category": "operational-scripts",
+      "key": "masked-export-product",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/qualification/masked-export-product.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:materialize-asset-policies",
       "category": "operational-scripts",
       "key": "materialize-asset-policies",
@@ -16231,6 +16183,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:neon-supplier-pilot",
+      "category": "operational-scripts",
+      "key": "neon-supplier-pilot",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/reference-seeds/neon-supplier-pilot.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:no-orphan-je",
@@ -23577,6 +23541,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-d---produce-the-phase-0-inventory-and-parity-matrix",
       "risk": "A legacy HTTP behavior may be absent or have changed authorization semantics.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "routes:get /jwks",
+      "category": "routes",
+      "key": "get /jwks",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "routes:get /limited",

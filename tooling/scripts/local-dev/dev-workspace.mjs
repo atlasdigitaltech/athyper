@@ -3,6 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { sourceIdentity } from "./evidence.mjs";
 import { processIdentity } from "./supervisor.mjs";
+import { configureDevPublicationWorkload } from "./publication-workload-config.mjs";
 import { configureDevProtectedValues } from "./protected-values-config.mjs";
 import {
   existsSync,
@@ -32,18 +33,35 @@ export const APPLICATIONS = [
 const project = "athyper-dev-source";
 const jsonRead = (path) => JSON.parse(readFileSync(path, "utf8"));
 const digest = (value) => createHash("sha256").update(value).digest("hex");
-export function configureDevPublication(config, preset, path = join(homedir(), ".athyper/instances/dev/secrets/dev-publication/server.json"), recoveryPath = join(homedir(), ".athyper/instances/dev/secrets/publication-recovery.json")) {
+export function configureDevPublication(
+  config,
+  preset,
+  path = join(
+    homedir(),
+    ".athyper/instances/dev/secrets/dev-publication/server.json",
+  ),
+  recoveryPath = join(
+    homedir(),
+    ".athyper/instances/dev/secrets/publication-recovery.json",
+  ),
+) {
   configureDevProtectedValues(config);
   if (config.services.worker && existsSync(recoveryPath)) {
     const stat = statSync(recoveryPath);
-    if (!stat.isFile() || stat.uid !== process.getuid() || (stat.mode & 0o077))
+    if (!stat.isFile() || stat.uid !== process.getuid() || stat.mode & 0o077)
       throw new Error("Private DEV recovery configuration required");
     const recovery = jsonRead(recoveryPath);
     const url = new URL(recovery.databaseUrl);
-    if (url.hostname !== "db" || url.port !== "5432" || url.pathname !== "/athyper_studio" || url.username !== "athyper_dev_publication_recovery")
+    if (
+      url.hostname !== "db" ||
+      url.port !== "5432" ||
+      url.pathname !== "/athyper_studio" ||
+      url.username !== "athyper_dev_publication_recovery"
+    )
       throw new Error("Invalid DEV recovery database coordinate");
     config.services.worker.environment ??= {};
-    config.services.worker.environment.PUBLICATION_RECOVERY_DATABASE_URL = recovery.databaseUrl;
+    config.services.worker.environment.PUBLICATION_RECOVERY_DATABASE_URL =
+      recovery.databaseUrl;
   }
   for (const name of ["api", "worker", "scheduler"]) {
     const service = config.services[name];
@@ -53,12 +71,20 @@ export function configureDevPublication(config, preset, path = join(homedir(), "
     // in generated compose files so recreation does not lose the runtime reader.
     // Compiled-only plane settings still take precedence; reader errors fail closed.
     service.environment.METADATA_FORMAT_ROUTING = "true";
-    service.volumes = (service.volumes ?? []).filter(m => m.target !== "/run/dev-publication/server.json");
+    service.volumes = (service.volumes ?? []).filter(
+      (m) => m.target !== "/run/dev-publication/server.json",
+    );
     delete service.environment.ATHYPER_DEV_PUBLICATION_CONFIG;
     service.environment.ATHYPER_DEV_PRESET = preset;
     if (preset === "devfull" && existsSync(path)) {
-      service.volumes.push({ type: "bind", source: path, target: "/run/dev-publication/server.json", read_only: true });
-      service.environment.ATHYPER_DEV_PUBLICATION_CONFIG = "/run/dev-publication/server.json";
+      service.volumes.push({
+        type: "bind",
+        source: path,
+        target: "/run/dev-publication/server.json",
+        read_only: true,
+      });
+      service.environment.ATHYPER_DEV_PUBLICATION_CONFIG =
+        "/run/dev-publication/server.json";
     }
   }
 }
@@ -585,6 +611,7 @@ export async function main(args = process.argv.slice(2)) {
             previewRoot,
           );
       configureDevPublication(config, preset);
+      configureDevPublicationWorkload(config, preset);
       // Keep all six definitions so devsimple can later return to devfull
       // even after the legacy containers have been removed.
       privateJson(fullFile, config);
@@ -733,12 +760,18 @@ export async function main(args = process.argv.slice(2)) {
           throw new Error("Development images belong to another checkout");
         const imageDefinitions = {};
         for (const name of APPLICATIONS) {
-          const image = built.images[name.endsWith("-web") ? name : "runtime-server"];
-          imageDefinitions[name] = JSON.parse(docker("image", "inspect", image))[0];
+          const image =
+            built.images[name.endsWith("-web") ? name : "runtime-server"];
+          imageDefinitions[name] = JSON.parse(
+            docker("image", "inspect", image),
+          )[0];
           if (
-            imageDefinitions[name].Config.Labels?.["org.opencontainers.image.revision"] !==
-              `working-tree-${built.sourceTreeSha256}` ||
-            imageDefinitions[name].Config.Labels?.["io.athyper.local-preview.protocol"] !== "1"
+            imageDefinitions[name].Config.Labels?.[
+              "org.opencontainers.image.revision"
+            ] !== `working-tree-${built.sourceTreeSha256}` ||
+            imageDefinitions[name].Config.Labels?.[
+              "io.athyper.local-preview.protocol"
+            ] !== "1"
           )
             throw new Error(
               "Development image provenance or preview support mismatch",
@@ -789,6 +822,7 @@ export async function main(args = process.argv.slice(2)) {
           );
         }
         configureDevPublication(config, "devfull");
+        configureDevPublicationWorkload(config, "devfull");
         const file = join(root, "container.compose.json");
         privateJson(file, config);
         mutate("compose", "-p", project, "-f", file, "config", "--quiet");

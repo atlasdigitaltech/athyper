@@ -300,12 +300,16 @@ describe.skipIf(!enabled)(
           constraints.lastIndexOf(
             "ALTER TABLE control.tenant_usage_limit_override",
           ),
+          constraints.indexOf("-- Exclusions protect publication"),
         ),
       );
       await run(
         functions.slice(
           functions.indexOf(
             "-- Versions describe the current catalog projection.",
+          ),
+          functions.indexOf(
+            "CREATE OR REPLACE FUNCTION control.trg_reject_process_publication_mutation",
           ),
         ),
       );
@@ -314,17 +318,24 @@ describe.skipIf(!enabled)(
           triggers.indexOf(
             "CREATE TRIGGER subscription_plan_entitlement_version",
           ),
+          triggers.indexOf(
+            "CREATE TRIGGER process_selection_publication_immutable",
+          ),
         ),
       );
       await run(
         rls.slice(
           rls.indexOf("ALTER TABLE control.tenant_module_entitlement_override"),
+          rls.indexOf("ALTER TABLE control.supplier_activation_policy"),
         ),
       );
       await run(
         ddl("common/control/11_grants.sql").slice(
           ddl("common/control/11_grants.sql").indexOf(
             "REVOKE ALL ON control.tenant_module_entitlement_override",
+          ),
+          ddl("common/control/11_grants.sql").lastIndexOf(
+            "DO $$ BEGIN IF EXISTS",
           ),
         ),
       );
@@ -383,6 +394,9 @@ describe.skipIf(!enabled)(
         ddl("common/control/11_grants.sql").slice(
           ddl("common/control/11_grants.sql").indexOf(
             "REVOKE ALL ON FUNCTION control.parameter_value_matches_definition",
+          ),
+          ddl("common/control/11_grants.sql").lastIndexOf(
+            "DO $$ BEGIN IF EXISTS",
           ),
         ),
       );

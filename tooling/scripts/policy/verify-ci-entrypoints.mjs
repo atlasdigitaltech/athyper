@@ -206,6 +206,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
                 "three-plane-verify",
                 "ci-success",
                 "iam-live",
+                "entity-foundation",
               ]
             : ["build"],
       },

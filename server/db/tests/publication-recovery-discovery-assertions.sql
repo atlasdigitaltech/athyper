@@ -38,7 +38,9 @@ DO $$ DECLARE n integer; first_id uuid; first_created timestamptz; BEGIN
     RAISE EXCEPTION 'recovery role has direct release access';
   END IF;
   SELECT count(*) INTO n FROM publication.fn_recoverable_deployment_coordinates(NULL,NULL,200);
-  IF n <> 2 THEN RAISE EXCEPTION 'expected two stale coordinates, got %', n; END IF;
+  IF n <> 3 THEN RAISE EXCEPTION 'expected three stale coordinates, got %', n; END IF;
+  IF NOT EXISTS(SELECT 1 FROM publication.fn_recoverable_deployment_coordinates(NULL,NULL,200) WHERE deployment_id='30000000-0000-0000-0000-000000000004') THEN RAISE EXCEPTION 'Lost acknowledgement was not recoverable'; END IF;
+  IF EXISTS(SELECT 1 FROM publication.fn_recoverable_deployment_coordinates(NULL,NULL,200) WHERE deployment_id IN ('30000000-0000-0000-0000-000000000005','30000000-0000-0000-0000-000000000006','30000000-0000-0000-0000-000000000007')) THEN RAISE EXCEPTION 'Completed, failed or fresh deployment was selected'; END IF;
   SELECT count(*) INTO n FROM publication.fn_recoverable_deployment_coordinates(NULL,NULL,1);
   IF n <> 1 THEN RAISE EXCEPTION 'batch limit ignored'; END IF;
   SELECT deployment_id, created_at INTO first_id, first_created

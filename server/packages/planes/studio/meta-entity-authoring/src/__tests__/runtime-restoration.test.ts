@@ -3,6 +3,7 @@ import { expect, it } from "vitest";
 import { compileGraph, validateGraph } from "../deterministic.js";
 import { compileRuntimeRestoration } from "../runtime-restoration.js";
 import { baselineJsonHash } from "../baseline-publication.js";
+import { intakeGraph } from "../testing/authoring-graph.js";
 const read = (path: string) =>
   JSON.parse(
     readFileSync(
@@ -114,17 +115,31 @@ it("rejects ambiguous old/new markers, unexpected versions and different entity 
 
 it("keeps reviewed record coverage while allowing validated presentation-only intake answers", () => {
   const { graph } = fixture();
-  const choices = read("server/packages/platform/metadata/src/__tests__/fixtures/intake-choice-graphs.json").business_partner;
+  const choices = intakeGraph();
   graph.fields.push(...choices.fields);
   graph.surfaces.push(...choices.surfaces);
-  graph.surfaceSections = [...(graph.surfaceSections ?? []), ...choices.surfaceSections];
-  graph.surfaceFieldBindings = [...(graph.surfaceFieldBindings ?? []), ...choices.surfaceFieldBindings];
+  graph.surfaceSections = [
+    ...(graph.surfaceSections ?? []),
+    ...choices.surfaceSections,
+  ];
+  graph.surfaceFieldBindings = [
+    ...(graph.surfaceFieldBindings ?? []),
+    ...choices.surfaceFieldBindings,
+  ];
   expect(validateGraph(graph).issues).toEqual([]);
-  expect(compileRuntimeRestoration(compileGraph(graph).descriptor)!.descriptor).toEqual(proposal.descriptor);
-  const field = graph.fields.find((f:any)=>f.fieldKey==="requested_role");
+  expect(
+    compileRuntimeRestoration(compileGraph(graph).descriptor)!.descriptor,
+  ).toEqual(proposal.descriptor);
+  const field = graph.fields.find((f: any) => f.fieldKey === "requested_role");
   field.storagePath = "legal_name";
-  expect(validateGraph(graph).issues.some(i=>i.code==="INTAKE_SURFACE_INVALID")).toBe(true);
+  expect(
+    validateGraph(graph).issues.some(
+      (i) => i.code === "INTAKE_SURFACE_INVALID",
+    ),
+  ).toBe(true);
   delete field.storagePath;
-  graph.surfaceFieldBindings = graph.surfaceFieldBindings.filter((b:any)=>b.entityFieldId!==field.id);
+  graph.surfaceFieldBindings = graph.surfaceFieldBindings.filter(
+    (b: any) => b.entityFieldId !== field.id,
+  );
   expect(validateGraph(graph).issues.length).toBeGreaterThan(0);
 });

@@ -15,6 +15,7 @@ GRANT USAGE ON SCHEMA publication, shared TO athyper_publication_recovery_owner;
 GRANT SELECT (id, tenant_id) ON publication.release TO athyper_publication_recovery_owner;
 GRANT SELECT (id, publication_release_id) ON publication.artifact TO athyper_publication_recovery_owner;
 GRANT SELECT (id, artifact_id, target_plane, status, created_at) ON publication.deployment TO athyper_publication_recovery_owner;
+GRANT SELECT (deployment_id) ON publication.deployment_acknowledgement TO athyper_publication_recovery_owner;
 DROP POLICY IF EXISTS recovery_discovery ON publication.release;
 CREATE POLICY recovery_discovery ON publication.release FOR SELECT
   TO athyper_publication_recovery_owner USING (true);
@@ -33,7 +34,9 @@ LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = pg_catalog AS $$
   FROM publication.deployment d
   JOIN publication.artifact a ON a.id = d.artifact_id
   JOIN publication.release r ON r.id = a.publication_release_id
-  WHERE d.status IN ('pending','dispatched','received','staged','verified')
+  WHERE (d.status IN ('pending','dispatched','received','staged','verified')
+    OR (d.status='activated' AND NOT EXISTS (
+      SELECT 1 FROM publication.deployment_acknowledgement ack WHERE ack.deployment_id=d.id)))
     AND d.created_at < clock_timestamp() - interval '2 minutes'
     AND (p_after_created_at IS NULL OR
          (d.created_at, d.id) > (p_after_created_at,

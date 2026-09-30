@@ -1,0 +1,145 @@
+{
+  "schema": "athyper.shared-reference-product/1",
+  "moduleCode": "ent",
+  "planes": ["studio", "neon", "mesh"],
+  "definition": {
+    "runtimeBindings": [
+      {
+        "operation": "list",
+        "handler": "entity.record.list.v1",
+        "resolver": "tenant.record.v1"
+      },
+      {
+        "operation": "read",
+        "handler": "entity.record.read.v1",
+        "resolver": "tenant.record.v1"
+      }
+    ],
+    "entityCode": "language",
+    "title": {
+      "labelKey": "entity.language.title",
+      "defaultText": "Languages"
+    },
+    "entityLabel": {
+      "labelKey": "entity.language.label",
+      "defaultText": "Language"
+    },
+    "storageObject": "language",
+    "codeField": "code",
+    "titleField": "name",
+    "fields": [
+      {
+        "key": "id",
+        "label": {
+          "labelKey": "entity.language.fields.id",
+          "defaultText": "Record ID"
+        },
+        "type": "uuid",
+        "required": true
+      },
+      {
+        "key": "code",
+        "label": {
+          "labelKey": "entity.language.fields.code",
+          "defaultText": "Code"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "name",
+        "label": {
+          "labelKey": "entity.language.fields.name",
+          "defaultText": "Name"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "native_name",
+        "label": {
+          "labelKey": "entity.language.fields.native_name",
+          "defaultText": "Native name"
+        },
+        "type": "string"
+      },
+      {
+        "key": "iso639_2",
+        "label": {
+          "labelKey": "entity.language.fields.iso639_2",
+          "defaultText": "ISO 639-2"
+        },
+        "type": "string"
+      },
+      {
+        "key": "direction",
+        "label": {
+          "labelKey": "entity.language.fields.direction",
+          "defaultText": "Text direction"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "status",
+        "label": {
+          "labelKey": "entity.language.fields.status",
+          "defaultText": "Status"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "created_at",
+        "label": {
+          "labelKey": "entity.language.fields.created_at",
+          "defaultText": "Created"
+        },
+        "type": "datetime",
+        "required": true
+      },
+      {
+        "key": "updated_at",
+        "label": {
+          "labelKey": "entity.language.fields.updated_at",
+          "defaultText": "Updated"
+        },
+        "type": "datetime"
+      }
+    ],
+    "columns": [
+      "code",
+      "name",
+      "native_name",
+      "iso639_2",
+      "direction",
+      "status"
+    ],
+    "searchFields": ["code", "name"],
+    "sections": [
+      {
+        "key": "overview",
+        "label": {
+          "labelKey": "entity.language.sections.overview",
+          "defaultText": "Language"
+        },
+        "fields": [
+          "code",
+          "name",
+          "native_name",
+          "iso639_2",
+          "direction",
+          "status"
+        ]
+      },
+      {
+        "key": "audit",
+        "label": {
+          "labelKey": "entity.language.sections.audit",
+          "defaultText": "Audit"
+        },
+        "fields": ["created_at", "updated_at"]
+      }
+    ]
+  }
+}
