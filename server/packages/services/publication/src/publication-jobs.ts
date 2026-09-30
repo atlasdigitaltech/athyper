@@ -1,3 +1,4 @@
+import { parseInstant, parsePostgresInstant } from "@athyper/platform-temporal";
 import type {
   JobEnvelope,
   JobExecutionCoordinate,
@@ -36,10 +37,18 @@ export interface RecoverablePublicationCoordinate extends PublicationCoordinateP
   readonly createdAt: Date | string;
 }
 export interface PublicationRecoveryDiscovery {
-  page(after: { readonly createdAt: Date | string; readonly deploymentId: string } | undefined, limit: number): Promise<readonly RecoverablePublicationCoordinate[]>;
+  page(
+    after:
+      | { readonly createdAt: Date | string; readonly deploymentId: string }
+      | undefined,
+    limit: number,
+  ): Promise<readonly RecoverablePublicationCoordinate[]>;
 }
 export interface PublicationRecoveryPayload {
-  readonly after?: { readonly createdAt: string; readonly deploymentId: string };
+  readonly after?: {
+    readonly createdAt: string;
+    readonly deploymentId: string;
+  };
 }
 export interface PublicationRollbackPayload {
   readonly tenantId: string;
@@ -50,7 +59,11 @@ export interface PublicationRollbackPayload {
   readonly actorId: string;
 }
 export interface PublicationRollbackExecutor {
-  rollback(input: PublicationRollbackPayload): Promise<import("@athyper/server-contract-publication").ActiveReleaseProjection>;
+  rollback(
+    input: PublicationRollbackPayload,
+  ): Promise<
+    import("@athyper/server-contract-publication").ActiveReleaseProjection
+  >;
 }
 
 export interface PublicationAuthorityWork {
@@ -129,10 +142,12 @@ export function createPublicationRollbackHandler(
   return {
     async handle(job) {
       const payload = rollbackPayload(job.data);
-      if (job.execution?.scope !== "tenant" ||
-          job.execution.tenantId !== payload.tenantId ||
-          job.execution.planeKey !== payload.targetPlane ||
-          job.execution.principalId !== payload.actorId)
+      if (
+        job.execution?.scope !== "tenant" ||
+        job.execution.tenantId !== payload.tenantId ||
+        job.execution.planeKey !== payload.targetPlane ||
+        job.execution.principalId !== payload.actorId
+      )
         throw permanent("PUBLICATION_ROLLBACK_EXECUTION_MISMATCH");
       const repository = repositories[payload.targetPlane];
       if (!repository) throw permanent("PUBLICATION_TARGET_DISABLED");
@@ -227,16 +242,32 @@ export function createPublicationAuthorityHandlers(
 export function createPublicationRecoveryHandler(
   discovery: PublicationRecoveryDiscovery,
   jobs: JobPublisher,
-  resolveExecution: (coordinate: RecoverablePublicationCoordinate) => Promise<JobExecutionCoordinate | null>,
+  resolveExecution: (
+    coordinate: RecoverablePublicationCoordinate,
+  ) => Promise<JobExecutionCoordinate | null>,
   metrics?: MetricsRegistry,
-  record?: (coordinate: RecoverablePublicationCoordinate, outcome: "discovered" | "enqueued" | "enqueue_failed" | "skipped") => Promise<void>,
-): JobHandler<typeof RECOVER_STALLED_PUBLICATIONS_JOB, PublicationRecoveryPayload> {
+  record?: (
+    coordinate: RecoverablePublicationCoordinate,
+    outcome: "discovered" | "enqueued" | "enqueue_failed" | "skipped",
+  ) => Promise<void>,
+): JobHandler<
+  typeof RECOVER_STALLED_PUBLICATIONS_JOB,
+  PublicationRecoveryPayload
+> {
   return {
     async handle(job): Promise<JobExecutionResult> {
       let recovered = 0;
-      let after: { createdAt: Date | string; deploymentId: string } | undefined = job.data.after;
-      if (after && (typeof after.createdAt !== "string" || !Number.isFinite(Date.parse(after.createdAt)) ||
-          typeof after.deploymentId !== "string" || !/^[0-9a-f-]{36}$/i.test(after.deploymentId)))
+      let after:
+        { createdAt: Date | string; deploymentId: string } | undefined =
+        job.data.after;
+      if (
+        after &&
+        (typeof after.createdAt !== "string" ||
+          (!Number.isFinite(parseInstant(after.createdAt)) &&
+            !Number.isFinite(parsePostgresInstant(after.createdAt))) ||
+          typeof after.deploymentId !== "string" ||
+          !/^[0-9a-f-]{36}$/i.test(after.deploymentId))
+      )
         throw permanent("PUBLICATION_RECOVERY_CURSOR_INVALID");
       for (let page = 0; page < 25; page++) {
         let deployments: readonly RecoverablePublicationCoordinate[];
@@ -244,27 +275,49 @@ export function createPublicationRecoveryHandler(
           deployments = await discovery.page(after, 200);
         } catch (error) {
           metrics?.counter("publication_operations_total").incrementBy(1, {
-            operation: "recover", plane: "studio", outcome: "discovery_failed",
+            operation: "recover",
+            plane: "studio",
+            outcome: "discovery_failed",
           });
           throw error;
         }
         if (!deployments.length) break;
-        metrics?.counter("publication_operations_total").incrementBy(deployments.length, {
-          operation: "recover", plane: "studio", outcome: "discovered",
-        });
+        metrics
+          ?.counter("publication_operations_total")
+          .incrementBy(deployments.length, {
+            operation: "recover",
+            plane: "studio",
+            outcome: "discovered",
+          });
         for (const deployment of deployments) {
           try {
             await record?.(deployment, "discovered");
             const execution = await resolveExecution(deployment);
-            if (!execution) { await record?.(deployment, "skipped"); continue; }
-            if (execution.scope !== "tenant" || execution.tenantId !== deployment.tenantId || execution.planeKey !== deployment.targetPlane || !execution.principalId)
+            if (!execution) {
+              await record?.(deployment, "skipped");
+              continue;
+            }
+            if (
+              execution.scope !== "tenant" ||
+              execution.tenantId !== deployment.tenantId ||
+              execution.planeKey !== deployment.targetPlane ||
+              !execution.principalId
+            )
               throw new Error("PUBLICATION_RECOVERY_EXECUTION_MISMATCH");
-            await enqueueApply(jobs, { deploymentId: deployment.deploymentId,
-              targetPlane: deployment.targetPlane }, execution);
+            await enqueueApply(
+              jobs,
+              {
+                deploymentId: deployment.deploymentId,
+                targetPlane: deployment.targetPlane,
+              },
+              execution,
+            );
             await record?.(deployment, "enqueued");
           } catch (error) {
             metrics?.counter("publication_operations_total").incrementBy(1, {
-              operation: "recover", plane: "studio", outcome: "enqueue_failed",
+              operation: "recover",
+              plane: "studio",
+              outcome: "enqueue_failed",
             });
             await record?.(deployment, "enqueue_failed");
             throw error;
@@ -277,19 +330,34 @@ export function createPublicationRecoveryHandler(
         if (page === 24) {
           // Continue beyond the per-job budget; restarting every scheduled run
           // at the head would otherwise starve deployments after the first 5k.
-          await jobs.enqueue(PUBLICATION_MAINTENANCE_QUEUE, RECOVER_STALLED_PUBLICATIONS_JOB,
-            { after: { createdAt: typeof last.createdAt === "string" ? last.createdAt : last.createdAt.toISOString(), deploymentId: last.deploymentId } },
-            { ...deterministic(last.deploymentId, `recover:${job.id}`), execution: job.execution,
-              payloadSchema: { name: RECOVER_STALLED_PUBLICATIONS_JOB, version: 1 } });
+          await jobs.enqueue(
+            PUBLICATION_MAINTENANCE_QUEUE,
+            RECOVER_STALLED_PUBLICATIONS_JOB,
+            {
+              after: {
+                createdAt:
+                  typeof last.createdAt === "string"
+                    ? last.createdAt
+                    : last.createdAt.toISOString(),
+                deploymentId: last.deploymentId,
+              },
+            },
+            {
+              ...deterministic(last.deploymentId, `recover:${job.id}`),
+              execution: job.execution,
+              payloadSchema: {
+                name: RECOVER_STALLED_PUBLICATIONS_JOB,
+                version: 1,
+              },
+            },
+          );
         }
       }
-      metrics
-        ?.counter("publication_operations_total")
-        .incrementBy(recovered, {
-          operation: "recover",
-          plane: "studio",
-          outcome: "reenqueued",
-        });
+      metrics?.counter("publication_operations_total").incrementBy(recovered, {
+        operation: "recover",
+        plane: "studio",
+        outcome: "reenqueued",
+      });
       return { status: "completed", output: { recovered } };
     },
   };

@@ -1,6 +1,8 @@
-const OFFSET_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/u;
+const OFFSET_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/u;
 const BUSINESS_DATE = /^(\d{4})-(\d{2})-(\d{2})$/u;
-const HTTP_DATE = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/u;
+const HTTP_DATE =
+  /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/u;
 
 /**
  * Parse an unambiguous instant without accepting implementation-dependent
@@ -9,7 +11,8 @@ const HTTP_DATE = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (?:Jan|Feb|Mar|Apr|Ma
  */
 export function parseInstant(value: string): number {
   if (typeof value !== "string") return Number.NaN;
-  if (OFFSET_TIMESTAMP.test(value) || HTTP_DATE.test(value)) return Date.parse(value);
+  if (OFFSET_TIMESTAMP.test(value) || HTTP_DATE.test(value))
+    return Date.parse(value);
   if (BUSINESS_DATE.test(value)) return parseBusinessDate(value);
   return Number.NaN;
 }
@@ -23,9 +26,20 @@ export function parseBusinessDate(value: string): number {
   const day = Number(match[3]);
   const result = Date.UTC(year, month - 1, day);
   const roundTrip = new Date(result);
-  return roundTrip.getUTCFullYear() === year
-      && roundTrip.getUTCMonth() === month - 1
-      && roundTrip.getUTCDate() === day
+  return roundTrip.getUTCFullYear() === year &&
+    roundTrip.getUTCMonth() === month - 1 &&
+    roundTrip.getUTCDate() === day
     ? result
     : Number.NaN;
+}
+
+/** Parse PostgreSQL timestamptz text for validation/comparison only.
+ * Keep the original string for database cursors: milliseconds lose precision. */
+export function parsePostgresInstant(value: string): number {
+  const match =
+    /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?)([+-]\d{2})(?::(\d{2}))?$/u.exec(
+      value,
+    );
+  if (!match) return Number.NaN;
+  return parseInstant(`${match[1]}T${match[2]}${match[3]}:${match[4] ?? "00"}`);
 }

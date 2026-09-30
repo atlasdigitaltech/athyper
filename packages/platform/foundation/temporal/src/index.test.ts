@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseBusinessDate, parseInstant } from "./index.js";
+import {
+  parseBusinessDate,
+  parseInstant,
+  parsePostgresInstant,
+} from "./index.js";
 
 test("parseInstant accepts only deterministic timestamp formats", () => {
   assert.equal(parseInstant("2026-09-04T10:30:00Z"), 1_788_517_800_000);
@@ -15,4 +19,22 @@ test("parseBusinessDate validates calendar dates at midnight UTC", () => {
   assert.equal(parseBusinessDate("2024-02-29"), Date.UTC(2024, 1, 29));
   assert.ok(Number.isNaN(parseBusinessDate("2023-02-29")));
   assert.ok(Number.isNaN(parseBusinessDate("2024-2-9")));
+});
+
+test("PostgreSQL timestamps require explicit offsets and retain cursor precision at the caller", () => {
+  assert.equal(
+    parsePostgresInstant("2026-09-30 00:00:00.123456+00"),
+    Date.UTC(2026, 8, 30, 0, 0, 0, 123),
+  );
+  assert.equal(
+    parsePostgresInstant("2026-09-30 05:30:00.123456+05:30"),
+    Date.UTC(2026, 8, 30, 0, 0, 0, 123),
+  );
+  for (const value of [
+    "2026-09-30 00:00:00",
+    "yesterday",
+    "2026-09-30 00:00:00+25",
+    "2026-09-30 00:00:00+00 garbage",
+  ])
+    assert.ok(Number.isNaN(parsePostgresInstant(value)));
 });

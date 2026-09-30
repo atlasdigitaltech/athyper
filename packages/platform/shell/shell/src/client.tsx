@@ -256,7 +256,7 @@ export function ShellChrome({
     ) {
       setCollapsed(true);
     }
-  }, []);
+  }, [setAtlasPinned]);
   useEffect(() => {
     const openAtlas = (event: Event) => {
       atlasOpener.current =
@@ -276,7 +276,7 @@ export function ShellChrome({
     };
     window.addEventListener("athyper:atlas-open", openAtlas);
     return () => window.removeEventListener("athyper:atlas-open", openAtlas);
-  }, [dismissTransient]);
+  }, [dismissTransient, setAtlasFull, setAtlasOpen, setAtlasPinned]);
   useEffect(() => {
     if (!drawerOpen) return;
     firstLink.current?.focus();
@@ -288,7 +288,7 @@ export function ShellChrome({
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
-  }, [drawerOpen]);
+  }, [drawerOpen, setDrawerOpen]);
   const toggleCollapsed = () =>
     setCollapsed((value) => {
       const next = !value;
