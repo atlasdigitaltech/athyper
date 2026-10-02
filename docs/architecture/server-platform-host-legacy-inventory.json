@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 351,
+    "operational-scripts:new": 352,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -17389,6 +17389,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/scripts/db-verification/tests/integration/publication-authority-repository.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:publication-concurrency-recovery.test",
+      "category": "operational-scripts",
+      "key": "publication-concurrency-recovery.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/publication-concurrency-recovery.test.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
