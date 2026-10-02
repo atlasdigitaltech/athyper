@@ -13,6 +13,7 @@ fail() {
 [ -d "$MIGRATION_ROOT" ] || fail "migration directory is unavailable: $MIGRATION_ROOT"
 TRANSACTION_MANIFEST="$MIGRATION_ROOT/manifests/runner-transactions.sha256"
 [ -r "$TRANSACTION_MANIFEST" ] || fail "runner transaction manifest is unavailable"
+EQUIVALENCE_MANIFEST="$MIGRATION_ROOT/manifests/foundation-equivalents.sha256"
 command -v psql >/dev/null 2>&1 || fail "psql is unavailable"
 command -v sha256sum >/dev/null 2>&1 || fail "sha256sum is unavailable"
 
@@ -91,6 +92,57 @@ SQL
     fi
     [ "$status" = applying ] && [ "$recorded_runner" = "$RUNNER_ID" ] \
       || fail "$database/$name is $status under runner $recorded_runner; operator resolution is required"
+
+    # Canonical foundations may have installed this exact capability already.
+    # Adopt only explicitly reviewed, checksum-bound equivalences. A table name
+    # alone is never proof, and failed/foreign receipts above remain locked.
+    equivalent=false
+    if [ -r "$EQUIVALENCE_MANIFEST" ]; then
+      while read -r migration migration_sha validator_sha validator sentinel; do
+        [ "$migration" = "$name" ] || continue
+        [ "$migration_sha" = "$checksum" ] || fail "$database/$name equivalence checksum differs"
+        case "$validator" in equivalence/*) ;; *) fail "unsafe equivalence validator" ;; esac
+        case "$validator$sentinel" in *..*|*[!A-Za-z0-9_./-]*) fail "unsafe equivalence path" ;; esac
+        [ -r "$MIGRATION_ROOT/$validator" ] || fail "equivalence validator unavailable"
+        [ "$(sha256sum "$MIGRATION_ROOT/$validator" | cut -d ' ' -f 1)" = "$validator_sha" ] \
+          || fail "$database/$name equivalence validator checksum differs"
+        provisioned=$(run_sql "$database" --tuples-only --no-align --set "sentinel=$sentinel" <<'SQL'
+SELECT to_regclass('public.schema_provisions') IS NOT NULL AS ledger_present \gset
+\if :ledger_present
+SELECT EXISTS(SELECT 1 FROM public.schema_provisions WHERE file_name=:'sentinel');
+\else
+SELECT false;
+\endif
+SQL
+        )
+        if [ "$provisioned" = t ]; then
+          # Validation and receipt commit together; catalog locks prevent table
+          # changes between verification and adoption. No migration SQL is edited.
+          if run_sql "$database" --single-transaction --set "migration=$name" --set "runner=$RUNNER_ID" --set "validator=$validator_sha" \
+            --file "$MIGRATION_ROOT/$validator" --file - <<'SQL'
+UPDATE public.athyper_schema_migration_v1
+   SET status='applied', completed_at=clock_timestamp(),
+       failure_message=NULL, runner_id='foundation-equivalent:' || :'validator' || ':' || runner_id
+ WHERE migration_name=:'migration' AND runner_id=:'runner' AND status='applying'
+ RETURNING migration_name AS adopted_migration \gset
+SQL
+          then
+            equivalent=true
+          else
+            run_sql "$database" --set "migration=$name" --set "runner=$RUNNER_ID" <<'SQL' || true
+UPDATE public.athyper_schema_migration_v1
+ SET status='failed', completed_at=clock_timestamp(), failure_message='canonical equivalence validation failed'
+ WHERE migration_name=:'migration' AND runner_id=:'runner' AND status='applying';
+SQL
+            fail "$database/$name canonical equivalence rejected; operator resolution is required"
+          fi
+        fi
+      done < "$EQUIVALENCE_MANIFEST"
+    fi
+    if [ "$equivalent" = true ]; then
+      printf '%s\n' "forward migration: verified canonical equivalent $database/$name"
+      continue
+    fi
 
     if run_sql "$database" "$@" --file "$file"; then
       run_sql "$database" --set "migration=$name" --set "runner=$RUNNER_ID" <<'SQL'

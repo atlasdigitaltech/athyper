@@ -3,6 +3,7 @@ import type {
   RecordMutationResult,
 } from "@athyper/server-contract-records";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
+import type { AuthorizationRequest } from "@athyper/server-contract-auth";
 import {
   appendRecordSideEffects,
   executeRecordCommand,
@@ -15,6 +16,29 @@ import { descriptorFor } from "../query-service.js";
  * effects belong in the transactional outbox. Returning a committed result after
  * independently committing a database transaction is not a supported adapter. */
 export interface TransactionalRecordActionHandler<T> {
+  /** Optional bounded target reader for scoped domain actions whose target is
+   * not admitted by generic owner administration. It grants no field read or
+   * generic write authority and requires a current authorization preflight. */
+  readTarget?(
+    command: RegisteredActionCommand,
+    descriptor: EntityRuntimeDescriptor,
+    transaction: T,
+  ): Promise<{ readonly recordId: string; readonly version?: number } | null>;
+  /** Derive business scope from stored records in the current transaction.
+   * This is not a grant: the published action permission is checked separately.
+   * Callers cannot supply this resource through the HTTP command. */
+  resolveAuthorizationResource?(
+    command: RegisteredActionCommand,
+    descriptor: EntityRuntimeDescriptor,
+    transaction: T,
+  ): Promise<{ readonly kind: "Resolved"; readonly resource: NonNullable<AuthorizationRequest["resource"]> } | RecordMutationResult>;
+  /** Revalidate domain scope in the current transaction before any receipt
+   * replay. A receipt never substitutes for current domain authorization. */
+  authorize?(
+    command: RegisteredActionCommand,
+    descriptor: EntityRuntimeDescriptor,
+    transaction: T,
+  ): Promise<RecordMutationResult | undefined>;
   execute(
     command: RegisteredActionCommand,
     descriptor: EntityRuntimeDescriptor,
@@ -56,23 +80,7 @@ export function createTransactionalRecordActionService<T>(
           kind: "CapabilityUnavailable",
           entityCode: command.entityCode,
         };
-      if (
-        !(
-          await options.authorizer.authorize({
-            context: command.context,
-            permissionCode: registration.permissionCode,
-            resource: {
-              entityCode: command.entityCode,
-              recordId: command.recordId,
-              actionCode: command.actionCode,
-            },
-          })
-        ).allowed
-      )
-        return {
-          kind: "Forbidden",
-          permissionCode: registration.permissionCode,
-        };
+      if (handler.readTarget && !handler.authorize) throw Error("RECORD_DOMAIN_TARGET_AUTHORIZATION_REQUIRED");
       if (
         descriptor.storage.versionField &&
         command.expectedVersion === undefined
@@ -82,14 +90,37 @@ export function createTransactionalRecordActionService<T>(
         return await options.transactions.run(
           command.context.planeKey,
           command.context,
-          (tx) =>
-            executeRecordCommand(
+          async (tx) => {
+            const resolved = await handler.resolveAuthorizationResource?.(command, descriptor, tx);
+            if (resolved && resolved.kind !== "Resolved") return resolved;
+            if (!(await options.authorizer.authorize({
+              context: command.context,
+              permissionCode: registration.permissionCode,
+              resource: {
+                ...(resolved?.resource ?? {}),
+                tenantId: command.context.tenantId,
+                entityCode: command.entityCode,
+                recordId: command.recordId,
+                actionCode: command.actionCode,
+                operationKey: command.actionCode,
+                authorizationDescriptorHash: descriptor.compiledHash,
+                ...(handler.resolveAuthorizationResource ? {registeredActionCheck:true,actionHandlerKey:registration.handlerKey} : {}),
+              },
+            })).allowed) return { kind: "Forbidden", permissionCode: registration.permissionCode };
+            const denied = await handler.authorize?.(command, descriptor, tx);
+            if (denied) return denied;
+            return executeRecordCommand(
               options,
               command,
               tx,
               "domain",
               async () => {
-                const current = await options.repository.get(
+                const admittedTarget = handler.readTarget ? await handler.readTarget(command, descriptor, tx) : undefined;
+                if(admittedTarget && admittedTarget.recordId !== command.recordId) throw Error("RECORD_DOMAIN_TARGET_SCOPE_INVALID");
+                const current = handler.readTarget ? (admittedTarget ? {
+                  [descriptor.storage.idField]: admittedTarget.recordId,
+                  ...(descriptor.storage.versionField ? {[descriptor.storage.versionField]:admittedTarget.version} : {}),
+                } : null) : await options.repository.get(
                   descriptor,
                   command.context.tenantId,
                   command.recordId,
@@ -136,7 +167,8 @@ export function createTransactionalRecordActionService<T>(
                 return result;
               },
               descriptor,
-            ),
+            );
+          },
         );
       } catch (error) {
         if (error instanceof DeclinedMutation) return error.result;

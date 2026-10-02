@@ -69,8 +69,13 @@ export class AtlasBusinessContextStore {
   }
   private refresh() {
     const pages = [...this.entries.values()].map((entry) => entry.page);
-    const next =
-      pages.filter((page) => page.kind === "record").at(-1) ?? pages.at(-1);
+    const record = pages.filter((page) => page.kind === "record").at(-1);
+    // A mounted dependent list belongs to this record and carries a narrower
+    // context. Unrelated Manage pages still cannot displace an open record.
+    const related = record?.kind === "record" ? pages.filter(page =>
+      page.kind === "manage" && page.parentScope?.parentEntityCode === record.entityCode &&
+      page.parentScope.parentRecordId === record.recordId).at(-1) : undefined;
+    const next = related ?? record ?? pages.at(-1);
     if (next === this.current) return;
     this.current = next;
     this.listeners.forEach((listener) => listener());

@@ -1,3 +1,4 @@
+import { parseEntityReferencePage, type EntityReferencePageV1 } from "@athyper/contract-platform-entity-runtime";
 import type {EntityViewCatalog} from "@athyper/contract-platform-entity-list";
 import { parseInstant } from "@athyper/platform-temporal";
 import { parseEntityApplicationDescriptor, type EntityApplicationDescriptorV1, parseEntityListDescriptor, parseEntityListResult, type EntityListDescriptorV1, type EntityListResultV1, type EntityListScopeCoordinateV1, type ListLocationStateV1 } from "@athyper/contract-platform-entity-list";
@@ -6,7 +7,11 @@ import type { Operation, RequestOptions } from "./index";
 type EntityListParams = Readonly<Record<string, string | number>>;
 
 export const entityApplicationDescriptorOperation: Operation<EntityApplicationDescriptorV1> = Object.freeze({method:"GET",path:(params:EntityListParams)=>`/api/entity-runtime/${entityCode(params)}/application-descriptor`,parse:parseEntityApplicationDescriptor,requestClass:"interactive",idempotency:"forbidden",response:"json"});
-export const entityListDescriptorOperation: Operation<EntityListDescriptorV1> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/entity-runtime/${entityCode(params)}/list-descriptor`, parse: parseEntityListDescriptor, requestClass: "interactive", idempotency: "forbidden", response: "json" });
+export const entityListDescriptorOperation: Operation<EntityListDescriptorV1> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/entity-runtime/${entityCode(params)}/list-descriptor`, parse: (value: unknown) => {
+  const descriptor = parseEntityListDescriptor(value);
+  const raw = parseObject(value);
+  return raw.viewCatalog === undefined ? descriptor : Object.freeze({ ...descriptor, viewCatalog: parseViewCatalog(raw.viewCatalog) });
+}, requestClass: "interactive", idempotency: "forbidden", response: "json" });
 export const entityListOperation: Operation<EntityListResultV1> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/entity-runtime/${entityCode(params)}/list`, parse: parseEntityListResult, requestClass: "interactive", idempotency: "forbidden", response: "json" });
 
 export interface RecordBookmarkItemV1 { readonly description?: string; readonly id: string; readonly entityCode: string; readonly recordId: string; readonly label?: string; readonly createdAt: string; }
@@ -113,3 +118,5 @@ function parseViewCatalog(value:unknown):EntityViewCatalog {
 }
 export const entityViewsOperation:Operation<EntityViewCatalog>=Object.freeze({method:"GET",path:(params:EntityListParams)=>`/api/entity-runtime/${entityCode(params)}/views`,parse:parseViewCatalog,requestClass:"interactive",idempotency:"forbidden",response:"json"});
 export const entityViewCommandOperation:Operation<EntityViewCatalog>=Object.freeze({method:"POST",path:(params:EntityListParams)=>`/api/entity-runtime/${entityCode(params)}/views`,parse:parseViewCatalog,requestClass:"interactive",idempotency:"forbidden",response:"json"});
+
+export const entityReferenceChoicesOperation: Operation<EntityReferencePageV1> = Object.freeze({method:"GET",path:(params:EntityListParams)=>`/api/entity-runtime/${entityCode(params)}/references/${encodeURIComponent(String(params.fieldKey))}`,parse:parseEntityReferencePage,requestClass:"interactive",idempotency:"forbidden",response:"json"});

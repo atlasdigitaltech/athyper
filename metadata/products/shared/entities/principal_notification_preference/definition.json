@@ -770,6 +770,49 @@
               }
             ],
             "actions": []
+          },
+          "formPresentation": {
+            "schemaVersion": 1,
+            "create": {
+              "sections": [
+                {
+                  "key": "delivery",
+                  "label": "Notification delivery",
+                  "fields": [
+                    "event_code",
+                    "channel",
+                    "is_enabled",
+                    "frequency_code",
+                    "status"
+                  ]
+                }
+              ],
+              "submitLabel": "Add preference",
+              "help": {
+                "is_enabled": "Use default keeps the inherited delivery setting.",
+                "event_code": "Enter a supported notification event code."
+              }
+            },
+            "edit": {
+              "sections": [
+                {
+                  "key": "delivery",
+                  "label": "Notification delivery",
+                  "fields": [
+                    "event_code",
+                    "channel",
+                    "is_enabled",
+                    "frequency_code",
+                    "status"
+                  ]
+                }
+              ],
+              "submitLabel": "Save preference",
+              "help": {
+                "is_enabled": "Use default keeps the inherited delivery setting.",
+                "event_code": "Enter a supported notification event code."
+              }
+            }
           }
         }
       }
@@ -1121,6 +1164,57 @@
         },
         "id": "d3f222b1-95f1-5d00-adf5-3242e11e4dc6"
       }
-    ]
+    ],
+    "ai": {
+      "schemaVersion": 1,
+      "enabled": true,
+      "aliases": [
+        "notification preference",
+        "notification settings"
+      ],
+      "description": "Read saved authorized values only. Parent-scoped lists retain their published Principal relationship. Do not infer defaults, missing rows, grants, or access from these values.",
+      "summaryFieldKeys": [
+        "event_code",
+        "channel",
+        "is_enabled",
+        "frequency_code",
+        "status"
+      ],
+      "searchFieldKeys": [
+        "event_code"
+      ],
+      "relationshipKeys": [],
+      "contextKinds": [
+        "record",
+        "manage"
+      ],
+      "insightProviders": [
+        {
+          "id": "entity_lookup",
+          "version": 1
+        },
+        {
+          "id": "entity_read_record",
+          "version": 1
+        },
+        {
+          "id": "entity_explain_fields",
+          "version": 1
+        }
+      ],
+      "actions": [
+        {
+          "id": "open_record",
+          "version": 1,
+          "operationKey": "read"
+        }
+      ],
+      "presentationProfiles": [
+        {
+          "id": "record_brief",
+          "version": 1
+        }
+      ]
+    }
   }
 }

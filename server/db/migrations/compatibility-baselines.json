@@ -1,0 +1,39 @@
+{
+  "schema": "entity-upgrade-compatibility-baselines/1",
+  "target": "captured-current-canonical-ddl-and-active-forward-manifests",
+  "planes": ["studio", "neon", "mesh"],
+  "baselines": [
+    {
+      "id": "canonical-current",
+      "kind": "reconstructed",
+      "excludedDdl": [],
+      "guarantee": "Fresh canonical installation followed by every active forward migration preserves populated reference and identity rows and exact retry receipts."
+    },
+    {
+      "id": "canonical-pre-principal-source",
+      "kind": "reconstructed",
+      "excludedDdl": [
+        "planes/neon/master/36_principal_person_link.sql",
+        "planes/neon/master/37_principal_person_link_target.sql",
+        "common/master/23_projected_profile_source.sql"
+      ],
+      "guarantee": "Canonical foundation without Principal source/target additions upgrades through the complete active manifests while preserving populated reference and identity rows."
+    },
+    {
+      "id": "legacy-pre-consolidation-20260914",
+      "kind": "unresolved",
+      "evidence": "server/db/scripts/operations/upgrades/legacy-baseline-20260914/original-manifests",
+      "blocker": "Original migration order and checksums survive, but an exact starting schema, populated fixture and reviewed upgrade sequence to the target are not declared."
+    },
+    {
+      "id": "existing-dev-qa-installations",
+      "kind": "unresolved",
+      "blocker": "Actual installation schema, migration receipts and populated-data prerequisites must be captured and mapped to a reviewed supported baseline before schema-dependent onboarding."
+    }
+  ],
+  "limitations": [
+    "Reconstructed baselines are qualification paths, not claims of historical or deployed support.",
+    "Passing paths do not close D7 while required historical or installation paths remain unresolved.",
+    "Database rehearsals do not establish publication activation, runtime authorization or browser journey qualification."
+  ]
+}

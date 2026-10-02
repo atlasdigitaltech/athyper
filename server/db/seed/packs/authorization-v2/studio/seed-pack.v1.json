@@ -74,11 +74,11 @@
         "operationCode": "use",
         "operationKind": "mutation",
         "riskTier": "medium",
-        "requiresMfa": true,
+        "requiresMfa": false,
         "requiresSod": false,
         "shareable": false,
         "delegable": false,
-        "definitionSha256": "3e77e9ff164c90bc53024a46cdca9999f13ba2f3812fe061cfd7dbe65b035d8d",
+        "definitionSha256": "5678760fae773db12a4961faa8e2e7102923883236c665fdcf3ed5ecde6e4ce1",
         "permissionKind": "capability",
         "moduleCode": "aig"
       },

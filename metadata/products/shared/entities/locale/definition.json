@@ -1,0 +1,284 @@
+{
+  "schema": "athyper.shared-reference-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
+  "definition": {
+    "runtimeBindings": [
+      {
+        "operation": "list",
+        "handler": "entity.record.list.v1",
+        "resolver": "tenant.record.v1"
+      },
+      {
+        "operation": "read",
+        "handler": "entity.record.read.v1",
+        "resolver": "tenant.record.v1"
+      }
+    ],
+    "entityCode": "locale",
+    "title": {
+      "labelKey": "entity.locale.title",
+      "defaultText": "Locales"
+    },
+    "entityLabel": {
+      "labelKey": "entity.locale.label",
+      "defaultText": "Locale"
+    },
+    "storageObject": "locale",
+    "codeField": "code",
+    "titleField": "name",
+    "fields": [
+      {
+        "key": "id",
+        "label": {
+          "labelKey": "entity.locale.fields.id",
+          "defaultText": "Record ID"
+        },
+        "type": "uuid",
+        "required": true
+      },
+      {
+        "key": "code",
+        "label": {
+          "labelKey": "entity.locale.fields.code",
+          "defaultText": "Code"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "name",
+        "label": {
+          "labelKey": "entity.locale.fields.name",
+          "defaultText": "Name"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "language_code",
+        "label": {
+          "labelKey": "entity.locale.fields.language_code",
+          "defaultText": "Language code"
+        },
+        "type": "string",
+        "required": true,
+        "keyReference": {
+          "targetEntity": "language",
+          "labelField": "name",
+          "fields": [
+            {
+              "source": "language_code",
+              "target": "code"
+            }
+          ]
+        }
+      },
+      {
+        "key": "country_code",
+        "label": {
+          "labelKey": "entity.locale.fields.country_code",
+          "defaultText": "Country code"
+        },
+        "type": "string",
+        "keyReference": {
+          "targetEntity": "country",
+          "labelField": "name",
+          "fields": [
+            {
+              "source": "country_code",
+              "target": "code"
+            }
+          ]
+        }
+      },
+      {
+        "key": "script",
+        "label": {
+          "labelKey": "entity.locale.fields.script",
+          "defaultText": "Script"
+        },
+        "type": "string"
+      },
+      {
+        "key": "direction",
+        "label": {
+          "labelKey": "entity.locale.fields.direction",
+          "defaultText": "Text direction"
+        },
+        "type": "enum",
+        "required": true,
+        "domainCode": "shared.text_direction",
+        "choices": [
+          {
+            "value": "ltr",
+            "label": {
+              "labelKey": "reference.direction.ltr",
+              "defaultText": "Left to right"
+            }
+          },
+          {
+            "value": "rtl",
+            "label": {
+              "labelKey": "reference.direction.rtl",
+              "defaultText": "Right to left"
+            }
+          }
+        ]
+      },
+      {
+        "key": "status",
+        "label": {
+          "labelKey": "entity.locale.fields.status",
+          "defaultText": "Status"
+        },
+        "type": "enum",
+        "required": true,
+        "domainCode": "shared.ref_status_d",
+        "choices": [
+          {
+            "value": "active",
+            "label": {
+              "labelKey": "reference.status.active",
+              "defaultText": "Active"
+            },
+            "tone": "success"
+          },
+          {
+            "value": "deprecated",
+            "label": {
+              "labelKey": "reference.status.deprecated",
+              "defaultText": "Deprecated"
+            },
+            "tone": "warning"
+          }
+        ],
+        "semanticRole": "status"
+      },
+      {
+        "key": "created_at",
+        "label": {
+          "labelKey": "entity.locale.fields.created_at",
+          "defaultText": "Created"
+        },
+        "type": "datetime",
+        "required": true
+      },
+      {
+        "key": "updated_at",
+        "label": {
+          "labelKey": "entity.locale.fields.updated_at",
+          "defaultText": "Updated"
+        },
+        "type": "datetime"
+      }
+    ],
+    "columns": [
+      "code",
+      "name",
+      "language_code",
+      "country_code",
+      "script",
+      "direction",
+      "status"
+    ],
+    "searchFields": [
+      "code",
+      "name"
+    ],
+    "sections": [
+      {
+        "key": "overview",
+        "label": {
+          "labelKey": "entity.locale.sections.overview",
+          "defaultText": "Locales"
+        },
+        "fields": [
+          "code",
+          "name",
+          "language_code",
+          "country_code",
+          "script",
+          "direction",
+          "status"
+        ]
+      },
+      {
+        "key": "audit",
+        "label": {
+          "labelKey": "entity.locale.sections.audit",
+          "defaultText": "Audit"
+        },
+        "fields": [
+          "created_at",
+          "updated_at"
+        ]
+      }
+    ],
+    "ai": {
+      "schemaVersion": 1,
+      "enabled": true,
+      "aliases": [
+        "locale",
+        "locales"
+      ],
+      "description": "Read published Locales reference data only. Do not infer missing values or relationships. This entity is read-only.",
+      "summaryFieldKeys": [
+        "code",
+        "name",
+        "language_code",
+        "country_code",
+        "script",
+        "direction",
+        "status"
+      ],
+      "searchFieldKeys": [
+        "code",
+        "name"
+      ],
+      "relationshipKeys": [
+        "country_code",
+        "language_code"
+      ],
+      "contextKinds": [
+        "record",
+        "manage"
+      ],
+      "insightProviders": [
+        {
+          "id": "entity_lookup",
+          "version": 1
+        },
+        {
+          "id": "entity_read_record",
+          "version": 1
+        },
+        {
+          "id": "entity_explain_fields",
+          "version": 1
+        },
+        {
+          "id": "entity_follow_reference",
+          "version": 1
+        }
+      ],
+      "actions": [
+        {
+          "id": "open_record",
+          "version": 1,
+          "operationKey": "read"
+        }
+      ],
+      "presentationProfiles": [
+        {
+          "id": "record_brief",
+          "version": 1
+        }
+      ]
+    }
+  }
+}

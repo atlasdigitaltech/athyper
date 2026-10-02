@@ -8,9 +8,9 @@ import { createRequire } from "node:module";
  * signing canonicalizer, host publication adapters and dependency lock. This is
  * a source fingerprint, not a binary attestation or an authorization grant. */
 export function publicationCompilerIdentity() {
-  const packages = ["@athyper/server-service-publication", "@athyper/server-plane-studio-meta-entity-authoring",
+  const packages = ["@athyper/server-platform-ai", "@athyper/server-service-publication", "@athyper/server-service-records", "@athyper/server-service-workforce", "@athyper/server-plane-studio-meta-entity-authoring",
     "@athyper/server-platform-metadata", "@athyper/server-contract-publication", "@athyper/server-contract-meta-entity-authoring",
-    "@athyper/server-contract-metadata", "@athyper/contract-platform-collection", "@athyper/server-adapter-publication-signing",
+    "@athyper/server-contract-metadata", "@athyper/server-contract-ai", "@athyper/server-contract-records", "@athyper/contract-platform-ai", "@athyper/contract-platform-collection", "@athyper/server-adapter-publication-signing",
     "@athyper/contract-platform-entity-runtime", "@athyper/contract-platform-entity-list"];
   const files: { key: string; bytes: Buffer }[] = [];
   function collect(root: string, label: string, path = root) {
@@ -26,8 +26,10 @@ export function publicationCompilerIdentity() {
     const hostRequire = createRequire(import.meta.url);
     // Resolve these transitive compiler contracts through their declared owner,
     // not accidental workspace-root hoisting (which differs inside DEV hosts).
-    const resolver = name === "@athyper/contract-platform-entity-runtime" || name === "@athyper/contract-platform-entity-list"
-      ? createRequire(hostRequire.resolve("@athyper/server-platform-metadata")) : hostRequire;
+    const resolver = name === "@athyper/contract-platform-ai"
+      ? createRequire(hostRequire.resolve("@athyper/server-contract-ai"))
+      : name === "@athyper/contract-platform-entity-runtime" || name === "@athyper/contract-platform-entity-list"
+        ? createRequire(hostRequire.resolve("@athyper/server-platform-metadata")) : hostRequire;
     const entry = realpathSync(resolver.resolve(name));
     let root = dirname(entry);
     while (!existsSync(join(root, "package.json"))) {
@@ -39,6 +41,10 @@ export function publicationCompilerIdentity() {
   }
   const adapters = dirname(fileURLToPath(import.meta.url));
   collect(adapters, "platform-host/publication");
+  // Source/registered-action admission is qualified in host composition. Pins
+  // must cover these adapters and their registry, not only domain packages.
+  collect(join(dirname(adapters), "entity-runtime"), "platform-host/entity-runtime");
+  files.push({ key: "platform-host/register-services.ts", bytes: readFileSync(join(dirname(dirname(adapters)), "register-services.ts")) });
   let workspace = adapters;
   while (!existsSync(join(workspace, "pnpm-lock.yaml"))) {
     const parent = dirname(workspace); if (parent === workspace) throw Error("PUBLICATION_COMPILER_BUILD_LOCK_MISSING"); workspace = parent;

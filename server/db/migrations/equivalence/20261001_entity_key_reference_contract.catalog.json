@@ -1,0 +1,492 @@
+{
+  "functions": [
+    {
+      "acl": ["athyperadmin=X/postgres", "postgres=X/postgres"],
+      "name": "metadata.fn_entity_key_reference_valid(jsonb,text)",
+      "owner": "postgres",
+      "definition": "CREATE OR REPLACE FUNCTION metadata.fn_entity_key_reference_valid(p_reference jsonb, p_field_key text)\n RETURNS boolean\n LANGUAGE plpgsql\n IMMUTABLE\n SET search_path TO 'pg_catalog', 'metadata'\nAS $function$\nDECLARE\n    v_mapping jsonb;\n    v_sources text[] := ARRAY[]::text[];\n    v_targets text[] := ARRAY[]::text[];\nBEGIN\n    IF jsonb_typeof(p_reference) IS DISTINCT FROM 'object'\n       OR NOT metadata.fn_jsonb_object_has_only_keys(p_reference, ARRAY['targetEntity', 'labelField', 'fields'])\n       OR jsonb_typeof(p_reference -> 'targetEntity') IS DISTINCT FROM 'string'\n       OR jsonb_typeof(p_reference -> 'labelField') IS DISTINCT FROM 'string'\n       OR coalesce(p_reference ->> 'targetEntity', '') !~ '^[a-z][a-z0-9_]{0,62}$'\n       OR coalesce(p_reference ->> 'labelField', '') !~ '^[a-z][a-z0-9_]{0,62}$'\n       OR jsonb_typeof(p_reference -> 'fields') IS DISTINCT FROM 'array' THEN\n        RETURN false;\n    END IF;\n    IF jsonb_array_length(p_reference -> 'fields') NOT BETWEEN 1 AND 8 THEN RETURN false; END IF;\n    FOR v_mapping IN SELECT value FROM jsonb_array_elements(p_reference -> 'fields') LOOP\n        IF jsonb_typeof(v_mapping) IS DISTINCT FROM 'object'\n           OR NOT metadata.fn_jsonb_object_has_only_keys(v_mapping, ARRAY['source', 'target'])\n           OR jsonb_typeof(v_mapping -> 'source') IS DISTINCT FROM 'string'\n           OR jsonb_typeof(v_mapping -> 'target') IS DISTINCT FROM 'string'\n           OR coalesce(v_mapping ->> 'source', '') !~ '^[a-z][a-z0-9_]{0,62}$'\n           OR coalesce(v_mapping ->> 'target', '') !~ '^[a-z][a-z0-9_]{0,62}$'\n           OR (v_mapping ->> 'source') = ANY(v_sources)\n           OR (v_mapping ->> 'target') = ANY(v_targets) THEN\n            RETURN false;\n        END IF;\n        v_sources := array_append(v_sources, v_mapping ->> 'source');\n        v_targets := array_append(v_targets, v_mapping ->> 'target');\n    END LOOP;\n    RETURN p_field_key = ANY(v_sources);\nEND;\n$function$\n"
+    },
+    {
+      "acl": ["athyperadmin=X/postgres", "postgres=X/postgres"],
+      "name": "metadata.trg_validate_entity_field_contract()",
+      "owner": "postgres",
+      "definition": "CREATE OR REPLACE FUNCTION metadata.trg_validate_entity_field_contract()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog', 'metadata'\nAS $function$\nDECLARE\n    v_allowed text[];\n    v_rule jsonb;\n    v_parameters jsonb;\n    v_rule_kind text;\nBEGIN\n    v_allowed := CASE NEW.data_type::text\n        WHEN 'string' THEN ARRAY['kind', 'min_length', 'max_length', 'pattern', 'keyReference']\n        WHEN 'text' THEN ARRAY['kind', 'min_length', 'max_length', 'pattern']\n        WHEN 'integer' THEN ARRAY['kind', 'minimum', 'maximum']\n        WHEN 'bigint' THEN ARRAY['kind', 'minimum', 'maximum']\n        WHEN 'decimal' THEN ARRAY['kind', 'minimum', 'maximum', 'precision', 'scale']\n        WHEN 'boolean' THEN ARRAY['kind']\n        WHEN 'uuid' THEN ARRAY['kind', 'keyReference']\n        WHEN 'date' THEN ARRAY['kind']\n        WHEN 'datetime' THEN ARRAY['kind', 'timezone_mode']\n        WHEN 'json' THEN ARRAY['kind', 'schema_code']\n        WHEN 'enum' THEN ARRAY['kind', 'domain_code']\n        WHEN 'reference' THEN ARRAY['kind', 'identifier_type']\n        WHEN 'money' THEN ARRAY['kind', 'currency_mode', 'currency_field_key', 'fixed_currency_code', 'scale']\n    END;\n\n    IF NOT metadata.fn_jsonb_object_has_only_keys(NEW.type_config, v_allowed) THEN\n        RAISE EXCEPTION 'type_config contains properties not allowed for data type %', NEW.data_type\n            USING ERRCODE = 'invalid_parameter_value';\n    END IF;\n\n    IF NEW.type_config ? 'keyReference'\n       AND NOT metadata.fn_entity_key_reference_valid(NEW.type_config -> 'keyReference', NEW.field_key::text) THEN\n        RAISE EXCEPTION 'keyReference requires a strict owned field-key mapping'\n            USING ERRCODE = 'invalid_parameter_value';\n    END IF;\n\n    IF NEW.data_type = 'enum'\n       AND coalesce(NEW.type_config ->> 'domain_code', '') !~ '^[a-z][a-z0-9_.-]{1,126}$' THEN\n        RAISE EXCEPTION 'enum type_config requires a canonical domain_code'\n            USING ERRCODE = 'invalid_parameter_value';\n    END IF;\n\n    IF NEW.data_type = 'reference'\n       AND coalesce(NEW.type_config ->> 'identifier_type', '') NOT IN ('uuid', 'string', 'integer', 'bigint') THEN\n        RAISE EXCEPTION 'reference type_config requires a supported identifier_type'\n            USING ERRCODE = 'invalid_parameter_value';\n    END IF;\n\n    IF NEW.default_spec IS NOT NULL THEN\n        IF NOT metadata.fn_jsonb_object_has_only_keys(\n            NEW.default_spec,\n            ARRAY['kind', 'value', 'field_key', 'context_key', 'resolver_key', 'apply_on']\n        ) OR coalesce(NEW.default_spec ->> 'kind', '') NOT IN (\n            'static', 'current_time', 'current_date', 'principal',\n            'tenant_context', 'parent_field', 'resolver'\n        ) THEN\n            RAISE EXCEPTION 'default_spec is not a supported strict default contract'\n                USING ERRCODE = 'invalid_parameter_value';\n        END IF;\n        IF NEW.default_spec ? 'apply_on'\n           AND (jsonb_typeof(NEW.default_spec -> 'apply_on') <> 'array'\n                OR EXISTS (\n                    SELECT 1 FROM jsonb_array_elements_text(NEW.default_spec -> 'apply_on') AS apply_event\n                     WHERE apply_event NOT IN ('create', 'reset')\n                )) THEN\n            RAISE EXCEPTION 'default_spec.apply_on may contain only create or reset'\n                USING ERRCODE = 'invalid_parameter_value';\n        END IF;\n    END IF;\n\n    IF NEW.computation_spec IS NOT NULL THEN\n        IF NOT metadata.fn_jsonb_object_has_only_keys(\n            NEW.computation_spec,\n            ARRAY['kind', 'language', 'expression', 'handler_key']\n        ) OR coalesce(NEW.computation_spec ->> 'kind', '') NOT IN ('expression', 'handler') THEN\n            RAISE EXCEPTION 'computation_spec is not a supported strict computation contract'\n                USING ERRCODE = 'invalid_parameter_value';\n        END IF;\n        IF (NEW.computation_spec ->> 'kind' = 'expression'\n                AND (coalesce(NEW.computation_spec ->> 'language', '') NOT IN ('cel', 'jsonlogic')\n                    OR nullif(btrim(NEW.computation_spec ->> 'expression'), '') IS NULL\n                    OR NEW.computation_spec ? 'handler_key'))\n           OR (NEW.computation_spec ->> 'kind' = 'handler'\n                AND (coalesce(NEW.computation_spec ->> 'handler_key', '') !~ '^[a-z][a-z0-9_.:-]{1,126}$'\n                    OR NEW.computation_spec ? 'expression'\n                    OR NEW.computation_spec ? 'language')) THEN\n            RAISE EXCEPTION 'computation_spec kind and properties are inconsistent'\n                USING ERRCODE = 'invalid_parameter_value';\n        END IF;\n    END IF;\n\n    IF NEW.validation_spec IS NOT NULL THEN\n        IF NOT metadata.fn_jsonb_object_has_only_keys(\n            NEW.validation_spec,\n            ARRAY['schema_version', 'rules']\n        ) OR coalesce((NEW.validation_spec ->> 'schema_version')::integer, 0) <> 1\n          OR jsonb_typeof(NEW.validation_spec -> 'rules') <> 'array' THEN\n            RAISE EXCEPTION 'validation_spec must be a version 1 strict rule collection'\n                USING ERRCODE = 'invalid_parameter_value';\n        END IF;\n\n        FOR v_rule IN SELECT value FROM jsonb_array_elements(NEW.validation_spec -> 'rules') LOOP\n            IF NOT metadata.fn_jsonb_object_has_only_keys(\n                v_rule,\n                ARRAY['code', 'kind', 'parameters', 'message_key', 'severity']\n            ) THEN\n                RAISE EXCEPTION 'validation_spec contains an unsupported rule property'\n                    USING ERRCODE = 'invalid_parameter_value';\n            END IF;\n            v_rule_kind := v_rule ->> 'kind';\n            v_parameters := coalesce(v_rule -> 'parameters', '{}'::jsonb);\n            IF coalesce(v_rule ->> 'code', '') !~ '^[a-z][a-z0-9_.-]{1,126}$'\n               OR v_rule_kind NOT IN ('length', 'range', 'pattern', 'allowed_values', 'comparison', 'custom_handler')\n               OR jsonb_typeof(v_parameters) <> 'object'\n               OR coalesce(v_rule ->> 'severity', 'error') NOT IN ('error', 'warning') THEN\n                RAISE EXCEPTION 'validation_spec contains an invalid rule contract'\n                    USING ERRCODE = 'invalid_parameter_value';\n            END IF;\n            v_allowed := CASE v_rule_kind\n                WHEN 'length' THEN ARRAY['minimum', 'maximum']\n                WHEN 'range' THEN ARRAY['minimum', 'maximum', 'inclusive_minimum', 'inclusive_maximum']\n                WHEN 'pattern' THEN ARRAY['pattern', 'flags']\n                WHEN 'allowed_values' THEN ARRAY['values']\n                WHEN 'comparison' THEN ARRAY['field_key', 'operator']\n                WHEN 'custom_handler' THEN ARRAY['handler_key']\n            END;\n            IF NOT metadata.fn_jsonb_object_has_only_keys(v_parameters, v_allowed) THEN\n                RAISE EXCEPTION 'validation rule % contains unsupported parameters', v_rule ->> 'code'\n                    USING ERRCODE = 'invalid_parameter_value';\n            END IF;\n        END LOOP;\n    END IF;\n\n    RETURN NEW;\nEXCEPTION\n    WHEN invalid_text_representation THEN\n        RAISE EXCEPTION 'Field specification contains a value with an invalid scalar type'\n            USING ERRCODE = 'invalid_parameter_value';\nEND;\n$function$\n"
+    }
+  ],
+  "relations": [
+    {
+      "acl": [
+        "athyperadmin=arwdDxt/postgres",
+        "athyperapp=arwd/postgres",
+        "postgres=arwdDxt/postgres"
+      ],
+      "rls": true,
+      "kind": "r",
+      "name": "metadata.entity_field",
+      "owner": "postgres",
+      "forced": true,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid",
+          "default": "shared.uuidv7()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "tenant_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "change_set_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "field_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "description",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "data_type",
+          "type": "metadata.entity_field_data_type_d",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "type_config",
+          "type": "jsonb",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "cardinality",
+          "type": "metadata.entity_field_cardinality_d",
+          "default": "'one'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "value_origin",
+          "type": "metadata.entity_field_value_origin_d",
+          "default": "'stored'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "write_mode",
+          "type": "metadata.entity_field_write_mode_d",
+          "default": "'mutable'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "storage_path",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "default_spec",
+          "type": "jsonb",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "computation_spec",
+          "type": "jsonb",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "validation_spec",
+          "type": "jsonb",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "data_classification",
+          "type": "text",
+          "default": "'internal'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "retention_policy_code",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "status",
+          "type": "metadata.entity_member_status_d",
+          "default": "'active'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "replacement_field_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "deprecated_since_release_no",
+          "type": "bigint",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "planned_removal_release_no",
+          "type": "bigint",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX entity_field_pii_inventory_idx ON metadata.entity_field USING btree (tenant_id, data_classification, entity_id, field_key) WHERE ((data_classification = ANY (ARRAY['pii'::text, 'sensitive_pii'::text])) AND ((status)::text = 'active'::text))"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX ix_entity_field_change_set_status ON metadata.entity_field USING btree (tenant_id, change_set_id, status, field_key)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX ix_entity_field_replacement ON metadata.entity_field USING btree (tenant_id, change_set_id, replacement_field_key) WHERE (replacement_field_key IS NOT NULL)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX ix_entity_field_storage_path ON metadata.entity_field USING btree (tenant_id, change_set_id, storage_path) WHERE (storage_path IS NOT NULL)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_field_key_uq ON metadata.entity_field USING btree (tenant_id, change_set_id, field_key) NULLS NOT DISTINCT"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_field_pkey ON metadata.entity_field USING btree (id)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_field_tenant_id_uq ON metadata.entity_field USING btree (tenant_id, id) NULLS NOT DISTINCT"
+        }
+      ],
+      "options": null,
+      "policies": [
+        {
+          "name": "admin_access",
+          "check": "true",
+          "roles": ["athyperadmin"],
+          "using": "true",
+          "command": "*",
+          "permissive": true
+        },
+        {
+          "name": "tenant_delete",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "(tenant_id = shared.current_tenant_id_soft())",
+          "command": "d",
+          "permissive": true
+        },
+        {
+          "name": "tenant_insert",
+          "check": "((tenant_id = shared.current_tenant_id()) AND (created_by = master.current_principal_id_soft()))",
+          "roles": ["athyperapp"],
+          "using": null,
+          "command": "a",
+          "permissive": true
+        },
+        {
+          "name": "tenant_read",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+          "command": "r",
+          "permissive": true
+        },
+        {
+          "name": "tenant_update",
+          "check": "(tenant_id = shared.current_tenant_id())",
+          "roles": ["athyperapp"],
+          "using": "(tenant_id = shared.current_tenant_id_soft())",
+          "command": "w",
+          "permissive": true
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_entity_field_10_graph_guard",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER trg_entity_field_10_graph_guard BEFORE INSERT OR DELETE OR UPDATE ON metadata.entity_field FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row('field_key')"
+        },
+        {
+          "name": "trg_entity_field_30_contract",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER trg_entity_field_30_contract BEFORE INSERT OR UPDATE ON metadata.entity_field FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_field_contract()"
+        },
+        {
+          "name": "trg_entity_field_90_updated_at",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER trg_entity_field_90_updated_at BEFORE UPDATE ON metadata.entity_field FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+        },
+        {
+          "name": "trg_entity_field_95_graph_validate",
+          "enabled": "O",
+          "definition": "CREATE CONSTRAINT TRIGGER trg_entity_field_95_graph_validate AFTER INSERT OR DELETE OR UPDATE ON metadata.entity_field DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "entity_field_audit_pair_chk",
+          "validated": true,
+          "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+        },
+        {
+          "name": "entity_field_change_set_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "entity_field_classification_chk",
+          "validated": true,
+          "definition": "CHECK ((data_classification = ANY (ARRAY['public'::text, 'internal'::text, 'confidential'::text, 'pii'::text, 'sensitive_pii'::text])))"
+        },
+        {
+          "name": "entity_field_computation_chk",
+          "validated": true,
+          "definition": "CHECK (((((value_origin)::text = 'computed'::text) AND ((write_mode)::text = 'computed'::text) AND (computation_spec IS NOT NULL)) OR (((value_origin)::text <> 'computed'::text) AND ((write_mode)::text <> 'computed'::text) AND (computation_spec IS NULL))))"
+        },
+        {
+          "name": "entity_field_created_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (created_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_field_default_chk",
+          "validated": true,
+          "definition": "CHECK (((default_spec IS NULL) OR (((value_origin)::text = 'stored'::text) AND ((write_mode)::text = ANY (ARRAY['mutable'::text, 'write_once'::text])))))"
+        },
+        {
+          "name": "entity_field_description_chk",
+          "validated": true,
+          "definition": "CHECK (((description IS NULL) OR ((btrim(description) <> ''::text) AND (length(description) <= 2000))))"
+        },
+        {
+          "name": "entity_field_entity_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_field_key_chk",
+          "validated": true,
+          "definition": "CHECK ((field_key ~ '^[a-z][a-z0-9_]{0,62}$'::text))"
+        },
+        {
+          "name": "entity_field_key_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, change_set_id, field_key)"
+        },
+        {
+          "name": "entity_field_lifecycle_chk",
+          "validated": true,
+          "definition": "CHECK (((((status)::text = 'active'::text) AND (replacement_field_key IS NULL) AND (deprecated_since_release_no IS NULL) AND (planned_removal_release_no IS NULL)) OR (((status)::text = 'deprecated'::text) AND (deprecated_since_release_no >= 1) AND ((planned_removal_release_no IS NULL) OR (planned_removal_release_no > deprecated_since_release_no)))))"
+        },
+        {
+          "name": "entity_field_optional_specs_chk",
+          "validated": true,
+          "definition": "CHECK ((((default_spec IS NULL) OR (jsonb_typeof(default_spec) = 'object'::text)) AND ((computation_spec IS NULL) OR (jsonb_typeof(computation_spec) = 'object'::text)) AND ((validation_spec IS NULL) OR (jsonb_typeof(validation_spec) = 'object'::text))))"
+        },
+        {
+          "name": "entity_field_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "entity_field_projected_write_chk",
+          "validated": true,
+          "definition": "CHECK ((((value_origin)::text <> 'projected'::text) OR ((write_mode)::text = 'read_only'::text)))"
+        },
+        {
+          "name": "entity_field_replacement_chk",
+          "validated": true,
+          "definition": "CHECK (((replacement_field_key IS NULL) OR ((replacement_field_key ~ '^[a-z][a-z0-9_]{0,62}$'::text) AND (replacement_field_key <> field_key))))"
+        },
+        {
+          "name": "entity_field_retention_policy_chk",
+          "validated": true,
+          "definition": "CHECK (((retention_policy_code IS NULL) OR (retention_policy_code ~ '^[a-z][a-z0-9_.-]{1,62}$'::text)))"
+        },
+        {
+          "name": "entity_field_storage_chk",
+          "validated": true,
+          "definition": "CHECK (((((value_origin)::text = ANY (ARRAY['stored'::text, 'projected'::text])) AND (storage_path ~ '^[A-Za-z_][A-Za-z0-9_.]{0,126}$'::text)) OR (((value_origin)::text = ANY (ARRAY['computed'::text, 'runtime'::text])) AND (storage_path IS NULL))))"
+        },
+        {
+          "name": "entity_field_tenant_id_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, id)"
+        },
+        {
+          "name": "entity_field_type_config_chk",
+          "validated": true,
+          "definition": "CHECK (((jsonb_typeof(type_config) = 'object'::text) AND ((type_config ->> 'kind'::text) = (data_type)::text)))"
+        },
+        {
+          "name": "entity_field_updated_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "trg_entity_field_95_graph_validate",
+          "validated": true,
+          "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+        }
+      ],
+      "replicaIdentity": "d"
+    }
+  ]
+}

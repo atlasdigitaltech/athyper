@@ -59,6 +59,7 @@ export function registerAtlasRoutes(app: Application, options: AtlasRouteOptions
       status: request.query.status === undefined ? undefined : readEnum(request.query.status, ["active", "archived", "all"] as const),
       limit: optionalInteger(request.query.limit),
       cursor: optionalText(request.query.cursor),
+      query: optionalText(request.query.q),
     }),
   })));
   registerContractRoute(app, contract("get", "/api/atlas/threads/:id", "atlas.getThread"), options.authenticate, route(async (request, context) => ({
@@ -259,8 +260,8 @@ export function handleAtlasError(error: unknown, response: Response, next: NextF
     : error.code === "THREAD_NOT_ACTIVE" || error.code === "VERSION_CONFLICT" || error.code === "IDEMPOTENCY_CONFLICT" || error.code === "STALE_PROPOSAL" || error.code === "TOOL_IN_PROGRESS" || error.code === "TOOL_CANCELLED" || error.code === "ATTACHMENT_NOT_READY" ? 409
       : error.code === "QUOTA_EXCEEDED" ? 429
       : error.code === "RESULT_TOO_LARGE" ? 413
-        : error.code === "ADMISSION_DENIED" || error.code === "PERMISSION_DENIED" || error.code === "TOOL_DENIED" ? 403
-          : error.code === "CREDENTIAL_UNAVAILABLE" || error.code === "PROVIDER_UNAVAILABLE" ? 503
+        : error.code === "ADMISSION_DENIED" || error.code === "PERMISSION_DENIED" || error.code === "TOOL_DENIED" || error.code === "BUSINESS_CONTEXT_UNAVAILABLE" || error.code === "BUSINESS_CONTEXT_NOT_ENABLED" ? 403
+          : error.code === "CREDENTIAL_UNAVAILABLE" || error.code === "PROVIDER_UNAVAILABLE" || error.code === "BUSINESS_CONTEXT_SERVICE_UNAVAILABLE" ? 503
             : 400;
   response.status(status).type("application/problem+json").json({
     type: `https://athyper.dev/problems/${error.code.toLowerCase()}`,

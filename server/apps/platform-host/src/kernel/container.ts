@@ -190,6 +190,7 @@ export interface Container {
       >;
     };
     authorizer?: Authorizer;
+    entityReadiness?: ReturnType<typeof import("../composition/shared/entity-runtime/deployment-readiness.js").createHostEntityReadiness>;
     metadata?: MetadataReader;
     /** Shared immutable split-artifact reader; browser/data projections remain separate. */
     compiledEntityReader?: PinnedCompiledEntityReader;

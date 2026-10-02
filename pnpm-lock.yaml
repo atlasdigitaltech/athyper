@@ -165,6 +165,9 @@ importers:
       '@athyper/platform-theme':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/theme
+      '@athyper/platform-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform/foundation/ui
       '@athyper/product-mesh-shell':
         specifier: workspace:*
         version: link:../../packages/planes/mesh/shell
@@ -880,6 +883,9 @@ importers:
       '@athyper/platform-shell-app-foundation':
         specifier: workspace:*
         version: link:../../../platform/shell/app-foundation
+      '@athyper/platform-ui':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/ui
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -1088,6 +1094,9 @@ importers:
       '@athyper/platform-shell-app-foundation':
         specifier: workspace:*
         version: link:../../../shell/app-foundation
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../foundation/temporal
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../../foundation/ui
@@ -1192,6 +1201,9 @@ importers:
       '@athyper/contract-platform-entity-list':
         specifier: workspace:*
         version: link:../../../contracts/platform/entity-list
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/entity-runtime
       '@athyper/contract-platform-navigation':
         specifier: workspace:*
         version: link:../../../contracts/platform/navigation
@@ -2021,6 +2033,9 @@ importers:
       '@athyper/server-service-records':
         specifier: workspace:*
         version: link:../../packages/services/records
+      '@athyper/server-service-workforce':
+        specifier: workspace:*
+        version: link:../../packages/services/workforce
       '@sentry/node':
         specifier: ^10.22.0
         version: 10.70.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.221.0(@opentelemetry/api@1.9.1))
@@ -3338,6 +3353,9 @@ importers:
       '@athyper/contract-platform-entity-runtime':
         specifier: workspace:*
         version: link:../../../../../packages/contracts/platform/entity-runtime
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../../../contracts/auth
@@ -3843,6 +3861,9 @@ importers:
       '@athyper/server-contract-metadata':
         specifier: workspace:*
         version: link:../../contracts/metadata
+      '@athyper/server-contract-object-storage':
+        specifier: workspace:*
+        version: link:../../contracts/object-storage
       '@athyper/server-contract-publication':
         specifier: workspace:*
         version: link:../../contracts/publication
@@ -3856,6 +3877,12 @@ importers:
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -4587,6 +4614,9 @@ importers:
       '@athyper/contract-platform-collection':
         specifier: workspace:*
         version: link:../../../../packages/contracts/platform/collection
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-audit':
         specifier: workspace:*
         version: link:../../contracts/audit
@@ -4709,6 +4739,34 @@ importers:
       pg:
         specifier: ^8.20.0
         version: 8.20.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
+
+  server/packages/services/workforce:
+    dependencies:
+      '@athyper/server-contract-auth':
+        specifier: workspace:*
+        version: link:../../contracts/auth
+      '@athyper/server-contract-metadata':
+        specifier: workspace:*
+        version: link:../../contracts/metadata
+      '@athyper/server-contract-records':
+        specifier: workspace:*
+        version: link:../../contracts/records
+      '@athyper/server-service-records':
+        specifier: workspace:*
+        version: link:../records
+      kysely:
+        specifier: ^0.28.17
+        version: 0.28.17
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -13494,7 +13552,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
     optional: true
 
   '@vitest/expect@4.1.4':

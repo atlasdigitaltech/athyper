@@ -30,7 +30,7 @@ test("shared rows expose record destinations, not generic completion", async ({
   await expect(
     page.getByRole("button", { name: "Complete", exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByText("Record link unavailable")).toBeVisible();
+  await expect(page.getByText("Record no longer available")).toBeVisible();
   await page.getByLabel("Actions for Alex mentioned you").click();
   await page.getByRole("button", { name: "Mark as read" }).click();
   await expect(page.getByRole("alert")).toContainText("Could not update");

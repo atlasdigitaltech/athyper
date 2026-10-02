@@ -1,0 +1,1310 @@
+{
+  "functions": null,
+  "relations": [
+    {
+      "acl": [
+        "athyperadmin=arwdDxt/postgres",
+        "athyperapp=r/postgres",
+        "postgres=arwdDxt/postgres"
+      ],
+      "rls": true,
+      "kind": "r",
+      "name": "metadata.entity_change_case_binding",
+      "owner": "postgres",
+      "forced": true,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid",
+          "default": "shared.uuidv7()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "tenant_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "change_set_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_operation_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "binding_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "case_kind",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "case_entity_code",
+          "type": "text",
+          "default": "'entity_case'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "workflow_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "materialization_binding_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "status",
+          "type": "metadata.entity_member_status_d",
+          "default": "'active'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_change_case_binding_key_uq ON metadata.entity_change_case_binding USING btree (tenant_id, change_set_id, binding_key) NULLS NOT DISTINCT"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_change_case_binding_operation_uq ON metadata.entity_change_case_binding USING btree (tenant_id, entity_operation_id) NULLS NOT DISTINCT"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_change_case_binding_pkey ON metadata.entity_change_case_binding USING btree (id)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_change_case_binding_tenant_id_uq ON metadata.entity_change_case_binding USING btree (tenant_id, id) NULLS NOT DISTINCT"
+        }
+      ],
+      "options": null,
+      "policies": [
+        {
+          "name": "administrator_access",
+          "check": "true",
+          "roles": ["athyperadmin"],
+          "using": "true",
+          "command": "*",
+          "permissive": true
+        },
+        {
+          "name": "application_read",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+          "command": "r",
+          "permissive": true
+        }
+      ],
+      "triggers": null,
+      "constraints": [
+        {
+          "name": "entity_change_case_binding_audit_pair_chk",
+          "validated": true,
+          "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+        },
+        {
+          "name": "entity_change_case_binding_change_set_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "entity_change_case_binding_created_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (created_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_change_case_binding_entity_chk",
+          "validated": true,
+          "definition": "CHECK ((case_entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'::text))"
+        },
+        {
+          "name": "entity_change_case_binding_entity_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_change_case_binding_key_chk",
+          "validated": true,
+          "definition": "CHECK ((binding_key ~ '^[a-z][a-z0-9_.-]{1,126}$'::text))"
+        },
+        {
+          "name": "entity_change_case_binding_key_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, change_set_id, binding_key)"
+        },
+        {
+          "name": "entity_change_case_binding_kind_chk",
+          "validated": true,
+          "definition": "CHECK ((case_kind = ANY (ARRAY['governed_change'::text, 'direct_change'::text])))"
+        },
+        {
+          "name": "entity_change_case_binding_materialization_chk",
+          "validated": true,
+          "definition": "CHECK (((materialization_binding_key IS NULL) OR (materialization_binding_key ~ '^[a-z][a-z0-9_.-]{1,126}$'::text)))"
+        },
+        {
+          "name": "entity_change_case_binding_operation_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (entity_operation_id) REFERENCES metadata.entity_operation(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "entity_change_case_binding_operation_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, entity_operation_id)"
+        },
+        {
+          "name": "entity_change_case_binding_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "entity_change_case_binding_tenant_id_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, id)"
+        },
+        {
+          "name": "entity_change_case_binding_updated_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_change_case_binding_workflow_chk",
+          "validated": true,
+          "definition": "CHECK (((workflow_key IS NULL) OR (workflow_key ~ '^[a-z][a-z0-9_.-]{1,126}$'::text)))"
+        }
+      ],
+      "replicaIdentity": "d"
+    },
+    {
+      "acl": [
+        "athyperadmin=arwdDxt/postgres",
+        "athyperapp=r/postgres",
+        "postgres=arwdDxt/postgres"
+      ],
+      "rls": true,
+      "kind": "r",
+      "name": "metadata.entity_field_reference_binding",
+      "owner": "postgres",
+      "forced": true,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid",
+          "default": "shared.uuidv7()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "tenant_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "change_set_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_field_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "binding_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "reference_kind",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "target_entity_code",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "lookup_domain",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "resolver_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "require_active",
+          "type": "boolean",
+          "default": "true",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "status",
+          "type": "metadata.entity_member_status_d",
+          "default": "'active'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_field_reference_binding_field_uq ON metadata.entity_field_reference_binding USING btree (tenant_id, entity_field_id) NULLS NOT DISTINCT"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_field_reference_binding_key_uq ON metadata.entity_field_reference_binding USING btree (tenant_id, change_set_id, binding_key) NULLS NOT DISTINCT"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_field_reference_binding_pkey ON metadata.entity_field_reference_binding USING btree (id)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_field_reference_binding_tenant_id_uq ON metadata.entity_field_reference_binding USING btree (tenant_id, id) NULLS NOT DISTINCT"
+        }
+      ],
+      "options": null,
+      "policies": [
+        {
+          "name": "administrator_access",
+          "check": "true",
+          "roles": ["athyperadmin"],
+          "using": "true",
+          "command": "*",
+          "permissive": true
+        },
+        {
+          "name": "application_read",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+          "command": "r",
+          "permissive": true
+        }
+      ],
+      "triggers": null,
+      "constraints": [
+        {
+          "name": "entity_field_reference_binding_audit_pair_chk",
+          "validated": true,
+          "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+        },
+        {
+          "name": "entity_field_reference_binding_change_set_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "entity_field_reference_binding_created_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (created_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_field_reference_binding_entity_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_field_reference_binding_field_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (entity_field_id) REFERENCES metadata.entity_field(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "entity_field_reference_binding_field_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, entity_field_id)"
+        },
+        {
+          "name": "entity_field_reference_binding_key_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, change_set_id, binding_key)"
+        },
+        {
+          "name": "entity_field_reference_binding_kind_chk",
+          "validated": true,
+          "definition": "CHECK ((reference_kind = ANY (ARRAY['entity_relation'::text, 'lookup_domain'::text, 'resolver'::text])))"
+        },
+        {
+          "name": "entity_field_reference_binding_kind_target_chk",
+          "validated": true,
+          "definition": "CHECK ((((reference_kind = 'entity_relation'::text) = (target_entity_code IS NOT NULL)) AND ((reference_kind = 'lookup_domain'::text) = (lookup_domain IS NOT NULL)) AND ((reference_kind = 'resolver'::text) = (resolver_key IS NOT NULL))))"
+        },
+        {
+          "name": "entity_field_reference_binding_lookup_chk",
+          "validated": true,
+          "definition": "CHECK (((lookup_domain IS NULL) OR (lookup_domain ~ '^[a-z][a-z0-9_.-]{1,126}$'::text)))"
+        },
+        {
+          "name": "entity_field_reference_binding_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "entity_field_reference_binding_resolver_chk",
+          "validated": true,
+          "definition": "CHECK (((resolver_key IS NULL) OR (resolver_key ~ '^[a-z][a-z0-9_.:-]{1,126}$'::text)))"
+        },
+        {
+          "name": "entity_field_reference_binding_target_chk",
+          "validated": true,
+          "definition": "CHECK (((target_entity_code IS NULL) OR (target_entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'::text)))"
+        },
+        {
+          "name": "entity_field_reference_binding_tenant_id_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, id)"
+        },
+        {
+          "name": "entity_field_reference_binding_updated_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        }
+      ],
+      "replicaIdentity": "d"
+    },
+    {
+      "acl": [
+        "athyperadmin=arwdDxt/postgres",
+        "athyperapp=r/postgres",
+        "postgres=arwdDxt/postgres"
+      ],
+      "rls": true,
+      "kind": "r",
+      "name": "metadata.entity_materialization_binding",
+      "owner": "postgres",
+      "forced": true,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid",
+          "default": "shared.uuidv7()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "tenant_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "change_set_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "binding_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "target_entity_code",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "materializer_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "target_collection_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "status",
+          "type": "metadata.entity_member_status_d",
+          "default": "'active'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_materialization_binding_key_uq ON metadata.entity_materialization_binding USING btree (tenant_id, change_set_id, binding_key) NULLS NOT DISTINCT"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_materialization_binding_pkey ON metadata.entity_materialization_binding USING btree (id)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_materialization_binding_tenant_id_uq ON metadata.entity_materialization_binding USING btree (tenant_id, id) NULLS NOT DISTINCT"
+        }
+      ],
+      "options": null,
+      "policies": [
+        {
+          "name": "administrator_access",
+          "check": "true",
+          "roles": ["athyperadmin"],
+          "using": "true",
+          "command": "*",
+          "permissive": true
+        },
+        {
+          "name": "application_read",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+          "command": "r",
+          "permissive": true
+        }
+      ],
+      "triggers": null,
+      "constraints": [
+        {
+          "name": "entity_materialization_binding_audit_pair_chk",
+          "validated": true,
+          "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+        },
+        {
+          "name": "entity_materialization_binding_change_set_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "entity_materialization_binding_collection_chk",
+          "validated": true,
+          "definition": "CHECK (((target_collection_key IS NULL) OR (target_collection_key ~ '^[a-z][a-z0-9_.-]{1,126}$'::text)))"
+        },
+        {
+          "name": "entity_materialization_binding_created_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (created_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_materialization_binding_entity_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_materialization_binding_handler_chk",
+          "validated": true,
+          "definition": "CHECK ((materializer_key ~ '^[a-z][a-z0-9_.:-]{1,126}\\\\.v[1-9][0-9]*$'::text))"
+        },
+        {
+          "name": "entity_materialization_binding_key_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, change_set_id, binding_key)"
+        },
+        {
+          "name": "entity_materialization_binding_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "entity_materialization_binding_target_chk",
+          "validated": true,
+          "definition": "CHECK ((target_entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'::text))"
+        },
+        {
+          "name": "entity_materialization_binding_tenant_id_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, id)"
+        },
+        {
+          "name": "entity_materialization_binding_updated_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        }
+      ],
+      "replicaIdentity": "d"
+    },
+    {
+      "acl": [
+        "athyperadmin=arwdDxt/postgres",
+        "athyperapp=r/postgres",
+        "postgres=arwdDxt/postgres"
+      ],
+      "rls": true,
+      "kind": "r",
+      "name": "metadata.entity_materialization_field_mapping",
+      "owner": "postgres",
+      "forced": true,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid",
+          "default": "shared.uuidv7()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "tenant_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_materialization_binding_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "source_field_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "target_field_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "transform_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "required",
+          "type": "boolean",
+          "default": "false",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "position",
+          "type": "smallint",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_materialization_field_mapping_pkey ON metadata.entity_materialization_field_mapping USING btree (id)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_materialization_field_mapping_position_uq ON metadata.entity_materialization_field_mapping USING btree (tenant_id, entity_materialization_binding_id, \"position\") NULLS NOT DISTINCT"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_materialization_field_mapping_source_uq ON metadata.entity_materialization_field_mapping USING btree (tenant_id, entity_materialization_binding_id, source_field_key) NULLS NOT DISTINCT"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_materialization_field_mapping_tenant_id_uq ON metadata.entity_materialization_field_mapping USING btree (tenant_id, id) NULLS NOT DISTINCT"
+        }
+      ],
+      "options": null,
+      "policies": [
+        {
+          "name": "administrator_access",
+          "check": "true",
+          "roles": ["athyperadmin"],
+          "using": "true",
+          "command": "*",
+          "permissive": true
+        },
+        {
+          "name": "application_read",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+          "command": "r",
+          "permissive": true
+        }
+      ],
+      "triggers": null,
+      "constraints": [
+        {
+          "name": "entity_materialization_field_mapping_audit_pair_chk",
+          "validated": true,
+          "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+        },
+        {
+          "name": "entity_materialization_field_mapping_binding_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (entity_materialization_binding_id) REFERENCES metadata.entity_materialization_binding(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "entity_materialization_field_mapping_created_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (created_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_materialization_field_mapping_field_chk",
+          "validated": true,
+          "definition": "CHECK (((source_field_key ~ '^[a-z][a-z0-9_]{0,62}$'::text) AND (target_field_key ~ '^[a-z][a-z0-9_]{0,62}$'::text)))"
+        },
+        {
+          "name": "entity_materialization_field_mapping_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "entity_materialization_field_mapping_position_chk",
+          "validated": true,
+          "definition": "CHECK ((\"position\" >= 0))"
+        },
+        {
+          "name": "entity_materialization_field_mapping_position_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, entity_materialization_binding_id, \"position\")"
+        },
+        {
+          "name": "entity_materialization_field_mapping_source_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, entity_materialization_binding_id, source_field_key)"
+        },
+        {
+          "name": "entity_materialization_field_mapping_tenant_id_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, id)"
+        },
+        {
+          "name": "entity_materialization_field_mapping_transform_chk",
+          "validated": true,
+          "definition": "CHECK (((transform_key IS NULL) OR (transform_key ~ '^[a-z][a-z0-9_.:-]{1,126}\\\\.v[1-9][0-9]*$'::text)))"
+        },
+        {
+          "name": "entity_materialization_field_mapping_updated_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        }
+      ],
+      "replicaIdentity": "d"
+    },
+    {
+      "acl": [
+        "athyperadmin=arwdDxt/postgres",
+        "athyperapp=r/postgres",
+        "postgres=arwdDxt/postgres"
+      ],
+      "rls": true,
+      "kind": "r",
+      "name": "metadata.entity_operation_context_requirement",
+      "owner": "postgres",
+      "forced": true,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid",
+          "default": "shared.uuidv7()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "tenant_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "change_set_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_operation_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "coordinate_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "source_kind",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "source_field_key",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "required",
+          "type": "boolean",
+          "default": "true",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "status",
+          "type": "metadata.entity_member_status_d",
+          "default": "'active'::text",
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "created_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "updated_by",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_operation_context_requirement_pkey ON metadata.entity_operation_context_requirement USING btree (id)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_operation_context_requirement_tenant_id_uq ON metadata.entity_operation_context_requirement USING btree (tenant_id, id) NULLS NOT DISTINCT"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX entity_operation_context_requirement_uq ON metadata.entity_operation_context_requirement USING btree (tenant_id, entity_operation_id, coordinate_key) NULLS NOT DISTINCT"
+        }
+      ],
+      "options": null,
+      "policies": [
+        {
+          "name": "administrator_access",
+          "check": "true",
+          "roles": ["athyperadmin"],
+          "using": "true",
+          "command": "*",
+          "permissive": true
+        },
+        {
+          "name": "application_read",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+          "command": "r",
+          "permissive": true
+        }
+      ],
+      "triggers": null,
+      "constraints": [
+        {
+          "name": "entity_operation_context_requirement_audit_pair_chk",
+          "validated": true,
+          "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+        },
+        {
+          "name": "entity_operation_context_requirement_change_set_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (change_set_id) REFERENCES metadata.entity_change_set(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "entity_operation_context_requirement_created_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (created_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_operation_context_requirement_entity_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (entity_id) REFERENCES metadata.entity(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_operation_context_requirement_key_chk",
+          "validated": true,
+          "definition": "CHECK ((coordinate_key ~ '^[a-z][a-zA-Z0-9_]{0,126}$'::text))"
+        },
+        {
+          "name": "entity_operation_context_requirement_operation_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (entity_operation_id) REFERENCES metadata.entity_operation(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "entity_operation_context_requirement_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "entity_operation_context_requirement_source_chk",
+          "validated": true,
+          "definition": "CHECK ((source_kind = ANY (ARRAY['tenant_context'::text, 'request_field'::text, 'record_field'::text])))"
+        },
+        {
+          "name": "entity_operation_context_requirement_source_field_chk",
+          "validated": true,
+          "definition": "CHECK (((source_kind = 'tenant_context'::text) = (source_field_key IS NULL)))"
+        },
+        {
+          "name": "entity_operation_context_requirement_tenant_id_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, id)"
+        },
+        {
+          "name": "entity_operation_context_requirement_updated_by_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "entity_operation_context_requirement_uq",
+          "validated": true,
+          "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, entity_operation_id, coordinate_key)"
+        }
+      ],
+      "replicaIdentity": "d"
+    }
+  ]
+}

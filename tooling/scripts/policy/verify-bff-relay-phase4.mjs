@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 
 const root = new URL("../../../", import.meta.url);
 const read = (path) =>
@@ -59,7 +60,8 @@ for (const plane of ["neon", "mesh", "studio"]) {
     // requiredEnvironment("RUNTIME_API_URL") helper no longer exists.
     if (
       !route.includes("@/lib/relay") ||
-      !config.includes("IAM_ME_OPERATION") ||
+      !config.includes("...COMMON_PLANE_RELAY_OPERATIONS") ||
+      !config.includes("session: relaySessionFromAuth(authRuntime)") ||
       !config.includes("readAppEnvironment().runtimeApiUrl")
     )
       failures.push(
@@ -78,8 +80,10 @@ const apps = ["apps/neon", "apps/mesh", "apps/studio"]
   )
   .join("\n");
 if (
-  !apps.includes("resolveRelaySession") ||
-  !apps.includes("invalidateRelaySession")
+  !apps.includes("createEnvironmentAuthRuntime") ||
+  !relay.includes("auth.resolveRelaySession(request)") ||
+  !relay.includes("auth.refreshRelaySession(request)") ||
+  !relay.includes("auth.invalidateRelaySession(request, reason)")
 )
   failures.push(
     "Application relays must resolve and invalidate through the shared server auth runtime",
@@ -89,6 +93,19 @@ if (failures.length) {
   console.error(failures.map((failure) => `- ${failure}`).join("\n"));
   process.exit(1);
 }
+// Exercise the shared group and authority adapter rather than assuming a helper
+// name in an app establishes allowlisting or correct session delegation.
+execFileSync(
+  process.execPath,
+  [
+    "--import",
+    "tsx",
+    "--test",
+    "tests/contracts/relay-common-plane-operations.test.ts",
+    "tests/contracts/bff-relay-security.test.ts",
+  ],
+  { cwd: root, stdio: "inherit" },
+);
 console.log(
   "Phase 4 BFF relay policy verified: server-only allowlist, authoritative context, bounded forwarding, and thin plane routes.",
 );

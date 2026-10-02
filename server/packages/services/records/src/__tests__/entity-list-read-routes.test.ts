@@ -14,6 +14,7 @@ afterEach(async () => {
 const recordId = "0d6f2f4e-8c3a-4a57-9a52-2f1f6b3d8c11";
 const base = "/api/entity-runtime/country";
 const routes = [
+  { name: "reference choices", method: "referenceChoices", path: `${base}/references/country_code` },
   { name: "application descriptor", method: "applicationDescriptor", path: `${base}/application-descriptor` },
   { name: "list descriptor", method: "descriptor", path: `${base}/list-descriptor` },
   { name: "form descriptor", method: "formDescriptor", path: `${base}/form-descriptor?mode=create` },
@@ -107,4 +108,21 @@ describe("request parameter validation", () => {
 it("exposes timings only with explicit diagnostics", async () => {
  const h = await setup(undefined, true);
  expect((await h.get(`${base}/detail-descriptor`)).headers.get("server-timing")).toMatch(/total;dur=/);
+});
+
+
+it("passes the validated edit form record coordinate to authorization", async () => {
+  const h = await setup();
+  expect((await h.get(`${base}/form-descriptor?mode=edit&recordId=${recordId}`)).status).toBe(200);
+  expect(h.service["formDescriptor"]).toHaveBeenCalledWith(expect.anything(), "country", "edit", recordId);
+  h.service["formDescriptor"]!.mockClear();
+  expect((await h.get(`${base}/form-descriptor?mode=edit&recordId=${"a".repeat(201)}`)).status).toBe(400);
+  expect(h.service["formDescriptor"]).not.toHaveBeenCalled();
+});
+
+ it.each(["{", "null", "[]", '{"country_code":true}', '{"country_code":""}'])("rejects invalid reference dependencies %s before the reader", async dependencies => {
+  const h = await setup();
+  const response = await h.get(`${base}/references/parent_code?dependencies=${encodeURIComponent(dependencies)}`);
+  expect(response.status).toBe(400);
+  expect(h.service["referenceChoices"]).not.toHaveBeenCalled();
 });

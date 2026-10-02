@@ -3,34 +3,160 @@
   "defaultLocale": "en",
   "requiredLocales": ["en", "ms", "ar"],
   "values": {
-    "entity.country.title": { "en": "Countries", "ms": "Negara", "ar": "البلدان" },
-    "entity.country.label": { "en": "Country", "ms": "Negara", "ar": "البلد" },
-    "entity.country.fields.id": { "en": "Record ID", "ms": "ID rekod", "ar": "معرّف السجل" },
-    "entity.country.fields.code": { "en": "ISO alpha-2", "ms": "ISO alfa-2", "ar": "رمز ISO الثنائي" },
-    "entity.country.fields.name": { "en": "Name", "ms": "Nama", "ar": "الاسم" },
-    "entity.country.fields.code3": { "en": "ISO alpha-3", "ms": "ISO alfa-3", "ar": "رمز ISO الثلاثي" },
-    "entity.country.fields.numeric3": { "en": "ISO numeric code", "ms": "Kod angka ISO", "ar": "رمز ISO الرقمي" },
-    "entity.country.fields.official_name": { "en": "Official name", "ms": "Nama rasmi", "ar": "الاسم الرسمي" },
-    "entity.country.fields.region": { "en": "Region", "ms": "Wilayah", "ar": "المنطقة" },
-    "entity.country.fields.subregion": { "en": "Subregion", "ms": "Subwilayah", "ar": "المنطقة الفرعية" },
-    "entity.country.fields.calling_code": { "en": "Calling code", "ms": "Kod panggilan", "ar": "رمز الاتصال" },
-    "entity.country.fields.phone_trunk_prefix": { "en": "National trunk prefix", "ms": "Awalan talian nasional", "ar": "بادئة الاتصال الوطنية" },
-    "entity.country.fields.phone_national_pattern": { "en": "National number pattern", "ms": "Corak nombor nasional", "ar": "نمط الرقم الوطني" },
-    "entity.country.fields.phone_example": { "en": "Phone example", "ms": "Contoh telefon", "ar": "مثال رقم الهاتف" },
-    "entity.country.fields.has_postal_codes": { "en": "Uses postal codes", "ms": "Menggunakan poskod", "ar": "يستخدم رموزًا بريدية" },
-    "entity.country.fields.postal_code_pattern": { "en": "Postal code pattern", "ms": "Corak poskod", "ar": "نمط الرمز البريدي" },
-    "entity.country.fields.postal_code_label": { "en": "Postal code label", "ms": "Label poskod", "ar": "تسمية الرمز البريدي" },
-    "entity.country.fields.postal_code_example": { "en": "Postal code example", "ms": "Contoh poskod", "ar": "مثال الرمز البريدي" },
-    "entity.country.fields.region_label": { "en": "Region label", "ms": "Label wilayah", "ar": "تسمية المنطقة" },
-    "entity.country.fields.postal_position": { "en": "Postal position", "ms": "Kedudukan poskod", "ar": "موضع الرمز البريدي" },
-    "entity.country.fields.address_format": { "en": "Address format", "ms": "Format alamat", "ar": "تنسيق العنوان" },
-    "entity.country.fields.status": { "en": "Status", "ms": "Status", "ar": "الحالة" },
-    "entity.country.fields.created_at": { "en": "Created", "ms": "Dicipta", "ar": "تاريخ الإنشاء" },
-    "entity.country.fields.updated_at": { "en": "Updated", "ms": "Dikemas kini", "ar": "تاريخ التحديث" },
-    "entity.country.sections.overview": { "en": "Country", "ms": "Negara", "ar": "البلد" },
-    "entity.country.sections.phone": { "en": "Phone", "ms": "Telefon", "ar": "الهاتف" },
-    "entity.country.sections.address": { "en": "Postal and address", "ms": "Pos dan alamat", "ar": "البريد والعنوان" },
-    "entity.country.sections.audit": { "en": "Audit", "ms": "Audit", "ar": "التدقيق" },
-    "navigation.overview": { "en": "Overview", "ms": "Ikhtisar", "ar": "نظرة عامة" }
+    "entity.country.title": {
+      "en": "Countries",
+      "ms": "Negara",
+      "ar": "البلدان"
+    },
+    "entity.country.label": {
+      "en": "Country",
+      "ms": "Negara",
+      "ar": "البلد"
+    },
+    "entity.country.fields.id": {
+      "en": "Record ID",
+      "ms": "ID rekod",
+      "ar": "معرّف السجل"
+    },
+    "entity.country.fields.code": {
+      "en": "ISO alpha-2",
+      "ms": "ISO alfa-2",
+      "ar": "رمز ISO الثنائي"
+    },
+    "entity.country.fields.name": {
+      "en": "Name",
+      "ms": "Nama",
+      "ar": "الاسم"
+    },
+    "entity.country.fields.code3": {
+      "en": "ISO alpha-3",
+      "ms": "ISO alfa-3",
+      "ar": "رمز ISO الثلاثي"
+    },
+    "entity.country.fields.numeric3": {
+      "en": "ISO numeric code",
+      "ms": "Kod angka ISO",
+      "ar": "رمز ISO الرقمي"
+    },
+    "entity.country.fields.official_name": {
+      "en": "Official name",
+      "ms": "Nama rasmi",
+      "ar": "الاسم الرسمي"
+    },
+    "entity.country.fields.region": {
+      "en": "Region",
+      "ms": "Wilayah",
+      "ar": "المنطقة"
+    },
+    "entity.country.fields.subregion": {
+      "en": "Subregion",
+      "ms": "Subwilayah",
+      "ar": "المنطقة الفرعية"
+    },
+    "entity.country.fields.calling_code": {
+      "en": "Calling code",
+      "ms": "Kod panggilan",
+      "ar": "رمز الاتصال"
+    },
+    "entity.country.fields.phone_trunk_prefix": {
+      "en": "National trunk prefix",
+      "ms": "Awalan talian nasional",
+      "ar": "بادئة الاتصال الوطنية"
+    },
+    "entity.country.fields.phone_national_pattern": {
+      "en": "National number pattern",
+      "ms": "Corak nombor nasional",
+      "ar": "نمط الرقم الوطني"
+    },
+    "entity.country.fields.phone_example": {
+      "en": "Phone example",
+      "ms": "Contoh telefon",
+      "ar": "مثال رقم الهاتف"
+    },
+    "entity.country.fields.has_postal_codes": {
+      "en": "Uses postal codes",
+      "ms": "Menggunakan poskod",
+      "ar": "يستخدم رموزًا بريدية"
+    },
+    "entity.country.fields.postal_code_pattern": {
+      "en": "Postal code pattern",
+      "ms": "Corak poskod",
+      "ar": "نمط الرمز البريدي"
+    },
+    "entity.country.fields.postal_code_label": {
+      "en": "Postal code label",
+      "ms": "Label poskod",
+      "ar": "تسمية الرمز البريدي"
+    },
+    "entity.country.fields.postal_code_example": {
+      "en": "Postal code example",
+      "ms": "Contoh poskod",
+      "ar": "مثال الرمز البريدي"
+    },
+    "entity.country.fields.region_label": {
+      "en": "Region label",
+      "ms": "Label wilayah",
+      "ar": "تسمية المنطقة"
+    },
+    "entity.country.fields.postal_position": {
+      "en": "Postal position",
+      "ms": "Kedudukan poskod",
+      "ar": "موضع الرمز البريدي"
+    },
+    "entity.country.fields.address_format": {
+      "en": "Address format",
+      "ms": "Format alamat",
+      "ar": "تنسيق العنوان"
+    },
+    "entity.country.fields.status": {
+      "en": "Status",
+      "ms": "Status",
+      "ar": "الحالة"
+    },
+    "entity.country.fields.created_at": {
+      "en": "Created",
+      "ms": "Dicipta",
+      "ar": "تاريخ الإنشاء"
+    },
+    "entity.country.fields.updated_at": {
+      "en": "Updated",
+      "ms": "Dikemas kini",
+      "ar": "تاريخ التحديث"
+    },
+    "entity.country.sections.overview": {
+      "en": "Country",
+      "ms": "Negara",
+      "ar": "البلد"
+    },
+    "entity.country.sections.phone": {
+      "en": "Phone",
+      "ms": "Telefon",
+      "ar": "الهاتف"
+    },
+    "entity.country.sections.address": {
+      "en": "Postal and address",
+      "ms": "Pos dan alamat",
+      "ar": "البريد والعنوان"
+    },
+    "entity.country.sections.audit": {
+      "en": "Audit",
+      "ms": "Audit",
+      "ar": "التدقيق"
+    },
+    "navigation.overview": {
+      "en": "Overview",
+      "ms": "Ikhtisar",
+      "ar": "نظرة عامة"
+    },
+    "reference.status.active": {
+      "en": "Active",
+      "ms": "Aktif",
+      "ar": "نشط"
+    },
+    "reference.status.deprecated": {
+      "en": "Deprecated",
+      "ms": "Tidak digunakan lagi",
+      "ar": "متوقف عن الاستخدام"
+    }
   }
 }

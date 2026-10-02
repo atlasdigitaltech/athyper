@@ -379,7 +379,7 @@ it("profiled export download rechecks fields and authority before minting an art
           object: "business_partner",
           idField: "id",
         },
-        fields: [],
+        fields: [{key:"code",storagePath:"code",type:"string",required:true,writableOn:[],classification:"public"}],
         operations: {
           export: { code: "export", permissionCode: request.permissionCode },
         },

@@ -1,3 +1,7 @@
+import { parseLearningFixtures, type LearningFixture } from "./learning-fixtures.js";
+export { parseLearningFixtures, type LearningFixture } from "./learning-fixtures.js";
+import { runLearningAttempt, type LearningAttemptEvidence } from "./learning-attempt.js";
+import { createLearningEvaluationReceipt, assertLearningEvaluationReceipt, type ControlledLearningFixtureSet } from "./learning-evaluation-receipt.js";
 import { cloneGraphIds } from "./graph-identity.js";
 import { createHash, randomUUID } from "node:crypto";
 import { sql, type Kysely } from "kysely";
@@ -21,15 +25,14 @@ import { compileEntityAi } from "./entity-ai.js";
 import { compileGraph, sha256 } from "./deterministic.js";
 
 type Database = Kysely<Record<string, never>>;
-export interface LearningFixture {
-  readonly question: string;
-  readonly expected: "read" | "delegate";
-}
 export interface LearningEvaluation {
   readonly passed: boolean;
   readonly fixtureHash: string;
   readonly resolverVersion: string;
+  readonly scoringVersion?: string;
+  readonly receipt?: import("./learning-evaluation-receipt.js").LearningEvaluationReceipt;
   readonly fixtures?: readonly LearningFixture[];
+  readonly previousEvaluations?: readonly { readonly changeSetId: string; readonly evaluatedDescriptorHash: string | null; readonly evaluation: Omit<LearningEvaluation, "previousEvaluations"> }[];
   readonly results: readonly {
     readonly expected: string;
     readonly actual: string;
@@ -42,6 +45,15 @@ interface InboxRow {
   release_id?: string;
   publication_status?: string;
   deployment_states?: unknown;
+  attempts?: readonly {
+    id: string;
+    status: "started" | "succeeded" | "failed";
+    failureCode: string | null;
+    evidence: LearningAttemptEvidence | null;
+    startedAt: string;
+    finishedAt: string | null;
+  }[];
+  attempt_count?: number;
   id: string;
   tenant_id: string;
   origin_plane: string;
@@ -57,6 +69,9 @@ interface InboxRow {
   expires_at: Date | string;
 }
 export interface LearningInboxOptions {
+  evaluationIdentity: { readonly resolverVersion: string; readonly scoringVersion: string };
+  /** Trusted provider; request callers may choose an ID, never authorship or expected answers. */
+  fixtureSets?: { resolve(context: VerifiedRequestContext, id: string): Promise<ControlledLearningFixtureSet & { readonly fixtures: readonly LearningFixture[]; readonly entityCode?: string; readonly originPlane?: string }> };
   database: Database;
   authorizer: Authorizer;
   sourceCurrent(proposal: AtlasLearningHandoff): Promise<boolean>;
@@ -126,13 +141,20 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
     );
   }
   async list(context: VerifiedRequestContext) {
-    await this.allowed(context, "metadata.entity.review");
+    await this.allowed(context, "metadata.entity.review", { learningOperation: "list" });
     return this.transaction(
       context.tenantId,
       context.principalId,
       async (tx) => {
         const rows = (
           await sql<InboxRow>`SELECT inbox.*,cs.status AS change_set_status,cs.lock_version AS change_set_revision,r.id AS release_id,pr.status AS publication_status,
+        (SELECT count(*)::integer FROM ai.atlas_learning_attempt a WHERE a.tenant_id=inbox.tenant_id AND a.inbox_id=inbox.id) AS attempt_count,
+        (SELECT jsonb_agg(history.entry ORDER BY history.started_at DESC,history.id DESC) FROM
+          (SELECT a.id,a.started_at,jsonb_build_object('id',a.id,'revision',a.revision,'actorId',a.actor_id,'startedAt',a.started_at,'finishedAt',r.finished_at,
+            'status',COALESCE(r.status,'started'),'failureCode',r.failure_code,'evidence',r.evidence,'resolverVersion',a.resolver_version,'scoringVersion',a.scoring_version,
+            'sourceReleaseId',a.source_release_id,'sourceDescriptorHash',a.source_descriptor_hash,'sourceContractHash',a.source_contract_hash) AS entry
+           FROM ai.atlas_learning_attempt a LEFT JOIN ai.atlas_learning_attempt_result r ON r.attempt_id=a.id AND r.tenant_id=a.tenant_id
+           WHERE a.tenant_id=inbox.tenant_id AND a.inbox_id=inbox.id ORDER BY a.started_at DESC,a.id DESC LIMIT 20) history) AS attempts,
         (SELECT jsonb_agg(jsonb_build_object('plane',d.target_plane,'state',d.status)) FROM publication.deployment d JOIN publication.artifact a ON a.id=d.artifact_id WHERE a.publication_release_id=pr.id) AS deployment_states
         FROM ai.atlas_learning_inbox inbox LEFT JOIN metadata.entity_change_set cs ON cs.id=inbox.change_set_id AND cs.tenant_id=inbox.tenant_id
         LEFT JOIN metadata.entity_release r ON r.change_set_id=cs.id AND r.tenant_id=inbox.tenant_id
@@ -166,6 +188,8 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
             publicationStatus: row.publication_status,
             deployments: row.deployment_states,
             evaluation: row.evaluation,
+            attempts: row.attempts ?? [],
+            attemptCount: row.attempt_count ?? 0,
             reviewedBy: row.reviewed_by,
             expiresAt: new Date(row.expires_at).toISOString(),
           })),
@@ -174,7 +198,7 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
     );
   }
   async reject(context: VerifiedRequestContext, id: string, revision: number) {
-    await this.allowed(context, "metadata.entity.review");
+    await this.allowed(context, "metadata.entity.review", { learningOperation: "reject", learningInboxId: id });
     return this.transaction(
       context.tenantId,
       context.principalId,
@@ -198,17 +222,42 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
     input: {
       id: string;
       revision: number;
-      fixtures: readonly LearningFixture[];
+      fixtures?: readonly LearningFixture[];
+      fixtureSetId?: string;
+      requalify?: boolean;
     },
   ) {
-    await this.allowed(context, "metadata.entity.review");
+    await this.allowed(context, "metadata.entity.review", { learningOperation: "stage", learningInboxId: input.id });
     await this.allowed(context, "metadata.entity.author");
-    const fixtures = parseLearningFixtures(input.fixtures);
+    const attemptId = randomUUID();
+    const attemptEvidence: LearningAttemptEvidence = {};
+    return runLearningAttempt({
+      start: () => this.transaction(context.tenantId, context.principalId, async tx => {
+        const row = await this.lock(tx, context, input.id, input.revision, input.requalify === true);
+        await sql`INSERT INTO ai.atlas_learning_attempt(id,tenant_id,inbox_id,actor_id,proposal_hash,revision,source_release_id,source_descriptor_hash,source_contract_hash,resolver_version,scoring_version)
+          VALUES(${attemptId}::uuid,${context.tenantId}::uuid,${row.id}::uuid,${context.principalId}::uuid,${row.proposal_hash},${row.revision},${row.proposal.sourceReleaseId}::uuid,${row.proposal.sourceDescriptorHash},${row.proposal.sourceContractHash},${this.options.evaluationIdentity.resolverVersion},${this.options.evaluationIdentity.scoringVersion})`.execute(tx);
+      }),
+      failed: code => this.transaction(context.tenantId, context.principalId, tx => this.finishAttempt(tx, context, attemptId, "failed", attemptEvidence, code)),
+      work: async () => {
+    if (input.fixtureSetId !== undefined && (!input.fixtureSetId.trim() || input.fixtureSetId.length > 200 || !this.options.fixtureSets || input.fixtures !== undefined))
+      throw new AuthoringPolicyError("LEARNING_FIXTURE_SET_UNAVAILABLE", "Select an available controlled fixture set without caller-supplied expectations");
+    const resolvedFixtures = input.fixtureSetId === undefined ? undefined : await this.options.fixtureSets!.resolve(context, input.fixtureSetId);
+    if (resolvedFixtures && resolvedFixtures.id !== input.fixtureSetId)
+      throw new AuthoringPolicyError("LEARNING_FIXTURE_SET_UNAVAILABLE", "The requested fixture set did not resolve exactly");
+    const fixtures = parseLearningFixtures(resolvedFixtures?.fixtures ?? input.fixtures);
+    attemptEvidence.fixtureContentHash = sha256(fixtures);
+    attemptEvidence.fixtureCount = fixtures.length;
+    if (resolvedFixtures) attemptEvidence.fixtureSetId = resolvedFixtures.id;
+    const controlledFixtureSet = resolvedFixtures ? { id: resolvedFixtures.id, contentHash: resolvedFixtures.contentHash,
+      authorId: resolvedFixtures.authorId, approvedBy: resolvedFixtures.approvedBy, lockedAt: resolvedFixtures.lockedAt } : undefined;
     return this.transaction(
       context.tenantId,
       context.principalId,
       async (tx) => {
-        const row = await this.lock(tx, context, input.id, input.revision);
+        const row = await this.lock(tx, context, input.id, input.revision, input.requalify === true);
+        if (resolvedFixtures && ((resolvedFixtures.entityCode !== undefined && resolvedFixtures.entityCode !== row.proposal.entityCode) ||
+          (resolvedFixtures.originPlane !== undefined && resolvedFixtures.originPlane !== row.origin_plane)))
+          throw new AuthoringPolicyError("LEARNING_FIXTURE_SET_UNAVAILABLE", "Controlled fixtures do not match the correction entity and origin plane");
         if (!(await this.options.sourceCurrent(row.proposal)))
           throw new AuthoringPolicyError(
             "LEARNING_SOURCE_UNAVAILABLE",
@@ -251,26 +300,11 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
           sourceContractHash: compileGraph(graph).contractHash,
         });
         const repository = new KyselyMetaEntityAuthoringRepository(tx);
-        const ai = compileEntityAi(next)!;
-        const evaluation = {
-          ...this.options.evaluate(
-            String(next.entity.entityCode),
-            ai,
-            fixtures,
-            compileEntityAi(graph)!,
-          ),
-          fixtures,
-        };
-        if (!evaluation.passed)
-          throw new AuthoringPolicyError(
-            "LEARNING_EVALUATION_FAILED",
-            "Held-out questions did not pass; the draft was not changed",
-          );
         const draft = await repository.createDraft({
           tenantId: context.tenantId,
           entityId: source.entity_id,
           entityCode: row.proposal.entityCode,
-          branchCode: "atlas-learning",
+          branchCode: `atlas-learning.${row.candidate_id}.${row.revision + 1}`,
           title: `Atlas vocabulary: ${row.proposal.phrase}`,
           actorId: context.principalId,
         });
@@ -284,10 +318,32 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
           },
           tx,
         );
-        // Hash the persisted graph, because canonical graph rows include database-assigned IDs/defaults.
-        const evaluatedHash = compileGraph(
-          await repository.loadGraph(changeSetId),
-        ).descriptorHash;
+        // Evaluate the persisted graph, including database-assigned IDs/defaults.
+        const persistedGraph = await repository.loadGraph(changeSetId);
+        const evaluatedHash = compileGraph(persistedGraph).descriptorHash;
+        const ai = compileEntityAi(persistedGraph)!;
+        const evaluatedAt = new Date().toISOString();
+        const result = {
+          ...this.options.evaluate(String(persistedGraph.entity.entityCode), ai, fixtures, compileEntityAi(graph)!),
+          fixtures,
+        };
+        attemptEvidence.evaluatedDescriptorHash = evaluatedHash;
+        attemptEvidence.evaluatorFixtureHash = /^[0-9a-f]{64}$/.test(result.fixtureHash) ? result.fixtureHash : sha256(result.fixtureHash);
+        attemptEvidence.passedCount = result.results.filter(item => item.passed).length;
+        attemptEvidence.resultHash = sha256(result.results);
+        if (result.resolverVersion !== this.options.evaluationIdentity.resolverVersion || result.scoringVersion !== this.options.evaluationIdentity.scoringVersion)
+          throw new AuthoringPolicyError("LEARNING_EVALUATOR_CHANGED", "Evaluation must use the installed resolver and scoring policy");
+        if (!result.passed)
+          throw new AuthoringPolicyError("LEARNING_EVALUATION_FAILED", "Evaluation questions did not pass; the draft was not changed");
+        const { previousEvaluations = [], ...previousEvaluation } = row.evaluation ?? {};
+        const evaluation = {
+          ...result,
+          ...(input.requalify && row.change_set_id && row.evaluation ? { previousEvaluations: [
+            ...previousEvaluations, { changeSetId: row.change_set_id, evaluatedDescriptorHash: row.evaluated_hash, evaluation: previousEvaluation as Omit<LearningEvaluation, "previousEvaluations"> },
+          ] } : {}),
+          receipt: createLearningEvaluationReceipt({ proposal: row.proposal, descriptorHash: evaluatedHash,
+            ai, evaluation: result, controlledFixtureSet, reviewerId: context.principalId, evaluatedAt }),
+        };
         await sql`UPDATE ai.atlas_learning_inbox SET state='drafted',revision=revision+1,reviewed_by=${context.principalId}::uuid,change_set_id=${changeSetId}::uuid,evaluated_hash=${evaluatedHash},evaluation=${JSON.stringify(evaluation)}::jsonb WHERE id=${row.id}::uuid AND tenant_id=${context.tenantId}::uuid`.execute(
           tx,
         );
@@ -297,6 +353,7 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
           context.principalId,
           "drafted",
         );
+        await this.finishAttempt(tx, context, attemptId, "succeeded", attemptEvidence);
         return {
           id: row.id,
           revision: row.revision + 1,
@@ -307,6 +364,8 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
         };
       },
     );
+      },
+    });
   }
   /** Called by the ordinary publication service before signing a learning-bearing graph. */
   async assertPublishable(
@@ -347,6 +406,14 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
           row?.change_set_id === changeSetId &&
           row.evaluated_hash === compileGraph(graph).descriptorHash &&
           (await this.options.sourceCurrent(row.proposal));
+        if (newlyReviewed && row?.evaluation) {
+          if (row.evaluation.resolverVersion !== this.options.evaluationIdentity.resolverVersion || row.evaluation.scoringVersion !== this.options.evaluationIdentity.scoringVersion)
+            throw new AuthoringPolicyError("LEARNING_REQUALIFICATION_REQUIRED", "The evaluator changed; explicitly requalify this unpublished correction");
+          assertLearningEvaluationReceipt({ proposal: row.proposal,
+            descriptorHash: compileGraph(graph).descriptorHash, ai: compileEntityAi(graph),
+            evaluation: row.evaluation, receipt: row.evaluation.receipt,
+            reviewerId: row.reviewed_by ?? "" });
+        }
         if (
           !row ||
           row.state !== "drafted" ||
@@ -370,10 +437,6 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
     expectedRevision: number,
     authoring: import("./authoring-service.js").MetaEntityAuthoringService,
   ) {
-    await this.allowed(
-      context,
-      `metadata.entity.${action === "approve" ? "review" : action}`,
-    );
     const row = await this.transaction(
       context.tenantId,
       context.principalId,
@@ -386,6 +449,7 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
     );
     if (!row?.change_set_id)
       throw new AuthoringConflictError("Reviewed draft is unavailable");
+    await this.allowed(context, `metadata.entity.${action === "approve" ? "review" : action}`, { changeSetId: row.change_set_id });
     const input = {
       changeSetId: row.change_set_id,
       expectedRevision,
@@ -404,7 +468,6 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
     id: string,
     authoring: import("./authoring-service.js").MetaEntityAuthoringService,
   ) {
-    await this.allowed(context, "metadata.entity.publish");
     const release = await this.transaction(
       context.tenantId,
       context.principalId,
@@ -422,6 +485,7 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
       throw new AuthoringConflictError(
         "A prepared publication is required for delivery retry",
       );
+    await this.allowed(context, "metadata.entity.publish", { releaseId: release.id });
     return authoring.redispatch({
       releaseId: release.id,
       targetPlanes: release.target_planes,
@@ -430,10 +494,11 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
   private async allowed(
     context: VerifiedRequestContext,
     permissionCode: string,
+    resource?: Readonly<Record<string, unknown>>,
   ) {
     if (
       context.planeKey !== "studio" ||
-      !(await this.options.authorizer.authorize({ context, permissionCode }))
+      !(await this.options.authorizer.authorize({ context, permissionCode, ...(resource ? { resource } : {}) }))
         .allowed
     )
       throw new AuthoringPolicyError(
@@ -446,9 +511,10 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
     context: VerifiedRequestContext,
     id: string,
     revision: number,
+    requalify = false,
   ) {
     const row = (
-      await sql<InboxRow>`SELECT * FROM ai.atlas_learning_inbox WHERE id=${id}::uuid AND tenant_id=${context.tenantId}::uuid AND revision=${revision} AND state='pending' AND expires_at>now() FOR UPDATE`.execute(
+      await sql<InboxRow>`SELECT * FROM ai.atlas_learning_inbox WHERE id=${id}::uuid AND tenant_id=${context.tenantId}::uuid AND revision=${revision} AND state=${requalify ? 'drafted' : 'pending'} AND expires_at>now() AND NOT EXISTS (SELECT 1 FROM metadata.entity_release release WHERE release.change_set_id=ai.atlas_learning_inbox.change_set_id AND release.tenant_id=ai.atlas_learning_inbox.tenant_id) FOR UPDATE`.execute(
         tx,
       )
     ).rows[0];
@@ -460,6 +526,11 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
         "A correction needs an independent reviewer",
       );
     return row;
+  }
+  private async finishAttempt(tx: Database, context: VerifiedRequestContext, attemptId: string,
+    status: "succeeded" | "failed", evidence: LearningAttemptEvidence, failureCode?: string) {
+    await sql`INSERT INTO ai.atlas_learning_attempt_result(tenant_id,attempt_id,status,failure_code,evidence)
+      VALUES(${context.tenantId}::uuid,${attemptId}::uuid,${status},${failureCode ?? null},${JSON.stringify(evidence)}::jsonb)`.execute(tx);
   }
   private async event(
     tx: Database,
@@ -483,46 +554,6 @@ export class AtlasLearningInbox implements AtlasLearningInboxPort {
       return work(tx);
     });
   }
-}
-export function parseLearningFixtures(
-  value: unknown,
-): readonly LearningFixture[] {
-  if (!Array.isArray(value) || value.length < 3 || value.length > 12)
-    throw new TypeError(
-      "Provide 2–11 unseen read questions and at least one negative question",
-    );
-  const fixtures = value.map((row) => {
-    if (
-      !row ||
-      typeof row !== "object" ||
-      Object.keys(row).some(
-        (key) => key !== "question" && key !== "expected",
-      ) ||
-      typeof row.question !== "string" ||
-      !row.question.trim() ||
-      row.question.length > 240 ||
-      /[\u0000-\u001f\u007f]/u.test(row.question) ||
-      (row.expected !== "read" && row.expected !== "delegate")
-    )
-      throw new TypeError("Invalid held-out question");
-    return {
-      question: row.question,
-      expected: row.expected,
-    } as LearningFixture;
-  });
-  if (
-    new Set(
-      fixtures.map((row) =>
-        row.question.normalize("NFKC").toLowerCase().trim(),
-      ),
-    ).size !== fixtures.length ||
-    fixtures.filter((row) => row.expected === "read").length < 2 ||
-    !fixtures.some((row) => row.expected === "delegate")
-  )
-    throw new TypeError(
-      "Use distinct positive and negative held-out questions",
-    );
-  return fixtures;
 }
 export function applyLearningCorrection(
   graph: MetaEntityGraph,

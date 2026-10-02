@@ -7,6 +7,8 @@ import {
 } from "./rich-text-types";
 import { validateUploadFile } from "./upload-lifecycle";
 import {
+  ComposerAttachment,
+  ComposerAttachments,
   ComposerFrame,
   ComposerHeader,
   ComposerFooter,
@@ -17,7 +19,7 @@ import {
   type MentionCandidate,
 } from "./comment-mention-picker";
 import { CommentAudiencePicker } from "./comment-audience-picker";
-import { CloseIcon } from "@athyper/platform-icons";
+import { BoldIcon, ItalicIcon, LinkIcon, PaperclipIcon, UnderlineIcon } from "@athyper/platform-icons";
 
 import {
   useCallback,
@@ -580,25 +582,20 @@ export function RichCommentComposer(props: RichCommentComposerProps) {
       />
 
       {attachmentIds.length ? (
-        <ul
-          className="a-rich-comment-composer__attachments"
-          aria-label={intl.message("comments.attachments")}
-        >
+        <ComposerAttachments label={intl.message("comments.attachments")}>
           {attachmentIds.map((id) => (
-            <li key={id}>
-              {props.renderAttachment?.(id, attachmentLabel(value, id)) ??
-                attachmentLabel(value, id)}
-              <button
-                type="button"
-                disabled={busy}
-                aria-label={`Remove attachment ${attachmentLabel(value, id)}`}
-                onClick={() => commit(withoutAttachment(value, id))}
-              >
-                <CloseIcon aria-hidden="true" size={16} />
-              </button>
-            </li>
+            <ComposerAttachment
+              key={id}
+              name={
+                props.renderAttachment?.(id, attachmentLabel(value, id)) ??
+                attachmentLabel(value, id)
+              }
+              removeLabel={`Remove attachment ${attachmentLabel(value, id)}`}
+              disabled={busy}
+              onRemove={() => commit(withoutAttachment(value, id))}
+            />
           ))}
-        </ul>
+        </ComposerAttachments>
       ) : null}
       {uploadCount > 0 ? (
         <p role="status">
@@ -609,39 +606,26 @@ export function RichCommentComposer(props: RichCommentComposerProps) {
       {props.supportingContent}
       <ComposerFooter className="a-rich-comment-composer__footer">
         <div role="toolbar" aria-label={intl.message("comments.formatting")}>
-          <button type="button" disabled={busy} onClick={() => format("bold")}>
-            <strong>B</strong>
-            <span className="a-visually-hidden">
-              {intl.message("comments.bold")}
-            </span>
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => format("italic")}
-          >
-            <em>I</em>
-            <span className="a-visually-hidden">
-              {intl.message("comments.italic")}
-            </span>
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => format("underline")}
-          >
-            <u>U</u>
-            <span className="a-visually-hidden">
-              {intl.message("comments.underline")}
-            </span>
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => format("createLink")}
-          >
-            {intl.message("comments.link")}
-          </button>
+          {/* Icons with names, as in every composer action row. */}
+          {(
+            [
+              ["bold", BoldIcon, "comments.bold"],
+              ["italic", ItalicIcon, "comments.italic"],
+              ["underline", UnderlineIcon, "comments.underline"],
+              ["createLink", LinkIcon, "comments.link"],
+            ] as const
+          ).map(([command, Icon, message]) => (
+            <Tooltip key={command} label={intl.message(message)}>
+              <button
+                type="button"
+                disabled={busy}
+                aria-label={intl.message(message)}
+                onClick={() => format(command)}
+              >
+                <Icon size={16} aria-hidden="true" />
+              </button>
+            </Tooltip>
+          ))}
           {props.allowAttachments && props.prepareAttachments ? (
             <>
               <Tooltip label={intl.message("comments.attach")}>
@@ -662,17 +646,7 @@ export function RichCommentComposer(props: RichCommentComposerProps) {
                     filePicker.current?.click();
                   }}
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    aria-hidden="true"
-                  >
-                    <path d="m21 11-9 9a6 6 0 0 1-8.5-8.5L13 2a4 4 0 0 1 5.7 5.7l-9.5 9.5a2 2 0 0 1-2.8-2.8L15 6" />
-                  </svg>
+                  <PaperclipIcon size={16} aria-hidden="true" />
                 </button>
               </Tooltip>
               <input

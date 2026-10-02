@@ -1,7 +1,9 @@
 "use client";
 import {
+  ChoiceSelect,
+  ComposerAttachment,
+  ComposerAttachments,
   ComposerFrame,
-  ComposerHeader,
   ComposerFooter,
 } from "@athyper/platform-ui";
 
@@ -24,18 +26,14 @@ import {
   AtlasBrandIcon,
   ArrowDownIcon,
   ArrowUpIcon,
-  Building2Icon,
   ChevronRightIcon,
-  FileTextIcon,
   HistoryIcon,
   LibraryBigIcon,
   Maximize2Icon,
+  PaperclipIcon,
   PinIcon,
-  PlusIcon,
-  SearchIcon,
   SlidersHorizontalIcon,
   SparklesIcon,
-  TrashIcon,
 } from "@athyper/platform-icons";
 import { useAccessSnapshot } from "@athyper/platform-shell-runtime";
 import {
@@ -962,44 +960,6 @@ export const AtlasPromptComposer = React.forwardRef<
           <small>Files are checked and prepared securely.</small>
         </div>
       ) : null}
-      <ComposerHeader>
-        <span>
-          <SearchIcon size={22} />
-        </span>
-        <strong>Ask Atlas</strong>
-        <Menu>
-          <Tooltip label="Prompt library">
-            <MenuTrigger
-              className="athyper-home__composer-library"
-              aria-label="Prompt library"
-              title="Prompt library"
-            >
-              <LibraryBigIcon size={17} />
-            </MenuTrigger>
-          </Tooltip>
-          <MenuContent
-            portal
-            className="athyper-home__prompt-library"
-            aria-label="Prompt library"
-          >
-            {effectivePrompts.map((item) => (
-              <MenuItem
-                key={`${item.agentCode ?? "default"}:${item.prompt}`}
-                onClick={() => {
-                  setText(item.prompt);
-                  if (item.agentCode) selectAgent(item.agentCode);
-                }}
-              >
-                <LibraryBigIcon size={16} />
-                <span>
-                  <strong>{item.label}</strong>
-                  <small>{item.prompt}</small>
-                </span>
-              </MenuItem>
-            ))}
-          </MenuContent>
-        </Menu>
-      </ComposerHeader>
       <div
         ref={editor}
         id={editorId}
@@ -1016,29 +976,19 @@ export const AtlasPromptComposer = React.forwardRef<
         onPaste={paste}
       />
       {attachments.length ? (
-        <ul
-          className="athyper-home__composer-attachments"
-          aria-label="Atlas supporting files"
-        >
+        <ComposerAttachments label="Atlas supporting files">
           {attachments.map((item) => (
-            <li key={item.localId} data-status={item.status}>
-              <span>
-                <strong>{item.fileName}</strong>
-                <small>
-                  {formatBytes(item.sizeBytes)} · {attachmentStatusLabel(item)}
-                </small>
-              </span>
-              <button
-                type="button"
-                aria-label={`Remove ${item.fileName}`}
-                disabled={props.busy}
-                onClick={() => void removeAttachment(item)}
-              >
-                <TrashIcon size={14} />
-              </button>
-            </li>
+            <ComposerAttachment
+              key={item.localId}
+              name={item.fileName}
+              detail={`${formatBytes(item.sizeBytes)} · ${attachmentStatusLabel(item)}`}
+              status={item.status}
+              removeLabel={`Remove ${item.fileName}`}
+              disabled={props.busy}
+              onRemove={() => void removeAttachment(item)}
+            />
           ))}
-        </ul>
+        </ComposerAttachments>
       ) : null}
       {formatMessage || tooLong ? (
         <p
@@ -1066,57 +1016,58 @@ export const AtlasPromptComposer = React.forwardRef<
               event.currentTarget.value = "";
             }}
           />
-          <Menu>
-            <MenuTrigger
-              className="athyper-home__composer-add"
-              disabled={props.busy}
-              aria-label="Add context"
-              title="Add context"
+          {/* The same actions as the comment composer: Attach on the leading edge. */}
+          <Tooltip label={attachments.length >= 5 ? "You can add up to 5 files" : "Attach files · PDF, Office, text or CSV, up to 25 MB"}>
+            <button
+              type="button"
+              className="athyper-home__composer-attach"
+              aria-label="Attach files"
+              disabled={props.busy || attachments.length >= 5}
+              onClick={() => fileInput.current?.click()}
             >
-              <PlusIcon size={16} />
-              <span>Add context</span>
-            </MenuTrigger>
+              <PaperclipIcon size={17} />
+            </button>
+          </Tooltip>
+          <Menu>
+            <Tooltip label="Prompt library">
+              <MenuTrigger
+                className="athyper-home__composer-library"
+                aria-label="Prompt library"
+                title="Prompt library"
+              >
+                <LibraryBigIcon size={17} />
+              </MenuTrigger>
+            </Tooltip>
             <MenuContent
               portal
-              className="athyper-home__composer-add-menu"
-              aria-label="Add context"
+              className="athyper-home__prompt-library"
+              aria-label="Prompt library"
             >
-              <MenuItem
-                className="athyper-home__composer-add-item"
-                disabled={attachments.length >= 5}
-                onClick={() => fileInput.current?.click()}
-              >
-                <FileTextIcon size={17} />
-                <span>
-                  <strong>Files from device</strong>
-                  <small>
-                    {attachments.length >= 5
-                      ? "You can add up to 5 files."
-                      : "PDF, Office, text, or CSV · up to 25 MB"}
-                  </small>
-                </span>
-              </MenuItem>
-              <MenuItem className="athyper-home__composer-add-item" disabled>
-                <Building2Icon size={17} />
-                <span>
-                  <strong>Business record…</strong>
-                  <small>Coming soon</small>
-                </span>
-              </MenuItem>
+              {effectivePrompts.map((item) => (
+                <MenuItem
+                  key={`${item.agentCode ?? "default"}:${item.prompt}`}
+                  onClick={() => {
+                    setText(item.prompt);
+                    if (item.agentCode) selectAgent(item.agentCode);
+                  }}
+                >
+                  <LibraryBigIcon size={16} />
+                  <span>
+                    <strong>{item.label}</strong>
+                    <small>{item.prompt}</small>
+                  </span>
+                </MenuItem>
+              ))}
             </MenuContent>
           </Menu>
-          {props.agents?.length ? (
-            <select
-              aria-label="Atlas agent"
-              value={props.selectedAgent}
-              onChange={(event) => selectAgent(event.currentTarget.value)}
-            >
-              {props.agents.map((agent) => (
-                <option key={agent.code} value={agent.code}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
+          {props.agents && props.agents.length > 1 ? (
+            <ChoiceSelect
+              className="athyper-home__composer-agent"
+              label="Atlas agent"
+              value={props.selectedAgent ?? props.agents[0]!.code}
+              options={props.agents.map((agent) => ({ value: agent.code, label: agent.name }))}
+              onChange={selectAgent}
+            />
           ) : null}
         </div>
         <div>

@@ -6,6 +6,7 @@ const identities = {
     "catl.owner": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
   },
   neon: {
+    "catl.finance": "d04198ac-53cf-5e94-969f-b6f75f176fa2",
     "catl.admin": "cca94907-7519-5871-8e3c-6b11aa545c93",
     "catl.owner": "645b6a55-3355-526a-9643-3900425bde47",
     "athyper.admin": "d4250b08-6e5e-5887-b4e1-6f3eb31d7c8c",
@@ -27,13 +28,14 @@ function captureTarget({
   if (
     !["dev", "qa"].includes(environment) ||
     !Object.hasOwn(identities, plane) ||
-    !["catl.admin", "catl.owner", "athyper.admin", "athyper.owner"].includes(
+    !["catl.admin", "catl.owner", "athyper.admin", "athyper.owner", "catl.finance"].includes(
       actor,
     )
   )
     throw Error(
       "Use environment dev|qa, plane studio|neon|mesh and a supported actor",
     );
+  if (actor === "catl.finance" && (environment !== "dev" || plane !== "neon" || isolatedStudio || isolatedNeon)) throw Error("catl.finance requires DEV Neon");
   if (
     isolatedStudio &&
     (environment !== "dev" ||

@@ -34,6 +34,6 @@ it("refuses learning-bearing publication without the configured review gate",asy
 });
 it("denies inbox access outside Studio or without reviewer authorization before querying",async()=>{
  const database={transaction:vi.fn()},authorizer={authorize:vi.fn(async()=>({allowed:false}))};
- const inbox=new AtlasLearningInbox({database:database as never,authorizer:authorizer as never,sourceCurrent:vi.fn(),evaluate:vi.fn()});
+ const inbox=new AtlasLearningInbox({database:database as never,authorizer:authorizer as never,sourceCurrent:vi.fn(),evaluate:vi.fn(),evaluationIdentity:{resolverVersion:"test",scoringVersion:"test"}});
  for(const planeKey of ["neon","mesh","studio"])await expect(inbox.list({planeKey} as never)).rejects.toMatchObject({code:"FORBIDDEN"});expect(database.transaction).not.toHaveBeenCalled();
 });

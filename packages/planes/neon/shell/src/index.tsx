@@ -551,7 +551,7 @@ function NeonContextContent({
       key={work.generation}
       inert={work.switching}
       aria-busy={work.switching || undefined}
-      style={{ display: "contents" }}
+      className="neon-work-boundary"
     >
       {children}
     </div>

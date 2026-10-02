@@ -15,11 +15,8 @@ import {
 import {
   AppliedFilters,
   Button,
-  Input,
-  Label,
   MenuItem,
   ObjectSearch,
-  Select,
   ViewSelector,
   PanelEmptyState,
   FilterChipGroup,
@@ -32,13 +29,20 @@ import {
   LayoutIcon,
 } from "@athyper/platform-icons";
 import {
-  CollectionDrawerHost,
+  CollectionDensitySettings,
+  CollectionGroupEditor,
+  CollectionSortEditor,
+  CollectionViewsManager,
+  CollectionControlSections,
   CollectionDraftFooter,
-  FilterValueEditor,
+  CollectionFilterEditor,
+  type CollectionFilterDraft,
   filterValueFromInput,
   filterInputValue,
 } from "@athyper/platform-collection-controls";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { ActivityNotificationActions } from "./activity-notification-actions";
+import { CollectionControlPanel } from "./collection-control-panel";
 import { ManagementToolbar } from "./management-workspace";
 import type { ShellActivityDataSource } from "./activity-center";
 
@@ -59,6 +63,10 @@ export function ActivityQueryControls({
     info = data.queryInfo?.[kind];
   const [panel, setPanel] = useState<Panel>(),
     [draft, setDraft] = useState<CollectionState>(),
+    // Typed filter text, kept so values are not reformatted while editing.
+    [filterDraft, setFilterDraft] = useState<readonly CollectionFilterDraft[]>(),
+    // Display: following the app density, until the person chooses one.
+    [followApp, setFollowApp] = useState<boolean>(),
     [search, setSearch] = useState(""),
     [error, setError] = useState<string>(),
     [preview, setPreview] = useState<number>(),
@@ -66,6 +74,9 @@ export function ActivityQueryControls({
     [busy, setBusy] = useState(false),
     [legacy, setLegacy] = useState<{ name: string; query: unknown }[]>([]);
   const searchId = useId();
+  const intl = useEntityI18n();
+  // Set by the shared controls panel: closes an overlay, keeps a pinned panel.
+  const finish = useRef<(open: boolean) => void>(undefined);
   const input = useRef<HTMLInputElement>(null),
     legacyKey = info?.viewScope
       ? `athyper.activity.views.v1:${info.viewScope}:${kind}`
@@ -79,6 +90,7 @@ export function ActivityQueryControls({
   useEffect(() => {
     setPanel(undefined);
     setDraft(undefined);
+    setFilterDraft(undefined);
     setError(undefined);
   }, [kind]);
   useEffect(() => {
@@ -136,14 +148,14 @@ export function ActivityQueryControls({
   }, [draft, panel, configuration, kind, q.timeZone, data.onPreviewQuery]);
   if (!configuration)
     return data.loading ? (
-      <p role="status">Loading activity configuration…</p>
+      <p role="status">{intl.message("activity.controls.loadingConfig")}</p>
     ) : (
       <PanelEmptyState
         icon={<FilterIcon />}
-        title="Activity configuration unavailable"
+        title={intl.message("activity.controls.configUnavailable")}
         description={
           data.collectionErrors?.[kind] ??
-          "Ask your administrator to publish this collection for the current workspace."
+          intl.message("activity.controls.configAsk")
         }
       />
     );
@@ -151,7 +163,7 @@ export function ActivityQueryControls({
     return (
       <PanelEmptyState
         icon={<FilterIcon />}
-        title="This view is no longer compatible"
+        title={intl.message("activity.controls.incompatible")}
         action={
           <Button
             onClick={() =>
@@ -165,7 +177,7 @@ export function ActivityQueryControls({
               )
             }
           >
-            Reset view
+            {intl.message("activity.controls.resetView")}
           </Button>
         }
       />
@@ -180,19 +192,32 @@ export function ActivityQueryControls({
         kind,
         collectionActivityQuery(kind, value, q.timeZone),
       );
-      setPanel(undefined);
+      // A pinned panel stays open on the refreshed state; inline panel filters close.
+      setDraft(undefined);
+      setFilterDraft(undefined);
+      if (compact) setPanel(undefined);
       setError(undefined);
     } catch (e) {
       setError((e as Error).message);
     }
   };
+  const close = () => {
+    finish.current = undefined;
+    setFollowApp(undefined);
+    setPanel(undefined);
+    setDraft(undefined);
+    setFilterDraft(undefined);
+  };
   const open = (key: Panel) => {
     setDraft(structuredClone(current));
+    setFilterDraft(undefined);
+    setFollowApp(undefined);
     setError(undefined);
     setPanel(key);
   };
   const patch = (value: Partial<CollectionState>) => {
     setError(undefined);
+    if (value.filters) setFilterDraft(undefined);
     setDraft({ ...working, ...value });
   };
   const command = async (value: Record<string, unknown>) => {
@@ -201,7 +226,7 @@ export function ActivityQueryControls({
     try {
       return await data.onViewCommand?.(kind, value);
     } catch (e) {
-      setError(`${(e as Error).message}. Reload views and try again.`);
+      setError(intl.message("activity.controls.reloadAgain", { message: (e as Error).message }));
     } finally {
       setBusy(false);
     }
@@ -209,6 +234,18 @@ export function ActivityQueryControls({
   const active = views?.views.find(
     (v) => v.compatible && same(v.state.collection, current),
   );
+  // A view's own filters (for example open task statuses) are the view, not
+  // filters the person applied: only additions are shown as chips.
+  const baseFilters = (active?.state.collection ?? configuration.defaultState).filters;
+  const added = current.filters.filter(
+    (filter) => !baseFilters.some((base) => JSON.stringify(base) === JSON.stringify(filter)),
+  );
+  // Apply from the panel: an overlay closes, a pinned panel stays open.
+  const finishApply = () => {
+    apply(working);
+    if (finish.current) finish.current(false);
+    else setPanel(undefined);
+  };
   const footer = (
     <CollectionDraftFooter
       count={preview}
@@ -216,436 +253,286 @@ export function ActivityQueryControls({
       error={error}
       onCancel={() => setPanel(undefined)}
       onReset={() => patch(configuration.defaultState)}
-      onApply={() => apply(working)}
+      onApply={finishApply}
     />
   );
   const fields = configuration.fields.filter((f) => f.operators.length);
+  const choicesFor = (field: (typeof fields)[number]) =>
+    field.choices?.length
+      ? field.choices
+      : field.choiceSource
+        ? (field.key === "entity" ? info?.facets?.entities : info?.facets?.types)?.map(
+            (value) => ({ value, label: value }),
+          )
+        : undefined;
+  type FilterFields = Parameters<typeof CollectionFilterEditor>[0]["fields"];
+  // Collection fields in the shape the shared filter editor reads.
+  const editorFields = fields.map((field) => ({
+    ...field,
+    filterOperators: field.operators,
+    filterOptions: choicesFor(field),
+  })) as unknown as FilterFields;
+  const toDraft = (list: CollectionState["filters"]): CollectionFilterDraft[] =>
+    list.map((filter, index) => ({
+      id: `applied-${index}`,
+      field: filter.field,
+      operator: filter.operator,
+      value: filterInputValue(filter, fields.find((f) => f.key === filter.field)?.valueKind),
+    }));
+  // Rows still awaiting a value are not filters yet.
+  const fromDraft = (list: readonly CollectionFilterDraft[]): CollectionState["filters"] =>
+    list
+      .filter((item) => item.value.trim() || item.operator === "is_null" || item.operator === "is_not_null")
+      .map((item) => {
+        const field = fields.find((f) => f.key === item.field);
+        const value = filterValueFromInput(item.operator, item.value, field?.valueKind, field ? choicesFor(field) : undefined);
+        return { field: item.field, operator: item.operator, ...(value === undefined ? {} : { value }) };
+      });
+  const ready = working.filters.length;
   const filters = (
-    <>
-      <div className="a-collection-fields">
-        <p>
-          {working.filters.length} active filters ·{" "}
-          {preview === undefined
-            ? "Preview pending"
-            : `${preview} matching items`}
-        </p>
-        {working.filters.map((filter, index) => {
-          const field = fields.find((f) => f.key === filter.field);
-          if (!field) return null;
-          const choices = field.choices?.length
-            ? field.choices
-            : field.choiceSource
-              ? (field.key === "entity"
-                  ? info?.facets?.entities
-                  : info?.facets?.types
-                )?.map((value) => ({ value, label: value }))
-              : undefined;
-          const editorField = {
-            ...field,
-            filterOperators: field.operators,
-            filterOptions: choices,
-          };
-          const replace = (value: typeof filter) =>
-            patch({
-              filters: working.filters.map((f, i) => (i === index ? value : f)),
-            });
-          return (
-            <div className="a-collection-filter-row" key={index}>
-              <Select
-                aria-label={`Field ${index + 1}`}
-                value={field.key}
-                onChange={(e) => {
-                  const next = fields.find((f) => f.key === e.target.value)!;
-                  replace({
-                    field: next.key,
-                    operator: next.operators[0]!,
-                    value: "",
-                  });
-                }}
-              >
-                {fields.map((f) => (
-                  <option key={f.key} value={f.key}>
-                    {f.label}
-                  </option>
-                ))}
-              </Select>
-              <Select
-                aria-label={`Operator ${index + 1}`}
-                value={filter.operator}
-                onChange={(e) =>
-                  replace({
-                    ...filter,
-                    operator: e.target.value as typeof filter.operator,
-                    value: "",
-                  })
-                }
-              >
-                {field.operators.map((op) => (
-                  <option key={op} value={op}>
-                    {(
-                      {
-                        eq: "Equals",
-                        in: "Is one of",
-                        contains: "Contains",
-                        gte: "On or after",
-                        lte: "On or before",
-                        relative: "Relative period",
-                      } as Record<string, string>
-                    )[op] ?? op}
-                  </option>
-                ))}
-              </Select>
-              <FilterValueEditor
-                field={editorField}
-                operator={filter.operator}
-                value={filterInputValue(filter, field.valueKind)}
-                filterNumber={index + 1}
-                onChange={(raw) =>
-                  replace({
-                    ...filter,
-                    value: filterValueFromInput(
-                      filter.operator,
-                      raw,
-                      field.valueKind,
-                      choices,
-                    ),
-                  })
-                }
-              />
-              <Button
-                variant="ghost"
-                aria-label={`Remove filter ${index + 1}`}
-                onClick={() =>
-                  patch({
-                    filters: working.filters.filter((_, i) => i !== index),
-                  })
-                }
-              >
-                Remove
-              </Button>
-            </div>
-          );
-        })}
-        <Button
-          variant="secondary"
-          disabled={working.filters.length >= 20}
-          onClick={() => {
-            const f =
-              fields.find((f) => configuration.quickFields.includes(f.key)) ??
-              fields[0];
-            if (f)
-              patch({
-                filters: [
-                  ...working.filters,
-                  { field: f.key, operator: f.operators[0]!, value: "" },
-                ],
-              });
+    <CollectionFilterEditor
+      fields={editorFields}
+      quickKeys={configuration.quickFields}
+      draft={filterDraft ?? toDraft(working.filters)}
+      onDraftChange={(next) => {
+        setError(undefined);
+        setFilterDraft(next);
+        setDraft({ ...working, filters: fromDraft(next) });
+      }}
+      footer={
+        <CollectionDraftFooter
+          className="a-entity-list__filter-actions"
+          dirty={!same(working, current)}
+          error={error}
+          summary={
+            <strong>
+              {ready
+                ? intl.message("list.footer.filtersReady", { count: ready })
+                : intl.message("list.footer.filtersCleared")}
+              {preview !== undefined ? ` · ${preview} matching` : ""}
+            </strong>
+          }
+          resetDisabled={same(working.filters, baseFilters)}
+          onReset={() => {
+            setFilterDraft(undefined);
+            patch({ filters: baseFilters });
           }}
-        >
-          Add filter
-        </Button>
-      </div>
-      {footer}
-    </>
+          onApply={finishApply}
+          resetLabel={intl.message("activity.controls.resetFilters")}
+          applyLabel={intl.message("activity.controls.applyFilters")}
+        />
+      }
+    />
   );
-  const selectField = (
-    label: string,
-    value: string,
-    choices: readonly { key: string; label: string }[],
-    onChange: (v: string) => void,
-  ) => (
-    <Label>
-      {label}
-      <Select
-        aria-label={label}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {choices.map((c) => (
-          <option key={c.key} value={c.key}>
-            {c.label}
-          </option>
-        ))}
-      </Select>
-    </Label>
+  const importLegacy = async () => {
+    let pending = [...legacy];
+    for (const v of legacy) {
+      try {
+        const state = activityCollectionState(
+          kind,
+          parseActivityQuery(kind, v.query),
+          configuration,
+        );
+        const result = await command({
+          action: "create",
+          name: v.name,
+          importKey: JSON.stringify([v.name, state]),
+          visibility: "personal",
+          state: {
+            schemaVersion: configuration.viewVersion,
+            collection: state,
+          },
+        });
+        if (!result) return;
+        pending = pending.filter((x) => x !== v);
+        setLegacy(pending);
+        if (legacyKey)
+          localStorage.setItem(legacyKey, JSON.stringify(pending));
+      } catch (e) {
+        setError((e as Error).message);
+        return;
+      }
+    }
+    if (legacyKey) localStorage.removeItem(legacyKey);
+    setLegacy([]);
+  };
+  // Sort, Group by, Display and Views: the shared collection sections, as on entity lists.
+  const defaults = configuration.defaultState;
+  const sectionFooter = (keys: { reset: string; apply: string }, summary: string, resetTo: Partial<CollectionState>, resetDisabled: boolean) => (
+    <CollectionDraftFooter
+      dirty={!same(working, current)}
+      error={error}
+      summary={<strong>{summary}</strong>}
+      resetDisabled={resetDisabled}
+      onReset={() => patch(resetTo)}
+      onApply={finishApply}
+      resetLabel={intl.message(keys.reset)}
+      applyLabel={intl.message(keys.apply)}
+    />
   );
   const sort = (
-    <>
-      <div className="a-collection-fields">
-        {working.sort.map((sort, i) => (
-          <div key={i}>
-            {selectField(
-              `Sort field ${i + 1}`,
-              sort.field,
-              configuration.fields.filter((f) => f.sortable),
-              (field) =>
-                patch({
-                  sort: working.sort.map((v, n) =>
-                    n === i ? { ...v, field } : v,
-                  ),
-                }),
-            )}
-            {selectField(
-              `Direction ${i + 1}`,
-              sort.direction,
-              [
-                { key: "asc", label: "Ascending" },
-                { key: "desc", label: "Descending" },
-              ],
-              (direction) =>
-                patch({
-                  sort: working.sort.map((v, n) =>
-                    n === i
-                      ? { ...v, direction: direction as "asc" | "desc" }
-                      : v,
-                  ),
-                }),
-            )}
-            <Button
-              variant="ghost"
-              onClick={() =>
-                patch({ sort: working.sort.filter((_, n) => n !== i) })
-              }
-            >
-              Remove sort
-            </Button>
-          </div>
-        ))}
-        <Button
-          onClick={() => {
-            const f = configuration.fields.find(
-              (f) => f.sortable && !working.sort.some((s) => s.field === f.key),
-            );
-            if (f)
-              patch({
-                sort: [...working.sort, { field: f.key, direction: "asc" }],
-              });
-          }}
-        >
-          Add sort
-        </Button>
-      </div>
-      {footer}
-    </>
+    <CollectionSortEditor
+      fields={configuration.fields.filter((f) => f.sortable)}
+      draft={working.sort}
+      onDraftChange={(next) => patch({ sort: next })}
+      footer={sectionFooter(
+        { reset: "collection.sort.reset", apply: "collection.sort.apply" },
+        intl.message("list.footer.sortReady", { count: working.sort.length }),
+        { sort: defaults.sort },
+        same(working.sort, defaults.sort),
+      )}
+    />
   );
+  const groupField = configuration.fields.find((f) => f.key === working.group);
   const group = (
-    <>
-      <div className="a-collection-fields">
-        {selectField(
-          "Group by",
-          working.group ?? "",
-          [
-            { key: "", label: "No grouping" },
-            ...configuration.fields.filter((f) => f.groupable),
-          ],
-          (group) => patch({ group: group || undefined }),
-        )}
-      </div>
-      {footer}
-    </>
+    <CollectionGroupEditor
+      fields={configuration.fields.filter((f) => f.groupable)}
+      value={working.group}
+      onChange={(next) => patch({ group: next })}
+      footer={sectionFooter(
+        { reset: "collection.group.reset", apply: "collection.group.apply" },
+        groupField
+          ? intl.message("list.footer.groupReady", { field: groupField.label })
+          : intl.message("list.footer.groupCleared"),
+        { group: defaults.group },
+        working.group === defaults.group,
+      )}
+    />
   );
+  // Density follows the app (Utilities) until the person picks one, as on entity lists.
+  const baseDensity = (active?.state.collection ?? defaults).density;
+  const appDensity = ((): CollectionState["density"] => {
+    const value = typeof document === "undefined" ? undefined : document.documentElement.dataset.density;
+    return value === "compact" || value === "spacious" ? value : "comfortable";
+  })();
+  const follow = followApp ?? working.density === baseDensity;
   const display = (
-    <>
-      <div className="a-collection-fields">
-        {selectField(
-          "Display density",
-          working.density,
-          [
-            { key: "comfortable", label: "Comfortable" },
-            { key: "compact", label: "Compact" },
-            { key: "spacious", label: "Spacious" },
-          ],
-          (density) =>
-            patch({ density: density as CollectionState["density"] }),
-        )}
-      </div>
-      {footer}
-    </>
-  );
-  const manage = (
-    <div className="a-collection-fields">
-      <Button
-        variant="secondary"
-        disabled={busy}
-        onClick={() => void command({ action: "reload" })}
-      >
-        Reload views
-      </Button>
-      <Label>
-        View name
-        <Input
-          value={name}
-          maxLength={160}
-          onChange={(e) => setName(e.target.value)}
+    <CollectionDensitySettings
+      appDensity={appDensity}
+      follow={follow}
+      onFollowChange={(next) => {
+        setFollowApp(next);
+        patch({ density: next ? baseDensity : appDensity });
+      }}
+      density={working.density}
+      onDensityChange={(density) => patch({ density })}
+      footer={
+        <CollectionDraftFooter
+          dirty={!same(working, current)}
+          error={error}
+          summary={<strong>{intl.message("list.footer.displayReady")}</strong>}
+          onReset={() => {
+            setFollowApp(undefined);
+            patch({ density: baseDensity });
+          }}
+          onApply={finishApply}
+          resetLabel={intl.message("collection.display.reset")}
+          applyLabel={intl.message("collection.display.save")}
         />
-      </Label>
-      <Button
-        disabled={busy || !name.trim()}
-        onClick={() =>
-          void command({
-            action: "create",
-            name,
-            visibility: "personal",
-            state: {
-              schemaVersion: configuration.viewVersion,
-              collection: current,
-            },
-          })
-        }
-      >
-        Save personal view
-      </Button>
-      {views?.capabilities.createShared ? (
-        <Button
-          disabled={busy || !name.trim()}
-          onClick={() =>
-            void command({
-              action: "create",
-              name,
-              visibility: "shared",
-              state: {
-                schemaVersion: configuration.viewVersion,
-                collection: current,
-              },
-            })
-          }
-        >
-          Save shared view
-        </Button>
-      ) : null}
-      <Button
-        variant="secondary"
-        disabled={busy}
-        onClick={() =>
-          void command({ action: "default", id: "system", target: "personal" })
-        }
-      >
-        Use published default
-      </Button>
-      {views?.views.map((v) => (
-        <div key={v.id}>
-          <strong>{v.name}</strong> · {v.scope}
-          {!v.compatible ? (
-            <p>
-              This view uses unavailable settings. Save a new view or delete it.
-            </p>
-          ) : null}
-          <Button
-            disabled={busy || !v.compatible}
-            onClick={() =>
-              void command({ action: "default", id: v.id, target: "personal" })
-            }
-          >
-            Make my default
-          </Button>
-          {v.scope === "shared" && views.capabilities.setSharedDefault ? (
-            <Button
-              disabled={busy || !v.compatible}
-              onClick={() =>
-                void command({ action: "default", id: v.id, target: "shared" })
-              }
-            >
-              Make shared default
+      }
+    />
+  );
+  const applyView = (state: CollectionState) => {
+    apply(state);
+    if (finish.current) finish.current(false);
+    else setPanel(undefined);
+  };
+  const viewState = { schemaVersion: configuration.viewVersion, collection: current };
+  const scopeOf = (scope: string): "system" | "personal" | "shared" =>
+    scope === "system" || scope === "shared" ? scope : "personal";
+  const manage = (
+    <CollectionViewsManager
+      rows={[
+        {
+          id: "system",
+          name: intl.message("collection.views.systemDefault"),
+          scope: "system",
+          published: true,
+          personalDefault: views?.personalDefault === "system",
+          sharedDefault: views?.sharedDefault === "system",
+        },
+        ...(views?.views ?? []).map((v) => ({
+          id: v.id,
+          name: v.name,
+          scope: scopeOf(v.scope),
+          compatible: v.compatible,
+          personalDefault: views?.personalDefault === v.id,
+          sharedDefault: views?.sharedDefault === v.id,
+        })),
+      ]}
+      currentId={active?.id ?? (same(current, defaults) ? "system" : "")}
+      busy={busy}
+      message={error ? <span role="alert">{error}</span> : undefined}
+      createShared={views?.capabilities.createShared}
+      manageShared={views?.capabilities.manageShared}
+      saveSummary={intl.message("activity.controls.saveSummary")}
+      onApply={(id) => {
+        const view = views?.views.find((v) => v.id === id);
+        applyView(view?.compatible ? view.state.collection : defaults);
+      }}
+      onSave={(viewName, visibility) => command({ action: "create", name: viewName, visibility, state: viewState })}
+      onMakeDefault={(id) => void command({ action: "default", id, target: "personal" })}
+      {...(views?.capabilities.setSharedDefault
+        ? { onSetSharedDefault: (id: string) => void command({ action: "default", id, target: "shared" }) }
+        : {})}
+      onCopy={(id) => void command({ action: "copy", id })}
+      onRename={async (id, viewName) =>
+        Boolean(await command({ action: "update", id, version: views?.views.find((v) => v.id === id)?.version, name: viewName }))
+      }
+      onUpdate={(id) =>
+        void command({ action: "update", id, version: views?.views.find((v) => v.id === id)?.version, state: viewState })
+      }
+      onDelete={(id) => void command({ action: "delete", id })}
+      extra={
+        <>
+          {error ? (
+            <Button variant="ghost" size="small" disabled={busy} onClick={() => void command({ action: "reload" })}>
+              {intl.message("activity.controls.reloadViews")}
             </Button>
           ) : null}
-          {v.scope === "personal" ||
-          (v.scope === "shared" && views.capabilities.manageShared) ? (
-            <>
-              <Button
-                disabled={busy}
-                onClick={() =>
-                  void command({
-                    action: "update",
-                    id: v.id,
-                    version: v.version,
-                    state: {
-                      schemaVersion: configuration.viewVersion,
-                      collection: current,
-                    },
-                  })
-                }
-              >
-                Update to current settings
+          {legacy.length ? (
+            <section>
+              <p className="a-entity-list__view-summary">
+                {intl.message("activity.controls.browserViews", { count: legacy.length })}
+              </p>
+              <Button variant="secondary" size="small" disabled={busy} onClick={() => void importLegacy()}>
+                {intl.message("activity.controls.importBrowser")}
               </Button>
-              <Button
-                disabled={busy}
-                onClick={() => void command({ action: "delete", id: v.id })}
-              >
-                Delete
-              </Button>
-            </>
+            </section>
           ) : null}
-        </div>
-      ))}
-      {legacy.length ? (
-        <>
-          <p>{legacy.length} views are saved only in this browser.</p>
-          <Button
-            disabled={busy}
-            onClick={() =>
-              void (async () => {
-                let pending = [...legacy];
-                for (const v of legacy) {
-                  try {
-                    const state = activityCollectionState(
-                      kind,
-                      parseActivityQuery(kind, v.query),
-                      configuration,
-                    );
-                    const result = await command({
-                      action: "create",
-                      name: v.name,
-                          importKey:JSON.stringify([v.name,state]),
-                      visibility: "personal",
-                      state: {
-                        schemaVersion: configuration.viewVersion,
-                        collection: state,
-                      },
-                    });
-                    if (!result) return;
-                    pending = pending.filter((x) => x !== v);
-                    setLegacy(pending);
-                    if (legacyKey)
-                      localStorage.setItem(legacyKey, JSON.stringify(pending));
-                  } catch (e) {
-                    setError((e as Error).message);
-                    return;
-                  }
-                }
-                if (legacyKey) localStorage.removeItem(legacyKey);
-                setLegacy([]);
-              })()
-            }
-          >
-            Import browser views
-          </Button>
         </>
-      ) : null}
-      {error ? <p role="alert">{error}</p> : null}
-    </div>
+      }
+    />
   );
+  // Same sections, text and badges as entity lists (list.controls.*).
   const options = [
-    { key: "filters" as const, label: "Filters", Icon: FilterIcon },
-    { key: "sort" as const, label: "Sort", Icon: SortIcon },
-    { key: "group" as const, label: "Group by", Icon: GroupIcon },
-    { key: "display" as const, label: "Display settings", Icon: LayoutIcon },
-    { key: "views" as const, label: "Manage views", Icon: LayoutIcon },
+    { key: "filters" as const, Icon: FilterIcon, count: added.length || undefined },
+    { key: "sort" as const, Icon: SortIcon },
+    { key: "group" as const, Icon: GroupIcon },
+    { key: "display" as const, Icon: LayoutIcon },
+    { key: "views" as const, Icon: LayoutIcon },
   ].map((item) => ({
     ...item,
-    description: `Configure your authorized ${configuration.title.toLowerCase()}.`,
+    label: intl.message(`list.controls.${item.key}.tab`),
+    title: intl.message(`list.controls.${item.key}.title`),
+    description: intl.message(`list.controls.${item.key}.description`, {
+      entity: configuration.title,
+    }),
   }));
   return (
     <div
       className={`athyper-activity-query${compact ? " athyper-activity-query--compact" : ""}`}
+      data-controls-open={panel ? "" : undefined}
     >
       <ManagementToolbar>
-        {!compact ? (
+        {/* Below 40rem (always in the activity centre) views are reached from Controls, as on entity lists. */}
+        <div data-slot="view" className="athyper-activity-query__view">
           <ViewSelector
             name={
               active?.name ??
               (same(current, configuration.defaultState)
-                ? "System default"
-                : "Custom")
+                ? intl.message("activity.controls.systemDefault")
+                : intl.message("activity.controls.custom"))
             }
           >
             {views?.views
@@ -656,11 +543,11 @@ export function ActivityQueryControls({
                 </MenuItem>
               ))}
             <MenuItem onClick={() => apply(configuration.defaultState)}>
-              System default
+              {intl.message("activity.controls.systemDefault")}
             </MenuItem>
-            <MenuItem onClick={() => open("views")}>Manage views</MenuItem>
+            <MenuItem onClick={() => open("views")}>{intl.message("activity.controls.manageViews")}</MenuItem>
           </ViewSelector>
-        ) : null}
+        </div>
         <form
           data-slot="search"
           role="search"
@@ -672,8 +559,8 @@ export function ActivityQueryControls({
           <ObjectSearch
             id={searchId}
             ref={input}
-            label="Search activity"
-            placeholder="Search activity or related records…"
+            label={intl.message("activity.controls.search")}
+            placeholder={compact ? intl.message("activity.controls.searchShort") : intl.message("activity.controls.searchLong")}
             value={search}
             onValueChange={(value) => {
               setSearch(value);
@@ -684,22 +571,36 @@ export function ActivityQueryControls({
         <div data-slot="actions">
           <Button
             variant="secondary"
-            onClick={() => (panel ? setPanel(undefined) : open("filters"))}
+            className="athyper-activity-query__action"
+            aria-label={intl.message("activity.controls.filters")}
+            title={intl.message("activity.controls.filters")}
+            aria-expanded={compact ? panel === "filters" : undefined}
+            onClick={() => (panel === "filters" ? close() : open("filters"))}
           >
             <FilterIcon size={16} />
-            Filters
+            <span className="athyper-activity-query__label">{intl.message("activity.controls.filters")}</span>
+            {added.length ? (
+              <span className="athyper-activity-query__badge" aria-hidden="true">
+                {added.length}
+              </span>
+            ) : null}
           </Button>
-          {!compact ? (
-            <Button variant="secondary" onClick={() => open("sort")}>
-              <SlidersHorizontalIcon size={16} />
-              Controls
-            </Button>
-          ) : null}
+          <Button
+            variant="secondary"
+            className="athyper-activity-query__action"
+            aria-label={intl.message("activity.controls.controls")}
+            title={intl.message("activity.controls.controls")}
+            aria-expanded={compact ? Boolean(panel && panel !== "filters") : undefined}
+            onClick={() => (panel && panel !== "filters" ? close() : open("sort"))}
+          >
+            <SlidersHorizontalIcon size={16} />
+            <span className="athyper-activity-query__label">{intl.message("activity.controls.controls")}</span>
+          </Button>
         </div>
       </ManagementToolbar>
       <div className="athyper-activity-query__summary">
       <FilterChipGroup
-        label="Activity views"
+        label={intl.message("activity.controls.views")}
         value={active?.id ?? ""}
         onValueChange={(id) => {
           const v = views?.views.find((v) => v.id === id);
@@ -711,42 +612,85 @@ export function ActivityQueryControls({
       />
       {kind === "notifications" ? <ActivityNotificationActions data={data} /> : null}
       </div>
-      {current.filters.length ? (
+      {added.length ? (
         <AppliedFilters
-          chips={current.filters.map((f, i) => ({
-            key: String(i),
-            label: `${configuration.fields.find((x) => x.key === f.field)?.label ?? f.field}: ${String(f.value)}`,
-            onRemove: () =>
-              apply({
-                ...current,
-                filters: current.filters.filter((_, n) => n !== i),
-              }),
-          }))}
-          onClear={() => apply({ ...current, filters: [] })}
+          chips={added.map((f, i) => {
+            const field = configuration.fields.find((x) => x.key === f.field);
+            return {
+              key: String(i),
+              label: `${field?.label ?? f.field}: ${filterValueLabel(field, f.value)}`,
+              onRemove: () =>
+                apply({
+                  ...current,
+                  filters: current.filters.filter((item) => item !== f),
+                }),
+            };
+          })}
+          // Clearing returns to the view's own filters; it never removes them.
+          onClear={() => apply({ ...current, filters: baseFilters })}
         />
       ) : null}
       {panel ? (
         compact ? (
-          filters
+          // Inline in the activity centre (it already owns the side slot): the
+          // same sections, tabs, editors and footers as the controls panel.
+          <div
+            className="a-collection-controls athyper-activity-query__filters"
+            onKeyDown={(event) => {
+              if (event.key !== "Escape" || event.defaultPrevented) return;
+              event.preventDefault();
+              close();
+            }}
+          >
+            <CollectionControlSections
+              active={panel}
+              onSelect={setPanel}
+              options={options}
+              sections={{ filters, sort, group, display, views: manage }}
+              tabsLabel={intl.message("list.controls.tabs")}
+            />
+          </div>
         ) : (
-          <CollectionDrawerHost
+          <CollectionControlPanel
+            id={`activity-controls-${kind}`}
             active={panel}
             onSelect={setPanel}
             onOpenChange={(open) => {
-              if (!open) setPanel(undefined);
+              if (!open) close();
             }}
             options={options}
-            sections={{ filters, sort, group, display, views: manage }}
+            entity={configuration.title}
+            context={{
+              label: configuration.title,
+              ...(info?.matchingCount !== undefined
+                ? { detail: intl.message(kind === "notifications" ? "activity.controls.notificationCount" : "activity.controls.taskCount", { count: info.matchingCount }) }
+                : {}),
+            }}
+            sections={(done) => {
+              finish.current = done;
+              return { filters, sort, group, display, views: manage };
+            }}
           />
         )
       ) : null}
       {error && !panel ? <p role="alert">{error}</p> : null}
-      {!data.loading && info?.matchingCount !== undefined ? (
-        <p role="status" className="athyper-activity-query__count">
-          {info.matchingCount} matching{" "}
-          {kind === "notifications" ? "notifications" : "tasks"}
-        </p>
-      ) : null}
     </div>
   );
+}
+
+/** People read choice labels, never stored values ("In progress", not "in_progress"). */
+function filterValueLabel(
+  field: { readonly choices?: readonly { readonly value: string | number | boolean; readonly label: string }[] } | undefined,
+  value: unknown,
+): string {
+  const values = Array.isArray(value) ? value : String(value).split(",");
+  return values
+    .map((item) => {
+      const text = String(item).trim();
+      return (
+        field?.choices?.find((choice) => String(choice.value) === text)?.label ??
+        text.replace(/[_.-]+/g, " ").replace(/^./, (letter) => letter.toUpperCase())
+      );
+    })
+    .join(", ");
 }

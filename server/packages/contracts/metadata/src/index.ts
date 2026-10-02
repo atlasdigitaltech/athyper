@@ -7,6 +7,7 @@ export * from "./collection-relationship.js";
 export * from "./directory-scope.js";
 
 export * from "./entity-ai.js";
+export * from "./entity-ai-manifest.js";
 export * from "./entity-authorization.js";
 
 export * from "./entity-authorization-runtime.js";
@@ -30,3 +31,6 @@ export * from "./identity-permissions.js";
 export * from "./record-mutation-policy.js";
 
 export * from "./record-predicates.js";
+
+export * from "./key-reference.js";
+export * from "./entity-readiness.js";

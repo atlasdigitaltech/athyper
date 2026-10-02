@@ -36,3 +36,12 @@ ALTER TABLE ai.atlas_learning_candidate_event ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai.atlas_learning_candidate_event FORCE ROW LEVEL SECURITY;
 CREATE POLICY atlas_learning_event_tenant ON ai.atlas_learning_candidate_event USING (tenant_id=shared.current_tenant_id()) WITH CHECK (tenant_id=shared.current_tenant_id());
 -- END ATLAS F4 LEARNING STUDIO
+
+-- BEGIN ATLAS LEARNING ATTEMPTS
+ALTER TABLE ai.atlas_learning_attempt ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai.atlas_learning_attempt FORCE ROW LEVEL SECURITY;
+CREATE POLICY atlas_learning_attempt_tenant ON ai.atlas_learning_attempt USING (tenant_id=shared.current_tenant_id()) WITH CHECK (tenant_id=shared.current_tenant_id());
+ALTER TABLE ai.atlas_learning_attempt_result ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai.atlas_learning_attempt_result FORCE ROW LEVEL SECURITY;
+CREATE POLICY atlas_learning_attempt_result_tenant ON ai.atlas_learning_attempt_result USING (tenant_id=shared.current_tenant_id()) WITH CHECK (tenant_id=shared.current_tenant_id());
+-- END ATLAS LEARNING ATTEMPTS

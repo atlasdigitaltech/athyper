@@ -10,8 +10,8 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | ---------------------------------------------------- | ----: |
 | Swagger operations                                   |   125 |
 | Swagger paths                                        |   117 |
-| Backend method/path identities extracted from source |   436 |
-| Source identities absent from Swagger                |   311 |
+| Backend method/path identities extracted from source |   437 |
+| Source identities absent from Swagger                |   312 |
 | studio URL entries (including patterns)              |    70 |
 | neon URL entries (including patterns)                |   113 |
 | mesh URL entries (including patterns)                |    61 |
@@ -32,7 +32,7 @@ This audit checks every listed App and Runtime entry, including discovery endpoi
 
 | Origin                          | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |
 | ------------------------------- | ------------------: | ----------------: | ------------------------: | --------------------------: |
-| https://api.dev.athyper.test    |                 438 |               438 |                         0 |                          36 |
+| https://api.dev.athyper.test    |                 439 |               439 |                         0 |                          36 |
 | https://studio.dev.athyper.test |                  74 |                74 |                         0 |                           1 |
 | https://neon.dev.athyper.test   |                 117 |               117 |                         0 |                           1 |
 | https://mesh.dev.athyper.test   |                  65 |                65 |                         0 |                           1 |
@@ -1822,6 +1822,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** `/api/entity-runtime/{entityCode}/reference-history`  
   Raw route · [source](../../server/packages/platform/preferences/src/reference-choice-routes.ts)
+
+- **GET** `/api/entity-runtime/{entityCode}/references/{fieldKey}`  
+  Route contract · [source](../../server/packages/services/records/src/entity-list-routes.ts)
 
 - **GET** `/api/entity-runtime/{entityCode}/views`  
   Raw route · [source](../../server/packages/platform/preferences/src/entity-views-routes.ts)

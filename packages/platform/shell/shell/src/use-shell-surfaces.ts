@@ -1,4 +1,5 @@
 "use client";
+import { viewportQuery } from "@athyper/platform-theme/tokens";
 import { useCallback, useReducer, useEffect, type SetStateAction } from "react";
 import type { ShellQuickAccessTab } from "./quick-access";
 import { type HeaderActionKind } from "./shell-surfaces";
@@ -14,7 +15,7 @@ export function useShellSurfaces() {
     [],
   );
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 760px)");
+    const media = window.matchMedia(viewportQuery({ below: "medium" }));
     const update = () => send({ type: "compact", value: media.matches });
     update();
     media.addEventListener("change", update);

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildSync } from "esbuild";
 import { test, expect } from "@playwright/test";
+import { chooseOption } from "./fixtures/choice";
 const styles = [
   "packages/platform/foundation/theme/src/styles.css",
   "packages/platform/foundation/ui/src/styles.css",
@@ -49,25 +50,25 @@ async function mount(page: import("@playwright/test").Page) {
 test('country confirmation preserves values, supports Escape and cancel, and clears only dependent values',async({page})=>{
  await mount(page);
  const country=page.getByRole('combobox', {name:/Country/});
- await country.selectOption('SG');
+ await chooseOption(country,'SG');
  const dialog=page.getByRole('dialog',{name:'Change country to Singapore?'});
  await expect(dialog).toBeVisible();
- await expect(country).toHaveValue('MY');
+ await expect(country).toHaveText('Malaysia');
  await expect(page.getByLabel('Region',{exact:true})).toHaveValue('Johor');
  await page.keyboard.press('Escape');
  await expect(dialog).toBeHidden();
  await expect(country).toBeFocused();
- await country.selectOption('SG');
+ await chooseOption(country,'SG');
  await dialog.getByRole('button',{name:'Keep Malaysia'}).click();
- await expect(country).toHaveValue('MY');
+ await expect(country).toHaveText('Malaysia');
  await expect(country).toBeFocused();
- await country.selectOption('SG');
+ await chooseOption(country,'SG');
  await dialog.getByRole('button',{name:'Change country',exact:true}).click();
  await expect(dialog).toBeHidden();
- await expect(country).toHaveValue('SG');
+ await expect(country).toHaveText('Singapore');
  await expect(page.getByLabel('Region',{exact:true})).toHaveValue('');
  await expect(page.getByLabel('Street',{exact:true})).toHaveValue('Example Tower');
- await country.selectOption('MY');
+ await chooseOption(country,'MY');
  await expect(page.getByRole('dialog')).toHaveCount(0);
- await expect(country).toHaveValue('MY');
+ await expect(country).toHaveText('Malaysia');
 });

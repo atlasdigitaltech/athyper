@@ -3,6 +3,8 @@ import { loadPublicationTrustConfiguration, loadPublicationSecretStore, type Pub
 
 
 export interface HostConfig {
+  /** Deployment authority identity. Missing identity leaves Entity capabilities unqualified. */
+  entityServingDeploymentId?: string;
   /** Plane-wide cutover, never a per-page or per-entity fallback. Enable only
    * after executable compiled baselines have been activated for that plane. */
   compiledMetadataPlanes?: readonly ("studio" | "neon" | "mesh")[];
@@ -902,6 +904,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): HostCo
   }
 
   const config: HostConfig = {
+    entityServingDeploymentId: environment["ENTITY_SERVING_DEPLOYMENT_ID"]?.trim() || undefined,
     compiledMetadataPlanes: readPublicationPlanes(environment["METADATA_COMPILED_ONLY_PLANES"], "METADATA_COMPILED_ONLY_PLANES"),
     metadataFormatRouting: readBoolean("METADATA_FORMAT_ROUTING", false),
     contactVerification: loadContactVerificationConfiguration(environment, env, notificationCapture),

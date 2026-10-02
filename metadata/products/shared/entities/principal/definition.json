@@ -726,6 +726,12 @@
                   "labelKey": "entity.principal.sections.notifications",
                   "defaultText": "Notifications"
                 }
+              },
+              {
+                "key": "ui_profile",
+                "label": "UI Profile",
+                "fields": [],
+                "relationshipKey": "ui_profile"
               }
             ],
             "actions": [],
@@ -745,7 +751,13 @@
                   "source": "tenant_id",
                   "target": "tenant_id"
                 },
-                "readOperation": "list"
+                "readOperation": "list",
+                "emptyState": {
+                  "message": "Profile has not been set up.",
+                  "setupLabel": "Set up profile",
+                  "editLabel": "Edit profile",
+                  "creation": "on_save"
+                }
               },
               {
                 "key": "notifications",
@@ -762,6 +774,28 @@
                   "target": "tenant_id"
                 },
                 "readOperation": "list"
+              },
+              {
+                "key": "ui_profile",
+                "targetEntity": "principal_ui_profile",
+                "cardinality": "zero_or_one",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "principal_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list",
+                "emptyState": {
+                  "message": "Using organization defaults. Customize only the settings you want to override.",
+                  "setupLabel": "Customize preferences",
+                  "editLabel": "Edit preferences",
+                  "creation": "on_save"
+                }
               }
             ],
             "navigation": {
@@ -799,6 +833,13 @@
                     "labelKey": "entity.principal.sections.notifications",
                     "defaultText": "Notifications"
                   }
+                },
+                {
+                  "key": "ui_profile",
+                  "label": "UI Profile",
+                  "sectionKeys": [
+                    "ui_profile"
+                  ]
                 }
               ]
             },
@@ -1249,6 +1290,58 @@
         },
         "id": "87c889e5-bc74-50e3-bd61-fa732cab390d"
       }
-    ]
+    ],
+    "ai": {
+      "schemaVersion": 1,
+      "enabled": true,
+      "aliases": [
+        "principal",
+        "user account"
+      ],
+      "description": "Read saved authorized values only. Parent-scoped lists retain their published Principal relationship. Do not infer defaults, missing rows, grants, or access from these values.",
+      "summaryFieldKeys": [
+        "code",
+        "name",
+        "principal_type",
+        "provisioning_source",
+        "status"
+      ],
+      "searchFieldKeys": [
+        "code",
+        "name"
+      ],
+      "relationshipKeys": [],
+      "contextKinds": [
+        "record",
+        "manage"
+      ],
+      "insightProviders": [
+        {
+          "id": "entity_lookup",
+          "version": 1
+        },
+        {
+          "id": "entity_read_record",
+          "version": 1
+        },
+        {
+          "id": "entity_explain_fields",
+          "version": 1
+        }
+      ],
+      "actions": [
+        {
+          "id": "open_record",
+          "version": 1,
+          "operationKey": "read"
+        }
+      ],
+      "presentationProfiles": [
+        {
+          "id": "record_brief",
+          "version": 1
+        }
+      ]
+    }
   }
 }

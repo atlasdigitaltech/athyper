@@ -1,0 +1,669 @@
+{
+  "schema": "athyper.table-entity-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "neon"
+  ],
+  "definition": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "employee",
+      "entityClass": "business",
+      "ownershipModel": "system"
+    },
+    "runtimeProfiles": [
+      {
+        "id": "69d954d4-9d46-5328-85dc-5fc731734d9f",
+        "profileKey": "default",
+        "backingKind": "table",
+        "storagePlane": "neon",
+        "storageSchema": "master",
+        "storageObject": "employee",
+        "tenantFieldKey": "tenant_id",
+        "apiExposure": "api",
+        "readMode": "generic",
+        "writeMode": "none",
+        "createMode": "form_only",
+        "concurrencyMode": "none"
+      }
+    ],
+    "operations": [
+      {
+        "id": "b13b3cc6-a8ae-5e95-80ca-bba89af2f7f4",
+        "operationKey": "list",
+        "operationKind": "read",
+        "label": "Employees",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "code",
+          "employee_number",
+          "person_id",
+          "principal_id",
+          "status"
+        ],
+        "auditEventCode": "employee.list"
+      },
+      {
+        "id": "f2661de3-c72e-56cf-9ec0-98dd1a58b6dd",
+        "operationKey": "read",
+        "operationKind": "read",
+        "label": "View record",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "code",
+          "employee_number",
+          "person_id",
+          "principal_id",
+          "status"
+        ],
+        "auditEventCode": "employee.read"
+      }
+    ],
+    "operationPermissions": [
+      {
+        "entityOperationId": "b13b3cc6-a8ae-5e95-80ca-bba89af2f7f4",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.employee.read",
+        "permissionKind": "capability",
+        "id": "e1aae9ce-db3b-5870-a327-2cecf2bdd094"
+      },
+      {
+        "entityOperationId": "f2661de3-c72e-56cf-9ec0-98dd1a58b6dd",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.employee.read",
+        "permissionKind": "capability",
+        "id": "c70d980e-a968-5cdf-a386-cbce2076f1ba"
+      }
+    ],
+    "operationScopeBindings": [
+      {
+        "entityOperationId": "b13b3cc6-a8ae-5e95-80ca-bba89af2f7f4",
+        "bindingKey": "list_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "collection",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "437fdeec-6920-5730-838e-ec7b1efe43f1"
+      },
+      {
+        "entityOperationId": "f2661de3-c72e-56cf-9ec0-98dd1a58b6dd",
+        "bindingKey": "read_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "fdc73233-097c-5f40-b137-04a4e7e59bb4"
+      }
+    ],
+    "searchProfiles": [
+      {
+        "id": "6dc44662-7bda-503a-b835-48911e4367dc",
+        "searchKey": "default",
+        "searchKind": "keyword",
+        "minimumQueryLength": 1,
+        "isDefault": true
+      }
+    ],
+    "fields": [
+      {
+        "id": "7b2f2e0b-cfcc-54f2-b457-7b1d4efbcd1b",
+        "fieldKey": "id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "1dd9015d-55a9-5855-87fe-bbebb7a09302",
+        "fieldKey": "tenant_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "tenant_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "5b3ad0a6-88af-56f3-be07-7ae32c4f1018",
+        "fieldKey": "code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "code",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "1d062240-6aa4-5ed6-9901-82cd06bf053d",
+        "fieldKey": "employee_number",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "employee_number",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "f1bbfcba-7cb4-5f6f-b84f-8800c52046ed",
+        "fieldKey": "person_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid",
+          "keyReference": {
+            "targetEntity": "person",
+            "labelField": "name",
+            "fields": [
+              {
+                "source": "tenant_id",
+                "target": "tenant_id"
+              },
+              {
+                "source": "person_id",
+                "target": "id"
+              }
+            ]
+          }
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "person_id",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "8be45917-5bbe-5bf4-a9d3-95c5b8899b5e",
+        "fieldKey": "principal_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid",
+          "keyReference": {
+            "targetEntity": "principal",
+            "labelField": "name",
+            "fields": [
+              {
+                "source": "tenant_id",
+                "target": "tenant_id"
+              },
+              {
+                "source": "principal_id",
+                "target": "id"
+              }
+            ]
+          }
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "principal_id",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "aa492a02-4a86-506e-9ace-fd589ca92ad7",
+        "fieldKey": "status",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "status",
+        "dataClassification": "internal",
+        "status": "active"
+      }
+    ],
+    "keys": [
+      {
+        "id": "469dd657-6a71-58b2-8aed-6fca626c2054",
+        "keyKey": "primary",
+        "keyKind": "primary",
+        "uniquenessScope": "global"
+      },
+      {
+        "id": "dc55adf4-de50-51aa-bdcb-ff1708b96bc7",
+        "keyKey": "natural",
+        "keyKind": "natural",
+        "uniquenessScope": "tenant"
+      }
+    ],
+    "keyFields": [
+      {
+        "entityKeyId": "469dd657-6a71-58b2-8aed-6fca626c2054",
+        "entityFieldId": "7b2f2e0b-cfcc-54f2-b457-7b1d4efbcd1b",
+        "position": 1,
+        "id": "1e6b3098-06c6-57cf-8700-2a6408e0ca14"
+      },
+      {
+        "entityKeyId": "dc55adf4-de50-51aa-bdcb-ff1708b96bc7",
+        "entityFieldId": "1dd9015d-55a9-5855-87fe-bbebb7a09302",
+        "position": 1,
+        "id": "7225db74-3ca8-51d7-981a-891f85985cd0"
+      },
+      {
+        "entityKeyId": "dc55adf4-de50-51aa-bdcb-ff1708b96bc7",
+        "entityFieldId": "f1bbfcba-7cb4-5f6f-b84f-8800c52046ed",
+        "position": 2,
+        "id": "b9874b4a-f3ff-5503-aca1-95f6ded97fa7"
+      }
+    ],
+    "searchFields": [
+      {
+        "entitySearchProfileId": "6dc44662-7bda-503a-b835-48911e4367dc",
+        "entityFieldId": "5b3ad0a6-88af-56f3-be07-7ae32c4f1018",
+        "position": 1,
+        "matchMode": "contains",
+        "id": "24984dcc-7c83-5d00-bbf2-594c4e30cd8c"
+      },
+      {
+        "entitySearchProfileId": "6dc44662-7bda-503a-b835-48911e4367dc",
+        "entityFieldId": "1d062240-6aa4-5ed6-9901-82cd06bf053d",
+        "position": 2,
+        "matchMode": "contains",
+        "id": "bfe030b9-5c5e-5b10-a425-f03bfbf73141"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "4873a556-cdf3-5fc9-bae5-06859a4c9e76",
+        "surfaceKey": "list",
+        "surfaceKind": "list",
+        "title": "Employees",
+        "isDefault": true,
+        "layoutConfig": {
+          "identityField": "code",
+          "defaultState": {
+            "sort": [
+              {
+                "field": "employee_number",
+                "direction": "asc"
+              }
+            ],
+            "density": "comfortable",
+            "mode": "table"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "limits": {
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              10,
+              25,
+              50,
+              100
+            ],
+            "maxSortLevels": 3,
+            "countMode": "exact"
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "employee",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "permissionCode": "neon.workforce.employee.read",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "permissionCode": "neon.workforce.employee.read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "code",
+                "fields": [
+                  "code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "employee_number",
+                "fields": [
+                  "employee_number"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "person_id",
+                "fields": [
+                  "person_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "principal_id",
+                "fields": [
+                  "principal_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "edd6686e-8697-538f-b9a6-b1f3f8e967ef",
+        "surfaceKey": "detail",
+        "surfaceKind": "detail",
+        "title": "Employees",
+        "layoutConfig": {
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "employee_number",
+            "codeField": "code",
+            "sections": [
+              {
+                "key": "overview",
+                "label": "Workforce identity",
+                "fields": [
+                  "code",
+                  "employee_number",
+                  "person_id",
+                  "principal_id",
+                  "status"
+                ]
+              }
+            ],
+            "actions": []
+          }
+        }
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "id": "8f1056a4-2ed0-552c-b693-0219daa11f42",
+        "entitySurfaceId": "4873a556-cdf3-5fc9-bae5-06859a4c9e76",
+        "entityFieldId": "7b2f2e0b-cfcc-54f2-b457-7b1d4efbcd1b",
+        "bindingKey": "list_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "5454e640-f587-5306-b19a-7825c528eb5b",
+        "entitySurfaceId": "4873a556-cdf3-5fc9-bae5-06859a4c9e76",
+        "entityFieldId": "1dd9015d-55a9-5855-87fe-bbebb7a09302",
+        "bindingKey": "list_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "afa2b5a5-b5b7-58f1-a961-3c1e11b3c839",
+        "entitySurfaceId": "4873a556-cdf3-5fc9-bae5-06859a4c9e76",
+        "entityFieldId": "5b3ad0a6-88af-56f3-be07-7ae32c4f1018",
+        "bindingKey": "list_code",
+        "position": 2,
+        "labelOverride": "Code",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "1e74904d-d9d3-581c-a252-887ab3fb4e34",
+        "entitySurfaceId": "4873a556-cdf3-5fc9-bae5-06859a4c9e76",
+        "entityFieldId": "1d062240-6aa4-5ed6-9901-82cd06bf053d",
+        "bindingKey": "list_employee_number",
+        "position": 3,
+        "labelOverride": "Employee number",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "88e4a556-3dba-521d-a6c3-c044ee5bb9a3",
+        "entitySurfaceId": "4873a556-cdf3-5fc9-bae5-06859a4c9e76",
+        "entityFieldId": "f1bbfcba-7cb4-5f6f-b84f-8800c52046ed",
+        "bindingKey": "list_person_id",
+        "position": 4,
+        "labelOverride": "Person",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "7d8b17cf-4dc8-5d9a-873b-5bca0866a090",
+        "entitySurfaceId": "4873a556-cdf3-5fc9-bae5-06859a4c9e76",
+        "entityFieldId": "8be45917-5bbe-5bf4-a9d3-95c5b8899b5e",
+        "bindingKey": "list_principal_id",
+        "position": 5,
+        "labelOverride": "Login identity",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "7db1991e-cfab-54bb-817b-19db60f600f8",
+        "entitySurfaceId": "4873a556-cdf3-5fc9-bae5-06859a4c9e76",
+        "entityFieldId": "aa492a02-4a86-506e-9ace-fd589ca92ad7",
+        "bindingKey": "list_status",
+        "position": 6,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "9a1e735d-7b53-59a0-bab5-93be7b3a4d95",
+        "entitySurfaceId": "edd6686e-8697-538f-b9a6-b1f3f8e967ef",
+        "entityFieldId": "7b2f2e0b-cfcc-54f2-b457-7b1d4efbcd1b",
+        "bindingKey": "detail_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "9eaf6a48-6c98-569e-86ed-6c62c9f21ffc",
+        "entitySurfaceId": "edd6686e-8697-538f-b9a6-b1f3f8e967ef",
+        "entityFieldId": "1dd9015d-55a9-5855-87fe-bbebb7a09302",
+        "bindingKey": "detail_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "c22aba83-3cd4-5ab2-904f-abe5a9878db7",
+        "entitySurfaceId": "edd6686e-8697-538f-b9a6-b1f3f8e967ef",
+        "entityFieldId": "5b3ad0a6-88af-56f3-be07-7ae32c4f1018",
+        "bindingKey": "detail_code",
+        "position": 2,
+        "labelOverride": "Code",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "65fa477e-c2d6-5abf-8976-bc1903557343",
+        "entitySurfaceId": "edd6686e-8697-538f-b9a6-b1f3f8e967ef",
+        "entityFieldId": "1d062240-6aa4-5ed6-9901-82cd06bf053d",
+        "bindingKey": "detail_employee_number",
+        "position": 3,
+        "labelOverride": "Employee number",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "094da400-5cc7-565e-a718-70f873860d35",
+        "entitySurfaceId": "edd6686e-8697-538f-b9a6-b1f3f8e967ef",
+        "entityFieldId": "f1bbfcba-7cb4-5f6f-b84f-8800c52046ed",
+        "bindingKey": "detail_person_id",
+        "position": 4,
+        "labelOverride": "Person",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "56a10282-665c-51d8-b54a-62f13386e0b1",
+        "entitySurfaceId": "edd6686e-8697-538f-b9a6-b1f3f8e967ef",
+        "entityFieldId": "8be45917-5bbe-5bf4-a9d3-95c5b8899b5e",
+        "bindingKey": "detail_principal_id",
+        "position": 5,
+        "labelOverride": "Login identity",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "379c552b-d8cc-57b9-b9a4-60f66b53cba5",
+        "entitySurfaceId": "edd6686e-8697-538f-b9a6-b1f3f8e967ef",
+        "entityFieldId": "aa492a02-4a86-506e-9ace-fd589ca92ad7",
+        "bindingKey": "detail_status",
+        "position": 6,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      }
+    ],
+    "fieldReferenceBindings": [
+      {
+        "id": "e106d54a-9eb3-593c-9903-9f444e4aed91",
+        "entityFieldId": "f1bbfcba-7cb4-5f6f-b84f-8800c52046ed",
+        "bindingKey": "person_id_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "person",
+        "status": "active"
+      },
+      {
+        "id": "36ec64a0-e508-5cdd-90e2-c6a6bb038d08",
+        "entityFieldId": "8be45917-5bbe-5bf4-a9d3-95c5b8899b5e",
+        "bindingKey": "principal_id_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "principal",
+        "status": "active"
+      }
+    ]
+  }
+}

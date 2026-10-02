@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "policy": "policy:ui-system",
+  "capturedAtCommit": "0fedc0e97c7a4c5f6b20586d0776c888680435f7",
+  "capturedOn": "2026-10-02",
+  "note": "Layout and control debt predating the application-wide UI system standard; keys are <file>#<rule>. Fix down; never up.",
+  "total": 0,
+  "files": {}
+}

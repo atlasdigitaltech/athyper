@@ -75,11 +75,10 @@ test("boolean membership retains Yes/No after an empty choice response and never
     );
     await act(async () => root.render(render()));
     await act(async () => root.render(render([])));
-    const trigger = container.querySelector<HTMLElement>("[role=combobox]")!;
-    assert.ok(trigger);
-    await act(async () => trigger.click());
-    assert.match(document.body.textContent!, /Yes/);
-    assert.match(document.body.textContent!, /No/);
+    // A two-value set is shown inline as choice chips.
+    const choices = [...container.querySelectorAll("button")].map((button) => button.textContent?.trim());
+    assert.ok(choices.includes("Yes"));
+    assert.ok(choices.includes("No"));
     assert.equal(loads, 0);
   }));
 
@@ -99,16 +98,14 @@ test("compact field select displays a stale field until explicitly replaced", ()
         />,
       ),
     );
-    const select = container.querySelector("select")!;
-    assert.equal(select.value, "retired");
-    assert.equal(
-      select.selectedOptions[0].textContent,
-      "Unavailable field: retired",
-    );
+    const input = container.querySelector<HTMLInputElement>("[role=combobox]")!;
+    assert.equal(input.value, "Unavailable field: retired");
     assert.equal(selected, undefined);
-    await act(async () => {
-      select.value = "name";
-      select.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
-    });
+    await act(async () => input.click());
+    const name = [...dom.window.document.querySelectorAll<HTMLElement>("[role=option]")].find(
+      (option) => option.textContent?.startsWith("Name"),
+    )!;
+    assert.ok(name);
+    await act(async () => name.click());
     assert.equal(selected, "name");
   }));

@@ -1,3 +1,5 @@
+import { AtlasToolRegistry, AtlasRegisteredToolCoordinator, createAtlasEntityRecordTool, evaluateAtlasProductionLearning } from "@athyper/server-platform-ai";
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign, verify } from "node:crypto";
 import { sql, type Kysely } from "kysely";
@@ -17,6 +19,7 @@ export async function qualifyLearningPublication(
   principalId: string,
   baselineId: string,
   learnedId: string,
+  requestContext: VerifiedRequestContext,
 ) {
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");
   const bytesByHash = new Map<string, Uint8Array>();
@@ -128,6 +131,29 @@ export async function qualifyLearningPublication(
       current.compiledHash,
       sha256(canonicalBytes(current.descriptor)),
     );
+    // Real active-descriptor discovery; synthetic permission context, no owner execution.
+    const resolutionFor = (active: typeof current) => {
+      const descriptor = { ...active.descriptor, compiledHash: active.compiledHash } as any;
+      const metadata = { getEntityDescriptor: async () => descriptor } as any;
+      const registry = new AtlasToolRegistry([createAtlasEntityRecordTool(metadata)]);
+      const unusedService = new Proxy({}, { get() { throw Error("Discovery qualification must not execute an owner"); } });
+      const coordinator = new AtlasRegisteredToolCoordinator(registry, unusedService as never, metadata);
+      const runtime = { context: { ...requestContext, permissions: { ...requestContext.permissions,
+        allowed: [descriptor.operations.read.permissionCode] } },
+        admission: { readToolsAllowed: true, mutationToolsAllowed: false }, toolsEnabled: true,
+        businessContext: { descriptorHash: active.compiledHash, scopeFingerprint: "qualification-record",
+          page: { schemaVersion: 1 as const, kind: "record" as const, entityCode: "business_partner",
+            recordId: principalId, section: "overview", dirty: false, generationId: "qualification", locale: "en" } } };
+      return { coordinator, runtime };
+    };
+    const baselineSelection = resolutionFor(old), activeSelection = resolutionFor(current);
+    const discovery = await evaluateAtlasProductionLearning({ candidate: activeSelection.coordinator,
+      baseline: baselineSelection.coordinator, fixtures: [{ id: "active-reviewed-summary", runtime: activeSelection.runtime,
+        baselineRuntime: baselineSelection.runtime, expectedAdmittedCapabilityIds: ["entity_read_record"],
+        expectation: { question: "Show this company snapshot", expected: "read", purpose: "correction",
+          capabilityIds: ["entity_read_record"] } }] });
+    assert.equal(discovery.passed, true);
+    console.log("PASS studio: active descriptor through production registry/discovery/resolver; synthetic permission context, no owner execution");
     await local.rollback({
       publicationKey: "metadata.entity.business_partner",
       targetAppliedReleaseId: before.id,
@@ -147,6 +173,6 @@ export async function qualifyLearningPublication(
     );
   });
   console.log(
-    "PASS studio: real publication compilation, Ed25519 signatures, verified loader, activation, delivery replay and rollback; unseen questions improve only on the active learned release",
+    "PASS studio: real publication compilation, Ed25519 signatures, verified loader, activation, delivery replay and rollback; evaluation correction questions improve only on the active learned release",
   );
 }

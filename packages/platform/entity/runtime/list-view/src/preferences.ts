@@ -10,7 +10,11 @@ export interface SavedListView {
   readonly state: SaveableListStateV1;
 }
 
-export type DisplayPreferences = Readonly<Pick<SaveableListStateV1, "density" | "mode"> & {
+/** Per-device list display preferences. `density` is present only when the
+ * person chose one for this list; absent means the list follows the app
+ * density (Utilities / profile). */
+export type DisplayPreferences = Readonly<Pick<SaveableListStateV1, "mode"> & {
+  readonly density?: SaveableListStateV1["density"];
   readonly searchBehavior: "instant" | "submit";
 }>;
 
@@ -72,9 +76,9 @@ export function readDisplayPreferences(plane: EntityListDescriptorV1["plane"], n
   const key = displayPreferenceKey(plane, namespace);
   try {
     const value = readStorageJson(key) as Partial<DisplayPreferences> | null;
-    if (!value || !["compact", "comfortable", "spacious"].includes(value.density ?? "") || typeof value.mode !== "string") return undefined;
+    if (!value || (value.density !== undefined && !["compact", "comfortable", "spacious"].includes(value.density)) || typeof value.mode !== "string") return undefined;
     return {
-      density: value.density!,
+      ...(value.density ? { density: value.density } : {}),
       mode: value.mode as SaveableListStateV1["mode"],
       searchBehavior: value.searchBehavior === "submit" ? "submit" : "instant",
     };

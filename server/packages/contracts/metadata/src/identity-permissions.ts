@@ -5,6 +5,8 @@ export const IDENTITY_PERMISSION_CATALOG = {
   "common.identity.principal_profile.edit": "medium",
   "common.identity.principal_notification_preference.read": "low",
   "common.identity.principal_notification_preference.edit": "medium",
+  "common.identity.principal_ui_profile.read": "low",
+  "common.identity.principal_ui_profile.edit": "medium",
   "common.identity.principal.administer": "high",
 } as const;
 export function isIdentityPermissionCode(

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { ChoiceSelect } from "@athyper/platform-ui";
 export interface EntitySectionItem {
   readonly key: string;
   readonly label: string;
@@ -27,18 +28,14 @@ export function EntitySectionNavigation({
     <nav className={`a-section-navigation ${className}`} aria-label={label}>
       <label className="a-entity-record__picker">
         {label}
-        <select
+        <ChoiceSelect
           value={activeSection}
-          onChange={(e) => onNavigate(e.target.value)}
-        >
-          {sections.map((s) => (
-            <option key={s.key} value={s.key}>
-              {s.label}
-              {s.count === undefined ? "" : ` (${s.count})`}
-              {s.status ? ` — ${s.status}` : ""}
-            </option>
-          ))}
-        </select>
+          onChange={onNavigate}
+          options={sections.map((s) => ({
+            value: s.key,
+            label: `${s.label}${s.count === undefined ? "" : ` (${s.count})`}${s.status ? ` — ${s.status}` : ""}`,
+          }))}
+        />
       </label>
       <div className="a-entity-record__links">
         {sections.map((s) => (

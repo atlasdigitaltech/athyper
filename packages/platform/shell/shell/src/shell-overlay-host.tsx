@@ -12,6 +12,7 @@ export function ShellOverlayHost({
   readonly quickAccess?: React.ComponentProps<typeof ShellQuickAccess>;
   readonly atlas?: AtlasWorkspaceProps;
 }) {
+  const [fullTarget, setFullTarget] = React.useState<HTMLDivElement | null>(null);
   return (
     <>
       {quickAccess ? (
@@ -23,20 +24,15 @@ export function ShellOverlayHost({
           <ShellQuickAccess {...quickAccess} />
         </ShellSurfaceBoundary>
       ) : null}
-      {atlas && !atlas.pinned && atlas.mode !== "fullscreen" ? (
-        <button
-          type="button"
-          className="athyper-atlas-workspace__scrim"
-          aria-label="Close Atlas"
-          onClick={atlas.onClose}
-        />
-      ) : null}
+      {/* Full view target: the shared panel moves Atlas here without remounting.
+          The docked panel's backdrop, geometry and pin belong to that frame. */}
+      {atlas ? <div ref={setFullTarget} className="athyper-atlas-full-host" /> : null}
       {atlas ? (
         <ShellSurfaceBoundary
           label="Atlas recovery"
           onClose={atlas.onClose ?? (() => {})}
         >
-          <AtlasWorkspace {...atlas} />
+          <AtlasWorkspace {...atlas} fullTarget={fullTarget} />
         </ShellSurfaceBoundary>
       ) : null}
     </>

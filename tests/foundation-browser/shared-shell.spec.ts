@@ -33,7 +33,8 @@ test("phone header keeps navigation available with branding inside the drawer", 
 });
 test("narrow mobile header keeps controls centered without shrinking touch targets", async ({ page }) => {
   await mount(page, 280, false, "/", "?desktopBrand");
-  await expect(page.getByRole("button",{name:/^Inbox/})).toBeHidden();
+  // Every app bar action stays; the work context truncates instead.
+  await expect(page.getByRole("button",{name:/^Inbox/})).toBeVisible();
   const geometry=await page.evaluate(()=>{
     const topbar=document.querySelector(".athyper-shell__topbar")!.getBoundingClientRect();
     const children=Array.from(document.querySelector(".athyper-shell__topbar")!.children).filter((element)=>getComputedStyle(element).display!=="none").map((element)=>element.getBoundingClientRect());
@@ -49,8 +50,8 @@ test("mobile activity center preserves the global header and owns only the remai
   const topbar=page.locator(".athyper-shell__topbar");
   await page.getByRole("button", { name: "More application actions" }).click();
   await page.getByRole("dialog", { name: "More application actions" }).getByRole("button", { name: /^Notifications/ }).click();
-  const layer=page.locator('.a-drawer-layer[data-variant="activity"]');
-  const panel=page.getByRole("dialog",{name:"Activity center"});
+  const layer=page.locator('#athyper-activity-center');
+  const panel=page.getByRole("dialog",{name:/^(Notifications|Inbox)$/});
   await expect(topbar).toBeVisible();
   await expect(page.locator(".athyper-shell")).toHaveAttribute("data-activity-open","true");
   await expect(page.locator(".athyper-shell__breadcrumbs")).toBeHidden();
@@ -120,7 +121,7 @@ test("RTL shell reserves the right rail and keeps the mobile header within the v
   expect(narrowGeometry.overflowWidth).toBe(narrowGeometry.viewportWidth);
   expect(narrowGeometry.visibleChildrenFit).toBe(true);
 });
-test("collapse preference keeps a badged home link, initials, and delayed navigation context", async ({ page }) => { await mount(page, 1200); await page.getByRole("button", { name: "Collapse navigation" }).click(); await expect(page.locator(".athyper-shell")).toHaveAttribute("data-collapsed", "true"); await expect(page.getByRole("button", { name: "Expand navigation" })).toBeVisible(); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAccessibleName("Athyper Test home"); await expect(page.locator(".athyper-shell__rail-brand > .athyper-shell__brand-copy")).toHaveCSS("width", "1px"); await expect(page.locator(".athyper-shell__rail-brand .athyper-shell__plane-badge")).toHaveCSS("display", "grid"); await expect(page.locator(".athyper-shell__profile-summary")).toHaveCSS("width", "1px"); await expect(page.locator(".athyper-shell__profile > summary > .athyper-shell__avatar")).toHaveText("UO"); await page.locator(".athyper-shell__rail-brand").hover(); await expect(page.locator(".athyper-shell__rail-brand .athyper-shell__brand-tooltip")).toHaveCSS("opacity", "1"); await page.getByRole("link", { name: "Finance" }).hover(); await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Finance"); const favourites=page.getByRole("button",{name:"Open favourites"});await favourites.hover();await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Quick accessFavourites");const recent=page.getByRole("button",{name:"Open recent items"});await recent.focus();await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Quick accessRecent items");expect(await page.evaluate(() => localStorage.getItem("athyper.shell.collapsed"))).toBe("true"); expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain("User One"); });
+test("collapse preference keeps a badged home link, initials, and delayed navigation context", async ({ page }) => { await mount(page, 1440); await page.getByRole("button", { name: "Collapse navigation" }).click(); await expect(page.locator(".athyper-shell")).toHaveAttribute("data-collapsed", "true"); await expect(page.getByRole("button", { name: "Expand navigation" })).toBeVisible(); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAccessibleName("Athyper Test home"); await expect(page.locator(".athyper-shell__rail-brand > .athyper-shell__brand-copy")).toHaveCSS("width", "1px"); await expect(page.locator(".athyper-shell__rail-brand .athyper-shell__plane-badge")).toHaveCSS("display", "grid"); await expect(page.locator(".athyper-shell__profile-summary")).toHaveCSS("width", "1px"); await expect(page.locator(".athyper-shell__profile > summary > .athyper-shell__avatar")).toHaveText("UO"); await page.locator(".athyper-shell__rail-brand").hover(); await expect(page.locator(".athyper-shell__rail-brand .athyper-shell__brand-tooltip")).toHaveCSS("opacity", "1"); await page.getByRole("link", { name: "Finance" }).hover(); await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Finance"); const favourites=page.getByRole("button",{name:"Open favourites"});await favourites.hover();await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Quick accessFavourites");const recent=page.getByRole("button",{name:"Open recent items"});await recent.focus();await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Quick accessRecent items");expect(await page.evaluate(() => localStorage.getItem("athyper.shell.collapsed"))).toBe("true"); expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain("User One"); });
 test("quick access tracks recent work and promotes it to persistent favourites", async ({ page }) => { await mount(page, 1280); const recentTrigger = page.getByRole("button", { name: "Open recent items" }); await recentTrigger.click(); const panel = page.getByRole("dialog", { name: "Quick access" }); await expect(panel).toBeVisible(); await expect(panel.getByPlaceholder("Search recent work")).toBeFocused(); await panel.getByRole("button", { name: /Pages/ }).click(); await expect(panel.getByRole("link", { name: /General Ledger/ })).toBeVisible(); await panel.getByRole("button", { name: "Add General Ledger to favourites" }).click(); await panel.getByRole("tab", { name: /Favourites/ }).click(); await expect(panel.getByRole("link", { name: /General Ledger/ })).toBeVisible(); await panel.getByRole("button", { name: "Close quick access" }).click(); await expect(recentTrigger).toBeFocused(); await recentTrigger.click(); await panel.getByRole("tab", { name: /Favourites/ }).click(); await expect(panel.getByRole("link", { name: /General Ledger/ })).toBeVisible(); expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain("User One"); });
 test("quick access becomes a full-width mobile surface and returns focus to navigation", async ({ page }) => { await mount(page, 390); const menu = page.getByRole("button", { name: "Open navigation" }); await menu.click(); await page.getByRole("button", { name: "Open recent items" }).click(); const panel = page.getByRole("dialog", { name: "Quick access" }); await expect(panel).toBeVisible(); await expect.poll(async () => (await panel.boundingBox())?.x).toBe(0); const bounds = await panel.boundingBox(); expect(bounds?.width).toBe(390); await page.keyboard.press("Escape"); await expect(menu).toBeFocused(); await expect(page.locator(".athyper-shell")).toHaveAttribute("data-quick-access-open", "false"); });
 test("empty entitlements render a stable accessible recovery state", async ({ page }) => { await mount(page, 900, true); await expect(page.getByRole("heading", { name: "No applications available" })).toBeVisible(); await expect(page.getByRole("link", { name: "Switch context" })).toHaveAttribute("href", "/select-context"); });
@@ -184,7 +185,7 @@ test("Atlas keeps its workspace mounted across dock and expanded transitions", a
   await atlas.getByRole("button", { name: "Pin Atlas to the right side", exact: true }).click();
   const draft = atlas.getByRole("textbox", { name: "Ask Atlas to search, create, or take action" });
   await draft.fill("Keep this local draft");
-  await atlas.getByRole("link", { name: "Open Atlas in full screen" }).click();
+  await atlas.getByRole("link", { name: "Open Atlas in full view" }).click();
   await expect(atlas).toHaveAttribute("data-test-instance", "original");
   await expect(draft).toContainText("Keep this local draft");
   await atlas.getByRole("button", { name: "Return to side panel" }).click();
@@ -376,16 +377,16 @@ test("quick access uses shared panel chrome, one empty state and keyboard tabs",
 test("activity center shares panel chrome and filtered empty-state recovery",async({page})=>{
   await mount(page,1280,false,"/","?zero");
   await page.getByRole("button",{name:/^Notifications/}).click();
-  const panel=page.getByRole("dialog",{name:"Activity center"});
+  const panel=page.getByRole("dialog",{name:/^(Notifications|Inbox)$/});
   await expect(panel.locator(".a-panel-header")).toBeVisible();
-  await expect(panel.locator(".a-panel-tabs")).toBeVisible();
+  // No section tabs in the panel: the app bar's Notifications and Inbox switch sections.
+  await expect(panel.getByRole("tab",{name:/^(Notifications|Inbox)/})).toHaveCount(0);
   await expect(panel.getByRole("heading",{name:"You’re all caught up"})).toBeVisible();
   await panel.getByRole("button",{name:/^Unread/}).click();
   await expect(panel.getByRole("heading",{name:"No unread notifications"})).toBeVisible();
   await panel.getByRole("button",{name:"Show all",exact:true}).click();
   await expect(panel.getByRole("heading",{name:"You’re all caught up"})).toBeVisible();
-  const notifications=panel.getByRole("tab",{name:/Notifications/});await notifications.focus();await page.keyboard.press("End");
-  await expect(panel.getByRole("tab",{name:/Inbox/})).toBeFocused();
+  await page.getByRole("button",{name:/^Inbox/}).click();
   await expect(panel.getByRole("heading",{name:"Your inbox is empty"})).toBeVisible();
 });
 
@@ -393,7 +394,7 @@ test("activity access failures explain access and transient failures can retry",
   for(const status of [403,500]){
     await mount(page,1280,false,"/",`?activityError=${status}`);
     await page.getByRole("button",{name:/^Notifications/}).click();
-    const panel=page.getByRole("dialog",{name:"Activity center"}),alert=panel.getByRole("alert");
+    const panel=page.getByRole("dialog",{name:/^(Notifications|Inbox)$/}),alert=panel.getByRole("alert");
     await expect(alert).toHaveAttribute("data-tone","error");
     await expect(alert).not.toContainText("Request failed");
     await expect(panel.getByRole("link",{name:/View all/})).toHaveCount(0);

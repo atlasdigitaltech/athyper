@@ -811,6 +811,7 @@ COMMENT ON COLUMN master.principal_identity_binding.provider_attributes IS
   'Restricted minimal provider extensions required by IAM adapters; never a full user snapshot or credential store.';
 
 CREATE TABLE master.principal_ui_profile (
+    record_version    bigint NOT NULL DEFAULT 1 CHECK (record_version > 0),
     id                uuid                        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id         uuid                        NOT NULL,
     principal_id      uuid                        NOT NULL,
@@ -895,7 +896,7 @@ CREATE TABLE master.principal_notification_preference (
     is_enabled          boolean,
     frequency_code      master.notification_digest_frequency_d,
     metadata            jsonb                                  NOT NULL DEFAULT '{}'::jsonb,
-    status              shared.ref_status_d                    NOT NULL DEFAULT 'active',
+    status              shared.active_inactive_d                    NOT NULL DEFAULT 'active',
     is_active           boolean GENERATED ALWAYS AS (status = 'active') STORED,
     status_changed_at   timestamptz,
     status_changed_by   uuid,

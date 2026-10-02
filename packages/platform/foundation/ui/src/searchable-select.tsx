@@ -7,17 +7,31 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { CheckIcon, ChevronDownIcon } from "@athyper/platform-icons";
+import { CheckIcon, ChevronDownIcon, CloseIcon } from "@athyper/platform-icons";
 import { createPortal } from "react-dom";
-import type { EntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
 
 export interface ReferenceOption {
   readonly value: string;
   readonly label: string;
   readonly group?: string;
-  readonly data?: Readonly<Record<string, string | boolean | readonly string[]>>;
+  readonly data?: Readonly<
+    Record<string, string | boolean | readonly string[]>
+  >;
 }
-export type SearchableSelectMessages = EntityReferenceMessages;
+/** Copy supplied by the caller; the generic control owns no Entity vocabulary. */
+export interface SearchableSelectMessages {
+  readonly search: string;
+  readonly recent: string;
+  readonly all: string;
+  readonly results: string;
+  readonly empty: string;
+  readonly unavailable: string;
+  readonly required: string;
+  readonly clear: string;
+  readonly clearRecent: string;
+  readonly loadMore: string;
+  readonly loading: string;
+}
 const normalize = (value: string) =>
   value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase().trim();
 const referenceIndexes = new WeakMap<
@@ -126,7 +140,10 @@ export function SearchableSelect({
     /** Resolves an existing persisted value, including a retired reference. */
     readonly value?: string;
     readonly signal: AbortSignal;
-  }) => Promise<{ readonly options: readonly ReferenceOption[]; readonly nextCursor?: string }>;
+  }) => Promise<{
+    readonly options: readonly ReferenceOption[];
+    readonly nextCursor?: string;
+  }>;
   readonly recentValues?: readonly string[];
   readonly recentLimit?: number;
   readonly onClearRecent?: () => void;
@@ -206,38 +223,82 @@ export function SearchableSelect({
         ),
       ];
   const activeOption = rows[active];
-  const loadDirectory = useCallback(async (nextQuery: string, cursor?: string, exactValue?: string) => {
-    if (!loadPage) return;
-    const controller = new AbortController();
-    setDirectory((current) => ({ ...current, loading: true }));
-    try {
-      const page = await loadPage({ query: nextQuery, ...(cursor ? { cursor } : {}), ...(exactValue ? { value: exactValue } : {}), signal: controller.signal });
-      setDirectory((current) => ({
-        query: nextQuery,
-        options: cursor && current.query === nextQuery
-          ? [...current.options, ...page.options.filter((option) => !current.options.some((item) => item.value === option.value))]
-          : page.options,
-        ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
-        loading: false,
-      }));
-    } catch (cause) {
-      // The cause can carry server or transport detail; show only the localized
-      // message and keep the specifics in the console for diagnosis.
-      console.error("[athyper/reference-select] lookup failed", cause);
-      setDirectory((current) => ({ ...current, loading: false, error: true }));
-    }
+  const directoryRequest = useRef<AbortController | null>(null);
+  const resolvedValue = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    directoryRequest.current?.abort();
+    resolvedValue.current = undefined;
+    setDirectory({ query: "", options: [], loading: false });
+    return () => {
+      directoryRequest.current?.abort();
+    };
   }, [loadPage]);
+  const loadDirectory = useCallback(
+    async (nextQuery: string, cursor?: string, exactValue?: string) => {
+      if (!loadPage) return;
+      directoryRequest.current?.abort();
+      const controller = new AbortController();
+      directoryRequest.current = controller;
+      setDirectory((current) => ({ ...current, loading: true }));
+      try {
+        const page = await loadPage({
+          query: nextQuery,
+          ...(cursor ? { cursor } : {}),
+          ...(exactValue ? { value: exactValue } : {}),
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setDirectory((current) => ({
+          query: nextQuery,
+          options:
+            cursor && current.query === nextQuery
+              ? [
+                  ...current.options,
+                  ...page.options.filter(
+                    (option) =>
+                      !current.options.some(
+                        (item) => item.value === option.value,
+                      ),
+                  ),
+                ]
+              : page.options,
+          ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
+          loading: false,
+        }));
+      } catch (cause) {
+        if (controller.signal.aborted) return;
+        // The cause can carry server or transport detail; show only the localized
+        // message and keep the specifics in the console for diagnosis.
+        console.error("[athyper/reference-select] lookup failed", cause);
+        setDirectory((current) => ({
+          ...current,
+          loading: false,
+          error: true,
+        }));
+      }
+    },
+    [loadPage],
+  );
   // An older saved reference can be retired and absent from the first page.
   // Resolve it by its persisted identity so the closed control still renders a
   // useful label; the server never offers retired rows in a normal search.
   useEffect(() => {
-    if (!loadPage || !value || effectiveOptions.some((option) => option.value === value)) return;
+    if (
+      !loadPage ||
+      !value ||
+      resolvedValue.current === value ||
+      effectiveOptions.some((option) => option.value === value)
+    )
+      return;
+    resolvedValue.current = value;
     void loadDirectory("", undefined, value);
   }, [effectiveOptions, loadDirectory, loadPage, value]);
   useEffect(() => {
     if (!open || !loadPage) return;
     const timer = window.setTimeout(
-      () => { void loadDirectory(query); },
+      () => {
+        void loadDirectory(query);
+      },
       query ? 180 : 0,
     );
     return () => window.clearTimeout(timer);
@@ -339,7 +400,9 @@ export function SearchableSelect({
   }, [open, rows.length]);
   useLayoutEffect(() => {
     if (!open || !activeOption || !list.current) return;
-    const option = root.current?.ownerDocument.getElementById(`${id}-option-${active}`);
+    const option = root.current?.ownerDocument.getElementById(
+      `${id}-option-${active}`,
+    );
     if (!option) return;
     // Scroll only the popup: scrollIntoView can move the surrounding form.
     const row = option.getBoundingClientRect(),
@@ -416,7 +479,15 @@ export function SearchableSelect({
     }
   };
   return (
-    <div className="a-reference-select" ref={root}>
+    <div
+      className="a-reference-select"
+      ref={root}
+      data-clear={
+        !required && (multipleValues ? multipleValues.length > 0 : value)
+          ? ""
+          : undefined
+      }
+    >
       {name ? (
         <input
           type="hidden"
@@ -479,7 +550,7 @@ export function SearchableSelect({
             dismiss();
           }}
         >
-          ×
+          <CloseIcon size={14} aria-hidden="true" />
         </button>
       ) : null}
       {open && typeof document !== "undefined"
@@ -602,17 +673,30 @@ export function SearchableSelect({
                 </p>
               ) : null}
               {directory.nextCursor && !directory.loading ? (
-                <button type="button" className="a-reference-select__clear-recent" onClick={() => void loadDirectory(query, directory.nextCursor)}>
+                <button
+                  type="button"
+                  className="a-reference-select__clear-recent"
+                  onClick={() =>
+                    void loadDirectory(query, directory.nextCursor)
+                  }
+                >
                   {messages.loadMore}
                 </button>
               ) : null}
-              {!rows.length && !status && !directory.loading && !directory.error ? (
+              {!rows.length &&
+              !status &&
+              !directory.loading &&
+              !directory.error ? (
                 <p className="a-reference-select__empty">
-                  {effectiveOptions.length ? messages.empty : messages.unavailable}
+                  {effectiveOptions.length
+                    ? messages.empty
+                    : messages.unavailable}
                 </p>
               ) : null}
               {directory.loading || directory.error ? (
-                <p className="a-reference-select__empty" role="status">{directory.loading ? messages.loading : messages.unavailable}</p>
+                <p className="a-reference-select__empty" role="status">
+                  {directory.loading ? messages.loading : messages.unavailable}
+                </p>
               ) : null}
               {onClearRecent && recent.length ? (
                 <button
@@ -627,8 +711,11 @@ export function SearchableSelect({
                 </button>
               ) : null}
             </div>,
-            root.current?.closest('[aria-modal="true"], dialog') ??
-              root.current?.ownerDocument.body ?? document.body,
+            root.current?.closest(
+              '[role="dialog"], [aria-modal="true"], dialog',
+            ) ??
+              root.current?.ownerDocument.body ??
+              document.body,
           )
         : null}
       <span

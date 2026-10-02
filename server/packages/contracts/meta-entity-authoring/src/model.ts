@@ -77,7 +77,7 @@ export interface MetaEntityGraph {
 
 export interface ContractTestCase {
   readonly key: string;
-  readonly assertion: "path_exists" | "path_equals";
+  readonly assertion: "path_exists" | "path_equals" | "learning_fixture_set";
   readonly path: string;
   readonly expected?: unknown;
 }

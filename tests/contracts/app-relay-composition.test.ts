@@ -131,3 +131,26 @@ for (const [plane, factory] of Object.entries({neon,mesh,studio})) {
     for(const headers of forwarded){assert.equal(headers.get("x-tenant-id"),"tenant");assert.equal(headers.get("x-plane"),plane);}
   });
 }
+
+for (const [plane, factory] of Object.entries({ neon, mesh, studio })) {
+  test(`${plane}: learning review stays Studio-only and retains mutation controls`, async () => {
+    const forwarded: string[] = [];
+    const handler = factory({
+      appOrigin: "https://app.test", runtimeApiUrl: "http://runtime.test",
+      session: { resolve: async () => ({ accessToken: "test", plane, realmKey: "athyper", tenantId: "tenant", principalId: "principal", authEpoch: 1, csrfToken: "csrf" }), refresh: async () => undefined, invalidate: async () => [] },
+      fetch: async url => { forwarded.push(String(url)); return Response.json({ items: [] }); },
+    });
+    const call = (suffix = "", method = "GET", headers: Record<string,string> = {}) => handler(new Request(`https://app.test/api/relay/studio/atlas-learning${suffix}`, { method, headers, ...(method === "POST" ? { body: "{}" } : {}) }), { params: Promise.resolve({ path: ["studio","atlas-learning",...suffix.split("/").filter(Boolean)] }) });
+    assert.equal((await call()).status, plane === "studio" ? 200 : 404);
+    for (const action of ["stage","reject","submit","approve","publish","resume"]) {
+      if (plane !== "studio") { assert.equal((await call(`/receipt/${action}`, "POST")).status,404); continue; }
+      const count = forwarded.length;
+      assert.notEqual((await call(`/receipt/${action}`, "POST")).status,200);
+      assert.equal(forwarded.length,count,"unprotected writes never reach the owner");
+      const response = await call(`/receipt/${action}`, "POST", { origin:"https://app.test", "x-csrf-token":"csrf", "idempotency-key":"evaluation-attempt-1", "content-type":"application/json" });
+      assert.equal(response.status,200);
+      assert.equal(forwarded.at(-1),`http://runtime.test/api/studio/atlas-learning/receipt/${action}`);
+    }
+    assert.equal((await call("/receipt/unknown", "POST")).status,404);
+  });
+}

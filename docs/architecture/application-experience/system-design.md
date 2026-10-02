@@ -198,6 +198,8 @@ Do not infer layout from fluctuating row counts or entity size. No section navig
 
 Entity lists follow the [Entity List Responsive Presentation Standard](entity-list-responsive-standard.md): width tiers from the list container, metadata-derived record cards on narrow widths, and the shared CSS design rules.
 
+Every front-end surface follows the [Application UI System Standard](ui-system-standard.md): one token, primitive and pattern layer, the `BREAKPOINT_SCALE` width scale, density everywhere, and the ratcheted `policy:ui-system` and page-type visual baseline that enforce them.
+
 ### 7.2 Page behavior
 
 - Breadcrumbs derive from registered routes and safe resolved identity, not raw URL segments. Ancestors link; current item is non-link current-page text. Intermediate ancestors collapse accessibly on narrow layouts.

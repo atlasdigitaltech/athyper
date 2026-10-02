@@ -1,5 +1,7 @@
 "use client";
+import { EntityReferencePreviewProvider } from "./reference-preview";
 import { EntityRecordFields } from "./record-fields";
+import { RegisteredEntitySection } from "./registered-renderers/entity-section-component";
 import { EntityRelatedSection } from "./related-entity-section";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
@@ -47,7 +49,14 @@ export function MetadataDetailWorkspace({
 }) {
   const intl = useEntityI18n();
   const descriptor = useMemo(() => localizeEntityLabels(sourceDescriptor, intl), [sourceDescriptor, intl]);
-  const presentation = descriptor.presentation!;
+  const presentation = useMemo(() => {
+    const published = descriptor.presentation!;
+    if (published.navigation || !published.sections.some(section => section.key === "overview")) return published;
+    return {...published,
+      sections: published.sections.map(section => section.key === "overview" && section.label === descriptor.entity.pluralLabel ? {...section,label:descriptor.entity.label} : section),
+      navigation: {mode: "scroll" as const, tabs: [{key:"overview",label:intl.message("detail.overview"),sectionKeys:published.sections.map(section=>section.key)}]},
+    };
+  }, [descriptor, intl]);
   useRecordFooterInformation({recordId: record.id, metadataRelease: descriptor.revision.release,
     ...(record.version === undefined ? {} : {recordRevision: record.version})});
   const sections = presentation.sections;
@@ -146,6 +155,7 @@ export function MetadataDetailWorkspace({
         + (root.current ? parseFloat(getComputedStyle(root.current).rowGap) || 0 : 0) + 1,
   });
   const header = resolveRecordHeader(presentation, record.values, {
+    choiceLabels: Object.fromEntries(descriptor.fields.map(field => [field.key, Object.fromEntries((field.options ?? []).map(option => [option.value, option.label]))])),
     entityLabel: descriptor.entity.label,
     fallbackTitle: descriptor.entity.label,
     labels: Object.fromEntries(
@@ -167,7 +177,7 @@ export function MetadataDetailWorkspace({
     ),
   });
   return (
-    <DetailCollaboration
+    <EntityReferencePreviewProvider sourceKey={`${entityCode}:${record.id}`}><DetailCollaboration
       entityCode={entityCode}
       recordId={record.id}
       recordTitle={header.title}
@@ -341,6 +351,7 @@ export function MetadataDetailWorkspace({
                       {section.relationshipKey ? <EntityRelatedSection ownerEntityCode={entityCode} ownerRecordId={record.id}
                         canCreate={descriptor.relationshipCapabilities?.[section.relationshipKey]?.create ?? false}
                         relationship={presentation.entityRelationships!.find(relation => relation.key === section.relationshipKey)!} /> :
+                        section.component ? <RegisteredEntitySection component={section.component} fields={section.fields} renderField={key => <EntityRecordFields descriptor={descriptor} record={record} fieldKeys={[key]} />} /> :
                         <EntityRecordFields descriptor={descriptor} record={record} fieldKeys={section.fields} />}
                     </Card>
                   </section>
@@ -357,6 +368,6 @@ export function MetadataDetailWorkspace({
           </div>
         </PageWorkspace>
       )}
-    />
+    /></EntityReferencePreviewProvider>
   );
 }

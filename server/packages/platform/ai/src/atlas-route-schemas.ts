@@ -35,6 +35,8 @@ export const atlasRequests: Readonly<Record<string, RouteContract["request"]>> =
           status: { enum: ["active", "archived", "all"] },
           limit: queryInteger,
           cursor: text,
+          // Searches conversation titles and message text.
+          q: { ...text, maxLength: 200 },
         },
       },
     },

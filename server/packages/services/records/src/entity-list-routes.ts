@@ -1,3 +1,4 @@
+import type { EntityListDescriptorV1 } from "@athyper/contract-platform-entity-list";
 import {
   isCanonicalEntityCode,
   isEntityRecordId,
@@ -23,6 +24,7 @@ import { parseRecordListParameters } from "./records-routes.js";
 
 export interface EntityListRouteOptions {
   readonly diagnostics?: boolean;
+  readonly viewCatalog?: (context: VerifiedRequestContext, descriptor: EntityListDescriptorV1, surface: string) => Promise<unknown>;
   readonly authenticate: RequestHandler;
   readonly readContext: (response: Response) => VerifiedRequestContext;
   readonly lists: EntityListService;
@@ -33,6 +35,30 @@ export function registerEntityListRoutes(
   application: Application,
   options: EntityListRouteOptions,
 ): void {
+  registerReadRoute(application, options, contracts.references, (request, context) => {
+    const invalid = () => new RecordServiceError(400, "INVALID_REFERENCE_QUERY", "Invalid reference lookup parameters");
+    const bounded = (value: unknown, max: number) => {
+      if (value === undefined) return undefined;
+      if (typeof value !== "string" || !value.trim() || value.length > max) throw invalid();
+      return value;
+    };
+    const raw = bounded(request.query["dependencies"], 2048);
+    let dependencies: Record<string, string> | undefined;
+    if (raw !== undefined) {
+      let parsed: unknown;
+      try { parsed = JSON.parse(raw); } catch { throw invalid(); }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)
+        || Object.keys(parsed).length > 7
+        || Object.entries(parsed).some(([key, value]) => !/^[a-z][a-z0-9_]{0,62}$/.test(key) || typeof value !== "string" || !value.length || value.length > 256)) throw invalid();
+      dependencies = parsed as Record<string, string>;
+    }
+    const field = bounded(request.params["fieldKey"], 63);
+    if (!field || !/^[a-z][a-z0-9_]{0,62}$/.test(field)) throw invalid();
+    return options.lists.referenceChoices(context, entityCodeParameter(request.params["entityCode"]), {
+      field, query: bounded(request.query["query"], 120), cursor: bounded(request.query["cursor"], 4096), value: bounded(request.query["value"], 256),
+      recordId: request.query["recordId"] === undefined ? undefined : recordId(request.query["recordId"]), dependencies,
+    });
+  });
   registerReadRoute(
     application,
     options,
@@ -51,15 +77,26 @@ export function registerEntityListRoutes(
     application,
     options,
     contracts.descriptor,
-    (request, context) =>
-      options.lists.descriptor(
+    async (request, context, timing) => {
+      const started = performance.now();
+      const descriptor = await options.lists.descriptor(
         context,
         entityCodeParameter(request.params["entityCode"]),
         parseEntityListScopeCoordinate(request.query),
         typeof request.query["filterChoiceField"] === "string"
-          ? request.query["filterChoiceField"]
-          : undefined,
-      ),
+          ? request.query["filterChoiceField"] : undefined,
+      );
+      timing("descriptor", performance.now() - started);
+      if (request.query["includeViews"] !== "true" || !options.viewCatalog ||
+          !descriptor.serverViews || descriptor.scope.status !== "ready") return descriptor;
+      const surface = request.query["surface"] ?? descriptor.surface.key;
+      if (typeof surface !== "string" || !/^[a-z][a-z0-9_.-]{0,126}$/.test(surface))
+        throw new TypeError("Invalid collection identifier");
+      const viewsStarted = performance.now();
+      const viewCatalog = await options.viewCatalog(context, descriptor, surface);
+      timing("views", performance.now() - viewsStarted);
+      return { ...descriptor, viewCatalog };
+    },
   );
   registerReadRoute(
     application,
@@ -70,6 +107,9 @@ export function registerEntityListRoutes(
         context,
         entityCodeParameter(request.params["entityCode"]),
         formMode(request.query["mode"]),
+        request.query["recordId"] === undefined
+          ? undefined
+          : recordId(request.query["recordId"]),
       ),
   );
   registerReadRoute(
@@ -227,6 +267,7 @@ const scopeProperties = {
   parentEntityCode: { type: "string", pattern: "^[a-z][a-z0-9_]{1,62}$" },
   parentRecordId: { type: "string", format: "uuid" },
   relationshipKey: { type: "string", pattern: "^[a-z][a-z0-9_]{1,62}$" },
+  parentDescriptorHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
   companyCodeIds: { type: "string", maxLength: 3699 },
   operatingOrganizationIds: { type: "string", maxLength: 3699 },
   partnerRole: { type: "string", enum: ["supplier", "customer"] },
@@ -241,6 +282,8 @@ const descriptorQuery = {
   additionalProperties: false,
   properties: {
     ...scopeProperties,
+    includeViews: { type: "string", enum: ["true", "false"] },
+    surface: { type: "string", pattern: "^[a-z][a-z0-9_.-]{0,126}$" },
     filterChoiceField: {
       type: "string",
       pattern: "^[a-z][a-z0-9_]*$",
@@ -292,6 +335,7 @@ const query = {
   },
 } as const;
 const contracts = {
+  references: defineRouteContract({method:"get",path:"/api/entity-runtime/:entityCode/references/:fieldKey",operationId:"entityRuntime.referenceChoices",summary:"Search a published Entity key reference under source and target authorization",tags:["Entity runtime"],authenticated:true,request:{query:{type:"object",additionalProperties:false,properties:{query:{type:"string",maxLength:120},cursor:{type:"string",maxLength:4096},value:{type:"string",maxLength:256},recordId:{type:"string",format:"uuid"},dependencies:{type:"string",maxLength:2048}}}},responses:{200:{description:"Authorized reference choices",body:{type:"object",required:["options"],additionalProperties:false,properties:{options:{type:"array",maxItems:25,items:{type:"object",additionalProperties:false,required:["value","label","recordId","entityCode"],properties:{value:{type:"string",maxLength:256},label:{type:"string",maxLength:500},recordId:{type:"string"},entityCode:{type:"string"}}}},nextCursor:{type:"string",maxLength:4096}}}},400:{description:"Invalid lookup"},401:{description:"Authentication required"},403:{description:"Reference forbidden"},409:{description:"Reference context required or ambiguous"}}}),
   application: defineRouteContract({
     method: "get",
     path: "/api/entity-runtime/:entityCode/application-descriptor",
@@ -337,7 +381,7 @@ const contracts = {
         type: "object",
         additionalProperties: false,
         required: ["mode"],
-        properties: { mode: { enum: ["create", "edit"] } },
+        properties: { mode: { enum: ["create", "edit"] }, recordId: { type: "string", format: "uuid" } },
       },
     },
     responses: {

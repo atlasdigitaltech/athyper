@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { build } from "esbuild";
 import { test, expect } from "@playwright/test";
 
+import { withSessionDefaults } from "./fixtures/session-stub";
+import { chooseOption } from "./fixtures/choice";
 const bundle = build({
   stdin: {
     loader: "tsx",
@@ -14,7 +16,7 @@ import {parseEntityRecordPresentation} from './packages/contracts/platform/entit
 const sections=window.fixture?.sections??[{key:'identity',label:'Identity',fields:['name']},{key:'contacts',label:'Contacts',fields:['contact']},{key:'audit',label:'Audit',fields:['created']}];
 const navigation=window.fixture?.navigation??(window.mode?{mode:window.mode,tabs:[{key:'details',label:'Details',sectionKeys:['identity','contacts']},{key:'history',label:'History',sectionKeys:['audit']}]}:undefined);
 const presentation=parseEntityRecordPresentation({schemaVersion:1,titleField:'name',sections,...(navigation?{navigation}:{}),...(window.fixture?.summaryView?{summaryView:window.fixture.summaryView}:{})});
-const descriptor={schemaVersion:1,pageKind:'detail',entity:{code:'fixture',label:'Fixture'},titleField:'name',revision:{release:'release'},fields:[...new Set(sections.flatMap(section=>section.fields))].map(key=>({key,label:key,kind:'string'})),actions:[],collaboration:window.fixture?.collaboration??[],presentation};
+const descriptor={schemaVersion:1,pageKind:'detail',entity:{code:'fixture',label:'Fixture',pluralLabel:'Fixtures'},titleField:'name',revision:{release:'release'},fields:[...new Set(sections.flatMap(section=>section.fields))].map(key=>({key,label:key,kind:'string'})),actions:[],collaboration:window.fixture?.collaboration??[],presentation};
 createRoot(document.getElementById('root')).render(<MetadataDetailWorkspace descriptor={descriptor} record={{id:'record',values:{name:'Example',contact:'Example contact',created:'Yesterday'}}} entityCode='fixture' preferenceKey='test.detail'/>);
 `,
   },
@@ -35,7 +37,7 @@ createRoot(document.getElementById('root')).render(<MetadataDetailWorkspace desc
           () => ({ path: "session", namespace: "fixture" }),
         );
         builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
-          contents: `const http={request:async(_operation,input)=>{window.summaryReads=(window.summaryReads??0)+1; input?.signal?.addEventListener('abort',()=>window.summaryAborts=(window.summaryAborts??0)+1); return {releaseId:'release',releaseHash:'sha256:'+'a'.repeat(64),revision:'record',cards:[{key:'identity',state:'ready',data:{name:'Authorized summary'}}]};}};export const useApiClient=()=>http;export const useSessionIdentity=()=>({scope:{tenantId:'tenant',principalId:'actor',authEpoch:1}});export const useToasts=()=>({push:()=>{}});export const useOptionalAppearanceProfile=()=>undefined;export const readBrowserCsrfToken=()=>undefined;`,
+          contents: withSessionDefaults(`const http={request:async(_operation,input)=>{window.summaryReads=(window.summaryReads??0)+1; input?.signal?.addEventListener('abort',()=>window.summaryAborts=(window.summaryAborts??0)+1); return {releaseId:'release',releaseHash:'sha256:'+'a'.repeat(64),revision:'record',cards:[{key:'identity',state:'ready',data:{name:'Authorized summary'}}]};}};export const useApiClient=()=>http;export const useSessionIdentity=()=>({scope:{tenantId:'tenant',principalId:'actor',authEpoch:1}});export const useToasts=()=>({push:()=>{}});export const useOptionalAppearanceProfile=()=>undefined;export const readBrowserCsrfToken=()=>undefined;`),
           loader: "js",
         }));
       },
@@ -80,22 +82,22 @@ test("provider Summary is lazy, supplementary, and aborts when disabled", async 
   await mount(page, undefined, "", {...country, summaryView: {schemaVersion:1,cards:[{key:"identity",label:"Identity summary",provider:"platform.record.identity.v1",rendererKey:"platform.record.identity.v1"}]}});
   expect(await page.evaluate(() => (window as any).summaryReads ?? 0)).toBe(0);
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("menuitemcheckbox", {name:"Summary view"}).click();
+  await page.getByRole("button", {name:"Summary view"}).click();
   await expect(page.getByLabel("Record summary", {exact:true})).toContainText("Authorized summary");
   await expect(page.locator('[data-detail-section="overview"]')).toBeVisible();
   expect(await page.evaluate(() => (window as any).summaryReads)).toBe(1);
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("menuitemcheckbox", {name:"Section view"}).click();
+  await page.getByRole("button", {name:"Section view"}).click();
   expect(await page.evaluate(() => (window as any).summaryReads)).toBe(1);
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("menuitemcheckbox", {name:"Summary view"}).click();
+  await page.getByRole("button", {name:"Summary view"}).click();
   await expect(page.getByLabel("Record summary", {exact:true})).toHaveCount(0);
   expect(await page.evaluate(() => (window as any).summaryAborts)).toBe(1);
 });
 test("an entity without authorized summary cards has no Summary setting", async ({page}) => {
   await mount(page, undefined, "", country);
   await page.locator('summary[aria-label="View settings"]').click();
-  await expect(page.getByRole("menuitemcheckbox", {name:"Summary view"})).toHaveCount(0);
+  await expect(page.getByRole("button", {name:"Summary view"})).toHaveCount(0);
 });
 test("record navigation fills the available shell width, including docking and mobile", async ({page}) => {
   await page.setViewportSize({width:1440,height:900});
@@ -194,6 +196,8 @@ test("navigation tab section menu supports keyboard, scrolling, dismissal and cr
   await page.getByRole("heading", {name: "Example", exact: true}).click();
   await expect(page.getByRole("menu", {name: "Details sections"})).toBeHidden();
   await page.getByRole("tab", {name: "History", exact: true}).click();
+  await expect(trigger).toHaveCount(0);
+  await page.getByRole("tab", {name: "Details", exact: true}).click();
   await trigger.click();
   await page.getByRole("menuitem", {name: "Contacts", exact: true}).click();
   await expect(page.getByRole("tab", {name: "Details", exact: true})).toHaveAttribute("aria-selected", "true");
@@ -236,7 +240,7 @@ test("explicit single Overview contains every Country section and keeps scrollin
   await expect(page.locator("[data-detail-section]")).toHaveCount(4);
   await expect(page.locator('[data-detail-section="phone"]')).toBeInViewport();
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("menuitemcheckbox", { name: "Section view" }).click();
+  await page.getByRole("button", { name: "Section view" }).click();
   const rail = page.getByRole("navigation", { name: "Record sections", exact: true });
   await rail.getByRole("button", { name: "Audit", exact: true }).click();
   await expect(page.locator('[data-detail-section="audit"]')).toBeFocused();
@@ -247,7 +251,7 @@ test("explicit single Overview contains every Country section and keeps scrollin
   expect(await page.evaluate(() => history.length)).toBe(entries);
   await expect(page.locator('[data-detail-section="audit"]')).toBeFocused();
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("menuitemcheckbox", { name: "Section view" }).click();
+  await page.getByRole("button", { name: "Section view" }).click();
   await expect(page.locator("[data-detail-section]")).toHaveCount(4);
   await expect(page.getByRole("combobox", { name: "Record sections" })).toHaveCount(0);
   await page.locator('summary[aria-label="Overview sections"]').click();
@@ -271,15 +275,13 @@ test("legacy selected sections do not silently become continuous", async ({
     page.getByRole("heading", { name: "Identity", exact: true }),
   ).toBeVisible();
   await expect(page.locator("[data-detail-section]")).toHaveCount(1);
-  await page
-    .getByRole("combobox", { name: "Record sections" })
-    .selectOption("contacts");
+  await chooseOption(page.getByRole("combobox", { name: "Record sections" }), "contacts");
   await expect(page.locator('[data-detail-section="contacts"]')).toBeFocused();
   await expect(page).toHaveURL(/section=contacts/);
   await page.goBack();
   await expect(page.locator('[data-detail-section="identity"]')).toBeVisible();
   await expect(
-    page.getByRole("menuitemcheckbox", { name: "Summary view" }),
+    page.getByRole("button", { name: "Summary view" }),
   ).toHaveCount(0);
 });
 test("metadata modes use manual keyboard activation without section-scroll feedback", async ({
@@ -317,7 +319,7 @@ test("deep links restore the final section and view settings do not change navig
     page.locator('[data-detail-section="contacts"]'),
   ).toBeInViewport();
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("menuitemcheckbox", { name: "Section view" }).click();
+  await page.getByRole("button", { name: "Section view" }).click();
   await expect(page.locator('[data-rail="true"]')).toBeVisible();
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(
@@ -331,4 +333,17 @@ test("deep links restore the final section and view settings do not change navig
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+});
+
+
+test("a declared Overview section receives shared navigation and a singular heading without redundant selectors", async ({page}) => {
+  await mount(page,undefined,"",{sections:[{key:"overview",label:"Fixtures",fields:["name"]},{key:"audit",label:"Audit",fields:["created"]}]});
+  await expect(page.getByRole("tab",{name:"Overview",exact:true})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Fixture",exact:true})).toBeVisible();
+  await expect(page.locator("[data-detail-section]")).toHaveCount(2);
+  await expect(page.getByRole("combobox",{name:"Record sections"})).toHaveCount(0);
+  await mount(page,undefined,"",{sections:[{key:"overview",label:"Fixtures",fields:["name"]}]});
+  await expect(page.getByRole("tab",{name:"Overview",exact:true})).toBeVisible();
+  await expect(page.locator('summary[aria-label="Overview sections"]')).toHaveCount(0);
+  await expect(page.getByRole("navigation",{name:"Record sections"})).toHaveCount(0);
 });

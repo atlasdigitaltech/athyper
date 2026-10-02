@@ -1,21 +1,60 @@
-.athyper-activity-page{width:min(72rem,100%);margin:0 auto;color:var(--a-foreground)}
-.athyper-activity-page>.athyper-content-header{padding-bottom:var(--a-space-4)}
+/* The page uses the wide management frame like entity lists: no centred column. */
+.athyper-activity-page{color:var(--a-foreground)}
 .athyper-activity-page__toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3);padding-block:var(--a-space-3);flex-wrap:wrap}
 .athyper-activity-page__toolbar-actions{display:flex;align-items:center;gap:var(--a-space-2);flex-wrap:wrap}
-.athyper-activity-page__group>h2{font-size:var(--a-font-size-xs);color:var(--a-muted-foreground);margin:var(--a-space-4) 0 var(--a-space-2)}
-.athyper-activity-feed{padding:0;margin:0;list-style:none;border:1px solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface-raised)}
-.athyper-activity-feed>li+li{border-top:1px solid var(--a-border)}
-.athyper-activity-feed>li:first-child{border-start-start-radius:inherit;border-start-end-radius:inherit}
 .athyper-activity-page__more{display:flex;justify-content:center;align-items:center;gap:var(--a-space-3);padding:var(--a-space-4);color:var(--a-muted-foreground)}
-.athyper-notification-controls{display:grid;gap:var(--a-space-3);margin-block:var(--a-space-3)}
-.athyper-notification-controls details{border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);padding:var(--a-space-4);background:var(--a-surface)}
-.athyper-notification-controls summary{cursor:pointer;font-weight:var(--a-font-weight-strong)}
-.athyper-notification-controls section{padding-block-start:var(--a-space-3)}
-.athyper-notification-controls fieldset{display:flex;flex-wrap:wrap;gap:var(--a-space-4);border:0;padding:var(--a-space-3) 0}
-.athyper-notification-controls label,.athyper-notification-controls__actions{display:flex;align-items:center;gap:var(--a-space-2)}
-.athyper-notification-controls__actions{flex-wrap:wrap;justify-content:space-between}
-.athyper-notification-controls ul{list-style:none;padding:0}.athyper-notification-controls li{display:grid;gap:var(--a-space-2);padding:var(--a-space-3);border-bottom:var(--a-border-width) solid var(--a-border);overflow-wrap:anywhere}
-.athyper-notification-controls p,.athyper-notification-controls li>span{color:var(--a-muted-foreground)}
+/* The list panel (matches .a-entity-list__panel): one surface from toolbar to last row. */
+.athyper-activity-page__panel{display:grid;min-inline-size:0;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface);box-shadow:var(--a-shadow-sm)}
+.athyper-activity-page__panel>.athyper-activity-query{margin:0;border-start-start-radius:inherit;border-start-end-radius:inherit;padding-block-end:var(--a-space-2);border-block-end:var(--a-border-width) solid var(--a-border)}
+.athyper-activity-page__panel>.athyper-activity-query>.a-management-toolbar{border:0;border-start-start-radius:inherit;border-start-end-radius:inherit;border-end-start-radius:0;border-end-end-radius:0;background:var(--a-surface)}
+.athyper-activity-page__panel .athyper-activity-query__summary{margin:0;padding-inline:var(--a-space-3)}
+.athyper-activity-page__panel .athyper-activity-query>.a-applied-filters{padding-inline:var(--a-space-3)}
+.athyper-activity-page__panel>.athyper-activity-page__toolbar{padding:var(--a-space-2) var(--a-space-3);border-block-end:var(--a-border-width) solid var(--a-border)}
+.athyper-activity-page__content{display:grid;min-inline-size:0}
+/* Notification preferences: a docked side panel with its own scroll. */
+/* Empty, loading and error states sit flat on the list panel's surface. */
+.athyper-activity-page__content .a-panel-empty-state.a-panel-empty-state{border:0;border-radius:0;background:transparent;box-shadow:none}
+.athyper-activity-page__list{display:grid;min-inline-size:0;align-content:start}
+/* Reading pane (80rem and wider): list | selected item, inside the one list panel. */
+.athyper-activity-page__content[data-reading-pane]{grid-template-columns:minmax(0,2fr) minmax(0,3fr);align-items:stretch}
+.athyper-activity-page__reading{min-inline-size:0;border-inline-start:var(--a-border-width) solid var(--a-border)}
+.athyper-activity-page__reading>.athyper-activity-detail{position:sticky;inset-block-start:var(--a-page-sticky-top,0px);max-block-size:calc(100dvh - var(--a-page-sticky-top,0px));overflow:auto}
+/* Row hover and selection backgrounds follow the panel's rounded bottom corners. */
+.athyper-activity-page__list>.athyper-activity-feed>.athyper-activity-center__group:last-child>ul>li:last-child .athyper-activity-row{border-end-start-radius:var(--a-radius-lg)}
+.athyper-activity-page__content:not([data-reading-pane]) .athyper-activity-page__list>.athyper-activity-feed>.athyper-activity-center__group:last-child>ul>li:last-child .athyper-activity-row{border-end-end-radius:var(--a-radius-lg)}
+/* Notification preferences: the shared side panel anatomy. One scrolling body, section
+   labels like the collection controls, one row per channel, footer pinned at the bottom. */
+.athyper-notification-preferences-panel{display:flex;flex-direction:column}
+.athyper-notification-controls{flex:1;min-block-size:0;display:flex;flex-direction:column}
+.athyper-notification-controls__body{flex:1;min-block-size:0;overflow:auto;display:grid;align-content:start;gap:var(--a-space-5);padding:var(--a-space-2) var(--a-density-panel-gutter) var(--a-density-panel-gutter)}
+.athyper-notification-controls section{display:grid;gap:var(--a-space-2)}
+.athyper-notification-controls h3{margin:0;color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-strong);letter-spacing:var(--a-tracking-wider);text-transform:uppercase}
+.athyper-notification-controls section>p{margin:0;color:var(--a-muted-foreground);font-size:var(--a-font-size-xs);line-height:var(--a-line-height-snug)}
+.athyper-notification-controls__device:not(:has(.athyper-browser-alerts)){display:none}
+.athyper-notification-controls .athyper-browser-alerts{display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3);padding-block:var(--a-space-2);border-block:var(--a-border-width) solid var(--a-border)}
+.athyper-notification-controls .athyper-browser-alerts>div{min-width:0;display:grid;gap:.15rem}
+.athyper-notification-controls .athyper-browser-alerts strong{font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-medium)}
+.athyper-notification-controls .athyper-browser-alerts span{color:var(--a-muted-foreground);font-size:var(--a-font-size-xs)}
+.athyper-notification-controls fieldset{margin:0;padding:0;border:0;border-block-start:var(--a-border-width) solid var(--a-border)}
+.athyper-notification-controls__channel{min-block-size:var(--a-control-height);display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3);padding-block:var(--a-space-1);border-block-end:var(--a-border-width) solid var(--a-border);font-size:var(--a-font-size-sm)}
+.athyper-notification-controls__channel>label{min-width:0;display:flex;align-items:center;gap:var(--a-space-3);cursor:pointer}
+.athyper-notification-controls__channel small{color:var(--a-muted-foreground);font-size:var(--a-font-size-xs);text-align:end}
+.athyper-notification-controls__channel small[data-tone=warning]{color:var(--a-warning-subtle-foreground);font-weight:var(--a-font-weight-medium)}
+.athyper-notification-controls__channel[data-unavailable]>label{cursor:default;color:var(--a-muted-foreground)}
+.athyper-notification-controls__error{display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3);color:var(--a-danger);font-size:var(--a-font-size-xs)}
+.athyper-notification-controls__footer{display:grid;gap:var(--a-space-2)}
+.athyper-notification-controls__footer>p{margin:0;font-size:var(--a-font-size-xs);color:var(--a-muted-foreground)}
+.athyper-notification-controls__footer>p[role=alert]{color:var(--a-danger)}
+.athyper-notification-controls__footer>div{display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-2)}
+.athyper-notification-controls__toolbar{display:flex;justify-content:flex-end}
+.athyper-notification-controls__deliveries{list-style:none;margin:0;padding:0;border-block-start:var(--a-border-width) solid var(--a-border)}
+.athyper-notification-controls__deliveries li{display:grid;gap:var(--a-space-1);justify-items:start;padding-block:var(--a-space-3);border-block-end:var(--a-border-width) solid var(--a-border)}
+.athyper-notification-controls__deliveries li>div{width:100%;display:flex;align-items:baseline;justify-content:space-between;gap:var(--a-space-3)}
+.athyper-notification-controls__deliveries strong{min-width:0;font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-medium)}
+.athyper-notification-controls__deliveries time{flex:none;color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs)}
+.athyper-notification-controls__deliveries li>p{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-2);color:var(--a-muted-foreground);font-size:var(--a-font-size-xs)}
+.athyper-notification-controls__delivery-error{color:var(--a-danger)!important}
+.athyper-notification-controls__pill{padding:.1rem .5rem;border-radius:var(--a-radius-full);background:var(--a-muted);color:var(--a-foreground);font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-medium)}
+.athyper-notification-controls__pill[data-tone=done]{background:var(--a-success-subtle);color:var(--a-success-subtle-foreground)}
+.athyper-notification-controls__pill[data-tone=attention]{background:var(--a-danger-subtle);color:var(--a-danger-subtle-foreground)}
 
-.athyper-activity-page__title { display:inline-flex; align-items:center; gap:var(--a-space-2); }
-.athyper-activity-page__title > svg { flex-shrink:0; }

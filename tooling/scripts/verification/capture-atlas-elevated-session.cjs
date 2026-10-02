@@ -9,7 +9,10 @@ const {
   rmSync,
 } = require("node:fs");
 const { parseArgs } = require("node:util");
-const { startCaptureStepUp } = require("./auth-capture-step-up.cjs");
+const {
+  startCaptureStepUp,
+  atlasAdmissionAllowed,
+} = require("./auth-capture-step-up.cjs");
 
 let capturePhase = "arguments";
 async function main() {
@@ -21,6 +24,8 @@ async function main() {
       "isolated-studio": { type: "boolean", default: false },
       "isolated-neon": { type: "boolean", default: false },
       fresh: { type: "boolean", default: false },
+      normal: { type: "boolean", default: false },
+      "session-only": { type: "boolean", default: false },
       output: { type: "string" },
     },
   });
@@ -46,6 +51,8 @@ async function main() {
   const output = resolve(values.output || target.statePath);
   const pending = `${output}.${process.pid}.pending`;
   const origin = target.origin;
+  const requireElevated = !values.normal;
+  const requireAtlas = requireElevated && !values["session-only"];
   capturePhase = "browser-launch";
   const browser = await playwright.chromium.launch({ headless: false });
   try {
@@ -58,7 +65,7 @@ async function main() {
     capturePhase = "page-create";
     const page = await context.newPage();
     console.log(
-      `Sign in as ${actor}; select ${tenant.label}. Then complete the MFA prompt. Do not close the browser until capture succeeds.`,
+      `Sign in as ${actor}; select ${tenant.label}.${requireElevated ? " Then complete the MFA prompt." : ""} Do not close the browser until capture succeeds.`,
     );
     capturePhase = "login-navigation";
     await page.goto(`${origin}/api/auth/login?returnTo=%2Fhome`);
@@ -80,29 +87,37 @@ async function main() {
                 "Wrong actor or tenant. Existing saved state was not replaced.",
               );
             }
-            if (!elevated || s.assurance === "elevated") return s;
+            if (!elevated) return s;
+            if (
+              s.assurance === "elevated" &&
+              (!requireAtlas || (await atlasAdmissionAllowed(context, origin)))
+            )
+              return s;
           }
         }
         await new Promise((r) => setTimeout(r, 1000));
       }
       throw Error(
-        "Timed out waiting for authenticated elevated assurance. Existing saved state was not replaced.",
+        "Timed out waiting for the required authenticated session assurance and admission. Existing saved state was not replaced.",
       );
     }
     capturePhase = "session-verification";
     const session = await waitSession(false);
-    if (session.assurance !== "elevated") {
+    if (
+      requireElevated && (session.assurance !== "elevated" ||
+      (requireAtlas && !(await atlasAdmissionAllowed(context, origin))))
+    ) {
       capturePhase = "interactive-step-up";
       await startCaptureStepUp(context, page, origin);
     }
-    capturePhase = "elevated-session-verification";
-    await waitSession(true);
+    capturePhase = "final-session-verification";
+    await waitSession(requireElevated);
     mkdirSync(dirname(output), { recursive: true });
     await context.storageState({ path: pending });
     chmodSync(pending, 0o600);
     renameSync(pending, output);
     console.log(
-      `Verified ${plane}/${actor}: ${tenant.label}, elevated. Saved session successfully.`,
+      `Verified ${plane}/${actor}: ${tenant.label}, ${requireAtlas ? "elevated with Atlas chat and read tools admitted" : requireElevated ? "elevated session" : "authenticated session"}. Saved session successfully.`,
     );
   } finally {
     rmSync(pending, { force: true });

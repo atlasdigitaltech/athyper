@@ -233,6 +233,8 @@ it("compiles notification releases through the scoped source without direct meta
             queries.push(text);
             if (text.includes("JOIN metadata.entity_release"))
               throw Error("Direct metadata access forbidden");
+            if (text.includes("to_regprocedure('publication.fn_notification_configuration_compilation_source(uuid)')"))
+              return { rows: [{ available: true }], rowCount: 1 };
             if (
               text.includes("fn_notification_configuration_compilation_source")
             )

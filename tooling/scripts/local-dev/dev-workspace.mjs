@@ -3,6 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { sourceIdentity } from "./evidence.mjs";
 import { processIdentity } from "./supervisor.mjs";
+import { configureDevPublicationWorkload } from "./publication-workload-config.mjs";
 import { configureDevProtectedValues } from "./protected-values-config.mjs";
 import {
   existsSync,
@@ -585,6 +586,7 @@ export async function main(args = process.argv.slice(2)) {
             previewRoot,
           );
       configureDevPublication(config, preset);
+      configureDevPublicationWorkload(config, preset);
       // Keep all six definitions so devsimple can later return to devfull
       // even after the legacy containers have been removed.
       privateJson(fullFile, config);
@@ -789,6 +791,7 @@ export async function main(args = process.argv.slice(2)) {
           );
         }
         configureDevPublication(config, "devfull");
+        configureDevPublicationWorkload(config, "devfull");
         const file = join(root, "container.compose.json");
         privateJson(file, config);
         mutate("compose", "-p", project, "-f", file, "config", "--quiet");

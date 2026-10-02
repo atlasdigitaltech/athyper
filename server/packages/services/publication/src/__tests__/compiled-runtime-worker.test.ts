@@ -141,7 +141,7 @@ it("worker uses scoped sources, signs real bytes, stores immutably and dispatche
 it("keeps compilation dependencies explicit and excludes product-specific implementations", () => {
   const content = readFileSync(new URL("../compilation/compiled-runtime.ts", import.meta.url), "utf8");
   const ast = ts.createSourceFile("compiled-runtime.ts", content, ts.ScriptTarget.Latest, true);
-  const allowed = new Set(["@athyper/server-contract-publication", "@athyper/server-platform-metadata", "../compiled-entity-artifact-compiler.js", "../shared/authorization/operation-projection.js"]);
+  const allowed = new Set(["@athyper/server-contract-publication", "@athyper/server-platform-metadata", "../compiled-entity-artifact-compiler.js", "../entity-ai-manifest-compiler.js", "../shared/authorization/operation-projection.js"]);
   function visit(node: ts.Node) {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) expect(allowed.has(node.moduleSpecifier.text)).toBe(true);
     if (ts.isCallExpression(node)) expect(node.expression.kind === ts.SyntaxKind.ImportKeyword || node.expression.getText(ast) === "require").toBe(false);

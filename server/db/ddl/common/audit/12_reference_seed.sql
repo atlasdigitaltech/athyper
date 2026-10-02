@@ -31,7 +31,22 @@ INSERT INTO master.audit_event_contract (
     ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],
     'tenant',false,'metadata',16384,1,
     '{"owner":"master-data","purpose":"protected_intake_capture","protected_values":"omitted"}'::jsonb,'active'
-) ON CONFLICT(code) DO NOTHING;
+)
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);
 DO $protected_capture_contract$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM master.audit_event_contract
@@ -54,7 +69,22 @@ INSERT INTO master.audit_event_contract (
  ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],
  'tenant',false,'metadata',4096,1,
  '{"owner":"master-data","sensitive":true,"commandPurposeRequired":true,"rawValuesExcluded":true}'::jsonb,'active'
-) ON CONFLICT(code) DO NOTHING;
+)
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);
 DO $tax_reveal_contract$
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM master.audit_event_contract WHERE code='business_partner_tax_reveal'
@@ -81,7 +111,21 @@ INSERT INTO master.audit_event_contract (
  ('business_partner_bank_provisional_resolution','^business_partner[.]bank_provisional[.]resolved$',34,
  ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],
  'tenant',false,'metadata',4096,1,'{"owner":"master-data","makerCheckerOnDecision":true,"accountUnchanged":true}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);
 DO $bank_contracts$
 BEGIN
  IF (SELECT count(*) FROM master.audit_event_contract WHERE
@@ -534,7 +578,21 @@ INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed
 VALUES('document_artifact_lifecycle','^documents\.(artifact\.rendered|render\.replayed|download_url\.created|malware\.detected|malware\.scan_failed)$',10,
  ARRAY['execute']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
  'tenant',false,'metadata',65536,1,'{"owner":"documents","document_content":"omitted"}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);
 -- End P4 document audit contracts.
 
 -- P7 self-service channel consent. Destination is represented only by its hash.
@@ -543,28 +601,98 @@ INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed
 VALUES('notification_channel_consent','^governance\.channel_consent\.(opted_in|opted_out)$',10,
  ARRAY['execute']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
  'tenant',false,'metadata',16384,1,'{"owner":"notifications","destination":"hash_only"}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);
 -- End P7 consent audit contract.
 
 -- DEV publication workload audit events retain explicit automation attribution.
 INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
 VALUES('metadata_development_publication','^metadata\.development_publication\.(started|submitted|approved|dispatched)$',22,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['service_account']::audit.actor_type_d[],'tenant',false,'metadata',65536,1,'{"owner":"publication","purpose":"development_workload_maker_checker_publication"}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);
 
 -- Reference publication evidence is attributed to the authenticated workload.
 INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
 VALUES('metadata_reference_publication','^metadata\.reference\.publication\.(qualified|review_authorized|dispatched)$',22,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['service_account']::audit.actor_type_d[],'tenant',false,'metadata',65536,1,'{"owner":"publication","purpose":"reference_workload_publication_evidence"}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);
 
 -- Separate workload runtime authority; human review contracts are unchanged.
 -- Machine-policy enrollment is a distinct, human-attributed authority action.
 INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
 VALUES('metadata_publication_policy','^metadata\.publication\.policy\.(proposed|activated)$',24,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['user']::audit.actor_type_d[],'tenant',false,'metadata',16384,1,'{"owner":"publication","purpose":"independent_machine_policy_enrollment"}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);
 
 INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
 VALUES('metadata_development_runtime','^metadata\.development_runtime\.(qualified|activation_authorized)$',23,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['service_account']::audit.actor_type_d[],'tenant',false,'metadata',65536,1,'{"owner":"publication","purpose":"devfull_workload_runtime_approval"}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);
 
 -- Collaboration writes produce tenant-scoped, metadata-only audit evidence.
 -- The transaction writer normalizes their created/edited/deleted actions to
@@ -588,4 +716,19 @@ ON CONFLICT(code) DO UPDATE SET event_code_pattern=EXCLUDED.event_code_pattern,p
 WHERE (master.audit_event_contract.event_code_pattern,master.audit_event_contract.priority,master.audit_event_contract.allowed_operations,master.audit_event_contract.default_severity,master.audit_event_contract.allowed_actor_types,master.audit_event_contract.allowed_scope,master.audit_event_contract.reason_required,master.audit_event_contract.capture_mode,master.audit_event_contract.max_payload_bytes,master.audit_event_contract.schema_version,master.audit_event_contract.metadata,master.audit_event_contract.status) IS DISTINCT FROM (EXCLUDED.event_code_pattern,EXCLUDED.priority,EXCLUDED.allowed_operations,EXCLUDED.default_severity,EXCLUDED.allowed_actor_types,EXCLUDED.allowed_scope,EXCLUDED.reason_required,EXCLUDED.capture_mode,EXCLUDED.max_payload_bytes,EXCLUDED.schema_version,EXCLUDED.metadata,EXCLUDED.status);
 
 INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
-VALUES('business_partner_identifier_reveal','^business_partner[.]identifier[.]revealed$',10,ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],'tenant',false,'metadata',4096,1,'{"owner":"master-data","sensitive":true,"commandPurposeRequired":true,"rawValuesExcluded":true}'::jsonb,'active') ON CONFLICT(code) DO NOTHING;
+VALUES('business_partner_identifier_reveal','^business_partner[.]identifier[.]revealed$',10,ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],'tenant',false,'metadata',4096,1,'{"owner":"master-data","sensitive":true,"commandPurposeRequired":true,"rawValuesExcluded":true}'::jsonb,'active')
+ON CONFLICT (code) DO UPDATE SET
+    event_code_pattern = EXCLUDED.event_code_pattern,
+    priority = EXCLUDED.priority,
+    allowed_operations = EXCLUDED.allowed_operations,
+    default_severity = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope = EXCLUDED.allowed_scope,
+    reason_required = EXCLUDED.reason_required,
+    capture_mode = EXCLUDED.capture_mode,
+    max_payload_bytes = EXCLUDED.max_payload_bytes,
+    schema_version = EXCLUDED.schema_version,
+    metadata = EXCLUDED.metadata,
+    status = EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status)
+ IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status);

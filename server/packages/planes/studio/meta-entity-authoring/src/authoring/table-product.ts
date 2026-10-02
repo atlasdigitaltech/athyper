@@ -5,7 +5,8 @@ import type {
 import { isCanonicalEntityCode } from "@athyper/contract-platform-entity-runtime";
 import { parseProductLocalization } from "./product-localization.js";
 import { parseEntityRuntimeLocalizedText } from "@athyper/contract-platform-entity-runtime";
-import { compileGraph } from "../deterministic.js";
+import { compileGraph, sha256 } from "../deterministic.js";
+import type { EntityAiDescriptorV1 } from "@athyper/server-contract-metadata";
 
 /** Standard graph authoring for platform-maintained definitions of tenant records.
  * Storage registration, executable handlers and grants require independent qualification. */
@@ -13,10 +14,13 @@ export interface TableEntityProduct {
   readonly schema: "athyper.table-entity-product/1";
   readonly moduleCode: string;
   readonly planes: readonly AuthoringPlane[];
-  readonly definition: MetaEntityGraph;
+  readonly definition: MetaEntityGraph & { readonly ai?: EntityAiDescriptorV1 };
 }
 
-export function parseTableEntityProduct(value: unknown, localization?: unknown): TableEntityProduct {
+export function parseTableEntityProduct(
+  value: unknown,
+  localization?: unknown,
+): TableEntityProduct {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw Error("TABLE_PRODUCT_OBJECT_REQUIRED");
   const source = value as Record<string, unknown>;
@@ -27,17 +31,25 @@ export function parseTableEntityProduct(value: unknown, localization?: unknown):
     typeof source.moduleCode !== "string" ||
     !/^[a-z][a-z0-9_]{1,62}$/.test(source.moduleCode) ||
     !Array.isArray(source.planes) ||
-    !source.planes.includes("studio") ||
+    source.planes.length === 0 ||
     new Set(source.planes).size !== source.planes.length ||
     source.planes.some((plane) => !["studio", "neon", "mesh"].includes(plane))
   )
     throw Error("TABLE_PRODUCT_INVALID");
-  const labels = localization === undefined ? undefined : parseProductLocalization(localization);
+  const labels =
+    localization === undefined
+      ? undefined
+      : parseProductLocalization(localization);
   const hydrate = (value: unknown): unknown => {
     if (Array.isArray(value)) return value.map(hydrate);
     if (!value || typeof value !== "object") return value;
-    if ("labelKey" in value && "defaultText" in value) return labels ? labels.localize(parseEntityRuntimeLocalizedText(value)) : value;
-    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, hydrate(child)]));
+    if ("labelKey" in value && "defaultText" in value)
+      return labels
+        ? labels.localize(parseEntityRuntimeLocalizedText(value))
+        : value;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, hydrate(child)]),
+    );
   };
   const graph = hydrate(structuredClone(source.definition)) as MetaEntityGraph;
   if (
@@ -50,7 +62,7 @@ export function parseTableEntityProduct(value: unknown, localization?: unknown):
     throw Error("TABLE_PRODUCT_IDENTITY_INVALID");
   const profile = graph.runtimeProfiles[0]!;
   if (
-    profile.storagePlane !== "studio" ||
+    !source.planes.includes(profile.storagePlane) ||
     profile.backingKind !== "table" ||
     profile.apiExposure !== "api" ||
     profile.readMode !== "generic" ||
@@ -122,10 +134,26 @@ export function parseTableEntityProduct(value: unknown, localization?: unknown):
 
 /** Change explicit plane coordinates only; never infer additional targets. */
 export function targetTableEntityGraph(
-  source: MetaEntityGraph,
+  source: TableEntityProduct["definition"],
   plane: AuthoringPlane,
 ): MetaEntityGraph {
-  const graph = structuredClone(source);
+  // definition.ai owns product authoring. Surfaces carry only its compiler
+  // projection; conflicting independently edited projections fail closed.
+  const { ai, ...graph } = structuredClone(source);
+  if (ai) {
+    const details = graph.surfaces?.filter(surface => surface.surfaceKind === "detail" && surface.status !== "deprecated") ?? [];
+    if (details.length !== 1) throw Error("TABLE_PRODUCT_AI_DETAIL_REQUIRED");
+    if (graph.surfaces?.some(surface => surface.layoutConfig?.ai !== undefined &&
+      (surface.id !== details[0]!.id || sha256(surface.layoutConfig.ai) !== sha256(ai))))
+      throw Error("TABLE_PRODUCT_AI_AUTHORITY_CONFLICT");
+    graph.surfaces = graph.surfaces!.map(surface => surface.id === details[0]!.id
+      ? { ...surface, layoutConfig: { ...surface.layoutConfig, ai } } : surface);
+  }
+  const sourcePlane = source.runtimeProfiles?.[0]?.storagePlane;
+  if (!sourcePlane || !["studio", "neon", "mesh"].includes(sourcePlane))
+    throw Error("TABLE_PRODUCT_STORAGE_PLANE_REQUIRED");
+  const permission = (code: string) =>
+    code.startsWith(`${sourcePlane}.`) ? `${plane}.${code.slice(sourcePlane.length + 1)}` : code;
   return {
     ...graph,
     runtimeProfiles: graph.runtimeProfiles?.map((profile) => ({
@@ -135,6 +163,7 @@ export function targetTableEntityGraph(
     operationPermissions: graph.operationPermissions?.map((binding) => ({
       ...binding,
       targetPlane: plane,
+      permissionCode: permission(binding.permissionCode),
     })),
     operationScopeBindings: graph.operationScopeBindings?.map((binding) => ({
       ...binding,
@@ -147,14 +176,25 @@ export function targetTableEntityGraph(
         !authorization ||
         typeof authorization !== "object" ||
         Array.isArray(authorization) ||
-        Reflect.get(authorization, "planeKey") !== "studio"
+        Reflect.get(authorization, "planeKey") !== sourcePlane
       )
         throw Error("TABLE_PRODUCT_AUTHORIZATION_SOURCE_INVALID");
       return {
         ...surface,
         layoutConfig: {
           ...surface.layoutConfig,
-          authorization: { ...authorization, planeKey: plane },
+          authorization: {
+            ...authorization,
+            planeKey: plane,
+            operations: (
+              Reflect.get(authorization, "operations") as {
+                permissionCode: string;
+              }[]
+            ).map((operation) => ({
+              ...operation,
+              permissionCode: permission(operation.permissionCode),
+            })),
+          },
         },
       };
     }),

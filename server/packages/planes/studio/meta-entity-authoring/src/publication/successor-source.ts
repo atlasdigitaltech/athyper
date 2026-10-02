@@ -2,7 +2,7 @@ import { sql, type Kysely } from "kysely";
 import { parseDevEntitySuccessorPolicy, type DevEntitySuccessorPolicy } from "@athyper/server-contract-publication";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import { compileGraph } from "../deterministic.js";
-import { compileSystemReferenceTarget } from "../compilation/target-compiler.js";
+import { compileSystemEntityTarget } from "../compilation/entity-target-compiler.js";
 
 /** Enrollment-time source check, not release authority or target qualification.
  * The scoped reader checks current source/predecessor correspondence and returns
@@ -22,5 +22,5 @@ export async function assertEntitySuccessorSource(
   if (artifact.contractHash !== policy.contractHash || artifact.descriptorHash !== policy.descriptorHash)
     throw Error("ENTITY_SUCCESSOR_SOURCE_PIN_CHANGED");
   // Metadata target admission is not storage/IAM/capability/head qualification.
-  for (const target of policy.targets) compileSystemReferenceTarget(graph, target.plane);
+  for (const target of policy.targets) compileSystemEntityTarget(graph, target.plane);
 }

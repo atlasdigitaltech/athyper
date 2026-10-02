@@ -1,5 +1,5 @@
 "use client";
-import { useId, useRef, type HTMLAttributes, type ReactNode, type Ref, type MouseEventHandler } from "react";
+import React, { useId, useRef, type HTMLAttributes, type ReactNode, type Ref, type MouseEventHandler } from "react";
 
 import { Tooltip } from "../tooltip";
 
@@ -18,12 +18,14 @@ export interface PanelHeaderAction {
 export interface PanelHeaderCapabilities {
   readonly new?: PanelHeaderAction;
   readonly history?: PanelHeaderAction;
+  /** Shows or hides a context side panel (for example Atlas full view). */
+  readonly context?: PanelHeaderAction;
   readonly pin?: PanelHeaderAction;
   readonly fullView?: PanelHeaderAction;
   readonly close?: PanelHeaderAction;
 }
 export function PanelHeaderActions({ capabilities }: { capabilities: PanelHeaderCapabilities }) {
-  return <>{(["new", "history", "pin", "fullView", "close"] as const).map(key => {
+  return <>{(["new", "history", "context", "pin", "fullView", "close"] as const).map(key => {
     const action = capabilities[key];
     if (!action) return null;
     const props = { "aria-label": action.label, "aria-pressed": action.pressed,

@@ -33,6 +33,7 @@ export interface EntityServiceOptions {
     "history" | "aggregateExecutor" | "mutationPolicies" | "collectionScopes"
   >;
   readonly listMetadata: MetadataReader;
+  readonly admitDescriptor: Parameters<typeof createEntityActivityProvider>[0]["admitDescriptor"];
   readonly reader: PinnedCompiledEntityReader;
   readonly fallbackCollectionScopes?: RecordCollectionScopeResolver;
   readonly presentation?: Parameters<
@@ -140,6 +141,7 @@ export function createEntityServices(options: EntityServiceOptions) {
   };
   // Activity reads use the same pinned descriptor and authorized query path.
   const activityProvider = createEntityActivityProvider({
+    admitDescriptor: options.admitDescriptor,
     collectionProviders: new Map(
       [...activityRegistrations].flatMap(([key, r]) =>
         r.collections ? [[key, r.collections] as const] : [],
@@ -181,6 +183,7 @@ export function createEntityServices(options: EntityServiceOptions) {
   });
   const mutations = createRecordMutationService<RecordTransaction>({
     ...common,
+    referenceChoices: lists.referenceChoices,
     collectionScopes,
     mutationPolicies: options.mutationPolicies,
     history: recordHistory,

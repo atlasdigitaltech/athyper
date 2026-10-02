@@ -1,3 +1,4 @@
+import { parsePublishedLearningFixtureSet } from "./published-learning-fixture-schema.js";
 import { parseRecordMutationPolicy, parseRecordPredicates } from "@athyper/server-contract-metadata";
 import { parseRecordOwnerAccess } from "@athyper/server-contract-metadata";
 import {collectionPublicationFromGraph} from "@athyper/server-contract-publication";
@@ -12,6 +13,7 @@ import {
 } from "./entity-authorization.js";
 import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
 import {
+  parseEntityFormPresentation,
   parseEntityRecordPresentation,
   validateRecordPresentationReferences,
   validateRelatedPresentationOwner,
@@ -490,6 +492,15 @@ export function runContractTests(graph: MetaEntityGraph): ContractTestReport {
   const results = [...(graph.tests ?? [])]
     .sort((a, b) => compareText(a.key, b.key))
     .map((test) => {
+      if (test.assertion === "learning_fixture_set") {
+        try {
+          if (test.path !== "entity") throw new TypeError("Fixture declaration path must be entity");
+          parsePublishedLearningFixtureSet(test.expected, String(graph.entity.entityCode));
+          return { key: test.key, passed: true };
+        } catch {
+          return { key: test.key, passed: false, message: "Invalid learning fixture declaration" };
+        }
+      }
       const actual = readPath(graph, test.path);
       const passed =
         test.assertion === "path_exists"
@@ -544,6 +555,9 @@ export function compileGraph(
       recordPresentation.related,
       graph.entity.entityCode,
     );
+  const formBindings = (graph.surfaces ?? []).filter(surface => surface.status !== "deprecated" && surface.layoutConfig?.formPresentation !== undefined);
+  if (formBindings.length > 1) throw TypeError("Ambiguous form presentation");
+  const formPresentation = formBindings[0] ? parseEntityFormPresentation(formBindings[0].layoutConfig!.formPresentation, graph.fields.map(field => field.fieldKey)) : undefined;
   const directoryRules = (graph.surfaces ?? []).flatMap((surface) =>
     surface.layoutConfig?.["directoryScope"] === undefined
       ? []
@@ -573,6 +587,7 @@ export function compileGraph(
     ...(collectionRelationship ? { collectionRelationship } : {}),
     ...(collectionCompilation ? { collectionCompilation } : {}),
     ...(recordPresentation ? { recordPresentation } : {}),
+    ...(formPresentation ? { formPresentation } : {}),
     ...(ownerAccess ? { ownerAccess } : {}),
     ...(predicateSets[0]?{recordPredicates:predicateSets[0]}:{}),
     ...(mutationPolicies[0]?{mutationPolicy:mutationPolicies[0]}:{}),

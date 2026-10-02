@@ -5,12 +5,56 @@ import type { ReferenceFirstPublicationPorts } from "@athyper/server-plane-studi
 
 type Target = Parameters<ReferenceFirstPublicationPorts["qualify"]>[0];
 type Database = Kysely<Record<string, never>>;
+/** Tenant-wide reads require explicit published tenant authorization. This does
+ * not admit self-service writes or substitute for owner resolution. */
+function tenantReadOnly(target: Target): boolean {
+  const profile = target.graph.runtimeProfiles?.[0];
+  const authorization = target.artifact.descriptor.authorization as
+    | {
+        planeKey?: string;
+        ownership?: string;
+        directory?: { population?: string };
+        operations?: { key?: string; effect?: string; scope?: string }[];
+      }
+    | undefined;
+  return (
+    profile?.writeMode === "none" &&
+    target.graph.fields.every((field) => field.writeMode === "read_only") &&
+    target.graph.operations.length > 0 &&
+    target.graph.operations.every(
+      (operation) =>
+        ["list", "read"].includes(operation.operationKey) &&
+        operation.operationKind === "read",
+    ) &&
+    authorization?.planeKey === target.targetPlane &&
+    authorization.ownership === "tenant.record.v1" &&
+    authorization.directory?.population === "tenant" &&
+    Array.isArray(authorization.operations) &&
+    authorization.operations.length === target.graph.operations.length &&
+    authorization.operations.every(
+      (operation) =>
+        operation.effect === "read" &&
+        operation.scope === "tenant.record.v1" &&
+        target.graph.operations.some(
+          (binding) => binding.operationKey === operation.key,
+        ),
+    ) &&
+    (target.graph.operationScopeBindings?.length ?? 0) > 0 &&
+    target.graph.operationScopeBindings!.every(
+      (binding) =>
+        binding.scopeKind === "tenant" &&
+        binding.missingValueBehavior === "deny",
+    )
+  );
+}
 /** Reads actual target storage and the published IAM catalog. Never grants access,
  * inserts projections, or treats successful compilation as capability readiness. */
 export async function qualifyReferencePublicationTarget(
   target: Target,
   dependencies: {
     mutationPolicies?: ReadonlySet<string>;
+    sourceAuthorities?: ReadonlySet<string>;
+    sourceAuthorityQualifiers?: ReadonlyMap<string,(plane:Target["targetPlane"],database:Database)=>Promise<boolean>>;
     databases: Readonly<Partial<Record<Target["targetPlane"], Database>>>;
     runtime: { qualify(profile: unknown, bindings: unknown): void };
     qualifyCapabilities: ReferenceFirstPublicationPorts["qualify"];
@@ -24,15 +68,23 @@ export async function qualifyReferencePublicationTarget(
   else if (
     graph.entity.ownershipModel !== "system" ||
     !["business", "configuration"].includes(graph.entity.entityClass ?? "") ||
-    !artifact.descriptor.ownerAccess
+    (!artifact.descriptor.ownerAccess && !tenantReadOnly(target))
   )
     throw Error("PUBLICATION_TABLE_ENTITY_PROFILE_INVALID");
   const policy = artifact.descriptor.mutationPolicy as
     { handlerKey: string } | undefined;
   if (policy && !dependencies.mutationPolicies?.has(policy.handlerKey))
     throw Error("PUBLICATION_MUTATION_POLICY_UNAVAILABLE");
+  const sourceAuthority = (
+    artifact.descriptor.ownerAccess as { sourceAuthority?: string } | undefined
+  )?.sourceAuthority;
+  if (sourceAuthority && (!dependencies.sourceAuthorities?.has(sourceAuthority)
+      || !dependencies.sourceAuthorityQualifiers?.has(sourceAuthority)))
+    throw Error("PUBLICATION_SOURCE_AUTHORITY_UNAVAILABLE");
   const db = dependencies.databases[targetPlane];
   if (!db) throw Error("PUBLICATION_TARGET_DATABASE_UNAVAILABLE");
+  if (sourceAuthority && !await dependencies.sourceAuthorityQualifiers!.get(sourceAuthority)!(targetPlane,db))
+    throw Error("PUBLICATION_SOURCE_AUTHORITY_UNAVAILABLE");
   const profiles = graph.runtimeProfiles ?? [];
   if (profiles.length !== 1)
     throw Error("PUBLICATION_STORAGE_PROFILE_AMBIGUOUS");
@@ -73,67 +125,69 @@ export async function qualifyReferencePublicationTarget(
       if (tableProduct) {
         if (!profile.tenantFieldKey || !names.has(profile.tenantFieldKey))
           throw Error("PUBLICATION_TENANT_STORAGE_REQUIRED");
-        const access = artifact.descriptor.ownerAccess as {
-          administerPermission: string;
-        };
-        const admin =
-          await sql`SELECT p.id FROM authz.permission p JOIN authz.permission_scope_kind s ON s.permission_id=p.id
+        if (artifact.descriptor.ownerAccess) {
+          const access = artifact.descriptor.ownerAccess as {
+            administerPermission: string;
+          };
+          const admin =
+            await sql`SELECT p.id FROM authz.permission p JOIN authz.permission_scope_kind s ON s.permission_id=p.id
         WHERE p.canonical_code=${access.administerPermission} AND p.status='published' AND s.status='active' AND s.scope_kind='tenant'`.execute(
+              tx,
+            );
+          if (!admin.rows.length)
+            throw Error("PUBLICATION_OWNER_PERMISSION_UNAVAILABLE");
+          const policies = await sql<{
+            policyname: string;
+          }>`SELECT policyname FROM pg_policies WHERE schemaname=${profile.storageSchema} AND tablename=${profile.storageObject}`.execute(
             tx,
           );
-        if (!admin.rows.length)
-          throw Error("PUBLICATION_OWNER_PERMISSION_UNAVAILABLE");
-        const policies = await sql<{
-          policyname: string;
-        }>`SELECT policyname FROM pg_policies WHERE schemaname=${profile.storageSchema} AND tablename=${profile.storageObject}`.execute(
-          tx,
-        );
-        const requiredPolicies = ["entity_owner_admin_read"];
-        if (
-          graph.operations.some(
-            (operation) => operation.operationKey === "create",
+          const requiredPolicies = ["entity_owner_admin_read"];
+          if (
+            graph.operations.some(
+              (operation) => operation.operationKey === "create",
+            )
           )
-        )
-          requiredPolicies.push("entity_owner_admin_insert");
-        if (
-          graph.operations.some(
-            (operation) => operation.operationKey === "patch",
+            requiredPolicies.push("entity_owner_admin_insert");
+          if (
+            graph.operations.some(
+              (operation) => operation.operationKey === "patch",
+            )
           )
-        )
-          requiredPolicies.push("entity_owner_admin_update");
-        if (
-          requiredPolicies.some(
-            (name) =>
-              !policies.rows.some((policy) => policy.policyname === name),
+            requiredPolicies.push("entity_owner_admin_update");
+          if (
+            requiredPolicies.some(
+              (name) =>
+                !policies.rows.some((policy) => policy.policyname === name),
+            )
           )
-        )
-          throw Error("PUBLICATION_OWNER_STORAGE_POLICY_UNAVAILABLE");
-        const writes = graph.operations.filter((operation) =>
-          ["create", "patch"].includes(operation.operationKey),
-        );
-        for (const operation of writes) {
-          const privilege =
-            operation.operationKey === "create" ? "INSERT" : "UPDATE";
-          const result = await sql<{
-            allowed: boolean;
-          }>`SELECT has_table_privilege(current_user,${`${profile.storageSchema}.${profile.storageObject}`},${privilege}) AS allowed`.execute(
-            tx,
+            throw Error("PUBLICATION_OWNER_STORAGE_POLICY_UNAVAILABLE");
+          const writes = graph.operations.filter((operation) =>
+            ["create", "patch"].includes(operation.operationKey),
           );
-          if (!result.rows[0]?.allowed)
-            throw Error("PUBLICATION_STORAGE_WRITE_PRIVILEGE_REQUIRED");
-        }
-        if (writes.length) {
-          const version = await sql`SELECT trigger.oid FROM pg_trigger trigger
+          for (const operation of writes) {
+            const privilege =
+              operation.operationKey === "create" ? "INSERT" : "UPDATE";
+            const result = await sql<{
+              allowed: boolean;
+            }>`SELECT has_table_privilege(current_user,${`${profile.storageSchema}.${profile.storageObject}`},${privilege}) AS allowed`.execute(
+              tx,
+            );
+            if (!result.rows[0]?.allowed)
+              throw Error("PUBLICATION_STORAGE_WRITE_PRIVILEGE_REQUIRED");
+          }
+          if (writes.length) {
+            const version = await sql`SELECT trigger.oid FROM pg_trigger trigger
           JOIN pg_class table_ ON table_.oid=trigger.tgrelid JOIN pg_namespace namespace ON namespace.oid=table_.relnamespace
           WHERE namespace.nspname=${profile.storageSchema} AND table_.relname=${profile.storageObject}
             AND trigger.tgname='trg_entity_record_version' AND trigger.tgenabled IN ('O','A')`.execute(
-            tx,
-          );
-          if (!version.rows.length)
-            throw Error("PUBLICATION_STORAGE_VERSION_TRIGGER_REQUIRED");
+              tx,
+            );
+            if (!version.rows.length)
+              throw Error("PUBLICATION_STORAGE_VERSION_TRIGGER_REQUIRED");
+          }
         }
       }
-      if (tableProduct) await qualifyPublishedRelationships(graph, tx);
+      await qualifyPublishedRelationships(graph, tx);
       // Compile the actual read against target credentials; catalog visibility alone
       // cannot establish SELECT privilege. No business rows are fetched.
       await sql`SELECT ${sql.join(fields.map((f) => sql.ref(f.storagePath!)))} FROM ${sql.table(`${profile.storageSchema}.${profile.storageObject}`)} LIMIT 0`.execute(

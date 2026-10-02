@@ -19,13 +19,15 @@ test("Atlas shared composer keeps prompt editing, library and submission control
   await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body><div id="root"></div></body></html>`);
   await page.evaluate(bundle);
   const frame = page.locator(".athyper-home__composer.a-composer-frame");
-  await expect(frame.locator(".a-composer-frame__header")).toContainText("Ask Atlas");
+  // No title row: the placeholder names the composer, as in comments.
+  await expect(frame.locator(".a-composer-frame__header")).toHaveCount(0);
   const editor = page.getByRole("textbox", {name:"Ask Atlas to search, create, or take action"});
   const send = page.getByRole("button", {name:"Send message"});
   await expect(send).toBeDisabled();
   await editor.fill("Help me review this record");
   await expect(send).toBeEnabled();
-  await expect(frame.locator(".a-composer-frame__footer")).toContainText("Add context");
+  await expect(frame.locator(".a-composer-frame__footer").getByRole("button", {name:"Attach files",exact:true})).toBeVisible();
+  await expect(frame.locator(".a-composer-frame__footer").getByRole("button", {name:"Prompt library"})).toBeVisible();
   await page.getByRole("button", {name:"Prompt library",exact:true}).click();
   await expect(page.getByRole("menu", {name:"Prompt library"})).toBeVisible();
   await page.keyboard.press("Escape");

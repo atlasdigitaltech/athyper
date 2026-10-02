@@ -11,6 +11,7 @@ import {
   type PublicationCanonicalizer,
 } from "@athyper/server-contract-publication";
 import { validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
+import { compileEntityAiManifestBindings } from "./entity-ai-manifest-compiler.js";
 
 export const COMPILED_ENTITY_ARTIFACT_COMPILER_VERSION = "1.0.0";
 
@@ -68,6 +69,12 @@ export function compileCompiledEntityArtifacts(
     }});
   }
   const compiled = sources.map((source) => {
+    if (source.content.artifactType === "runtime_contract") {
+      source = { ...source, content: { ...source.content, descriptor: compileEntityAiManifestBindings(
+        source.content.descriptor as Readonly<Record<string, unknown>>,
+        source.content.plane as CompiledEntityArtifactV2["plane"], input.registry,
+      ) } };
+    }
     const members=input.capabilityMembers?.[String(source.content.entityCode)];
     if(members && ["core","operation"].includes(String(source.content.artifactType))) {
       const mapped=capabilityArtifactMembers(String(source.content.entityCode),members);

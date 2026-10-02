@@ -9,7 +9,7 @@ export function recordFilterOperators(type: EntityFieldDescriptor["type"] | stri
 
 /** Applies an Entity's optional restriction without ever widening the type policy. */
 export function recordFieldFilterOperators(field: EntityFieldDescriptor): readonly RecordFilterOperator[] {
-  const allowed = recordFilterOperators(field.type);
+  const allowed = recordFilterOperators(field.keyReference ? "reference" : field.type);
   const configured = field.list?.filterOperators;
   return Object.freeze(configured?.length ? configured.filter((operator) => allowed.includes(operator)) : [...allowed]);
 }

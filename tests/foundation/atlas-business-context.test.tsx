@@ -81,6 +81,29 @@ test("Manage survives a record panel and identical renders keep generation; full
   store.remove("list");
   assert.equal(store.snapshot(), undefined);
 });
+test("a related list narrows its parent record context and restores it on departure", () => {
+  const store = new AtlasBusinessContextStore();
+  const parent = record(a);
+  store.publish("parent", parent);
+  store.publish("child", { ...manage, entityCode: "child_record", parentScope: {
+    parentEntityCode: parent.entityCode, parentRecordId: a, relationshipKey: "children",
+  } });
+  assert.equal(store.snapshot()?.entityCode, "child_record");
+  store.publish("parent", { ...parent, section: "children" });
+  assert.equal(store.snapshot()?.entityCode, "child_record");
+  store.publish("unrelated", { ...manage, search: "unrelated" });
+  assert.equal(store.snapshot()?.entityCode, "child_record");
+  store.publish("opened-child", { ...record(b), entityCode: "child_record" });
+  assert.equal(store.snapshot()?.kind, "record");
+  store.remove("opened-child");
+  assert.equal(store.snapshot()?.kind, "manage");
+  store.remove("child");
+  assert.equal(store.snapshot()?.entityCode, parent.entityCode);
+  const token = store.handoff("tenant:principal")!;
+  const restored = new AtlasBusinessContextStore();
+  restored.restore("tenant:principal", token);
+  assert.deepEqual(restored.snapshot(), store.snapshot());
+});
 test("navigation aborts a request and discards late text, actions and completion even when the client ignores abort", async () => {
   let controller: ReturnType<typeof useAtlasAnswer>;
   const calls: {

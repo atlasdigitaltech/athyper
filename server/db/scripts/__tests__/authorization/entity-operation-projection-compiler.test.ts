@@ -200,6 +200,6 @@ test("database staging requires compiler IDs and canonical permission identity",
   );
   assert.match(sql, /OPERATION_BINDING_CANONICAL_PERMISSION_REQUIRED/);
   assert.match(sql, /p\.id=\(item->>'permissionId'\)::uuid/);
-  assert.match(sql, /\(item->>'bindingId'\)::uuid/);
-  assert.match(sql, /\(item->>'scopeBindingId'\)::uuid/);
+  assert.match(sql, /md5\(p_applied_release_id::text\|\|':operation:'\|\|\(item->>'bindingId'\)\)::uuid/);
+  assert.match(sql, /md5\(p_applied_release_id::text\|\|':scope:'\|\|\(item->>'scopeBindingId'\)\)::uuid/);
 });

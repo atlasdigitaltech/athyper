@@ -1320,7 +1320,7 @@ function validNumberingSystem(value: string): boolean {
     return false;
   }
 }
-function normalizeLocalePolicy(
+export function normalizeLocalePolicy(
   planeKey: VerifiedRequestContext["planeKey"],
   row:
     | {
@@ -1523,7 +1523,7 @@ function applyLocalePolicy(
   });
   return { profile, localization: effectiveLocalization(profile, "tenant") };
 }
-function catalogCodeForLocale(value: string): SupportedLocale | undefined {
+export function catalogCodeForLocale(value: string): SupportedLocale | undefined {
   const canonical = canonicalLocale(value, "");
   if (!canonical) return undefined;
   const match = matchSupportedLocale(canonical, SUPPORTED_UI_LOCALES);

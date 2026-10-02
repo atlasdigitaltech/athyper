@@ -10,6 +10,8 @@ if (!databaseUrl) {
 const deploymentOwner = process.env["SECDEF_EXPECTED_OWNER"]?.trim() || "postgres";
 const projectionOwner = process.env["SECDEF_PROJECTION_OWNER"]?.trim() || "athyper_projection_owner";
 const bypassOwner = process.env["SECDEF_BYPASS_OWNER"]?.trim() || "postgres";
+const recoveryOwner = "athyper_publication_recovery_owner";
+const recoverySignature = "publication.fn_recoverable_deployment_coordinates(p_after_created_at timestamp with time zone, p_after_id uuid, p_limit integer)";
 for (const value of [deploymentOwner, projectionOwner, bypassOwner]) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) throw new Error(`invalid role name ${JSON.stringify(value)}`);
 }
@@ -35,12 +37,22 @@ try {
   if (rows.length === 0) throw new Error("no application SECURITY DEFINER functions found");
   let failures = 0;
   for (const row of rows) {
-    const expectedOwner = row.bypass_boundary ? bypassOwner : projectionFunctions.has(row.qualified_name) ? projectionOwner : deploymentOwner;
+    const expectedOwner = row.signature === recoverySignature ? recoveryOwner : row.bypass_boundary ? bypassOwner : projectionFunctions.has(row.qualified_name) ? projectionOwner : deploymentOwner;
     const issues: string[] = [];
     if (row.owner !== expectedOwner) issues.push(`owner=${row.owner}, expected=${expectedOwner}`);
     if (row.public_has_exec) issues.push("PUBLIC has EXECUTE");
     if (!row.has_search_path) issues.push("search_path is not explicit");
+    if (row.signature === recoverySignature && row.bypass_boundary) issues.push("recovery discovery must retain RLS");
     if (issues.length > 0) { failures++; console.error(`FAIL ${row.signature}: ${issues.join('; ')}`); }
+  }
+  if (rows.some(row => row.signature === recoverySignature)) {
+    const [role] = await sql<{ unsafe: boolean }[]>`
+      SELECT rolsuper OR rolbypassrls OR rolcanlogin OR rolcreatedb OR rolcreaterole OR rolreplication AS unsafe
+      FROM pg_roles WHERE rolname = ${recoveryOwner}
+    `;
+    if (!role || role.unsafe) {
+      failures++; console.error(`FAIL ${recoveryOwner}: must be a non-login, non-administrative, RLS-bound owner`);
+    }
   }
   const [projectionRole] = await sql<{ superuser: boolean; bypass_rls: boolean; can_login: boolean }[]>`
     SELECT rolsuper AS superuser, rolbypassrls AS bypass_rls, rolcanlogin AS can_login FROM pg_roles WHERE rolname = ${projectionOwner}

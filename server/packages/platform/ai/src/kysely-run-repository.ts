@@ -1,3 +1,4 @@
+import { directEntityReadResults } from "./direct-entity-read-completion.js";
 import { atlasGuidance } from "@athyper/server-contract-ai";
 import { atlasEvidenceHash, createAtlasMessageLineage } from "./message-lineage.js";
 import type { AtlasMessageLineage, AtlasReplayCompletion } from "@athyper/server-contract-ai";
@@ -270,23 +271,23 @@ export class KyselyAtlasRunRepository
       (v) =>
         v.usage.inputTokens !== undefined || v.usage.outputTokens !== undefined,
     );
-    // A direct section answer has no provider usage. Require a durable read
-    // invocation matching its persisted tool result before admitting completion.
+    // Direct Entity answers may discover metadata before reading. Every result
+    // must have a matching persisted call and durable authorized read receipt.
     let directRead = false;
     if (status === "completed" && !available && calls.length === 0) {
-      const results = content.filter(block => block.type === "tool_result");
-      const result = results.length === 1 ? results[0] : undefined;
-      if (result?.type === "tool_result" && !result.isError &&
-          content.some(block => block.type === "text" && block.text.trim()) &&
-          content.some(block => block.type === "tool_use" && block.callId === result.callId && block.toolName === result.toolName)) {
-        const read = await sql<{ present: boolean }>`SELECT EXISTS(
-          SELECT 1 FROM ai.ai_tool_invocation
-          WHERE tenant_id=${c.tenantId}::uuid AND run_id=${r.id}::uuid
-            AND principal_id=${c.principalId}::uuid AND plane=${c.planeKey}
-            AND tool_call_id=${result.callId} AND tool_code=${result.toolName}
-            AND operation_class='read' AND status='completed'
-        ) AS present`.execute(tx);
-        directRead = read.rows[0]?.present === true;
+      const results = directEntityReadResults(content);
+      if (results) {
+        directRead = true;
+        for (const result of results) {
+          const read = await sql<{ present: boolean }>`SELECT EXISTS(
+            SELECT 1 FROM ai.ai_tool_invocation
+            WHERE tenant_id=${c.tenantId}::uuid AND run_id=${r.id}::uuid
+              AND principal_id=${c.principalId}::uuid AND plane=${c.planeKey}
+              AND tool_call_id=${result.callId} AND tool_code=${result.toolName}
+              AND operation_class='read' AND status='completed'
+          ) AS present`.execute(tx);
+          if (read.rows[0]?.present !== true) { directRead = false; break; }
+        }
       }
     }
     const guidanceCode = replayCompletion?.guidance;

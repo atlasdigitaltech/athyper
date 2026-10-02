@@ -19,6 +19,7 @@
   "dependencies": {
     "@athyper/platform-api-client": "workspace:*",
     "@athyper/platform-i18n": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-shell-activity-center-data": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",

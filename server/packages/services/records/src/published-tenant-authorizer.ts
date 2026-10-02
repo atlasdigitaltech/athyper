@@ -61,6 +61,7 @@ function recordProfileSupported(value: unknown, owned: boolean): boolean {
         ...["create", "patch"].filter((key) => d.operations[key]),
       ]
     : ["list", "read"];
+  if (d.operations.export) keys.push("export");
   if (p.operations.length !== keys.length) return false;
   if (owned) {
     const owner = d.ownerAccess!;
@@ -88,7 +89,7 @@ function recordProfileSupported(value: unknown, owned: boolean): boolean {
       operation.effect !==
         (["create", "patch"].includes(key) ? "write" : "read") ||
       operation.target !==
-        (key === "list"
+        (["list", "export"].includes(key)
           ? "collection"
           : key === "create"
             ? "proposed"
@@ -113,7 +114,7 @@ function recordProfileSupported(value: unknown, owned: boolean): boolean {
           !owned || !["create", "patch"].includes(key) || !keys.includes(key),
       ) ||
       policy.queryUses.some(
-        (use) => !["search", "filter", "sort", "group"].includes(use),
+        (use) => !["search", "filter", "sort", "group", ...(keys.includes("export") ? ["export"] : [])].includes(use),
       )
     )
       return false;
@@ -142,6 +143,7 @@ export function createPublishedTenantRecordAuthorizer(options: {
   ownerAccess?: boolean;
   /** Dedicated IAM policy evaluator for qualified owner administration. */
   ownerAuthority?: Authorizer;
+  actionAuthority?: Authorizer;
   metadata: MetadataReader;
   refreshContext(
     context: VerifiedRequestContext,
@@ -231,6 +233,12 @@ export function createPublishedTenantRecordAuthorizer(options: {
           resource.tenantId !== context.tenantId
         )
           return { allowed: false, reason: "entity_scope_mismatch" };
+        if(resource.registeredActionCheck===true) {
+          const action=d.actions?.find(action=>action.code===resource.actionCode);
+          if(!options.actionAuthority || !action || action.permissionCode!==request.permissionCode || action.handlerKey!==resource.actionHandlerKey || resource.operationKey!==action.code || typeof resource.recordId!=='string')
+            return {allowed:false,reason:'entity_authorization_unmapped'};
+          return options.actionAuthority.authorize({...request,context});
+        }
         // Separate internal owner-administration check. It never substitutes for
         // the operation permission; the record pipeline requires both boundaries.
         if (resource.ownerAccessCheck === true) {

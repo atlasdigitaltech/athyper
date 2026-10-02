@@ -89,7 +89,7 @@
   position: sticky;
   inset-block-start: var(--detail-section-offset);
 }
-@container metadata-detail (max-width: 960px) {
+@container metadata-detail (width < 64rem) {
   .a-metadata-detail__layout[data-summary], .a-metadata-detail__layout[data-summary][data-rail] {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -126,7 +126,7 @@
 .a-metadata-detail__tail {
   block-size: max(0px, calc(100dvh - var(--detail-section-offset)));
 }
-@container metadata-detail (max-width: 70rem) {
+@container metadata-detail (width < 80rem) {
   .a-metadata-detail__layout[data-tab-sections] > .a-metadata-detail__rail {
     display: none;
   }
@@ -144,4 +144,16 @@
     align-items: center;
     gap: var(--a-space-2);
   }
+}
+
+/* The compact section trigger sits beside the tab row. Anchor its menu to
+   the whole navigation band so it cannot run past the phone viewport. */
+.a-metadata-detail__navigation { position:relative; }
+.a-metadata-detail__navigation > .a-entity-record__group { position:static; }
+.a-metadata-detail__navigation > .a-entity-record__group > [role="menu"] {
+  inset-inline-start:0;
+  inset-inline-end:auto;
+  min-inline-size:min(18rem,100%);
+  max-inline-size:100%;
+  box-sizing:border-box;
 }

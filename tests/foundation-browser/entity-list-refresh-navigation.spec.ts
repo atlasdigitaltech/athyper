@@ -6,6 +6,8 @@ const bundle = build({
   stdin: { resolveDir: process.cwd(), loader: "tsx", contents: `
     import React,{useEffect,useState} from 'react';
     import {createRoot} from 'react-dom/client';
+    import {PlatformShell} from './packages/platform/shell/shell/src/index';
+    import {useI18n} from './packages/platform/foundation/i18n/src/react';
     import {EntityListRuntime} from './packages/platform/entity/runtime/list-view/src/index';
     import {EntityLink,EntityNavigationProvider} from './packages/platform/entity/runtime/list-view/src/entity-navigation';
     import {ApiTransportError} from './packages/platform/foundation/api-client/src/index';
@@ -24,6 +26,18 @@ const bundle = build({
       if(window.hold)return new Promise((resolve,reject)=>window.pending.push({resolve:()=>resolve(result),reject:(status=503)=>reject(new ApiTransportError('http','Failed',status)),signal:input.signal}));
       return result;
     }};
+    function LocaleProbe(){const intl=useI18n();useEffect(()=>{window.localeRevisions=(window.localeRevisions||0)+1},[intl]);return null}
+    const route={id:'country.list',moduleCode:'mdm',href:'/app/entity/country',label:'Countries',iconKey:'home',requiredPermissions:[],requiredFeatures:[],navigation:'primary',workspaceCode:'mdm',workspaceName:'Master data',moduleName:'Countries',sortOrder:1};
+    const navigation={workspaces:[{code:'mdm',name:'Master data',href:'/app/entity/country',iconKey:'home',sortOrder:1,routes:[route]}],routes:[route],entityRoutes:[{entityCode:'country',operation:'list'}],landingHref:'/app/entity/country',unknownActiveModules:[]};
+    function ActivityShell({children}){
+      const [revision,setRevision]=useState(0);
+      useEffect(()=>{
+        const refresh=()=>{if(document.visibilityState==='visible'){setRevision(n=>n+1);setTimeout(()=>setRevision(n=>n+1),30)}};
+        document.addEventListener('visibilitychange',refresh);
+        return ()=>document.removeEventListener('visibilitychange',refresh);
+      },[]);
+      return <PlatformShell applicationName='Neon' tenantId='tenant' principalId='actor' tenantLabel='Tenant' accountLabel='Actor' navigation={navigation} activity={{notifications:[],inbox:[],unreadNotificationCount:revision,openInboxCount:0}}><LocaleProbe/>{children}</PlatformShell>;
+    }
     function App(){const [route,setRoute]=useState('list');const [scope,setScope]=useState(undefined);
       useEffect(()=>{window.shellMounts++},[]);window.changeScope=setScope;
       const navigate=href=>{window.navigations.push(href);setRoute(href)};
@@ -32,7 +46,7 @@ const bundle = build({
         <EntityNavigationProvider navigate={navigate}><EntityLink id='external' href='https://outside.test/'>External</EntityLink><EntityLink id='download' href='/file' download>Download</EntityLink><EntityLink id='blank' href='/new' target='_blank'>New tab</EntityLink></EntityNavigationProvider>
       </>;
     }
-    createRoot(document.getElementById('root')).render(<App/>);
+    createRoot(document.getElementById('root')).render(location.search.includes('activityShell')?<ActivityShell><App/></ActivityShell>:<App/>);
   ` },
   bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
   loader: { ".css": "empty" }, tsconfig: resolve("tooling/config/tsconfig-react.json"),
@@ -124,4 +138,27 @@ test("scope controls notify their owner and follow subsequent parent context cha
   expect(await page.evaluate(()=>(window as any).scopeChanges)).toEqual([{operatingOrganizationId:'selected-organization'}]);
   await page.evaluate(()=>(window as any).changeScope({operatingOrganizationId:'parent-organization'}));
   await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).operatingOrganizationId)).toBe('parent-organization');
+});
+
+
+test("returning to the tab updates shell activity without refetching or replacing entity rows", async ({ page }) => {
+  await mount(page, "?activityShell=true");
+  await expect.poll(() => page.evaluate(() => (window as any).queries.length)).toBe(1);
+  const revisions = await page.evaluate(() => {
+    (window as any).originalRow = document.querySelector("tbody tr");
+    return (window as any).localeRevisions;
+  });
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+      document.dispatchEvent(new Event("visibilitychange"));
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(page.getByRole("button", { name: new RegExp("Notifications.*" + (i + 1) * 2) }).first()).toBeAttached();
+  }
+  expect(await page.evaluate(() => (window as any).queries.length)).toBe(1);
+  expect(await page.evaluate(() => (window as any).localeRevisions)).toBe(revisions);
+  expect(await page.evaluate(() => document.querySelector("tbody tr") === (window as any).originalRow)).toBe(true);
+  await expect(page.locator('table[aria-busy="true"]')).toHaveCount(0);
 });

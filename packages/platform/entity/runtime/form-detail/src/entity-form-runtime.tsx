@@ -14,10 +14,13 @@ import {
   useAtlasBusinessContextPublisher,
   useContextDepartureGuard,
 } from "@athyper/platform-shell";
-import { useApiClient } from "@athyper/platform-shell-app-foundation";
+import { useApiClient, useSessionIdentity, useExperienceRevision, usePermissions } from "@athyper/platform-shell-app-foundation";
 import { Button, Card, InlineStatus } from "@athyper/platform-ui";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createFormSubmissionIdentity } from "./form-submission-identity";
+import { formFieldErrors, formVersionConflict, formAlreadyExists } from "./form-errors";
 import { FormFields } from "./field-input";
+import { RegisteredEntitySection } from "./registered-renderers/entity-section-component";
 import { isFormDirty } from "./form-dirty";
 import { isUntouchedOptionalCreateField, normalizeFieldValue } from "./form-values";
 import { useAsyncResource } from "./use-async-resource";
@@ -33,11 +36,13 @@ export function EntityFormRuntime({
   entityCode,
   recordId,
   onCommitted,
+  onConflictReload,
   contentOnly = false,
   parentScope,
 }: {
   readonly entityCode: string;
   readonly recordId?: string;
+  readonly onConflictReload?: () => void;
   readonly onCommitted?: (recordId: string) => void;
   readonly contentOnly?: boolean;
   readonly parentScope?: {
@@ -48,28 +53,41 @@ export function EntityFormRuntime({
 }) {
   const intl = useEntityI18n();
   const client = useApiClient();
+  const identity = useSessionIdentity();
+  const revision = useExperienceRevision();
+  const permissions = [...usePermissions()].sort();
+  const accessKey = JSON.stringify([identity.state, identity.scope, revision, permissions, entityCode, recordId]);
+  const access = useRef(accessKey);
+  access.current = accessKey;
   const mode = recordId ? "edit" : "create";
   const loaded = useAsyncResource<LoadedForm>(
-    `${entityCode}:${mode}:${recordId ?? ""}`,
+    accessKey,
     async () => {
       const [descriptor, record] = await Promise.all([
-        entityDescriptorClient.form(client, entityCode, mode),
+        entityDescriptorClient.form(client, entityCode, mode, recordId),
         recordId
           ? entityDescriptorClient.record(client, entityCode, recordId)
           : Promise.resolve(undefined),
       ]);
       return { descriptor, ...(record ? { record } : {}) };
     },
-    [client, entityCode, mode, recordId],
+    [client, accessKey, entityCode, mode, recordId],
+    identity.state === "authenticated" && Boolean(identity.scope) && revision.state === "ready",
   );
   const descriptor = useMemo(() => loaded.data?.descriptor ? localizeEntityLabels(loaded.data.descriptor, intl) : undefined, [loaded.data?.descriptor, intl]);
   const record = loaded.data?.record;
 
   const [values, setValues] = useState<FormValues>({});
+  const [initializedAccess, setInitializedAccess] = useState<string>();
   // Last loaded or saved values; "dirty" means differing from this baseline.
   const [baseline, setBaseline] = useState<FormValues>({});
   const [saving, setSaving] = useState(false);
+  const submitting = useRef(false);
+  const submissionIdentity = useRef(createFormSubmissionIdentity());
   const [saveStatus, setSaveStatus] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Readonly<Record<string, string>>>({});
+  const [conflict, setConflict] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState<number>();
 
   useEffect(() => {
     if (!loaded.data) return;
@@ -81,9 +99,13 @@ export function EntityFormRuntime({
           ]),
         )
       : {};
+    setInitializedAccess(accessKey);
+    setCurrentVersion(loaded.data.record?.version);
     setValues(initial);
     setBaseline(initial);
     setSaveStatus("");
+    setFieldErrors({});
+    setConflict(false);
   }, [loaded.data]);
 
   const dirty = !!descriptor && isFormDirty(descriptor.fields, values, baseline);
@@ -93,6 +115,7 @@ export function EntityFormRuntime({
           kind: "record",
           entityCode,
           recordId,
+          parentScope,
           dirty: record?.id === recordId && dirty,
           savedRevision:
             record?.id !== recordId || record?.version === undefined
@@ -111,13 +134,15 @@ export function EntityFormRuntime({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!descriptor) return;
+    if (!descriptor || submitting.current) return;
+    submitting.current = true;
     setSaving(true);
     setSaveStatus("");
+    setFieldErrors({});
     try {
       const input = Object.fromEntries(
         descriptor.fields
-          .filter((field) => !field.readOnly)
+          .filter((field) => !field.readOnly && (!recordId || isFormDirty([field], values, baseline)))
           .flatMap((field) =>
             !recordId &&
             isUntouchedOptionalCreateField(values[field.key], field)
@@ -125,14 +150,14 @@ export function EntityFormRuntime({
               : [[field.key, normalizeFieldValue(values[field.key], field)]],
           ),
       );
-      const key = `entity-${descriptor.pageKind}-${crypto.randomUUID()}`;
+      const key = submissionIdentity.current.key({ entityCode, recordId, mode, version: currentVersion, parentScope, input });
       const receipt = recordId
         ? await entityDescriptorClient.patch(
             client,
             entityCode,
             recordId,
             input,
-            record?.version ?? 0,
+            currentVersion ?? 0,
             key,
           )
         : await entityDescriptorClient.create(
@@ -142,16 +167,24 @@ export function EntityFormRuntime({
             key,
             parentScope,
           );
+      if (access.current !== accessKey) return;
       // Saved values are the new baseline, so navigating away after a commit
       // is not treated as abandoning unsaved changes.
+      submissionIdentity.current.clear();
+      setCurrentVersion(receipt.version);
       setBaseline(values);
       setSaveStatus(
         intl.message("form.saved", { entity: descriptor.entity.label }),
       );
       onCommitted?.(receipt.recordId);
     } catch (error) {
-      setSaveStatus(localizedEntityError(error, intl));
+      if (access.current !== accessKey) return;
+      const errors = formFieldErrors(error, descriptor.fields, (key, params) => intl.message(key, params));
+      setFieldErrors(errors);
+      setConflict(formVersionConflict(error) || formAlreadyExists(error));
+      setSaveStatus(Object.keys(errors).length ? intl.message("validation.summary") : formAlreadyExists(error) ? intl.message("form.alreadyExists") : formVersionConflict(error) ? intl.message("form.versionConflict") : localizedEntityError(error, intl));
     } finally {
+      submitting.current = false;
       setSaving(false);
     }
   };
@@ -159,7 +192,7 @@ export function EntityFormRuntime({
   const setValue = (key: string, value: unknown) =>
     setValues((current) => ({ ...current, [key]: value }));
 
-  if (!descriptor) {
+  if (!descriptor || initializedAccess !== accessKey) {
     const pending = <InlineStatus>{status}</InlineStatus>;
     if (contentOnly) return pending;
     return (
@@ -174,12 +207,16 @@ export function EntityFormRuntime({
     );
   }
 
-  const fields = (
-    <FormFields fields={descriptor.fields} values={values} onChange={setValue} />
-  );
+  const grouped = new Set(descriptor.sections?.flatMap(section => section.fields) ?? []);
+  const renderFields = (keys: readonly string[]) => <div className="a-entity-form-fields"><FormFields entityCode={entityCode} fields={keys.flatMap(key => descriptor.fields.find(field => field.key === key) ?? [])} values={values} errors={fieldErrors} onChange={setValue} /></div>;
+  const fields = <>
+    {descriptor.sections?.map(section => <fieldset className="a-entity-form-section" key={section.key}><legend>{section.label}</legend>{section.component ? <RegisteredEntitySection component={section.component} fields={section.fields} renderField={key => renderFields([key])} /> : renderFields(section.fields)}</fieldset>)}
+    {renderFields(descriptor.fields.filter(field => !grouped.has(field.key)).map(field => field.key))}
+  </>;
+  const recovery = conflict && (recordId || onConflictReload) ? <Button type="button" onClick={() => { if (window.confirm(intl.message("form.reloadDiscard"))) { if (onConflictReload) onConflictReload(); else loaded.reload(); } }}>{intl.message("form.reloadRecord")}</Button> : null;
   const submitButton = (
-    <Button type="submit" loading={saving}>
-      {intl.message(descriptor.mode === "create" ? "form.submitCreate" : "form.submitEdit", { entity: descriptor.entity.label })}
+    <Button type="submit" loading={saving} disabled={conflict || (mode === "edit" && !dirty)}>
+      {descriptor.submit.label}
     </Button>
   );
   if (contentOnly)
@@ -187,6 +224,7 @@ export function EntityFormRuntime({
       <form onSubmit={submit}>
         {fields}
         {submitButton}
+        {recovery}
         <InlineStatus>{status}</InlineStatus>
       </form>
     );
@@ -212,7 +250,7 @@ export function EntityFormRuntime({
       />
       <form onSubmit={submit}>
         <Card>{fields}</Card>
-        <div>{submitButton}</div>
+        <div>{submitButton}{recovery}</div>
         <InlineStatus>{status}</InlineStatus>
       </form>
     </PageFrame>

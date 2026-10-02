@@ -170,9 +170,9 @@
       "operation": "use",
       "permissionKind": "capability",
       "riskTier": "medium",
-      "requiresMfa": true,
+      "requiresMfa": false,
       "lifecycle": "proposed",
-      "definitionSha256": "c393e8db1e65b216c8c07045fb7bc909910ab6d4098131100fbf46ab0c9c882a"
+      "definitionSha256": "ffd9a73c49fdefb90ae23489662b0f7aee3ec5ce081767c457b4359bfd434908"
     },
     {
       "permissionId": "2a295664-36f3-5dbf-860d-74789ad267cb",
@@ -331,5 +331,5 @@
       "definitionSha256": "b1b49d011ee421dc3448653c7d54c23768425d923c54a3ca31555c9699504258"
     }
   ],
-  "sha256": "524bfe752b67b1374f5af1dc4fc10cf1f5f450f9e2e7103dd2b2968551c26998"
+  "sha256": "bd99b060b371bd2fb153cac4a271c96f34714d4abf7d9061a44ec5af74dd0ecf"
 }

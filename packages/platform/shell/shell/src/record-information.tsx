@@ -1,4 +1,5 @@
 "use client";
+import { viewportQuery } from "@athyper/platform-theme/tokens";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button, Dialog, DialogContent } from "@athyper/platform-ui";
 import { InfoIcon, CopyIcon, CloseIcon } from "@athyper/platform-icons";
@@ -32,7 +33,7 @@ function Information({
       : [["Record revision", String(information.recordRevision)]]),
   ];
   useEffect(() => {
-    const media = matchMedia("(max-width: 760px)");
+    const media = matchMedia(viewportQuery({ below: "medium" }));
     const update = () => {
       setOpen(false);
       setCompact(media.matches);

@@ -1,5 +1,6 @@
 "use client";
 import React, { type ReactNode, type HTMLAttributes } from "react";
+import { ChevronDownIcon } from "@athyper/platform-icons";
 import { PageFrame } from "./page-foundation";
 import { EntityPageLayout } from "./entity-page-layout";
 import { PageNavigationSlot, PageWorkspace } from "./page-workspace";
@@ -115,7 +116,8 @@ export function ManagementNavigation({
                 : undefined
             }
           >
-            {moreLabel} <span aria-hidden="true">▾</span>
+            {moreLabel}
+            <ChevronDownIcon size={16} className="a-disclosure-caret a-disclosure-caret--menu" aria-hidden="true" />
           </summary>
           <div className="a-management-navigation__overflow">
             {overflow.map(link)}

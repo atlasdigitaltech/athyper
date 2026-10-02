@@ -8,6 +8,7 @@ import {
 import { parseCompiledRuntimeContract, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
 import { compileCompiledEntityArtifacts, compiledEntityRuntimeProjection, type CompiledEntityArtifactCompilationInputV2 } from "../compiled-entity-artifact-compiler.js";
 import { assertOperationProjection } from "../shared/authorization/operation-projection.js";
+import { assertEntityAiManifestBindings } from "../entity-ai-manifest-compiler.js";
 
 export interface CompiledRuntimeSource {
   readonly releaseId: string;
@@ -90,11 +91,13 @@ export async function qualifyRuntimePublication(document: UnsignedPublication, d
     if (artifact.artifactHash !== `sha256:${digest}`) throw Error("COMPILED_PUBLICATION_MEMBER_HASH_MISMATCH");
   }
   compiledPublicationTenant(e.publicationKey, e.payload);
-  validateCompiledEntityRelease(e.payload.release, e.payload.artifacts, await dependencies.registry(e.targetPlane));
+  const registry = await dependencies.registry(e.targetPlane);
+  validateCompiledEntityRelease(e.payload.release, e.payload.artifacts, registry);
   validateCompiledRuntimeContracts(e.payload.artifacts);
   const runtimes = e.payload.artifacts.filter(a => a.artifactType === "runtime_contract");
   if (!runtimes.length) throw Error("COMPILED_PUBLICATION_RUNTIME_REQUIRED");
   for (const artifact of runtimes) {
+    assertEntityAiManifestBindings(artifact.content.descriptor as Record<string, unknown>, e.targetPlane, registry);
     parseCompiledRuntimeContract(artifact, { releaseId: e.releaseId, releaseNo: e.releaseNo });
     assertOperationProjection(artifact.content.descriptor as Record<string, unknown>);
     const source = (artifact.content.descriptor as Record<string, unknown>).source as Record<string, unknown> | undefined;

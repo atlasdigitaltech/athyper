@@ -104,7 +104,7 @@ function AuthorizedDetailRuntime({
       <ThumbnailRecordScope.Provider value={JSON.stringify([entityCode, recordId])}>
       <MetadataDetailWorkspace
         key={key}
-        preferenceKey={`athyper.detail-view.${descriptor.plane}:${identity.scope?.tenantId}:${identity.scope?.principalId}:${entityCode}`}
+        preferenceKey={`athyper.detail-view.${descriptor.plane}:${identity.scope?.tenantId}:${identity.scope?.principalId}:record-layout`}
         entityCode={entityCode}
         descriptor={{
           ...descriptor,

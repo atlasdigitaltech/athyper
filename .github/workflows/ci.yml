@@ -116,14 +116,16 @@ jobs:
       - name: Test host capability composition failure gates
         run: pnpm run test:host-capability-registry
 
-      - name: Workspace tests with coverage
-        run: pnpm run test:workspace -- --coverage
+      # Workspace runners include Node tests as well as Vitest. Coverage needs a
+      # runner-specific gate; forwarding --coverage to Turbo never ran these tests.
+      - name: Workspace tests
+        run: pnpm run test:workspace
         env:
           CI: "true"
           FORCE_COLOR: "1"
 
-      - name: Business Partner Atlas evaluations and owner gates
-        run: pnpm qualify:business-partner-r9
+      # The bespoke R9 application and its evaluator were removed in 870f08f52.
+      # Disposition and remaining coverage gaps: docs/runbooks/entity-foundation-qualification.md.
 
       - name: Root tests and reachability
         # test:root includes the required Country browser qualification gate.
@@ -204,6 +206,41 @@ jobs:
       - name: Verify no legacy DDL schema references (Gate 3 — advisory)
         continue-on-error: true
         run: pnpm policy:no-legacy-schema-refs
+
+  # Run framework security evidence independently of unrelated static-policy failures.
+  entity-foundation:
+    name: Country and Principal framework qualification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify qualification failure gates
+        run: node --test tooling/scripts/verification/entity-foundation-qualification.test.mjs
+      - name: Qualify shared authoring, records, publication and host
+        run: pnpm qualify:entity-foundation
+      - name: Qualify record audit contract upgrade and failure recovery
+        if: ${{ !cancelled() }}
+        run: pnpm qualify:entity-audit-upgrade
+      - name: Retain upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: entity-audit-upgrade-${{ github.sha }}
+          path: ${{ env.ATHYPER_ARTIFACT_ROOT }}/entity-audit-upgrade/ci/
+          if-no-files-found: error
+      - name: Retain qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: entity-foundation-${{ github.sha }}
+          path: ${{ env.ATHYPER_ARTIFACT_ROOT }}/entity-foundation/ci/
+          if-no-files-found: error
 
   # P0 performance baseline. Advisory until two stable captured runs have
   # been reviewed. Enable by setting the PERF_BASE_URL repository variable.
@@ -444,11 +481,23 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [quality, build, rls-verify, three-plane-verify, iam-live]
+    needs:
+      [
+        quality,
+        build,
+        rls-verify,
+        three-plane-verify,
+        iam-live,
+        entity-foundation,
+      ]
     if: always()
     steps:
       - name: Evaluate results
         run: |
+          if [[ "${{ needs.entity-foundation.result }}" != "success" ]]; then
+            echo "Entity Framework qualification failed"
+            exit 1
+          fi
           if [[ "${{ needs.iam-live.result }}" != "success" ]]; then
             echo "IAM dependency readiness failed"
             exit 1

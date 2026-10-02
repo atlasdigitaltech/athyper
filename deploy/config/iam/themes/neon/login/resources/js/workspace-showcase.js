@@ -10,7 +10,7 @@
     const options = root.querySelector(".kc-ws-options");
     const response = root.querySelector(".kc-ws-response");
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const narrow = window.matchMedia("(max-width: 52rem)");
+    const narrow = window.matchMedia("(width < 64rem)");
     const steps = Array.from(root.querySelectorAll(".kc-ws-chain li"));
     let paused = false, visible = true, timer = null, elapsed = 0;
     const interval = 100;

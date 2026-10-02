@@ -267,12 +267,12 @@ it("refuses ambiguous source IDs and scopes retraction to the selected source ki
   }
 });
 
-it.each([true, false])("completes a zero-model answer only with a matching durable read (present=%s)", async present => {
+it.each([[true, false], [false, false], [true, true], [false, true]])("completes a zero-model answer only with matching durable reads (present=%s, discovery=%s)", async (present, discovery) => {
   const row = {id: "run", status: "started", started_at: at, generation_config: {}, conversation_id: "thread"};
   const f = database(query => {
     if (query.sql.includes("FROM ai.atlas_run")) return [row];
-    if (query.sql.includes("SELECT EXISTS")) return [{present}];
-    if (query.sql.includes("count(*) AS count FROM ai.ai_tool_invocation")) return [{count: present ? 1 : 0}];
+    if (query.sql.includes("SELECT EXISTS")) return [{present: query.parameters.includes("entity_discover") || present}];
+    if (query.sql.includes("count(*) AS count FROM ai.ai_tool_invocation")) return [{count: present ? (discovery ? 2 : 1) : 0}];
     if (query.sql.includes("clock_timestamp() AS at")) return [{at: new Date(at)}];
     if (query.sql.startsWith("UPDATE ai.atlas_run")) return [{...row, status: "completed"}];
     return [];
@@ -280,8 +280,9 @@ it.each([true, false])("completes a zero-model answer only with a matching durab
   const {KyselyAtlasRunRepository} = await import("../kysely-run-repository.js");
   const repo = new KyselyAtlasRunRepository(f.transactions);
   const promise = repo.complete({context, runId: "run", completedAt: at, assistantContent: [
-    {type: "tool_use", callId: "call", toolName: "read_section", input: {}},
-    {type: "tool_result", callId: "call", toolName: "read_section", result: {}},
+    ...(discovery ? [{type: "tool_use" as const, callId: "discovery", toolName: "entity_discover", input: {}}, {type: "tool_result" as const, callId: "discovery", toolName: "entity_discover", result: {}}] : []),
+    {type: "tool_use", callId: "call", toolName: discovery ? "entity_follow_reference" : "read_section", input: {}},
+    {type: "tool_result", callId: "call", toolName: discovery ? "entity_follow_reference" : "read_section", result: {}},
     {type: "text", text: "Saved section data"},
   ]});
   if (present) {
@@ -290,16 +291,16 @@ it.each([true, false])("completes a zero-model answer only with a matching durab
     const usage = f.queries.find(q => q.sql.includes("INSERT INTO ai.ai_agent_run"))!;
     const columns = usage.sql.slice(usage.sql.indexOf("(") + 1, usage.sql.indexOf(")")).split(",");
     expect(usage.parameters[columns.indexOf("model_call_count")]).toBe(0);
-    expect(usage.parameters[columns.indexOf("tool_call_count")]).toBe(1);
+    expect(usage.parameters[columns.indexOf("tool_call_count")]).toBe(discovery ? 2 : 1);
     expect(usage.parameters[columns.indexOf("usage_source")]).toBe("unavailable");
 
   } else {
     await expect(promise).rejects.toThrow("Completion requires recorded provider usage");
     expect(f.queries.some(q => q.sql.startsWith("UPDATE ai.atlas_message"))).toBe(false);
   }
-  const check = f.queries.find(q => q.sql.includes("SELECT EXISTS"))!;
+  const check = f.queries.find(q => q.sql.includes("SELECT EXISTS") && q.parameters.includes("call"))!;
   expect(check.sql).toContain("operation_class='read' AND status='completed'");
-  expect(check.parameters).toEqual([context.tenantId, "run", context.principalId, context.planeKey, "call", "read_section"]);
+  expect(check.parameters).toEqual([context.tenantId, "run", context.principalId, context.planeKey, "call", discovery ? "entity_follow_reference" : "read_section"]);
   await f.db.destroy();
 });
 

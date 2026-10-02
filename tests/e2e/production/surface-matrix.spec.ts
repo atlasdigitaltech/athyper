@@ -52,22 +52,11 @@ test("desktop or mobile shell matches the active project", async ({ page }, test
 test("Atlas Add menu remains usable from desktop through compact mobile widths", async ({ page }) => {
   await page.goto("/home");
   const composer = page.locator(".athyper-home__hero .athyper-home__composer");
-  const add = composer.getByRole("button", { name: "Add context" });
+  // Attach is a direct action, as in the comment composer (no menu, no placeholder items).
+  const add = composer.getByRole("button", { name: "Attach files" });
   await expect(add).toBeVisible();
-  await add.click();
-  const menu = page.getByRole("menu", { name: "Add context" });
-  await expect(menu.getByRole("menuitem", { name: /Files from device/ })).toBeEnabled();
-  await expect(menu.getByRole("menuitem", { name: /Business record/ })).toBeDisabled();
-  await expect(menu).toContainText("Coming soon");
-  await expect(menu.getByRole("menuitem", { name: /Files from device/ })).toBeFocused();
-  const desktopTriggerBounds = await add.boundingBox();
-  const desktopMenuBounds = await menu.boundingBox();
-  expect(Math.abs((desktopMenuBounds?.x ?? 0) - (desktopTriggerBounds?.x ?? 0))).toBeLessThanOrEqual(2);
-  await page.keyboard.press("End");
-  await expect(menu.getByRole("menuitem", { name: /Files from device/ })).toBeFocused();
-
   const fileChooser = page.waitForEvent("filechooser");
-  await menu.getByRole("menuitem", { name: /Files from device/ }).click();
+  await add.click();
   expect((await fileChooser).isMultiple()).toBe(true);
 
   for (const width of [430, 390, 320]) {
@@ -95,9 +84,9 @@ test("Atlas Add menu remains usable from desktop through compact mobile widths",
 
   await page.setViewportSize({ width: 430, height: 850 });
   await page.getByRole("button", { name: "Pin Atlas to the right side" }).click();
-  await expect(page.locator(".athyper-atlas-workspace--dock").getByRole("button", { name: "Add context" })).toBeVisible();
+  await expect(page.locator(".athyper-atlas-workspace--dock").getByRole("button", { name: "Attach files" })).toBeVisible();
   await page.goto("/atlas?from=%2Fhome");
-  await expect(page.locator(".athyper-atlas-workspace--fullscreen").getByRole("button", { name: "Add context" })).toBeVisible();
+  await expect(page.locator(".athyper-atlas-workspace--fullscreen").getByRole("button", { name: "Attach files" })).toBeVisible();
 });
 
 test("Atlas file messages follow the governed attachment vocabulary", async ({ page }) => {

@@ -17,6 +17,16 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 - Implement read-only entities and record-scoped embedded lists through that
   same framework. Enforce locked record scope and authorization on the server.
 
+## Domain ownership
+
+Place business-specific rules and handlers in the owning domain service package.
+Keep shared Entity Framework packages domain-neutral and dependent on contracts
+or registered ports, not concrete business implementations. Register domain
+implementations through host/plane composition. All entity operations must
+continue through the existing Entity Framework authorization, transaction, audit,
+idempotency and publication controls. Colocate tests with their owning
+implementation.
+
 ## Do not build bespoke applications
 
 - Do not create separate entity-specific apps, custom explorer pages, parallel

@@ -1,0 +1,267 @@
+{
+  "functions": [
+    {
+      "acl": ["athyperadmin=X/postgres", "postgres=X/postgres"],
+      "name": "snapshot.trg_record_version_immutable()",
+      "owner": "postgres",
+      "definition": "CREATE OR REPLACE FUNCTION snapshot.trg_record_version_immutable()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN RAISE EXCEPTION 'Record versions are immutable' USING ERRCODE='42501'; END $function$\n"
+    }
+  ],
+  "relations": [
+    {
+      "acl": [
+        "athyperadmin=arwdDxt/postgres",
+        "athyperapp=ar/postgres",
+        "postgres=arwdDxt/postgres"
+      ],
+      "rls": true,
+      "kind": "r",
+      "name": "snapshot.record_version",
+      "owner": "postgres",
+      "forced": true,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid",
+          "default": "shared.uuidv7()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "tenant_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "plane_code",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_type",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_code",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "entity_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "source_record_version",
+          "type": "bigint",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "default": "clock_timestamp()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "actor_principal_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "operation",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "transition_code",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "release_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "contract_hash",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "changed_fields",
+          "type": "text[]",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "payload_json",
+          "type": "jsonb",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "snapshot_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX record_version_feed_idx ON snapshot.record_version USING btree (tenant_id, plane_code, entity_code, entity_type, entity_id, occurred_at DESC, id DESC)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX record_version_pkey ON snapshot.record_version USING btree (id)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX record_version_source_uq ON snapshot.record_version USING btree (tenant_id, plane_code, entity_type, entity_id, source_record_version)"
+        }
+      ],
+      "options": null,
+      "policies": [
+        {
+          "name": "record_version_append",
+          "check": "((tenant_id = shared.current_tenant_id()) AND (plane_code = current_setting('app.database_plane'::text, true)) AND (actor_principal_id = master.current_principal_id_soft()))",
+          "roles": ["public"],
+          "using": null,
+          "command": "a",
+          "permissive": true
+        },
+        {
+          "name": "record_version_read",
+          "check": null,
+          "roles": ["public"],
+          "using": "((tenant_id = shared.current_tenant_id()) AND (plane_code = current_setting('app.database_plane'::text, true)))",
+          "command": "r",
+          "permissive": true
+        }
+      ],
+      "triggers": [
+        {
+          "name": "record_version_immutable",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER record_version_immutable BEFORE DELETE OR UPDATE ON snapshot.record_version FOR EACH ROW EXECUTE FUNCTION snapshot.trg_record_version_immutable()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "record_version_operation_check",
+          "validated": true,
+          "definition": "CHECK ((operation = ANY (ARRAY['create'::text, 'patch'::text, 'transition'::text, 'delete'::text, 'aggregate'::text, 'domain'::text])))"
+        },
+        {
+          "name": "record_version_payload_json_check",
+          "validated": true,
+          "definition": "CHECK ((jsonb_typeof(payload_json) = 'object'::text))"
+        },
+        {
+          "name": "record_version_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "record_version_plane_code_check",
+          "validated": true,
+          "definition": "CHECK ((plane_code = ANY (ARRAY['studio'::text, 'neon'::text, 'mesh'::text])))"
+        },
+        {
+          "name": "record_version_snapshot_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (tenant_id, snapshot_id) REFERENCES snapshot.entity_snapshot_identity(tenant_id, id)"
+        },
+        {
+          "name": "record_version_source_record_version_check",
+          "validated": true,
+          "definition": "CHECK ((source_record_version > 0))"
+        },
+        {
+          "name": "record_version_source_uq",
+          "validated": true,
+          "definition": "UNIQUE (tenant_id, plane_code, entity_type, entity_id, source_record_version)"
+        }
+      ],
+      "replicaIdentity": "d"
+    }
+  ]
+}

@@ -134,18 +134,15 @@ for (const theme of ["light", "dark"]) {
     });
     expect(colors.actual).toBe(colors.expected);
     await page.getByRole("button", {name:"Cancel",exact:true}).click();
+    // Filters use design-system chips (no OS dropdown); the chosen chip follows the selection tokens.
     await page.getByRole("button", {name:"Filters",exact:true}).click();
-    const select = page.locator("select.a-select").first();
-    await expect(select).toHaveCSS("appearance", "base-select");
-    await select.click();
-    const option = select.locator("option").last();
-    await option.click();
-    const value = await option.getAttribute("value");
-    await expect(select).toHaveValue(value!);
+    const chip = page.getByRole("group", {name:"Category", exact:true}).getByRole("button", {name:"Evidence", exact:true});
+    await chip.click();
+    await expect(chip).toHaveAttribute("aria-pressed", "true");
     await page.mouse.move(0, 0);
-    const selection = await option.evaluate(el => {
+    const selection = await chip.evaluate(el => {
       const probe = document.createElement("span");
-      probe.style.background = "var(--a-selection-strong)";
+      probe.style.background = "var(--a-selection-subtle)";
       document.body.append(probe);
       const expected = getComputedStyle(probe).backgroundColor;
       probe.remove();
@@ -357,9 +354,9 @@ test("drawer preview restores query and filters; full view retains results and o
   page,
 }) => {
   await page.getByRole("button", { name: "Filters", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Folder", exact: true })
-    .selectOption("folder");
+  await page.getByRole("navigation", { name: "Record folders" })
+    .getByRole("button", { name: "Evidence", exact: true })
+    .click();
   await page.getByRole("radio", { name: "File contents", exact: true }).check();
   await page.getByRole("searchbox").fill("instarem");
   await page.getByRole("button", { name: "Search", exact: true }).click();
@@ -388,8 +385,8 @@ test("drawer preview restores query and filters; full view retains results and o
     .click();
   await page.getByRole("button", { name: "Clear search", exact: true }).click();
   await expect(
-    page.getByRole("combobox", { name: "Folder", exact: true }),
-  ).toHaveValue("folder");
+    page.getByRole("navigation", { name: "Record folders" }).getByRole("button", { name: "Evidence", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
 });
 test("stale queries, empty results, failure and mobile layout are handled", async ({
   page,
@@ -663,8 +660,9 @@ test("folders are visible without filters and forms stay centered across modes",
   });
   await expect(dialog).toContainText("proof.pdf");
   await dialog
-    .getByRole("combobox", { name: "Folder", exact: true })
-    .selectOption({ label: "Folder content" });
+    .getByRole("group", { name: "Folder", exact: true })
+    .getByRole("button", { name: "Folder content", exact: true })
+    .click();
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(row.locator(".a-file-location")).toContainText("Folder content");
   await folders
@@ -718,8 +716,9 @@ test("rename and category forms save visibly and use mobile viewport dialogs", a
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(390);
   await dialog
-    .getByRole("combobox", { name: "Category", exact: true })
-    .selectOption("evidence");
+    .getByRole("radiogroup", { name: "Category", exact: true })
+    .getByRole("radio", { name: "Evidence", exact: true })
+    .click();
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(row).toContainText("evidence");
 });
@@ -738,12 +737,13 @@ test("content filters remain available and invalidate previous result pages", as
     page.getByRole("button", { name: "More results", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Filters", exact: true }).click();
+  await page.getByRole("navigation", { name: "Record folders" })
+    .getByRole("button", { name: "Unfiled", exact: true })
+    .click();
   await page
-    .getByRole("combobox", { name: "Folder", exact: true })
-    .selectOption("__unfiled");
-  await page
-    .getByRole("combobox", { name: "Category", exact: true })
-    .selectOption("evidence");
+    .getByRole("group", { name: "Category", exact: true })
+    .getByRole("button", { name: "Evidence", exact: true })
+    .click();
   await expect(input).toHaveValue("instarem");
   await expect(
     page.getByRole("button", { name: "More results", exact: true }),
@@ -779,12 +779,12 @@ test("upload opens below the action row at every width", async ({
     const addBox=(await page.getByRole("button",{name:"＋ Add files",exact:true}).boundingBox())!;
     expect(uploadBox.y).toBeGreaterThanOrEqual(addBox.y + addBox.height);
     await page.getByRole("button", { name: "Filters", exact: true }).click();
-    const filter = page.getByRole("combobox", { name: "Folder", exact: true });
+    const filter = page.getByRole("group", { name: "Category", exact: true });
     await expect(filter).toBeVisible();
     expect((await filter.boundingBox())!.y).toBeLessThan(
       (await folders.boundingBox())!.y,
     );
-    await filter.selectOption("folder");
+    await folders.getByRole("button", { name: "Evidence", exact: true }).click();
     await expect(
       folders.getByRole("button", { name: "Evidence", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -1227,8 +1227,9 @@ test("files can be moved to Unfiled without removing their record link", async (
     exact: true,
   });
   await dialog
-    .getByRole("combobox", { name: "Folder", exact: true })
-    .selectOption("");
+    .getByRole("group", { name: "Folder", exact: true })
+    .getByRole("button", { name: "Unfiled (no folder)", exact: true })
+    .click();
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(row.locator(".a-file-location")).toContainText("Unfiled");

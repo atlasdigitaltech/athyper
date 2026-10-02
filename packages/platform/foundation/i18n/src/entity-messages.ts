@@ -1,9 +1,17 @@
 /** Shared entity UI copy. Entity-specific labels remain in published metadata. */
 export const entityEnglishMessages = Object.freeze({
+  "form.emptySetup": "Enter at least one profile value or preference override before saving.",
+  "form.alreadyExists": "This record was already set up. Your draft is preserved. Reload the section to review the existing record.",
+  "form.versionConflict": "This record changed since you opened it. Your draft is preserved. Reload the latest record before trying again.",
+  "form.reloadDiscard": "Discard your unsaved changes and load the latest record?",
+  "form.reloadRecord": "Reload latest record",
+  "form.discardChanges": "Discard your unsaved changes?",
   "detail.recordNotFound": "This record is unavailable or does not exist.",
   "entity.related.unavailable": "This section could not be loaded.",
   "entity.related.loading": "Loading…",
   "entity.related.empty": "No record has been added.",
+  "entity.related.sourceManaged": "These details are managed by another authoritative source. Local editing is unavailable.",
+  "entity.related.sourceUnavailable": "The authoritative source could not be verified. Local editing is unavailable. Try again when the source is available.",
   "entity.related.add": "Add",
   "entity.related.edit": "Edit",
   "entity.related.cancel": "Cancel",

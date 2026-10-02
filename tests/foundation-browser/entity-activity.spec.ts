@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { withSessionDefaults } from "./fixtures/session-stub";
+import { chooseOption } from "./fixtures/choice";
 const bundle = build({
   stdin: {
     loader: "tsx",
@@ -13,9 +15,10 @@ const bundle = build({
  import {parseEntityRecordPresentation} from './packages/contracts/platform/entity-runtime/src/record-presentation';
  import {IntlProvider} from './packages/platform/foundation/i18n/src/react';
  import {createEffectiveLocalization} from './packages/platform/foundation/i18n/src/index';
+ import {entityMessages,entityFallbackMessages} from './packages/platform/foundation/i18n/src/entity-catalogs';
  const presentation=parseEntityRecordPresentation({schemaVersion:1,titleField:'name',sections:[{key:'main',label:'Details',fields:['name','enabled','status','date']},{key:'coverage',label:'Other details',fields:['missing']},{key:'private',label:'Hidden section',fields:['secret']}],navigation:{mode:'scroll',tabs:[{key:'overview',label:'Overview',sectionKeys:['main','coverage','private']}]}});
  const countryDescriptor={schema:'athyper.entity-detail-descriptor/1',plane:'neon',pageKind:'detail',entity:{code:'country',label:'Country'},revision:{release:'release'},titleField:'name',fields:country.definition.fields.map(f=>({key:f.key,label:f.label.defaultText,kind:f.type==='boolean'?'boolean':'string',readOnly:true,required:!!f.required})),actions:[],collaboration:['comments','attachments'],activity:true,presentation:parseEntityRecordPresentation({schemaVersion:1,titleField:'name',navigation:country.definition.navigation,sections:country.definition.sections.map(s=>({...s,label:s.label.defaultText}))})};
- function App(){const [identity,setIdentity]=useState('first');return <IntlProvider localization={createEffectiveLocalization({uiLocale:window.locale??'en',formatLocale:window.locale??'en',timeZone:'UTC'})} messages={{}}><><button onClick={()=>{window.tenant='second';setIdentity('second')}}>Switch tenant</button><MetadataDetailWorkspace key={identity} entityCode={window.country?"country":"example_reference"} preferenceKey="test.activity" descriptor={window.country?countryDescriptor:{schema:'athyper.entity-detail-descriptor/1',plane:'neon',pageKind:'detail',entity:{code:'example_reference',label:'Example'},revision:{release:'release'},titleField:'name',fields:[{key:'name',label:'Name',kind:'string'},{key:'enabled',label:'Enabled',kind:'boolean'},{key:'status',label:'Status',kind:'enum',options:[{value:'active',label:'Active'}]},{key:'date',label:'Effective date',kind:'date'},{key:'missing',label:'Optional detail',kind:'string'}],actions:[],collaboration:['comments','attachments'],activity:window.activityEnabled!==false,presentation}} record={{id:'00000000-0000-4000-8000-000000000010',values:{name:'Example'}}}/></></IntlProvider>}
+ function App(){const [identity,setIdentity]=useState('first');return <IntlProvider localization={createEffectiveLocalization({uiLocale:window.locale??'en',formatLocale:window.locale??'en',timeZone:'UTC'})} messages={entityMessages(window.locale??'en')} fallbackMessages={entityFallbackMessages}><><button onClick={()=>{window.tenant='second';setIdentity('second')}}>Switch tenant</button><MetadataDetailWorkspace key={identity} entityCode={window.country?"country":"example_reference"} preferenceKey="test.activity" descriptor={window.country?countryDescriptor:{schema:'athyper.entity-detail-descriptor/1',plane:'neon',pageKind:'detail',entity:{code:'example_reference',label:'Example'},revision:{release:'release'},titleField:'name',fields:[{key:'name',label:'Name',kind:'string'},{key:'enabled',label:'Enabled',kind:'boolean'},{key:'status',label:'Status',kind:'enum',options:[{value:'active',label:'Active'}]},{key:'date',label:'Effective date',kind:'date'},{key:'missing',label:'Optional detail',kind:'string'}],actions:[],collaboration:['comments','attachments'],activity:window.activityEnabled!==false,presentation}} record={{id:'00000000-0000-4000-8000-000000000010',values:{name:'Example'}}}/></></IntlProvider>}
  createRoot(document.getElementById('root')).render(<App/>);
 `,
   },
@@ -38,7 +41,7 @@ const bundle = build({
         builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
           loader: "js",
           resolveDir: process.cwd(),
-          contents: `
+          contents: withSessionDefaults(`
  import {ApiTransportError} from './packages/platform/foundation/api-client/src/index';
  const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
  const snap=n=>({id:id(n),capturedAt:'2026-09-28T00:00:00Z',capturedBy:'Test user',sequence:n,sourceRecordVersion:null,coverage:'authorized_fields'});
@@ -56,7 +59,7 @@ const bundle = build({
  return op.parse?op.parse(result):result;}};
  export {ErrorSurface} from "./packages/platform/shell/app-foundation/src/boundaries";
  export const useApiClient=()=>client;export const useSessionIdentity=()=>({scope:{tenantId:window.tenant??'first',principalId:'actor',authEpoch:1}});export const useToasts=()=>({push:()=>{}});export const useOptionalAppearanceProfile=()=>undefined;export const readBrowserCsrfToken=()=>undefined;
- `,
+ `),
         }));
       },
     },
@@ -110,7 +113,7 @@ test("navigation order, lazy reads, shared side/full state, comparison expansion
   await page
     .getByRole("checkbox", { name: "Select snapshot 2", exact: true })
     .check();
-  await page.getByRole("combobox", { name: "Activity date range" }).selectOption("last:7");
+  await chooseOption(page.getByRole("combobox", { name: "Activity date range" }), "last:7");
   await expect(
     page.getByRole("checkbox", { name: "Select snapshot 1", exact: true }),
   ).toBeChecked();
@@ -132,7 +135,7 @@ test("navigation order, lazy reads, shared side/full state, comparison expansion
     "data-mode",
     "content",
   );
-  await expect(page.getByRole("combobox", { name: "Activity date range" })).toHaveValue("last:7");
+  await expect(page.getByRole("combobox", { name: "Activity date range" })).toHaveText("Last 7 days");
   await page.screenshot({
     path: test.info().outputPath("activity-full.png"),
     fullPage: true,
@@ -243,7 +246,7 @@ test("published profile supplies the default view and date range", async ({
   await expect(
     page.getByRole("tab", { name: "Saved snapshots", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("combobox", { name: "Activity date range" })).toHaveValue("last:7");
+  await expect(page.getByRole("combobox", { name: "Activity date range" })).toHaveText("Last 7 days");
   const calls = await page.evaluate(() => (window as any).requests.length);
   await page.getByRole("button", { name: /Side view/i }).click();
   await expect(
@@ -617,17 +620,19 @@ test('calendar range groups, timezone, custom validation and navigation preserve
  await mount(page,{timelineEnabled:true,defaultView:'timeline'});
  await page.getByRole('button',{name:'Open Activity',exact:true}).click();
  const range=page.getByRole('combobox',{name:'Activity date range'});
- await expect(range).toHaveValue('last:30');
- expect(await range.locator('optgroup').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('label')))).toEqual(['Days','Weeks','Months','Custom']);
- expect(await range.locator('option').allTextContents()).not.toContain('Tomorrow');
- await range.selectOption('yesterday');
+ await expect(range).toHaveText('Last 30 days');
+ await range.click(); const list=page.getByRole('listbox',{name:'Activity date range'});
+ expect(await list.getByRole('group').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('aria-label')))).toEqual(['Days','Weeks','Months','Custom']);
+ expect(await list.getByRole('option').allTextContents()).not.toContain('Tomorrow');
+ await page.keyboard.press('Escape');
+ await chooseOption(range,'yesterday');
  await expect.poll(()=>page.evaluate(()=>(window as any).lastQuery?.period)).toBe('yesterday');
  expect(await page.evaluate(()=>(window as any).lastQuery.timeZone)).toBe('UTC');
  await page.getByRole('tab',{name:'Saved snapshots',exact:true}).click();
- await expect(range).toHaveValue('yesterday');
+ await expect(range).toHaveText('Yesterday');
  await page.getByRole('button',{name:/Side view/i}).click();
- await expect(range).toHaveValue('yesterday');
- await range.selectOption('custom');
+ await expect(range).toHaveText('Yesterday');
+ await chooseOption(range,'custom');
  await page.getByLabel('Start date',{exact:true}).fill('2026-09-10');
  await page.getByLabel('End date',{exact:true}).fill('2026-09-09');
  await expect(page.getByRole('button',{name:'Apply range',exact:true})).toBeDisabled();
@@ -636,16 +641,18 @@ test('calendar range groups, timezone, custom validation and navigation preserve
  await expect.poll(()=>page.evaluate(()=>(window as any).lastQuery?.startDate)).toBe('2026-09-10');
  expect(await page.evaluate(()=>(window as any).lastQuery.endDate)).toBe('2026-09-12');
  await page.goBack();
- await expect(range).toHaveValue('yesterday');
+ await expect(range).toHaveText('Yesterday');
 });
 
 test('older API only offers supported days presets',async({page})=>{
  await mount(page,{calendarRanges:false});
  await page.getByRole('button',{name:'Open Activity',exact:true}).click();
  const range=page.getByRole('combobox',{name:'Activity date range'});
- await expect(range.locator('optgroup')).toHaveCount(1);
- await expect(range.locator('option[value="custom"]')).toHaveCount(0);
- await range.selectOption('last:90');
+ await range.click(); const list=page.getByRole('listbox',{name:'Activity date range'});
+ await expect(list.getByRole('group')).toHaveCount(1);
+ await expect(list.locator('[data-value="custom"]')).toHaveCount(0);
+ await page.keyboard.press('Escape');
+ await chooseOption(range,'last:90');
  await expect.poll(()=>page.evaluate(()=>(window as any).lastQuery?.days)).toBe(90);
  expect(await page.evaluate(()=>(window as any).lastQuery.period)).toBeUndefined();
 });

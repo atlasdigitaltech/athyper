@@ -5,7 +5,7 @@ import type {
   EntityListResultV1,
   ListLocationStateV1,
 } from "@athyper/contract-platform-entity-list";
-import { Button, Label, Select } from "@athyper/platform-ui";
+import { Button, ChoiceSelect, Label } from "@athyper/platform-ui";
 
 /** Shared cursor-pagination controls for every Entity Framework list surface. */
 export function EntityListPagination({
@@ -47,9 +47,12 @@ export function EntityListPagination({
       <div className="a-entity-list__page-controls">
         <Label>
           <span>{intl.message("list.rowsPerPage")}</span>
-          <Select disabled={loading} value={pageSize} onChange={(event) => onPageSize(Number(event.currentTarget.value))}>
-            {descriptor.limits.allowedPageSizes.map((size) => <option value={size} key={size}>{intl.number(size)}</option>)}
-          </Select>
+          <ChoiceSelect
+            disabled={loading}
+            value={String(pageSize)}
+            onChange={(size) => onPageSize(Number(size))}
+            options={descriptor.limits.allowedPageSizes.map((size) => ({ value: String(size), label: intl.number(size) }))}
+          />
         </Label>
         <div className="a-entity-list__page-buttons">
           {recoverFirst ? <Button size="small" variant="secondary" disabled={loading} onClick={onFirst}>{intl.message("list.firstPage")}</Button> : <Button size="small" variant="secondary" disabled={!cursorHistory.length || loading} onClick={onPrevious}>{intl.message("list.previousPage")}</Button>}

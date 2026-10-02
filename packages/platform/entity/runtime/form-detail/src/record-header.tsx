@@ -1,10 +1,10 @@
 "use client";
 import React, { useEffect, useId, useRef, type ReactNode } from "react";
 import type { EntityRecordHeaderV1 } from "@athyper/contract-platform-entity-runtime";
-import { resolveIcon } from "@athyper/platform-icons";
+import { ChevronDownIcon, resolveIcon } from "@athyper/platform-icons";
 import { PageHeader, useRecordBreadcrumb } from "@athyper/platform-shell";
 import { EntityRecordAction, type EntityActionHandlers } from "./record-action";
-import { Badge } from "@athyper/platform-ui";
+import { Badge, ChoiceSelect } from "@athyper/platform-ui";
 
 export function EntityRecordHeader({
   header,
@@ -120,6 +120,7 @@ export function EntityRecordHeader({
               <details className="a-record-header__more">
                 <summary className="a-button a-button--secondary">
                   More actions
+                  <ChevronDownIcon size={16} className="a-disclosure-caret a-disclosure-caret--menu" aria-hidden="true" />
                 </summary>
                 <div>{overflow.map(action)}</div>
               </details>
@@ -155,19 +156,16 @@ export function EntityRecordHeader({
         >
           <label className="a-record-header__picker" htmlFor={id}>
             Section
-            <select
-              aria-label="Section"
+            <ChoiceSelect
+              label="Section"
               id={id}
               value={activeSection ?? ""}
-              onChange={(event) => onSelectSection?.(event.currentTarget.value)}
-            >
-              {header.sections.map((item) => (
-                <option key={item.key} value={item.key}>
-                  {item.label}
-                  {item.count === undefined ? "" : ` (${item.count})`}
-                </option>
-              ))}
-            </select>
+              onChange={(key) => onSelectSection?.(key)}
+              options={header.sections.map((item) => ({
+                value: item.key,
+                label: `${item.label}${item.count === undefined ? "" : ` (${item.count})`}`,
+              }))}
+            />
           </label>
           <div className="a-record-header__tabs">
             {primarySections.map(section)}
@@ -182,6 +180,7 @@ export function EntityRecordHeader({
                 >
                   {otherSections.find((item) => item.key === activeSection)
                     ?.label ?? "More sections"}
+                  <ChevronDownIcon size={16} className="a-disclosure-caret a-disclosure-caret--menu" aria-hidden="true" />
                 </summary>
                 <div>{otherSections.map(section)}</div>
               </details>

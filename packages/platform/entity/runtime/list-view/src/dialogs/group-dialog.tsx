@@ -1,6 +1,9 @@
 import type { EntityListDescriptorV1 } from "@athyper/contract-platform-entity-list";
-import { Button, Drawer, Label, Select } from "@athyper/platform-ui";
-import { useEffect, useState } from "react";
+import { Button, Drawer } from "@athyper/platform-ui";
+import { CollectionGroupEditor } from "@athyper/platform-collection-controls";
+import { SearchableFieldSelect } from "../field-catalogue";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import React, { useEffect, useState } from "react";
 
 /** Metadata-driven grouping control; it never alters the authorized query. */
 export function GroupDialog({
@@ -16,6 +19,7 @@ export function GroupDialog({
   readonly group?: string;
   readonly onApply: (group?: string) => void;
 }) {
+  const intl = useEntityI18n();
   const [draft, setDraft] = useState(group ?? "");
   const fields = descriptor.fields.filter((field) => field.groupable);
   useEffect(() => {
@@ -25,59 +29,34 @@ export function GroupDialog({
   const dirty = draft !== (group ?? "");
   return (
     <>
-      <Drawer.Toolbar>
-        <Drawer.Context aria-label="Grouping context">
-          <Drawer.Metric label="Groupable fields" value={fields.length} />
-          <Drawer.Metric
-            label="Current grouping"
-            value={
-              group
-                ? (fields.find((field) => field.key === group)?.label ?? group)
-                : "None"
-            }
+      {/* The shared Group by section (same as Notifications and Inbox), with the
+          list's searchable, clearable field picker. */}
+      <CollectionGroupEditor
+        fields={fields}
+        value={draft || undefined}
+        onChange={(next) => setDraft(next ?? "")}
+        fieldSelect={
+          <SearchableFieldSelect
+            label={intl.message("collection.group.field")}
+            fields={fields}
+            value={draft}
+            required={false}
+            placeholder={intl.message("collection.group.none")}
+            onChange={(field) => setDraft(field.key)}
+            onClear={() => setDraft("")}
           />
-          <Drawer.Metric label="Selected" value={selected?.label ?? "None"} />
-        </Drawer.Context>
-      </Drawer.Toolbar>
-      <Drawer.Body>
-        {fields.length ? (
-          <div className="a-entity-list__group-settings">
-            <Label>
-              <span>Grouping field</span>
-              <Select
-                value={draft}
-                onChange={(event) => setDraft(event.currentTarget.value)}
-              >
-                <option value="">No grouping</option>
-                {fields.map((field) => (
-                  <option value={field.key} key={field.key}>
-                    {field.label}
-                  </option>
-                ))}
-              </Select>
-            </Label>
-            <p>
-              Grouping changes presentation only; it does not change the
-              authorized result set.
-            </p>
-          </div>
-        ) : (
-          <div className="a-entity-list__dialog-empty">
-            This entity does not publish any groupable fields.
-          </div>
-        )}
-      </Drawer.Body>
+        }
+        footer={
       <Drawer.Footer>
-        <Drawer.FooterSummary>
-          <strong>
-            {dirty
-              ? "Changes ready to apply"
-              : selected
-                ? `Grouped by ${selected.label}`
-                : "No grouping applied"}
-          </strong>
-          <span>Records will remain in the current authorized list.</span>
-        </Drawer.FooterSummary>
+        {dirty ? (
+          <Drawer.FooterSummary>
+            <strong>
+              {selected
+                ? intl.message("list.footer.groupReady", { field: selected.label })
+                : intl.message("list.footer.groupCleared")}
+            </strong>
+          </Drawer.FooterSummary>
+        ) : null}
         <Drawer.FooterActions>
           <Button
             variant="ghost"
@@ -85,11 +64,8 @@ export function GroupDialog({
             disabled={!draft}
             onClick={() => setDraft("")}
           >
-            Reset grouping
+            {intl.message("collection.group.reset")}
           </Button>
-          <Drawer.Close className="a-button a-button--secondary a-button--small">
-            Cancel
-          </Drawer.Close>
           <Button
             size="small"
             disabled={!dirty}
@@ -98,10 +74,12 @@ export function GroupDialog({
               onOpenChange(false);
             }}
           >
-            Apply grouping
+            {intl.message("collection.group.apply")}
           </Button>
         </Drawer.FooterActions>
       </Drawer.Footer>
+        }
+      />
     </>
   );
 }

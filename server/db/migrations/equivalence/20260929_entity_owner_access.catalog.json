@@ -1,0 +1,167 @@
+{
+  "functions": [
+    {
+      "acl": ["postgres=X/postgres"],
+      "name": "authz.trg_entity_default_membership()",
+      "owner": "postgres",
+      "definition": "CREATE OR REPLACE FUNCTION authz.trg_entity_default_membership()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nDECLARE g record;\nBEGIN\n IF NEW.status<>'active' OR NOT EXISTS(SELECT 1 FROM master.principal p\n   WHERE p.id=NEW.principal_id AND p.tenant_id=NEW.tenant_id AND p.principal_type='user' AND p.status='active') THEN RETURN NEW; END IF;\n FOR g IN SELECT id FROM authz.principal_group WHERE tenant_id=NEW.tenant_id AND status='active'\n   AND group_kind='system' AND source_type='seed' AND metadata->>'entityFrameworkDefaultAccess'='true'\n LOOP\n   -- Preserve explicit membership revocations; a login/provisioning retry must\n   -- not reactivate a grant an administrator removed.\n   IF NOT EXISTS(SELECT 1 FROM authz.group_member WHERE tenant_id=NEW.tenant_id AND group_id=g.id AND principal_id=NEW.principal_id) THEN\n     INSERT INTO authz.group_member(tenant_id,group_id,principal_id,source_type,source_ref,status,created_by)\n       VALUES(NEW.tenant_id,g.id,NEW.principal_id,'seed','entity-framework:default-access:v1','active',NEW.created_by);\n   END IF;\n END LOOP;\n RETURN NEW;\nEND $function$\n"
+    },
+    {
+      "acl": null,
+      "name": "shared.fn_entity_owner_admin_access(text,text,uuid,boolean)",
+      "owner": "postgres",
+      "definition": "CREATE OR REPLACE FUNCTION shared.fn_entity_owner_admin_access(p_schema text, p_object text, p_tenant uuid, p_write boolean)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO 'pg_catalog'\nAS $function$\n SELECT p_tenant=shared.current_tenant_id_soft()\n   AND COALESCE(NULLIF(current_setting('app.entity_owner_access',true),'')::jsonb->>'admin','false')='true'\n   AND NULLIF(current_setting('app.entity_owner_access',true),'')::jsonb->>'schema'=p_schema\n   AND NULLIF(current_setting('app.entity_owner_access',true),'')::jsonb->>'object'=p_object\n   AND NULLIF(current_setting('app.entity_owner_access',true),'')::jsonb->>'tenantId'=p_tenant::text\n   AND NULLIF(current_setting('app.entity_owner_access',true),'')::jsonb->>'actorId'=master.current_principal_id_soft()::text\n   AND (NOT p_write OR NULLIF(current_setting('app.entity_owner_access',true),'')::jsonb->>'operation' IN ('create','patch'))\n$function$\n"
+    },
+    {
+      "acl": null,
+      "name": "shared.trg_record_optimistic_version()",
+      "owner": "postgres",
+      "definition": "CREATE OR REPLACE FUNCTION shared.trg_record_optimistic_version()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nBEGIN\n IF NEW.record_version IS DISTINCT FROM OLD.record_version AND NEW.record_version<>OLD.record_version+1 THEN\n  RAISE EXCEPTION 'Record version must increment by one' USING ERRCODE='check_violation';\n END IF;\n NEW.record_version:=OLD.record_version+1;\n RETURN NEW;\nEND $function$\n"
+    }
+  ],
+  "relations": [
+    {
+      "name": "authz.plane_membership",
+      "columns": null,
+      "indexes": null,
+      "policies": null,
+      "triggers": [
+        {
+          "name": "trg_entity_default_membership",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER trg_entity_default_membership AFTER INSERT OR UPDATE OF status ON authz.plane_membership FOR EACH ROW EXECUTE FUNCTION authz.trg_entity_default_membership()"
+        }
+      ],
+      "constraints": null
+    },
+    {
+      "name": "master.principal",
+      "columns": null,
+      "indexes": null,
+      "policies": [
+        {
+          "name": "entity_owner_admin_read",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "shared.fn_entity_owner_admin_access('master'::text, 'principal'::text, tenant_id, false)",
+          "command": "r",
+          "permissive": true
+        }
+      ],
+      "triggers": null,
+      "constraints": null
+    },
+    {
+      "name": "master.principal_notification_preference",
+      "columns": [
+        {
+          "acl": null,
+          "name": "record_version",
+          "type": "bigint",
+          "default": "1",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": null,
+      "policies": [
+        {
+          "name": "entity_owner_admin_insert",
+          "check": "shared.fn_entity_owner_admin_access('master'::text, 'principal_notification_preference'::text, tenant_id, true)",
+          "roles": ["athyperapp"],
+          "using": null,
+          "command": "a",
+          "permissive": true
+        },
+        {
+          "name": "entity_owner_admin_read",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "shared.fn_entity_owner_admin_access('master'::text, 'principal_notification_preference'::text, tenant_id, false)",
+          "command": "r",
+          "permissive": true
+        },
+        {
+          "name": "entity_owner_admin_update",
+          "check": "shared.fn_entity_owner_admin_access('master'::text, 'principal_notification_preference'::text, tenant_id, true)",
+          "roles": ["athyperapp"],
+          "using": "shared.fn_entity_owner_admin_access('master'::text, 'principal_notification_preference'::text, tenant_id, true)",
+          "command": "w",
+          "permissive": true
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_entity_record_version",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER trg_entity_record_version BEFORE UPDATE ON master.principal_notification_preference FOR EACH ROW EXECUTE FUNCTION shared.trg_record_optimistic_version()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "principal_notification_preference_record_version_check",
+          "validated": true,
+          "definition": "CHECK ((record_version > 0))"
+        }
+      ]
+    },
+    {
+      "name": "master.principal_profile",
+      "columns": [
+        {
+          "acl": null,
+          "name": "record_version",
+          "type": "bigint",
+          "default": "1",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": null,
+      "policies": [
+        {
+          "name": "entity_owner_admin_insert",
+          "check": "shared.fn_entity_owner_admin_access('master'::text, 'principal_profile'::text, tenant_id, true)",
+          "roles": ["athyperapp"],
+          "using": null,
+          "command": "a",
+          "permissive": true
+        },
+        {
+          "name": "entity_owner_admin_read",
+          "check": null,
+          "roles": ["athyperapp"],
+          "using": "shared.fn_entity_owner_admin_access('master'::text, 'principal_profile'::text, tenant_id, false)",
+          "command": "r",
+          "permissive": true
+        },
+        {
+          "name": "entity_owner_admin_update",
+          "check": "shared.fn_entity_owner_admin_access('master'::text, 'principal_profile'::text, tenant_id, true)",
+          "roles": ["athyperapp"],
+          "using": "shared.fn_entity_owner_admin_access('master'::text, 'principal_profile'::text, tenant_id, true)",
+          "command": "w",
+          "permissive": true
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_entity_record_version",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER trg_entity_record_version BEFORE UPDATE ON master.principal_profile FOR EACH ROW EXECUTE FUNCTION shared.trg_record_optimistic_version()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "principal_profile_record_version_check",
+          "validated": true,
+          "definition": "CHECK ((record_version > 0))"
+        }
+      ]
+    }
+  ]
+}

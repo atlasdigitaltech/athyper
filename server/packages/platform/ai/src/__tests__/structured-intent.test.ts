@@ -90,7 +90,7 @@ it("clarifies ambiguity and never routes to an unadmitted tool or historical rec
 it.each([
   "ambiguous",
   "missing_scope",
-  "assessment_scope",
+  "owner_assessment_scope",
   "access_denied",
   "execution_denied",
 ] as const)(
@@ -126,7 +126,7 @@ it.each([
     const runtime = new AtlasAgentRuntime({
       businessContexts: {
         resolve: async () => {
-          if (code === "missing_scope")
+          if (code === "missing_scope" || code === "owner_assessment_scope")
             throw new AtlasScopeSelectionRequiredError();
           if (code === "access_denied")
             throw new AtlasServiceError("PERMISSION_DENIED", "PRIVATE_REASON");
@@ -174,10 +174,10 @@ it.each([
       quota: { reserve },
       tools: {
         definitions: async () =>
-          code === "assessment_scope"
+          code === "owner_assessment_scope"
             ? [
                 {
-                  name: "bp_check_eligibility",
+                  name: "registered_owner_assessment",
                   description: "eligibility",
                   inputSchema: { type: "object" },
                 },
@@ -196,7 +196,7 @@ it.each([
       publicModelId: "atlas-fast",
       dataClass: "internal",
       userText:
-        code === "assessment_scope"
+        code === "owner_assessment_scope"
           ? "Can we purchase from this supplier?"
           : code === "ambiguous"
             ? "Show this partner's contacts and addresses"
@@ -212,7 +212,7 @@ it.each([
       atlasGuidance[
         code === "execution_denied"
           ? "access_denied"
-          : code === "assessment_scope"
+          : code === "owner_assessment_scope"
             ? "missing_scope"
             : code
       ],
@@ -229,7 +229,7 @@ it.each([
           guidance:
             code === "execution_denied"
               ? "access_denied"
-              : code === "assessment_scope"
+              : code === "owner_assessment_scope"
                 ? "missing_scope"
                 : code,
         },
@@ -290,4 +290,9 @@ it("recognizes an unavailable registered section without revealing capability na
     reason: "access_denied",
     capabilityIds: [],
   });
+});
+
+it("delegates assessment questions instead of inferring owner scope from business vocabulary", () => {
+  expect(resolveAtlasIntent([{ name: "registered_owner_assessment", description: "Assessment", inputSchema: {} }],
+    "Can we purchase from this supplier?", page)).toMatchObject({ kind: "delegate", strategy: "model", reason: "unsupported" });
 });

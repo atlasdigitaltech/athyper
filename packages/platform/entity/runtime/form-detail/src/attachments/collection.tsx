@@ -59,7 +59,7 @@ import {
   Card,
   Dialog,
   DialogContent,
-  Select,
+  SegmentedControl,
   Tooltip,
 } from "@athyper/platform-ui";
 import {
@@ -958,44 +958,39 @@ export function AttachmentCollection({
                     />
                   </label>
                 ) : categoryTarget ? (
-                  <label>
-                    {intl.message("files.category")}
-                    <Select
+                  <div className="a-attachment-workspace__filter">
+                    <span className="a-attachment-workspace__filter-label" aria-hidden="true">
+                      {intl.message("files.category")}
+                    </span>
+                    <SegmentedControl
+                      label={intl.message("files.category")}
                       value={categoryValue}
-                      onChange={(event) =>
-                        setCategoryValue(
-                          event.currentTarget.value as "general" | "evidence",
-                        )
-                      }
-                    >
-                      <option value="general">
-                        {intl.message("files.general")}
-                      </option>
-                      <option value="evidence">
-                        {intl.message("files.evidence")}
-                      </option>
-                    </Select>
-                  </label>
+                      options={[
+                        { value: "general", label: intl.message("files.general") },
+                        { value: "evidence", label: intl.message("files.evidence") },
+                      ]}
+                      onValueChange={setCategoryValue}
+                    />
+                  </div>
                 ) : (
-                  <label>
-                    {intl.message("files.folder")}
-                    <Select
+                  <div className="a-attachment-workspace__filter">
+                    <span className="a-attachment-workspace__filter-label" aria-hidden="true">
+                      {intl.message("files.folder")}
+                    </span>
+                    <FilterChipGroup
+                      label={intl.message("files.folder")}
                       value={moveValue}
-                      onChange={(event) =>
-                        setMoveValue(event.currentTarget.value)
-                      }
-                    >
-                      <option value="">{intl.message("files.noFolder")}</option>
-                      {folders.map((folder) => (
-                        <option
-                          key={String(folder.id)}
-                          value={String(folder.id)}
-                        >
-                          {String(folder.name)}
-                        </option>
-                      ))}
-                    </Select>
-                  </label>
+                      onValueChange={setMoveValue}
+                      items={[
+                        { value: "", label: intl.message("files.noFolder") },
+                        ...folders.map((folder) => ({
+                          value: String(folder.id),
+                          label: String(folder.name),
+                          icon: <FolderInputIcon size={16} />,
+                        })),
+                      ]}
+                    />
+                  </div>
                 )}
                 {error ? <p role="alert">{error}</p> : null}
                 <div className="a-comment-action-dialog__footer">
@@ -1034,38 +1029,22 @@ export function AttachmentCollection({
             hidden={!filtersOpen}
             className="a-attachment-workspace__filters"
           >
-            <label>
-              {intl.message("files.folder")}
-              <Select
-                value={folderFilter}
-                onChange={(event) => setFolderFilter(event.currentTarget.value)}
-              >
-                <option value="">{intl.message("files.allFolders")}</option>
-                <option value="__unfiled">
-                  {intl.message("files.unfiled")}
-                </option>
-                {folders.map((folder) => (
-                  <option key={String(folder.id)} value={String(folder.id)}>
-                    {String(folder.name)}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <label>
-              {intl.message("files.category")}
-              <Select
+            {/* Folder choice lives in the folder chips below; the panel adds only the category. */}
+            <div className="a-attachment-workspace__filter">
+              <span className="a-attachment-workspace__filter-label" aria-hidden="true">
+                {intl.message("files.category")}
+              </span>
+              <FilterChipGroup
+                label={intl.message("files.category")}
                 value={categoryFilter}
-                onChange={(event) =>
-                  setCategoryFilter(event.currentTarget.value)
-                }
-              >
-                <option value="">{intl.message("files.allCategories")}</option>
-                <option value="general">{intl.message("files.general")}</option>
-                <option value="evidence">
-                  {intl.message("files.evidence")}
-                </option>
-              </Select>
-            </label>
+                onValueChange={setCategoryFilter}
+                items={[
+                  { value: "", label: intl.message("files.allCategories") },
+                  { value: "general", label: intl.message("files.general") },
+                  { value: "evidence", label: intl.message("files.evidence") },
+                ]}
+              />
+            </div>
           </div>
           {categoryFilter ? (
             <div className="a-file-filter-chips">

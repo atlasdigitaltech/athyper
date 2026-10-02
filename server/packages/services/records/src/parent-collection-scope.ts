@@ -13,7 +13,7 @@ export function createParentCollectionScopeResolver(options: {
 }): RecordCollectionScopeResolver {
   return {
     async resolve(input) {
-      const { parentEntityCode, parentRecordId, relationshipKey, ...rest } =
+      const { parentEntityCode, parentRecordId, relationshipKey, parentDescriptorHash, ...rest } =
         input.coordinate ?? {};
       const baseline = (await options.fallback?.resolve({
         ...input,
@@ -29,7 +29,7 @@ export function createParentCollectionScopeResolver(options: {
       if (
         parentEntityCode === undefined &&
         parentRecordId === undefined &&
-        relationshipKey === undefined
+        relationshipKey === undefined && parentDescriptorHash === undefined
       )
         return baseline;
       const denied = {
@@ -42,6 +42,9 @@ export function createParentCollectionScopeResolver(options: {
         !parentEntityCode ||
         !parentRecordId ||
         !relationshipKey ||
+        !/^[a-z][a-z0-9_]{1,62}$/.test(parentEntityCode) ||
+        !/^[a-z][a-z0-9_]{1,62}$/.test(relationshipKey) ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(parentRecordId) ||
         input.operationCode !== "read"
       )
         return denied;
@@ -54,6 +57,9 @@ export function createParentCollectionScopeResolver(options: {
       );
       if (
         !parent ||
+        parent.entityCode !== parentEntityCode ||
+        parent.planeKey !== input.context.planeKey ||
+        (parentDescriptorHash !== undefined && parent.compiledHash !== parentDescriptorHash) ||
         !relation ||
         !input.descriptor.operations[relation.readOperation] ||
         relation.targetEntity !== input.descriptor.entityCode ||
@@ -85,7 +91,8 @@ export function createParentCollectionScopeResolver(options: {
         entityCode: parentEntityCode,
         recordId: parentRecordId,
       });
-      if (!record.data) return denied;
+      if (!record.data || record.data[parent.storage.idField] !== parentRecordId ||
+        (Object.hasOwn(record.data, parent.storage.tenantField) && record.data[parent.storage.tenantField] !== input.context.tenantId)) return denied;
       const predicates: { field: string; value: string | number | boolean }[] =
         [];
       for (const mapping of relation.fields) {
@@ -122,6 +129,8 @@ export function createParentCollectionScopeResolver(options: {
           parentRecordId,
           relationshipKey,
           parentRelease: parent.releaseId,
+          parentDescriptorHash: parent.compiledHash,
+          scopeResolver: "entity.parent.v1",
           childRelease: input.descriptor.releaseId,
           parentPredicates: JSON.stringify(predicates),
         },

@@ -16,6 +16,7 @@ export * from "./runtime-tool-coordinator.js";
 export * from "./stream.js";
 export * from "./thread-service.js";
 export * from "./tool-service.js";
+export * from "./entity-tool-manifest.js";
 export * from "./atlas-routes.js";
 export * from "./atlas-admin-routes.js";
 export * from "./experience-configuration.js";
@@ -36,8 +37,17 @@ export * from "./redis-insight-cache.js";
 export * from "./business-context.js";
 export { createAtlasEntitySectionTool } from "./entity-section-tool.js";
 
-
 export { createAtlasEntityRecordTool } from "./entity-record-tool.js";
 export * from "./response-feedback.js";
 export * from "./learning-candidates.js";
 export * from "./learning-evaluation.js";
+
+export {
+  createAtlasEntityContextTools,
+  entityContextTool,
+  type AtlasEntityContextReader,
+} from "./entity-context-tools.js";
+
+export { createAtlasEntityLookupTools, entityLookupTool } from "./entity-lookup-tools.js";
+
+export * from "./production-learning-evaluation.js";

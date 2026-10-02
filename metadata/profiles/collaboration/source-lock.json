@@ -1,0 +1,17 @@
+{
+  "schema": "athyper.capability-profile-source-lock/1",
+  "profiles": [
+    {
+      "code": "platform.collaboration.comments.standard",
+      "version": 1,
+      "file": "comments/standard.v1.json",
+      "sha256": "4dcbeb6bcc1f3bc3d26244d1a1c0d1b71f34767b70c90ab2eb0109ea68951222"
+    },
+    {
+      "code": "platform.collaboration.attachments.standard",
+      "version": 1,
+      "file": "attachments/standard.v1.json",
+      "sha256": "5567f3a41a8b5840e5003263990397e8812c0c0ee7d271c69b881ec6eeece291"
+    }
+  ]
+}

@@ -4,21 +4,94 @@ import { BellIcon, CheckIcon } from "@athyper/platform-icons";
 import { Button } from "@athyper/platform-ui";
 import { activityCount } from "./activity-counts";
 import type { ShellActivityDataSource } from "./activity-center";
+import { useShellI18n } from "./shell-i18n";
 
-/** Shared notification actions for the full page and compact drawer. */
-export function ActivityNotificationActions({ data }: { data: ShellActivityDataSource }) {
-  const [busy, setBusy] = useState(false), [error, setError] = useState<string>();
-  const status = data.pushEnrollmentStatus;
-  async function run(action: () => void | Promise<void>) {
-    setBusy(true); setError(undefined);
-    try { await action(); } catch { setError("Could not update notifications. Try again."); }
-    finally { setBusy(false); }
+async function attempt(
+  action: () => void | Promise<void>,
+  setBusy: (busy: boolean) => void,
+  setError: (error?: string) => void,
+  failure: string,
+) {
+  setBusy(true);
+  setError(undefined);
+  try {
+    await action();
+  } catch {
+    setError(failure);
+  } finally {
+    setBusy(false);
   }
-  return <div className="athyper-activity-query__actions">
-    {status === "enabled" || status === "prompt" || status === "error" ? <Button size="small" variant="ghost" disabled={busy} aria-pressed={status === "enabled"} title={data.pushEnrollmentError} onClick={() => void run(() => status === "enabled" ? data.onDisableBrowserPush?.() : data.onEnableBrowserPush?.())}>
-      <BellIcon size={16} />{status === "enabled" ? "Browser alerts: On" : "Enable browser alerts"}
-    </Button> : status === "denied" ? <span className="athyper-activity-query__push-status" title="Allow notifications in your browser site settings"><BellIcon size={16} />Browser alerts blocked</span> : null}
-    {data.onMarkAllNotificationsRead ? <Button size="small" variant="ghost" disabled={busy || data.loading || !(activityCount(data, "notifications")! > 0)} title="Mark all notifications read, including those outside the current filters" onClick={() => void run(() => data.onMarkAllNotificationsRead!())}><CheckIcon size={16} />Mark all read</Button> : null}
-    {error ? <span role="alert" className="athyper-activity-query__action-error">{error}</span> : null}
-  </div>;
+}
+
+/** The one list action for notifications, in the panel and the full page.
+ * Settings such as browser alerts live in Notification preferences. */
+export function ActivityNotificationActions({ data }: { data: ShellActivityDataSource }) {
+  const intl = useShellI18n();
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState<string>();
+  if (!data.onMarkAllNotificationsRead) return null;
+  return (
+    <div className="athyper-activity-query__actions">
+      <Button
+        size="small"
+        variant="ghost"
+        disabled={busy || data.loading || !(activityCount(data, "notifications")! > 0)}
+        title={intl.message("activity.markAllReadHint")}
+        onClick={() =>
+          void attempt(() => data.onMarkAllNotificationsRead!(), setBusy, setError, intl.message("activity.updateManyFailed"))
+        }
+      >
+        <CheckIcon size={16} />
+        {intl.message("activity.markAllRead")}
+      </Button>
+      {error ? <span role="alert" className="athyper-activity-query__action-error">{error}</span> : null}
+    </div>
+  );
+}
+
+/** Browser alerts for this device: a notification setting, shown in
+ * Notification preferences rather than beside the list. */
+export function BrowserAlertsSetting({ data }: { data: ShellActivityDataSource }) {
+  const intl = useShellI18n();
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState<string>();
+  const status = data.pushEnrollmentStatus;
+  if (!status || status === "checking" || status === "unsupported" || status === "unavailable") return null;
+  return (
+    <div className="athyper-browser-alerts">
+      <div>
+        <strong>{intl.message("activity.browserAlerts")}</strong>
+        <span>
+          {intl.message(
+            status === "enabled"
+              ? "activity.browserAlerts.on"
+              : status === "denied"
+                ? "activity.browserAlerts.blocked"
+                : "activity.browserAlerts.off",
+          )}
+        </span>
+      </div>
+      {status === "enabled" || status === "prompt" || status === "error" ? (
+        <Button
+          size="small"
+          variant="secondary"
+          disabled={busy}
+          aria-pressed={status === "enabled"}
+          title={data.pushEnrollmentError}
+          onClick={() =>
+            void attempt(
+              () => (status === "enabled" ? data.onDisableBrowserPush?.() : data.onEnableBrowserPush?.()),
+              setBusy,
+              setError,
+              intl.message("activity.updateManyFailed"),
+            )
+          }
+        >
+          <BellIcon size={16} />
+          {intl.message(status === "enabled" ? "activity.turnOff" : "activity.turnOn")}
+        </Button>
+      ) : null}
+      {error ? <span role="alert">{error}</span> : null}
+    </div>
+  );
 }

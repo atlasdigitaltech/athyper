@@ -11,6 +11,7 @@
   "exports": {
     ".": "./src/index.tsx",
     "./core": "./src/core.ts",
+    "./tool-panel": "./src/tool-panel.ts",
     "./styles.css": "./src/styles.css"
   },
   "scripts": {

@@ -75,6 +75,11 @@ export function useApiClient() {
 export function useSessionIdentity() {
   return { scope: { principalId: "owner" } };
 }
+// Session hooks the collaboration runtime reads; inert values for the fixture.
+export const useExperienceRevision = () => ({ state: "ready", revision: "fixture" });
+export const usePermissions = () => new Set<string>();
+export const useEntityContext = () => undefined;
+export const useApplicationNavigation = () => ({ push() {}, replace() {}, refresh() {} });
 function Fixture() {
   const [, refresh] = useState(0);
   const [full,setFull]=useState(false);Object.assign(window,{setFull});

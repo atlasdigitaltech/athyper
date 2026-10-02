@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
-- Cataloged database tables: 754
+- Cataloged database tables: 757
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -23,12 +23,12 @@ or multiply classified runtime objects.
 
 | Data class | Objects |
 | --- | ---: |
-| ai_governance_and_runtime | 29 |
+| ai_governance_and_runtime | 31 |
 | audit_log | 17 |
 | authentication_authority | 1 |
 | authorization_authority | 21 |
 | authorization_cache | 1 |
-| business_master_transactional | 162 |
+| business_master_transactional | 163 |
 | business_scope_context_non_authorizing | 2 |
 | business_workflow_transactional | 10 |
 | database_backup_object | 1 |
@@ -79,6 +79,8 @@ or multiply classified runtime objects.
 | `ai.atlas_knowledge_chunk` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_knowledge_revision` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_knowledge_source` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_learning_attempt` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_learning_attempt_result` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_learning_candidate` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_learning_candidate_event` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_learning_inbox` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
@@ -587,6 +589,7 @@ or multiply classified runtime objects.
 | `master.principal` | identity_projection | import_exact_preserved_projection | exact_table_override |
 | `master.principal_identity_binding` | identity_projection | import_exact_preserved_projection | exact_table_override |
 | `master.principal_notification_preference` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.principal_person_link` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.principal_profile` | identity_projection | import_cleaned_preserved_projection | exact_table_override |
 | `master.principal_surface_arrangement` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.principal_ui_preference` | business_master_transactional | migrate_in_declared_fk_order | schema_default |

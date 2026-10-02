@@ -17,6 +17,8 @@ BEGIN
     ('76df2a11-bfef-54cb-8ee0-8a50853d1e8c'::uuid,'common.identity.principal_profile.edit','medium'),
     ('32e58242-82cb-5dee-8aa8-3758b66bb8d6'::uuid,'common.identity.principal_notification_preference.read','low'),
     ('9d6eb3ab-e6f0-5008-ad01-9a146eda365f'::uuid,'common.identity.principal_notification_preference.edit','medium'),
+    ('71ba327a-8c75-55da-b5c3-4fa67d7928d0'::uuid,'common.identity.principal_ui_profile.read','low'),
+    ('ca46487f-caa4-5a0f-a20b-8fa69b40362b'::uuid,'common.identity.principal_ui_profile.edit','medium'),
     ('cea6db1a-4c78-5a69-8340-b9e065b0da17'::uuid,'common.identity.principal.administer','high')
   ) AS expected(id,code,risk)
   LOOP

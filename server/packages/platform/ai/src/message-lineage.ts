@@ -80,6 +80,31 @@ export class AtlasDurableMessageAuthorizer {
       readonly maxDependencies?: number;
     },
   ) {}
+  /** Share exact dependency reads only for this disclosure request. Each message still
+   * validates its complete ancestry; no result or owner decision survives the call. */
+  async authorizeMany({ context, messageIds }: {
+    readonly context: VerifiedRequestContext;
+    readonly messageIds: readonly string[];
+  }): Promise<readonly boolean[]> {
+    assertAtlasContext(context);
+    const { reader, reads, attachments, businessContexts } = this.options;
+    const scoped = new AtlasDurableMessageAuthorizer({
+      ...this.options,
+      reader: { read: memoized(reader.read.bind(reader), (_context, id) => id) },
+      ...(reads ? { reads: { revalidate: memoized(reads.revalidate.bind(reads), (_context, evidence) => atlasEvidenceHash(evidence)) } } : {}),
+      ...(businessContexts ? { businessContexts: { resolve: memoized(businessContexts.resolve.bind(businessContexts), (_context, value) => atlasEvidenceHash(value)) } } : {}),
+      ...(attachments ? { attachments: { resolve: memoized(attachments.resolve.bind(attachments), input => {
+        const { context: _context, ...request } = input;
+        return atlasEvidenceHash(request);
+      }) } } : {}),
+    });
+    const results: boolean[] = [];
+    // Unique owner reads already share promises. Running independent ancestry walks
+    // concurrently can exhaust the owner's own read timeout under database contention.
+    for (const messageId of messageIds)
+      results.push(await scoped.authorize({ context, messageId }));
+    return results;
+  }
   async authorize({
     context,
     messageId,
@@ -194,4 +219,17 @@ export function atlasReadEvidenceHash(toolCode: string, value: {data?: unknown; 
     for (const evidence of copy.data.insight.evidence ?? []) delete evidence.observedAt;
   }
   return atlasEvidenceHash(copy);
+}
+
+/** Promise reuse includes failures, which remain fail-closed for this request. */
+function memoized<Args extends readonly unknown[], Result>(
+  resolve: (...args: Args) => Promise<Result>, key: (...args: Args) => string,
+): (...args: Args) => Promise<Result> {
+  const pending = new Map<string, Promise<Result>>();
+  return (...args) => {
+    const id = key(...args);
+    let result = pending.get(id);
+    if (!result) { result = Promise.resolve().then(() => resolve(...args)); pending.set(id, result); }
+    return result;
+  };
 }

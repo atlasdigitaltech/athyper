@@ -144,7 +144,7 @@ export class EntitySuccessorPublicationWorkflow {
       && (!cs.submittedBy || cs.submittedBy === p.authorPrincipalId) && (!cs.approvedBy || cs.approvedBy === p.publisherPrincipalId), "ENTITY_SUCCESSOR_ACTOR_OR_STATE_MISMATCH");
     const artifact = compileGraph(graph);
     check(artifact.contractHash === p.contractHash && artifact.descriptorHash === p.descriptorHash, "ENTITY_SUCCESSOR_SOURCE_PIN_CHANGED");
-    return p.targets.map(t => compileSystemReferenceTarget(graph, t.plane));
+    return p.targets.map(t => compileSystemEntityTarget(graph, t.plane));
   }
   async run() {
     const p = this.policy;

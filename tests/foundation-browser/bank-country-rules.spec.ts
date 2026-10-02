@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildSync } from "esbuild";
 import { test, expect } from "@playwright/test";
+import { chooseOption } from "./fixtures/choice";
 const styles = [
   "packages/platform/foundation/theme/src/styles.css",
   "packages/platform/foundation/ui/src/styles.css",
@@ -69,7 +70,7 @@ for (const [country, value] of Object.entries({
 }))
   test(country + " account format and routing", async ({ page }) => {
     await mount(page);
-    await page.getByRole("combobox", { name: "country" }).selectOption(country);
+    await chooseOption(page.getByRole("combobox", { name: "country" }), country);
     await expect(page.getByRole("combobox")).toHaveCount(1);
     const iban = ["SA", "EG", "QA"].includes(country);
     await page

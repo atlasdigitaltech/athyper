@@ -1,7 +1,20 @@
 import type { EntityAuthorizationRuntime } from "./entity-authorization-runtime.js";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 
-export const ENTITY_FIELD_TYPES = ["string", "text", "integer", "decimal", "money", "boolean", "date", "datetime", "uuid", "enum", "reference", "json"] as const;
+export const ENTITY_FIELD_TYPES = [
+  "string",
+  "text",
+  "integer",
+  "decimal",
+  "money",
+  "boolean",
+  "date",
+  "datetime",
+  "uuid",
+  "enum",
+  "reference",
+  "json",
+] as const;
 export type EntityFieldType = (typeof ENTITY_FIELD_TYPES)[number];
 /** Stored fields and handler-backed facts are intentionally distinct. A computed
  * field may be queryable only after a registered server projection declares it. */
@@ -69,6 +82,9 @@ export function entityFieldFilterOperators(
 }
 
 export interface EntityFieldDescriptor {
+  /** Published, single UUID reference; resolved through the target Entity owner, never an inferred join. */
+  readonly referenceTargetEntity?: string;
+  readonly keyReference?: import("./key-reference.js").EntityKeyReference;
   readonly key: string;
   readonly storagePath: string;
   readonly type: EntityFieldType;
@@ -105,7 +121,9 @@ export interface EntityFieldDescriptor {
     /** Ordering hint for narrow record cards; it never widens the authorized projection. */
     readonly cardPriority?: "primary" | "secondary" | "hidden";
     readonly rendererKey?: string;
-    readonly statusTones?: Readonly<Record<string, "neutral" | "success" | "warning" | "danger">>;
+    readonly statusTones?: Readonly<
+      Record<string, "neutral" | "success" | "warning" | "danger">
+    >;
     readonly defaultVisible?: boolean;
     readonly defaultOrder?: number;
     readonly defaultWidth?: number;
@@ -300,6 +318,10 @@ export interface EntityRuntimeDescriptor {
   readonly intakeSurfaces?: readonly import("@athyper/contract-platform-entity-runtime").EntityIntakeSurfaceV1[];
   readonly intakeFlows?: readonly import("@athyper/contract-platform-entity-runtime").EntityIntakeFlowV1[];
   readonly ai?: import("./entity-ai.js").EntityAiDescriptorV1;
+  /** Runtime-only trusted host result; never parsed from a published artifact. */
+  readonly capabilityReadiness?: import("./entity-readiness.js").EntityReadinessResult;
+  readonly aiManifestBindings?: import("./entity-ai-manifest.js").EntityAiManifestBindingsV1;
+  readonly formPresentation?: import("@athyper/contract-platform-entity-runtime").EntityFormPresentationV1;
   readonly recordPresentation?: import("@athyper/contract-platform-entity-runtime").EntityRecordPresentationV1;
   readonly directoryScope?: import("./directory-scope.js").EntityDirectoryScopeV1;
   readonly authorizationRuntime?: EntityAuthorizationRuntime;

@@ -767,6 +767,68 @@
               }
             ],
             "actions": []
+          },
+          "formPresentation": {
+            "schemaVersion": 1,
+            "create": {
+              "sections": [
+                {
+                  "key": "names",
+                  "label": "Names",
+                  "fields": [
+                    "given_name",
+                    "family_name",
+                    "preferred_name",
+                    "display_name"
+                  ]
+                },
+                {
+                  "key": "photo",
+                  "label": "Photo",
+                  "fields": [
+                    "avatar_url"
+                  ]
+                }
+              ],
+              "submitLabel": "Set up profile",
+              "help": {
+                "display_name": "Name shown in your profile. Login and security settings are managed separately.",
+                "avatar_url": "URL of your profile photo. Uploads are available only through an authorized file capability."
+              }
+            },
+            "edit": {
+              "sections": [
+                {
+                  "key": "names",
+                  "label": "Names",
+                  "fields": [
+                    "given_name",
+                    "family_name",
+                    "preferred_name",
+                    "display_name"
+                  ]
+                },
+                {
+                  "key": "photo",
+                  "label": "Photo",
+                  "fields": [
+                    "avatar_url"
+                  ]
+                }
+              ],
+              "submitLabel": "Save profile",
+              "help": {
+                "display_name": "Name shown in your profile. Login and security settings are managed separately.",
+                "avatar_url": "URL of your profile photo. Uploads are available only through an authorized file capability."
+              }
+            },
+            "meaningfulFields": [
+              "given_name",
+              "family_name",
+              "preferred_name",
+              "display_name",
+              "avatar_url"
+            ]
           }
         }
       }

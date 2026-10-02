@@ -275,7 +275,7 @@ test("workspace surfaces render Home and entitled modules as header tabs", async
   assert.match(styles, /athyper-home__hero\{padding:1\.5rem/);
   assert.match(
     styles,
-    /@media\(max-width:760px\)\{\.athyper-home__atlas-actions\{display:none\}\}/,
+    /@media \(width < 48rem\)\{\.athyper-home__atlas-actions\{display:none\}\}/,
   );
 });
 

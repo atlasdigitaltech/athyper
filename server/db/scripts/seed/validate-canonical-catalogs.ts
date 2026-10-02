@@ -17,6 +17,7 @@ type Permission = {
   permissionKind: string;
   riskTier: "low" | "medium" | "high" | "critical";
   requiresMfa: boolean;
+  requiresSod: boolean;
   lifecycle: "proposed";
   definitionSha256: string;
 };

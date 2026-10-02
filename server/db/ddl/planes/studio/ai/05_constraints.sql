@@ -43,3 +43,8 @@ ALTER TABLE ai.atlas_learning_inbox ADD CONSTRAINT atlas_learning_draft_fk FOREI
 ALTER TABLE ai.atlas_learning_inbox ADD CONSTRAINT atlas_learning_inbox_coordinate_uq UNIQUE(tenant_id,id,proposal_hash);
 ALTER TABLE ai.atlas_learning_candidate_event ADD CONSTRAINT atlas_learning_event_coordinate_fk FOREIGN KEY(tenant_id,inbox_id,proposal_hash) REFERENCES ai.atlas_learning_inbox(tenant_id,id,proposal_hash) ON DELETE CASCADE;
 -- END ATLAS F4 LEARNING STUDIO
+
+-- BEGIN ATLAS LEARNING ATTEMPTS
+ALTER TABLE ai.atlas_learning_attempt ADD CONSTRAINT atlas_learning_attempt_coordinate_fk FOREIGN KEY(tenant_id,inbox_id,proposal_hash) REFERENCES ai.atlas_learning_inbox(tenant_id,id,proposal_hash);
+ALTER TABLE ai.atlas_learning_attempt_result ADD CONSTRAINT atlas_learning_attempt_result_coordinate_fk FOREIGN KEY(tenant_id,attempt_id) REFERENCES ai.atlas_learning_attempt(tenant_id,id);
+-- END ATLAS LEARNING ATTEMPTS

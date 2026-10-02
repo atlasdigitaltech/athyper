@@ -106,7 +106,7 @@ const { Client } = require(process.cwd() + "/server/db/node_modules/pg");
         )
       ).rows.map((r) => r.canonical_code);
       if (
-        defaults.length !== 5 ||
+        defaults.length !== 7 ||
         defaults.includes("common.identity.principal.administer")
       )
         throw Error("default self grants");
@@ -194,9 +194,34 @@ const { Client } = require(process.cwd() + "/server/db/node_modules/pg");
         [tenant, actors[1]],
       );
       if (after.rowCount) throw Error("admin marker reset isolation");
+      for (const table of ["principal_ui_profile", "principal_notification_preference"]) {
+        const notification=table === "principal_notification_preference";
+        const columns=notification ? ",event_code,channel,status" : ",appearance_mode";
+        const values=notification ? ",'stage2.test','in_app','inactive'" : ",'dark'";
+        const insert=`INSERT INTO master.${table}(tenant_id,principal_id,created_by${columns}) VALUES($1,$2,$3${values}) RETURNING id,record_version`;
+        await client.query("SELECT set_config('app.entity_owner_access','{}',true)");
+        const own=await client.query(insert,[tenant,actors[0],actors[0]]);
+        if(Number(own.rows[0]?.record_version)!==1)throw Error(table+": self create failed");
+        await client.query("SAVEPOINT child_deny");
+        try { await client.query(insert,[tenant,actors[1],actors[0]]); throw Error(table+": other owner admitted"); }
+        catch(e){if(e.code!=="42501")throw e;await client.query("ROLLBACK TO SAVEPOINT child_deny");}
+        const marker=operation=>JSON.stringify({schema:"master",object:table,tenantId:tenant,actorId:actors[0],operation,admin:true});
+        await client.query("SELECT set_config('app.entity_owner_access',$1,true)",[marker("create")]);
+        const other=await client.query(insert,[tenant,actors[1],actors[0]]);
+        await client.query("SELECT set_config('app.entity_owner_access',$1,true)",[marker("patch")]);
+        const assignment=notification ? "status='active'" : "appearance_mode='light'";
+        const update=`UPDATE master.${table} SET ${assignment},updated_by=$1 WHERE id=$2 AND record_version=$3 RETURNING record_version`;
+        const edited=await client.query(update,[actors[0],other.rows[0].id,1]);
+        if(Number(edited.rows[0]?.record_version)!==2)throw Error(table+": admin edit failed");
+        if((await client.query(update,[actors[0],other.rows[0].id,1])).rowCount)throw Error(table+": stale version admitted");
+        await client.query("SELECT set_config('app.entity_owner_access','{}',true)");
+        if((await client.query(update,[actors[0],other.rows[0].id,2])).rowCount)throw Error(table+": revoked admin marker admitted");
+        if(Number((await client.query(update,[actors[0],own.rows[0].id,1])).rows[0]?.record_version)!==2)throw Error(table+": self edit failed");
+      }
       console.log(
         JSON.stringify({
           plane,
+          editableEntities: ["principal_profile","principal_notification_preference","principal_ui_profile"],
           selfRead: true,
           selfCreate: true,
           otherOwnerDenied: true,

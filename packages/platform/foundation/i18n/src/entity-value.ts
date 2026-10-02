@@ -79,7 +79,7 @@ export function formatExactDecimal(value: string, intl: IntlRuntime): string {
   const [whole, fraction] = (negative ? value.slice(1) : value).split(".");
   const { integer: formatter, decimal, digits } = decimalFormat(intl);
   // Number -0 preserves the locale's sign and bidi literals; BigInt -0 does not.
-  const integer = formatter.format(negative && BigInt(whole!) === 0n
+  const integer = formatter.format(negative && BigInt(whole!) === BigInt(0)
     ? -0 : BigInt(`${negative ? "-" : ""}${whole}`));
   if (fraction === undefined) return integer;
   return integer + decimal + [...fraction].map(digit => digits[Number(digit)]).join("");

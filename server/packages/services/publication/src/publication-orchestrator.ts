@@ -38,12 +38,15 @@ const PERMANENT_CODES = new Set([
   "ENTITY_PROJECTION_REQUIRED",
   "ENTITY_BACKEND_AUTHORIZATION_UNAVAILABLE",
   "PUBLICATION_ACTIVATION_APPROVAL_REQUIRED",
+  "PUBLICATION_ROLLBACK_PLANE_MISMATCH",
+  "PUBLICATION_ROLLBACK_TENANT_MAPPING_REQUIRED",
 ]);
 
 const CONFLICT_CODES = new Set([
   "ACTIVATION_REGRESSION",
   "RELEASE_SEQUENCE_NOT_FORWARD",
   "LOCAL_ACTIVATION_HEAD_MISMATCH",
+  "LOCAL_ROLLBACK_HEAD_MISMATCH",
   "ACKNOWLEDGEMENT_CONFLICT",
   "DEPLOYMENT_TERMINAL",
 ]);
@@ -321,7 +324,12 @@ function errorCode(error: unknown): string {
   const candidate = Reflect.get(asObject(error), "code");
   if (typeof candidate === "string" && candidate.length > 0)
     return safeCode(candidate);
-  if (error instanceof Error && PERMANENT_CODES.has(error.message))
+  // Repository adapters also emit exact message-only codes. Preserve known
+  // state conflicts without promoting arbitrary dependency messages to codes.
+  if (
+    error instanceof Error &&
+    (PERMANENT_CODES.has(error.message) || CONFLICT_CODES.has(error.message))
+  )
     return error.message;
   return error instanceof TypeError
     ? "INVALID_PUBLICATION_INPUT"

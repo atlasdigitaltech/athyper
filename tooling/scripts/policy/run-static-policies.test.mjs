@@ -118,6 +118,7 @@ test("CLI exits nonzero after failures and zero when every required check passes
     join(cwd, "governance/config/governance/static-policy-profiles.json"),
     JSON.stringify({ schemaVersion: 1, profiles: { ci: ["policy:probe"] } }),
   );
+  writeFileSync(join(cwd, ".gitignore"), "evidence/\n");
   assert.equal(spawnSync("git", ["init", "-q"], { cwd }).status, 0);
   assert.equal(
     spawnSync(
@@ -156,15 +157,79 @@ test("CLI exits nonzero after failures and zero when every required check passes
           ...process.env,
           GITHUB_STEP_SUMMARY: "",
           ATHYPER_ARTIFACT_ROOT: join(cwd, "evidence"),
-          ATHYPER_ARTIFACT_RUN_ID: "test",
+          ATHYPER_ARTIFACT_RUN_ID: `test-${exitCode}`,
         },
       },
     );
     assert.equal(result.status, exitCode ? 1 : 0, result.stderr);
     const report = JSON.parse(
-      readFileSync(join(cwd, "evidence/static-policy/test/ci/results.json")),
+      readFileSync(
+        join(cwd, `evidence/static-policy/test-${exitCode}/ci/results.json`),
+      ),
     );
     assert.equal(report.total, 1);
     assert.equal(report.failed, exitCode ? 1 : 0);
+    const gate = JSON.parse(
+      readFileSync(
+        join(cwd, `evidence/static-policy/test-${exitCode}/ci/gate.json`),
+      ),
+    );
+    assert.equal(gate.sourceStable, true);
+    assert.equal(gate.passed, exitCode === 0);
+  }
+  writeFileSync(
+    join(cwd, "package.json"),
+    JSON.stringify({
+      scripts: {
+        "policy:probe": `node -e "require('node:fs').writeFileSync('changed.txt', 'new source')"`,
+      },
+    }),
+  );
+  const changed = spawnSync(
+    process.execPath,
+    [cli.pathname, "--profile", "ci", "--deliverable", "D8"],
+    {
+      cwd,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        GITHUB_STEP_SUMMARY: "",
+        ATHYPER_ARTIFACT_ROOT: join(cwd, "evidence"),
+        ATHYPER_ARTIFACT_RUN_ID: "drift",
+      },
+    },
+  );
+  assert.equal(changed.status, 1, changed.stderr);
+  const gate = JSON.parse(
+    readFileSync(join(cwd, "evidence/static-policy/drift/ci/D8/gate.json")),
+  );
+  assert.equal(gate.deliverable, "D8");
+  assert.equal(gate.sourceStable, false);
+  assert.deepEqual(gate.failedPolicies, []);
+  assert.equal(gate.passed, false);
+  const repeated = spawnSync(
+    process.execPath,
+    [cli.pathname, "--profile", "ci", "--deliverable", "D8"],
+    {
+      cwd,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        ATHYPER_ARTIFACT_ROOT: join(cwd, "evidence"),
+        ATHYPER_ARTIFACT_RUN_ID: "drift",
+      },
+    },
+  );
+  assert.equal(repeated.status, 1);
+  assert.match(repeated.stderr, /evidence already exists/);
+  for (const args of [
+    ["--profile", "wave1", "--deliverable", "D8"],
+    ["--profile", "ci", "--deliverable", "D11"],
+  ]) {
+    const invalid = spawnSync(process.execPath, [cli.pathname, ...args], {
+      cwd,
+      encoding: "utf8",
+    });
+    assert.equal(invalid.status, 1);
   }
 });

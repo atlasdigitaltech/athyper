@@ -304,3 +304,47 @@ it("opens and searches a tenant directory with organization-scoped permission ev
   expect(page.rows).toHaveLength(1);
   expect(page.rows[0]?.values).not.toHaveProperty("tax_id");
 });
+
+it.each([
+  ["4", 4],
+  [4, 4],
+  ["9007199254740993", undefined],
+  ["4.5", undefined],
+  ["", undefined],
+])("preserves safe PostgreSQL version %j across list and record surfaces", async (raw, expected) => {
+  const row = { partner_uuid: "partner-1", tenant_id: context.tenantId, partner_code: "ACME", display_name: "Acme", row_version: raw };
+  const lists = createTestListService({ authorizer: allowReadOnly(), rows: [row] });
+  expect((await lists.list({ context, entityCode: descriptor.entityCode })).rows[0]?.version).toBe(expected);
+  const records = createEntityListService({ metadata, authorizer: allowReadOnly(), listExecutor: {} as never, queries: { get: async () => ({ data: row }) } as never });
+  expect((await records.record(context, descriptor.entityCode, "partner-1")).version).toBe(expected);
+});
+
+it("omits server-owned create inputs and retains authorized published field grouping", async () => {
+  const form: EntityRuntimeDescriptor = { ...descriptor,
+    fields: descriptor.fields.map(field => ({ ...field, writableOn: field.key === "name" ? ["create", "patch"] : [] })),
+    operations: { ...descriptor.operations, create: { code: "create", permissionCode: "partner.create" } },
+    recordPresentation: parseEntityRecordPresentation({ schemaVersion: 1, titleField: "name", sections: [{ key: "names", label: "Names", fields: ["name", "tax_id"] }], actions: [] }),
+  };
+  const service = createTestListService({ descriptor: form, metadata: { getEntityDescriptor: async () => form }, authorizer: { authorize: async ({permissionCode}) => permissionCode === "partner.tax.read" ? { allowed: false, reason: "missing_permission" } : { allowed: true } } });
+  const result = await service.formDescriptor(context, form.entityCode, "create");
+  expect(result.fields.map(field => field.key)).toEqual(["name"]);
+  expect(result.sections).toEqual([{ key: "names", label: "Names", fields: ["name"] }]);
+  expect(JSON.stringify(result)).not.toContain("tax_id");
+});
+
+it("projects explicit form inputs, help and action labels only after field authorization", async () => {
+  const { parseEntityFormPresentation } = await import("@athyper/contract-platform-entity-runtime");
+  const mode = { sections: [{ key: "names", label: "Names", fields: ["name", "tax_id"] }], submitLabel: "Save profile", help: { name: "Your display name.", tax_id: "Restricted help." } };
+  const form: EntityRuntimeDescriptor = { ...descriptor,
+    fields: descriptor.fields.map(field => ({ ...field, writableOn: field.key === "name" ? ["create", "patch"] : [] })),
+    operations: { ...descriptor.operations, create: { code: "create", permissionCode: "partner.create" } },
+    formPresentation: parseEntityFormPresentation({ schemaVersion: 1, create: mode, edit: mode }, descriptor.fields.map(field => field.key)),
+  };
+  const service = createTestListService({ descriptor: form, metadata: { getEntityDescriptor: async () => form }, authorizer: { authorize: async ({permissionCode}) => permissionCode === "partner.tax.read" ? { allowed: false, reason: "missing_permission" } : { allowed: true } } });
+  const result = await service.formDescriptor(context, form.entityCode, "create");
+  expect(result.fields.map(field => field.key)).toEqual(["name"]);
+  expect(result.fields[0]?.helpText).toBe("Your display name.");
+  expect(result.submit.label).toBe("Save profile");
+  expect(JSON.stringify(result)).not.toContain("Restricted help");
+  expect(JSON.stringify(result)).not.toContain("tax_id");
+});

@@ -247,7 +247,7 @@ export { SearchableSelect, searchReferenceOptions, type ReferenceOption, type Se
 /** Controlled object search; filtering and keyboard shortcut ownership stay with the host workspace. */
 export const ObjectSearch = forwardRef<HTMLInputElement, { id: string; value: string; onValueChange: (value: string) => void; placeholder?: string; label: string; maxLength?: number; /** Longer guidance kept for assistive technology when the placeholder is shortened. */ description?: string }>(function ObjectSearch({id,value,onValueChange,placeholder,label,maxLength,description},ref) {
  const messages = useUiMessages();
- return <div className="a-object-search"><SearchIcon size={18} aria-hidden="true" /><Input ref={ref} id={id} type="search" autoComplete="off" enterKeyHint="search" aria-label={label} aria-describedby={description ? `${id}-description` : undefined} value={value} placeholder={placeholder} maxLength={maxLength} onChange={e=>onValueChange(e.target.value)} />{value ? <Button variant="ghost" size="small" aria-label={messages.clearSearch} onClick={()=>onValueChange("")}>{messages.clearSearch}</Button> : <kbd aria-hidden="true">/</kbd>}{description ? <span id={`${id}-description`} className="a-visually-hidden">{description}</span> : null}</div>;
+ return <div className="a-object-search"><SearchIcon size={18} aria-hidden="true" /><Input ref={ref} id={id} type="search" autoComplete="off" enterKeyHint="search" aria-label={label} aria-describedby={description ? `${id}-description` : undefined} value={value} placeholder={placeholder} maxLength={maxLength} onChange={e=>onValueChange(e.target.value)} />{value ? <Button className="a-object-search__clear" variant="ghost" size="icon" aria-label={messages.clearSearch} title={messages.clearSearch} onClick={()=>onValueChange("")}><CloseIcon size={16} /></Button> : <kbd aria-hidden="true">/</kbd>}{description ? <span id={`${id}-description`} className="a-visually-hidden">{description}</span> : null}</div>;
 });
 
 export { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
@@ -257,9 +257,11 @@ export { PreviewFrame } from "./preview-frame";
 export { registerModalBranch } from "./modal-isolation";
 export { UiMessagesProvider, englishUiMessages, useUiMessages, type UiMessages } from "./ui-messages";
 
-export { ComposerFrame, ComposerHeader, ComposerFooter, type ComposerFrameProps } from "./composer-frame";
+export { ComposerFrame, ComposerHeader, ComposerFooter, ComposerAttachments, ComposerAttachment, type ComposerFrameProps } from "./composer-frame";
 
 export { PanelHeader, PanelHeaderActions, PanelTabs, PanelEmptyState, PanelContextRow, PanelToolbar, PanelFooter, type PanelHeaderAction, type PanelHeaderCapabilities, type PanelScope, type PanelTab } from "./panel";
 export { SearchField, type SearchFieldProps } from "./search-field";
-export { FilterChipGroup, type FilterChipItem } from "./filter-chip-group";
+export { FilterChipGroup, ChoiceChips, type FilterChipItem } from "./filter-chip-group";
 export { ViewSelector } from "./view-selector";
+export { SegmentedControl, type SegmentedOption } from "./segmented-control";
+export { ChoiceSelect, type ChoiceOption, type ChoiceSelectProps } from "./choice-select";

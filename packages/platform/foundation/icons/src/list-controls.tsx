@@ -42,3 +42,11 @@ export function EyeIcon(props: IconProps) { return <IconFrame {...props}><path d
 export function CopyIcon(props: IconProps) { return <IconFrame {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></IconFrame>; }
 
 export function UnlinkIcon(props: IconProps) { return <IconFrame {...props}><path d="m18 13 2-2a5 5 0 0 0-7-7l-2 2M6 11l-2 2a5 5 0 0 0 7 7l2-2M3 3l18 18M8 2v3M2 8h3M16 19v3M19 16h3" /></IconFrame>; }
+/* Composer actions shared by comments and Atlas. */
+export function PaperclipIcon(props: IconProps) { return <IconFrame {...props}><path d="m21 11-9 9a6 6 0 0 1-8.5-8.5L13 2a4 4 0 0 1 5.7 5.7l-9.5 9.5a2 2 0 0 1-2.8-2.8L15 6" /></IconFrame>; }
+export function BoldIcon(props: IconProps) { return <IconFrame {...props}><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8" /></IconFrame>; }
+export function ItalicIcon(props: IconProps) { return <IconFrame {...props}><path d="M19 4h-9M14 20H5M15 4 9 20" /></IconFrame>; }
+export function UnderlineIcon(props: IconProps) { return <IconFrame {...props}><path d="M6 4v6a6 6 0 0 0 12 0V4M4 20h16" /></IconFrame>; }
+/* Answer feedback. */
+/** The shell's thumbs-up outline, flipped, so the pair matches. */
+export function ThumbsDownIcon(props: IconProps) { return <IconFrame {...props}><path transform="matrix(1 0 0 -1 0 24)" d="M7 10v11H3V10h4Zm0 0 5-8a3 3 0 0 1 2 3v4h5a2 2 0 0 1 2 2l-2 8a2 2 0 0 1-2 2H7" /></IconFrame>; }

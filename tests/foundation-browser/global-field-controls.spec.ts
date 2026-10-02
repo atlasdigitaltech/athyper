@@ -16,16 +16,16 @@ const script = buildSync({
     loader: "tsx",
     contents: `
 import React,{useState} from 'react';import{createRoot}from'react-dom/client';
-import{Select,Input,DrawerRoot,DrawerPanel,DrawerHeader,DrawerBody}from'./packages/platform/foundation/ui/src/index';
+import{ChoiceSelect,Input,DrawerRoot,DrawerPanel,DrawerHeader,DrawerBody}from'./packages/platform/foundation/ui/src/index';
 import{ReferenceSelect}from'./packages/platform/entity/runtime/form-detail/src/reference-select';
 import{FilterValueEditor}from'./packages/platform/entity/runtime/list-view/src/filter-editor';
 const options=[{value:'MY',label:'Malaysia'},{value:'SG',label:'Singapore'},...Array.from({length:247},(_,i)=>({value:'C'+i,label:'Country '+i}))];
 window.requests={get:0,post:0};let history=[];
 const client={request:async(operation,opts)=>{if(operation.method==='GET'){window.requests.get++;await new Promise(r=>setTimeout(r,40));}
 else{window.requests.post++;history=opts.body.action==='clear'?[]:[{key:opts.body.key,selectedAt:new Date().toISOString()},...history.filter(item=>item.key!==opts.body.key)];}return{items:history};}};
-function App(){const[open,setOpen]=useState(false),[value,setValue]=useState('MY'),[user,setUser]=useState('alice'),[many,setMany]=useState('MY'),[legacy,setLegacy]=useState('Mal'),[period,setPeriod]=useState('last_7_days'),[dates,setDates]=useState('2026-09-13,2026-09-20');
+function App(){const[open,setOpen]=useState(false),[value,setValue]=useState('MY'),[user,setUser]=useState('alice'),[many,setMany]=useState('MY'),[legacy,setLegacy]=useState('Mal'),[period,setPeriod]=useState('last_7_days'),[dates,setDates]=useState('2026-09-13,2026-09-20'),[ownership,setOwnership]=useState('external');
 return <main><h1>Global field controls</h1><button onClick={()=>setOpen(true)}>Open filters</button><button onClick={()=>setUser('bob')}>Switch identity</button>
-<label htmlFor="ownership">Ownership</label><Select id="ownership" defaultValue="external"><option value="external">External</option><option value="internal">Internal</option></Select>
+<label htmlFor="ownership">Ownership</label><ChoiceSelect id="ownership" name="ownership" value={ownership} onChange={setOwnership} options={[{value:'external',label:'External'},{value:'internal',label:'Internal'}]}/>
 <label htmlFor="need">Need by date</label><Input id="need" type="date" defaultValue="2026-09-13"/>
 {Array.from({length:20},(_,i)=><ReferenceSelect key={i} id={'country-'+i} name={'country-'+i} label={'Country '+i} value={value} onChange={setValue} options={options} sourceKey="iso.country" recentScope={{plane:'neon',tenantId:'tenant',principalId:user}} recentPolicy={{enabled:true,limit:5,persistence:'server',scope:'referenceSource',retentionDays:90}} history={{client,entityCode:'business_partner',surfaceKey:'details',fieldKey:'country'}}/>)}
 <DrawerRoot open={open} onOpenChange={setOpen}><DrawerPanel size="standard"><DrawerHeader title="Filters"/><DrawerBody><div style={{height:260}}>Filter values</div><FilterValueEditor field={{key:'country',label:'Country',valueKind:'reference',filterOperators:['eq','in'],filterOptions:options}} operator="in" value={many} filterNumber={1} onChange={setMany}/><FilterValueEditor field={{key:'legacy',label:'Legacy country',valueKind:'string',semanticRole:'country_code',filterOperators:['contains'],filterOptions:options}} operator="contains" value={legacy} filterNumber={2} onChange={setLegacy}/><FilterValueEditor field={{key:'updated',label:'Updated',valueKind:'datetime',filterOperators:['relative']}} operator="relative" value={period} filterNumber={3} onChange={setPeriod}/><FilterValueEditor field={{key:'need',label:'Need by',valueKind:'date',filterOperators:['between']}} operator="between" value={dates} filterNumber={4} onChange={setDates}/><output aria-label="Selected countries">{many}</output><div style={{height:500}}/></DrawerBody></DrawerPanel></DrawerRoot></main>};
@@ -38,6 +38,8 @@ createRoot(document.getElementById('root')).render(<App/>);`,
   jsx: "automatic",
   tsconfig: resolve("tooling/config/tsconfig-react.json"),
   define: { "process.env.NODE_ENV": '"production"' },
+  // Stylesheets are injected by the page, not bundled (the date picker imports its CSS).
+  loader: { ".css": "empty" },
   logLevel: "silent",
 }).outputFiles[0]!.text;
 
@@ -154,23 +156,23 @@ for (const width of [900, 390])
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
-test("native choices and dates retain form semantics and RTL styling", async ({
+test("metadata choices and dates retain form semantics in RTL", async ({
   page,
 }) => {
   await mount(page);
-  const select = page.getByLabel("Ownership"),
+  const choice = page.getByRole("combobox", { name: "Ownership" }),
     date = page.getByLabel("Need by date");
-  await select.selectOption("internal");
-  await expect(select).toHaveValue("internal");
+  // The select widget is the design-system ChoiceSelect, not an OS popup.
+  await choice.click();
+  await page.getByRole("listbox", { name: "Ownership" }).getByRole("option", { name: /internal/i }).click();
+  await expect(choice).toHaveText(/internal/i);
+  await expect(page.locator('input[type=hidden][name="ownership"]')).toHaveValue("internal");
   await date.fill("2026-10-01");
   await expect(date).toHaveValue("2026-10-01");
-  expect(
-    await select.evaluate((node) => getComputedStyle(node).appearance),
-  ).toBe("none");
   await page.evaluate(() => (document.documentElement.dir = "rtl"));
-  expect(
-    await select.evaluate((node) => getComputedStyle(node).backgroundPosition),
-  ).toContain("11px");
+  const [trigger, icon] = await choice.evaluate((node) => [node.getBoundingClientRect().toJSON(), node.querySelector("svg")!.getBoundingClientRect().toJSON()]);
+  // In RTL the chevron sits at the inline start (left) of the control.
+  expect(icon.x - trigger.x).toBeLessThan(trigger.width / 2);
   expect(await page.evaluate(() => (window as any).requests)).toEqual({
     get: 0,
     post: 0,
@@ -238,15 +240,14 @@ test("relative periods keep groups and commit a date preset inside the drawer", 
   const field = page.getByRole("combobox", {
     name: "Value for Updated filter 3",
   });
-  await expect(field).toHaveValue("last_7_days");
-  expect(
-    await field
-      .locator("optgroup")
-      .evaluateAll((nodes) => nodes.map((n) => n.label)),
-  ).toEqual(["Days", "Weeks", "Months", "Years"]);
-  expect(
-    await field.locator('optgroup[label="Days"] option').allTextContents(),
-  ).toEqual([
+  await expect(field).toHaveText("Last 7 days");
+  await field.click();
+  const list = page.getByRole("listbox", { name: "Value for Updated filter 3" });
+  for (const name of ["Days", "Weeks", "Months", "Years"])
+    await expect(list.getByRole("group", { name, exact: true })).toBeVisible();
+  await expect(
+    list.getByRole("group", { name: "Days", exact: true }).getByRole("option"),
+  ).toHaveText([
     "Today",
     "Yesterday",
     "Tomorrow",
@@ -257,8 +258,10 @@ test("relative periods keep groups and commit a date preset inside the drawer", 
     "Next 30 days",
     "Next 90 days",
   ]);
-  await field.selectOption("last_30_days");
+  await list.getByRole("option", { name: "Last 30 days" }).click();
+  await expect(field).toHaveText("Last 30 days");
   await expect(page.getByText(/Previous 30 days plus today/)).toBeVisible();
+  // A fixed, grouped list: no search field and no recent-choice list.
   await expect(
     page.getByRole("combobox", { name: "Search by name or code…" }),
   ).toHaveCount(0);
@@ -267,8 +270,8 @@ test("relative periods keep groups and commit a date preset inside the drawer", 
   ).toHaveCount(0);
   await field.focus();
   await field.press("Home");
-  await field.press("ArrowDown");
-  await expect(field).toHaveValue("today");
+  await field.press("Enter");
+  await expect(field).toHaveText("Today");
   await expect(field).toBeFocused();
   expect(await page.evaluate(() => (window as any).requests)).toEqual({
     get: 0,

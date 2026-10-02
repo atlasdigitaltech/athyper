@@ -11,7 +11,7 @@ const recordPatch = createOperation<RecordMutationReceipt, Readonly<Record<strin
 export interface RecordMutationReceipt { readonly kind: "Committed"; readonly action: "create" | "patch"; readonly entityCode: string; readonly recordId: string; readonly version?: number; readonly replayed: boolean; }
 export const entityDescriptorClient = Object.freeze({
   detailRead: (client: HttpClient, entityCode: string, recordId: string, signal?: AbortSignal) => client.request(detailRead, { signal, params: { entityCode, recordId } }),
-  form: (client: HttpClient, entityCode: string, mode: "create" | "edit") => client.request(formDescriptor, { params: { entityCode }, query: { mode } }),
+  form: (client: HttpClient, entityCode: string, mode: "create" | "edit", recordId?: string) => client.request(formDescriptor, { params: { entityCode }, query: { mode, ...(mode === "edit" && recordId ? { recordId } : {}) } }),
   detail: (client: HttpClient, entityCode: string, recordId?: string, signal?: AbortSignal) => client.request(detailDescriptor, { signal, params: { entityCode }, ...(recordId ? { query: { recordId } } : {}) }),
   record: (client: HttpClient, entityCode: string, recordId: string, signal?: AbortSignal) => client.request(recordRead, { signal, params: { entityCode, recordId } }),
   create: (client: HttpClient, entityCode: string, values: Readonly<Record<string, unknown>>, idempotencyKey: string, parentScope?: {parentEntityCode:string;parentRecordId:string;relationshipKey:string}) => client.request(recordCreate, { params: { entityCode }, body: values, idempotencyKey, ...(parentScope ? {query:parentScope} : {}) }),

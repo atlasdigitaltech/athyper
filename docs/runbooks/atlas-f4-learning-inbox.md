@@ -53,3 +53,73 @@ No live database migration, tenant publication or deployment was performed as pa
 611 package/vertical/client/UI tests passed, along with 11 typechecks and test-reachability verification. Disposable PostgreSQL qualification passed on all three planes; Studio additionally verified real Ed25519 delivery, activation, retry and rollback, including compatibility with legacy snapshot hashes. See the recorded qualification evidence.
 
 Public authoring routes enforce Studio/tenant scope. Platform-scoped change sets additionally require platform catalogue management; browser-supplied break-glass evidence is not accepted as independent review authority.
+
+## Controlled Country benchmark preparation
+
+The shared preparation command can initialize the supplied nine-question Country record-summary
+base and proposed attempt rules. The sample is a shared template, not independently authored
+acceptance content. It assumes neither an active release number nor current deployment support.
+The same command prepares any eligible Entity graph through the existing authoring compiler; no
+separate provider, publication route or runtime is introduced.
+
+From the repository root, choose a new private output directory whose parent already exists:
+
+```sh
+node --import tsx tooling/scripts/verification/prepare-atlas-controlled-benchmark.ts \
+  --init tooling/scripts/verification/fixtures/country-record-summary.template.json \
+  /absolute/path/to/new-custodian-draft
+```
+
+This validates the declaration through the existing fixture parser and requires explicit purposes,
+capability IDs and correction/preservation/safety coverage. It writes `declaration.template.json`,
+`attempt-rules.proposed.json` and `handoff.json` with private permissions. Existing directories are
+refused. The handoff records the outstanding T04–T08 steps and makes no independence claim.
+
+The proposed rules specify three repetitions per fixture, at least one correction improved,
+100% preservation, zero safety failures, aggregation across every planned attempt, fresh identities
+for retries and no passing result for interrupted attempts. These are proposed settings for custodian
+agreement, not evaluator configuration or an executed acceptance policy. The tool validates and
+hashes them; the actual acceptance run must enforce the agreed rules. A rule file cannot assert
+agreement or approval, and a passing summary cannot compensate for a safety failure.
+
+`catl.admin` must independently author the final questions. Pin and inspect the actual source and
+candidate: preservation questions must pass the baseline; correction questions must demonstrate
+improvement. Shared wording and paraphrases alone establish neither independence nor improvement.
+Country summary-only expectations do not waive admitted-competitor ambiguity or separate runtime
+scope, denial, stale-publication and replay coverage where applicable.
+
+Export the real source authoring graph through the existing Studio workflow. A checked-in
+`definition.json` is not that graph. Once final declaration and proposed rules files are available:
+
+```sh
+node --import tsx tooling/scripts/verification/prepare-atlas-controlled-benchmark.ts \
+  /absolute/path/to/source-graph.json /absolute/path/to/final-declaration.json \
+  country-record-summary-v1 /absolute/path/to/new-preparation-packet \
+  --rules /absolute/path/to/attempt-rules.proposed.json
+```
+
+Preparation checks authoring contracts and an unchanged runtime descriptor, rejects duplicate test
+keys and impossible correction thresholds, and writes `graph.json`, `preparation.json`, the rule
+snapshot/hash and `handoff.json`. The receipt remains `prepared-only`, `independence: not-attested`
+and `attemptRulesAgreement: not-attested`. The original four-argument command remains supported;
+without `--rules`, it makes no rule-capture claim.
+
+Before any acceptance execution, record the custodians' agreement on the exact rules and assign
+its accountable author. Save the prepared graph through Studio under the actual author identity,
+then use ordinary submission and `catl.owner`'s authenticated independent review/publication.
+Retain published fixture-set references and real receipts. The proposer and evaluation reviewer
+must be distinct eligible principals, both separate from the two fixture custodians. Preparing or
+committing JSON cannot supply this evidence or close T04–T06.
+
+After those gates and the relevant D4/D5 prerequisites pass, use the existing Studio learning inbox
+for controlled evaluation and the existing Entity/model qualification commands for runtime evidence.
+Those runtime commands preserve attempts but currently label their output `implementation-diagnostic`;
+this preparation command does not turn them into acceptance receipts, run them automatically, or
+change activation. Bind actual acceptance evidence to the same candidate, fixture/rule hashes,
+source/model/configuration and activated artifact. Failures and interrupted attempts remain retained.
+
+Verify the offline automation with:
+
+```sh
+node --import tsx --test tooling/scripts/verification/prepare-atlas-controlled-benchmark.test.ts
+```

@@ -1,0 +1,834 @@
+{
+  "schema": "athyper.table-entity-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "neon"
+  ],
+  "definition": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "person_address_use",
+      "entityClass": "business",
+      "ownershipModel": "system"
+    },
+    "runtimeProfiles": [
+      {
+        "id": "748dfe87-21fa-5256-9c26-3e04959eaf6a",
+        "profileKey": "default",
+        "backingKind": "table",
+        "storagePlane": "neon",
+        "storageSchema": "master",
+        "storageObject": "person_address_use",
+        "tenantFieldKey": "tenant_id",
+        "apiExposure": "api",
+        "readMode": "generic",
+        "writeMode": "none",
+        "createMode": "form_only",
+        "concurrencyMode": "none"
+      }
+    ],
+    "operations": [
+      {
+        "id": "33c49e62-3da1-5af5-a9d3-387409251058",
+        "operationKey": "list",
+        "operationKind": "read",
+        "label": "Personal addresses",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "person_id",
+          "address_id",
+          "purpose",
+          "is_primary",
+          "effective_from",
+          "effective_until",
+          "status",
+          "row_version"
+        ],
+        "auditEventCode": "person_address_use.list"
+      },
+      {
+        "id": "27710895-3dae-5707-81a5-930cb6551338",
+        "operationKey": "read",
+        "operationKind": "read",
+        "label": "View record",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "person_id",
+          "address_id",
+          "purpose",
+          "is_primary",
+          "effective_from",
+          "effective_until",
+          "status",
+          "row_version"
+        ],
+        "auditEventCode": "person_address_use.read"
+      }
+    ],
+    "operationPermissions": [
+      {
+        "entityOperationId": "33c49e62-3da1-5af5-a9d3-387409251058",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.person_address_use.read",
+        "permissionKind": "capability",
+        "id": "cb917977-4f4c-5f96-88ae-e8ca6026f012"
+      },
+      {
+        "entityOperationId": "27710895-3dae-5707-81a5-930cb6551338",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.person_address_use.read",
+        "permissionKind": "capability",
+        "id": "62a2f466-bd03-573c-b7bd-dc8f795da2ae"
+      }
+    ],
+    "operationScopeBindings": [
+      {
+        "entityOperationId": "33c49e62-3da1-5af5-a9d3-387409251058",
+        "bindingKey": "list_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "collection",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "52610812-c72b-57ce-9c9d-b6c873153875"
+      },
+      {
+        "entityOperationId": "27710895-3dae-5707-81a5-930cb6551338",
+        "bindingKey": "read_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "4141dceb-f0b7-5499-9a4c-0ee5044c4052"
+      }
+    ],
+    "searchProfiles": [
+      {
+        "id": "76863048-a526-5906-90bf-7bdf4b95e64f",
+        "searchKey": "default",
+        "searchKind": "keyword",
+        "minimumQueryLength": 1,
+        "isDefault": true
+      }
+    ],
+    "fields": [
+      {
+        "id": "a80e8893-769f-5c6d-89ca-505559b8810b",
+        "fieldKey": "id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "8e2e9c97-3f29-56b2-aedc-fef70b45918a",
+        "fieldKey": "tenant_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "tenant_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "af0bfacc-8fb7-5f98-b9c6-6c990b913d97",
+        "fieldKey": "person_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid",
+          "keyReference": {
+            "targetEntity": "person",
+            "labelField": "name",
+            "fields": [
+              {
+                "source": "tenant_id",
+                "target": "tenant_id"
+              },
+              {
+                "source": "person_id",
+                "target": "id"
+              }
+            ]
+          }
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "person_id",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "bf76d837-ce46-561b-93ef-1334a613adb3",
+        "fieldKey": "address_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid",
+          "keyReference": {
+            "targetEntity": "address",
+            "labelField": "formatted_address",
+            "fields": [
+              {
+                "source": "tenant_id",
+                "target": "tenant_id"
+              },
+              {
+                "source": "address_id",
+                "target": "id"
+              }
+            ]
+          }
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "address_id",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "60c48217-1b68-5bf9-b8c8-199e302d785b",
+        "fieldKey": "purpose",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "purpose",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "3b00e1df-1b40-5325-9b18-1a0b9fb63f2a",
+        "fieldKey": "is_primary",
+        "dataType": "boolean",
+        "typeConfig": {
+          "kind": "boolean"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "is_primary",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "834dd30b-ee27-5072-8628-987dd3d572d5",
+        "fieldKey": "effective_from",
+        "dataType": "date",
+        "typeConfig": {
+          "kind": "date"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "effective_from",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "5f346146-eb64-5a03-b507-c20af1476679",
+        "fieldKey": "effective_until",
+        "dataType": "date",
+        "typeConfig": {
+          "kind": "date"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "effective_until",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "69f9b686-8ffa-5012-b4fe-54fc92035151",
+        "fieldKey": "status",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.person_address_use.status"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "status",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "e6557ab2-3b97-5eae-9056-c30f5041742c",
+        "fieldKey": "row_version",
+        "dataType": "integer",
+        "typeConfig": {
+          "kind": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "row_version",
+        "dataClassification": "internal",
+        "status": "active"
+      }
+    ],
+    "keys": [
+      {
+        "id": "b74f104f-acfb-5e52-823c-51edeee3833e",
+        "keyKey": "primary",
+        "keyKind": "primary",
+        "uniquenessScope": "global"
+      }
+    ],
+    "keyFields": [
+      {
+        "entityKeyId": "b74f104f-acfb-5e52-823c-51edeee3833e",
+        "entityFieldId": "a80e8893-769f-5c6d-89ca-505559b8810b",
+        "position": 1,
+        "id": "1f4a9dc0-351d-5edd-b366-81136b1748ec"
+      }
+    ],
+    "searchFields": [
+      {
+        "entitySearchProfileId": "76863048-a526-5906-90bf-7bdf4b95e64f",
+        "entityFieldId": "60c48217-1b68-5bf9-b8c8-199e302d785b",
+        "position": 1,
+        "matchMode": "contains",
+        "id": "7324afc3-f8c1-51cf-ad04-2dc0f168f796"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "surfaceKey": "list",
+        "surfaceKind": "list",
+        "title": "Personal addresses",
+        "isDefault": true,
+        "layoutConfig": {
+          "identityField": "id",
+          "defaultState": {
+            "sort": [
+              {
+                "field": "purpose",
+                "direction": "asc"
+              }
+            ],
+            "density": "comfortable",
+            "mode": "table"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "limits": {
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              10,
+              25,
+              50,
+              100
+            ],
+            "maxSortLevels": 3,
+            "countMode": "exact"
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "person_address_use",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "permissionCode": "neon.workforce.person_address_use.read",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "permissionCode": "neon.workforce.person_address_use.read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "person_id",
+                "fields": [
+                  "person_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "address_id",
+                "fields": [
+                  "address_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "purpose",
+                "fields": [
+                  "purpose"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "is_primary",
+                "fields": [
+                  "is_primary"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "effective_from",
+                "fields": [
+                  "effective_from"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "effective_until",
+                "fields": [
+                  "effective_until"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "row_version",
+                "fields": [
+                  "row_version"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "surfaceKey": "detail",
+        "surfaceKind": "detail",
+        "title": "Personal addresses",
+        "layoutConfig": {
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "purpose",
+            "codeField": "id",
+            "sections": [
+              {
+                "key": "address",
+                "label": "Address use",
+                "fields": [
+                  "address_id",
+                  "purpose",
+                  "is_primary",
+                  "effective_from",
+                  "effective_until",
+                  "status"
+                ]
+              }
+            ],
+            "actions": []
+          }
+        }
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "id": "fc53cf51-af93-54ec-b64e-8c4b9d431efe",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "a80e8893-769f-5c6d-89ca-505559b8810b",
+        "bindingKey": "list_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "88751576-c423-5437-8cd1-dc09eea8ad53",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "8e2e9c97-3f29-56b2-aedc-fef70b45918a",
+        "bindingKey": "list_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "d5112684-b73f-546d-9cc4-d7b2cf0a41e9",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "af0bfacc-8fb7-5f98-b9c6-6c990b913d97",
+        "bindingKey": "list_person_id",
+        "position": 2,
+        "labelOverride": "Person",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "fce45517-35ca-524b-b332-e589739a5456",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "bf76d837-ce46-561b-93ef-1334a613adb3",
+        "bindingKey": "list_address_id",
+        "position": 3,
+        "labelOverride": "Address",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "99b4b011-2569-521e-a7fd-526ffba6eb19",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "60c48217-1b68-5bf9-b8c8-199e302d785b",
+        "bindingKey": "list_purpose",
+        "position": 4,
+        "labelOverride": "Purpose",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "a643079e-a1ac-5d25-880d-c20de61b9a66",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "3b00e1df-1b40-5325-9b18-1a0b9fb63f2a",
+        "bindingKey": "list_is_primary",
+        "position": 5,
+        "labelOverride": "Is primary",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "6e8da41a-f69f-5e78-988f-c527cdf5672f",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "834dd30b-ee27-5072-8628-987dd3d572d5",
+        "bindingKey": "list_effective_from",
+        "position": 6,
+        "labelOverride": "Effective from",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "ff2d3e38-4610-5cb5-98e1-8749f9394c89",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "5f346146-eb64-5a03-b507-c20af1476679",
+        "bindingKey": "list_effective_until",
+        "position": 7,
+        "labelOverride": "Effective until",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "27d9dc2d-1a87-51af-8619-74d5d93baa22",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "69f9b686-8ffa-5012-b4fe-54fc92035151",
+        "bindingKey": "list_status",
+        "position": 8,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "inactive",
+                "label": "Inactive"
+              },
+              {
+                "value": "archived",
+                "label": "Archived"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "91c09569-b1ff-514e-97b7-382c6f8bf7d5",
+        "entitySurfaceId": "fcec3494-c38a-5a50-87d0-975eaefff8bd",
+        "entityFieldId": "e6557ab2-3b97-5eae-9056-c30f5041742c",
+        "bindingKey": "list_row_version",
+        "position": 9,
+        "labelOverride": "Record version",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "3e30efd8-d506-5ec4-aaa0-7ea9fd2f2937",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "a80e8893-769f-5c6d-89ca-505559b8810b",
+        "bindingKey": "detail_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "661487ae-7e44-541d-908c-b486b3dbabea",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "8e2e9c97-3f29-56b2-aedc-fef70b45918a",
+        "bindingKey": "detail_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "2829f686-d5e7-5e09-a886-ad4466675bb3",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "af0bfacc-8fb7-5f98-b9c6-6c990b913d97",
+        "bindingKey": "detail_person_id",
+        "position": 2,
+        "labelOverride": "Person",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "0caee59a-8951-531b-99ea-aa65b5138e95",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "bf76d837-ce46-561b-93ef-1334a613adb3",
+        "bindingKey": "detail_address_id",
+        "position": 3,
+        "labelOverride": "Address",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "b57d4abd-ba59-51f0-b8a5-80e5f5306425",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "60c48217-1b68-5bf9-b8c8-199e302d785b",
+        "bindingKey": "detail_purpose",
+        "position": 4,
+        "labelOverride": "Purpose",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "9b3c7dfb-489e-5f14-bf38-6e83408b196a",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "3b00e1df-1b40-5325-9b18-1a0b9fb63f2a",
+        "bindingKey": "detail_is_primary",
+        "position": 5,
+        "labelOverride": "Is primary",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "79aef05d-879f-55bf-9519-9d010fc8e5b6",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "834dd30b-ee27-5072-8628-987dd3d572d5",
+        "bindingKey": "detail_effective_from",
+        "position": 6,
+        "labelOverride": "Effective from",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "c72dd421-e3e5-5883-9b8e-56ccca1b69b2",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "5f346146-eb64-5a03-b507-c20af1476679",
+        "bindingKey": "detail_effective_until",
+        "position": 7,
+        "labelOverride": "Effective until",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "bc483b79-2d87-561f-9791-51931b36d60b",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "69f9b686-8ffa-5012-b4fe-54fc92035151",
+        "bindingKey": "detail_status",
+        "position": 8,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "inactive",
+                "label": "Inactive"
+              },
+              {
+                "value": "archived",
+                "label": "Archived"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "131c3f6b-e17c-5194-a37c-b2414010ab52",
+        "entitySurfaceId": "2d5d54c9-ec36-5edb-a3a2-9bb47bdd2886",
+        "entityFieldId": "e6557ab2-3b97-5eae-9056-c30f5041742c",
+        "bindingKey": "detail_row_version",
+        "position": 9,
+        "labelOverride": "Record version",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      }
+    ],
+    "fieldReferenceBindings": [
+      {
+        "id": "1964916d-245b-50dd-bd8c-b915f9994531",
+        "entityFieldId": "af0bfacc-8fb7-5f98-b9c6-6c990b913d97",
+        "bindingKey": "person_id_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "person",
+        "status": "active"
+      },
+      {
+        "id": "f8ec4348-8f33-573b-b683-73645f907c6c",
+        "entityFieldId": "bf76d837-ce46-561b-93ef-1334a613adb3",
+        "bindingKey": "address_id_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "address",
+        "status": "active"
+      }
+    ]
+  }
+}

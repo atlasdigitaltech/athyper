@@ -1,11 +1,13 @@
 "use client";
+import { entityReferenceChoicesOperation } from "@athyper/platform-api-client";
+import { FilterReferenceLoader } from "./filter-editor";
 import { EntityLink, EntityNavigationProvider, useEntityNavigate } from "./entity-navigation";
 import { groupedRows } from "./grouped-rows";
 import { SurfaceErrorBoundary } from "@athyper/platform-ui";
 import { rollbackBookmarks } from "./bookmark-state";
 import { entityLocationSearch } from "./entity-location";
 import { retryRequiresDescriptor } from "./retry-policy";
-import { CollectionDraftFooter } from "@athyper/platform-collection-controls";
+import { CollectionDensitySettings, CollectionDraftFooter, CollectionSortEditor, CollectionViewsManager, FilterOperatorMenu } from "@athyper/platform-collection-controls";
 import { isListViewAllowed, constrainEmbeddedViewState } from "./view-policy";
 import { lookupInitialState } from "./lookup-directory";
 import {
@@ -42,10 +44,13 @@ import {
   LIST_DRAWERS,
   ListDrawerHost,
   listDrawer,
+  listDrawerText,
   type ListDrawerKey,
 } from "./drawer-registry";
 import { StickyListTable } from "./sticky-table";
 import { useListWidthTier, type ListWidthTier } from "./presentation-tier";
+import { sortPickerFields } from "./sort-direction";
+import { ReorderMenu } from "./reorder-menu";
 import { revealListStart, useQuickReturnToolbar } from "./list-scroll";
 import { recordCardLayout, type RecordCardLayout } from "./record-card-layout";
 import { EntityNavigation, EntityNavigationSkeleton } from "./navigation";
@@ -118,6 +123,7 @@ import {
   LayoutIcon,
   LinkIcon,
   MoreVerticalIcon,
+  LockIcon,
   RefreshCwIcon,
   ResetIcon,
   SearchIcon,
@@ -150,7 +156,7 @@ import {
   MenuContent,
   MenuItem,
   MenuTrigger,
-  Select,
+  SegmentedControl,
   Skeleton,
 } from "@athyper/platform-ui";
 import { createPortal } from "react-dom";
@@ -193,10 +199,10 @@ import {
   type DataOperationLaunch,
 } from "./data-operations";
 import {
-  fieldTypeLabel,
   groupAvailableColumns,
   matchesColumnSearch,
   reorderColumn,
+  SYSTEM_FIELD_GROUP,
 } from "./columns";
 import {
   FieldCataloguePicker,
@@ -530,7 +536,7 @@ function EntityApplicationContent({
                 ? taskHeader.description
                 : listHeaderInformation(
                     listInformation?.description ?? description,
-                    listInformation?.count,
+                    recordCountText(entityIntl, listInformation?.count),
                   )
             }
             supportingRow={taskHeader?.supportingRow}
@@ -619,7 +625,7 @@ function EntityCollectionRuntime({
   onNavigate,
   onOpenRecord,
   activePath,
-  initialDensity = "comfortable",
+  initialDensity,
   applicationName,
 }: EntityListRuntimeProps) {
   const inherited = useEntityApplication();
@@ -709,6 +715,27 @@ function EntityCollectionRuntime({
     descriptor?.scope.fingerprint,
     descriptor?.revision.descriptorHash,
   ]);
+  const loadReferenceChoices = useCallback<NonNullable<React.ContextType<typeof FilterReferenceLoader>>>(async (field, input) => {
+    const expectedScope = activeChoiceScope.current;
+    const reference = descriptor?.fields.find(item => item.key === field)?.referenceLookup;
+    const dependencies = Object.fromEntries((reference?.dependencies ?? []).flatMap(key => {
+      const value = state?.filters.find(filter => filter.field === key && filter.operator === "eq")?.value;
+      return typeof value === "string" && value ? [[key, value]] : [];
+    }));
+    const result = await client.request(entityReferenceChoicesOperation, {
+      params: { entityCode, fieldKey: field },
+      query: {
+        ...(input.query ? { query: input.query } : {}),
+        ...(input.cursor ? { cursor: input.cursor } : {}),
+        ...(input.value ? { value: input.value } : {}),
+        ...(Object.keys(dependencies).length ? { dependencies: JSON.stringify(dependencies) } : {}),
+      },
+      signal: input.signal,
+    });
+    if (input.signal.aborted || expectedScope !== activeChoiceScope.current)
+      throw new DOMException("Reference context changed", "AbortError");
+    return result;
+  }, [descriptor?.fields, descriptor?.scope.fingerprint, descriptor?.revision.descriptorHash, state?.filters, client, entityCode, authorityKey]);
   useEffect(
     () => () => {
       for (const controller of filterChoiceControllers.current)
@@ -757,15 +784,18 @@ function EntityCollectionRuntime({
     setPendingBookmarkIds(new Set());
     if (scopePending) return () => controller.abort();
     previousAuthorityKey.current = authorityKey;
-    client
-      .request(entityListDescriptorOperation, {
+    // Let immediately superseded effects cancel before transport dispatch.
+    Promise.resolve().then(() => {
+      controller.signal.throwIfAborted();
+      return client.request(entityListDescriptorOperation, {
         params: { entityCode },
-        query: entityListScopeQuery(scopeCoordinate),
+        query: { ...entityListScopeQuery(scopeCoordinate), includeViews: "true", ...(viewNamespace ? { surface: viewNamespace } : {}) },
         signal: controller.signal,
-      })
+      });
+    })
       .then(async (raw) => {
         let next = viewNamespace ? { ...raw, viewNamespace } : raw;
-        if (next.serverViews && next.scope.status === "ready") {
+        if (next.serverViews && !next.viewCatalog && next.scope.status === "ready") {
           const viewCatalog = await client.request(entityViewsOperation, {
             params: { entityCode },
             query: {
@@ -811,7 +841,7 @@ function EntityCollectionRuntime({
               : embedding.options.display.defaults.searchBehavior,
           );
           if (
-            pref &&
+            pref?.density &&
             embedding.options.display.userOverrides.includes("density")
           )
             nextState = { ...nextState, density: pref.density };
@@ -898,6 +928,9 @@ function EntityCollectionRuntime({
   ]);
 
   useEffect(() => {
+    // Fetch from published metadata, not its presentation-only localization.
+    // Shell activity and locale updates must not restart an unchanged read.
+    const descriptor = sourceDescriptor;
     if (
       navigationOnly ||
       applicationOnly ||
@@ -947,7 +980,7 @@ function EntityCollectionRuntime({
     return () => controller.abort();
   }, [
     client,
-    descriptor,
+    sourceDescriptor,
     entityCode,
     serverQueryKey,
     scopeKey,
@@ -1053,8 +1086,11 @@ function EntityCollectionRuntime({
           pageIndex: state.pageIndex ?? 0,
           cursor: state.cursor,
           standardViewKey: state.standardViewKey,
+          parentScope: scopeCoordinate?.parentEntityCode && scopeCoordinate.parentRecordId && scopeCoordinate.relationshipKey
+            ? { parentEntityCode: scopeCoordinate.parentEntityCode, parentRecordId: scopeCoordinate.parentRecordId, relationshipKey: scopeCoordinate.relationshipKey }
+            : undefined,
           directory:
-            !descriptor.scope.workContext && scopeCoordinate
+            !scopeCoordinate?.parentEntityCode && !descriptor.scope.workContext && scopeCoordinate
               ? {
                   operatingOrganizationIds:
                     scopeCoordinate.operatingOrganizationIds ??
@@ -1095,6 +1131,15 @@ function EntityCollectionRuntime({
       : undefined
     : descriptor?.surface.description;
   const resultsCurrent = !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`;
+  // Lists follow the app density (Utilities / profile) on the page root. They set
+  // their own data-density only for an explicit override: a density saved for this
+  // list on this device, a non-default ?density=, or a host-configured lookup.
+  const densityOverride = useMemo(() => {
+    if (!state || !descriptor) return undefined;
+    if (embedding) return state.density;
+    const saved = readDisplayPreferences(descriptor.plane, entityDisplayPreferenceNamespace(descriptor))?.density;
+    return saved ?? (state.density !== descriptor.surface.defaultState.density ? state.density : undefined);
+  }, [state, descriptor, embedding]);
   useEffect(() => {
     const pending = pendingResultsReveal.current;
     if (pending === undefined || !resultsCurrent) return;
@@ -1147,7 +1192,7 @@ function EntityCollectionRuntime({
         <ListFrame
           contentOnly={contentOnly}
           headerOnly={applicationOnly}
-          density={state?.density ?? initialDensity}
+          density={densityOverride ?? initialDensity}
           title="Loading list"
           entityName={
             inherited?.descriptor.surface.header
@@ -1357,7 +1402,10 @@ function EntityCollectionRuntime({
     }
   };
 
+
+
   return (
+    <FilterReferenceLoader.Provider value={loadReferenceChoices}>
     <FilterChoiceLoader.Provider
       value={(field) => {
         const expectedScope = activeChoiceScope.current;
@@ -1414,6 +1462,7 @@ function EntityCollectionRuntime({
       <PageFrame
         width="wide"
         className={`a-entity-list a-entity-list--${state.density}${embedding ? " a-entity-list--embedded" : ""}`}
+        data-density={densityOverride}
       >
         {!contentOnly ? (
           <>
@@ -1421,7 +1470,7 @@ function EntityCollectionRuntime({
               className="a-entity-list__header"
               level="collection"
               title={title}
-              description={listHeaderInformation(description, availableCount)}
+              description={listHeaderInformation(description, recordCountText(entityIntl, availableCount))}
               icon={<HeaderIcon />}
               actions={headerActions}
             />
@@ -1631,6 +1680,7 @@ function EntityCollectionRuntime({
         ) : null}
       </PageFrame>
     </FilterChoiceLoader.Provider>
+    </FilterReferenceLoader.Provider>
   );
 }
 
@@ -1729,12 +1779,14 @@ function ListChrome({
       () =>
         JSON.stringify({
           ...saveableViewState(state),
-          ...(embedding ? { density: undefined, mode: undefined } : {}),
+          density: undefined,
+          ...(embedding ? { mode: undefined } : {}),
         }) !==
         JSON.stringify({
           ...(activeView?.state ??
             saveableViewState(descriptor.surface.defaultState)),
-          ...(embedding ? { density: undefined, mode: undefined } : {}),
+          density: undefined,
+          ...(embedding ? { mode: undefined } : {}),
         }),
       [
         state,
@@ -1998,7 +2050,7 @@ function ListChrome({
             >
               <FilterIcon size={16} />
               <span className="a-entity-list__toolbar-label">
-                {listDrawer("filters").label}
+                {listDrawerText("filters", descriptor, entityIntl).title}
               </span>
               {filterCount ? (
                 <span
@@ -2029,7 +2081,7 @@ function ListChrome({
             >
               <SortIcon size={16} />
               <span className="a-entity-list__toolbar-label">
-                {listDrawer("sort").label}
+                {listDrawerText("sort", descriptor, entityIntl).title}
               </span>
               {state.sort.length > 1 ? (
                 <span
@@ -2051,7 +2103,7 @@ function ListChrome({
               onClick={() => setActiveDrawer("columns")}
             >
               <ColumnsIcon size={16} />
-              <span>{listDrawer("columns").label}</span>
+              <span>{listDrawerText("columns", descriptor, entityIntl).title}</span>
               <span className="a-entity-list__action-count" aria-hidden="true">
                 {state.columns.length}
               </span>
@@ -2094,7 +2146,7 @@ function ListChrome({
                 <ListMenuItem
                   key={item.key}
                   icon={<item.Icon size={16} />}
-                  label={item.label}
+                  label={listDrawerText(item.key, descriptor, entityIntl).title}
                   value={
                     {
                       filters: `${filterCount} active`,
@@ -2225,31 +2277,37 @@ function ListChrome({
           onSelect={setActiveDrawer}
           onOpenChange={closeDrawer}
           descriptor={descriptor}
-          sections={{
+          context={{
+            // The server's tenant-wide "access" label adds nothing; real collection scopes are named.
+            label: scopeLabel && scopeLabel.key !== "access" ? `${descriptor.surface.title} · ${scopeLabel.value}` : descriptor.surface.title,
+            detail: !resultsCurrent
+              ? entityIntl.message("list.controls.updating")
+              : recordCountText(entityIntl, resultCountLabel),
+          }}
+          counts={{ filters: filterCount }}
+          sections={(finish) => ({
             filters: (
               <FilterDialog
                 open
-                onOpenChange={closeDrawer}
+                onOpenChange={finish}
                 descriptor={descriptor}
                 filters={state.filters}
-                resultCountLabel={resultCountLabel}
                 onApply={(filters) => onChange({ filters }, "push")}
               />
             ),
             sort: (
               <SortDialog
                 open
-                onOpenChange={closeDrawer}
+                onOpenChange={finish}
                 descriptor={descriptor}
                 sort={state.sort}
-                resultCountLabel={resultCountLabel}
                 onApply={(sort) => onChange({ sort }, "push")}
               />
             ),
             columns: (
               <ColumnsDialog
                 open
-                onOpenChange={closeDrawer}
+                onOpenChange={finish}
                 descriptor={descriptor}
                 state={state}
                 onApply={(columns) => onChange({ columns }, "push")}
@@ -2258,7 +2316,7 @@ function ListChrome({
             group: (
               <GroupDialog
                 open
-                onOpenChange={closeDrawer}
+                onOpenChange={finish}
                 descriptor={descriptor}
                 group={state.group}
                 onApply={(group) => onChange({ group }, "push")}
@@ -2266,6 +2324,7 @@ function ListChrome({
             ),
             display: (
               <DisplaySettingsDialog
+                widthTier={widthTier}
                 preferenceNamespace={preferenceNamespace}
                 configuration={embedding?.options.display}
                 onPreferencesChange={() => {
@@ -2279,7 +2338,7 @@ function ListChrome({
                   );
                 }}
                 open
-                onOpenChange={closeDrawer}
+                onOpenChange={finish}
                 descriptor={descriptor}
                 state={state}
                 onApply={(patch) => onChange(patch, "push")}
@@ -2293,7 +2352,7 @@ function ListChrome({
                 scopeCoordinate={scopeCoordinate}
                 onCatalogChange={onCatalogChange}
                 open
-                onOpenChange={closeDrawer}
+                onOpenChange={finish}
                 descriptor={descriptor}
                 state={state}
                 views={views}
@@ -2301,7 +2360,7 @@ function ListChrome({
                 onApply={(patch) => onChange(patch, "push")}
               />
             ),
-          }}
+          })}
         />
       ) : null}
       <ResetConfigurationDialog
@@ -2407,16 +2466,15 @@ function FilterDialog({
   onOpenChange,
   descriptor,
   filters,
-  resultCountLabel,
   onApply,
 }: {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly descriptor: EntityListDescriptorV1;
   readonly filters: readonly ListFilterV1[];
-  readonly resultCountLabel?: string;
   readonly onApply: (filters: readonly ListFilterV1[]) => void;
 }) {
+  const filterIntl = useEntityI18n();
   const directory = useDirectoryFilters(),
     directoryKinds = descriptor.scope.filterKinds ?? [],
     hasDirectory = Boolean(
@@ -2504,7 +2562,6 @@ function FilterDialog({
         value: "",
       },
     ]);
-    setFilterPickerOpen(false);
   };
   const invalid = draft.some(
     (item) =>
@@ -2561,9 +2618,6 @@ function FilterDialog({
     } else if (value || operator === "is_null" || operator === "is_not_null")
       setDraft([...draft, { id: nextId(), field: field.key, operator, value }]);
   };
-  const recordLabel = resultCountLabel
-    ? `${resultCountLabel} ${resultCountLabel === "1" ? "record" : "records"}`
-    : "Not available";
   return (
     <>
       <Drawer.Tabs
@@ -2580,28 +2634,6 @@ function FilterDialog({
           )
         }
       >
-        <Drawer.Toolbar>
-          <Drawer.Context aria-label="Filter context">
-            <Drawer.Metric label="Records" value={resultCountLabel ?? "—"} />
-            <Drawer.Metric
-              label="Active filters"
-              value={
-                draft.length +
-                (descriptor.scope.quickFilters?.filter(
-                  (filter) => directoryDraft[filter.key],
-                ).length ?? 0) +
-                (hasDirectory
-                  ? (directoryDraft.operatingOrganizationIds?.length ?? 0) +
-                    (directoryDraft.companyCodeIds?.length ?? 0)
-                  : 0)
-              }
-            />
-            <Drawer.Metric
-              label="State"
-              value={dirty ? "Modified" : "Current"}
-            />
-          </Drawer.Context>
-        </Drawer.Toolbar>
         <Drawer.Navigation aria-label="Filter views">
           <Drawer.TabList>
             <Drawer.Tab value="common">Quick filters</Drawer.Tab>
@@ -2665,35 +2697,21 @@ function FilterDialog({
                         className="a-entity-list__filter-row"
                         key={field.key}
                       >
-                        <div className="a-entity-list__filter-control">
-                          <span className="a-entity-list__filter-label">
-                            Field
-                          </span>
+                        <div className="a-entity-list__filter-heading">
                           <strong>{field.label}</strong>
-                        </div>
-                        <div className="a-entity-list__filter-control">
-                          <span className="a-entity-list__filter-label">
-                            Operator
-                          </span>
-                          <Select
-                            aria-label={`Operator for quick ${field.label} filter`}
+                          <FilterOperatorMenu
+                            label={`Operator for quick ${field.label} filter`}
                             value={operator}
-                            onChange={(event) => {
-                              const next = event.currentTarget
-                                .value as ListFilterOperator;
+                            operators={field.filterOperators}
+                            labelFor={(candidate) => operatorLabel(candidate, field)}
+                            onChange={(next) => {
                               setQuickOperators({
                                 ...quickOperators,
                                 [field.key]: next,
                               });
                               setQuickFilter(field, next, "");
                             }}
-                          >
-                            {field.filterOperators.map((candidate) => (
-                              <option value={candidate} key={candidate}>
-                                {operatorLabel(candidate, field)}
-                              </option>
-                            ))}
-                          </Select>
+                          />
                         </div>
                         <FilterValueEditor
                           historyKey={recentFilterKey(descriptor)}
@@ -2780,28 +2798,19 @@ function FilterDialog({
                               }
                             />
                           </div>
-                          <div className="a-entity-list__filter-control">
+                          <div className="a-entity-list__filter-control a-entity-list__filter-operator-control">
                             <span className="a-entity-list__filter-label">
                               Operator
                             </span>
-                            <Select
-                              aria-label={`Operator for ${field?.label ?? `filter ${index + 1}`}`}
+                            <FilterOperatorMenu
+                              label={`Operator for ${field?.label ?? `filter ${index + 1}`}`}
                               value={item.operator}
-                              onChange={(event) =>
-                                replaceItem({
-                                  ...item,
-                                  operator: event.currentTarget
-                                    .value as ListFilterOperator,
-                                  value: "",
-                                })
+                              operators={operators}
+                              labelFor={(operator) => operatorLabel(operator, field)}
+                              onChange={(operator) =>
+                                replaceItem({ ...item, operator, value: "" })
                               }
-                            >
-                              {operators.map((operator) => (
-                                <option value={operator} key={operator}>
-                                  {operatorLabel(operator, field)}
-                                </option>
-                              ))}
-                            </Select>
+                            />
                           </div>
                           {field ? (
                             <FilterValueEditor
@@ -2849,9 +2858,12 @@ function FilterDialog({
                 {filterPickerOpen ? (
                   <FieldCataloguePicker
                     heading="Add a filter field"
-                    fields={remainingFilterFields}
-                    placeholder="Search filterable fields by name or code…"
+                    fields={filterable}
+                    selected={draft.map((item) => item.field)}
+                    placeholder={filterIntl.message("list.fields.search")}
+                    checkboxLabel={(field) => filterIntl.message("list.filters.useField", { field: field.label })}
                     onSelect={add}
+                    onDeselect={(field) => setDraft(draft.filter((item) => item.field !== field.key))}
                     onClose={() => setFilterPickerOpen(false)}
                   />
                 ) : (
@@ -2878,18 +2890,20 @@ function FilterDialog({
             !draft.length &&
             directorySelectionKey(directoryDraft) === directorySelectionKey({})
           }
-          summary={
-            <>
+          summary={(() => {
+            const pending =
+              draft.length +
+              (directoryDraft.operatingOrganizationIds?.length ?? 0) +
+              (directoryDraft.companyCodeIds?.length ?? 0) +
+              (descriptor.scope.quickFilters?.filter((filter) => directoryDraft[filter.key]).length ?? 0);
+            return (
               <strong>
-                {dirty ? "Changes ready to apply" : `${recordLabel} matching`}
+                {pending
+                  ? filterIntl.message("list.footer.filtersReady", { count: pending })
+                  : filterIntl.message("list.footer.filtersCleared")}
               </strong>
-              <span>
-                {dirty
-                  ? `${recordLabel} in the current list`
-                  : `${draft.length + (directoryDraft.operatingOrganizationIds?.length ?? 0) + (directoryDraft.companyCodeIds?.length ?? 0) + (descriptor.scope.quickFilters?.filter((filter) => directoryDraft[filter.key]).length ?? 0)} active filters`}
-              </span>
-            </>
-          }
+            );
+          })()}
           onReset={() => {
             setDraft([]);
             setDirectoryDraft({});
@@ -2950,222 +2964,76 @@ function SortDialog({
   onOpenChange,
   descriptor,
   sort,
-  resultCountLabel,
   onApply,
 }: {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly descriptor: EntityListDescriptorV1;
   readonly sort: readonly ListSortV1[];
-  readonly resultCountLabel?: string;
   readonly onApply: (sort: readonly ListSortV1[]) => void;
 }) {
-  const fields = descriptor.fields.filter((field) => field.sortable),
+  const sortIntl = useEntityI18n();
+  const fields = sortPickerFields(descriptor.fields),
     [draft, setDraft] = useState<readonly ListSortV1[]>(sort),
-    [pickerOpen, setPickerOpen] = useState(false),
-    [dragIndex, setDragIndex] = useState<number>();
+    [pickerOpen, setPickerOpen] = useState(false);
   useEffect(() => {
     if (open) {
       setDraft(sort);
       setPickerOpen(false);
-      setDragIndex(undefined);
     }
   }, [open, sort]);
   const dirty = JSON.stringify(draft) !== JSON.stringify(sort),
-    maximum = Math.min(descriptor.limits.maxSortLevels, fields.length),
-    recordLabel = resultCountLabel
-      ? `${resultCountLabel} ${resultCountLabel === "1" ? "record" : "records"}`
-      : "Records unavailable";
-  const remainingFields = fields.filter(
-    (field) => !draft.some((item) => item.field === field.key),
-  );
-  const add = (field: ListFieldDescriptorV1) => {
-    if (draft.length >= maximum) return;
-    setDraft([...draft, { field: field.key, direction: "asc" }]);
-    setPickerOpen(draft.length + 1 < maximum);
-  };
-  const drop = (event: ReactDragEvent<HTMLDivElement>, target: number) => {
-    event.preventDefault();
-    if (dragIndex === undefined || dragIndex === target) return;
-    setDraft(moveItem(draft, dragIndex, target));
-    setDragIndex(undefined);
-  };
+    maximum = Math.min(descriptor.limits.maxSortLevels, fields.length);
   return (
     <>
-      <Drawer.Toolbar>
-        <Drawer.Context aria-label="Sort context">
-          <Drawer.Metric label="Records" value={resultCountLabel ?? "—"} />
-          <Drawer.Metric label="Sort levels" value={draft.length} />
-          <Drawer.Metric label="Maximum" value={maximum} />
-        </Drawer.Context>
-      </Drawer.Toolbar>
-      <Drawer.Body className="a-entity-list__sort-content">
-        {draft.length ? (
-          <div className="a-entity-list__sort-list">
-            {draft.map((item, index) => {
-              const availableFields = fields.filter(
-                (field) =>
-                  field.key === item.field ||
-                  !draft.some((candidate) => candidate.field === field.key),
-              );
-              return (
-                <div
-                  key={`${item.field}-${index}`}
-                  data-dragging={dragIndex === index || undefined}
-                  onDragOver={(event) => {
-                    if (dragIndex !== undefined) {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                    }
-                  }}
-                  onDrop={(event) => drop(event, index)}
-                >
-                  <button
-                    type="button"
-                    className="a-entity-list__sort-grip"
-                    draggable
-                    aria-label={`Drag sort ${index + 1} to reorder`}
-                    title="Drag to reorder"
-                    onDragStart={(event) => {
-                      event.dataTransfer.effectAllowed = "move";
-                      setDragIndex(index);
-                    }}
-                    onDragEnd={() => setDragIndex(undefined)}
-                  >
-                    <GripVerticalIcon size={18} />
-                  </button>
-                  <span
-                    className="a-entity-list__sort-order"
-                    aria-label={`Priority ${index + 1}`}
-                  >
-                    {index + 1}
-                  </span>
-                  <Label>
-                    <span>Field</span>
-                    <SearchableFieldSelect
-                      label={`Field for sort ${index + 1}`}
-                      fields={availableFields}
-                      value={item.field}
-                      onChange={(selected) =>
-                        setDraft(
-                          draft.map((candidate, itemIndex) =>
-                            itemIndex === index
-                              ? { ...candidate, field: selected.key }
-                              : candidate,
-                          ),
-                        )
-                      }
-                    />
-                  </Label>
-                  <Label>
-                    <span>Direction</span>
-                    <Select
-                      aria-label={`Direction for sort ${index + 1}`}
-                      value={item.direction}
-                      onChange={(event) =>
-                        setDraft(
-                          draft.map((candidate, itemIndex) =>
-                            itemIndex === index
-                              ? {
-                                  ...candidate,
-                                  direction: event.currentTarget.value as
-                                    "asc" | "desc",
-                                }
-                              : candidate,
-                          ),
-                        )
-                      }
-                    >
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
-                    </Select>
-                  </Label>
-                  <div className="a-entity-list__sort-actions">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={index === 0}
-                      aria-label={`Move sort ${index + 1} up`}
-                      title="Move up"
-                      onClick={() =>
-                        setDraft(moveItem(draft, index, index - 1))
-                      }
-                    >
-                      <ArrowUpIcon size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={index === draft.length - 1}
-                      aria-label={`Move sort ${index + 1} down`}
-                      title="Move down"
-                      onClick={() =>
-                        setDraft(moveItem(draft, index, index + 1))
-                      }
-                    >
-                      <ArrowDownIcon size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Remove sort ${index + 1}`}
-                      title="Remove sort"
-                      onClick={() =>
-                        setDraft(
-                          draft.filter(
-                            (_candidate, itemIndex) => itemIndex !== index,
-                          ),
-                        )
-                      }
-                    >
-                      <TrashIcon size={17} />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : !pickerOpen ? (
-          <div className="a-entity-list__sort-empty">
-            <span aria-hidden="true">
-              <SortIcon />
-            </span>
-            <strong>No sort levels configured</strong>
-            <p>Records will use the entity’s natural order.</p>
-          </div>
-        ) : null}
-        {pickerOpen ? (
-          <FieldCataloguePicker
-            key={draft.length}
-            heading="Add a sortable field"
-            fields={remainingFields}
-            placeholder="Search sortable fields by name or code…"
-            onSelect={add}
-            onClose={() => setPickerOpen(false)}
+      {/* The shared Sort section (same as Notifications and Inbox): numbered levels,
+          drag or menu to reorder, direction in the field's terms. The list keeps its
+          searchable field picker and field catalogue. */}
+      <CollectionSortEditor
+        fields={fields}
+        draft={draft}
+        onDraftChange={setDraft}
+        maxLevels={maximum}
+        renderField={({ label, fields: available, value, onChange }) => (
+          <SearchableFieldSelect
+            label={label}
+            fields={available as readonly ListFieldDescriptorV1[]}
+            value={value}
+            onChange={(selected) => onChange(selected.key)}
           />
-        ) : (
-          <Button
-            className="a-entity-list__sort-add"
-            variant="secondary"
-            size="small"
-            disabled={draft.length >= maximum}
-            onClick={() => setPickerOpen(true)}
-          >
-            Add sort level
-          </Button>
         )}
-      </Drawer.Body>
+        renderAdd={({ label, count, maximum: limit, add, remove }) =>
+          pickerOpen ? (
+            <FieldCataloguePicker
+              heading={sortIntl.message("list.sort.pickerHeading")}
+              fields={fields}
+              selected={draft.map((item) => item.field)}
+              limitReached={count >= limit}
+              placeholder={sortIntl.message("list.fields.search")}
+              checkboxLabel={(field) => sortIntl.message("list.sort.useField", { field: field.label })}
+              onSelect={(field) => add(field.key)}
+              onDeselect={(field) => remove(field.key)}
+              onClose={() => setPickerOpen(false)}
+            />
+          ) : (
+            <Button
+              className="a-entity-list__sort-add"
+              variant="secondary"
+              size="small"
+              disabled={count >= limit}
+              onClick={() => setPickerOpen(true)}
+            >
+              {label}
+            </Button>
+          )
+        }
+        footer={
       <Drawer.Footer>
-        <Drawer.FooterSummary>
-          <strong>
-            {dirty
-              ? "Changes ready to apply"
-              : `${draft.length} active sort ${draft.length === 1 ? "level" : "levels"}`}
-          </strong>
-          <span>
-            {recordLabel} will be ordered by priority from top to bottom.
-          </span>
-        </Drawer.FooterSummary>
+        {dirty ? (
+          <Drawer.FooterSummary>
+            <strong>{sortIntl.message("list.footer.sortReady", { count: draft.length })}</strong>
+          </Drawer.FooterSummary>
+        ) : null}
         <Drawer.FooterActions>
           <Button
             variant="ghost"
@@ -3178,9 +3046,6 @@ function SortDialog({
           >
             Reset sort
           </Button>
-          <Drawer.Close className="a-button a-button--secondary a-button--small">
-            Cancel
-          </Drawer.Close>
           <Button
             size="small"
             disabled={!dirty}
@@ -3193,6 +3058,8 @@ function SortDialog({
           </Button>
         </Drawer.FooterActions>
       </Drawer.Footer>
+        }
+      />
     </>
   );
 }
@@ -3210,9 +3077,11 @@ function ColumnsDialog({
   readonly state: ListLocationStateV1;
   readonly onApply: (columns: readonly string[]) => void;
 }) {
+  const columnsIntl = useEntityI18n();
   const defaults = descriptor.surface.defaultState.columns;
   const [columns, setColumns] = useState<readonly string[]>(state.columns);
   const [search, setSearch] = useState("");
+  const [systemOpen, setSystemOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [drag, setDrag] = useState<{
     readonly source: string;
@@ -3308,22 +3177,12 @@ function ColumnsDialog({
   const dirty = JSON.stringify(columns) !== JSON.stringify(state.columns);
   return (
     <>
-      <Drawer.Toolbar>
-        <Drawer.Context aria-label="Column context">
-          <Drawer.Metric label="Fields" value={descriptor.fields.length} />
-          <Drawer.Metric label="Visible" value={columns.length} />
-          <Drawer.Metric
-            label="Maximum"
-            value={ENTITY_LIST_MAX_VISIBLE_COLUMNS}
-          />
-        </Drawer.Context>
-      </Drawer.Toolbar>
       <Drawer.Body scrollable={false} className="a-entity-list__column-content">
         <FieldSearchInput
           id="entity-list-column-search"
           value={search}
           count={matchingFieldCount}
-          placeholder="Search fields by name or code…"
+          placeholder={columnsIntl.message("list.fields.search")}
           onChange={setSearch}
         />
         <div className="a-entity-list__column-browser">
@@ -3361,39 +3220,32 @@ function ColumnsDialog({
                     >
                       <GripVerticalIcon size={18} />
                     </button>
-                    <Checkbox
-                      aria-label={`Show ${field.label}`}
-                      checked
-                      disabled={identity}
-                      onChange={() => remove(field)}
-                    />
+                    {identity ? (
+                      // The identity column cannot be hidden: say so instead of a disabled checkbox.
+                      <span className="a-entity-list__column-lock" title={columnsIntl.message("list.columns.alwaysShown")}>
+                        <LockIcon size={16} aria-hidden="true" />
+                      </span>
+                    ) : (
+                      <Checkbox
+                        aria-label={`Show ${field.label}`}
+                        checked
+                        onChange={() => remove(field)}
+                      />
+                    )}
                     <span className="a-entity-list__column-name">
                       <strong>{field.label}</strong>
                       <small>
-                        {field.key}
-                        {identity ? " · Identity field" : ""}
+                        {identity ? columnsIntl.message("list.columns.alwaysShown") : field.key}
                       </small>
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={index <= 0}
-                      aria-label={`Move ${field.label} up`}
-                      title="Move up"
-                      onClick={() => move(field.key, index - 1)}
-                    >
-                      <ArrowUpIcon size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={index === columns.length - 1}
-                      aria-label={`Move ${field.label} down`}
-                      title="Move down"
-                      onClick={() => move(field.key, index + 1)}
-                    >
-                      <ArrowDownIcon size={16} />
-                    </Button>
+                    <ReorderMenu
+                      item={field.label}
+                      index={index}
+                      count={columns.length}
+                      onMove={(target) => move(field.key, target)}
+                      onRemove={identity ? undefined : () => remove(field)}
+                      removeLabel={columnsIntl.message("list.reorder.hide")}
+                    />
                   </div>
                 );
               })}
@@ -3422,12 +3274,29 @@ function ColumnsDialog({
                 reached. Hide a field before adding another.
               </p>
             ) : null}
-            {availableGroups.map((group) => (
+            {availableGroups.map((group) => {
+              const collapsible = group.label === SYSTEM_FIELD_GROUP && !normalizedSearch,
+                groupOpen = !collapsible || systemOpen;
+              return (
               <div className="a-entity-list__column-group" key={group.label}>
-                <h4>
-                  {group.label}
-                  <span>{group.fields.length}</span>
-                </h4>
+                {collapsible ? (
+                  <button
+                    type="button"
+                    className="a-entity-list__field-group-toggle"
+                    aria-expanded={groupOpen}
+                    onClick={() => setSystemOpen(!groupOpen)}
+                  >
+                    <span>{group.label}</span>
+                    <span>{group.fields.length}</span>
+                    <ChevronDownIcon size={14} className="a-disclosure-caret" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <h4>
+                    {group.label}
+                    <span>{group.fields.length}</span>
+                  </h4>
+                )}
+                {groupOpen ? (
                 <div className="a-entity-list__column-list a-entity-list__column-list--available">
                   {group.fields.map((field) => (
                     <label key={field.key}>
@@ -3441,15 +3310,15 @@ function ColumnsDialog({
                       />
                       <span className="a-entity-list__column-name">
                         <strong>{field.label}</strong>
-                        <small>
-                          {field.key} · {fieldTypeLabel(field.valueKind)}
-                        </small>
+                        <small>{field.key}</small>
                       </span>
                     </label>
                   ))}
                 </div>
+                ) : null}
               </div>
-            ))}
+              );
+            })}
             {!availableGroups.length ? (
               <ColumnSearchEmpty
                 search={search}
@@ -3464,16 +3333,11 @@ function ColumnsDialog({
         </div>
       </Drawer.Body>
       <Drawer.Footer>
-        <Drawer.FooterSummary>
-          <strong>
-            {dirty
-              ? "Changes ready to apply"
-              : `${columns.length} visible ${columns.length === 1 ? "column" : "columns"}`}
-          </strong>
-          <span>
-            {descriptor.fields.length - columns.length} fields remain available.
-          </span>
-        </Drawer.FooterSummary>
+        {dirty ? (
+          <Drawer.FooterSummary>
+            <strong>{columnsIntl.message("list.footer.columnsReady", { count: columns.length })}</strong>
+          </Drawer.FooterSummary>
+        ) : null}
         <Drawer.FooterActions>
           <Button
             variant="ghost"
@@ -3486,9 +3350,6 @@ function ColumnsDialog({
           >
             Reset columns
           </Button>
-          <Drawer.Close className="a-button a-button--secondary a-button--small">
-            Cancel
-          </Drawer.Close>
           <Button
             size="small"
             disabled={!dirty}
@@ -3554,12 +3415,7 @@ function SavedViewsDialog({
   readonly onApply: (patch: Partial<ListLocationStateV1>) => void;
 }) {
   const entityIntl = useEntityI18n();
-  const [tab, setTab] = useState("available"),
-    [renaming, setRenaming] = useState<string>(),
-    [renameValue, setRenameValue] = useState("");
-  const [name, setName] = useState(""),
-    [visibility, setVisibility] = useState<"personal" | "shared">("personal"),
-    [busy, setBusy] = useState(false),
+  const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   const catalog = descriptor.viewCatalog,
     caps = catalog?.capabilities;
@@ -3612,7 +3468,7 @@ function SavedViewsDialog({
       setBusy(false);
     }
   };
-  const save = () => {
+  const save = (name: string, visibility: "personal" | "shared") => {
     if (readOnly || !name.trim()) return;
     if (descriptor.serverViews) {
       void command(
@@ -3656,341 +3512,57 @@ function SavedViewsDialog({
       allowedViewKeys,
     ),
   );
-  const activeName =
-    rows.find((view) => view.id === (state.savedViewId ?? "system"))?.name ??
-    "System default";
+  // The shared Views section (same as Notifications and Inbox). Each action is
+  // passed only when this list allows it, so read-only lists show none.
+  const writable = !readOnly,
+    viewOf = (id: string) => rows.find((view) => view.id === id);
   return (
-    <>
-      <Drawer.Toolbar>
-        <Drawer.Context aria-label="Saved view context">
-          <Drawer.Metric
-            label="Saved views"
-            value={rows.filter((view) => view.scope !== "system").length}
-          />
-          <Drawer.Metric label="Active view" value={activeName} />
-          <Drawer.Metric
-            label="Configuration"
-            value={`${state.columns.length} columns · ${state.filters.length} filters`}
-          />
-        </Drawer.Context>
-      </Drawer.Toolbar>
-      <Drawer.Tabs value={tab} onValueChange={setTab}>
-        <Drawer.TabList aria-label="Manage views sections">
-          <Drawer.Tab value="available">Available views</Drawer.Tab>
-          {!readOnly ? (
-            <Drawer.Tab value="save">Save current configuration</Drawer.Tab>
-          ) : null}
-        </Drawer.TabList>
-        <Drawer.Body className="a-entity-list__view-dialog">
-          <div hidden={tab !== "save"} inert={tab !== "save"}>
-            <section>
-              <h3>Save current configuration</h3>
-              <Label htmlFor="entity-list-view-name">View name</Label>
-              <div className="a-entity-list__save-view">
-                <Input
-                  id="entity-list-view-name"
-                  value={name}
-                  onChange={(event) => setName(event.currentTarget.value)}
-                  placeholder="Name this view"
-                />
-                <Button
-                  disabled={
-                    busy || !name.trim() || (descriptor.serverViews && !catalog)
-                  }
-                  onClick={save}
-                >
-                  Save view
-                </Button>
-              </div>
-              {descriptor.serverViews ? (
-                <>
-                  <Label htmlFor="entity-view-visibility">Visibility</Label>
-                  <Select
-                    id="entity-view-visibility"
-                    value={visibility}
-                    onChange={(event) =>
-                      setVisibility(
-                        event.currentTarget.value as "personal" | "shared",
-                      )
-                    }
-                  >
-                    <option value="personal">Personal</option>
-                    {caps?.createShared ? (
-                      <option value="shared">Shared with this tenant</option>
-                    ) : null}
-                  </Select>
-                </>
-              ) : null}
-              <p className="a-entity-list__view-summary">
-                Includes filters, sorting, grouping, columns, layout, and
-                density. Search and work context are not saved.
-              </p>
-            </section>
-          </div>
-          <div hidden={tab !== "available"} inert={tab !== "available"}>
-            {[
-              {
-                label: "Standard views",
-                items: rows.filter((view) => view.scope === "system"),
-              },
-              {
-                label: "My views",
-                items: rows.filter(
-                  (view) => !view.scope || view.scope === "personal",
-                ),
-              },
-              {
-                label: "Shared views",
-                items: rows.filter((view) => view.scope === "shared"),
-              },
-            ].map((section) => (
-              <section key={section.label}>
-                <h3>{section.label}</h3>
-                {!section.items.length ? (
-                  <p className="a-entity-list__view-summary">
-                    {entityIntl.message("list.emptyEntity", { entity: section.label })}
-                  </p>
-                ) : (
-                  <div className="a-entity-list__saved-views">
-                    {section.items.map((view) => {
-                      const system = view.scope === "system",
-                        local = !system && !view.scope,
-                        active = (state.savedViewId ?? "system") === view.id,
-                        writable =
-                          !system &&
-                          (view.scope === "personal" ||
-                            (view.scope === "shared" && caps?.manageShared));
-                      return (
-                        <div
-                          key={view.id}
-                          className="a-entity-list__saved-view-row"
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              apply(view.id === "system" ? undefined : view)
-                            }
-                            disabled={busy || view.compatible === false}
-                          >
-                            <strong>
-                              {view.name}
-                              {view.compatible === false
-                                ? " · Unavailable fields"
-                                : ""}
-                              {active ? " · Active" : ""}
-                            </strong>
-                            <small>
-                              {system
-                                ? view.id === "system"
-                                  ? "Published configuration"
-                                  : "Standard view"
-                                : local
-                                  ? "This browser"
-                                  : view.scope === "shared"
-                                    ? "Shared with this tenant"
-                                    : "Personal"}
-                              {catalog?.personalDefault === view.id
-                                ? " · My default"
-                                : ""}
-                              {catalog?.sharedDefault === view.id
-                                ? " · Tenant default"
-                                : ""}
-                            </small>
-                          </button>
-                          <div
-                            className="a-entity-list__view-row-actions"
-                            hidden={readOnly}
-                            inert={readOnly}
-                          >
-                            {catalog && !local ? (
-                              <Button
-                                size="small"
-                                variant="ghost"
-                                disabled={
-                                  busy ||
-                                  view.compatible === false ||
-                                  catalog.personalDefault === view.id
-                                }
-                                onClick={() =>
-                                  void command({
-                                    action: "default",
-                                    id: view.id,
-                                    target: "personal",
-                                  })
-                                }
-                              >
-                                Make my default
-                              </Button>
-                            ) : null}
-                            {caps?.setSharedDefault &&
-                            (system || view.scope === "shared") ? (
-                              <Button
-                                size="small"
-                                variant="ghost"
-                                disabled={
-                                  busy ||
-                                  view.compatible === false ||
-                                  catalog?.sharedDefault === view.id
-                                }
-                                onClick={() =>
-                                  void command({
-                                    action: "default",
-                                    id: view.id,
-                                    target: "shared",
-                                  })
-                                }
-                              >
-                                Set tenant default
-                              </Button>
-                            ) : null}
-                            {view.scope === "shared" ? (
-                              <Button
-                                size="small"
-                                variant="ghost"
-                                disabled={busy}
-                                onClick={() =>
-                                  void command({ action: "copy", id: view.id })
-                                }
-                              >
-                                Personal copy
-                              </Button>
-                            ) : null}
-                            {writable ? (
-                              <>
-                                <Button
-                                  size="small"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() => {
-                                    setRenaming(view.id);
-                                    setRenameValue(view.name);
-                                  }}
-                                >
-                                  Rename
-                                </Button>
-                                <Button
-                                  size="small"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void command({
-                                      action: "update",
-                                      id: view.id,
-                                      version: view.version,
-                                      state: saveableViewState(state),
-                                    })
-                                  }
-                                >
-                                  Update from current
-                                </Button>
-                                <Button
-                                  size="small"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void command({
-                                      action: "delete",
-                                      id: view.id,
-                                    }).then((success) => {
-                                      if (success && active) apply();
-                                    })
-                                  }
-                                >
-                                  Delete
-                                </Button>
-                              </>
-                            ) : null}
-                            {local ? (
-                              <Button
-                                size="small"
-                                variant="ghost"
-                                disabled={busy || !catalog}
-                                onClick={() =>
-                                  void command(
-                                    {
-                                      action: "create",
-                                      name: view.name,
-                                      visibility: "personal",
-                                      state: view.state,
-                                    },
-                                    true,
-                                  )
-                                }
-                              >
-                                Save to my account
-                              </Button>
-                            ) : null}
-                          </div>
-                          {renaming === view.id ? (
-                            <div className="a-entity-list__save-view">
-                              <Input
-                                aria-label={`New name for ${view.name}`}
-                                value={renameValue}
-                                onChange={(event) =>
-                                  setRenameValue(event.currentTarget.value)
-                                }
-                              />
-                              <Button
-                                size="small"
-                                disabled={busy || !renameValue.trim()}
-                                onClick={() =>
-                                  void command({
-                                    action: "update",
-                                    id: view.id,
-                                    version: view.version,
-                                    name: renameValue.trim(),
-                                  }).then((success) => {
-                                    if (success) setRenaming(undefined);
-                                  })
-                                }
-                              >
-                                Save name
-                              </Button>
-                              <Button
-                                size="small"
-                                variant="ghost"
-                                onClick={() => setRenaming(undefined)}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            ))}
-          </div>
-          {message ? <p role="status">{message}</p> : null}
-          <p className="a-entity-list__view-summary">
-            Resetting to System default does not change your startup preference.
-          </p>
-        </Drawer.Body>
-      </Drawer.Tabs>
-      <Drawer.Footer>
-        <Drawer.FooterSummary>
-          <strong>
-            {rows.filter((view) => view.scope !== "system").length} saved views
-          </strong>
-          <span>Current view: {activeName}</span>
-        </Drawer.FooterSummary>
-        <Drawer.FooterActions>
-          <Button
-            variant="ghost"
-            size="small"
-            disabled={busy}
-            onClick={() => apply()}
-          >
-            Reset to system default
-          </Button>
-          <Drawer.Close className="a-button a-button--secondary a-button--small">
-            Close
-          </Drawer.Close>
-        </Drawer.FooterActions>
-      </Drawer.Footer>
-    </>
+    <CollectionViewsManager
+      rows={rows.map((view) => ({
+        id: view.id,
+        name: view.name,
+        scope: view.scope ?? "local",
+        compatible: view.compatible,
+        published: view.id === "system",
+        personalDefault: catalog?.personalDefault === view.id,
+        sharedDefault: catalog?.sharedDefault === view.id,
+      }))}
+      currentId={state.savedViewId ?? "system"}
+      busy={busy}
+      message={message || undefined}
+      createShared={Boolean(descriptor.serverViews && caps?.createShared)}
+      manageShared={Boolean(caps?.manageShared)}
+      saveSummary="Includes filters, sorting, grouping, columns, layout, and density. Search and work context are not saved."
+      nameInputId="entity-list-view-name"
+      onApply={(id) => apply(id === undefined || id === "system" ? undefined : viewOf(id))}
+      {...(writable && !(descriptor.serverViews && !catalog) ? { onSave: save } : {})}
+      {...(writable && catalog
+        ? {
+            onMakeDefault: (id: string) => void command({ action: "default", id, target: "personal" }),
+            onCopy: (id: string) => void command({ action: "copy", id }),
+            onSaveLocal: (id: string) => {
+              const view = viewOf(id);
+              if (view)
+                void command({ action: "create", name: view.name, visibility: "personal", state: view.state }, true);
+            },
+          }
+        : {})}
+      {...(writable && caps?.setSharedDefault
+        ? { onSetSharedDefault: (id: string) => void command({ action: "default", id, target: "shared" }) }
+        : {})}
+      {...(writable
+        ? {
+            onRename: (id: string, name: string) =>
+              command({ action: "update", id, version: viewOf(id)?.version, name }),
+            onUpdate: (id: string) =>
+              void command({ action: "update", id, version: viewOf(id)?.version, state: saveableViewState(state) }),
+            onDelete: (id: string) =>
+              void command({ action: "delete", id }).then((success) => {
+                if (success && (state.savedViewId ?? "system") === id) apply();
+              }),
+          }
+        : {})}
+    />
   );
 }
 
@@ -4003,6 +3575,7 @@ function DisplaySettingsDialog({
   descriptor,
   state,
   onApply,
+  widthTier,
 }: {
   readonly preferenceNamespace?: string;
   readonly configuration?: import("@athyper/contract-platform-entity-runtime").EntityLookupOptions["display"];
@@ -4012,7 +3585,10 @@ function DisplaySettingsDialog({
   readonly descriptor: EntityListDescriptorV1;
   readonly state: ListLocationStateV1;
   readonly onApply: (patch: Partial<ListLocationStateV1>) => void;
+  /** Narrow lists always show cards, so layout and density do not apply there. */
+  readonly widthTier?: ListWidthTier;
 }) {
+  const displayIntl = useEntityI18n();
   const effectivePreferences = () => {
     const saved = readDisplayPreferences(descriptor.plane, preferenceNamespace);
     return configuration
@@ -4029,8 +3605,19 @@ function DisplaySettingsDialog({
         }
       : saved;
   };
+  // Standalone lists follow the app density unless the person chose one for
+  // this list; host-configured lookups keep their explicit density.
+  const appDensity: ListLocationStateV1["density"] = (() => {
+    const value = typeof document === "undefined" ? undefined : document.documentElement.dataset.density;
+    return value === "compact" || value === "spacious" ? value : "comfortable";
+  })();
+  const initialFollow = () =>
+    !configuration &&
+    !readDisplayPreferences(descriptor.plane, preferenceNamespace)?.density &&
+    state.density === descriptor.surface.defaultState.density;
   const preferences = effectivePreferences(),
-    [density, setDensity] = useState(state.density),
+    [followApp, setFollowApp] = useState(initialFollow),
+    [density, setDensity] = useState(initialFollow() ? appDensity : state.density),
     [mode, setMode] = useState(state.mode),
     [searchBehavior, setSearchBehavior] = useState<
       DisplayPreferences["searchBehavior"]
@@ -4042,7 +3629,8 @@ function DisplaySettingsDialog({
   useEffect(() => {
     if (open) {
       const saved = effectivePreferences();
-      setDensity(saved?.density ?? state.density);
+      setFollowApp(initialFollow());
+      setDensity(initialFollow() ? appDensity : (saved?.density ?? state.density));
       setMode(saved?.mode ?? state.mode);
       setSearchBehavior(
         saved?.searchBehavior ??
@@ -4052,15 +3640,18 @@ function DisplaySettingsDialog({
     }
   }, [open, descriptor.plane, state.density, state.mode]);
   const dirty =
-    density !== (preferences?.density ?? state.density) ||
+    followApp !== initialFollow() ||
+    (!followApp && density !== (preferences?.density ?? state.density)) ||
     mode !== (preferences?.mode ?? state.mode) ||
     searchBehavior !==
       (preferences?.searchBehavior ??
         configuration?.defaults.searchBehavior ??
         "instant");
   const reset = () => {
-    if (!configuration)
+    if (!configuration) {
       clearDisplayPreferences(descriptor.plane, preferenceNamespace);
+      setFollowApp(true);
+    }
     setDensity(
       configuration?.defaults.density ??
         descriptor.surface.defaultState.density,
@@ -4072,107 +3663,59 @@ function DisplaySettingsDialog({
   };
   return (
     <>
-      <Drawer.Toolbar>
-        <Drawer.Context aria-label="Display setting context">
-          <Drawer.Metric label="Layout" value={humanizeIdentifier(mode)} />
-          <Drawer.Metric label="Density" value={humanizeIdentifier(density)} />
-          <Drawer.Metric
-            label="Search"
-            value={searchBehavior === "instant" ? "As you type" : "On Enter"}
-          />
-        </Drawer.Context>
-      </Drawer.Toolbar>
-      <Drawer.Body>
-        <div className="a-entity-list__view-options">
-          <Label>
-            <span>Layout</span>
-            <Select
-              value={mode}
-              disabled={
-                configuration && !configuration.userOverrides.includes("layout")
-              }
-              onChange={(event) =>
-                setMode(
-                  event.currentTarget.value as ListLocationStateV1["mode"],
-                )
-              }
-            >
-              {descriptor.surface.supportedModes.map((item) => (
-                <option value={item} key={item}>
-                  {humanizeIdentifier(item)}
-                </option>
-              ))}
-            </Select>
-          </Label>
-          <Label>
-            <span>Density</span>
-            <Select
-              value={density}
-              disabled={
-                configuration &&
-                !configuration.userOverrides.includes("density")
-              }
-              onChange={(event) =>
-                setDensity(
-                  event.currentTarget.value as ListLocationStateV1["density"],
-                )
-              }
-            >
-              <option value="compact">Compact</option>
-              <option value="comfortable">Comfortable</option>
-              <option value="spacious">Spacious</option>
-            </Select>
-          </Label>
-          <Label>
-            <span>Search behavior</span>
-            <Select
+      {/* The shared Display section (same as Notifications and Inbox), with the
+          list's layout and search behaviour around density. */}
+      <CollectionDensitySettings
+        appDensity={appDensity}
+        follow={followApp}
+        onFollowChange={(next) => {
+          setFollowApp(next);
+          if (next) setDensity(appDensity);
+        }}
+        density={density}
+        onDensityChange={setDensity}
+        showFollow={!configuration}
+        densityDisabled={Boolean(configuration && !configuration.userOverrides.includes("density"))}
+        hideDensity={widthTier === "narrow"}
+        after={
+          <div className="a-label">
+            <span aria-hidden="true">{displayIntl.message("list.display.searchBehavior")}</span>
+            <SegmentedControl
+              label={displayIntl.message("list.display.searchBehavior")}
               value={searchBehavior}
-              disabled={
-                configuration &&
-                !configuration.userOverrides.includes("searchBehavior")
-              }
-              onChange={(event) =>
-                setSearchBehavior(
-                  event.currentTarget
-                    .value as DisplayPreferences["searchBehavior"],
-                )
-              }
-            >
-              <option value="instant">Search as I type</option>
-              <option value="submit">Search when I press Enter</option>
-            </Select>
-          </Label>
-        </div>
-      </Drawer.Body>
+              disabled={Boolean(configuration && !configuration.userOverrides.includes("searchBehavior"))}
+              options={(["instant", "submit"] as const).map((item) => ({
+                value: item,
+                label: displayIntl.message(`list.searchBehavior.${item}`),
+              }))}
+              onValueChange={setSearchBehavior}
+            />
+          </div>
+        }
+        footer={
       <Drawer.Footer>
-        <Drawer.FooterSummary>
-          <strong>
-            {dirty ? "Changes ready to save" : "Personal defaults are current"}
-          </strong>
-          <span>These preferences apply to this list on this device.</span>
-        </Drawer.FooterSummary>
+        {dirty ? (
+          <Drawer.FooterSummary>
+            <strong>{displayIntl.message("list.footer.displayReady")}</strong>
+          </Drawer.FooterSummary>
+        ) : null}
         <Drawer.FooterActions>
           <Button variant="ghost" size="small" onClick={reset}>
             Reset settings
           </Button>
-          <Drawer.Close className="a-button a-button--secondary a-button--small">
-            Cancel
-          </Drawer.Close>
           <Button
             size="small"
             disabled={!dirty}
             onClick={() => {
               writeDisplayPreferences(
                 descriptor.plane,
-                {
-                  density,
-                  mode,
-                  searchBehavior,
-                },
+                followApp ? { mode, searchBehavior } : { density, mode, searchBehavior },
                 preferenceNamespace,
               );
               onPreferencesChange?.();
-              onApply({ density, mode });
+              // Following the app returns the list to the surface default, which
+              // drops ?density= and lets the page's density apply.
+              onApply({ density: followApp ? descriptor.surface.defaultState.density : density, mode });
               onOpenChange(false);
             }}
           >
@@ -4180,6 +3723,26 @@ function DisplaySettingsDialog({
           </Button>
         </Drawer.FooterActions>
       </Drawer.Footer>
+        }
+      >
+        {widthTier === "narrow" ? (
+          <p className="a-entity-list__view-note">{displayIntl.message("list.display.narrowNote")}</p>
+        ) : (
+          <div className="a-label">
+            <span aria-hidden="true">{displayIntl.message("list.display.layout")}</span>
+            <SegmentedControl
+              label={displayIntl.message("list.display.layout")}
+              value={mode}
+              disabled={Boolean(configuration && !configuration.userOverrides.includes("layout"))}
+              options={descriptor.surface.supportedModes.map((item) => ({
+                value: item,
+                label: displayIntl.message(`list.mode.${item}`),
+              }))}
+              onValueChange={setMode}
+            />
+          </div>
+        )}
+      </CollectionDensitySettings>
     </>
   );
 }
@@ -4414,10 +3977,10 @@ function EntityRows({
             >
               {href && isRecordLinkField(field, descriptor) ? (
                 <EntityLink className="a-entity-list__record-link" href={href} onClick={recordClick(row)}>
-                  {renderFieldValue(row.values[field.key], field, query, intl)}
+                  {renderFieldValue(row.values[field.key], field, query, intl, row.displayValues?.[field.key])}
                 </EntityLink>
               ) : (
-                renderFieldValue(row.values[field.key], field, query, intl)
+                renderFieldValue(row.values[field.key], field, query, intl, row.displayValues?.[field.key])
               )}
             </td>
           ))}
@@ -4706,7 +4269,7 @@ function EntityRecordCard({
       }
     },
     value = (field: ListFieldDescriptorV1) =>
-      renderFieldValue(row.values[field.key], field, query, intl),
+      renderFieldValue(row.values[field.key], field, query, intl, row.displayValues?.[field.key]),
     details = (items: readonly ListFieldDescriptorV1[]) => (
       <dl>
         {items.map((field) => (
@@ -5012,30 +4575,19 @@ function ColumnFilter({
                   className="a-entity-list__column-filter-rule"
                   key={item.id}
                 >
-                  <Select
-                    aria-label={`Operator for ${field.label} filter ${index + 1}`}
+                  <FilterOperatorMenu
+                    label={`Operator for ${field.label} filter ${index + 1}`}
                     value={item.operator}
-                    onChange={(event) =>
+                    operators={field.filterOperators}
+                    labelFor={(operator) => operatorLabel(operator, field)}
+                    onChange={(operator) =>
                       setDraft(
                         draft.map((row) =>
-                          row.id === item.id
-                            ? {
-                                ...row,
-                                operator: event.currentTarget
-                                  .value as ListFilterOperator,
-                                value: "",
-                              }
-                            : row,
+                          row.id === item.id ? { ...row, operator, value: "" } : row,
                         ),
                       )
                     }
-                  >
-                    {field.filterOperators.map((operator) => (
-                      <option key={operator} value={operator}>
-                        {operatorLabel(operator, field)}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                   <FilterValueEditor
                     historyKey={recentFilterKey(descriptor)}
                     field={field}
@@ -5160,8 +4712,9 @@ function renderFieldValue(
   field: ListFieldDescriptorV1,
   query?: string,
   intl?: ReturnType<typeof useEntityI18n>,
+  displayLabel?: string,
 ): ReactNode {
-  const display = formatFieldValue(value, field, intl),
+  const display = displayLabel ?? formatFieldValue(value, field, intl),
     highlighted = highlightText(display, query);
   if (field.semanticRole === "status") {
     const normalized = String(value ?? "").toLowerCase();
@@ -5237,6 +4790,17 @@ function listCountLabel(page: EntityListResultV1 | undefined, intl: ReturnType<t
     ? undefined
     : `${page?.pagination.countMode === "approximate" ? "≈" : ""}${intl.number(count)}`;
 }
+/** "1 record" / "247 records"; the count may be pre-formatted ("25+"). */
+function recordCountText(
+  intl: ReturnType<typeof useEntityI18n>,
+  count?: string,
+): string | undefined {
+  if (count === undefined) return undefined;
+  return count === "1"
+    ? intl.message("list.controls.recordOne")
+    : intl.message("list.controls.records", { count });
+}
+
 function listHeaderInformation(
   description?: string,
   count?: string,
@@ -5248,7 +4812,7 @@ function listHeaderInformation(
       {text ? <span>{text}</span> : null}
       {text && count !== undefined ? <span aria-hidden="true"> · </span> : null}
       {count !== undefined ? (
-        <span aria-live="polite">{count} records</span>
+        <span aria-live="polite">{count}</span>
       ) : null}
     </>
   );
@@ -5346,7 +4910,7 @@ function ListFrame({
   retry,
   contentOnly = false,
   headerOnly = false,
-  density = "comfortable",
+  density,
   applicationName,
   entityName,
 }: {
@@ -5363,7 +4927,8 @@ function ListFrame({
   return (
     <PageFrame
       width="wide"
-      className={`a-entity-list a-entity-list--${density}`}
+      className={`a-entity-list a-entity-list--${density ?? "comfortable"}`}
+      data-density={density}
       aria-busy={loading}
     >
       {!contentOnly && !error ? (

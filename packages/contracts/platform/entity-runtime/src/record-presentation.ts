@@ -1,7 +1,8 @@
 import { parseEntityRelationships, type EntityRelationshipV1 } from "./entity-relationship";
+import { parseEntitySectionComponent, readableEntitySectionComponent, type EntitySectionComponentV1 } from "./section-component";
 import type { EntityAccessDecisionV1 } from "./access-decision";
 import { isObjectRecord, isBoundedNonBlankText } from "./validation/values";
-import { parsePresentationLocalization, type EntityPresentationLocalizationV1 } from "./presentation-localization";
+import { readablePresentationLocalization, parsePresentationLocalization, type EntityPresentationLocalizationV1 } from "./presentation-localization";
 import { parseEntityRuntimeLocalizedText, type EntityRuntimeLocalizedTextV1 } from "./runtime-resource";
 import { parseEntityDetailNavigation, type EntityDetailNavigationV1 } from "./detail-navigation";
 import { parseRelatedPresentations, type RelatedPresentationV1 } from "./related-presentation";
@@ -32,6 +33,7 @@ export interface EntityRecordPresentationV1 {
     readonly tones: Readonly<Record<string, RecordBadgeTone>>;
   }[];
   readonly sections: readonly {
+    readonly component?: EntitySectionComponentV1;
     readonly key: string;
     readonly label: string;
     readonly localizedLabel?: EntityRuntimeLocalizedTextV1;
@@ -163,6 +165,7 @@ export function parseEntityRecordPresentation(
         label: text(item.label),
         ...(item.localizedLabel === undefined ? {} : { localizedLabel: parseEntityRuntimeLocalizedText(item.localizedLabel) }),
         fields: list(item.fields ?? []).map(key),
+        ...(item.component === undefined ? {} : {component: parseEntitySectionComponent(item.component, list(item.fields ?? []).map(key))}),
         ...(item.relationshipKey === undefined ? {} : { relationshipKey: key(item.relationshipKey) }),
         ...(item.scopePrompt === undefined ? {} : { scopePrompt: text(item.scopePrompt) }),
         placement: choice(item.placement ?? "direct", [
@@ -278,9 +281,7 @@ export function readableRecordPresentation(
   return {
     ...presentation,
     ...(presentation.entityRelationships ? {entityRelationships: presentation.entityRelationships.filter(relation => authorizedRelationships.includes(relation.key))} : {}),
-    ...(presentation.localizedLabels ? { localizedLabels: { ...presentation.localizedLabels,
-      fields: Object.fromEntries(Object.entries(presentation.localizedLabels.fields).filter(([key]) => fields.includes(key))),
-    } } : {}),
+    ...(presentation.localizedLabels ? { localizedLabels: readablePresentationLocalization(presentation.localizedLabels, fields) } : {}),
     ...(presentation.navigation ? { navigation: {
       mode: presentation.navigation.mode,
       ...(presentation.navigation.tabs ? { tabs: presentation.navigation.tabs.map(tab => ({
@@ -307,6 +308,7 @@ export function readableRecordPresentation(
       .map((item) => ({
         ...item,
         fields: item.fields.filter((key) => fields.includes(key)),
+        component: readableEntitySectionComponent(item.component, fields),
       }))
       .filter((item) => item.fields.length > 0 || Boolean(item.relationshipKey && authorizedRelationships.includes(item.relationshipKey))),
     actions: presentation.actions.filter((item) =>
@@ -328,6 +330,7 @@ export function resolveRecordHeader(
     readonly entityLabel: string;
     readonly fallbackTitle: string;
     readonly labels?: Readonly<Record<string, string>>;
+    readonly choiceLabels?: Readonly<Record<string, Readonly<Record<string, string>>>>;
     readonly actions?: EntityRecordHeaderV1["actions"];
     readonly readOnly?: boolean;
   },
@@ -352,7 +355,7 @@ export function resolveRecordHeader(
       return value
         ? [
             {
-              label: item.label ? `${item.label}: ${value}` : value,
+              label: item.label ? `${item.label}: ${options.choiceLabels?.[item.field]?.[value] ?? value}` : (options.choiceLabels?.[item.field]?.[value] ?? value),
               tone: item.tones[value] ?? "neutral",
             },
           ]

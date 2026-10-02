@@ -72,3 +72,5 @@ export { createParentCollectionScopeResolver } from "./parent-collection-scope.j
 export { createRecordOwnerAccessAdapter, scopeRecordOwnerRead } from "./record-owner-access.js";
 
 export * from "./record-mutation-policy.js";
+
+export * from "./record-source-authority.js";

@@ -1,4 +1,6 @@
-import IntlMessageFormat, { type FormatXMLElementFn, type PrimitiveType } from "intl-messageformat";
+// The named export: intl-messageformat is CommonJS, and under Node ESM interop its
+// default import is the module object, not the class (server rendering broke).
+import { IntlMessageFormat, type FormatXMLElementFn, type PrimitiveType } from "intl-messageformat";
 
 export type TextDirection = "ltr" | "rtl";
 export const SUPPORTED_UI_LOCALES = Object.freeze(["en", "ar", "ms", "zh-Hans", "hi", "ta", "fr", "de"] as const);

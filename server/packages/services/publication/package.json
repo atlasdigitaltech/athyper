@@ -17,7 +17,8 @@
     "./entity-definition-compiler": "./src/entity-definition-compiler.ts",
     "./compiled-entity-artifact-compiler": "./src/compiled-entity-artifact-compiler.ts",
     "./compiled-entity-collection-compiler": "./src/compiled-entity-collection-compiler.ts",
-    "./entity-case-contract-service": "./src/entity-case-contract-service.ts"
+    "./entity-case-contract-service": "./src/entity-case-contract-service.ts",
+    "./compilation/compiled-runtime": "./src/compilation/compiled-runtime.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -38,7 +39,8 @@
     "@athyper/server-platform-metadata": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
     "kysely": "^0.28.17",
-    "@athyper/contract-platform-collection": "workspace:*"
+    "@athyper/contract-platform-collection": "workspace:*",
+    "@athyper/platform-temporal": "workspace:*"
   },
   "devDependencies": {
     "@athyper/server-adapter-publication-signing": "workspace:*",

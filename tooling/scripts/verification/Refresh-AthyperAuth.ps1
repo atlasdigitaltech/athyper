@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('neon', 'mesh', 'studio')][string]$Plane,
     [Parameter(Mandatory = $true)]
-    [ValidateSet('catl.admin', 'catl.owner', 'athyper.admin', 'athyper.owner')][string]$Actor,
+    [ValidateSet('catl.admin', 'catl.owner', 'athyper.admin', 'athyper.owner', 'catl.finance')][string]$Actor,
     [ValidateSet('dev', 'qa')][string]$Environment = 'dev',
     [string]$Distro = 'Ubuntu-24.04',
     [string]$RepoPath = '/home/chandravel_natarajan/src/athyper',
@@ -14,6 +14,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Actor -eq 'catl.finance' -and ($Environment -ne 'dev' -or $Plane -ne 'neon')) { throw 'catl.finance is provisioned only in DEV Neon. Use -Environment dev -Plane neon; Mesh requires a separately provisioned identity and membership.' }
 if ($IsolatedStudio -and ($Environment -ne 'dev' -or $Plane -ne 'studio' -or $Actor -notin @('catl.admin', 'catl.owner'))) {
     throw 'Isolated Studio requires dev/studio and catl.admin or catl.owner.'
 }
@@ -44,7 +45,7 @@ try {
     npx.cmd --yes "playwright@$PlaywrightVersion" install chromium
     if ($LASTEXITCODE -ne 0) { throw 'Chromium installation failed.' }
 
-    if ($Elevated) {
+    if ($Elevated -or $Actor -eq 'catl.finance') {
         npm.cmd install --prefix $captureFolder --no-audit --no-fund "playwright@$PlaywrightVersion"
         if ($LASTEXITCODE -ne 0) { throw 'Playwright module installation failed.' }
         $repoWindows = "\\wsl.localhost\$Distro" + ($RepoPath.TrimEnd('/') -replace '/', '\')
@@ -54,8 +55,13 @@ try {
             $env:ATLAS_CAPTURE_PACKAGE_ROOT = $captureFolder
             $freshOptions = @()
             if ($Fresh) { $freshOptions = @('--fresh') }
-            node.exe $elevatedScript --environment $Environment --plane $Plane --actor $Actor --output $targetState @captureOptions @freshOptions
-            if ($LASTEXITCODE -ne 0) { throw 'Elevated capture failed; existing state retained.' }
+            $sessionOptions = @()
+            if ($Actor -eq 'catl.finance') {
+                $sessionOptions += '--session-only'
+                if (!$Elevated) { $sessionOptions += '--normal' }
+            }
+            node.exe $elevatedScript --environment $Environment --plane $Plane --actor $Actor --output $targetState @captureOptions @freshOptions @sessionOptions
+            if ($LASTEXITCODE -ne 0) { throw 'Session capture failed; existing state retained.' }
         } finally {
             $env:ATLAS_CAPTURE_PACKAGE_ROOT = $priorPackageRoot
         }
@@ -65,8 +71,10 @@ try {
         $validatorNode = "$validatorHome/.local/bin/node"
         & wsl.exe -d $Distro -- test -x $validatorNode
         if ($LASTEXITCODE -ne 0) { $validatorNode = 'node' }
-        & wsl.exe -d $Distro --cd $RepoPath -- $validatorNode tooling/scripts/verification/check-athyper-auth.mjs --environment $Environment --plane $Plane --actor $Actor --require-elevated @captureOptions
-        if ($LASTEXITCODE -ne 0) { throw 'Session capture succeeded, but elevated session validation failed.' }
+        $validationOptions = @()
+        if ($Elevated) { $validationOptions += '--require-elevated' }
+        & wsl.exe -d $Distro --cd $RepoPath -- $validatorNode tooling/scripts/verification/check-athyper-auth.mjs --environment $Environment --plane $Plane --actor $Actor @validationOptions @captureOptions
+        if ($LASTEXITCODE -ne 0) { throw 'Session capture succeeded, but session validation failed.' }
         return
     }
 

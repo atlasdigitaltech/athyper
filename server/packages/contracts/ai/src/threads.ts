@@ -41,7 +41,8 @@ export interface AtlasRetentionPolicyResolver { resolve(context: VerifiedRequest
 
 export interface AtlasThreadRepository {
   create(input: { readonly context: VerifiedRequestContext; readonly threadId: string; readonly title: string | null; readonly retention: AtlasThreadRetention }): Promise<AtlasThread>;
-  list(input: { readonly context: VerifiedRequestContext; readonly status: AtlasThreadStatus | "all"; readonly limit: number; readonly cursor?: string }): Promise<AtlasCursorPage<AtlasThread>>;
+  /** `query` matches the title or any message text, case-insensitively. */
+  list(input: { readonly context: VerifiedRequestContext; readonly status: AtlasThreadStatus | "all"; readonly limit: number; readonly cursor?: string; readonly query?: string }): Promise<AtlasCursorPage<AtlasThread>>;
   get(input: { readonly context: VerifiedRequestContext; readonly threadId: string }): Promise<AtlasThread | null>;
   listMessages(input: { readonly context: VerifiedRequestContext; readonly threadId: string; readonly limit: number; readonly beforeSequence?: number }): Promise<AtlasCursorPage<AtlasMessage>>;
   rename(input: { readonly context: VerifiedRequestContext; readonly threadId: string; readonly title: string; readonly expectedRowVersion: number }): Promise<AtlasThread | null>;

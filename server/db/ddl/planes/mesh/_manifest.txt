@@ -193,6 +193,8 @@ common/authz/14_workflow_permission_reference_seed.sql
 common/shared/12_reference_seed.sql
 common/control/12_ui_locale_catalog_seed.sql
 common/audit/12_reference_seed.sql
+common/audit/13_entity_record_contracts.sql
+common/audit/14_entity_export_contracts.sql
 common/control/12_lookup_reference_entrypoint.sql
 common/control/12_notification_reference_seed.sql
 common/control/12_cron_schedule_reference_seed.sql
@@ -231,3 +233,4 @@ common/document/14_collaboration_participant_directory.sql
 planes/mesh/master/26_entity_owner_access.sql
 common/authz/20_common_identity_permissions.sql
 common/authz/21_entity_default_access.sql
+common/master/23_projected_profile_source.sql

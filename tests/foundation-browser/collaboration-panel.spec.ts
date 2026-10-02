@@ -31,9 +31,8 @@ window.mountAtlasReference=()=>{const node=document.createElement('section');nod
     "@athyper/platform-ui": resolve(
       "packages/platform/foundation/ui/src/index.tsx",
     ),
-    "@athyper/platform-shell": resolve(
-      "packages/platform/shell/shell/src/workspace-side-panel.tsx",
-    ),
+    // Shell subpaths resolve from source (the panel imports "@athyper/platform-shell/tool-panel").
+    "@athyper/platform-shell": resolve("packages/platform/shell/shell/src"),
   },
   loader: { ".css": "empty" },
   bundle: true,
@@ -64,7 +63,10 @@ test("one draft survives display modes, tabs, Atlas handoff and close/reopen", a
   await expect(panel).toHaveAttribute("data-mode", "content");
   await expect(editor).toHaveValue("Unsaved draft");
   await page
-    .getByRole("button", { name: "Open Collaboration in side view", exact: true })
+    .getByRole("button", {
+      name: "Open Collaboration in side view",
+      exact: true,
+    })
     .click();
   await expect(panel).toHaveAttribute("data-mode", "pinned");
   await page.getByRole("tab", { name: "Files" }).click();
@@ -76,14 +78,19 @@ test("one draft survives display modes, tabs, Atlas handoff and close/reopen", a
   await page.setViewportSize({ width: 900, height: 900 });
   await expect(page.locator("#entity-record-collaboration")).toBeHidden();
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator("#entity-record-collaboration")).toHaveAttribute("data-mode", "pinned");
+  await expect(page.locator("#entity-record-collaboration")).toHaveAttribute(
+    "data-mode",
+    "pinned",
+  );
 
   await page
     .getByRole("button", { name: "Open comments", exact: true })
     .click();
   await expect(editor).toHaveValue("Unsaved draft");
   await expect(panel).toHaveAttribute("data-mode", "pinned");
-  await page.getByRole("button", { name: "Close collaboration", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Close collaboration", exact: true })
+    .click();
   await expect(page.locator("#entity-record-collaboration")).toBeHidden();
   await page
     .getByRole("button", { name: "Open comments", exact: true })
@@ -109,7 +116,10 @@ test("keyboard resizing respects bounds and compact screens use full content vie
   await page.keyboard.press("Home");
   await expect(separator).toHaveAttribute("aria-valuenow", "360");
   await page.setViewportSize({ width: 390, height: 844 });
-  const panel = page.getByRole("region", { name: "Collaboration", exact: true });
+  const panel = page.getByRole("region", {
+    name: "Collaboration",
+    exact: true,
+  });
   await expect(panel).toBeVisible();
   await expect(panel).toHaveAttribute("data-mode", "content");
   await expect(page.getByRole("tablist")).toHaveCount(0);
@@ -127,8 +137,19 @@ test("full view uses external navigation and preserves unsaved record fields", a
     .getByRole("button", { name: "Open collaboration in full view" })
     .click();
   await expect(field).toBeHidden();
-  await expect(page.locator(".a-collaboration-panel__header").getByRole("button", {name:"Open Collaboration in side view",exact:true})).toBeVisible();
-  await expect(page.locator(".a-collaboration-panel__header").getByRole("button", {name:"Close collaboration",exact:true})).toBeVisible();
+  await expect(
+    page
+      .locator(".a-collaboration-panel__header")
+      .getByRole("button", {
+        name: "Open Collaboration in side view",
+        exact: true,
+      }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator(".a-collaboration-panel__header")
+      .getByRole("button", { name: "Close collaboration", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("tablist")).toHaveCount(0);
   await expect(
     page.getByText("Comments and files save separately from record changes."),
@@ -136,7 +157,10 @@ test("full view uses external navigation and preserves unsaved record fields", a
   await page.getByRole("button", { name: "Record Files", exact: true }).click();
   await page.getByLabel("attachments", { exact: true }).fill("saved filter");
   await page
-    .getByRole("button", { name: "Open Collaboration in side view", exact: true })
+    .getByRole("button", {
+      name: "Open Collaboration in side view",
+      exact: true,
+    })
     .click();
   await expect(field).toHaveValue("Unsaved record name");
   await expect(
@@ -144,33 +168,102 @@ test("full view uses external navigation and preserves unsaved record fields", a
   ).toHaveAttribute("aria-selected", "true");
 });
 
-test("Collaboration side header matches Atlas height and typography", async ({ page }) => {
+test("Collaboration side header matches Atlas height and typography", async ({
+  page,
+}) => {
   await expect(page.locator(".a-collaboration-panel__header")).toBeVisible();
-  await page.evaluate(() => (window as unknown as {mountAtlasReference():void}).mountAtlasReference());
+  await page.evaluate(() =>
+    (
+      window as unknown as { mountAtlasReference(): void }
+    ).mountAtlasReference(),
+  );
   await expect(page.locator(".athyper-atlas-workspace__header")).toBeVisible();
   const styles = await page.evaluate(() => {
     const read = (selector: string) => {
       const header = document.querySelector(selector)!;
       const title = getComputedStyle(header.querySelector("strong")!);
 
-      return {height:header.getBoundingClientRect().height,font:title.fontSize,weight:title.fontWeight};
+      return {
+        height: header.getBoundingClientRect().height,
+        font: title.fontSize,
+        weight: title.fontWeight,
+      };
     };
-    return {collaboration:read(".a-collaboration-panel__header"),atlas:read("section.athyper-atlas-workspace > header")};
+    return {
+      collaboration: read(".a-collaboration-panel__header"),
+      atlas: read("section.athyper-atlas-workspace > header"),
+    };
   });
   expect(styles.collaboration).toEqual(styles.atlas);
 });
 
-test("pin toggles layout without losing the record draft", async ({page}) => {
- await page.setViewportSize({width:1440,height:900});
- await page.setContent('<div id="root"></div>');await page.addStyleTag({content:css});await page.evaluate(bundle);
- const panel=page.locator('#entity-record-collaboration');
- await panel.getByRole('textbox',{name:'comments',exact:true}).fill('Keep while unpinned');
- await panel.locator('[data-panel-action=pin]').click();
- await expect(panel).toHaveAttribute('data-mode','drawer');
- await expect(panel.locator('[data-panel-action=pin]')).toHaveAttribute('aria-pressed','false');
- await expect(page.locator('.a-collaboration-backdrop')).toBeVisible();
- await panel.locator('[data-panel-action=pin]').click();
- await expect(panel).toHaveAttribute('data-mode','pinned');
- await expect(panel.getByRole('textbox',{name:'comments',exact:true})).toHaveValue('Keep while unpinned');
- await expect(page.locator('.a-collaboration-backdrop')).toHaveCount(0);
+test("pin toggles layout without losing the record draft", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setContent('<div id="root"></div>');
+  await page.addStyleTag({ content: css });
+  await page.evaluate(bundle);
+  const panel = page.locator("#entity-record-collaboration");
+  await panel
+    .getByRole("textbox", { name: "comments", exact: true })
+    .fill("Keep while unpinned");
+  await panel.locator("[data-panel-action=pin]").click();
+  await expect(panel).toHaveAttribute("data-mode", "drawer");
+  await expect(panel.locator("[data-panel-action=pin]")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(page.locator(".a-collaboration-backdrop")).toBeVisible();
+  await panel.locator("[data-panel-action=pin]").click();
+  await expect(panel).toHaveAttribute("data-mode", "pinned");
+  await expect(
+    panel.getByRole("textbox", { name: "comments", exact: true }),
+  ).toHaveValue("Keep while unpinned");
+  await expect(page.locator(".a-collaboration-backdrop")).toHaveCount(0);
+});
+
+test("unpinned collaboration is a modal dialog on the shared tool panel; pinned and full view are not", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setContent('<div id="root"></div>');
+  await page.addStyleTag({ content: css });
+  await page.evaluate(bundle);
+  const panel = page.locator("#entity-record-collaboration");
+  // One shared frame: the same docked tool panel as list controls.
+  await expect(panel).toHaveClass(/\ba-tool-panel\b/);
+  await expect(panel).toHaveAttribute("role", "region");
+  await expect(panel).not.toHaveAttribute("aria-modal", "true");
+  await panel.locator("[data-panel-action=pin]").click();
+  await expect(panel).toHaveAttribute("data-mode", "drawer");
+  await expect(panel).toHaveAttribute("role", "dialog");
+  await expect(panel).toHaveAttribute("aria-modal", "true");
+  // Focus stays inside the overlay while it covers the record.
+  for (let step = 0; step < 8; step++) {
+    await page.keyboard.press("Tab");
+    expect(
+      await panel.evaluate((node) => node.contains(document.activeElement)),
+    ).toBe(true);
+  }
+  // A focused control's tooltip takes the first Escape (WCAG 1.4.13); from a field, Escape closes.
+  await panel.getByRole("textbox", { name: "comments", exact: true }).focus();
+  // A hovered or just-left control keeps its tooltip briefly; move the pointer off the header.
+  await page.mouse.move(700, 450);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Open comments", exact: true }),
+  ).not.toBeFocused();
+  await page
+    .getByRole("button", { name: "Open comments", exact: true })
+    .click();
+  await expect(panel).toBeVisible();
+  await panel.locator("[data-panel-action=fullView]").click();
+  await expect(panel).toHaveAttribute("data-mode", "content");
+  await expect(panel).toHaveAttribute("role", "region");
+  await expect(page.locator(".a-collaboration-backdrop")).toHaveCount(0);
+  // Full view is part of the page: Escape does not close it.
+  await panel.focus();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeVisible();
 });

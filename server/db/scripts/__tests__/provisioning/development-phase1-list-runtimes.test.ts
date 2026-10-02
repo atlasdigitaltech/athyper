@@ -32,13 +32,13 @@ test("Phase 1 Neon, Mesh and Studio list publications are deterministic and plan
     10,
   );
   assert.equal(
-    mesh.projection.descriptor.compiled_json.listPresentation.dataOperations
+    mesh.projection.descriptor.compiled_json.listPresentation.dataOperations!
       .importAdapterKey,
     "mesh.network_relationship.request.v1",
   );
   assert.equal(mesh.releaseNo, 5);
   assert.deepEqual(
-    mesh.projection.descriptor.compiled_json.listPresentation.dataOperations
+    mesh.projection.descriptor.compiled_json.listPresentation.dataOperations!
       .importFormats,
     ["xlsx", "csv", "json"],
   );
@@ -68,12 +68,12 @@ test("Phase 1 Neon, Mesh and Studio list publications are deterministic and plan
     "entity_code",
   );
   assert.equal(
-    studio.projection.descriptor.compiled_json.listPresentation.dataOperations
+    studio.projection.descriptor.compiled_json.listPresentation.dataOperations!
       .importAdapterKey,
     "studio.metadata_entity.draft.v1",
   );
   assert.deepEqual(
-    studio.projection.descriptor.compiled_json.listPresentation.dataOperations
+    studio.projection.descriptor.compiled_json.listPresentation.dataOperations!
       .importFormats,
     ["xlsx", "csv", "json"],
   );

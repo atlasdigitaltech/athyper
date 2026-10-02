@@ -10,7 +10,7 @@ import {
   compileCompiledEntityArtifacts,
 } from "@athyper/server-service-publication";
 import { parseCompiledRuntimeContract } from "@athyper/server-platform-metadata";
-import { createPublishedTenantRecordAuthorizer } from "@athyper/server-service-records";
+import { createEntityListService, createPublishedTenantRecordAuthorizer } from "@athyper/server-service-records";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { assertEntityAuthorizationEnforceable } from "../publication/entity-authorization-activation.js";
 const digest = (value: Uint8Array) =>
@@ -88,6 +88,7 @@ function fixture(code: string, plane: "studio" | "neon" | "mesh" = "neon") {
         "entity.record.create.v1",
         "entity.record.patch.v1",
         "platform.notifications.preferences.v1",
+        "platform.experience.ui_profile.v1",
       ]),
       resolvers: new Set(["tenant.record.v1"]),
       renderers: new Set(),
@@ -151,6 +152,7 @@ for (const code of [
   "principal",
   "principal_profile",
   "principal_notification_preference",
+  "principal_ui_profile",
 ])
   it.each(["studio", "neon", "mesh"] as const)(
     `qualifies and reads the published ${code} on %s`,
@@ -210,7 +212,7 @@ it("keeps owner admin checks separate from published operation permissions", asy
     allowed: false,
   });
 });
-it.each(["principal_profile", "principal_notification_preference"])(
+it.each(["principal_profile", "principal_notification_preference", "principal_ui_profile"])(
   "checks published writable fields and existing owner scope for %s",
   async (code) => {
     const f = setup(code);
@@ -536,3 +538,16 @@ it("requires the published owner policy for high-risk administration and preserv
       }),
     ).toMatchObject({ allowed: false });
 });
+
+
+it.each(["principal_profile", "principal_notification_preference", "principal_ui_profile"])(
+  "authorizes edit form metadata against the existing %s record", async code => {
+    const f = setup(code);
+    const service = createEntityListService({
+      metadata: f.options.metadata, authorizer: f.authorizer, queries: {} as never, listExecutor: {} as never,
+    });
+    await expect(service.formDescriptor(f.context, code, "edit", self)).resolves.toMatchObject({ mode: "edit" });
+    await expect(service.formDescriptor(f.context, code, "edit", other)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(service.formDescriptor(f.context, code, "edit")).rejects.toMatchObject({ statusCode: 403 });
+  },
+);

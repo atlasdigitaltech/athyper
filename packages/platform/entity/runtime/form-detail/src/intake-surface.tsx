@@ -127,7 +127,7 @@ export function EntityIntakeSurface({
   return (
     <div
       className="a-intake-surface"
-      style={{ "--intake-columns": surface.columns } as CSSProperties}
+      style={columnCount("--intake-columns", surface.columns)}
     >
       {surface.sections
         .filter((section) =>
@@ -179,4 +179,9 @@ export function EntityIntakeSurface({
         ))}
     </div>
   );
+}
+
+/** The metadata column count, handed to the stylesheet's grid as a CSS variable. */
+function columnCount(name: string, columns: number | undefined): CSSProperties {
+  return { [name]: columns } as CSSProperties;
 }

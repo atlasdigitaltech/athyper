@@ -195,6 +195,6 @@ function requireEntity(view: SavedView, entityCode?: string): void {
     throw new SavedViewError(409, "SAVED_VIEW_ENTITY_MISMATCH", "Saved view belongs to another entity");
 }
 
-export {registerEntityViewRoutes,registerViewCollectionRoutes} from "./entity-views-routes.js";
+export {readEntityViewCatalog,registerEntityViewRoutes,registerViewCollectionRoutes} from "./entity-views-routes.js";
 
 export { createReferenceHistoryStore, registerReferenceChoiceRoutes } from "./reference-choice-routes.js";

@@ -1,0 +1,640 @@
+{
+  "schema": "athyper.table-entity-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "neon"
+  ],
+  "definition": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "external_worker",
+      "entityClass": "business",
+      "ownershipModel": "system"
+    },
+    "runtimeProfiles": [
+      {
+        "id": "a89af038-5e4e-506c-81f1-714973856324",
+        "profileKey": "default",
+        "backingKind": "table",
+        "storagePlane": "neon",
+        "storageSchema": "master",
+        "storageObject": "external_worker",
+        "tenantFieldKey": "tenant_id",
+        "apiExposure": "api",
+        "readMode": "generic",
+        "writeMode": "none",
+        "createMode": "form_only",
+        "concurrencyMode": "none"
+      }
+    ],
+    "operations": [
+      {
+        "id": "82010d23-0a02-53ec-a664-577a629eb802",
+        "operationKey": "list",
+        "operationKind": "read",
+        "label": "External workforce",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "worker_number",
+          "person_id",
+          "default_classification",
+          "status"
+        ],
+        "auditEventCode": "external_worker.list"
+      },
+      {
+        "id": "c6730c63-737e-55da-b646-1660385fc445",
+        "operationKey": "read",
+        "operationKind": "read",
+        "label": "View record",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "worker_number",
+          "person_id",
+          "default_classification",
+          "status"
+        ],
+        "auditEventCode": "external_worker.read"
+      }
+    ],
+    "operationPermissions": [
+      {
+        "entityOperationId": "82010d23-0a02-53ec-a664-577a629eb802",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.external_worker.read",
+        "permissionKind": "capability",
+        "id": "ba5912d8-2ed2-57d5-b93b-247c9521c84f"
+      },
+      {
+        "entityOperationId": "c6730c63-737e-55da-b646-1660385fc445",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.external_worker.read",
+        "permissionKind": "capability",
+        "id": "c071ef6e-e892-5b9c-9ba6-f5e6eca4de3b"
+      }
+    ],
+    "operationScopeBindings": [
+      {
+        "entityOperationId": "82010d23-0a02-53ec-a664-577a629eb802",
+        "bindingKey": "list_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "collection",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "67c4ee46-df8c-550f-a802-0531d7110960"
+      },
+      {
+        "entityOperationId": "c6730c63-737e-55da-b646-1660385fc445",
+        "bindingKey": "read_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "4c40e938-5125-54c8-afe2-f71ca8d25b75"
+      }
+    ],
+    "searchProfiles": [
+      {
+        "id": "648049cd-0f5e-53c0-8a4b-0daf9055cd56",
+        "searchKey": "default",
+        "searchKind": "keyword",
+        "minimumQueryLength": 1,
+        "isDefault": true
+      }
+    ],
+    "fields": [
+      {
+        "id": "de21ad7f-2ef7-5403-b944-e2da43d53e2c",
+        "fieldKey": "id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "975dcdfd-8620-5973-8282-e934cb1321b3",
+        "fieldKey": "tenant_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "tenant_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "df5e12f2-b7e3-5506-89e0-1851c3d58d5e",
+        "fieldKey": "worker_number",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "worker_number",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "ba563ef8-5dea-5f9e-a3e5-1c3b8cc68f2c",
+        "fieldKey": "person_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid",
+          "keyReference": {
+            "targetEntity": "person",
+            "labelField": "name",
+            "fields": [
+              {
+                "source": "tenant_id",
+                "target": "tenant_id"
+              },
+              {
+                "source": "person_id",
+                "target": "id"
+              }
+            ]
+          }
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "person_id",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "75f80cbe-f79f-5caf-8c48-206056c6cc23",
+        "fieldKey": "default_classification",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "default_classification",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "60e1c542-c337-58d8-b6ab-99b03bc81229",
+        "fieldKey": "status",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.external_worker.status"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "status",
+        "dataClassification": "internal",
+        "status": "active"
+      }
+    ],
+    "keys": [
+      {
+        "id": "1cbdc327-31af-5af3-a506-f373ed3d361a",
+        "keyKey": "primary",
+        "keyKind": "primary",
+        "uniquenessScope": "global"
+      },
+      {
+        "id": "f8a13bcd-0d3d-51e4-863d-18542b850aad",
+        "keyKey": "natural",
+        "keyKind": "natural",
+        "uniquenessScope": "tenant"
+      }
+    ],
+    "keyFields": [
+      {
+        "entityKeyId": "1cbdc327-31af-5af3-a506-f373ed3d361a",
+        "entityFieldId": "de21ad7f-2ef7-5403-b944-e2da43d53e2c",
+        "position": 1,
+        "id": "738d61f9-950f-5a75-b971-65dcd1849caa"
+      },
+      {
+        "entityKeyId": "f8a13bcd-0d3d-51e4-863d-18542b850aad",
+        "entityFieldId": "975dcdfd-8620-5973-8282-e934cb1321b3",
+        "position": 1,
+        "id": "5d19b518-04c3-59a7-a0ee-46ae9eb610d7"
+      },
+      {
+        "entityKeyId": "f8a13bcd-0d3d-51e4-863d-18542b850aad",
+        "entityFieldId": "ba563ef8-5dea-5f9e-a3e5-1c3b8cc68f2c",
+        "position": 2,
+        "id": "7903dd46-9933-5b33-acaa-14a6464f0f8a"
+      }
+    ],
+    "searchFields": [
+      {
+        "entitySearchProfileId": "648049cd-0f5e-53c0-8a4b-0daf9055cd56",
+        "entityFieldId": "df5e12f2-b7e3-5506-89e0-1851c3d58d5e",
+        "position": 1,
+        "matchMode": "contains",
+        "id": "d840bb20-c2b7-5aff-9bec-dc4c7578a4fd"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "ab72281d-aa09-5791-917b-dd3725c4e2f4",
+        "surfaceKey": "list",
+        "surfaceKind": "list",
+        "title": "External workforce",
+        "isDefault": true,
+        "layoutConfig": {
+          "identityField": "worker_number",
+          "defaultState": {
+            "sort": [
+              {
+                "field": "worker_number",
+                "direction": "asc"
+              }
+            ],
+            "density": "comfortable",
+            "mode": "table"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "limits": {
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              10,
+              25,
+              50,
+              100
+            ],
+            "maxSortLevels": 3,
+            "countMode": "exact"
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "external_worker",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "permissionCode": "neon.workforce.external_worker.read",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "permissionCode": "neon.workforce.external_worker.read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "worker_number",
+                "fields": [
+                  "worker_number"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "person_id",
+                "fields": [
+                  "person_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "default_classification",
+                "fields": [
+                  "default_classification"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "a3100975-8ab2-515e-b933-5fcf22088947",
+        "surfaceKey": "detail",
+        "surfaceKind": "detail",
+        "title": "External workforce",
+        "layoutConfig": {
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "worker_number",
+            "codeField": "worker_number",
+            "sections": [
+              {
+                "key": "overview",
+                "label": "Workforce identity",
+                "fields": [
+                  "worker_number",
+                  "person_id",
+                  "default_classification",
+                  "status"
+                ]
+              }
+            ],
+            "actions": []
+          }
+        }
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "id": "4b8241c1-048a-52b0-ad5f-d8bfe9441cd4",
+        "entitySurfaceId": "ab72281d-aa09-5791-917b-dd3725c4e2f4",
+        "entityFieldId": "de21ad7f-2ef7-5403-b944-e2da43d53e2c",
+        "bindingKey": "list_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "e4c8f018-deba-526e-bf40-d165d38ce424",
+        "entitySurfaceId": "ab72281d-aa09-5791-917b-dd3725c4e2f4",
+        "entityFieldId": "975dcdfd-8620-5973-8282-e934cb1321b3",
+        "bindingKey": "list_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "f866fa15-a822-5504-9bd5-85d752bfa18d",
+        "entitySurfaceId": "ab72281d-aa09-5791-917b-dd3725c4e2f4",
+        "entityFieldId": "df5e12f2-b7e3-5506-89e0-1851c3d58d5e",
+        "bindingKey": "list_worker_number",
+        "position": 2,
+        "labelOverride": "Worker number",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "3308bbbc-0112-5470-adea-97691817170b",
+        "entitySurfaceId": "ab72281d-aa09-5791-917b-dd3725c4e2f4",
+        "entityFieldId": "ba563ef8-5dea-5f9e-a3e5-1c3b8cc68f2c",
+        "bindingKey": "list_person_id",
+        "position": 3,
+        "labelOverride": "Person",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "df19c632-98cc-569b-be94-bec170ec90cb",
+        "entitySurfaceId": "ab72281d-aa09-5791-917b-dd3725c4e2f4",
+        "entityFieldId": "75f80cbe-f79f-5caf-8c48-206056c6cc23",
+        "bindingKey": "list_default_classification",
+        "position": 4,
+        "labelOverride": "Default classification",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "2b10a0aa-bee0-5067-8cd8-61da702b61c2",
+        "entitySurfaceId": "ab72281d-aa09-5791-917b-dd3725c4e2f4",
+        "entityFieldId": "60e1c542-c337-58d8-b6ab-99b03bc81229",
+        "bindingKey": "list_status",
+        "position": 5,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "prospect",
+                "label": "Prospect"
+              },
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "suspended",
+                "label": "Suspended"
+              },
+              {
+                "value": "inactive",
+                "label": "Inactive"
+              },
+              {
+                "value": "archived",
+                "label": "Archived"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "8e9b9748-9cc9-564c-a6af-a18d101e15ca",
+        "entitySurfaceId": "a3100975-8ab2-515e-b933-5fcf22088947",
+        "entityFieldId": "de21ad7f-2ef7-5403-b944-e2da43d53e2c",
+        "bindingKey": "detail_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "0a3c1065-f5ca-553a-8bc7-1ff4e2045777",
+        "entitySurfaceId": "a3100975-8ab2-515e-b933-5fcf22088947",
+        "entityFieldId": "975dcdfd-8620-5973-8282-e934cb1321b3",
+        "bindingKey": "detail_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "f14cd79c-1c57-55d4-a623-e6d1c48cb17b",
+        "entitySurfaceId": "a3100975-8ab2-515e-b933-5fcf22088947",
+        "entityFieldId": "df5e12f2-b7e3-5506-89e0-1851c3d58d5e",
+        "bindingKey": "detail_worker_number",
+        "position": 2,
+        "labelOverride": "Worker number",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "ae94a087-3afa-5de6-840d-5fa84e97ed44",
+        "entitySurfaceId": "a3100975-8ab2-515e-b933-5fcf22088947",
+        "entityFieldId": "ba563ef8-5dea-5f9e-a3e5-1c3b8cc68f2c",
+        "bindingKey": "detail_person_id",
+        "position": 3,
+        "labelOverride": "Person",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "84cb5209-54f0-5e23-b3ef-811cab861c24",
+        "entitySurfaceId": "a3100975-8ab2-515e-b933-5fcf22088947",
+        "entityFieldId": "75f80cbe-f79f-5caf-8c48-206056c6cc23",
+        "bindingKey": "detail_default_classification",
+        "position": 4,
+        "labelOverride": "Default classification",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "99536764-c820-51c5-aef0-6fa64c87358e",
+        "entitySurfaceId": "a3100975-8ab2-515e-b933-5fcf22088947",
+        "entityFieldId": "60e1c542-c337-58d8-b6ab-99b03bc81229",
+        "bindingKey": "detail_status",
+        "position": 5,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "prospect",
+                "label": "Prospect"
+              },
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "suspended",
+                "label": "Suspended"
+              },
+              {
+                "value": "inactive",
+                "label": "Inactive"
+              },
+              {
+                "value": "archived",
+                "label": "Archived"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "fieldReferenceBindings": [
+      {
+        "id": "b27b8f31-9c61-55e6-b97d-91677ed6b132",
+        "entityFieldId": "ba563ef8-5dea-5f9e-a3e5-1c3b8cc68f2c",
+        "bindingKey": "person_id_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "person",
+        "status": "active"
+      }
+    ]
+  }
+}

@@ -1,8 +1,9 @@
 import { artifactDirectory } from "../artifact-paths.mjs";
-import { spawnSync, execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
   closeSync,
+  existsSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -10,6 +11,7 @@ import {
 } from "node:fs";
 import { resolve, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { capturePolicySource } from "./static-policy-source.mjs";
 
 export function selectPolicies(document, profile, scripts) {
   const selection = document.profiles?.[profile];
@@ -96,11 +98,21 @@ export function runPolicies(
 }
 
 export function main(args = process.argv.slice(2), cwd = process.cwd()) {
-  if (args.length !== 2 || args[0] !== "--profile")
+  if (
+    ![2, 4].includes(args.length) ||
+    args[0] !== "--profile" ||
+    (args.length === 4 &&
+      (args[2] !== "--deliverable" || !/^D(?:[1-9]|10)$/.test(args[3])))
+  )
     throw new Error(
-      "Usage: run-static-policies.mjs --profile <workspace|release|ci|wave1>",
+      "Usage: run-static-policies.mjs --profile <workspace|release|ci|wave1> [--deliverable D1..D10]",
     );
   const profile = args[1];
+  const deliverable = args[3] ?? null;
+  if (deliverable && profile !== "ci")
+    throw new Error(
+      "Foundation deliverables require the complete ci static-policy profile",
+    );
   const document = JSON.parse(
     readFileSync(
       join(cwd, "governance/config/governance/static-policy-profiles.json"),
@@ -111,28 +123,76 @@ export function main(args = process.argv.slice(2), cwd = process.cwd()) {
     readFileSync(join(cwd, "package.json"), "utf8"),
   ).scripts;
   const names = selectPolicies(document, profile, scripts);
-  const output = join(artifactDirectory("static-policy"), profile);
-  const report = runPolicies(names, { cwd, output });
-  const commit = execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd,
-    encoding: "utf8",
-  }).trim();
-  const dirty = Boolean(
-    execFileSync("git", ["status", "--porcelain"], {
-      cwd,
-      encoding: "utf8",
-    }).trim(),
+  const output = join(
+    artifactDirectory("static-policy"),
+    profile,
+    ...(deliverable ? [deliverable] : []),
   );
+  if (existsSync(output))
+    throw new Error(
+      `Static-policy evidence already exists: ${output}; use a new run ID`,
+    );
+  mkdirSync(output, { recursive: true });
+  const startedAt = new Date().toISOString();
+  const before = capturePolicySource(cwd, output);
+  writeFileSync(
+    join(output, "source-before.json"),
+    JSON.stringify(before, null, 2) + "\n",
+  );
+  const report = runPolicies(names, { cwd, output });
+  const after = capturePolicySource(cwd);
+  const stable = before.fingerprint === after.fingerprint;
   writeFileSync(
     join(output, "source.json"),
-    JSON.stringify({ commit, dirty, profile }, null, 2) + "\n",
+    JSON.stringify(
+      {
+        commit: before.commit,
+        dirty: !before.clean,
+        profile,
+        deliverable,
+        stable,
+        beforeFingerprint: before.fingerprint,
+        after,
+      },
+      null,
+      2,
+    ) + "\n",
   );
+  writeFileSync(
+    join(output, "gate.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        profile,
+        deliverable,
+        sourceFingerprint: before.fingerprint,
+        sourceStable: stable,
+        passed: report.failed === 0 && stable,
+        failedPolicies: report.results
+          .filter((row) => row.status === "failed")
+          .map((row) => row.name),
+        sourceManifest: "source-before.json",
+        sourceBlobs: "source-blobs",
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  if (!stable) {
+    appendFileSync(
+      join(output, "summary.md"),
+      "\nSource changed during checks; qualification failed. Rerun against a stable checkout.\n",
+    );
+    console.error("Source changed during checks; qualification failed.");
+  }
   if (process.env.GITHUB_STEP_SUMMARY)
     appendFileSync(
       process.env.GITHUB_STEP_SUMMARY,
       readFileSync(join(output, "summary.md")),
     );
-  return report.failed ? 1 : 0;
+  return report.failed || !stable ? 1 : 0;
 }
 
 if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? "")).href) {

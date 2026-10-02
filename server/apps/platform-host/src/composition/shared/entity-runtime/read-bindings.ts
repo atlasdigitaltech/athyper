@@ -6,6 +6,7 @@ import {
 } from "@athyper/server-service-records";
 import {
   registerEntityViewRoutes,
+  readEntityViewCatalog,
   registerReferenceChoiceRoutes,
 } from "@athyper/server-platform-preferences";
 
@@ -28,7 +29,12 @@ export function registerEntityReadHttp(
   if (bindings.views) registerEntityViewRoutes(application, bindings.views);
   if (bindings.references) registerReferenceChoiceRoutes(application, bindings.references);
   if (bindings.directory) registerSharedReferenceDirectoryRoutes(application, bindings.directory);
-  registerEntityListRoutes(application, bindings.entity);
+  const views = bindings.views;
+  registerEntityListRoutes(application, {
+    ...bindings.entity,
+    ...(views ? { viewCatalog: (context, descriptor, surface) =>
+      readEntityViewCatalog(views.service, context, descriptor, surface) } : {}),
+  });
   if (bindings.bookmarks) registerRecordBookmarkRoutes(application, bindings.bookmarks);
   if (bindings.snapshots) registerRecordSnapshotRoutes(application, bindings.snapshots);
 }

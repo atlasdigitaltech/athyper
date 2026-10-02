@@ -33,12 +33,12 @@ async function main() {
   const tenantId = values["tenant-id"] || target.tenantId;
   if (
     !["neon", "mesh", "studio"].includes(plane) ||
-    !["catl.admin", "catl.owner", "athyper.admin", "athyper.owner"].includes(
+    !["catl.admin", "catl.owner", "athyper.admin", "athyper.owner", "catl.finance"].includes(
       actor,
     )
   ) {
     throw new Error(
-      "Usage: node tooling/scripts/verification/check-athyper-auth.mjs --plane neon|mesh|studio --actor catl.admin|catl.owner|athyper.admin|athyper.owner [--environment dev|qa] [--principal-id ID] [--tenant-id ID] [--activate]",
+      "Usage: node tooling/scripts/verification/check-athyper-auth.mjs --plane neon|mesh|studio --actor catl.admin|catl.owner|athyper.admin|athyper.owner|catl.finance [--environment dev|qa] [--principal-id ID] [--tenant-id ID] [--activate]",
     );
   }
   const statePath = target.statePath;

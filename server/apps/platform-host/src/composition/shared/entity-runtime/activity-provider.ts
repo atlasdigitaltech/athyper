@@ -38,6 +38,7 @@ import type {
 type Tx = Transaction<Record<string, never>>;
 export function createEntityActivityProvider(options: {
   reader: PinnedCompiledEntityReader;
+  admitDescriptor(descriptor: EntityRuntimeDescriptor): Promise<EntityRuntimeDescriptor>;
   collectionProviders?: ReadonlyMap<
     string,
     ActivityCollectionProviderRegistration
@@ -53,10 +54,10 @@ export function createEntityActivityProvider(options: {
 }): EntityActivityProvider {
   const snapshots = new ActivitySnapshotRepository(options.transactions);
   async function source(input: ActivitySubject, admission: ActivityAdmission) {
-    const descriptor = await readCompiledRuntimeContract(
+    const descriptor = await options.admitDescriptor(await readCompiledRuntimeContract(
       options.reader,
       admission.release,
-    );
+    ));
     if (
       descriptor.entityCode !== input.entityCode ||
       descriptor.planeKey !== input.context.planeKey

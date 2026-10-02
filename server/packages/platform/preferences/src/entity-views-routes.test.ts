@@ -14,3 +14,33 @@ it("authenticates view routes and validates collection access before storage",as
  const url=`http://127.0.0.1:${address.port}/api/entity-runtime/partner/views?surface=app.manage.partner`;
  try{expect((await fetch(url)).status).toBe(401);expect((await fetch(url,{headers:{authorization:"test"}})).status).toBe(400);allowed=true;const post=(body:unknown)=>fetch(url,{method:"POST",headers:{authorization:"test","content-type":"application/json"},body:JSON.stringify(body)});expect((await post({action:"create",name:"Shared",visibility:"shared",state})).status).toBe(403);expect(writes).toBe(0);expect((await post({action:"create",name:"Mine",visibility:"personal",state})).status).toBe(201);expect(writes).toBe(1);expect((await post({action:"create",name:"Invalid",visibility:"personal",state:{...state,filters:[{field:"secret",operator:"eq",value:1}]}})).status).toBe(400);expect(writes).toBe(1);}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });
+
+it("reuses GET evidence per request and emits opt-in stage timings", async () => {
+  const { readEvidence } = await import("@athyper/server-foundation/context");
+  const context = { planeKey: "neon", tenantId: "tenant", principalId: "principal" } as VerifiedRequestContext;
+  const provider = {};
+  let reads = 0;
+  const evidence = () => readEvidence(provider, context, "iam", async () => ++reads);
+  const repository: SavedViewRepository = { list: async () => [], get: async () => undefined, create: async () => {}, replace: async () => undefined };
+  const app = express();
+  registerEntityViewRoutes(app, {
+    diagnostics: true, authenticate: (_req, _res, next) => next(), readContext: () => context,
+    service: createSavedViewService(repository, undefined, async () => { await evidence(); return false; }),
+    descriptor: async () => { await evidence(); return descriptor; },
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>(resolve => server.on("listening", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw Error("No address");
+  try {
+    for (let i = 0; i < 2; i++) {
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/entity-runtime/country/views`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("server-timing")).toMatch(/descriptor;dur=.*views;dur=.*total;dur=/);
+    }
+    expect(reads).toBe(2);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
+});

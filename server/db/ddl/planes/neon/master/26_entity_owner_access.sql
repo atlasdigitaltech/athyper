@@ -43,3 +43,13 @@ CREATE POLICY entity_owner_admin_update ON master.principal_notification_prefere
  WITH CHECK (shared.fn_entity_owner_admin_access('master','principal_notification_preference',tenant_id,true));
 CREATE TRIGGER trg_entity_record_version BEFORE UPDATE ON master.principal_notification_preference
  FOR EACH ROW EXECUTE FUNCTION shared.trg_record_optimistic_version();
+
+CREATE POLICY entity_owner_admin_read ON master.principal_ui_profile FOR SELECT TO athyperapp
+ USING (shared.fn_entity_owner_admin_access('master','principal_ui_profile',tenant_id,false));
+CREATE POLICY entity_owner_admin_insert ON master.principal_ui_profile FOR INSERT TO athyperapp
+ WITH CHECK (shared.fn_entity_owner_admin_access('master','principal_ui_profile',tenant_id,true));
+CREATE POLICY entity_owner_admin_update ON master.principal_ui_profile FOR UPDATE TO athyperapp
+ USING (shared.fn_entity_owner_admin_access('master','principal_ui_profile',tenant_id,true))
+ WITH CHECK (shared.fn_entity_owner_admin_access('master','principal_ui_profile',tenant_id,true));
+CREATE TRIGGER trg_entity_record_version BEFORE UPDATE ON master.principal_ui_profile
+ FOR EACH ROW EXECUTE FUNCTION shared.trg_record_optimistic_version();

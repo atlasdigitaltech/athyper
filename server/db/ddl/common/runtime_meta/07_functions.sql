@@ -447,10 +447,36 @@ DECLARE
     v_target runtime_meta.applied_release%ROWTYPE;
     v_previous uuid;
     v_activated_at timestamptz := clock_timestamp();
+    v_completed runtime_meta.release_activation_event%ROWTYPE;
 BEGIN
+    -- Use the activation lock order and serialize retries for this publication.
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_publication_key,0));
     SELECT * INTO v_head FROM runtime_meta.release_activation_head
      WHERE publication_key=p_publication_key FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'ACTIVE_RELEASE_NOT_FOUND' USING ERRCODE='no_data_found'; END IF;
+    IF p_evidence ? 'operationId' THEN
+      IF jsonb_typeof(p_evidence->'operationId') IS DISTINCT FROM 'string'
+         OR COALESCE(p_evidence->>'operationId','')=''
+         OR jsonb_typeof(p_evidence->'tenantId') IS DISTINCT FROM 'string'
+         OR COALESCE(p_evidence->>'tenantId','')=''
+         OR p_evidence->>'tenantId' IS DISTINCT FROM current_setting('app.current_tenant_id',true) THEN
+        RAISE EXCEPTION 'ROLLBACK_OPERATION_COORDINATES_INVALID' USING ERRCODE='insufficient_privilege';
+      END IF;
+      SELECT * INTO v_completed FROM runtime_meta.release_activation_event
+       WHERE publication_key=p_publication_key
+         AND evidence->>'operationId'=p_evidence->>'operationId'
+         AND evidence->>'tenantId'=p_evidence->>'tenantId'
+       ORDER BY activated_at DESC,id DESC LIMIT 1;
+      IF FOUND THEN
+        IF v_completed.applied_release_id=p_target_applied_release_id
+           AND v_completed.evidence=p_evidence||jsonb_build_object('rollback',true)
+           AND v_head.applied_release_id=v_completed.applied_release_id
+           AND v_head.activated_at=v_completed.activated_at THEN
+          RETURN v_head;
+        END IF;
+        RAISE EXCEPTION 'ROLLBACK_OPERATION_REPLAY_MISMATCH' USING ERRCODE='object_not_in_prerequisite_state';
+      END IF;
+    END IF;
     SELECT * INTO v_target FROM runtime_meta.applied_release
      WHERE id=p_target_applied_release_id AND publication_key=p_publication_key FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'ROLLBACK_RELEASE_NOT_FOUND' USING ERRCODE='no_data_found'; END IF;

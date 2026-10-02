@@ -261,8 +261,11 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       if(available){result=await sql<Row>`SELECT * FROM publication.fn_collection_configuration_compilation_source(${releaseId}::uuid)`.execute(this.options.database);if(result.rows.length)artifactKind="entity_runtime";}
     }
     if (!result.rows.length) {
-      result = await sql<Row>`SELECT * FROM publication.fn_notification_configuration_compilation_source(${releaseId}::uuid)`.execute(this.options.database);
-      if (result.rows.length) artifactKind = "entity_runtime";
+      const available = (await sql<Row>`SELECT to_regprocedure('publication.fn_notification_configuration_compilation_source(uuid)') IS NOT NULL AS available`.execute(this.options.database)).rows[0]?.["available"];
+      if (available) {
+        result = await sql<Row>`SELECT * FROM publication.fn_notification_configuration_compilation_source(${releaseId}::uuid)`.execute(this.options.database);
+        if (result.rows.length) artifactKind = "entity_runtime";
+      }
     }
     if (!result.rows.length) {
       result =

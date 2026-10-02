@@ -9,14 +9,16 @@ type RecordTransaction = Transaction<Database>;
 export function createKyselyCommandExecutionStore<Result extends object = RecordMutationResult>(): CommandExecutionStore<RecordTransaction, Result> {
   return {
     async begin(input, transaction) {
+      // Bind receipt/start to one transaction clock. Wall-clock correction
+      // must not make start precede the database receipt timestamp.
       const inserted = await sql<{ id: string }>`
         INSERT INTO event.command_execution
           (tenant_id, command_code, idempotency_key, request_fingerprint, status,
-           actor_principal_id, source_service, correlation_id, started_at, created_by)
+           actor_principal_id, source_service, correlation_id, received_at, started_at, created_by)
         VALUES
           (${input.tenantId}::uuid, ${input.commandCode}, ${input.idempotencyKey},
            ${input.requestFingerprint}, 'processing', ${input.actorPrincipalId}::uuid,
-           ${input.sourceService}, ${input.correlationId ?? null}::uuid, clock_timestamp(),
+           ${input.sourceService}, ${input.correlationId ?? null}::uuid, transaction_timestamp(), transaction_timestamp(),
            ${input.actorPrincipalId}::uuid)
         ON CONFLICT (tenant_id, command_code, idempotency_key) DO NOTHING
         RETURNING id
@@ -48,7 +50,7 @@ export function createKyselyCommandExecutionStore<Result extends object = Record
       const completed = await sql<{ id: string }>`
         UPDATE event.command_execution
            SET status = 'succeeded', result_payload = ${JSON.stringify(result)}::jsonb,
-               completed_at = clock_timestamp(), status_changed_at = clock_timestamp(),
+               completed_at = GREATEST(clock_timestamp(), started_at), status_changed_at = clock_timestamp(),
                status_changed_by = ${actorPrincipalId}::uuid,
                updated_at = clock_timestamp(), updated_by = ${actorPrincipalId}::uuid
          WHERE id = ${executionId}::uuid AND status = 'processing'

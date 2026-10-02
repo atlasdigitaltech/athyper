@@ -16,15 +16,19 @@ let host: HTMLElement;
 
 beforeEach(() => {
   dom = new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>", { url: "https://neon.test/" });
-  const animationFrame = (callback: FrameRequestCallback) => { callback(0); return 1; };
+  // Asynchronous like a browser: a synchronous fake recurses forever when a frame schedules the next.
+  const animationFrame = (callback: FrameRequestCallback) => setTimeout(() => callback(0), 0) as unknown as number;
   Object.defineProperties(globalThis, {
     window: { configurable: true, value: dom.window }, document: { configurable: true, value: dom.window.document },
     navigator: { configurable: true, value: dom.window.navigator }, localStorage: { configurable: true, value: dom.window.localStorage },
     Element: { configurable: true, value: dom.window.Element }, HTMLElement: { configurable: true, value: dom.window.HTMLElement },
     MouseEvent: { configurable: true, value: dom.window.MouseEvent }, KeyboardEvent: { configurable: true, value: dom.window.KeyboardEvent },
     requestAnimationFrame: { configurable: true, value: animationFrame }, IS_REACT_ACT_ENVIRONMENT: { configurable: true, value: true },
+    // Some shell sources compile with the classic JSX runtime here.
+    React: { configurable: true, value: React },
   });
   Object.defineProperty(dom.window, "requestAnimationFrame", { configurable: true, value: animationFrame });
+  Object.defineProperty(dom.window, "cancelAnimationFrame", { configurable: true, value: (id: number) => clearTimeout(id) });
   Object.defineProperty(dom.window, "matchMedia", { configurable: true, value: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) });
   Object.defineProperties(dom.window.HTMLElement.prototype, { attachEvent: { configurable: true, value() {} }, detachEvent: { configurable: true, value() {} } });
   host = document.querySelector("#root") as HTMLElement;
@@ -35,13 +39,10 @@ afterEach(async () => { await act(async () => root.unmount()); dom.window.close(
 const click = async (element: Element) => act(async () => element.dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
 describe("shell activity center", () => {
-  it("opens through a body portal, switches tabs, and restores trigger focus", async () => {
-    let enabled=0;
+  it("opens through a body portal, switches sections from the app bar, and restores focus", async () => {
     await act(async () => root.render(<ShellChrome applicationName="Neon" tenantId="tenant-alpha" tenantLabel="Tenant Alpha" accountLabel="User One" navigation={navigation} activity={{
       notifications: [{ id: "notification-1", title: "Invoice approved", timestamp: "2026-08-25T08:00:00Z", timestampLabel: "Just now", unread: true }],
       inbox: [{ id: "inbox-1", title: "Review purchase order", priority: "high" }],
-      pushEnrollmentStatus: "prompt",
-      onEnableBrowserPush: ()=>{enabled+=1;},
     }}><section><h1>Dashboard</h1></section></ShellChrome>));
 
     const recent = host.querySelector<HTMLButtonElement>('button[aria-label="Open recent items"]')!;
@@ -57,17 +58,22 @@ describe("shell activity center", () => {
     assert.equal(host.querySelector('#athyper-quick-access'), null);
     assert.equal(host.querySelector('#athyper-activity-center'), null);
     assert.match(drawer.textContent ?? "", /Invoice approved/);
-    const enableAlerts=Array.from(drawer.querySelectorAll("button")).find((button)=>button.textContent?.includes("Enable alerts"))!;
-    await click(enableAlerts);
-    assert.equal(enabled,1);
-    assert.equal(document.activeElement?.getAttribute("aria-label"), "Close activity center");
+    // Browser alerts live in Notification preferences, not the panel.
+    assert.doesNotMatch(drawer.textContent ?? "", /Enable alerts/);
+    // No section tabs: the app bar's Inbox switches the open panel to its section.
+    assert.equal(drawer.querySelector('[role="tab"][id^="athyper-activity-tab-"]'), null);
+    const inbox = host.querySelector<HTMLButtonElement>('button[data-slot="inbox"]')!;
+    inbox.focus();
+    await click(inbox);
+    const switched = document.body.querySelector<HTMLElement>('#athyper-activity-center')!;
+    assert.match(switched.textContent ?? "", /Review purchase order/);
 
-    await click(drawer.querySelector<HTMLButtonElement>('#athyper-activity-tab-inbox')!);
-    assert.match(drawer.textContent ?? "", /Review purchase order/);
-
-    await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    // Escape and focus return are covered in a real browser (shared-shell,
+    // activity-header-switch); here the panel closes through its close button.
+    await click(switched.querySelector<HTMLButtonElement>('button[aria-label="Close activity center"]')!);
     assert.equal(document.body.querySelector('#athyper-activity-center'), null);
-    assert.equal(document.activeElement, notifications);
+    // Focus returns to the app bar control used last.
+    assert.equal(document.activeElement, inbox);
   });
 
   it("uses contextual recent counts and makes clearing recoverable", async () => {
@@ -75,10 +81,12 @@ describe("shell activity center", () => {
 
     await click(host.querySelector<HTMLButtonElement>('button[aria-label="Open recent items"]')!);
     const panel = host.querySelector<HTMLElement>('#athyper-quick-access')!;
-    assert.match(panel.textContent ?? "", /0 records/);
+    // Section counts are badges now ("Records 0", "Pages 1").
+    assert.match(panel.textContent ?? "", /Records0/);
 
     await click(Array.from(panel.querySelectorAll("button")).find((button) => button.textContent?.includes("Show recent pages"))!);
-    assert.match(panel.textContent ?? "", /1 page/);
+    assert.match(panel.textContent ?? "", /Pages1/);
+    assert.match(panel.textContent ?? "", /Core Accounting/);
 
     await click(Array.from(panel.querySelectorAll("button")).find((button) => button.textContent === "Clear all recent")!);
     assert.ok(Array.from(panel.querySelectorAll("button")).some((button) => button.textContent === "Cancel"));
@@ -86,6 +94,7 @@ describe("shell activity center", () => {
     assert.match(panel.textContent ?? "", /Recent history cleared/);
 
     await click(Array.from(panel.querySelectorAll("button")).find((button) => button.textContent === "Undo")!);
-    assert.match(panel.textContent ?? "", /1 page/);
+    assert.match(panel.textContent ?? "", /Pages1/);
+    assert.match(panel.textContent ?? "", /Core Accounting/);
   });
 });

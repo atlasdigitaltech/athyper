@@ -5,3 +5,108 @@
 .a-entity-list__controls-drawer > [data-list-drawer]:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
 .a-entity-list__controls-drawer > [data-list-drawer] > .a-collection-fields{flex:1;min-height:0;overflow:auto;align-content:start}
 .athyper-activity-query--compact > .a-collection-fields{max-height:40dvh;overflow:auto}
+
+/* Collection controls anatomy, shared by the docked tool panel and the modal
+   drawer: PanelHeader · section tabs · context line · body · footer. */
+.a-collection-controls{--a-panel-gutter:var(--a-space-4)}
+.a-collection-controls__tabs.a-panel-tabs{margin:var(--a-space-3) var(--a-panel-gutter) var(--a-space-1);overflow-x:auto;scrollbar-width:none}
+.a-collection-controls__tabs.a-panel-tabs::-webkit-scrollbar{display:none}
+.a-collection-controls__tabs.a-panel-tabs button[role=tab]{flex:1 0 auto;white-space:nowrap}
+.a-collection-controls>[data-list-drawer]:not([hidden]){display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.a-collection-controls>[data-list-drawer]>.a-collection-fields{flex:1;min-height:0;overflow:auto;align-content:start}
+/* Section facts read as one wrapping context line, never truncated labels. */
+.a-collection-controls .a-drawer__toolbar{padding:var(--a-space-1) var(--a-panel-gutter) var(--a-space-2);border-block-end:0;background:transparent}
+.a-collection-controls .a-drawer__context{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--a-space-1) var(--a-space-3)}
+.a-collection-controls .a-drawer__metric{display:inline-flex;align-items:baseline;gap:var(--a-space-1);padding:0;border:0}
+.a-collection-controls .a-drawer__metric dt{overflow:visible;white-space:nowrap}
+.a-collection-controls .a-drawer__metric dd{font-size:var(--a-font-size-xs)}
+.a-collection-controls .a-drawer__metric small{display:inline;font-size:var(--a-font-size-2xs)}
+/* In-section views (Quick filters · All filters) use the same segmented tabs. */
+.a-collection-controls .a-drawer__navigation{padding:0 var(--a-panel-gutter) var(--a-space-2);border-block-end:var(--a-border-width) solid var(--a-border);background:transparent}
+.a-collection-controls .a-drawer__tab-list{min-height:0;padding:var(--a-space-1);border:0;border-radius:var(--a-radius-md);background:var(--a-muted);box-shadow:none}
+.a-collection-controls .a-drawer__tab-list .a-drawer__tab{flex:1 0 auto;min-block-size:var(--a-density-control-height-small);padding:var(--a-space-1) var(--a-space-2)}
+.a-collection-controls .a-drawer__tab-list .a-drawer__tab[aria-selected=true]{background:var(--a-surface);color:var(--a-primary);box-shadow:var(--a-shadow-sm)}
+.a-collection-controls .a-drawer__body{padding:var(--a-space-3) var(--a-panel-gutter)}
+/* Footer grammar: summary line, then Reset (leading) and one primary action (trailing). */
+.a-collection-controls .a-drawer__footer{flex-wrap:wrap;align-items:center;gap:var(--a-space-2);padding:var(--a-space-3) var(--a-panel-gutter) calc(var(--a-space-3) + env(safe-area-inset-bottom));background:var(--a-surface)}
+.a-collection-controls .a-drawer__footer-summary{flex-basis:100%;font-size:var(--a-font-size-xs)}
+.a-collection-controls .a-drawer__footer-actions{display:flex;width:100%;justify-content:space-between;gap:var(--a-space-2)}
+.a-collection-controls .a-drawer__footer-actions>:last-child{margin-inline-start:auto}
+.a-collection-controls .a-drawer__footer-actions>.a-button:last-child:not(.a-button--ghost){min-inline-size:8rem}
+/* Sections render inside a 360-560px tool panel: sort levels always stack. */
+.a-collection-controls .a-entity-list__sort-content{padding:var(--a-space-3) var(--a-panel-gutter)}
+/* Filter rows in the tool panel: name and operator chip on one line, value below. */
+.a-collection-controls .a-entity-list__filter-header{display:none}
+.a-collection-controls .a-entity-list__filter-list{display:grid;gap:var(--a-space-2);padding:0;border:0;background:transparent;box-shadow:none}
+.a-collection-controls .a-entity-list__filter-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--a-space-2);padding:var(--a-space-3);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface)}
+.a-collection-controls .a-entity-list__filter-row>*{grid-column:1/-1;min-width:0}
+.a-collection-controls .a-entity-list__filter-row>.a-entity-list__filter-control:first-child{grid-column:1}
+.a-collection-controls .a-entity-list__filter-row>.a-entity-list__filter-remove{grid-column:2;grid-row:1;justify-self:end}
+.a-collection-controls .a-entity-list__filter-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-2);min-width:0}
+.a-collection-controls .a-entity-list__filter-heading>strong{min-width:0;overflow-wrap:anywhere;font-size:var(--a-font-size-sm)}
+.a-collection-controls .a-entity-list__filter-label{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.a-collection-controls .a-entity-list__filter-control{display:grid;gap:var(--a-space-1)}
+.a-filter-operator{display:inline-flex;flex:none;align-items:center;gap:.25rem;min-height:1.75rem;padding:0 var(--a-space-2);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-round);background:var(--a-surface);color:var(--a-muted-foreground);font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-medium);white-space:nowrap}
+.a-filter-operator:hover{color:var(--a-foreground);border-color:var(--a-primary)}
+.a-filter-operator--static{border-style:dashed}
+.a-filter-operator__menu .a-menu__item{display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3)}
+.a-filter-operator__menu .a-menu__item[aria-current=true]{color:var(--a-primary);font-weight:var(--a-font-weight-medium)}
+.a-collection-controls .a-entity-list__recent{display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-1)}
+.a-collection-controls .a-entity-list__recent>span{color:var(--a-muted-foreground);font-size:var(--a-font-size-xs)}
+.a-collection-controls .a-choice-chips{display:flex;flex-wrap:wrap;gap:var(--a-space-1)}
+@media(pointer:coarse){.a-filter-operator{min-height:var(--a-touch-target)}}
+/* Narrow panels: segments keep their full labels; bare in-section tab lists keep the gutter. */
+.a-collection-controls .a-segmented>button{padding-inline:var(--a-space-1)}
+.a-collection-controls .a-drawer__tabs>.a-drawer__tab-list{margin:0 var(--a-panel-gutter) var(--a-space-2)}
+/* Filter rows are separate cards in the panel; the table layout's last-row rule does not apply. */
+.a-collection-controls .a-entity-list__filter-list>.a-entity-list__filter-row:last-child{border-block-end:var(--a-border-width) solid var(--a-border)}
+/* Sort level: one row (grip · priority · field · direction · ⋯) that wraps its
+   direction and menu to a second line only when the panel is narrow. */
+.a-collection-controls .a-entity-list__sort-list>div{display:flex;flex-wrap:wrap;align-items:center;gap:var(--a-space-2);padding:var(--a-space-2)}
+.a-collection-controls .a-entity-list__sort-field{flex:1 1 11rem;min-width:0}
+.a-collection-controls .a-entity-list__sort-direction{flex:0 0 auto}
+.a-collection-controls .a-entity-list__sort-direction>button{flex:0 0 auto;min-inline-size:3.25rem}
+.a-collection-controls .a-entity-list__sort-list>div>.a-menu{flex:none;margin-inline-start:auto}
+.a-entity-list__reorder-trigger{display:grid;place-items:center;width:2rem;height:var(--a-density-icon-button);min-height:var(--a-density-icon-button);padding:0;color:var(--a-muted-foreground)}
+.a-entity-list__reorder-menu .a-menu__item{display:flex;align-items:center;gap:var(--a-space-2)}
+@media(pointer:coarse){.a-entity-list__reorder-trigger{width:var(--a-touch-target);height:var(--a-touch-target)}}
+/* Columns: the identity column is locked, not a disabled checkbox. */
+.a-entity-list__column-lock{display:grid;place-items:center;inline-size:1.25rem;color:var(--a-muted-foreground)}
+/* Field pickers: category headings; the system group is a disclosure. */
+.a-entity-list__field-group-toggle:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:-2px}
+/* Compact rows: one line per sort level (also on phones) and per column. */
+.a-collection-controls .a-entity-list__sort-list{gap:var(--a-space-1)}
+.a-collection-controls .a-entity-list__sort-list>div{gap:var(--a-space-1) var(--a-space-2);padding:var(--a-space-1) var(--a-space-2)}
+.a-collection-controls .a-entity-list__sort-order{width:1.5rem;height:1.5rem;font-size:var(--a-font-size-xs)}
+.a-collection-controls .a-entity-list__sort-field{flex-basis:7rem}
+.a-collection-controls .a-entity-list__sort-direction>button{min-inline-size:2.75rem}
+.a-collection-controls .a-entity-list__column-name{display:flex;align-items:baseline;gap:var(--a-space-2)}
+.a-collection-controls .a-entity-list__column-name small{flex:0 1 auto}
+.a-collection-controls .a-entity-list__column-list--visible>div{min-height:var(--a-control-height);padding-block:var(--a-space-1)}
+.a-collection-controls .a-entity-list__column-list--available>label{min-height:var(--a-control-height);padding-block:var(--a-space-1)}
+/* Field pickers: full-width rows with the name and code on one line. */
+.a-collection-controls .a-entity-list__sort-list>div{column-gap:var(--a-space-1)}
+.a-collection-controls .a-entity-list__sort-grip{inline-size:1.5rem;min-inline-size:1.5rem;padding-inline:0}
+.a-collection-controls .a-entity-list__sort-direction>button{min-inline-size:2.25rem}
+/* Phones: the panel is full screen and touch reorders through the ⋯ menu, so the drag handle gives its room to the field. */
+@media(max-width:48rem){.a-collection-controls .a-entity-list__sort-grip{display:none}}
+/* Field lists (Sort picker and Columns) share one look: sentence-case group
+   heading with a count, a bordered list per group, name and code on one line. */
+.a-entity-list__field-group-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:var(--a-space-2);margin:var(--a-space-2) 0 var(--a-space-1);padding:var(--a-space-1);border:0;border-radius:var(--a-radius-sm);background:transparent;color:var(--a-muted-foreground);font:inherit;font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-strong);cursor:pointer}
+.a-entity-list__field-group-toggle>span+span{margin-inline-start:auto;font-weight:var(--a-font-weight-normal)}
+/* Quick and All filters share one card: field/name · operator · [remove] on the first line, value below. */
+.a-collection-controls .a-entity-list__filter-row{grid-template-columns:minmax(0,1fr) auto auto}
+.a-collection-controls .a-entity-list__filter-row>.a-entity-list__filter-operator-control{grid-column:2;grid-row:1}
+.a-collection-controls .a-entity-list__filter-row>.a-entity-list__filter-remove{grid-column:3;grid-row:1}
+/* A lone footer action (Reset without a primary) keeps the leading edge. */
+.a-collection-controls .a-drawer__footer-actions>:last-child:first-child{margin-inline-start:0}
+/* Display settings: one setting per row at full width. */
+.a-collection-controls .a-entity-list__view-options{grid-template-columns:minmax(0,1fr);gap:var(--a-space-4)}
+.a-collection-controls .a-entity-list__view-options .a-segmented{width:100%}
+/* Views: the current view is marked in the list, not repeated in the footer. */
+.a-entity-list__saved-view-row[data-current]{border-color:var(--a-primary);background:var(--a-selection-subtle)}
+.a-entity-list__view-current{margin-inline-start:var(--a-space-2);vertical-align:middle;background:var(--a-primary);color:var(--a-primary-foreground)}
+/* Display settings: the list follows the app density unless this is unticked. */
+.a-entity-list__follow-app{display:flex;align-items:flex-start;gap:var(--a-space-2);margin-block-end:var(--a-space-2);font-weight:var(--a-font-weight-normal)}
+.a-entity-list__follow-app>span{display:grid;gap:.125rem}
+.a-entity-list__follow-app small{color:var(--a-muted-foreground);font-size:var(--a-font-size-xs)}

@@ -2,6 +2,7 @@ import { build } from "esbuild";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
+import { withSessionDefaults } from "./fixtures/session-stub";
 const bundle = build({
   stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
@@ -20,7 +21,7 @@ const bundle = build({
   define: { "process.env.NODE_ENV": '"test"' },
   plugins: [{ name: "session", setup(builder) {
     builder.onResolve({filter:/^@athyper\/platform-shell-app-foundation$/},()=>({path:"session",namespace:"fixture"}));
-    builder.onLoad({filter:/.*/,namespace:"fixture"},()=>({loader:"js",contents:`export const useApiClient=()=>({request:async()=>({})});export const useSessionIdentity=()=>({scope:{tenantId:'tenant',principalId:'actor',authEpoch:1}});export const useToasts=()=>({push:()=>{}});export const useOptionalAppearanceProfile=()=>undefined;export const readBrowserCsrfToken=()=>undefined;export const ErrorSurface=()=>null;`}));
+    builder.onLoad({filter:/.*/,namespace:"fixture"},()=>({loader:"js",contents: withSessionDefaults(`export const useApiClient=()=>({request:async()=>({})});export const useSessionIdentity=()=>({scope:{tenantId:'tenant',principalId:'actor',authEpoch:1}});export const useToasts=()=>({push:()=>{}});export const useOptionalAppearanceProfile=()=>undefined;export const readBrowserCsrfToken=()=>undefined;export const ErrorSurface=()=>null;`)}));
   }}],
 }).then(result=>result.outputFiles[0]!.text);
 async function mount(page:import("@playwright/test").Page,kind:string,data:unknown,crash=false){

@@ -3,6 +3,8 @@ import { build } from "esbuild";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { withSessionDefaults } from "./fixtures/session-stub";
+import { chooseOption } from "./fixtures/choice";
 // Compile in the repository's ESM loader; Playwright's CJS transform cannot
 // directly load the server workspace's mixed ESM package graph.
 let localizedDescriptor: unknown;
@@ -26,7 +28,7 @@ const bundle = build({
   tsconfig: resolve("tooling/config/tsconfig-react.json"), define: { "process.env.NODE_ENV": '"test"' },
   plugins: [{ name: "session-fixture", setup(builder) {
     builder.onResolve({ filter: /^@athyper\/platform-shell-app-foundation$/ }, () => ({ path: "session", namespace: "fixture" }));
-    builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: `
+    builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: withSessionDefaults(`
       const client={request:async(op,input)=>{const path=typeof op.path==='function'?op.path(input?.params??{}):op.path;window.requests.push(path);(window.requestCursors??=[]).push(input?.query?.cursor);if(window.denied)throw Object.assign(Error('Forbidden'),{status:403});if(window.readFailure)throw Error('Unavailable');const kind=path.endsWith('/attachments')?'attachments':'comments';return {releaseId:'release',releaseHash:'a'.repeat(64),revision:'1',sectionKey:kind,presentation:{rendererKey:'platform.'+kind+'.v1',fields:[],childCollections:[]},capability:{schemaVersion:1,layouts:['drawer','content'],actions:(window.writable?['read','create','finalize']:['read']).map(key=>({key,concurrency:'none',idempotency:key==='read'?'none':'required'})),maxTextLength:5000,maxAttachments:3,maxFileBytes:5242880,maxBatchCount:3,allowedContentTypes:['text/plain'],maxDepth:0,allowedAudiences:['private'],defaultAudience:'private'},data:{items:window.commentItems??[],nextCursor:window.nextCursor,totalCount:window.commentItems?.length??0}}}};
       export const useApiClient=()=>client;
       export const useSessionIdentity=()=>({state:'authenticated',scope:{tenantId:window.testTenant,principalId:'actor',authEpoch:1}});
@@ -36,7 +38,7 @@ const bundle = build({
       export const useOptionalAppearanceProfile=()=>undefined;
       export const readBrowserCsrfToken=()=>undefined;
       export const ErrorSurface=()=>null;
-    `, loader: "js" }));
+    `), loader: "js" }));
   } }],
 }).then(r => r.outputFiles[0]!.text);
 const styles = ["packages/platform/foundation/theme/src/styles.css", "packages/platform/foundation/ui/src/styles.css", "packages/platform/shell/shell/src/styles.css", "packages/platform/entity/runtime/form-detail/src/detail-workspace.css", "packages/platform/entity/runtime/form-detail/src/styles.css", "packages/platform/entity/runtime/form-detail/src/record/record.css", "packages/platform/entity/runtime/form-detail/src/record/record-collaboration.css"].map(p => readFileSync(p, "utf8").replace(/@import[^;]+;/g, "")).join("\n");
@@ -333,12 +335,12 @@ test("docked section switches preserve the selected view and comment reading sta
  await page.setViewportSize({width:1440,height:900});await mount(page,["comments","attachments"],true);
  await page.evaluate(()=>{(window as any).commentItems=Array.from({length:30},(_,i)=>({id:`comment-${i}`,text:`Comment ${i}`,authorDisplayName:'Author',createdAt:'2026-09-28T01:00:00Z',visibility:'private'}));});
  await page.getByRole('button',{name:'Open Comments',exact:true}).click();
- const group=page.getByRole('combobox',{name:'Group comments by'});await group.selectOption('user');
+ const group=page.getByRole('combobox',{name:'Group comments by'});await chooseOption(group,'user');
  const feed=page.locator('.a-comment-feed');await feed.evaluate(el=>{window.scrollTo(0,window.scrollY+el.getBoundingClientRect().top+200);window.dispatchEvent(new Event('scroll'));});
  await page.getByRole('button',{name:'Open Collaboration in side view',exact:true}).click();
- await expect(group).toHaveValue('user');await expect.poll(()=>feed.evaluate(el=>el.scrollTop)).toBe(200);
+ await expect(group).toHaveText("Group by user");await expect.poll(()=>feed.evaluate(el=>el.scrollTop)).toBe(200);
  await page.getByRole('button',{name:'Open Files',exact:true}).click();await expect(page.locator('.a-collaboration-panel')).toHaveAttribute('data-mode','pinned');
- await page.getByRole('button',{name:'Open Comments',exact:true}).click();await expect(group).toHaveValue('user');
+ await page.getByRole('button',{name:'Open Comments',exact:true}).click();await expect(group).toHaveText("Group by user");
  await page.getByRole('button',{name:'Open collaboration in full view',exact:true}).click();await expect.poll(()=>feed.evaluate(el=>Math.round(-el.getBoundingClientRect().top))).toBe(200);
 });
 

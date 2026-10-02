@@ -1,8 +1,9 @@
 "use client";
+import { ReferenceFieldInput } from "./reference-field-input";
 import type { EntitySurfaceFieldV1 } from "@athyper/contract-platform-entity-runtime";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
-import { Checkbox, FormField, Input, Label, Select } from "@athyper/platform-ui";
+import { Checkbox, ChoiceSelect, FormField, Input } from "@athyper/platform-ui";
 
 /** One metadata-driven form control. Presentation only; value normalization
  * lives in `form-values` and validation is enforced by the server. */
@@ -10,62 +11,63 @@ export function FieldInput({
   field,
   value,
   onChange,
+  entityCode,
+  values,
+  error,
 }: {
+  readonly error?: string;
+  readonly entityCode?: string;
+  readonly values?: Readonly<Record<string,unknown>>;
   readonly field: EntitySurfaceFieldV1;
   readonly value: unknown;
   readonly onChange: (value: unknown) => void;
 }) {
   const intl = useEntityI18n();
   const localization = useOptionalI18n()?.localization;
+  if (field.referenceLookup && entityCode) return <ReferenceFieldInput field={field} entityCode={entityCode} value={value} values={values ?? {}} onChange={onChange} error={error} />;
   if (field.kind === "boolean" && field.required)
     return (
-      <Label>
-        <Checkbox
+      <FormField label={field.label} required={field.required} error={error} hint={field.helpText}>
+        {control => <Checkbox
+          {...control}
           checked={value === true}
           disabled={field.readOnly}
           onChange={(event) => onChange(event.currentTarget.checked)}
-        />
-        {field.label}
-      </Label>
+        />}
+      </FormField>
     );
   return (
-    <FormField label={field.label} required={field.required}>
+    <FormField label={field.label} required={field.required} error={error} hint={field.helpText}>
       {(control) => {
         if (field.kind === "boolean")
           return (
-            <Select
+            <ChoiceSelect
               {...control}
               value={value === true ? "true" : value === false ? "false" : ""}
               disabled={field.readOnly}
-              onChange={(event) =>
-                onChange(
-                  event.currentTarget.value === ""
-                    ? null
-                    : event.currentTarget.value === "true",
-                )
-              }
-            >
-              <option value="">{intl.message("form.useDefault")}</option>
-              <option value="true">{intl.message("form.enabled")}</option>
-              <option value="false">{intl.message("form.disabled")}</option>
-            </Select>
+              onChange={(next) => onChange(next === "" ? null : next === "true")}
+              options={[
+                { value: "", label: intl.message("form.useDefault") },
+                { value: "true", label: intl.message("form.enabled") },
+                { value: "false", label: intl.message("form.disabled") },
+              ]}
+            />
           );
         if (field.options?.length)
           return (
-            <Select
+            <ChoiceSelect
               {...control}
               value={String(value ?? "")}
               required={field.required}
               disabled={field.readOnly}
-              onChange={(event) => onChange(event.currentTarget.value)}
-            >
-              <option value="">{intl.message("form.select")}</option>
-              {field.options.map((option) => (
-                <option value={option.value} key={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
+              placeholder={intl.message("form.select")}
+              onChange={onChange}
+              options={[
+                // An optional field can be cleared, as with the native empty option.
+                ...(field.required ? [] : [{ value: "", label: intl.message("form.select") }]),
+                ...field.options.map((option) => ({ value: option.value, label: option.label })),
+              ]}
+            />
           );
         return (
           <Input
@@ -86,10 +88,14 @@ export function FieldInput({
 
 /** Renders every field of a form descriptor. */
 export function FormFields({
+  entityCode,
   fields,
   values,
   onChange,
+  errors,
 }: {
+  readonly errors?: Readonly<Record<string, string>>;
+  readonly entityCode?: string;
   readonly fields: readonly EntitySurfaceFieldV1[];
   readonly values: Readonly<Record<string, unknown>>;
   readonly onChange: (key: string, value: unknown) => void;
@@ -99,7 +105,10 @@ export function FormFields({
       {fields.map((field) => (
         <FieldInput
           key={field.key}
+          entityCode={entityCode}
+          values={values}
           field={field}
+          error={errors?.[field.key]}
           value={values[field.key]}
           onChange={(value) => onChange(field.key, value)}
         />

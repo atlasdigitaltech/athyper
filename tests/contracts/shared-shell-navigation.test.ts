@@ -403,7 +403,7 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.doesNotMatch(source, /<AccountMenu /);
   assert.match(source, /className="athyper-shell__nav-label"/);
   assert.match(source, /onPointerEnter=/);
-  assert.match(source, /min-width: 761px\) and \(max-width: 1100px/);
+  assert.match(source, /viewportQuery\(\{ from: "medium", below: "extraWide" \}\)/);
   assert.match(source, /athyper_shell_collapsed=\$\{value\}/);
   assert.match(source, /aria-label=\{`\$\{applicationName\} home`\}/);
   assert.doesNotMatch(source, /title=\{`\$\{applicationName\} home`\}/);
@@ -436,7 +436,7 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   );
   assert.match(
     styles,
-    /max-width:760px.*athyper-context-identity--logo-or-name .*max-width:9\.5rem;height:2\.35rem/,
+    /width < 48rem\).*athyper-context-identity--logo-or-name .*max-width:9\.5rem;height:2\.35rem/,
   );
   assert.match(styles, /\.athyper-shell__action-panel/);
   assert.match(styles, /\.athyper-shell__profile-panel/);
@@ -444,7 +444,7 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.match(styles, /athyper-shell__mobile-brand\{display:flex/);
   assert.match(
     styles,
-    /@media\(min-width:761px\).*data-desktop-brand=true.*athyper-shell__desktop-brand/s,
+    /@media \(width >= 48rem\).*data-desktop-brand=true.*athyper-shell__desktop-brand/s,
   );
   assert.match(styles, /athyper-shell__desktop-brand\{display:none/);
   assert.match(
@@ -469,7 +469,7 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   );
   assert.match(
     styles,
-    /max-width:760px.*athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame.*display:none/,
+    /width < 48rem\).*athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame.*display:none/,
   );
   assert.match(
     styles,
@@ -489,11 +489,11 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.match(styles, /data-collapsed=true.*athyper-shell__profile-summary/);
   assert.match(
     styles,
-    /max-width:760px.*athyper-shell__navigation-peek\{display:none/,
+    /width < 48rem\).*athyper-shell__navigation-peek\{display:none/,
   );
   assert.match(
     styles,
-    /max-width:760px.*data-activity-open=true.*athyper-shell__breadcrumbs\{display:none\}/,
+    /width < 48rem\).*data-activity-open=true.*athyper-shell__breadcrumbs\{display:none\}/,
   );
   assert.match(
     styles,
@@ -630,7 +630,9 @@ test("Atlas home combines a timezone-aware greeting with the primary heading", a
   );
   assert.match(home, /What can we achieve together\?/);
   assert.match(home, /Ask Atlas to search, create, or take action…/);
-  assert.match(home, />Add context<\/span>/);
+  // Same composer actions as comments: Attach on the leading edge, no placeholder menu items.
+  assert.match(home, /aria-label="Attach files"/);
+  assert.doesNotMatch(home, /Coming soon/);
   assert.match(home, /ArrowUpIcon/);
   for (const experience of experiences) {
     assert.match(
@@ -652,7 +654,7 @@ test("Atlas home combines a timezone-aware greeting with the primary heading", a
   );
   assert.match(
     styles,
-    /max-width:600px.*athyper-home__welcome h1\{font-size:clamp\(\.8125rem,4\.2vw,1\.25rem\);[^}]*white-space:nowrap/s,
+    /width < 40rem\).*athyper-home__welcome h1\{font-size:clamp\(\.8125rem,4\.2vw,1\.25rem\);[^}]*white-space:nowrap/s,
   );
   assert.match(styles, /athyper-home__welcome\{gap:\.75rem\}/);
   assert.doesNotMatch(
@@ -661,15 +663,15 @@ test("Atlas home combines a timezone-aware greeting with the primary heading", a
   );
   assert.match(
     styles,
-    /max-width:600px.*athyper-home__welcome\{display:grid;grid-template-columns:minmax\(0,1fr\)/s,
+    /width < 40rem\).*athyper-home__welcome\{display:grid;grid-template-columns:minmax\(0,1fr\)/s,
   );
   assert.match(
     styles,
-    /max-width:600px.*athyper-home__greeting\{font-size:clamp\(\.9375rem,4\.5vw,1\.0625rem\)/s,
+    /width < 40rem\).*athyper-home__greeting\{font-size:clamp\(\.9375rem,4\.5vw,1\.0625rem\)/s,
   );
   assert.match(
     styles,
-    /max-width:600px.*athyper-home__composer>header>strong\{font-size:clamp\(\.4375rem,2\.3vw,\.6875rem\);[^}]*white-space:nowrap/s,
+    /width < 40rem\).*athyper-home__composer>header>strong\{font-size:clamp\(\.4375rem,2\.3vw,\.6875rem\);[^}]*white-space:nowrap/s,
   );
 });
 

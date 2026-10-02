@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { createEffectiveLocalization, mergeCatalogs, type EffectiveLocalization, type SupportedLocale } from "@athyper/platform-i18n";
 import { entityFallbackMessages, entityMessages } from "@athyper/platform-i18n/entity-catalogs";
 import { IntlProvider, useI18n } from "@athyper/platform-i18n/react";
@@ -22,8 +22,15 @@ export type { ShellActivityDataSource, ShellActivityTab, ShellInboxItem, ShellIn
 export type { ShellQuickAccessDataSource, ShellQuickAccessItem, ShellQuickAccessKind, ShellQuickAccessTab } from "./quick-access";
 export interface ShellLocalePolicy {readonly enabledLocales:readonly SupportedLocale[];readonly defaultLocale:SupportedLocale;}
 export interface PlatformShellProps { readonly atlasProactiveBriefsEnabled?: boolean; readonly localization?: EffectiveLocalization;readonly localePolicy?:ShellLocalePolicy;readonly onLocaleChange?:(localeCode:SupportedLocale)=>Promise<void>; readonly applicationName: string; readonly planeDescriptor?: string; readonly planeIconSrc?: string; readonly planeWordmarkSrc?: string; readonly persistentDesktopBrand?: boolean; readonly homeHref?: string; readonly initialCollapsed?: boolean; readonly tenantId: string; readonly principalId: string; readonly tenantLabel: string; readonly tenantSecondaryLabel?: string; readonly tenantCountryCode?: string; readonly tenantLogoAssetRef?: string; readonly contextLabel?: string; readonly showOrganizationContext?: boolean; readonly accountLabel: string; readonly accountInitials?: string; readonly accountLoginId?: string; readonly accountEmail?: string; readonly accountSecondaryLabel?: string; readonly transactionContext?: import("./client").ShellTransactionContext; readonly workContextControl?: ReactNode; readonly navigation: DerivedShellNavigation; readonly experienceState?: "ready" | "context_not_ready"; readonly contexts?: readonly import("./client").ShellContextOption[]; readonly quickAccess?: import("./quick-access").ShellQuickAccessDataSource; readonly activity?: import("./activity-center").ShellActivityDataSource; readonly children: ReactNode; }
+const FALLBACK_MESSAGES = mergeCatalogs(shellEnglishMessages, entityFallbackMessages);
 const DEFAULT_LOCALIZATION = createEffectiveLocalization({ uiLocale: "en", formatLocale: "en-US" });
-export function PlatformShell({localization=DEFAULT_LOCALIZATION,applicationName,tenantId,principalId,accountLabel,atlasProactiveBriefsEnabled=false,...props}: PlatformShellProps) { return <IntlProvider localization={localization} messages={mergeCatalogs(shellMessages(localization.catalogLocale),entityMessages(localization.catalogLocale))} fallbackMessages={mergeCatalogs(shellEnglishMessages,entityFallbackMessages)}><LocalizedFoundationUi><AtlasAnswerProvider key={`${applicationName}:${tenantId}:${principalId}`} options={{proactiveBriefsEnabled:applicationName.toLowerCase()==="neon" && atlasProactiveBriefsEnabled,locale:localization.uiLocale,scopeKey:`${applicationName}:${tenantId}:${principalId}`}}><ShellPersonalizationScopeProvider plane={applicationName} tenantId={tenantId} principalId={principalId}><ShellHomeIdentityProvider displayName={accountLabel} timeZone={localization.timeZone}><ShellChrome principalId={principalId} currentLocale={localization.catalogLocale} applicationName={applicationName} tenantId={tenantId} accountLabel={accountLabel} {...props} /></ShellHomeIdentityProvider></ShellPersonalizationScopeProvider></AtlasAnswerProvider></LocalizedFoundationUi></IntlProvider>; }
+export function PlatformShell({localization=DEFAULT_LOCALIZATION,applicationName,tenantId,principalId,accountLabel,atlasProactiveBriefsEnabled=false,...props}: PlatformShellProps) {
+  // Activity refreshes must not replace the entity framework's locale context.
+  const messages = useMemo(
+    () => mergeCatalogs(shellMessages(localization.catalogLocale), entityMessages(localization.catalogLocale)),
+    [localization.catalogLocale],
+  );
+  return <IntlProvider localization={localization} messages={messages} fallbackMessages={FALLBACK_MESSAGES}><LocalizedFoundationUi><AtlasAnswerProvider key={`${applicationName}:${tenantId}:${principalId}`} options={{proactiveBriefsEnabled:applicationName.toLowerCase()==="neon" && atlasProactiveBriefsEnabled,locale:localization.uiLocale,scopeKey:`${applicationName}:${tenantId}:${principalId}`}}><ShellPersonalizationScopeProvider plane={applicationName} tenantId={tenantId} principalId={principalId}><ShellHomeIdentityProvider displayName={accountLabel} timeZone={localization.timeZone}><ShellChrome principalId={principalId} currentLocale={localization.catalogLocale} applicationName={applicationName} tenantId={tenantId} accountLabel={accountLabel} {...props} /></ShellHomeIdentityProvider></ShellPersonalizationScopeProvider></AtlasAnswerProvider></LocalizedFoundationUi></IntlProvider>; }
 
 function LocalizedFoundationUi({ children }: { readonly children: ReactNode }) {
   const intl = useI18n();
@@ -35,6 +42,7 @@ function LocalizedFoundationUi({ children }: { readonly children: ReactNode }) {
     companyDetails: (code, country, currency) => intl.message("ui.companyDetails", { code, country, currency }),
     noMatchingCompanies: intl.message("ui.noMatchingCompanies"),
     selectView: intl.message("ui.selectView"),
+    selectOption: intl.message("ui.selectOption"),
     viewName: (name, modified) => intl.message(modified ? "ui.viewNameModified" : "ui.viewName", { name }),
   };
   return <UiMessagesProvider messages={messages}>{children}</UiMessagesProvider>;
@@ -58,8 +66,11 @@ export { PageNavigation, useDeepLinkedTabState, type PageNavigationTabItem, type
 export { PageResourceBoundary, type PageResourceStatus, type PageResourceBoundaryProps } from "./page-resource-boundary";
 
 export { useWorkspaceSidePanel } from "./workspace-side-panel";
+export { WorkspaceToolPanel, TOOL_PANEL_MIN_WIDTH, TOOL_PANEL_MAX_WIDTH, type WorkspaceToolPanelLabels, type WorkspaceToolPanelMode } from "./workspace-tool-panel";
 
-export { ActivityNotificationRow, ActivityInboxRow } from "./activity-center";
+export { ActivityNotificationRow, ActivityInboxRow, ActivityFeed, ActivitySectionTabs, activityDensityOverride, activityEntries, type ActivitySelection } from "./activity-center";
 export { ActivityQueryControls } from "./activity-query-controls";
 
-export { ActivityNotificationActions } from "./activity-notification-actions";
+export { ActivityNotificationActions, BrowserAlertsSetting } from "./activity-notification-actions";
+export { activityCount } from "./activity-counts";
+export { ActivityDetail, ActivityDetailEmpty, useReadingPane } from "./activity-reading-pane";

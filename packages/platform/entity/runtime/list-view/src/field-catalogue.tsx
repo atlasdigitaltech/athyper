@@ -1,14 +1,13 @@
 "use client";
 
 import type { ListFieldDescriptorV1 } from "@athyper/contract-platform-entity-list";
-import { SearchIcon } from "@athyper/platform-icons";
+import { ChevronDownIcon, SearchIcon } from "@athyper/platform-icons";
 import {
   Button,
+  Checkbox,
   Input,
   Label,
-  Select,
   SearchableSelect,
-  choicePresentation,
 } from "@athyper/platform-ui";
 import React, {
   useMemo,
@@ -20,9 +19,11 @@ import React, {
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import { createEntityReferenceMessages } from "@athyper/platform-i18n/entity-reference-messages";
 import { entityEnglishMessages } from "@athyper/platform-i18n/entity-messages";
-import { fieldTypeLabel, matchesColumnSearch } from "./columns";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
+import { groupAvailableColumns, matchesColumnSearch, SYSTEM_FIELD_GROUP } from "./columns";
 
-const MAX_CATALOGUE_RESULTS = 20;
+/** Large catalogues stay responsive; typical entities show every field. */
+const MAX_CATALOGUE_RESULTS = 100;
 
 export function FieldSearchInput({
   id,
@@ -67,47 +68,75 @@ export function FieldSearchInput({
   );
 }
 
+/** Searchable field list for Sort and Filters, with the same rows as the
+ * Columns list: a checkbox shows whether the field is used. Ticking adds a
+ * sort level or filter, unticking removes it; at the limit unticked rows are
+ * disabled. Fields are grouped by category; the system group stays collapsed
+ * until opened or searched. */
 export function FieldCataloguePicker({
   heading,
   fields,
   placeholder,
+  selected,
   onSelect,
+  onDeselect,
   onClose,
+  checkboxLabel,
+  limitReached = false,
 }: {
   readonly heading: string;
   readonly fields: readonly ListFieldDescriptorV1[];
   readonly placeholder: string;
+  /** Keys of fields already used (checked). */
+  readonly selected: readonly string[];
   readonly onSelect: (field: ListFieldDescriptorV1) => void;
+  readonly onDeselect: (field: ListFieldDescriptorV1) => void;
   readonly onClose: () => void;
+  /** Accessible name of a row's checkbox, e.g. "Sort by Region". */
+  readonly checkboxLabel: (field: ListFieldDescriptorV1) => string;
+  readonly limitReached?: boolean;
 }) {
   const [search, setSearch] = useState(""),
+    [systemOpen, setSystemOpen] = useState(false),
     searchId = useId(),
     options = useRef<HTMLDivElement>(null),
     matching = fields.filter((field) => matchesColumnSearch(field, search)),
-    shown = matching.slice(0, MAX_CATALOGUE_RESULTS);
-  const focusOption = (index: number) =>
-    options.current
-      ?.querySelectorAll<HTMLButtonElement>("[data-field-option]")
-      [index]?.focus();
-  const optionKeyDown = (
-    event: ReactKeyboardEvent<HTMLButtonElement>,
-    index: number,
-  ) => {
+    shown = matching.slice(0, MAX_CATALOGUE_RESULTS),
+    groups = groupAvailableColumns(shown);
+  const choices = () => [
+    ...(options.current?.querySelectorAll<HTMLInputElement>("[data-field-option] input:not(:disabled)") ?? []),
+  ];
+  const focusOption = (index: number) => choices()[index]?.focus();
+  const optionKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
-    const target =
+    const enabled = choices(),
+      index = enabled.indexOf(event.currentTarget);
+    focusOption(
       event.key === "Home"
         ? 0
         : event.key === "End"
-          ? shown.length - 1
-          : Math.max(
-              0,
-              Math.min(
-                shown.length - 1,
-                index + (event.key === "ArrowDown" ? 1 : -1),
-              ),
-            );
-    focusOption(target);
+          ? enabled.length - 1
+          : Math.max(0, Math.min(enabled.length - 1, index + (event.key === "ArrowDown" ? 1 : -1))),
+    );
+  };
+  const option = (field: ListFieldDescriptorV1) => {
+    const used = selected.includes(field.key);
+    return (
+      <label key={field.key} data-field-option>
+        <Checkbox
+          aria-label={checkboxLabel(field)}
+          checked={used}
+          disabled={!used && limitReached}
+          onKeyDown={optionKeyDown}
+          onChange={() => (used ? onDeselect(field) : onSelect(field))}
+        />
+        <span className="a-entity-list__column-name">
+          <strong>{field.label}</strong>
+          <small>{field.key}</small>
+        </span>
+      </label>
+    );
   };
   return (
     <section
@@ -129,23 +158,36 @@ export function FieldCataloguePicker({
         onArrowDown={() => focusOption(0)}
       />
       <div ref={options} className="a-entity-list__field-options">
-        {shown.map((field, index) => (
-          <button
-            type="button"
-            data-field-option
-            key={field.key}
-            onKeyDown={(event) => optionKeyDown(event, index)}
-            onClick={() => onSelect(field)}
-          >
-            <span>
-              <strong>{field.label}</strong>
-              <small>
-                {field.key} · {fieldTypeLabel(field.valueKind)}
-              </small>
-            </span>
-            <span aria-hidden="true">＋</span>
-          </button>
-        ))}
+        {groups.map((group) => {
+          const collapsible = group.label === SYSTEM_FIELD_GROUP && !search.trim(),
+            open = !collapsible || systemOpen;
+          return (
+            <div key={group.label} className="a-entity-list__column-group" role="group" aria-label={group.label}>
+              {collapsible ? (
+                <button
+                  type="button"
+                  className="a-entity-list__field-group-toggle"
+                  aria-expanded={open}
+                  onClick={() => setSystemOpen(!open)}
+                >
+                  <span>{group.label}</span>
+                  <span>{group.fields.length}</span>
+                  <ChevronDownIcon size={14} className="a-disclosure-caret" aria-hidden="true" />
+                </button>
+              ) : (
+                <h4>
+                  {group.label}
+                  <span>{group.fields.length}</span>
+                </h4>
+              )}
+              {open ? (
+                <div className="a-entity-list__column-list a-entity-list__column-list--available">
+                  {group.fields.map(option)}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
       {matching.length > shown.length ? (
         <p className="a-entity-list__field-catalogue-hint">
@@ -167,16 +209,25 @@ export function FieldCataloguePicker({
   );
 }
 
+/** Field picker for list controls. Always searchable, whatever the field
+ * count, so the control looks and behaves the same for every entity. */
 export function SearchableFieldSelect({
   fields,
   value,
   label,
   onChange,
+  onClear,
+  required = true,
+  placeholder,
 }: {
   readonly fields: readonly ListFieldDescriptorV1[];
   readonly value: string;
   readonly label: string;
   readonly onChange: (field: ListFieldDescriptorV1) => void;
+  /** Optional pickers (for example grouping) clear to an empty value. */
+  readonly onClear?: () => void;
+  readonly required?: boolean;
+  readonly placeholder?: string;
 }) {
   const id = useId(),
     i18n = useOptionalI18n();
@@ -184,29 +235,25 @@ export function SearchableFieldSelect({
     const text = i18n?.message(key);
     return text && text !== key ? text : entityEnglishMessages[key];
   };
+  // A saved field that is no longer available stays visible, labelled as such,
+  // until the person explicitly picks a replacement.
+  const entityIntl = useEntityI18n();
+  const unavailable =
+    value && !fields.some((field) => field.key === value)
+      ? entityIntl.message("list.fields.unavailable", { field: value })
+      : undefined;
   const options = useMemo(
-    () => fields.map((field) => ({ value: field.key, label: field.label })),
-    [fields],
+    () => [
+      ...(unavailable ? [{ value, label: unavailable }] : []),
+      ...fields.map((field) => ({ value: field.key, label: field.label })),
+    ],
+    [fields, unavailable, value],
   );
   const select = (key: string) => {
+    if (!key) return onClear?.();
     const field = fields.find((field) => field.key === key);
     if (field) onChange(field);
   };
-  if (choicePresentation({ optionCount: fields.length }) === "select")
-    return (
-      <Select
-        aria-label={label}
-        value={value}
-        onChange={(event) => select(event.currentTarget.value)}
-      >
-        {!options.some(option => option.value === value) ? <option value={value} disabled>{value ? `Unavailable field: ${value}` : "Select a field"}</option> : null}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </Select>
-    );
   return (
     <SearchableSelect
       id={id}
@@ -214,7 +261,8 @@ export function SearchableFieldSelect({
       value={value}
       options={options}
       onChange={select}
-      required
+      required={required}
+      placeholder={placeholder}
       locale={i18n?.localization.uiLocale}
       messages={createEntityReferenceMessages(message)}
     />

@@ -1,0 +1,104 @@
+{
+  "at": "2026-09-30T13:31:11.575Z",
+  "plane": "neon",
+  "samples": [
+    {
+      "variant": "separate",
+      "ms": 527,
+      "timings": [
+        "descriptor;dur=160.4, total;dur=160.5",
+        "descriptor;dur=177.5, views;dur=2.1, total;dur=179.7"
+      ],
+      "views": 0
+    },
+    {
+      "variant": "combined",
+      "ms": 262,
+      "timings": [
+        "descriptor;dur=153.3, views;dur=1.3, total;dur=154.7"
+      ],
+      "views": 0
+    },
+    {
+      "variant": "separate",
+      "ms": 476,
+      "timings": [
+        "descriptor;dur=156.9, total;dur=156.9",
+        "descriptor;dur=149.6, views;dur=2.5, total;dur=152.1"
+      ],
+      "views": 0
+    },
+    {
+      "variant": "combined",
+      "ms": 216,
+      "timings": [
+        "descriptor;dur=153.6, views;dur=1.2, total;dur=154.8"
+      ],
+      "views": 0
+    },
+    {
+      "variant": "separate",
+      "ms": 474,
+      "timings": [
+        "descriptor;dur=154.7, total;dur=154.7",
+        "descriptor;dur=156.0, views;dur=1.4, total;dur=157.5"
+      ],
+      "views": 0
+    },
+    {
+      "variant": "combined",
+      "ms": 273,
+      "timings": [
+        "descriptor;dur=165.2, views;dur=1.3, total;dur=166.5"
+      ],
+      "views": 0
+    },
+    {
+      "variant": "separate",
+      "ms": 480,
+      "timings": [
+        "descriptor;dur=152.2, total;dur=152.2",
+        "descriptor;dur=152.9, views;dur=2.6, total;dur=155.6"
+      ],
+      "views": 0
+    },
+    {
+      "variant": "combined",
+      "ms": 208,
+      "timings": [
+        "descriptor;dur=146.8, views;dur=1.1, total;dur=148.0"
+      ],
+      "views": 0
+    },
+    {
+      "variant": "separate",
+      "ms": 475,
+      "timings": [
+        "descriptor;dur=154.3, total;dur=154.3",
+        "descriptor;dur=153.8, views;dur=1.4, total;dur=155.3"
+      ],
+      "views": 0
+    },
+    {
+      "variant": "combined",
+      "ms": 263,
+      "timings": [
+        "descriptor;dur=158.1, views;dur=1.1, total;dur=159.3"
+      ],
+      "views": 0
+    }
+  ],
+  "browser": [
+    {
+      "path": "/api/relay/entity-runtime/principal_notification_preference/list-descriptor",
+      "query": "combined",
+      "status": 200,
+      "failure": null
+    },
+    {
+      "path": "/api/relay/entity-runtime/principal_notification_preference/list",
+      "status": 200,
+      "failure": null
+    }
+  ]
+}

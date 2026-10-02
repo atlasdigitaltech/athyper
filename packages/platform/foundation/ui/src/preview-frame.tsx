@@ -56,18 +56,7 @@ export function PreviewFrame({
       {target
         ? createPortal(
             <main aria-label={title}>
-              <h1
-                style={{
-                  position: "absolute",
-                  width: 1,
-                  height: 1,
-                  padding: 0,
-                  margin: -1,
-                  overflow: "hidden",
-                  clipPath: "inset(50%)",
-                  whiteSpace: "nowrap",
-                }}
-              >
+              <h1 className="a-visually-hidden">
                 {title}
               </h1>
               {children}

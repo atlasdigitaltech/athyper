@@ -1,3 +1,24 @@
+-- seed-contract-version: 1
+-- seed-pack: common.master.contact-person
+-- seed-pack-version: 1.0.0
+-- seed-dataset: control.lookup_domain
+-- seed-data-class: production_reference
+-- seed-provenance: {"source":"existing-repository-reference-data","publisher":"Athyper","source_version":"1","retrieved_at":"2026-09-30","license":"internal"}
+-- seed-plane: common
+-- seed-tenant-scope: none
+-- seed-natural-key: control.lookup_domain(code);control.lookup_value(domain_code,code);control.owner_type(code);control.owner_type_purpose(owner_type_id,capability,purpose_code)
+-- seed-cross-file-ids: false
+-- seed-id-strategy: database-generated
+-- seed-expected-row-count: minimum:17
+-- seed-assertions: expected-count,orphan,uniqueness,semantic
+-- seed-demo-data: false
+
+DO $seed_plane_guard$ BEGIN
+ IF COALESCE(current_setting('app.database_plane', true),'') NOT IN ('studio','neon','mesh') THEN
+  RAISE EXCEPTION 'common.master.contact-person: invalid database plane';
+ END IF;
+END $seed_plane_guard$;
+
 INSERT INTO control.lookup_domain (
     code, name, description, source_schema, is_extensible,
     metadata, status, created_by
@@ -12,13 +33,15 @@ VALUES (
     'active',
     '00000000-0000-0000-0000-000000000000'::uuid
 )
-ON CONFLICT (code) DO UPDATE
-SET name = EXCLUDED.name,
+ON CONFLICT (code) DO UPDATE SET
+    name = EXCLUDED.name,
     description = EXCLUDED.description,
     source_schema = EXCLUDED.source_schema,
     is_extensible = true,
     metadata = EXCLUDED.metadata,
-    status = 'active';
+    status = 'active'
+WHERE (control.lookup_domain.name, control.lookup_domain.description, control.lookup_domain.source_schema, control.lookup_domain.is_extensible, control.lookup_domain.metadata, control.lookup_domain.status)
+ IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.description, EXCLUDED.source_schema, true, EXCLUDED.metadata, 'active');
 
 INSERT INTO control.lookup_value (
     tenant_id, code, name, domain_code, description, category,
@@ -47,12 +70,16 @@ FROM (VALUES
     ('project_coordinator', 'Project Coordinator', 'Project delivery contact.', 'operations', 160::smallint),
     ('escalation', 'Escalation', 'Escalation contact.', 'general', 170::smallint)
 ) AS value(code, name, description, category, sort_order)
-ON CONFLICT (domain_code, code) WHERE tenant_id IS NULL DO UPDATE
-SET name = EXCLUDED.name,
+ON CONFLICT (domain_code, code) WHERE tenant_id IS NULL DO UPDATE SET
+    name = EXCLUDED.name,
     description = EXCLUDED.description,
     category = EXCLUDED.category,
     sort_order = EXCLUDED.sort_order,
-    status = 'active';
+    is_system = EXCLUDED.is_system,
+    metadata = EXCLUDED.metadata,
+    status = 'active'
+WHERE (control.lookup_value.name, control.lookup_value.description, control.lookup_value.category, control.lookup_value.sort_order, control.lookup_value.is_system, control.lookup_value.metadata, control.lookup_value.status)
+ IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.description, EXCLUDED.category, EXCLUDED.sort_order, EXCLUDED.is_system, EXCLUDED.metadata, 'active');
 
 INSERT INTO control.owner_type (
     tenant_id, code, name, description, category, source_type,
@@ -71,13 +98,23 @@ VALUES (
     35, 'active',
     '00000000-0000-0000-0000-000000000000'::uuid
 )
-ON CONFLICT (code) WHERE tenant_id IS NULL DO UPDATE
-SET name = EXCLUDED.name,
+ON CONFLICT (code) WHERE tenant_id IS NULL DO UPDATE SET
+    name = EXCLUDED.name,
     description = EXCLUDED.description,
+    category = EXCLUDED.category,
+    source_type = EXCLUDED.source_type,
     target_schema = EXCLUDED.target_schema,
     target_table = EXCLUDED.target_table,
+    pk_column = EXCLUDED.pk_column,
+    is_tenant_scoped = EXCLUDED.is_tenant_scoped,
+    tenant_column = EXCLUDED.tenant_column,
+    supports_address = EXCLUDED.supports_address,
     supports_contact = true,
-    status = 'active';
+    supports_external_reference = EXCLUDED.supports_external_reference,
+    sort_order = EXCLUDED.sort_order,
+    status = 'active'
+WHERE (control.owner_type.name, control.owner_type.description, control.owner_type.category, control.owner_type.source_type, control.owner_type.target_schema, control.owner_type.target_table, control.owner_type.pk_column, control.owner_type.is_tenant_scoped, control.owner_type.tenant_column, control.owner_type.supports_address, control.owner_type.supports_contact, control.owner_type.supports_external_reference, control.owner_type.sort_order, control.owner_type.status)
+ IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.description, EXCLUDED.category, EXCLUDED.source_type, EXCLUDED.target_schema, EXCLUDED.target_table, EXCLUDED.pk_column, EXCLUDED.is_tenant_scoped, EXCLUDED.tenant_column, EXCLUDED.supports_address, true, EXCLUDED.supports_external_reference, EXCLUDED.sort_order, 'active');
 
 INSERT INTO control.owner_type_purpose (
     owner_type_id, capability, purpose_code, created_by
@@ -90,7 +127,7 @@ SELECT owner.id, 'contact', purpose.code,
  ) AS purpose(code)
  WHERE owner.tenant_id IS NULL
    AND owner.code = 'contact_person'
-ON CONFLICT DO NOTHING;
+ON CONFLICT (owner_type_id, capability, purpose_code) DO NOTHING;
 
 -- Generic address association can own a site's communication channels. This is
 -- not a new person/contact copy and is shared by all consuming planes.
@@ -102,8 +139,37 @@ INSERT INTO control.owner_type (
  NULL,'address_link','Address association','Communication channels for an owner-specific address.',
  'party','platform','master','address_link','id',true,'tenant_id',false,true,false,36,'active',
  '00000000-0000-0000-0000-000000000000'
-);
+)
+ON CONFLICT (code) WHERE tenant_id IS NULL DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    category = EXCLUDED.category,
+    source_type = EXCLUDED.source_type,
+    target_schema = EXCLUDED.target_schema,
+    target_table = EXCLUDED.target_table,
+    pk_column = EXCLUDED.pk_column,
+    is_tenant_scoped = EXCLUDED.is_tenant_scoped,
+    tenant_column = EXCLUDED.tenant_column,
+    supports_address = EXCLUDED.supports_address,
+    supports_contact = EXCLUDED.supports_contact,
+    supports_external_reference = EXCLUDED.supports_external_reference,
+    sort_order = EXCLUDED.sort_order,
+    status = EXCLUDED.status
+WHERE (control.owner_type.name, control.owner_type.description, control.owner_type.category, control.owner_type.source_type, control.owner_type.target_schema, control.owner_type.target_table, control.owner_type.pk_column, control.owner_type.is_tenant_scoped, control.owner_type.tenant_column, control.owner_type.supports_address, control.owner_type.supports_contact, control.owner_type.supports_external_reference, control.owner_type.sort_order, control.owner_type.status)
+ IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.description, EXCLUDED.category, EXCLUDED.source_type, EXCLUDED.target_schema, EXCLUDED.target_table, EXCLUDED.pk_column, EXCLUDED.is_tenant_scoped, EXCLUDED.tenant_column, EXCLUDED.supports_address, EXCLUDED.supports_contact, EXCLUDED.supports_external_reference, EXCLUDED.sort_order, EXCLUDED.status);
 INSERT INTO control.owner_type_purpose(owner_type_id,capability,purpose_code,created_by)
  SELECT id,'contact',purpose.code,'00000000-0000-0000-0000-000000000000'::uuid
  FROM control.owner_type CROSS JOIN (VALUES('default'),('business'),('notification'),('escalation')) purpose(code)
- WHERE tenant_id IS NULL AND control.owner_type.code='address_link';
+ WHERE tenant_id IS NULL AND control.owner_type.code='address_link'
+ON CONFLICT (owner_type_id, capability, purpose_code) DO NOTHING;
+
+DO $seed_assertions$ BEGIN
+ -- seed-assertion: expected-count
+ IF (SELECT count(*) FROM control.lookup_value WHERE tenant_id IS NULL AND domain_code='master.contact_role')<17 THEN RAISE EXCEPTION 'common.master.contact-person: expected-count failed'; END IF;
+ -- seed-assertion: orphan
+ IF EXISTS(SELECT 1 FROM control.owner_type_purpose p LEFT JOIN control.owner_type o ON o.id=p.owner_type_id WHERE o.id IS NULL) THEN RAISE EXCEPTION 'common.master.contact-person: orphan failed'; END IF;
+ -- seed-assertion: uniqueness
+ IF EXISTS(SELECT domain_code,code FROM control.lookup_value WHERE tenant_id IS NULL AND domain_code='master.contact_role' GROUP BY domain_code,code HAVING count(*)>1) THEN RAISE EXCEPTION 'common.master.contact-person: uniqueness failed'; END IF;
+ -- seed-assertion: semantic
+ IF (SELECT count(*) FROM control.owner_type WHERE tenant_id IS NULL AND code IN ('contact_person','address_link') AND supports_contact AND status='active')<>2 THEN RAISE EXCEPTION 'common.master.contact-person: semantic failed'; END IF;
+END $seed_assertions$;

@@ -16,11 +16,14 @@ import React, {
 } from "react";
 import {
   Button,
+  ChoiceChips,
   Input,
-  Select,
+  ChoiceSelect,
   SearchableSelect,
-  choicePresentation,
 } from "@athyper/platform-ui";
+
+/** Up to this many published choices render as chips; more use a searchable picker. */
+export const FILTER_CHIP_LIMIT = 8;
 import type {
   EntityListDescriptorV1,
   ListFieldDescriptorV1 as EntityField,
@@ -44,7 +47,9 @@ type ListFieldDescriptorV1 = Pick<
   | "filterOperators"
   | "filterOptions"
   | "semanticRole"
+  | "referenceLookup"
 >;
+export const FilterReferenceLoader = createContext<((field: string, input: {query:string;cursor?:string;value?:string;signal:AbortSignal}) => Promise<{options:readonly {value:string;label:string}[];nextCursor?:string}>) | undefined>(undefined);
 export const FilterChoiceLoader = createContext<
   ((field: string) => Promise<void>) | undefined
 >(undefined);
@@ -144,6 +149,7 @@ export function filterValidationError(
     return "Enter both range boundaries.";
   if (
     ["eq", "ne", "in"].includes(operator) &&
+    !field.referenceLookup &&
     field.filterOptions?.length &&
     parts.some(
       (value) =>
@@ -153,6 +159,7 @@ export function filterValidationError(
     return "Select an available value.";
   if (
     field.valueKind === "reference" &&
+    !field.referenceLookup &&
     ["eq", "ne", "in"].includes(operator) &&
     !field.filterOptions?.length
   )
@@ -247,29 +254,28 @@ function RelativeDatePicker({
   readonly label: string;
   readonly onChange: (value: string) => void;
 }) {
-  const id = useId();
+  const descriptionId = useId();
   const description = relativePeriodDescription(value);
+  const options = useMemo(
+    () =>
+      RELATIVE_DATE_GROUPS.flatMap((group) =>
+        group.options.map((option) => ({ value: option.value, label: option.label, group: group.label })),
+      ),
+    [],
+  );
+  // A short, grouped, fixed list: a select-only choice, not a search.
   return (
     <div className="a-entity-list__period-control">
-      <Select
-        aria-label={label}
+      <ChoiceSelect
+        label={label}
         value={value}
-        onChange={(event) => onChange(event.currentTarget.value)}
-        aria-describedby={description ? id : undefined}
-      >
-        <option value="">Select a relative period</option>
-        {RELATIVE_DATE_GROUPS.map((group) => (
-          <optgroup key={group.label} label={group.label}>
-            {group.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </Select>
+        options={options}
+        onChange={onChange}
+        placeholder="Select a relative period"
+        aria-describedby={description ? descriptionId : undefined}
+      />
       {description ? (
-        <small id={id}>
+        <small id={descriptionId}>
           {description} Uses the server calendar; recalculated when the filter
           runs.
         </small>
@@ -297,6 +303,7 @@ function ChoicePicker({
 }) {
   const id = useId(),
     load = useContext(FilterChoiceLoader),
+    referenceLoad = useContext(FilterReferenceLoader),
     pending = useRef(false);
   const mounted = useRef(false),
     [loading, setLoading] = useState(false),
@@ -315,6 +322,7 @@ function ChoicePicker({
   const openChoices = () => {
     // An empty loaded catalogue is distinct from choices not fetched yet.
     if (
+      !field.referenceLookup &&
       field.valueKind !== "boolean" &&
       field.filterOptions === undefined &&
       load &&
@@ -333,6 +341,7 @@ function ChoicePicker({
         });
     }
   };
+  const loadReferencePage = useMemo(() => field.referenceLookup && referenceLoad ? (input: Parameters<NonNullable<typeof referenceLoad>>[1]) => referenceLoad(field.key, input) : undefined, [field.referenceLookup, field.key, referenceLoad]);
   const options = useMemo(
     () =>
       (field.valueKind === "boolean"
@@ -350,6 +359,7 @@ function ChoicePicker({
       label={label}
       value={value}
       options={options}
+      loadPage={loadReferencePage}
       onChange={onChange}
       multipleValues={
         multiple
@@ -488,16 +498,24 @@ export function FilterValueEditor({
       : type === "number" || type === "datetime-local"
         ? "any"
         : undefined;
-  const searchable =
-    ["eq", "ne", "in"].includes(operator) &&
-    choicePresentation({
-      optionCount: field.filterOptions?.length ?? 0,
-      valueKind: field.valueKind,
-      semanticRole: field.semanticRole,
-      multiple:
-        operator === "in" &&
-        (!!field.filterOptions?.length || field.valueKind === "boolean"),
-    }) === "searchable";
+  const choiceOperator = ["eq", "ne", "in"].includes(operator),
+    publishedChoices =
+      field.valueKind === "boolean"
+        ? [
+            { value: "true", label: "Yes" },
+            { value: "false", label: "No" },
+          ]
+        : field.filterOptions?.map((option) => ({ value: String(option.value), label: option.label })),
+    chips =
+      choiceOperator &&
+      field.valueKind !== "reference" &&
+      field.valueKind !== "enum" &&
+      !!publishedChoices?.length &&
+      publishedChoices.length <= FILTER_CHIP_LIMIT,
+    searchable =
+      choiceOperator &&
+      !chips &&
+      (!!publishedChoices?.length || field.valueKind === "reference" || field.valueKind === "enum" || field.filterOptions !== undefined);
   const clearRecent = () => {
     try {
       removeBrowserStorage(`${historyKey}.${field.key}`, "session");
@@ -545,7 +563,7 @@ export function FilterValueEditor({
         </label>
       </div>
     );
-  } else if (searchable)
+  } else if (searchable && !chips)
     control = (
       <ChoicePicker
         key={`${field.key}-${operator}`}
@@ -560,28 +578,15 @@ export function FilterValueEditor({
         onClearRecent={historyKey ? clearRecent : undefined}
       />
     );
-  else if (
-    ["eq", "ne", "in"].includes(operator) &&
-    (field.filterOptions?.length || field.valueKind === "boolean")
-  )
+  else if (chips)
     control = (
-      <Select
-        aria-label={label}
-        value={value}
-        onChange={(event) => onChange(event.currentTarget.value)}
-      >
-        <option value="">Select a value</option>
-        {(
-          field.filterOptions ?? [
-            { value: true, label: "Yes" },
-            { value: false, label: "No" },
-          ]
-        ).map((option) => (
-          <option key={String(option.value)} value={String(option.value)}>
-            {option.label}
-          </option>
-        ))}
-      </Select>
+      <ChoiceChips
+        label={label}
+        items={publishedChoices!}
+        multiple={operator === "in"}
+        values={value.split(",").map((item) => item.trim()).filter(Boolean)}
+        onValuesChange={(values) => onChange(values.join(","))}
+      />
     );
   else if (operator === "in" && temporal)
     control = (
@@ -627,41 +632,31 @@ export function FilterValueEditor({
         </small>
       ) : null}
       {recent.length && !searchable ? (
-        <div className="a-entity-list__recent">
-          <Select
-            aria-label={`Recent choices for ${field.label}`}
-            value=""
-            onChange={(event) => onChange(event.currentTarget.value)}
-          >
-            <option value="">Recent choices</option>
-            {recent.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.operator === "relative"
-                  ? RELATIVE_DATE_GROUPS.flatMap((group) => group.options).find(
-                      (option) => option.value === item.value,
-                    )?.label
-                  : item.value
-                      .split(",")
-                      .map(
-                        (key) =>
-                          field.filterOptions?.find(
-                            (option) => String(option.value) === key.trim(),
-                          )?.label ?? key,
-                      )
-                      .join(", ")}
-              </option>
-            ))}
-          </Select>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={() => {
-              try {
-                removeBrowserStorage(`${historyKey}.${field.key}`, "session");
-              } catch {}
-              setHistoryVersion((version) => version + 1);
-            }}
-          >
+        <div className="a-entity-list__recent a-filter-chip-group" role="group" aria-label={`Recent choices for ${field.label}`}>
+          <span aria-hidden="true">Recent</span>
+          {recent.map((item) => (
+            <button
+              type="button"
+              key={item.value}
+              className="a-filter-chip"
+              onClick={() => onChange(item.value)}
+            >
+              {item.operator === "relative"
+                ? RELATIVE_DATE_GROUPS.flatMap((group) => group.options).find(
+                    (option) => option.value === item.value,
+                  )?.label
+                : item.value
+                    .split(",")
+                    .map(
+                      (key) =>
+                        field.filterOptions?.find(
+                          (option) => String(option.value) === key.trim(),
+                        )?.label ?? key,
+                    )
+                    .join(", ")}
+            </button>
+          ))}
+          <Button variant="ghost" size="small" onClick={clearRecent}>
             Clear recent
           </Button>
         </div>

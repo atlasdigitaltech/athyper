@@ -65,12 +65,13 @@ async function lookupDescriptor(
     return cache.descriptor;
   const descriptor = await client.request(entityListDescriptorOperation, {
     params: { entityCode },
+    query: { includeViews: "true" },
     signal,
   });
   if (cache && !signal.aborted) {
     cache.descriptor = descriptor;
     cache.loadedAt = Date.now();
-    cache.viewsLoaded = false;
+    cache.viewsLoaded = Boolean(descriptor.viewCatalog);
   }
   return descriptor;
 }
@@ -84,7 +85,7 @@ export async function searchLookupDirectory(
   cache?: LookupDescriptorCache,
 ) {
   let descriptor = await lookupDescriptor(client, entityCode, signal, cache);
-  if (descriptor.serverViews && !cache?.viewsLoaded) {
+  if (descriptor.serverViews && !descriptor.viewCatalog && !cache?.viewsLoaded) {
     descriptor = {
       ...descriptor,
       viewCatalog: await client.request(entityViewsOperation, {
@@ -127,7 +128,7 @@ export async function searchLookupDirectory(
     .catch((error) => {
       if (cache && !signal.aborted) {
         cache.descriptor = undefined;
-        cache.viewsLoaded = false;
+        cache.viewsLoaded = Boolean(descriptor.viewCatalog);
       }
       throw error;
     });
@@ -137,7 +138,7 @@ export async function searchLookupDirectory(
   ) {
     if (cache) {
       cache.descriptor = undefined;
-      cache.viewsLoaded = false;
+      cache.viewsLoaded = Boolean(descriptor.viewCatalog);
     }
     throw Error("Lookup authority changed. Please search again.");
   }

@@ -1,3 +1,6 @@
+import { createEntityReferenceReader, type EntityReferenceRequest, type EntityReferencePage } from "./entity-reference-reader.js";
+import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
+import { exportableClassification } from "./transfer/export-admission.js";
 import { resolveIntakeFormChoices } from "./intake-form-choices.js";
 import { authorizeListContextDiscovery } from "./list-context-discovery.js";
 import { readablePresentationLocalization } from "@athyper/contract-platform-entity-runtime";
@@ -11,6 +14,7 @@ import {
   parseEntityFormDescriptor,
   parseEntityRecordPresentation,
   readableRecordPresentation,
+  readableEntitySectionComponent,
 } from "@athyper/contract-platform-entity-runtime";
 import {
   createRelationshipStandardViewSources,
@@ -74,6 +78,7 @@ import {
 } from "./record-read-access.js";
 
 export interface EntityListService {
+  referenceChoices(context: VerifiedRequestContext, entityCode: string, request: EntityReferenceRequest): Promise<EntityReferencePage>;
   applicationDescriptor(
     context: VerifiedRequestContext,
     entityCode: string,
@@ -91,6 +96,7 @@ export interface EntityListService {
     context: VerifiedRequestContext,
     entityCode: string,
     mode: "create" | "edit",
+    recordId?: string,
   ): Promise<EntityFormDescriptorV1>;
   detailDescriptor(
     context: VerifiedRequestContext,
@@ -133,6 +139,11 @@ export function createEntityListService(options: {
     Record<string, EntityAttentionCountResolver>
   >;
 }): EntityListService {
+  const references = createEntityReferenceReader(options);
+  async function referencePresentation(context: VerifiedRequestContext, descriptor: EntityRuntimeDescriptor, data: Readonly<Record<string, unknown>>) {
+    const resolved = await references.presentation(context, descriptor, data);
+    return Object.keys(resolved.references).length ? resolved : {};
+  }
   const standardViewSources = {
     ...createRelationshipStandardViewSources(options.authorizer),
     ...options.standardViewSources,
@@ -227,7 +238,7 @@ export function createEntityListService(options: {
             kind: "transition",
           });
       stage("actions");
-      const fields = readable.map((field) => surfaceField(field, true));
+      const fields = readable.map((field) => surfaceField(field, true, descriptor));
       const identity = descriptor.listPresentation?.identityField;
       const titleField =
         identity && readable.some((field) => field.key === identity)
@@ -287,11 +298,11 @@ export function createEntityListService(options: {
       ]);
       const detail = parseEntityDetailDescriptor({
         schema: "athyper.entity-detail-descriptor/1",
-        ...(entityLabels(descriptor).localization ? { localizedLabels: readablePresentationLocalization(entityLabels(descriptor).localization, fields.map(field => field.key)) } : {}),
+        ...(entityLabels(descriptor).localization ? { localizedLabels: authorizedPresentationLocalization(descriptor, entityLabels(descriptor).localization, fields.map(field => field.key)) } : {}),
         collaboration,
         relationshipCapabilities,
         activity,
-        presentation: { ...presentation, summaryView },
+        presentation: { ...presentation, localizedLabels: authorizedPresentationLocalization(descriptor, presentation.localizedLabels, fields.map(field => field.key)), badges: presentation.badges.filter(badge => !maskedPresentationField(descriptor, badge.field)), summaryView },
         plane: descriptor.planeKey,
         entity: {
           code: entityCode,
@@ -306,12 +317,16 @@ export function createEntityListService(options: {
           presentation,
         }),
         titleField,
+        referenceSummaryFields: (descriptor.listPresentation?.defaultState?.columns ?? descriptor.listPresentation?.defaultColumns ?? [titleField]).filter(key => fields.some(field => field.key === key) && !maskedPresentationField(descriptor, key)).slice(0, 8),
         fields,
         actions,
       });
-      return { descriptor: detail, record: data ? normalizeRecord(descriptor, data, readable.map(field => field.key)) : undefined };
+      return { descriptor: detail, record: data ? {...normalizeRecord(descriptor, data, readable.map(field => field.key)), ...await referencePresentation(context,descriptor,data)} : undefined };
   }
   return Object.freeze({
+    async referenceChoices(context: VerifiedRequestContext, entityCode: string, request: EntityReferenceRequest) {
+      return references.lookup(context, await descriptorFor(options.metadata,context,entityCode), request);
+    },
     async applicationDescriptor(
       context: VerifiedRequestContext,
       entityCode: string,
@@ -369,7 +384,7 @@ export function createEntityListService(options: {
         : (descriptor.listPresentation?.title ?? humanizeIdentifier(entityCode));
       return Object.freeze({
         schemaVersion: 1 as const,
-        ...(descriptor.listPresentation?.localizedLabels ? { localizedLabels: readablePresentationLocalization(descriptor.listPresentation.localizedLabels, []) } : {}),
+        ...(descriptor.listPresentation?.localizedLabels ? { localizedLabels: authorizedPresentationLocalization(descriptor, descriptor.listPresentation.localizedLabels, []) } : {}),
         plane: descriptor.planeKey,
         entity: Object.freeze({
           code: entityCode,
@@ -475,15 +490,15 @@ export function createEntityListService(options: {
         collectionScope,
         options.attentionCounts,
       );
-      const choices = filterChoiceField
+      const queryFields = queryableListFields(descriptor, readable);
+      const choiceFields = queryFields.filter(field => field.filterable && field.key === filterChoiceField);
+      const choices = filterChoiceField && choiceFields.length
         ? ((await options.filterChoices?.(
             context,
-            readable.filter(
-              (field) => field.filterable && field.key === filterChoiceField,
-            ),
+            choiceFields,
           )) ?? {})
         : {};
-      const filterFields = readable.map((field) =>
+      const filterFields = queryFields.map((field) =>
         choices[field.key]
           ? {
               ...field,
@@ -513,6 +528,7 @@ export function createEntityListService(options: {
       context: VerifiedRequestContext,
       entityCode: string,
       mode: "create" | "edit",
+      recordId?: string,
     ) {
       const descriptor = await descriptorFor(
         options.metadata,
@@ -525,16 +541,20 @@ export function createEntityListService(options: {
         context,
         descriptor,
         operation,
+        mode === "edit" ? recordId : undefined,
       );
       if (mode === "edit")
-        await requireOperation(options.authorizer, context, descriptor, "read");
+        await requireOperation(options.authorizer, context, descriptor, "read", recordId);
       const readable = new Set(
         (
           await readableRecordFields(options.authorizer, context, descriptor)
         ).map((field) => field.key),
       );
+      const presentation = descriptor.formPresentation?.[mode];
+      const inputKeys = presentation ? new Set(presentation.sections.flatMap(section => section.fields)) : undefined;
       const fields = await Promise.all(
         descriptor.fields.map(async (field) => {
+          if (inputKeys && !inputKeys.has(field.key)) return undefined;
           const writable =
             field.writableOn.includes(operation) &&
             (!field.writePermissionCode ||
@@ -545,8 +565,10 @@ export function createEntityListService(options: {
                   resource: fieldWriteAuthorizationResource(context, entityCode, operation, field.key),
                 })
               ).allowed);
+          // Create forms contain user inputs only; server-owned values remain server-derived.
+          if (!writable && (mode === "create" || !presentation)) return undefined;
           if (!readable.has(field.key) && !writable) return undefined;
-          return surfaceField(field, !writable);
+          return { ...surfaceField(field, !writable, descriptor), ...(presentation?.help[field.key] ? { helpText: presentation.help[field.key] } : {}) };
         }),
       );
       const visible = fields.filter((field): field is EntitySurfaceFieldV1 =>
@@ -560,10 +582,10 @@ export function createEntityListService(options: {
         );
       const labels = entityLabels(descriptor),
         label = labels.singular,
-        projection = { entityCode, mode, fields: visible, operation };
+        projection = { entityCode, mode, fields: visible, operation, sections: presentation?.sections ?? descriptor.recordPresentation?.sections };
       return parseEntityFormDescriptor({
         schema: "athyper.entity-form-descriptor/1",
-        ...(labels.localization ? { localizedLabels: readablePresentationLocalization(labels.localization, visible.map(field => field.key)) } : {}),
+        ...(labels.localization ? { localizedLabels: authorizedPresentationLocalization(descriptor, labels.localization, visible.map(field => field.key)) } : {}),
         plane: descriptor.planeKey,
         entity: {
           code: entityCode,
@@ -575,9 +597,19 @@ export function createEntityListService(options: {
         title: mode === "create" ? `New ${label}` : `Edit ${label}`,
         description: `${mode === "create" ? "Create" : "Update"} a governed ${label.toLocaleLowerCase()} record.`,
         fields: visible,
+        sections: (() => {
+          const admitted = new Set(visible.map(field => field.key));
+          const used = new Set<string>();
+          return (presentation?.sections ?? descriptor.recordPresentation?.sections ?? []).flatMap(section => {
+            const fields = section.fields.filter(key => admitted.has(key) && !used.has(key));
+            fields.forEach(key => used.add(key));
+            const component = readableEntitySectionComponent(section.component, fields);
+            return fields.length ? [{ key: section.key, label: section.label, fields, ...(component ? {component} : {}) }] : [];
+          });
+        })(),
         submit: {
           operation,
-          label: mode === "create" ? `Create ${label}` : `Save ${label}`,
+          label: presentation?.submitLabel ?? (mode === "create" ? `Create ${label}` : `Save ${label}`),
         },
       });
     },
@@ -612,7 +644,7 @@ export function createEntityListService(options: {
           "ENTITY_RECORD_NOT_FOUND",
           "The governed record was not found",
         );
-      return normalizeRecord(descriptor, data);
+      return {...normalizeRecord(descriptor, data), ...await referencePresentation(context,descriptor,data)};
     },
     async list(query: ListRecordsQuery) {
       if ((query.sort?.length ?? 0) > 10)
@@ -658,6 +690,7 @@ export function createEntityListService(options: {
         dataOperations,
       );
       const identity = storageIdentityProjection(descriptor, readable);
+      const displayValues = await references.labelsMany(query.context, descriptor, result.data);
       const rows = result.data.map((source, index) => {
         const rawId = source[descriptor.storage.idField];
         if (typeof rawId !== "string" && typeof rawId !== "number")
@@ -672,14 +705,10 @@ export function createEntityListService(options: {
           if (value !== undefined) values[field.key] = value;
         }
         if (!identity.published) values[identity.key] = String(rawId);
-        const versionField = descriptor.storage.versionField;
-        const version =
-          versionField &&
-          Number.isInteger(source[versionField]) &&
-          Number(source[versionField]) >= 0
-            ? Number(source[versionField])
-            : undefined;
+        const version = recordVersion(descriptor.storage.versionField
+          ? source[descriptor.storage.versionField] : undefined);
         return Object.freeze({
+          ...(Object.keys(displayValues[index]!).length ? {displayValues: displayValues[index]} : {}),
           id: String(rawId),
           ...(version !== undefined ? { version } : {}),
           values: Object.freeze(values),
@@ -704,6 +733,7 @@ export function createEntityListService(options: {
           countMode: query.countMode ?? "none",
         }),
         rows: Object.freeze(rows),
+        ...(result.sourceAuthority ? { sourceAuthority: result.sourceAuthority } : {}),
         pagination: Object.freeze({
           pageSize: result.pagination.pageSize,
           hasNext: result.pagination.hasMore,
@@ -796,8 +826,11 @@ function enumOptionLabel(field: EntityFieldDescriptor, value: string): string {
 function surfaceField(
   field: EntityFieldDescriptor,
   readOnly: boolean,
+  descriptor: EntityRuntimeDescriptor,
 ): EntitySurfaceFieldV1 {
-  const raw = Array.isArray(field.validation?.["options"])
+  const masked = descriptor.authorization?.fieldPolicies.some(policy =>
+    policy.representation === "masked" && policy.fields.includes(field.key));
+  const raw = !masked && Array.isArray(field.validation?.["options"])
     ? field.validation["options"]
     : [];
   const options = raw.flatMap((candidate) =>
@@ -821,7 +854,8 @@ function surfaceField(
   return Object.freeze({
     key: field.key,
     label: field.list?.label ?? humanizeIdentifier(field.key),
-    kind: field.type,
+    kind: !masked && field.keyReference ? "reference" : field.type,
+    ...(!masked && field.keyReference ? {referenceLookup: {dependencies: field.keyReference.fields.filter(mapping => mapping.source !== field.key).map(mapping => mapping.source)}} : {}),
     required: field.required,
     readOnly,
     ...(options.length ? { options: Object.freeze(options) } : {}),
@@ -838,6 +872,23 @@ function surfaceRevision(
   });
 }
 
+/** Presentation and choice providers must honor the same published query-use
+ * boundary as the executor. Masked values cannot become filter enumerations. */
+function queryableListFields(descriptor: EntityRuntimeDescriptor, fields: readonly EntityFieldDescriptor[]): readonly EntityFieldDescriptor[] {
+  if (!descriptor.authorization) return fields;
+  return fields.map(field => {
+    const policy = descriptor.authorization!.fieldPolicies.find(policy => policy.fields.includes(field.key));
+    const allowed = (use: "filter" | "sort" | "group" | "search") => policy?.representation === "plain" && policy.queryUses.includes(use);
+    return {
+      ...field,
+      filterable: field.filterable === true && allowed("filter"),
+      sortable: field.sortable === true && allowed("sort"),
+      searchable: field.searchable === true && allowed("search"),
+      list: { ...field.list, groupable: field.list?.groupable === true && allowed("group"), ...(!allowed("group") ? { aggregations: [] } : {}) },
+    };
+  });
+}
+
 export function compileEntityListDescriptor(
   context: VerifiedRequestContext,
   descriptor: EntityRuntimeDescriptor,
@@ -848,6 +899,10 @@ export function compileEntityListDescriptor(
   actions: readonly EffectiveListActionV1[] = [],
   navigation: readonly EffectiveEntitySectionV1[] = [],
 ): EntityListDescriptorV1 {
+  readableFields = queryableListFields(descriptor, readableFields);
+  // The executor searches the published search profile as a whole. Do not
+  // advertise a partial profile that would still query a forbidden member.
+  const searchAdmitted = descriptor.fields.filter(field => field.searchable).every(field => readableFields.some(visible => visible.key === field.key && visible.searchable));
   if (!readableFields.length)
     throw new RecordServiceError(
       403,
@@ -871,11 +926,12 @@ export function compileEntityListDescriptor(
   // reuse it as the `title` role so record cards need no second declaration.
   const recordTitleKey = descriptor.recordPresentation?.titleField;
   const fields: ListFieldDescriptorV1[] = readableFields.map((field, index) => {
-    const options = filterOptions(field);
-    const semanticRole =
+    const masked = maskedPresentationField(descriptor, field.key);
+    const options = !masked && (field.filterable || field.type === "enum") ? filterOptions(field) : [];
+    const semanticRole = masked ? undefined :
       field.list?.semanticRole ??
       (field.key === recordTitleKey && field.key !== identityKey ? "title" : undefined);
-    const statusTones = field.list?.statusTones ?? descriptor.recordPresentation?.badges.find(badge => badge.field === field.key)?.tones;
+    const statusTones = masked ? undefined : field.list?.statusTones ?? descriptor.recordPresentation?.badges.find(badge => badge.field === field.key)?.tones;
     return Object.freeze({
       key: field.key,
     label: field.list?.label ?? humanizeIdentifier(field.key),
@@ -883,7 +939,8 @@ export function compileEntityListDescriptor(
         ? { columnGroup: field.list.columnGroup }
         : {}),
       valueKind:
-        field.list?.semanticRole === "country_code" ? "reference" : field.type,
+        field.keyReference || field.list?.semanticRole === "country_code" ? "reference" : field.type,
+      ...(!masked && field.keyReference ? { referenceLookup: { dependencies: field.keyReference.fields.filter(mapping => mapping.source !== field.key).map(mapping => mapping.source) } } : {}),
       ...(semanticRole ? { semanticRole } : {}),
       ...(field.list?.cardPriority
         ? { cardPriority: field.list.cardPriority }
@@ -1021,7 +1078,7 @@ export function compileEntityListDescriptor(
   return Object.freeze({
     schemaVersion: 1,
     serverViews: true,
-    ...(descriptor.listPresentation?.localizedLabels ? { localizedLabels: readablePresentationLocalization(descriptor.listPresentation.localizedLabels, fields.map(field => field.key)) } : {}),
+    ...(descriptor.listPresentation?.localizedLabels ? { localizedLabels: authorizedPresentationLocalization(descriptor, descriptor.listPresentation.localizedLabels, fields.map(field => field.key)) } : {}),
     plane: descriptor.planeKey,
     entity: Object.freeze({
       code: descriptor.entityCode,
@@ -1049,7 +1106,7 @@ export function compileEntityListDescriptor(
         ? { description: descriptor.listPresentation.description }
         : {}),
       defaultState: Object.freeze({
-        ...(configuredState?.query ? { query: configuredState.query } : {}),
+        ...(searchAdmitted && configuredState?.query ? { query: configuredState.query } : {}),
         filters: defaultFilters,
         sort: defaultSort,
         ...(defaultGroup ? { group: defaultGroup } : {}),
@@ -1062,7 +1119,7 @@ export function compileEntityListDescriptor(
       }),
       supportedModes: modes,
       search: Object.freeze({
-        ...(descriptor.listPresentation?.search?.profileKey
+        ...(searchAdmitted && descriptor.listPresentation?.search?.profileKey
           ? { profileKey: descriptor.listPresentation.search.profileKey }
           : {}),
         minimumQueryLength,
@@ -1136,7 +1193,8 @@ async function effectiveDataOperations(
             await authorizer.authorize({
               context,
               permissionCode: permission,
-              resource,
+              resource: { ...resource, ...(usesEntityBackendAuthorization(authorizer, context, descriptor)
+                ? {entityCode: descriptor.entityCode, operationKey: operation, authorizationDescriptorHash: descriptor.compiledHash} : {}) },
               observation: {
                 entityCode: descriptor.entityCode,
                 operationKey: operation,
@@ -1186,7 +1244,10 @@ async function effectiveDataOperations(
   const config = descriptor.listPresentation?.dataOperations;
   const exportMax = config?.exportMaxRecords ?? 250_000,
     importMax = config?.importMaxRows ?? 50_000;
-  const serverExport = exportAuthority?.allowed
+  const exportable = readable.filter(field => exportableClassification(field.classification) &&
+    (!usesEntityBackendAuthorization(authorizer, context, descriptor) || descriptor.authorization!.fieldPolicies.some(policy =>
+      policy.fields.includes(field.key) && policy.representation === "plain" && policy.queryUses.includes("export"))));
+  const serverExport = exportAuthority?.allowed && exportable.length
     ? enabled(exportAuthority.permission, exportMax, true)
     : hidden;
   const adapterReady = Boolean(config?.importAdapterKey);
@@ -1264,7 +1325,7 @@ async function effectiveDataOperations(
           : hidden,
       formats: exportFormats,
       defaultFormat: exportFormats[0]!,
-      exportableFields: Object.freeze(readable.map((field) => field.key)),
+      exportableFields: Object.freeze(exportable.map((field) => field.key)),
       asynchronousThreshold: config?.asynchronousThreshold ?? 5_000,
     }),
     import: Object.freeze({
@@ -1551,7 +1612,7 @@ async function resolveCollectionScope(
   descriptor: EntityRuntimeDescriptor,
   coordinate?: ListRecordsQuery["scopeCoordinate"],
 ): Promise<RecordCollectionScopeResolution> {
-  if (!resolver && (coordinate?.parentEntityCode || coordinate?.parentRecordId || coordinate?.relationshipKey))
+  if (!resolver && (coordinate?.parentEntityCode || coordinate?.parentRecordId || coordinate?.relationshipKey || coordinate?.parentDescriptorHash))
     throw new RecordServiceError(403, "ENTITY_PARENT_ACCESS_DENIED", "Related record scope is unavailable");
   if (resolver)
     return resolver.resolve({
@@ -1582,18 +1643,28 @@ function normalizeRecord(descriptor: EntityRuntimeDescriptor, data: Readonly<Rec
           Object.hasOwn(data, field.key) ? [[field.key, data[field.key]]] : [],
         ),
       );
-      const rawVersion = descriptor.storage.versionField
-          ? data[descriptor.storage.versionField]
-          : undefined,
-        version =
-          typeof rawVersion === "number" &&
-          Number.isInteger(rawVersion) &&
-          rawVersion >= 0
-            ? rawVersion
-            : undefined;
+      const version = recordVersion(descriptor.storage.versionField
+        ? data[descriptor.storage.versionField] : undefined);
       return Object.freeze({
         id: String(rawId),
         ...(version === undefined ? {} : { version }),
         values: Object.freeze(values),
       });
+}
+
+// PostgreSQL bigint columns arrive as decimal strings. Preserve optimistic
+// concurrency coordinates without rounding an unsafe integer.
+function recordVersion(value: unknown): number | undefined {
+  const numeric = typeof value === "number" || typeof value === "string" && /^[0-9]+$/.test(value)
+    ? Number(value) : NaN;
+  return Number.isSafeInteger(numeric) && numeric >= 0 ? numeric : undefined;
+}
+
+/** Masked values must not disclose their finite domain through label catalogs or header tones. */
+function maskedPresentationField(descriptor: EntityRuntimeDescriptor, key: string): boolean {
+  return descriptor.authorization?.fieldPolicies.some(policy => policy.representation === "masked" && policy.fields.includes(key)) ?? false;
+}
+function authorizedPresentationLocalization(descriptor: EntityRuntimeDescriptor, localization: Parameters<typeof readablePresentationLocalization>[0], fields: readonly string[]) {
+  const readable = readablePresentationLocalization(localization, fields);
+  return readable ? { ...readable, ...(readable.options ? { options: Object.fromEntries(Object.entries(readable.options).filter(([key]) => !maskedPresentationField(descriptor, key))) } : {}) } : undefined;
 }

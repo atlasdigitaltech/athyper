@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1219,
+    "identities": 1220,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 351,
+    "currentOnly": 352,
     "legacyOccurrences": 898,
-    "currentOccurrences": 417
+    "currentOccurrences": 418
   },
   "routes": [
     {
@@ -70,7 +70,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 93,
+          "line": 94,
           "declaredPath": "/api/atlas/threads/:id",
           "kind": "contract"
         }
@@ -85,7 +85,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 116,
+          "line": 117,
           "declaredPath": "/api/atlas/threads/:id/participants/:principalId",
           "kind": "contract"
         }
@@ -1573,7 +1573,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 64,
+          "line": 65,
           "declaredPath": "/api/atlas/threads/:id",
           "kind": "contract"
         }
@@ -1588,7 +1588,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 101,
+          "line": 102,
           "declaredPath": "/api/atlas/threads/:id/export",
           "kind": "contract"
         }
@@ -1603,7 +1603,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 67,
+          "line": 68,
           "declaredPath": "/api/atlas/threads/:id/messages",
           "kind": "contract"
         }
@@ -1618,7 +1618,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 157,
+          "line": 158,
           "declaredPath": "/api/atlas/tools/history",
           "kind": "contract"
         }
@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2767,
+          "line": 3782,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 2440,
+          "line": 3172,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -2849,7 +2849,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 295,
+          "line": 339,
           "declaredPath": "/api/entity-runtime/:entityCode/application-descriptor",
           "kind": "contract"
         }
@@ -2864,7 +2864,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 350,
+          "line": 394,
           "declaredPath": "/api/entity-runtime/:entityCode/detail-descriptor",
           "kind": "contract"
         }
@@ -2879,7 +2879,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 328,
+          "line": 372,
           "declaredPath": "/api/entity-runtime/:entityCode/form-descriptor",
           "kind": "contract"
         }
@@ -2894,7 +2894,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 405,
+          "line": 449,
           "declaredPath": "/api/entity-runtime/:entityCode/list",
           "kind": "contract"
         }
@@ -2909,7 +2909,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 312,
+          "line": 356,
           "declaredPath": "/api/entity-runtime/:entityCode/list-descriptor",
           "kind": "contract"
         }
@@ -2924,7 +2924,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 390,
+          "line": 434,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId",
           "kind": "contract"
         }
@@ -2969,7 +2969,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 373,
+          "line": 417,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/detail",
           "kind": "contract"
         }
@@ -3017,6 +3017,21 @@
           "line": 180,
           "declaredPath": "/api/entity-runtime/:entityCode/reference-history",
           "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/entity-runtime/:param/references/:param",
+      "method": "GET",
+      "path": "/api/entity-runtime/:param/references/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 338,
+          "declaredPath": "/api/entity-runtime/:entityCode/references/:fieldKey",
+          "kind": "contract"
         }
       ],
       "status": "current-only"
@@ -9632,7 +9647,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 75,
+          "line": 76,
           "declaredPath": "/api/atlas/threads/:id",
           "kind": "contract"
         }
@@ -10790,7 +10805,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 86,
+          "line": 87,
           "declaredPath": "/api/atlas/threads/:id/archive",
           "kind": "contract"
         }
@@ -10805,7 +10820,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 124,
+          "line": 125,
           "declaredPath": "/api/atlas/threads/:id/runs",
           "kind": "contract"
         }
@@ -10820,7 +10835,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 187,
+          "line": 188,
           "declaredPath": "/api/atlas/tools/:proposalId/cancel",
           "kind": "contract"
         }
@@ -10835,7 +10850,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 190,
+          "line": 191,
           "declaredPath": "/api/atlas/tools/:proposalId/run",
           "kind": "contract"
         }
@@ -10850,7 +10865,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 160,
+          "line": 161,
           "declaredPath": "/api/atlas/tools/preview",
           "kind": "contract"
         }
@@ -18322,7 +18337,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 104,
+          "line": 105,
           "declaredPath": "/api/atlas/threads/:id/participants/:principalId",
           "kind": "contract"
         }

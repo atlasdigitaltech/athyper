@@ -1,5 +1,6 @@
 "use client";
 import { PageHeader } from "@athyper/platform-shell";
+import { ChoiceSelect } from "@athyper/platform-ui";
 import { useMeshAccountContext } from "@athyper/product-mesh-shell";
 export default function BuyerDiscoveryPage() {
   const context = useMeshAccountContext(),
@@ -27,22 +28,15 @@ export default function BuyerDiscoveryPage() {
           <>
             <label>
               Acting buyer account
-              <select
+              <ChoiceSelect
                 value={selected?.networkAccountId ?? ""}
-                onChange={(event) => context.select(event.target.value)}
-              >
-                <option value="" disabled>
-                  Select a buyer account
-                </option>
-                {buyers.map((account) => (
-                  <option
-                    key={account.networkAccountId}
-                    value={account.networkAccountId}
-                  >
-                    {account.code} · {account.displayName}
-                  </option>
-                ))}
-              </select>
+                placeholder="Select a buyer account"
+                onChange={(value) => context.select(value)}
+                options={buyers.map((account) => ({
+                  value: account.networkAccountId,
+                  label: `${account.code} · ${account.displayName}`,
+                }))}
+              />
             </label>
             {selected ? (
               <p>

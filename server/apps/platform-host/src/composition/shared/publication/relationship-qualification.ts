@@ -1,3 +1,4 @@
+import { parseEntityKeyReference } from "@athyper/server-contract-metadata";
 import { sql, type Transaction } from "kysely";
 import {
   parseEntityRelationships,
@@ -88,6 +89,30 @@ export async function qualifyPublishedRelationships(
       key.map((column) => columns.get(column) ?? "!unpublished"),
     ),
   };
+  // Key references point from a stored FK to an independently authorized target.
+  const candidateReference = {
+    entityCode: graph.entity.entityCode, planeKey: profile.storagePlane!,
+    storage: {schema: profile.storageSchema!, object: profile.storageObject!, tenantField: profile.tenantFieldKey},
+    fields: graph.fields.map(field => ({key: field.fieldKey, storagePath: field.storagePath!, type: field.dataType, writableOn: field.writeMode === "read_only" ? [] : ["patch"], keyReference: field.typeConfig?.keyReference === undefined ? undefined : parseEntityKeyReference(field.typeConfig.keyReference, field.fieldKey)})),
+    operations: Object.fromEntries(graph.operations.map(operation => [operation.operationKey, true])),
+  };
+  const referenceContracts = [...active.filter(item => item.entityCode !== candidateReference.entityCode), candidateReference];
+  for (const owner of referenceContracts) for (const field of owner.fields) {
+    const relation = field.keyReference;
+    if (!relation || (owner.entityCode !== candidateReference.entityCode && relation.targetEntity !== candidateReference.entityCode)) continue;
+    const target = referenceContracts.find(item => item.entityCode === relation.targetEntity);
+    if (!target || target.planeKey !== owner.planeKey || !target.operations.read || !target.operations.list) throw Error("PUBLICATION_KEY_REFERENCE_TARGET_REQUIRED");
+    const mappings = relation.fields.map(mapping => {
+      const from = owner.fields.find(item => item.key === mapping.source), to = target.fields.find(item => item.key === mapping.target);
+      if (!from || !to || from.type !== to.type || to.writableOn.length) throw Error("PUBLICATION_KEY_REFERENCE_FIELD_MISMATCH");
+      return {source: from.storagePath, target: to.storagePath};
+    });
+    if (!target.fields.some(item => item.key === relation.labelField)) throw Error("PUBLICATION_KEY_REFERENCE_LABEL_REQUIRED");
+    if (target.storage.tenantField && (!owner.storage.tenantField || !mappings.some(mapping => mapping.source === owner.storage.tenantField && mapping.target === target.storage.tenantField))) throw Error("PUBLICATION_KEY_REFERENCE_TENANT_MAPPING_REQUIRED");
+    const unique = await uniqueKeys(target.storage.schema, target.storage.object, tx);
+    if (!unique.some(key => key.length === mappings.length && key.every(column => mappings.some(mapping => mapping.target === column)))) throw Error("PUBLICATION_KEY_REFERENCE_UNIQUE_KEY_REQUIRED");
+    await requireForeignKey(target.storage.schema, target.storage.object, owner.storage.schema, owner.storage.object, mappings.map(mapping => ({source: mapping.target, target: mapping.source})), tx);
+  }
   for (const relationship of relations) {
     const targets = active.filter(
       (d) => d.entityCode === relationship.targetEntity,

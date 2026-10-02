@@ -32,6 +32,8 @@ function desired(
     identityId: "identity-1",
     authorityTenantId: "tenant-1",
     personId: "person-1",
+    sourcePlane: "neon",
+    sourceTenantId: "workforce-tenant-1",
     identifier: "user@example.test",
     displayName: "User",
     realmKey: "neon",
@@ -167,6 +169,8 @@ describe("TrustIAM identity saga", () => {
     expect(h.local.converge).toHaveBeenCalledWith(
       expect.objectContaining({
         personId: "person-1",
+        sourcePlane: "neon",
+        sourceTenantId: "workforce-tenant-1",
         applications: expect.arrayContaining([
           expect.objectContaining({
             roles: expect.arrayContaining([

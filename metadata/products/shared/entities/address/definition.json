@@ -1,0 +1,1037 @@
+{
+  "schema": "athyper.table-entity-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "neon"
+  ],
+  "definition": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "address",
+      "entityClass": "business",
+      "ownershipModel": "system"
+    },
+    "runtimeProfiles": [
+      {
+        "id": "effc6513-222f-51fb-ae32-22296002a0ad",
+        "profileKey": "default",
+        "backingKind": "table",
+        "storagePlane": "neon",
+        "storageSchema": "master",
+        "storageObject": "address",
+        "tenantFieldKey": "tenant_id",
+        "apiExposure": "api",
+        "readMode": "generic",
+        "writeMode": "none",
+        "createMode": "form_only",
+        "concurrencyMode": "none"
+      }
+    ],
+    "operations": [
+      {
+        "id": "45a78d25-d9cc-53c6-a7f9-13319be3cb71",
+        "operationKey": "list",
+        "operationKind": "read",
+        "label": "Addresses",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "line1",
+          "line2",
+          "line3",
+          "city",
+          "state_region_code",
+          "postal_code",
+          "country_code",
+          "timezone_code",
+          "formatted_address",
+          "address_kind",
+          "status"
+        ],
+        "auditEventCode": "address.list"
+      },
+      {
+        "id": "653a40c8-2ef0-5150-9a61-b009e1fc2d67",
+        "operationKey": "read",
+        "operationKind": "read",
+        "label": "View record",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "line1",
+          "line2",
+          "line3",
+          "city",
+          "state_region_code",
+          "postal_code",
+          "country_code",
+          "timezone_code",
+          "formatted_address",
+          "address_kind",
+          "status"
+        ],
+        "auditEventCode": "address.read"
+      }
+    ],
+    "operationPermissions": [
+      {
+        "entityOperationId": "45a78d25-d9cc-53c6-a7f9-13319be3cb71",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.address.read",
+        "permissionKind": "capability",
+        "id": "971cf5cc-64d6-5a15-99d7-135e5089e71d"
+      },
+      {
+        "entityOperationId": "653a40c8-2ef0-5150-9a61-b009e1fc2d67",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.address.read",
+        "permissionKind": "capability",
+        "id": "f5b4a0da-a673-5d16-8ae1-5148a97004a9"
+      }
+    ],
+    "operationScopeBindings": [
+      {
+        "entityOperationId": "45a78d25-d9cc-53c6-a7f9-13319be3cb71",
+        "bindingKey": "list_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "collection",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "db681d28-d88f-56da-85f5-ff5c437c6722"
+      },
+      {
+        "entityOperationId": "653a40c8-2ef0-5150-9a61-b009e1fc2d67",
+        "bindingKey": "read_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "a1ca88bb-4001-512a-882b-f7a192990fa3"
+      }
+    ],
+    "searchProfiles": [
+      {
+        "id": "dcfbafab-8083-5def-9c23-6a3b5a700d3f",
+        "searchKey": "default",
+        "searchKind": "keyword",
+        "minimumQueryLength": 1,
+        "isDefault": true
+      }
+    ],
+    "fields": [
+      {
+        "id": "cd7372fa-0e60-5fd5-97bd-6954898c285c",
+        "fieldKey": "id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "4efbfa89-d557-557a-9f56-7db26fd70810",
+        "fieldKey": "tenant_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "tenant_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "edc65263-a3c1-52d6-a2f9-1e4fad1860ce",
+        "fieldKey": "line1",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "line1",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "b3e37228-1ae2-59eb-a856-6117939494b1",
+        "fieldKey": "line2",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "line2",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "51f3b009-15f8-5744-bb53-afd6c6c6646c",
+        "fieldKey": "line3",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "line3",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "35887e58-3e23-55b5-be0d-66c59a8465f7",
+        "fieldKey": "city",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "city",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "41eee574-1ae8-557c-ab8d-ad74859ccf96",
+        "fieldKey": "state_region_code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "keyReference": {
+            "targetEntity": "state_region",
+            "labelField": "name",
+            "fields": [
+              {
+                "source": "country_code",
+                "target": "country_code"
+              },
+              {
+                "source": "state_region_code",
+                "target": "code"
+              }
+            ]
+          }
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "state_region_code",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "15e03a33-2f94-5892-a7f1-e75b5374d293",
+        "fieldKey": "postal_code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "postal_code",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "e17525cb-68c0-55f6-b4a5-840596ff329a",
+        "fieldKey": "country_code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "keyReference": {
+            "targetEntity": "country",
+            "labelField": "name",
+            "fields": [
+              {
+                "source": "country_code",
+                "target": "code"
+              }
+            ]
+          }
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "country_code",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "6ad96eff-413e-59dd-9ae8-eacdecf738df",
+        "fieldKey": "timezone_code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "keyReference": {
+            "targetEntity": "timezone",
+            "labelField": "code",
+            "fields": [
+              {
+                "source": "timezone_code",
+                "target": "code"
+              }
+            ]
+          }
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "timezone_code",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "1e5b8685-9e69-57b3-8f11-1ef4d4c426ae",
+        "fieldKey": "formatted_address",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "formatted_address",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "9d1c55bd-4f3f-55ed-9719-b96ba95821de",
+        "fieldKey": "address_kind",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "address_kind",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "679bd15c-febb-5b92-9732-3563f3fcb726",
+        "fieldKey": "status",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.address.status"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "status",
+        "dataClassification": "internal",
+        "status": "active"
+      }
+    ],
+    "keys": [
+      {
+        "id": "4f8e7597-e6c2-5109-95a3-e27d293da0c5",
+        "keyKey": "primary",
+        "keyKind": "primary",
+        "uniquenessScope": "global"
+      }
+    ],
+    "keyFields": [
+      {
+        "entityKeyId": "4f8e7597-e6c2-5109-95a3-e27d293da0c5",
+        "entityFieldId": "cd7372fa-0e60-5fd5-97bd-6954898c285c",
+        "position": 1,
+        "id": "fe866d3d-6e1a-5754-b37c-40b81cecbb01"
+      }
+    ],
+    "searchFields": [
+      {
+        "entitySearchProfileId": "dcfbafab-8083-5def-9c23-6a3b5a700d3f",
+        "entityFieldId": "35887e58-3e23-55b5-be0d-66c59a8465f7",
+        "position": 1,
+        "matchMode": "contains",
+        "id": "5995ce54-2616-593a-a13b-845fce078240"
+      },
+      {
+        "entitySearchProfileId": "dcfbafab-8083-5def-9c23-6a3b5a700d3f",
+        "entityFieldId": "edc65263-a3c1-52d6-a2f9-1e4fad1860ce",
+        "position": 2,
+        "matchMode": "contains",
+        "id": "5c5ad6e3-ee50-50aa-8e5d-e1ada938a3f2"
+      },
+      {
+        "entitySearchProfileId": "dcfbafab-8083-5def-9c23-6a3b5a700d3f",
+        "entityFieldId": "15e03a33-2f94-5892-a7f1-e75b5374d293",
+        "position": 3,
+        "matchMode": "contains",
+        "id": "3c821806-00e7-5c1d-a744-e97d2ab74c4a"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "surfaceKey": "list",
+        "surfaceKind": "list",
+        "title": "Addresses",
+        "isDefault": true,
+        "layoutConfig": {
+          "identityField": "id",
+          "defaultState": {
+            "sort": [
+              {
+                "field": "city",
+                "direction": "asc"
+              }
+            ],
+            "density": "comfortable",
+            "mode": "table"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "limits": {
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              10,
+              25,
+              50,
+              100
+            ],
+            "maxSortLevels": 3,
+            "countMode": "exact"
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "address",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "permissionCode": "neon.workforce.address.read",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "permissionCode": "neon.workforce.address.read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "line1",
+                "fields": [
+                  "line1"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "line2",
+                "fields": [
+                  "line2"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "line3",
+                "fields": [
+                  "line3"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "city",
+                "fields": [
+                  "city"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "state_region_code",
+                "fields": [
+                  "state_region_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "postal_code",
+                "fields": [
+                  "postal_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "country_code",
+                "fields": [
+                  "country_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "timezone_code",
+                "fields": [
+                  "timezone_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "formatted_address",
+                "fields": [
+                  "formatted_address"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "address_kind",
+                "fields": [
+                  "address_kind"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "surfaceKey": "detail",
+        "surfaceKind": "detail",
+        "title": "Addresses",
+        "layoutConfig": {
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "formatted_address",
+            "codeField": "id",
+            "sections": [
+              {
+                "key": "address",
+                "label": "Postal address",
+                "fields": [
+                  "country_code",
+                  "address_kind",
+                  "line1",
+                  "line2",
+                  "line3",
+                  "city",
+                  "state_region_code",
+                  "postal_code",
+                  "timezone_code"
+                ],
+                "component": {
+                  "rendererKey": "platform.address.fields.v1",
+                  "bindings": {
+                    "country": "country_code",
+                    "kind": "address_kind",
+                    "line1": "line1",
+                    "line2": "line2",
+                    "line3": "line3",
+                    "city": "city",
+                    "region": "state_region_code",
+                    "postalCode": "postal_code",
+                    "timezone": "timezone_code"
+                  }
+                }
+              },
+              {
+                "key": "formatted",
+                "label": "Formatted address",
+                "fields": [
+                  "formatted_address",
+                  "status"
+                ]
+              }
+            ],
+            "actions": []
+          }
+        }
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "id": "337022e4-1285-5bc6-969e-f59af881c5e7",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "cd7372fa-0e60-5fd5-97bd-6954898c285c",
+        "bindingKey": "list_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "ff284547-2348-502f-87bb-f178de38e534",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "4efbfa89-d557-557a-9f56-7db26fd70810",
+        "bindingKey": "list_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "69607487-bef6-5b84-bbca-b8e4acb621e1",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "edc65263-a3c1-52d6-a2f9-1e4fad1860ce",
+        "bindingKey": "list_line1",
+        "position": 2,
+        "labelOverride": "Line1",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "bf5966be-1f85-5217-bc55-35f5e6aece32",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "b3e37228-1ae2-59eb-a856-6117939494b1",
+        "bindingKey": "list_line2",
+        "position": 3,
+        "labelOverride": "Line2",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "b082be67-baec-5bd4-8828-da3e2e76f61f",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "51f3b009-15f8-5744-bb53-afd6c6c6646c",
+        "bindingKey": "list_line3",
+        "position": 4,
+        "labelOverride": "Line3",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "d4aed5cc-da54-5eda-a68b-2ba3c3c151dd",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "35887e58-3e23-55b5-be0d-66c59a8465f7",
+        "bindingKey": "list_city",
+        "position": 5,
+        "labelOverride": "City",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "254d36b2-d6f4-5dcd-a68c-4ee8fa313cd5",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "41eee574-1ae8-557c-ab8d-ad74859ccf96",
+        "bindingKey": "list_state_region_code",
+        "position": 6,
+        "labelOverride": "State/Region",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "beb30785-70e5-5aad-bcea-043286de7a46",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "15e03a33-2f94-5892-a7f1-e75b5374d293",
+        "bindingKey": "list_postal_code",
+        "position": 7,
+        "labelOverride": "Postal code",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "9d265ddb-c47b-5aba-8b67-beeb5db60134",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "e17525cb-68c0-55f6-b4a5-840596ff329a",
+        "bindingKey": "list_country_code",
+        "position": 8,
+        "labelOverride": "Country",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "fba7de8d-2d57-5434-a417-cf0147736764",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "6ad96eff-413e-59dd-9ae8-eacdecf738df",
+        "bindingKey": "list_timezone_code",
+        "position": 9,
+        "labelOverride": "Timezone",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "a30cd22f-84a1-511a-8ca1-e33b17a115cf",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "1e5b8685-9e69-57b3-8f11-1ef4d4c426ae",
+        "bindingKey": "list_formatted_address",
+        "position": 10,
+        "labelOverride": "Formatted address",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "96e45de5-6bae-5c63-a6ce-223f4cad53e9",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "9d1c55bd-4f3f-55ed-9719-b96ba95821de",
+        "bindingKey": "list_address_kind",
+        "position": 11,
+        "labelOverride": "Address kind",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "1d2c8f4e-20ba-53f4-a445-2dcfbe058478",
+        "entitySurfaceId": "f4a66ca8-0cb2-5373-9921-4598580cbd40",
+        "entityFieldId": "679bd15c-febb-5b92-9732-3563f3fcb726",
+        "bindingKey": "list_status",
+        "position": 12,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "draft",
+                "label": "Draft"
+              },
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "retired",
+                "label": "Retired"
+              },
+              {
+                "value": "merged",
+                "label": "Merged"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "f37d651e-aefa-5e38-9de3-1b30beff5386",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "cd7372fa-0e60-5fd5-97bd-6954898c285c",
+        "bindingKey": "detail_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "521e01cb-ad0a-54c2-a383-15182945fd02",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "4efbfa89-d557-557a-9f56-7db26fd70810",
+        "bindingKey": "detail_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "beafbbf4-d753-5249-8bcf-adedfaae93ee",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "edc65263-a3c1-52d6-a2f9-1e4fad1860ce",
+        "bindingKey": "detail_line1",
+        "position": 2,
+        "labelOverride": "Line1",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "4c6956e2-082a-5e4a-ac77-b8690a0dd2f8",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "b3e37228-1ae2-59eb-a856-6117939494b1",
+        "bindingKey": "detail_line2",
+        "position": 3,
+        "labelOverride": "Line2",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "1bff9d7c-5b68-5219-8cb4-1b176506e451",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "51f3b009-15f8-5744-bb53-afd6c6c6646c",
+        "bindingKey": "detail_line3",
+        "position": 4,
+        "labelOverride": "Line3",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "023454e4-157b-5071-ba01-de22d4fc11ce",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "35887e58-3e23-55b5-be0d-66c59a8465f7",
+        "bindingKey": "detail_city",
+        "position": 5,
+        "labelOverride": "City",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "c0706251-d0cc-5ecb-b9fe-64b1026a2218",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "41eee574-1ae8-557c-ab8d-ad74859ccf96",
+        "bindingKey": "detail_state_region_code",
+        "position": 6,
+        "labelOverride": "State/Region",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "9a606507-c03c-5051-ba37-3dfbee78cf75",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "15e03a33-2f94-5892-a7f1-e75b5374d293",
+        "bindingKey": "detail_postal_code",
+        "position": 7,
+        "labelOverride": "Postal code",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "0868bf5f-6acf-5b07-a886-e810b43086d1",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "e17525cb-68c0-55f6-b4a5-840596ff329a",
+        "bindingKey": "detail_country_code",
+        "position": 8,
+        "labelOverride": "Country",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "9897bf4a-df69-596f-8d55-55d69749f809",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "6ad96eff-413e-59dd-9ae8-eacdecf738df",
+        "bindingKey": "detail_timezone_code",
+        "position": 9,
+        "labelOverride": "Timezone",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "36cd19c9-9ba2-56cc-bb5a-2579f832bd83",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "1e5b8685-9e69-57b3-8f11-1ef4d4c426ae",
+        "bindingKey": "detail_formatted_address",
+        "position": 10,
+        "labelOverride": "Formatted address",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "39f8281b-1a0d-5c6d-9ec7-5def38433def",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "9d1c55bd-4f3f-55ed-9719-b96ba95821de",
+        "bindingKey": "detail_address_kind",
+        "position": 11,
+        "labelOverride": "Address kind",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "21e29ff4-564d-502e-a517-cf0f8061da3a",
+        "entitySurfaceId": "36a24fa6-582f-5ea8-93a9-31334b11f4dd",
+        "entityFieldId": "679bd15c-febb-5b92-9732-3563f3fcb726",
+        "bindingKey": "detail_status",
+        "position": 12,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "draft",
+                "label": "Draft"
+              },
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "retired",
+                "label": "Retired"
+              },
+              {
+                "value": "merged",
+                "label": "Merged"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "fieldReferenceBindings": [
+      {
+        "id": "a694ea65-a8cb-5657-8b87-62a68294291c",
+        "entityFieldId": "41eee574-1ae8-557c-ab8d-ad74859ccf96",
+        "bindingKey": "state_region_code_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "state_region",
+        "status": "active"
+      },
+      {
+        "id": "afc49870-2867-541d-b465-dbda40cefd5f",
+        "entityFieldId": "e17525cb-68c0-55f6-b4a5-840596ff329a",
+        "bindingKey": "country_code_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "country",
+        "status": "active"
+      },
+      {
+        "id": "ed5a4337-15df-5f96-a70b-a66403d57940",
+        "entityFieldId": "6ad96eff-413e-59dd-9ae8-eacdecf738df",
+        "bindingKey": "timezone_code_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "timezone",
+        "status": "active"
+      }
+    ]
+  }
+}

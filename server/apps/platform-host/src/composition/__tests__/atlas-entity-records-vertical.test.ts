@@ -48,11 +48,11 @@ it.each([["business_partner", "neon"], ["network_relationship", "mesh"]] as cons
   const result = await read();
   expect(result.data).toMatchObject({items: [{[summary]: "Saved record", status: "active"}]});
   expect(JSON.stringify(result)).not.toMatch(/NEVER_DISCLOSE|UNRELATED_ACCOUNT/);
-  await expect(resolver.resolve({...context, tenantId: otherId, permissions: {...context.permissions, tenantId: otherId}}, page)).rejects.toMatchObject({code: "PERMISSION_DENIED"});
+  await expect(resolver.resolve({...context, tenantId: otherId, permissions: {...context.permissions, tenantId: otherId}}, page)).rejects.toMatchObject({code: "BUSINESS_CONTEXT_UNAVAILABLE"});
   if (planeKey === "mesh") {
     await expect(resolver.resolve(context, {...page, workContext: undefined})).rejects.toMatchObject({code: "TOOL_DENIED"});
-    await expect(resolver.resolve(context, {...page, recordId: otherId})).rejects.toMatchObject({code: "PERMISSION_DENIED"});
-    await expect(resolver.resolve(context, {...page, workContext: {networkAccountId: otherId}})).rejects.toMatchObject({code: "PERMISSION_DENIED"});
+    await expect(resolver.resolve(context, {...page, recordId: otherId})).rejects.toMatchObject({code: "BUSINESS_CONTEXT_UNAVAILABLE"});
+    await expect(resolver.resolve(context, {...page, workContext: {networkAccountId: otherId}})).rejects.toMatchObject({code: "BUSINESS_CONTEXT_UNAVAILABLE"});
     accountAllowed = false;
     await expect(read()).rejects.toMatchObject({code: "PERMISSION_DENIED"});
   }

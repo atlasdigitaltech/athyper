@@ -2,6 +2,7 @@ import { build } from "esbuild";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
+import { withSessionDefaults } from "./fixtures/session-stub";
 // Exercise the real workspace and its scroll effects; only resource loading and
 // shell providers are replaced so the navigation race is deterministic.
 const bundle = build({
@@ -33,7 +34,7 @@ const bundle = build({
     builder.onResolve({ filter: /use-section-resource$/ }, () => ({ path: "resources", namespace: "fixture" }));
     builder.onResolve({ filter: /^@athyper\/platform-shell-app-foundation$/ }, () => ({ path: "shell", namespace: "fixture" }));
     builder.onLoad({ filter: /.*/, namespace: "fixture" }, ({path}) => ({ loader: "tsx", resolveDir: process.cwd(), contents: path === "shell"
-      ? `export const useApiClient = () => ({}); export const useSessionIdentity = () => ({}); export const useToasts = () => ({push:()=>{}}); export const readBrowserCsrfToken = () => undefined;`
+      ? withSessionDefaults(`export const useApiClient = () => ({}); export const useSessionIdentity = () => ({}); export const useToasts = () => ({push:()=>{}}); export const readBrowserCsrfToken = () => undefined;`)
       : `import {useState} from 'react';
          const keys = ['overview', 'contacts', 'banking', 'activity', 'policy', 'limits'];
          const bootstrap = {header:{values:{},revision:'1'}, plan:{actions:[], sections:keys.map(key=>({key,label:{defaultText:key}})),navigation:{tabs:[{key:'360',provider:'overview',sectionDisplay:'continuous',label:{defaultText:'Record'},sectionKeys:keys.slice(0,3)},{key:'arbitrary-group',provider:'section',sectionDisplay:'continuous',label:{defaultText:'Policy'},sectionKeys:['policy','limits']}]}}};

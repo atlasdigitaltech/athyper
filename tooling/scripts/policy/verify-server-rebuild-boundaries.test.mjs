@@ -282,3 +282,40 @@ test("only test source may import declared development test utilities", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("host bootstrap imports are allowed only from exact composition entrypoints", () => {
+  const root = fixture();
+  try {
+    write(
+      root,
+      "server/apps/platform-host/src/kernel/container.ts",
+      "export interface Container {}\n",
+    );
+    write(
+      root,
+      "server/apps/platform-host/src/composition/create-container.ts",
+      'import type { Container } from "../kernel/container.js";\n',
+    );
+    assert.equal(
+      analyzeServerRebuild(root).violations.filter((v) => v.code === "KERNEL")
+        .length,
+      0,
+    );
+    write(
+      root,
+      "server/apps/platform-host/src/business.ts",
+      'import type { Container } from "./kernel/container.js";\n',
+    );
+    write(
+      root,
+      "server/packages/foundation/src/kernel/container.ts",
+      "export {};\n",
+    );
+    const failures = analyzeServerRebuild(root).violations.filter(
+      (v) => v.code === "KERNEL",
+    );
+    assert.equal(failures.length, 2);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

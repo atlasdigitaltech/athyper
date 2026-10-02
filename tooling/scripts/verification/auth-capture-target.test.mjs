@@ -77,3 +77,8 @@ test("isolated NEON uses its own state and rejects mismatched capture targets", 
   ])
     assert.throws(() => targets.captureTarget({ ...options, ...patch }));
 });
+test('ordinary-user qualification is pinned to its actual DEV Neon identity',()=>{
+ const target=targets.captureTarget({...input,actor:'catl.finance'});
+ assert.equal(target.principalId,'d04198ac-53cf-5e94-969f-b6f75f176fa2');
+ for(const patch of [{environment:'qa'},{plane:'studio'},{plane:'mesh'},{'isolated-neon':true}]) assert.throws(()=>targets.captureTarget({...input,actor:'catl.finance',...patch}));
+});

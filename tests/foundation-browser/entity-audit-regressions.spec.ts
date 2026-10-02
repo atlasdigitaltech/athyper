@@ -252,7 +252,8 @@ test('a second column filter preserves the first pending mutation',async({page})
  await mount(page);
  await page.evaluate(()=>(window as any).delay=true);
  await page.getByRole('button',{name:'Filter Status',exact:true}).click();
- await page.getByRole('dialog',{name:'Filter Status'}).locator('select[aria-label^="Value"]').selectOption('draft');
+ await page.getByRole('dialog',{name:'Filter Status',exact:true}).getByRole('combobox',{name:'Value for Status filter 1'}).click();
+ await page.getByRole('option',{name:/^Draft/}).click();
  await page.getByRole('dialog',{name:'Filter Status'}).getByRole('button',{name:'Apply',exact:true}).click();
  await page.getByRole('button',{name:'Filter Display Name',exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'Filter Display Name'});

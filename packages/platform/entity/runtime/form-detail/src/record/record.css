@@ -34,7 +34,7 @@
   margin: 0.5rem 0;
 }
 .a-entity-record button,
-.a-entity-record select {
+.a-entity-record .a-choice-select__trigger {
   font-family: inherit;
   font-size: var(--a-font-size-sm);
 }
@@ -63,7 +63,7 @@
 }
 .a-entity-record-summary-view > section {
   border: var(--a-border-width) solid var(--a-border);
-  border-radius: 0.75rem;
+  border-radius: var(--a-radius-lg);
   background: var(--a-surface);
   padding: 1rem;
 }
@@ -87,7 +87,7 @@
 .a-entity-record-summary-view dd {
   margin: 0;
 }
-@media (max-width: 960px) {
+@media (width < 64rem) {
   .a-entity-record-record-body--summary {
     grid-template-columns: 1fr;
   }
@@ -104,7 +104,7 @@
   display: grid;
   place-items: center;
   min-width: 3rem;
-  min-height: 3rem;
+  min-height: var(--a-density-row-height);
   cursor: pointer;
   list-style: none;
 }
@@ -124,7 +124,7 @@
   min-width: 15rem;
   padding: 0.5rem;
   border: 1px solid var(--a-border);
-  border-radius: 0.5rem;
+  border-radius: var(--a-radius-md);
   background: var(--a-surface-raised);
   box-shadow: var(--a-shadow-overlay);
 }
@@ -137,7 +137,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  min-height: 2.5rem;
+  min-height: var(--a-control-height);
   padding: 0.5rem;
   border: 0;
   background: transparent;
@@ -184,7 +184,7 @@
   border-inline-start-color: var(--a-primary);
   background: var(--a-selection-subtle);
 }
-@media (max-width: 960px) {
+@media (width < 64rem) {
   .a-entity-record-record-body--sections,
   .a-entity-record-record-body--sections.a-entity-record-record-body--summary {
     grid-template-columns: 1fr;
@@ -214,14 +214,15 @@
 }
 /* On wide screens, contextual navigation and decision support remain visible while the
    continuous record document owns the only scroll surface. */
-@media (min-width: 961px) {
+@media (width >= 64rem) {
   .a-entity-record
     .athyper-page-workspace__body:has(> .a-entity-record-record-body--pinned)
     > .a-record-page-header
     > .a-entity-record__tabs {
     position: sticky;
     top: var(--a-page-sticky-top, calc(var(--shell-topbar, 4.5rem) + var(--shell-crumbs, 0px)));
-    z-index: 16;
+    /* Just below the shell's sticky chrome, which must stay on top while scrolling. */
+    z-index: calc(var(--a-z-sticky) - 4);
   }
   .a-entity-record-record-body--pinned {
     position: sticky;
@@ -248,7 +249,7 @@
 }
 /* Balanced 15 / 65 / 20 workspace: navigation stays legible, content remains primary,
    and summary cards retain a useful decision-support width. */
-@media (min-width: 961px) {
+@media (width >= 64rem) {
   .a-entity-record-record-body--sections.a-entity-record-record-body--summary {
     grid-template-columns: minmax(11rem, 15fr) minmax(0, 65fr) minmax(
         16rem,
@@ -283,7 +284,7 @@
   .a-entity-record-record-body--pinned
     > .a-entity-record-record-content::-webkit-scrollbar-thumb {
     background: transparent;
-    border-radius: 999px;
+    border-radius: var(--a-radius-full);
   }
   .a-entity-record-record-body--pinned
     > .a-entity-record-record-content:is(
@@ -323,7 +324,7 @@
   inline-size: 2.2rem;
   block-size: 1.25rem;
   flex: 0 0 auto;
-  border-radius: 999px;
+  border-radius: var(--a-radius-full);
   background: var(--a-muted);
   transition: background var(--a-motion-fast);
 }
@@ -361,7 +362,7 @@
   gap: var(--a-space-2);
 }
 /* Sticky record chrome has a fixed stack: shell top bar, breadcrumb, then record navigation. */
-@media (min-width: 961px) {
+@media (width >= 64rem) {
   .a-entity-record
     .athyper-page-workspace__body:has(> .a-entity-record-record-body--pinned)
     > .a-record-page-header
@@ -378,7 +379,7 @@
 }
 /* Once record identity has collapsed, the existing mode navigation becomes shell chrome.
    Fixed positioning avoids the record-header containing block clipping its sticky child. */
-@media (min-width: 961px) {
+@media (width >= 64rem) {
   .a-entity-record--header-collapsed
     .a-record-page-header
     > .a-entity-record__tabs {
@@ -395,7 +396,7 @@
 }
 /* After the application page scrolls, promote the record workspace to a fixed three-pane
    surface. Each pane can then manage its own overflow without the application root moving it. */
-@media (min-width: 961px) {
+@media (width >= 64rem) {
   .a-entity-record--header-collapsed .a-entity-record-record-body--pinned {
     /* Preserve the browser's normal page scroll for record identity, while the
        three panes remain anchored below the record navigation. */
@@ -454,7 +455,7 @@
       .a-entity-record-summary-view
     )::-webkit-scrollbar-thumb {
     background: transparent;
-    border-radius: 999px;
+    border-radius: var(--a-radius-full);
   }
   .a-entity-record--header-collapsed
     .a-entity-record-record-body--pinned
@@ -467,7 +468,7 @@
 }
 /* The collapsed record is an application viewport; its fixed panes extend to the
    shell edge and the ordinary page footer does not participate in this mode. */
-@media (min-width: 961px) {
+@media (width >= 64rem) {
   .athyper-shell__body:has(
       .a-entity-record--header-collapsed .a-entity-record-record-body--pinned
     )
@@ -478,7 +479,7 @@
 /* Three-pane record workspace: every independently scrolling pane owns the same
    reading gutter. Scrollbars stay at the pane edge; cards and section controls
    retain clear space on every side. */
-@media (min-width: 961px) {
+@media (width >= 64rem) {
   .a-entity-record-record-body--pinned {
     --a-entity-record-pane-padding: var(--a-space-3);
     --a-entity-record-scrollbar-clearance: 0.5rem;
@@ -506,7 +507,7 @@
     gap: var(--a-space-3);
   }
 }
-@media (min-width: 961px) {
+@media (width >= 64rem) {
   .a-entity-record-record-body--pinned
     > :is(.a-entity-record-section-outline, .a-entity-record-summary-view) {
     overflow-y: auto;
@@ -546,7 +547,7 @@
       .a-entity-record-summary-view
     )::-webkit-scrollbar-thumb {
     background: transparent;
-    border-radius: 999px;
+    border-radius: var(--a-radius-full);
   }
   .a-entity-record-record-body--pinned
     > :is(.a-entity-record-section-outline, .a-entity-record-summary-view):is(
@@ -591,3 +592,27 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Phones: Comments, Files and Activity become icon buttons (their accessible
+   names stay), so the record navigation fits one row instead of clipping the
+   last tab. Wider screens keep the labels; many business tabs still scroll. */
+@media (max-width: 40rem) {
+  .a-entity-record__tabs { gap: 0; }
+  .a-entity-record__tabs .a-entity-record__collaboration-control {
+    min-inline-size: var(--a-touch-target, 2.75rem);
+    justify-content: center;
+    padding-inline: var(--a-space-2);
+  }
+  .a-entity-record__tabs .a-entity-record__collaboration-control > span {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+.a-entity-record__tabs { scrollbar-width: thin; }

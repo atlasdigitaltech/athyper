@@ -192,8 +192,10 @@ function SessionProvider({ session, lifecycle, children }: { readonly session: S
   return <SessionIdentityContext.Provider value={identity}><SessionExpiryContext.Provider value={expiry}><SessionExpiryUpdateContext.Provider value={setTouchedExpiry}><SessionActionsContext.Provider value={actions}>{children}</SessionActionsContext.Provider></SessionExpiryUpdateContext.Provider></SessionExpiryContext.Provider></SessionIdentityContext.Provider>;
 }
 function ExperienceBootstrapProvider({ bootstrap, children }: { readonly bootstrap: ExperienceBootstrap; readonly children: ReactNode }) { const revision = useMemo(() => Object.freeze({ state: bootstrap.state, revision: bootstrap.revision }), [bootstrap.state, bootstrap.revision]); return <ExperienceRevisionContext.Provider value={revision}><ExperienceNavigationContext.Provider value={bootstrap.workspaces}>{children}</ExperienceNavigationContext.Provider></ExperienceRevisionContext.Provider>; }
-function ApiClientProvider({ client, children }: { readonly client: HttpClient; readonly children: ReactNode }) { return <ApiClientContext.Provider value={client}>{children}</ApiClientContext.Provider>; }
-function PermissionProvider({ permissions, children }: { readonly permissions: readonly string[]; readonly children: ReactNode }) { const value = useMemo(() => new Set(permissions), [permissions]); return <PermissionContext.Provider value={value}>{children}</PermissionContext.Provider>; }
+/** Supplies the API client; AppFoundationProviders uses it, and previews or fixtures can too. */
+export function ApiClientProvider({ client, children }: { readonly client: HttpClient; readonly children: ReactNode }) { return <ApiClientContext.Provider value={client}>{children}</ApiClientContext.Provider>; }
+/** Supplies effective permissions; AppFoundationProviders uses it, and previews or fixtures can too. */
+export function PermissionProvider({ permissions, children }: { readonly permissions: readonly string[]; readonly children: ReactNode }) { const value = useMemo(() => new Set(permissions), [permissions]); return <PermissionContext.Provider value={value}>{children}</PermissionContext.Provider>; }
 function FeatureProvider({ features, children }: { readonly features: Readonly<Record<string, ExperienceFeature>>; readonly children: ReactNode }) { return <FeatureContext.Provider value={features}>{children}</FeatureContext.Provider>; }
 
 function SurfaceStackProvider({ children }: { readonly children: ReactNode }) {
@@ -311,6 +313,8 @@ export const useExperienceRevision = () => required(useContext(ExperienceRevisio
 export const useApiClient = () => required(useContext(ApiClientContext), "useApiClient");
 export const usePermissions = () => required(useContext(PermissionContext), "usePermissions");
 export const usePermission = (code: string) => usePermissions().has(code);
+/** For surfaces that can render outside an authenticated app (fixtures, previews): false without a provider. */
+export const useOptionalPermission = (code: string) => useContext(PermissionContext)?.has(code) ?? false;
 export const useFeatures = () => required(useContext(FeatureContext), "useFeatures");
 export const useFeature = (code: string) => useFeatures()[code]?.enabled === true;
 export const useApplicationNavigation = () => required(useContext(ApplicationNavigationContext), "useApplicationNavigation");

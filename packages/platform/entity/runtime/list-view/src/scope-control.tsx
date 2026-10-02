@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { Building2Icon } from "@athyper/platform-icons";
-import { announceOverlayOpened, overlayOpenedEvent } from "@athyper/platform-ui";
+import { ChoiceSelect, announceOverlayOpened, overlayOpenedEvent } from "@athyper/platform-ui";
 
 export interface ListScopeOption {
   readonly value: string;
@@ -90,15 +90,13 @@ export function ListScopeControl(props: ListScopeControlProps) {
       <span className="a-visually-hidden">Authorized</span>
       <span className="a-entity-list__scope-icon" aria-hidden="true"><Building2Icon size={17}/></span>
       <label htmlFor={props.id}><strong>{props.label}</strong></label>
-      <select
+      <ChoiceSelect
         id={props.id}
         value={props.value ?? ""}
         disabled={props.status !== "ready" || !props.options.length}
-        onChange={(event) => props.onChange(event.currentTarget.value || undefined)}
-      >
-        <option value="">{placeholder}</option>
-        {props.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
+        onChange={(value) => props.onChange(value || undefined)}
+        options={[{ value: "", label: placeholder }, ...props.options.map((option) => ({ value: option.value, label: option.label }))]}
+      />
     </div>
   );
 }

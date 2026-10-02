@@ -25,7 +25,18 @@ export function createAtlasRecordDataGateway(options: AtlasRecordDataGatewayOpti
       if (!descriptor || descriptor.planeKey !== context.planeKey || descriptor.entityCode !== request.entityCode) throw new AtlasServiceError("PERMISSION_DENIED", "The requested Atlas entity descriptor is unavailable.");
       const descriptorFields = new Set(descriptor.fields.map((field) => field.key));
       if (request.fields.some((field) => !descriptorFields.has(field))) throw new AtlasServiceError("PERMISSION_DENIED", "The Atlas field projection exceeds the published descriptor.");
-      const result = await options.records.list({ context, entityCode: request.entityCode, limit: request.limit, filters: request.filters, sort: request.sort, countMode: "none", hydrateReferences: false, ...(request.scopeCoordinate?{scopeCoordinate:request.scopeCoordinate}:{}) }).catch(error => { if (error && typeof error === "object" && "code" in error && error.code === "RECORD_LIST_SCOPE_REQUIRED") throw new AtlasScopeSelectionRequiredError(); throw new AtlasServiceError("PERMISSION_DENIED", "The requested Atlas query is unavailable."); });
+      // A tool's exact record selector is independent of published user filter
+      // controls. Use Records' existing ID selection and retain all other filters.
+      const ids = request.filters?.filter(filter => filter.field === descriptor.storage.idField && filter.operator === "eq");
+      const selectedIds = ids?.map(filter => filter.value);
+      if (selectedIds?.some(value => typeof value !== "string" || !value.length) ||
+          new Set(selectedIds).size > 1)
+        throw new AtlasServiceError("INVALID_ARGUMENT", "Atlas record selectors must identify one consistent record.");
+      const filters = ids?.length
+        ? request.filters?.filter(filter => !ids.includes(filter)) : request.filters;
+      const result = await options.records.list({ context, entityCode: request.entityCode, limit: request.limit, filters, sort: request.sort,
+        ...(selectedIds?.length ? {recordIds: selectedIds as string[]} : {}),
+        countMode: "none", hydrateReferences: false, ...(request.scopeCoordinate?{scopeCoordinate:request.scopeCoordinate}:{}) }).catch(error => { if (error && typeof error === "object" && "code" in error && error.code === "RECORD_LIST_SCOPE_REQUIRED") throw new AtlasScopeSelectionRequiredError(); throw new AtlasServiceError("PERMISSION_DENIED", "The requested Atlas query is unavailable."); });
       const projected = await options.fieldSecurity.project({ context, entityCode: request.entityCode, descriptorHash: descriptor.compiledHash, requestedFields: request.fields, rows: result.data });
       if (projected.length !== result.data.length || result.data.length > request.limit) throw new AtlasServiceError("PROVIDER_PROTOCOL_ERROR", "The authorized Atlas projection has invalid cardinality.");
       const rows = projected.map((row) => Object.freeze(Object.fromEntries(request.fields.filter((field) => Object.hasOwn(row, field)).map((field) => [field, row[field]]))));

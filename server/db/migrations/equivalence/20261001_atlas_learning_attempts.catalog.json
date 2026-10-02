@@ -1,0 +1,361 @@
+{
+  "functions": [
+    {
+      "acl": ["athyperadmin=X/postgres", "postgres=X/postgres"],
+      "name": "publication.trg_guard_ledger_mutation()",
+      "owner": "postgres",
+      "definition": "CREATE OR REPLACE FUNCTION publication.trg_guard_ledger_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nBEGIN RAISE EXCEPTION '% is append-only',TG_TABLE_NAME USING ERRCODE='integrity_constraint_violation'; END; $function$\n"
+    }
+  ],
+  "relations": [
+    {
+      "acl": [
+        "athyperadmin=arwdDxt/postgres",
+        "athyperapp=ar/postgres",
+        "postgres=arwdDxt/postgres"
+      ],
+      "rls": true,
+      "kind": "r",
+      "name": "ai.atlas_learning_attempt",
+      "owner": "postgres",
+      "forced": true,
+      "columns": [
+        {
+          "acl": null,
+          "name": "id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "tenant_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "inbox_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "actor_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "proposal_hash",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "revision",
+          "type": "integer",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "source_release_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "source_descriptor_hash",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "source_contract_hash",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "resolver_version",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "scoring_version",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "default": "clock_timestamp()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX atlas_learning_attempt_inbox_ix ON ai.atlas_learning_attempt USING btree (tenant_id, inbox_id, started_at DESC, id DESC)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX atlas_learning_attempt_pkey ON ai.atlas_learning_attempt USING btree (id)"
+        },
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX atlas_learning_attempt_tenant_id_id_key ON ai.atlas_learning_attempt USING btree (tenant_id, id)"
+        }
+      ],
+      "options": null,
+      "policies": [
+        {
+          "name": "atlas_learning_attempt_tenant",
+          "check": "(tenant_id = shared.current_tenant_id())",
+          "roles": ["public"],
+          "using": "(tenant_id = shared.current_tenant_id())",
+          "command": "*",
+          "permissive": true
+        }
+      ],
+      "triggers": [
+        {
+          "name": "atlas_learning_attempt_immutable",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER atlas_learning_attempt_immutable BEFORE DELETE OR UPDATE ON ai.atlas_learning_attempt FOR EACH ROW EXECUTE FUNCTION publication.trg_guard_ledger_mutation()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "atlas_learning_attempt_coordinate_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (tenant_id, inbox_id, proposal_hash) REFERENCES ai.atlas_learning_inbox(tenant_id, id, proposal_hash)"
+        },
+        {
+          "name": "atlas_learning_attempt_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "atlas_learning_attempt_proposal_hash_check",
+          "validated": true,
+          "definition": "CHECK ((proposal_hash ~ '^[0-9a-f]{64}$'::text))"
+        },
+        {
+          "name": "atlas_learning_attempt_resolver_version_check",
+          "validated": true,
+          "definition": "CHECK (((length(resolver_version) >= 1) AND (length(resolver_version) <= 200)))"
+        },
+        {
+          "name": "atlas_learning_attempt_revision_check",
+          "validated": true,
+          "definition": "CHECK ((revision >= 0))"
+        },
+        {
+          "name": "atlas_learning_attempt_scoring_version_check",
+          "validated": true,
+          "definition": "CHECK (((length(scoring_version) >= 1) AND (length(scoring_version) <= 200)))"
+        },
+        {
+          "name": "atlas_learning_attempt_source_contract_hash_check",
+          "validated": true,
+          "definition": "CHECK ((source_contract_hash ~ '^[0-9a-f]{64}$'::text))"
+        },
+        {
+          "name": "atlas_learning_attempt_source_descriptor_hash_check",
+          "validated": true,
+          "definition": "CHECK ((source_descriptor_hash ~ '^[0-9a-f]{64}$'::text))"
+        },
+        {
+          "name": "atlas_learning_attempt_tenant_id_id_key",
+          "validated": true,
+          "definition": "UNIQUE (tenant_id, id)"
+        }
+      ],
+      "replicaIdentity": "d"
+    },
+    {
+      "acl": [
+        "athyperadmin=arwdDxt/postgres",
+        "athyperapp=ar/postgres",
+        "postgres=arwdDxt/postgres"
+      ],
+      "rls": true,
+      "kind": "r",
+      "name": "ai.atlas_learning_attempt_result",
+      "owner": "postgres",
+      "forced": true,
+      "columns": [
+        {
+          "acl": null,
+          "name": "tenant_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "attempt_id",
+          "type": "uuid",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "status",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "failure_code",
+          "type": "text",
+          "default": null,
+          "identity": "",
+          "required": false,
+          "collation": "\"default\"",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "evidence",
+          "type": "jsonb",
+          "default": null,
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        },
+        {
+          "acl": null,
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "default": "clock_timestamp()",
+          "identity": "",
+          "required": true,
+          "collation": "-",
+          "generated": ""
+        }
+      ],
+      "indexes": [
+        {
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX atlas_learning_attempt_result_pkey ON ai.atlas_learning_attempt_result USING btree (attempt_id)"
+        }
+      ],
+      "options": null,
+      "policies": [
+        {
+          "name": "atlas_learning_attempt_result_tenant",
+          "check": "(tenant_id = shared.current_tenant_id())",
+          "roles": ["public"],
+          "using": "(tenant_id = shared.current_tenant_id())",
+          "command": "*",
+          "permissive": true
+        }
+      ],
+      "triggers": [
+        {
+          "name": "atlas_learning_attempt_result_immutable",
+          "enabled": "O",
+          "definition": "CREATE TRIGGER atlas_learning_attempt_result_immutable BEFORE DELETE OR UPDATE ON ai.atlas_learning_attempt_result FOR EACH ROW EXECUTE FUNCTION publication.trg_guard_ledger_mutation()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "atlas_learning_attempt_result_check",
+          "validated": true,
+          "definition": "CHECK ((((status = 'succeeded'::text) AND (failure_code IS NULL)) OR ((status = 'failed'::text) AND (failure_code IS NOT NULL))))"
+        },
+        {
+          "name": "atlas_learning_attempt_result_coordinate_fk",
+          "validated": true,
+          "definition": "FOREIGN KEY (tenant_id, attempt_id) REFERENCES ai.atlas_learning_attempt(tenant_id, id)"
+        },
+        {
+          "name": "atlas_learning_attempt_result_evidence_check",
+          "validated": true,
+          "definition": "CHECK (((jsonb_typeof(evidence) = 'object'::text) AND (pg_column_size(evidence) <= 2048) AND ((evidence - ARRAY['fixtureSetId'::text, 'fixtureContentHash'::text, 'evaluatorFixtureHash'::text, 'evaluatedDescriptorHash'::text, 'fixtureCount'::text, 'passedCount'::text, 'resultHash'::text]) = '{}'::jsonb)))"
+        },
+        {
+          "name": "atlas_learning_attempt_result_failure_code_check",
+          "validated": true,
+          "definition": "CHECK ((failure_code = ANY (ARRAY['LEARNING_FIXTURE_SET_UNAVAILABLE'::text, 'LEARNING_FIXTURE_PROVENANCE_INVALID'::text, 'LEARNING_SOURCE_UNAVAILABLE'::text, 'LEARNING_TARGET_UNSUPPORTED'::text, 'LEARNING_EVALUATOR_CHANGED'::text, 'LEARNING_EVALUATION_FAILED'::text, 'LEARNING_EVALUATION_RECEIPT_INVALID'::text, 'LEARNING_CONTROLLED_FIXTURES_REQUIRED'::text, 'REVIEWER_SEPARATION_REQUIRED'::text, 'LEARNING_CONFLICT'::text, 'LEARNING_INVALID_INPUT'::text, 'LEARNING_ATTEMPT_FAILED'::text])))"
+        },
+        {
+          "name": "atlas_learning_attempt_result_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (attempt_id)"
+        },
+        {
+          "name": "atlas_learning_attempt_result_status_check",
+          "validated": true,
+          "definition": "CHECK ((status = ANY (ARRAY['succeeded'::text, 'failed'::text])))"
+        }
+      ],
+      "replicaIdentity": "d"
+    }
+  ]
+}

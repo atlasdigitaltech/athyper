@@ -1,0 +1,1058 @@
+{
+  "schema": "athyper.table-entity-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "neon"
+  ],
+  "definition": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "person",
+      "entityClass": "business",
+      "ownershipModel": "system"
+    },
+    "runtimeProfiles": [
+      {
+        "id": "0d4e5a4c-9044-561d-986f-8b4a16f4992f",
+        "profileKey": "default",
+        "backingKind": "table",
+        "storagePlane": "neon",
+        "storageSchema": "master",
+        "storageObject": "person",
+        "tenantFieldKey": "tenant_id",
+        "apiExposure": "api",
+        "readMode": "generic",
+        "writeMode": "none",
+        "createMode": "form_only",
+        "concurrencyMode": "none"
+      }
+    ],
+    "operations": [
+      {
+        "id": "f4396a53-9d4c-5f93-9969-1afbcd1526cd",
+        "operationKey": "list",
+        "operationKind": "read",
+        "label": "People",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "code",
+          "name",
+          "first_name",
+          "middle_name",
+          "last_name",
+          "display_name",
+          "preferred_name",
+          "primary_email",
+          "primary_phone",
+          "country_code",
+          "status"
+        ],
+        "auditEventCode": "person.list"
+      },
+      {
+        "id": "c116ad7f-1144-5cc6-bde0-01ac73eb80b9",
+        "operationKey": "read",
+        "operationKind": "read",
+        "label": "View record",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "code",
+          "name",
+          "first_name",
+          "middle_name",
+          "last_name",
+          "display_name",
+          "preferred_name",
+          "primary_email",
+          "primary_phone",
+          "country_code",
+          "status"
+        ],
+        "auditEventCode": "person.read"
+      }
+    ],
+    "operationPermissions": [
+      {
+        "entityOperationId": "f4396a53-9d4c-5f93-9969-1afbcd1526cd",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.person.read",
+        "permissionKind": "capability",
+        "id": "d308ad05-c62e-5e0b-b6d6-4595970ad8ca"
+      },
+      {
+        "entityOperationId": "c116ad7f-1144-5cc6-bde0-01ac73eb80b9",
+        "targetPlane": "neon",
+        "permissionCode": "neon.workforce.person.read",
+        "permissionKind": "capability",
+        "id": "5d7f954d-077f-5fbb-ae23-670eade238c7"
+      }
+    ],
+    "operationScopeBindings": [
+      {
+        "entityOperationId": "f4396a53-9d4c-5f93-9969-1afbcd1526cd",
+        "bindingKey": "list_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "collection",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "a7737c59-1255-535c-bb46-5eda459db478"
+      },
+      {
+        "entityOperationId": "c116ad7f-1144-5cc6-bde0-01ac73eb80b9",
+        "bindingKey": "read_tenant",
+        "targetPlane": "neon",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "50418aa1-c980-55f7-8f10-eb94a5d87bf4"
+      }
+    ],
+    "searchProfiles": [
+      {
+        "id": "e58c7a2f-4502-5422-a516-92f693947b6a",
+        "searchKey": "default",
+        "searchKind": "keyword",
+        "minimumQueryLength": 1,
+        "isDefault": true
+      }
+    ],
+    "fields": [
+      {
+        "id": "7eb6a5ad-d070-5636-b62b-935395bfb347",
+        "fieldKey": "id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "93ecfb57-7fb7-5a64-8fb6-550c7e09788b",
+        "fieldKey": "tenant_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "tenant_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "671cf937-4f46-5870-b1bd-1fb0f1d26e82",
+        "fieldKey": "code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "code",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "2459b84d-008a-5f3b-9d21-4b239b229023",
+        "fieldKey": "name",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "name",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "3927bfb9-ec68-554f-a81b-74e346f43c47",
+        "fieldKey": "first_name",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "first_name",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "82ac5461-b915-59e3-8de2-37cfd0f1413a",
+        "fieldKey": "middle_name",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "middle_name",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "0ef4f3f5-0f40-5bf3-a76e-1673b2ca5fc4",
+        "fieldKey": "last_name",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "last_name",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "901d746e-f56f-5205-b0ba-b47b454de9b6",
+        "fieldKey": "display_name",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "display_name",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "11d18735-e4ea-515f-9907-791320eabfe6",
+        "fieldKey": "preferred_name",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "preferred_name",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "eb490519-c987-50f5-b0ed-4b093c65d36a",
+        "fieldKey": "primary_email",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "primary_email",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "f566d956-0ef4-537f-84e4-6c998a434c0a",
+        "fieldKey": "primary_phone",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "primary_phone",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "ad018e4c-84d9-594c-8ed8-71197b87d8d5",
+        "fieldKey": "country_code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "keyReference": {
+            "targetEntity": "country",
+            "labelField": "name",
+            "fields": [
+              {
+                "source": "country_code",
+                "target": "code"
+              }
+            ]
+          }
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "country_code",
+        "dataClassification": "pii",
+        "status": "active"
+      },
+      {
+        "id": "488c4186-12b7-57c4-8537-df1ae46c1557",
+        "fieldKey": "status",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.person.status"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "status",
+        "dataClassification": "internal",
+        "status": "active"
+      }
+    ],
+    "keys": [
+      {
+        "id": "541c86c7-4700-5812-9aa0-e9d81d3ebb24",
+        "keyKey": "primary",
+        "keyKind": "primary",
+        "uniquenessScope": "global"
+      },
+      {
+        "id": "70f8b971-be03-561f-ae02-62a65d08b5e6",
+        "keyKey": "natural",
+        "keyKind": "natural",
+        "uniquenessScope": "tenant"
+      }
+    ],
+    "keyFields": [
+      {
+        "entityKeyId": "541c86c7-4700-5812-9aa0-e9d81d3ebb24",
+        "entityFieldId": "7eb6a5ad-d070-5636-b62b-935395bfb347",
+        "position": 1,
+        "id": "15767b95-0d25-5998-9d05-ac3b6624275c"
+      },
+      {
+        "entityKeyId": "70f8b971-be03-561f-ae02-62a65d08b5e6",
+        "entityFieldId": "93ecfb57-7fb7-5a64-8fb6-550c7e09788b",
+        "position": 1,
+        "id": "2e41080c-18e3-5772-9a10-285dc8d8151b"
+      },
+      {
+        "entityKeyId": "70f8b971-be03-561f-ae02-62a65d08b5e6",
+        "entityFieldId": "671cf937-4f46-5870-b1bd-1fb0f1d26e82",
+        "position": 2,
+        "id": "acf3542e-324f-5d9c-a79a-f50955304a8d"
+      }
+    ],
+    "searchFields": [
+      {
+        "entitySearchProfileId": "e58c7a2f-4502-5422-a516-92f693947b6a",
+        "entityFieldId": "671cf937-4f46-5870-b1bd-1fb0f1d26e82",
+        "position": 1,
+        "matchMode": "contains",
+        "id": "5c48a0ce-b5c3-50e4-9703-8c3eae30ab17"
+      },
+      {
+        "entitySearchProfileId": "e58c7a2f-4502-5422-a516-92f693947b6a",
+        "entityFieldId": "2459b84d-008a-5f3b-9d21-4b239b229023",
+        "position": 2,
+        "matchMode": "contains",
+        "id": "66c0ed97-0935-5747-943b-31f15ca80233"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "surfaceKey": "list",
+        "surfaceKind": "list",
+        "title": "People",
+        "isDefault": true,
+        "layoutConfig": {
+          "identityField": "code",
+          "defaultState": {
+            "sort": [
+              {
+                "field": "name",
+                "direction": "asc"
+              }
+            ],
+            "density": "comfortable",
+            "mode": "table"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "limits": {
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              10,
+              25,
+              50,
+              100
+            ],
+            "maxSortLevels": 3,
+            "countMode": "exact"
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "person",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "permissionCode": "neon.workforce.person.read",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "permissionCode": "neon.workforce.person.read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "code",
+                "fields": [
+                  "code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "name",
+                "fields": [
+                  "name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "first_name",
+                "fields": [
+                  "first_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "middle_name",
+                "fields": [
+                  "middle_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "last_name",
+                "fields": [
+                  "last_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "display_name",
+                "fields": [
+                  "display_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "preferred_name",
+                "fields": [
+                  "preferred_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "primary_email",
+                "fields": [
+                  "primary_email"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "primary_phone",
+                "fields": [
+                  "primary_phone"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "country_code",
+                "fields": [
+                  "country_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ]
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "surfaceKey": "detail",
+        "surfaceKind": "detail",
+        "title": "People",
+        "layoutConfig": {
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "name",
+            "codeField": "code",
+            "sections": [
+              {
+                "key": "identity",
+                "label": "Personal details",
+                "fields": [
+                  "code",
+                  "name",
+                  "first_name",
+                  "middle_name",
+                  "last_name",
+                  "display_name",
+                  "preferred_name"
+                ]
+              },
+              {
+                "key": "contact",
+                "label": "Contact",
+                "fields": [
+                  "primary_email",
+                  "primary_phone",
+                  "country_code"
+                ]
+              },
+              {
+                "key": "status",
+                "label": "Status",
+                "fields": [
+                  "status"
+                ]
+              },
+              {
+                "key": "employee",
+                "label": "Employee",
+                "fields": [],
+                "relationshipKey": "employee"
+              },
+              {
+                "key": "external_worker",
+                "label": "External workforce",
+                "fields": [],
+                "relationshipKey": "external_worker"
+              },
+              {
+                "key": "addresses",
+                "label": "Addresses",
+                "fields": [],
+                "relationshipKey": "addresses"
+              }
+            ],
+            "actions": [],
+            "entityRelationships": [
+              {
+                "key": "employee",
+                "targetEntity": "employee",
+                "cardinality": "zero_or_one",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "person_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              },
+              {
+                "key": "external_worker",
+                "targetEntity": "external_worker",
+                "cardinality": "zero_or_one",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "person_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              },
+              {
+                "key": "addresses",
+                "targetEntity": "person_address_use",
+                "cardinality": "many",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "person_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "id": "71b6301c-c6e1-514b-bff0-1083632b6b41",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "7eb6a5ad-d070-5636-b62b-935395bfb347",
+        "bindingKey": "list_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "b5cd938d-7e90-51ff-ac85-4d1dbed93fb6",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "93ecfb57-7fb7-5a64-8fb6-550c7e09788b",
+        "bindingKey": "list_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "da1be915-2f9e-52e2-93a8-0bbdea4aaaff",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "671cf937-4f46-5870-b1bd-1fb0f1d26e82",
+        "bindingKey": "list_code",
+        "position": 2,
+        "labelOverride": "Code",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "1397b9a6-9c3f-5d68-a9b7-a8be8402cab1",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "2459b84d-008a-5f3b-9d21-4b239b229023",
+        "bindingKey": "list_name",
+        "position": 3,
+        "labelOverride": "Name",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "6003f554-e0ca-55f4-b700-335ef080bc22",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "3927bfb9-ec68-554f-a81b-74e346f43c47",
+        "bindingKey": "list_first_name",
+        "position": 4,
+        "labelOverride": "First name",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "89ad205a-9cc7-531a-8b03-ec920b0e949a",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "82ac5461-b915-59e3-8de2-37cfd0f1413a",
+        "bindingKey": "list_middle_name",
+        "position": 5,
+        "labelOverride": "Middle name",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "6d016af5-4f1a-52c6-91f5-bb6f459631b3",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "0ef4f3f5-0f40-5bf3-a76e-1673b2ca5fc4",
+        "bindingKey": "list_last_name",
+        "position": 6,
+        "labelOverride": "Last name",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "1cb3f7df-67a7-5198-a4b4-593c792f9e9c",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "901d746e-f56f-5205-b0ba-b47b454de9b6",
+        "bindingKey": "list_display_name",
+        "position": 7,
+        "labelOverride": "Display name",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "26289f71-4f56-5d39-b5fb-ea1fdfe5f0aa",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "11d18735-e4ea-515f-9907-791320eabfe6",
+        "bindingKey": "list_preferred_name",
+        "position": 8,
+        "labelOverride": "Preferred name",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "38f2c3f7-4852-5bd3-ab70-f3cefc25168f",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "eb490519-c987-50f5-b0ed-4b093c65d36a",
+        "bindingKey": "list_primary_email",
+        "position": 9,
+        "labelOverride": "Primary email",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "c605def8-56b0-5b89-807b-0204aa3491d5",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "f566d956-0ef4-537f-84e4-6c998a434c0a",
+        "bindingKey": "list_primary_phone",
+        "position": 10,
+        "labelOverride": "Primary phone",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "47bd70cb-369d-52ec-9e9b-7c4bdfb8f4da",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "ad018e4c-84d9-594c-8ed8-71197b87d8d5",
+        "bindingKey": "list_country_code",
+        "position": 11,
+        "labelOverride": "Country",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "9c2ac132-4b6f-58ee-9ab0-4e3b4e4a22c4",
+        "entitySurfaceId": "d933770f-ffe8-5631-94a4-f5180e3459c4",
+        "entityFieldId": "488c4186-12b7-57c4-8537-df1ae46c1557",
+        "bindingKey": "list_status",
+        "position": 12,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "draft",
+                "label": "Draft"
+              },
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "inactive",
+                "label": "Inactive"
+              },
+              {
+                "value": "archived",
+                "label": "Archived"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "7bbc66bb-61e4-5d59-bc84-f87f3899bde2",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "7eb6a5ad-d070-5636-b62b-935395bfb347",
+        "bindingKey": "detail_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "cc56a10f-1e3a-52c9-a161-38a27e56e9cf",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "93ecfb57-7fb7-5a64-8fb6-550c7e09788b",
+        "bindingKey": "detail_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "84795d22-7b75-5828-9275-7426322086c0",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "671cf937-4f46-5870-b1bd-1fb0f1d26e82",
+        "bindingKey": "detail_code",
+        "position": 2,
+        "labelOverride": "Code",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "f368abc3-1409-59bb-b223-941f63e3a3f8",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "2459b84d-008a-5f3b-9d21-4b239b229023",
+        "bindingKey": "detail_name",
+        "position": 3,
+        "labelOverride": "Name",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "6e535115-9c19-503b-9c06-f57d8bd5ca56",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "3927bfb9-ec68-554f-a81b-74e346f43c47",
+        "bindingKey": "detail_first_name",
+        "position": 4,
+        "labelOverride": "First name",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "febc0e90-0545-54d0-a7c8-7b66c0cf0e7c",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "82ac5461-b915-59e3-8de2-37cfd0f1413a",
+        "bindingKey": "detail_middle_name",
+        "position": 5,
+        "labelOverride": "Middle name",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "80ed2f5b-73ca-51b4-8f58-23cdab686f11",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "0ef4f3f5-0f40-5bf3-a76e-1673b2ca5fc4",
+        "bindingKey": "detail_last_name",
+        "position": 6,
+        "labelOverride": "Last name",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "a7da7d5b-9f2a-51ec-8024-70cfca5eddfa",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "901d746e-f56f-5205-b0ba-b47b454de9b6",
+        "bindingKey": "detail_display_name",
+        "position": 7,
+        "labelOverride": "Display name",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "4a819436-5399-5934-b3c8-ac939d5e99ed",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "11d18735-e4ea-515f-9907-791320eabfe6",
+        "bindingKey": "detail_preferred_name",
+        "position": 8,
+        "labelOverride": "Preferred name",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "9ca54019-2a26-505e-bcb2-aa34e13e1b68",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "eb490519-c987-50f5-b0ed-4b093c65d36a",
+        "bindingKey": "detail_primary_email",
+        "position": 9,
+        "labelOverride": "Primary email",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "4f57d57e-916f-5d6c-a15f-c1580488a5ad",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "f566d956-0ef4-537f-84e4-6c998a434c0a",
+        "bindingKey": "detail_primary_phone",
+        "position": 10,
+        "labelOverride": "Primary phone",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "04f87f7a-7623-5d49-8e16-db1e8fdc6573",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "ad018e4c-84d9-594c-8ed8-71197b87d8d5",
+        "bindingKey": "detail_country_code",
+        "position": 11,
+        "labelOverride": "Country",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "9c80776a-d3af-5466-9b6f-a9f7c3722c8e",
+        "entitySurfaceId": "85b62364-2fb1-5801-b65a-01484aa97d76",
+        "entityFieldId": "488c4186-12b7-57c4-8537-df1ae46c1557",
+        "bindingKey": "detail_status",
+        "position": 12,
+        "labelOverride": "Status",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "draft",
+                "label": "Draft"
+              },
+              {
+                "value": "active",
+                "label": "Active"
+              },
+              {
+                "value": "inactive",
+                "label": "Inactive"
+              },
+              {
+                "value": "archived",
+                "label": "Archived"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "fieldReferenceBindings": [
+      {
+        "id": "61d831a8-2582-5196-b787-a51adfda8bff",
+        "entityFieldId": "ad018e4c-84d9-594c-8ed8-71197b87d8d5",
+        "bindingKey": "country_code_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "country",
+        "status": "active"
+      }
+    ]
+  }
+}

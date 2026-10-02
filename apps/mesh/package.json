@@ -25,6 +25,7 @@
     "@athyper/platform-shell-dashboard": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",
     "@athyper/platform-shell-activity-center-data": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "@athyper/product-mesh-shell": "workspace:*",
     "@athyper/platform-entity-list-view": "workspace:*",
     "@athyper/platform-entity-form-detail": "workspace:*",

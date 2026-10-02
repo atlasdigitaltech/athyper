@@ -10,6 +10,7 @@ import type {
   RecordQueryService,
 } from "@athyper/server-contract-records";
 import { assertAtlasContext } from "./context.js";
+import { resolveAtlasParentScope } from "./entity-parent-scope.js";
 import {
   AtlasServiceError,
   AtlasScopeSelectionRequiredError,
@@ -22,6 +23,8 @@ export interface AtlasResolvedBusinessContext {
   readonly entityDescriptorHash?: string;
   readonly entityContractHash?: string;
   readonly scopeFingerprint: string;
+  /** Produced during authorized context resolution, not accepted from the model. */
+  readonly scopeCoordinate?: ListRecordsQuery["scopeCoordinate"];
 }
 export interface AtlasBusinessContextResolver {
   resolve(
@@ -46,7 +49,7 @@ export function createAtlasBusinessContextResolver(options: {
       const page = readAtlasBusinessContext(value);
       const deny = (): never => {
         throw new AtlasServiceError(
-          "PERMISSION_DENIED",
+          "BUSINESS_CONTEXT_UNAVAILABLE",
           "The requested Atlas business context is unavailable.",
         );
       };
@@ -61,13 +64,13 @@ export function createAtlasBusinessContextResolver(options: {
       )
         return deny();
       if (
-        descriptor.ai &&
-        (!descriptor.ai.enabled ||
-          !descriptor.ai.contextKinds.includes(page.kind))
+        !descriptor.ai?.enabled ||
+        !descriptor.ai.contextKinds.includes(page.kind)
       )
-        return deny();
-      if (!descriptor.ai)
-        return deny();
+        throw new AtlasServiceError(
+          "BUSINESS_CONTEXT_NOT_ENABLED",
+          "Atlas is not enabled for this published Entity context.",
+        );
       if (
         page.workContext?.networkAccountId &&
         !descriptor.ai?.insightProviders.some(
@@ -82,11 +85,12 @@ export function createAtlasBusinessContextResolver(options: {
             context,
             requestId: page.caseId,
           });
-        } catch {
-          return deny();
+        } catch (error) {
+          throwContextFailure(error);
         }
       }
       try {
+        const scopeCoordinate = await resolveAtlasParentScope(options.metadata, context, page);
         const base = {
           context,
           entityCode: page.entityCode,
@@ -115,10 +119,10 @@ export function createAtlasBusinessContextResolver(options: {
             ...base,
             // Tenant-wide directory admission is independent of optional work scope.
             // Work coordinates remain untrusted until a scoped owner evaluates them.
-            ...(descriptor.directoryScope?.mode === "tenant" &&
+            ...(!page.parentScope && descriptor.directoryScope?.mode === "tenant" &&
             !descriptor.collectionRelationship
               ? {}
-              : { scopeCoordinate: page.workContext }),
+              : { scopeCoordinate }),
             recordIds: [page.recordId],
             limit: 1,
           });
@@ -130,20 +134,21 @@ export function createAtlasBusinessContextResolver(options: {
             entityDescriptorHash: descriptor.compiledHash,
             entityContractHash: descriptor.contractHash,
             scopeFingerprint: fingerprint(scoped.scopeFingerprint, page),
+            scopeCoordinate,
           });
         }
         // Directory membership and transaction work coordinates are validated independently.
-        if (page.workContext)
+        if (page.workContext || page.parentScope)
           await options.list({
             ...base,
-            scopeCoordinate: page.workContext,
+            scopeCoordinate,
             limit: 1,
           });
         const directory = page.directory;
         // Independently owned collections retain their validated work target for
         // every row query. Parent directory filters cannot substitute for it.
         // Mixed collection/directory semantics need a registered owner contract.
-        if (descriptor.collectionRelationship && directory) return deny();
+        if ((descriptor.collectionRelationship || page.parentScope) && directory) return deny();
         // The owner eligibility filter requires exactly one explicit organization/company pair.
         const directoryCoordinate =
           directory?.eligibleOperation &&
@@ -164,8 +169,8 @@ export function createAtlasBusinessContextResolver(options: {
           sort: page.sort,
           search: page.search,
           standardViewKey: page.standardViewKey,
-          scopeCoordinate: descriptor.collectionRelationship
-            ? page.workContext
+          scopeCoordinate: descriptor.collectionRelationship || page.parentScope
+            ? scopeCoordinate
             : directoryCoordinate,
           limit: page.pageSize,
         };
@@ -195,6 +200,7 @@ export function createAtlasBusinessContextResolver(options: {
           entityDescriptorHash: descriptor.compiledHash,
           entityContractHash: descriptor.contractHash,
           scopeFingerprint: fingerprint(scoped.scopeFingerprint, page),
+          scopeCoordinate,
         });
       } catch (error) {
         if (
@@ -204,10 +210,28 @@ export function createAtlasBusinessContextResolver(options: {
           error.code === "RECORD_LIST_SCOPE_REQUIRED"
         )
           throw new AtlasScopeSelectionRequiredError();
-        return deny();
+        throwContextFailure(error);
       }
     },
   };
+}
+
+/** Access failures stay opaque; dependency failures must not masquerade as missing scope. */
+function throwContextFailure(error: unknown): never {
+  if (error instanceof AtlasServiceError) throw error;
+  const status =
+    error && typeof error === "object" && "statusCode" in error
+      ? error.statusCode
+      : undefined;
+  if (status === 403 || status === 404)
+    throw new AtlasServiceError(
+      "BUSINESS_CONTEXT_UNAVAILABLE",
+      "The requested Atlas business context is unavailable.",
+    );
+  throw new AtlasServiceError(
+    "BUSINESS_CONTEXT_SERVICE_UNAVAILABLE",
+    "Atlas could not verify the Entity context.",
+  );
 }
 function fingerprint(scope: string, page: AtlasBusinessContextV1) {
   const { generationId: _, ...coordinates } = page;

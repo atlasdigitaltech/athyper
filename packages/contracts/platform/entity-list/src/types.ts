@@ -164,6 +164,7 @@ export interface ListLocationStateV1 extends SaveableListStateV1 {
 }
 
 export interface ListFieldDescriptorV1 {
+  readonly referenceLookup?: {readonly dependencies: readonly string[]};
   readonly key: string;
   readonly label: string;
   /** Optional metadata-defined catalogue section used by field discovery controls. */
@@ -318,6 +319,7 @@ export interface EntityListDescriptorV1 {
 }
 
 export interface EntityListRowV1 {
+  readonly displayValues?: Readonly<Record<string,string>>;
   readonly id: string;
   readonly version?: number;
   readonly values: Readonly<Record<string, JsonValue>>;
@@ -329,6 +331,8 @@ export interface EntityListRowV1 {
 }
 
 export interface EntityListResultV1 {
+  /** Server-evaluated for an authorized, locked owner scope. No source data or coordinates. */
+  readonly sourceAuthority?: { readonly state: 'local' | 'linked' | 'unavailable'; readonly reference?: { readonly entityCode: string; readonly recordId: string } };
   readonly schemaVersion: 1;
   readonly descriptorHash: string;
   readonly scopeFingerprint: string;

@@ -31,3 +31,9 @@ GRANT UPDATE(state,revision,reviewed_by,change_set_id,evaluated_hash,evaluation)
 GRANT SELECT,INSERT ON ai.atlas_learning_candidate_event TO athyperapp;
 GRANT ALL ON ai.atlas_learning_inbox,ai.atlas_learning_candidate_event TO athyperadmin;
 -- END ATLAS F4 LEARNING STUDIO
+
+-- BEGIN ATLAS LEARNING ATTEMPTS
+REVOKE ALL ON ai.atlas_learning_attempt,ai.atlas_learning_attempt_result FROM PUBLIC;
+GRANT SELECT,INSERT ON ai.atlas_learning_attempt,ai.atlas_learning_attempt_result TO athyperapp;
+GRANT ALL ON ai.atlas_learning_attempt,ai.atlas_learning_attempt_result TO athyperadmin;
+-- END ATLAS LEARNING ATTEMPTS

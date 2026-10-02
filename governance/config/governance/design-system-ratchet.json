@@ -1,26 +1,11 @@
 {
   "schemaVersion": 1,
   "policy": "policy:design-system",
-  "capturedAtCommit": "63fc9492b361e97b9edf024be5fb7fb1d38fd4a5",
-  "capturedOn": "2026-09-29",
+  "capturedAtCommit": "0fedc0e97c7a4c5f6b20586d0776c888680435f7",
+  "capturedOn": "2026-10-02",
   "note": "Hand-authored presentation debt predating the token system. Fix down; never up.",
-  "total": 144,
+  "total": 1,
   "files": {
-    "apps/docs-external/src/styles/atlas-theme.css": 37,
-    "apps/docs-internal/public/assets/prototypes/entity-comments-attachments.html": 7,
-    "apps/docs-internal/src/styles/atlas-theme.css": 37,
-    "packages/planes/neon/shell/src/index.tsx": 1,
-    "packages/platform/entity/runtime/form-detail/src/data-surface.tsx": 1,
-    "packages/platform/entity/runtime/form-detail/src/intake-surface.tsx": 1,
-    "packages/platform/foundation/icons/src/atlas-brand.tsx": 1,
-    "packages/platform/foundation/surface-kit/src/public-identity-showcase.css": 1,
-    "packages/platform/foundation/ui/src/date-picker-calendar.tsx": 1,
-    "packages/platform/foundation/ui/src/preview-frame.tsx": 2,
-    "packages/platform/foundation/ui/src/searchable-select.tsx": 2,
-    "packages/platform/foundation/ui/src/styles.css": 15,
-    "packages/platform/iam/identity-gate/src/styles.css": 14,
-    "packages/platform/iam/identity-gate/src/workspace-showcase.tsx": 10,
-    "packages/platform/shell/shell/src/management-workspace.tsx": 1,
-    "packages/platform/shell/shell/src/styles.css": 13
+    "packages/platform/foundation/icons/src/atlas-brand.tsx": 1
   }
 }

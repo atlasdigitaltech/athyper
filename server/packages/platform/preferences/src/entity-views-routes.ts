@@ -1,3 +1,4 @@
+import { withReadEvidence } from "@athyper/server-foundation/context";
 import { randomUUID, createHash } from "node:crypto";
 import type { Application, RequestHandler, Response } from "express";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
@@ -23,6 +24,7 @@ export interface ViewCollectionDescriptor {
 export function registerEntityViewRoutes(
   app: Application,
   options: {
+    diagnostics?: boolean;
     authenticate: RequestHandler;
     readContext: (response: Response) => VerifiedRequestContext;
     service: ReturnType<typeof createSavedViewService>;
@@ -39,24 +41,64 @@ export function registerEntityViewRoutes(
     surface: "entity_list",
     descriptor: async (context, key, query) => {
       const d = await options.descriptor(context, key, query);
-      return {
-        standardViews: (d.standardViews ?? []).map((v) => ({
-          key: v.key,
-          label: resolveEntityText(v.label),
-          state: { ...d.surface.defaultState, standardViewKey: v.key },
-        })),
-        validate: (raw) =>
-          validateViewState(raw, d) as unknown as Record<string, unknown>,
-      };
+      return entityViewDescriptor(d);
     },
   });
 }
+
+function entityViewDescriptor(d: EntityListDescriptorV1): ViewCollectionDescriptor {
+  return {
+    standardViews: (d.standardViews ?? []).map(v => ({
+      key: v.key,
+      label: resolveEntityText(v.label),
+      state: { ...d.surface.defaultState, standardViewKey: v.key },
+    })),
+    validate: raw => validateViewState(raw, d) as unknown as Record<string, unknown>,
+  };
+}
+
+/** Uses an already-authorized descriptor; never resolves or widens parent scope. */
+export async function readEntityViewCatalog(
+  service: ReturnType<typeof createSavedViewService>,
+  context: VerifiedRequestContext,
+  descriptor: EntityListDescriptorV1,
+  surface: string,
+) {
+  if (!/^[a-z][a-z0-9_.-]{0,126}$/.test(surface))
+    throw new TypeError("Invalid collection identifier");
+  return readViewCatalog(service, context, descriptor.entity.code, surface, entityViewDescriptor(descriptor));
+}
+
+async function readViewCatalog(
+  service: ReturnType<typeof createSavedViewService>,
+  context: VerifiedRequestContext,
+  entity: string,
+  surface: string,
+  descriptor: ViewCollectionDescriptor,
+) {
+  const result = await service.collection(context, entity, surface);
+  return {
+    ...result,
+    views: [
+      ...result.views,
+      ...descriptor.standardViews.map(view => ({
+        id: `standard.${view.key}`, name: view.label, scope: "system" as const,
+        version: 1, state: view.state,
+      })),
+    ].map(view => {
+      try { return { ...view, state: descriptor.validate(view.state), compatible: true }; }
+      catch { return { ...view, state: {}, compatible: false }; }
+    }),
+  };
+}
+
 /** Same saved-view commands for entity lists and registered collections. No metadata entity required. */
 export function registerViewCollectionRoutes(
   app: Application,
   options: {
     path: string;
     surface: string;
+    diagnostics?: boolean;
     authenticate: RequestHandler;
     readContext: (response: Response) => VerifiedRequestContext;
     service: ReturnType<typeof createSavedViewService>;
@@ -82,42 +124,30 @@ export function registerViewCollectionRoutes(
         surface !== options.surface
       )
         throw new TypeError("Collection surface is unavailable");
-      const descriptor = await options.descriptor(context, entity, req.query);
-      const read = async () => {
-        const result = await options.service.collection(
-          context,
-          entity,
-          surface,
-        );
-        return {
-          ...result,
-          views: [
-            ...result.views,
-            ...(descriptor.standardViews ?? []).map((view) => ({
-              id: `standard.${view.key}`,
-              name: view.label,
-              scope: "system" as const,
-              version: 1,
-              state: view.state,
-            })),
-          ].map((view) => {
-            try {
-              return {
-                ...view,
-                state: descriptor.validate(view.state),
-                compatible: true,
-              };
-            } catch {
-              return { ...view, state: {}, compatible: false };
-            }
-          }),
-        };
+      const stages: string[] = [];
+      const started = performance.now();
+      const timing = (stage: string, start: number) => {
+        stages.push(`${stage};dur=${(performance.now() - start).toFixed(1)}`);
+        if (options.diagnostics === true) res.setHeader("Server-Timing", stages.join(", "));
       };
       res.setHeader("Cache-Control", "private, no-store");
       if (req.method === "GET") {
-        res.json(await read());
+        const result = await withReadEvidence(async () => {
+          const descriptorStart = performance.now();
+          const descriptor = await options.descriptor(context, entity, req.query);
+          timing("descriptor", descriptorStart);
+          const viewsStart = performance.now();
+          const catalog = await readViewCatalog(options.service, context, entity, surface, descriptor);
+          timing("views", viewsStart);
+          return catalog;
+        });
+        timing("total", started);
+        res.json(result);
         return;
       }
+      // Commands deliberately do not share read evidence across mutations.
+      const descriptor = await options.descriptor(context, entity, req.query);
+      const read = () => readViewCatalog(options.service, context, entity, surface, descriptor);
       const value = req.body as Record<string, unknown>;
       if (!value || typeof value !== "object" || Array.isArray(value))
         throw new TypeError("Expected a view command");

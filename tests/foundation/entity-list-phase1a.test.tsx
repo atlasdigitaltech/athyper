@@ -1,3 +1,6 @@
+import { IntlProvider } from "../../packages/platform/foundation/i18n/src/react";
+import { createEffectiveLocalization } from "../../packages/platform/foundation/i18n/src/index";
+import { entityMessages } from "../../packages/platform/foundation/i18n/src/entity-catalogs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
@@ -10,6 +13,7 @@ import type {
 } from "@athyper/contract-platform-entity-list";
 import { ENTITY_LIST_MAX_SEARCH_LENGTH } from "../../packages/contracts/platform/entity-list/src/index";
 import {
+  entityListOperation,
   entityViewsOperation,
   entityViewCommandOperation,
   entityApplicationDescriptorOperation,
@@ -533,24 +537,31 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
         new dom.window.MouseEvent("click", { bubbles: true }),
       ),
     );
+    // The page header counts with the catalogue's singular form.
+    const headerText = dom.window.document.querySelector(".a-entity-list__header")?.textContent ?? "";
+    assert.match(headerText, /· 1 record(?!s)/);
+    assert.doesNotMatch(headerText, /1 records/);
+    // Docked list controls: an overlay tool panel (modal) until pinned.
     assert.equal(
-      dom.window.document
-        .querySelector(".a-drawer-layer")
-        ?.getAttribute("data-mobile-presentation"),
-      "fullscreen",
+      dom.window.document.querySelector(".a-tool-panel")?.getAttribute("data-mode"),
+      "drawer",
     );
     assert.match(
       dom.window.document.querySelector('[role="dialog"]')?.textContent ?? "",
-      /Filters.*authorized business partners list.*Records.*1.*Active filters.*0.*State.*Current.*Quick filters.*All filters.*Status.*1 record matching/,
+      /Filters.*Refine the Business Partners list.*Business Partners · Operations.*1 record.*Quick filters.*All filters.*Status/,
     );
+    // One panel-level context row; no per-section stats and no footer summary for a clean draft.
+    assert.equal(dom.window.document.querySelectorAll(".a-tool-panel .a-panel-context").length, 1);
+    assert.equal(dom.window.document.querySelectorAll(".a-tool-panel .a-drawer__metric").length, 0);
+    assert.equal(dom.window.document.querySelectorAll(".a-tool-panel .a-drawer__footer-summary").length, 0);
     assert.doesNotMatch(
       dom.window.document.querySelector('[role="dialog"]')?.textContent ?? "",
       /Frequently used|Common filters/,
     );
-    assert.ok(dom.window.document.querySelector(".a-drawer__header-icon svg"));
+    assert.ok(dom.window.document.querySelector(".a-panel-header__icon svg"));
     assert.ok(
       dom.window.document.querySelector(
-        'select[aria-label="Operator for quick Status filter"]',
+        'button[aria-label^="Operator for quick Status filter"]',
       ),
     );
     assert.equal(
@@ -598,7 +609,7 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     );
     assert.equal(
       dom.window.document.querySelector<HTMLInputElement>(
-        'input[placeholder="Search filterable fields by name or code…"]',
+        '.a-entity-list__field-catalogue input[placeholder="Search fields…"]',
       )?.value,
       "",
     );
@@ -619,7 +630,7 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     );
     assert.ok(
       dom.window.document.querySelector(
-        'select[aria-label="Field for filter 1"]',
+        'input[role="combobox"][aria-label="Field for filter 1"]',
       ),
     );
     assert.ok(
@@ -627,11 +638,7 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
         '[aria-label^="Value for "][aria-label$=" filter 1"]',
       ),
     );
-    const filterCancel = [
-      ...dom.window.document.querySelectorAll<HTMLButtonElement>(
-        '[role="dialog"] button',
-      ),
-    ].find((button) => button.textContent === "Cancel");
+    const filterCancel = dom.window.document.querySelector<HTMLButtonElement>('[aria-label="Close list controls"]');
     await act(async () =>
       filterCancel?.dispatchEvent(
         new dom.window.MouseEvent("click", { bubbles: true }),
@@ -648,12 +655,20 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     const sortDialog = dom.window.document.querySelector('[role="dialog"]');
     assert.match(
       sortDialog?.textContent ?? "",
-      /Sort.*business partners.*Records.*1.*Sort levels.*1.*Maximum.*1.*Display Name.*Descending.*1 active sort level/,
+      /Sort.*Choose the order of Business Partners.*1 record.*Add sort level · 1 of 1/,
     );
-    assert.ok(sortDialog?.querySelector(".a-drawer__header-icon svg"));
+    assert.equal(
+      sortDialog?.querySelector<HTMLInputElement>('input[role="combobox"][aria-label="Field for sort 1"]')?.value,
+      "Display Name",
+    );
+    // Visible direction wording follows the field type (text: Z→A); the accessible name stays Descending.
+    const checkedDirection = sortDialog?.querySelector('[role="radiogroup"][aria-label="Direction for sort 1"] [aria-checked="true"]');
+    assert.equal(checkedDirection?.querySelector('[aria-hidden="true"]')?.textContent, "Z→A");
+    assert.equal(checkedDirection?.querySelector(".a-visually-hidden")?.textContent, "Descending");
+    assert.ok(sortDialog?.querySelector(".a-panel-header__icon svg"));
     assert.ok(
       sortDialog?.querySelector(
-        'select[aria-label="Field for sort 1"]',
+        'input[role="combobox"][aria-label="Field for sort 1"]',
       ),
     );
     assert.equal(
@@ -662,9 +677,7 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
       )?.disabled,
       true,
     );
-    const sortCancel = [
-      ...sortDialog!.querySelectorAll<HTMLButtonElement>("button"),
-    ].find((button) => button.textContent === "Cancel");
+    const sortCancel = dom.window.document.querySelector<HTMLButtonElement>('[aria-label="Close list controls"]');
     await act(async () =>
       sortCancel?.dispatchEvent(
         new dom.window.MouseEvent("click", { bubbles: true }),
@@ -681,9 +694,9 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     const columnDialog = dom.window.document.querySelector('[role="dialog"]');
     assert.match(
       columnDialog?.textContent ?? "",
-      /Columns.*business partners.*Fields.*3.*Visible.*3.*Maximum.*100.*Visible columns.*3 selected.*Available fields.*3 visible columns/,
+      /Columns.*Business Partners.*1 record.*Visible columns.*3 selected.*Available fields/,
     );
-    assert.ok(columnDialog?.querySelector(".a-drawer__header-icon svg"));
+    assert.ok(columnDialog?.querySelector(".a-panel-header__icon svg"));
     assert.equal(
       columnDialog?.querySelectorAll<HTMLButtonElement>(
         '.a-entity-list__column-grip[draggable="true"]',
@@ -694,7 +707,7 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
       columnDialog
         ?.querySelector<HTMLInputElement>("#entity-list-column-search")
         ?.getAttribute("placeholder"),
-      "Search fields by name or code…",
+      "Search fields…",
     );
     const displayNameVisibility = columnDialog?.querySelector<HTMLInputElement>(
       'input[aria-label="Show Display Name"]',
@@ -735,6 +748,13 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     assert.equal(
       new dom.window.URLSearchParams(dom.window.location.search).get("cols"),
       null,
+    );
+    // The columns draft had no net change, so the overlay is still open and modal;
+    // close it before using the list toolbar behind it.
+    await act(async () =>
+      dom.window.document
+        .querySelector<HTMLButtonElement>('[aria-label="Close list controls"]')
+        ?.click(),
     );
     const more = [
       ...dom.window.document.querySelectorAll<HTMLButtonElement>("button"),
@@ -1186,7 +1206,7 @@ test("canonical entity route preserves saved views and repeated query values", a
   );
 });
 
-test("application failure replaces loading header with themed retry state", async () => {
+test("unexpected application failure replaces loading header with safe themed retry state", async () => {
   const dom = new JSDOM('<div id="root"></div>', {
     url: "https://neon.test/partners",
   });
@@ -1228,11 +1248,19 @@ test("application failure replaces loading header with themed retry state", asyn
     );
     assert.equal(
       dom.window.document.querySelector('[role="alert"] h2')?.textContent,
-      "This application is unavailable",
+      "Something went wrong",
+    );
+    assert.match(
+      dom.window.document.querySelector('[role="alert"]')?.textContent ?? "",
+      /The page could not be loaded\. Try again\./,
+    );
+    assert.doesNotMatch(
+      dom.window.document.querySelector('[role="alert"]')?.textContent ?? "",
+      /The requested platform operation is not allowlisted/,
     );
     assert.equal(
-      dom.window.document.querySelector("details")?.hasAttribute("open"),
-      false,
+      dom.window.document.querySelector("details[open]"),
+      null,
     );
     assert.ok(
       dom.window.document.querySelector(".a-entity-list__state--empty"),
@@ -1431,7 +1459,7 @@ test("Manage views exposes System default and permission-gated tenant defaults",
     const drawer = dom.window.document.querySelector('[role="dialog"]')!;
     assert.ok(drawer);
     const viewTabs = [
-      ...drawer.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+      ...drawer.querySelectorAll<HTMLButtonElement>('[data-list-drawer="views"] [role="tab"]'),
     ];
     assert.deepEqual(
       viewTabs.map((tab) => tab.textContent),
@@ -1555,19 +1583,13 @@ test("column filters preserve other fields, synchronize chips and dismiss withou
       dom.window.document.body,
       "Popover escapes the scrolling table container",
     );
-    assert.deepEqual(
-      [...dialog.querySelectorAll('select[aria-label^="Operator"] option')].map(
-        (option) => option.getAttribute("value"),
-      ),
-      ["eq", "in"],
-    );
-    const value = dialog.querySelector<HTMLSelectElement>(
-      'select[aria-label^="Value"]',
-    )!;
-    await act(async () => {
-      value.value = "draft";
-      value.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
-    });
+    // Enum values use a dropdown and retain their stored codes.
+    assert.ok(dialog.querySelector('button[aria-label^="Operator for Status filter 1"]'));
+    await click('[role="combobox"][aria-label="Value for Status filter 1"]');
+    const value = [...dom.window.document.querySelectorAll<HTMLElement>('[role="option"]')]
+      .find(option => option.textContent?.startsWith("Draft"));
+    assert.ok(value, `Published enum option is available: ${dom.window.document.body.textContent}`);
+    await act(async () => value.click());
     await act(async () =>
       [...dialog.querySelectorAll<HTMLButtonElement>("button")]
         .find((button) => button.textContent === "Apply")!
@@ -1675,34 +1697,16 @@ test("one drawer selector preserves drafts within a session and uses metadata av
   } as unknown as HttpClient;
   const root = createRoot(dom.window.document.getElementById("root")!);
   const switchTo = async (label: string) => {
-    await act(async () =>
-      dom.window.document
-        .querySelector<HTMLButtonElement>(
-          '[aria-label^="Switch list controls"]',
-        )!
-        .click(),
-    );
-    const menu = dom.window.document.querySelector(
-      ".a-entity-list__drawer-menu",
-    )!;
-    assert.deepEqual(
-      [...menu.querySelectorAll('[role="menuitem"] span')].map(
-        (item) => item.textContent,
+    const tabs = [
+      ...dom.window.document.querySelectorAll<HTMLButtonElement>(
+        '[role="tablist"][aria-label="List controls"] [role="tab"]',
       ),
-      [
-        "Filters",
-        "Sort",
-        "Columns",
-        "Group by",
-        "Display settings",
-        "Manage views",
-      ],
+    ];
+    assert.deepEqual(
+      tabs.map((tab) => tab.textContent),
+      ["Filters", "Sort", "Columns", "Group", "Display", "Views"],
     );
-    await act(async () =>
-      [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
-        .find((item) => item.textContent === label)!
-        .click(),
-    );
+    await act(async () => tabs.find((tab) => tab.textContent === label)!.click());
   };
   try {
     await act(async () =>
@@ -1717,28 +1721,30 @@ test("one drawer selector preserves drafts within a session and uses metadata av
     );
     const drawer = dom.window.document.querySelector('[role="dialog"]');
     const calls = listCalls;
-    await switchTo("Group by");
-    const group = dom.window.document.querySelector<HTMLSelectElement>(
-      '[data-list-drawer="group"] select',
+    await switchTo("Group");
+    const group = dom.window.document.querySelector<HTMLInputElement>(
+      '[data-list-drawer="group"] input[role="combobox"]',
     )!;
-    await act(async () => {
-      group.value = "status";
-      group.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
-    });
+    await act(async () => group.click());
+    await act(async () =>
+      [...dom.window.document.querySelectorAll<HTMLElement>('[role="option"]')]
+        .find((option) => option.textContent?.includes("Status"))!
+        .click(),
+    );
     await switchTo("Sort");
-    await switchTo("Group by");
+    await switchTo("Group");
     assert.equal(
       dom.window.document.querySelector('[role="dialog"]'),
       drawer,
       "Same drawer and backdrop survive switches",
     );
     assert.equal(
-      dom.window.document.querySelectorAll(".a-drawer-layer").length,
+      dom.window.document.querySelectorAll(".a-tool-panel").length,
       1,
     );
     assert.equal(
       group.value,
-      "status",
+      "Status",
       "Unapplied grouping draft survives switching",
     );
     assert.equal(listCalls, calls, "Switching does not apply a query");
@@ -1762,38 +1768,13 @@ test("one drawer selector preserves drafts within a session and uses metadata av
         }),
       );
     });
-    assert.match(
-      dom.window.document.activeElement?.getAttribute("aria-label") ?? "",
-      /^Switch list controls/,
+    assert.ok(
+      drawer?.contains(dom.window.document.activeElement),
+      "Tab stays inside the overlay tool panel",
     );
     await act(async () =>
       dom.window.document
-        .querySelector<HTMLButtonElement>(
-          '[aria-label^="Switch list controls"]',
-        )!
-        .click(),
-    );
-    await act(async () =>
-      dom.window.document.querySelector('[role="menuitem"]')!.dispatchEvent(
-        new dom.window.KeyboardEvent("keydown", {
-          key: "Escape",
-          bubbles: true,
-          cancelable: true,
-        }),
-      ),
-    );
-    assert.equal(
-      dom.window.document.querySelector(".a-entity-list__drawer-menu"),
-      null,
-    );
-    assert.equal(
-      dom.window.document.querySelector('[role="dialog"]'),
-      drawer,
-      "Escape dismisses the selector before the drawer",
-    );
-    await act(async () =>
-      dom.window.document
-        .querySelector<HTMLButtonElement>('[aria-label="Close group by"]')!
+        .querySelector<HTMLButtonElement>('[aria-label="Close list controls"]')!
         .click(),
     );
     await act(async () =>
@@ -1801,10 +1782,10 @@ test("one drawer selector preserves drafts within a session and uses metadata av
         .querySelector<HTMLButtonElement>('[aria-label="Filters"]')!
         .click(),
     );
-    await switchTo("Group by");
+    await switchTo("Group");
     assert.equal(
-      dom.window.document.querySelector<HTMLSelectElement>(
-        '[data-list-drawer="group"] select',
+      dom.window.document.querySelector<HTMLInputElement>(
+        '[data-list-drawer="group"] input[role="combobox"]',
       )!.value,
       "",
       "Closing discards unapplied drafts",
@@ -2137,7 +2118,7 @@ test("directory filters are metadata-gated and stage company changes until Apply
       true,
     );
     assert.equal(calls, 0);
-    await clickText("Cancel");
+    await click('[aria-label="Close list controls"]');
     assert.equal(calls, 0);
     await click('[aria-label="Filters"]');
     await clickText("Company");
@@ -2295,18 +2276,20 @@ test("scope quick filters stage values, enforce dependencies and reset", async (
       target.click();
     });
 
-  const change = async (label: string, value: string) =>
-    act(async () => {
-      const input = dom.window.document.querySelector<HTMLSelectElement>(
-        `select[aria-label="${label}"]`,
-      )!;
-      input.value = value;
-      input.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
-    });
-  const eligibility = () =>
-    dom.window.document.querySelector<HTMLSelectElement>(
-      'select[aria-label="Eligible for transactions"]',
+  // Quick scope filters are design-system ChoiceSelects: open the list, pick an option.
+  const combobox = (label: string) =>
+    dom.window.document.querySelector<HTMLButtonElement>(
+      `[role="combobox"][aria-label="${label}"]`,
     )!;
+  const change = async (label: string, value: string) => {
+    await act(async () => combobox(label).click());
+    await act(async () =>
+      dom.window.document
+        .querySelector<HTMLElement>(`[role="option"][data-value="${value}"]`)!
+        .click(),
+    );
+  };
+  const eligibility = () => combobox("Eligible for transactions");
   try {
     await act(async () => root.render(<App />));
     await click('[aria-label^="Filters"]');
@@ -2320,10 +2303,10 @@ test("scope quick filters stage values, enforce dependencies and reset", async (
     assert.equal(eligibility().disabled, false);
     await change("Eligible for transactions", "order");
     assert.equal(calls, 0);
-    await clickText("Cancel");
+    await click('[aria-label="Close list controls"]');
     assert.equal(calls, 0);
     await click('[aria-label^="Filters"]');
-    assert.equal(eligibility().value, "");
+    assert.equal(eligibility().textContent, "Any");
     await change("Role", "supplier");
     await clickText("Company");
     await click(".a-company-groups__row input");
@@ -2338,13 +2321,14 @@ test("scope quick filters stage values, enforce dependencies and reset", async (
         '[aria-label="Remove Eligible for transactions filter"]',
       ),
     );
-    await click('[aria-label^="Filters"]');
-    assert.equal(eligibility().value, "order");
+    // Reopen from the toolbar; its label now reports the active filter count.
+    await click(".a-entity-list__toolbar-actions .a-entity-list__toolbar-action");
+    assert.equal(eligibility().textContent, "Orders");
     await clickText("Company");
     await click(".a-company-groups__row:nth-child(2) input");
     await clickText("Quick filters");
     assert.equal(eligibility().disabled, true);
-    assert.equal(eligibility().value, "");
+    assert.equal(eligibility().textContent, "Any");
     await clickText("Reset filters");
     await click(".a-entity-list__filter-actions button:last-child");
     assert.equal(calls, 2);
@@ -2553,4 +2537,92 @@ test("embedded chooser reuses directory, selects one record, and leaves parent U
     await act(async()=>root.render(<EntityListRuntime client={client} entityCode="business_partner" contentOnly embedding={{options:parseEntityLookupOptions({mode:"browse"}),selectedRows:[],onSelectionChange:()=>{throw Error("Browse must not select");}}}/>));
     assert.equal(dom.window.document.querySelectorAll('input[type="radio"],input[type="checkbox"]').length,0);
   } finally {await act(async()=>root.unmount());dom.window.close();for(const [key,d] of prior){if(d)Object.defineProperty(globalThis,key,d);else Reflect.deleteProperty(globalThis,key);}}
+});
+
+test("combined list bootstrap preserves saved filters and parent scope before rows, without StrictMode restarts", async () => {
+  const dom = new JSDOM('<div id="root"></div>', { url: "https://neon.example.test/app/entity/business_partner" });
+  const globals = ["window", "document", "navigator", "Element", "HTMLElement", "MouseEvent", "IS_REACT_ACT_ENVIRONMENT"];
+  const previous = globals.map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
+  for (const key of globals) Object.defineProperty(globalThis, key, { configurable: true, value: key === "IS_REACT_ACT_ENVIRONMENT" ? true : (dom.window as unknown as Record<string, unknown>)[key] });
+  const base = descriptor(digest("b"));
+  const scope = { parentEntityCode: "principal", parentRecordId: "01a0d433-806b-7874-862d-49a9b955f6a1", relationshipKey: "notifications" };
+  const saved = { ...base.surface.defaultState, filters: [{ field: "code", operator: "eq" as const, value: "ABC" }], sort: [{ field: "code", direction: "desc" as const }] };
+  const catalog = { views: [{ id: "mine", name: "Mine", scope: "personal" as const, version: 1, compatible: true, state: saved }], personalDefault: "mine", capabilities: { createShared: false, manageShared: false, setSharedDefault: false } };
+  assert.deepEqual(entityListDescriptorOperation.parse({ ...base, serverViews: true, viewCatalog: catalog }).viewCatalog?.personalDefault, "mine");
+  let descriptors = 0, views = 0;
+  const rows: Record<string, unknown>[] = [];
+  const client = { request: async (operation: unknown, options: { query?: Record<string, unknown> }) => {
+    if (operation === entityListDescriptorOperation) {
+      descriptors++;
+      assert.deepEqual(options.query, { ...scope, includeViews: "true", surface: "principal.notifications" });
+      return { ...base, serverViews: true, viewCatalog: catalog };
+    }
+    if (operation === entityViewsOperation) { views++; return catalog; }
+    if (operation === entityListOperation) { rows.push(options.query!); return page(digest("b"), "ABC"); }
+    if (operation === recordBookmarkMembershipOperation) return new Set();
+    return [];
+  } } as unknown as HttpClient;
+  const root = createRoot(dom.window.document.getElementById("root")!);
+  try {
+    await act(async () => root.render(<React.StrictMode><EntityListRuntime client={client} entityCode="business_partner" scopeCoordinate={scope} viewNamespace="principal.notifications" /></React.StrictMode>));
+    assert.equal(descriptors, 1);
+    assert.equal(views, 0);
+    assert.equal(rows.length, 1);
+    assert.deepEqual(rows[0]!.sort, ["code:desc"]);
+    assert.equal(rows[0]!.parentRecordId, scope.parentRecordId);
+    assert.match(JSON.stringify(rows[0]), /ABC/);
+  } finally {
+    await act(async () => root.unmount());
+    for (const [key, value] of previous) { if (value) Object.defineProperty(globalThis, key, value); else Reflect.deleteProperty(globalThis, key); }
+    dom.window.close();
+  }
+});
+
+test("presentation context updates keep list reads and rows steady, while scope changes reload", async () => {
+  const dom = new JSDOM('<div id="root"></div>', { url: "https://neon.test/partners" });
+  const keys = ["window", "document", "navigator", "Element", "HTMLElement", "MouseEvent", "IS_REACT_ACT_ENVIRONMENT"];
+  const previous = keys.map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
+  for (const key of keys) Object.defineProperty(globalThis, key, { configurable: true, value: key === "IS_REACT_ACT_ENVIRONMENT" ? true : (dom.window as unknown as Record<string, unknown>)[key] });
+  const localization = createEffectiveLocalization({ uiLocale: "en", formatLocale: "en-US" });
+  let descriptors = 0;
+  const reads: AbortSignal[] = [];
+  let resolveRows: ((result: EntityListResultV1) => void) | undefined;
+  const client = { request: async (operation: unknown, options: { signal: AbortSignal }) => {
+    if (operation === entityListDescriptorOperation) { descriptors++; return descriptor(digest("b")); }
+    if (operation === entityListOperation) {
+      reads.push(options.signal);
+      if (reads.length === 1) return new Promise<EntityListResultV1>(resolve => { resolveRows = resolve; });
+      return page(digest("b"), "STABLE-ROW");
+    }
+    if (operation === recordBookmarkMembershipOperation) return new Set();
+    return [];
+  } } as unknown as HttpClient;
+  const root = createRoot(dom.window.document.getElementById("root")!);
+  const render = (label: string, organization = "org-1") => root.render(
+    <IntlProvider localization={localization} messages={{ ...entityMessages("en"), "entity.controls": label }}>
+      <EntityListRuntime client={client} entityCode="business_partner" scopeCoordinate={{ operatingOrganizationId: organization }} />
+    </IntlProvider>,
+  );
+  try {
+    await act(async () => render("Controls"));
+    assert.equal(reads.length, 1);
+    await act(async () => render("Controls updated"));
+    assert.equal(reads.length, 1, "presentation updates must not restart pending reads");
+    assert.equal(reads[0]!.aborted, false);
+    await act(async () => resolveRows!(page(digest("b"), "STABLE-ROW")));
+    const row = dom.window.document.querySelector("tbody tr");
+    assert.ok(row);
+    await act(async () => render("Controls again"));
+    assert.equal(reads.length, 1, "settled rows must not refetch on presentation updates");
+    assert.equal(dom.window.document.querySelector("tbody tr"), row);
+    assert.ok(dom.window.document.querySelector('[aria-label="Controls again"]'), "presentation still updates");
+    assert.equal(descriptors, 1);
+    await act(async () => render("Controls again", "org-2"));
+    assert.equal(descriptors, 2);
+    assert.equal(reads.length, 2, "a genuine authority change must reload");
+  } finally {
+    await act(async () => root.unmount());
+    for (const [key, value] of previous) { if (value) Object.defineProperty(globalThis, key, value); else Reflect.deleteProperty(globalThis, key); }
+    dom.window.close();
+  }
 });

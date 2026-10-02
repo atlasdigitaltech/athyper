@@ -6,6 +6,9 @@ export interface RecordListScopeCoordinate {
   readonly parentEntityCode?: string;
   readonly parentRecordId?: string;
   readonly relationshipKey?: string;
+  /** Optional publication pin, checked by the registered parent resolver. A
+   * mismatch narrows admission to denial; it never supplies authority. */
+  readonly parentDescriptorHash?: string;
   readonly companyCodeIds?: readonly string[];
   readonly operatingOrganizationIds?: readonly string[];
   readonly partnerRole?: "supplier" | "customer";
@@ -61,6 +64,7 @@ export interface GetRecordQuery {
 }
 
 export interface RecordListResult {
+  readonly sourceAuthority?: { readonly state: 'local' | 'linked' | 'unavailable'; readonly reference?: { readonly entityCode: string; readonly recordId: string } };
   readonly data: readonly Readonly<Record<string, unknown>>[];
   readonly groups?: readonly Readonly<{ readonly value: unknown; readonly count: number }>[];
   readonly pagination: {

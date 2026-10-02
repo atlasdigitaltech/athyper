@@ -1726,6 +1726,7 @@ export function createRecordTransferService<Transaction>(options: {
             "EXPORT_AUTHORIZATION_FIELDS_MISSING",
             "Export fields are unavailable",
           );
+        assertExportFieldAdmission(descriptor, fields);
         await authorizeDescriptorOperation(
           options.authorizer,
           context,

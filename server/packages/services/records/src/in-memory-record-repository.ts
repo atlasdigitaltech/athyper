@@ -89,8 +89,15 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
 }
 
 function toStorage(descriptor: EntityRuntimeDescriptor, input: Readonly<Row>): Row { const fields = new Map(descriptor.fields.map((field) => [field.key, field.storagePath])); return Object.fromEntries(Object.entries(input).map(([key, value]) => [fields.get(key) ?? key, value])); }
-function visible(descriptor: EntityRuntimeDescriptor, row: Row): boolean { return !descriptor.storage.softDeleteField || row[descriptor.storage.softDeleteField] === null || row[descriptor.storage.softDeleteField] === undefined; }
+function visible(descriptor: EntityRuntimeDescriptor, row: Row): boolean { return (!descriptor.storage.softDeleteField || row[descriptor.storage.softDeleteField] === null || row[descriptor.storage.softDeleteField] === undefined) && (descriptor.recordPredicates ?? []).every(predicate => matches(row, descriptor, predicate)); }
 function collectionScopeMatches(descriptor: EntityRuntimeDescriptor, row: Row, constraint: RecordRepositoryListInput["collectionScope"][number]): boolean {
+  if (constraint.kind === "entity.parent.v1") {
+    if (constraint.entityCode !== descriptor.entityCode || constraint.storageSchema !== descriptor.storage.schema ||
+        constraint.storageObject !== descriptor.storage.object || !constraint.predicates.length ||
+        constraint.predicates.some(predicate => !descriptor.fields.some(field => field.key === predicate.field)))
+      throw new Error("Parent collection scope cannot be applied to this descriptor");
+    return constraint.predicates.every(predicate => value(row, descriptor, predicate.field) === predicate.value);
+  }
   if (constraint.kind === "neon.business_partner.directory.v1") return false; // Relationship admission requires the database adapter.
   if (constraint.kind === "platform.document_relationship.v1") return false; // Registered document relationships require the database adapter.
   if (constraint.kind === "neon.business_partner.operating_organization.v1") {

@@ -87,7 +87,8 @@ function fixture(collectionProviders?: Parameters<typeof createEntityActivityPro
     nullable: null,
     secret: "must not capture",
   }));
-  const provider = createEntityActivityProvider({
+  const admitDescriptor = vi.fn(async (descriptor: Parameters<Parameters<typeof createEntityActivityProvider>[0]["admitDescriptor"]>[0]) => descriptor);
+  const provider = createEntityActivityProvider({ admitDescriptor,
     reader: { artifactByKey: async () => runtimeArtifact } as never,
     collectionProviders,
     authorizer: {
@@ -122,6 +123,7 @@ function fixture(collectionProviders?: Parameters<typeof createEntityActivityPro
     run,
     read,
     provider,
+    admitDescriptor,
     subject,
     admission,
   };
@@ -418,4 +420,12 @@ it("rejects a historical same-key field with changed interpretation", async () =
     await expect(f.provider.compare(f.subject, f.admission, "older", "newer"))
       .rejects.toMatchObject({ status: 409 });
   } finally { await f.database.destroy(); vi.restoreAllMocks(); }
+});
+
+it("rejects activity reads before storage access when pinned readiness is revoked", async () => {
+  const f = fixture();
+  f.admitDescriptor.mockRejectedValue(Error("ENTITY_DEPLOYMENT_NOT_READY"));
+  await expect(f.provider.snapshot(f.subject, f.admission, "snapshot")).rejects.toThrow("ENTITY_DEPLOYMENT_NOT_READY");
+  expect(f.get).not.toHaveBeenCalled();
+  expect(f.read).not.toHaveBeenCalled();
 });

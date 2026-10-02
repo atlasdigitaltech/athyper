@@ -1722,7 +1722,7 @@ BEGIN
          OR (split_part(item->>'permissionCode','.',1)<>lower(p_plane_code)
              AND item->>'permissionCode' NOT IN ('common.platform.reference.view',
                'common.identity.principal.read','common.identity.principal_profile.read','common.identity.principal_profile.edit',
-               'common.identity.principal_notification_preference.read','common.identity.principal_notification_preference.edit'))
+               'common.identity.principal_notification_preference.read','common.identity.principal_notification_preference.edit','common.identity.principal_ui_profile.read','common.identity.principal_ui_profile.edit'))
          OR split_part(item->>'permissionCode','.',2)='action'
          OR split_part(item->>'permissionCode','.',3)='action'
          OR COALESCE(item->>'permissionId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'

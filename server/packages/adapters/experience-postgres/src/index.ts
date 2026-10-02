@@ -1039,3 +1039,9 @@ async function lockLocaleTenant(
     );
   }
 }
+
+/** Shared Entity writes use the same transaction lock and locale-policy snapshot as settings. */
+export async function readLockedPrincipalLocalePolicy(database: Database, context: VerifiedRequestContext): Promise<ExperienceLocalePolicyRecord> {
+  await lockLocaleTenant(database,context);
+  return readTenantLocalePolicy(database,context);
+}

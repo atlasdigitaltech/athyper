@@ -1,0 +1,243 @@
+{
+  "schema": "athyper.shared-reference-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
+  "definition": {
+    "runtimeBindings": [
+      {
+        "operation": "list",
+        "handler": "entity.record.list.v1",
+        "resolver": "tenant.record.v1"
+      },
+      {
+        "operation": "read",
+        "handler": "entity.record.read.v1",
+        "resolver": "tenant.record.v1"
+      }
+    ],
+    "entityCode": "timezone",
+    "title": {
+      "labelKey": "entity.timezone.title",
+      "defaultText": "Timezones"
+    },
+    "entityLabel": {
+      "labelKey": "entity.timezone.label",
+      "defaultText": "Timezone"
+    },
+    "storageObject": "timezone",
+    "codeField": "code",
+    "titleField": "code",
+    "fields": [
+      {
+        "key": "id",
+        "label": {
+          "labelKey": "entity.timezone.fields.id",
+          "defaultText": "Record ID"
+        },
+        "type": "uuid",
+        "required": true
+      },
+      {
+        "key": "code",
+        "label": {
+          "labelKey": "entity.timezone.fields.code",
+          "defaultText": "Code"
+        },
+        "type": "string",
+        "required": true
+      },
+      {
+        "key": "name",
+        "label": {
+          "labelKey": "entity.timezone.fields.name",
+          "defaultText": "Name"
+        },
+        "type": "string"
+      },
+      {
+        "key": "utc_offset_minutes",
+        "label": {
+          "labelKey": "entity.timezone.fields.utc_offset_minutes",
+          "defaultText": "Standard UTC offset (minutes)"
+        },
+        "type": "integer"
+      },
+      {
+        "key": "is_alias",
+        "label": {
+          "labelKey": "entity.timezone.fields.is_alias",
+          "defaultText": "Alias"
+        },
+        "type": "boolean",
+        "required": true
+      },
+      {
+        "key": "canonical_code",
+        "label": {
+          "labelKey": "entity.timezone.fields.canonical_code",
+          "defaultText": "Canonical timezone code"
+        },
+        "type": "string",
+        "keyReference": {
+          "targetEntity": "timezone",
+          "labelField": "code",
+          "fields": [
+            {
+              "source": "canonical_code",
+              "target": "code"
+            }
+          ]
+        }
+      },
+      {
+        "key": "status",
+        "label": {
+          "labelKey": "entity.timezone.fields.status",
+          "defaultText": "Status"
+        },
+        "type": "enum",
+        "required": true,
+        "domainCode": "shared.ref_status_d",
+        "choices": [
+          {
+            "value": "active",
+            "label": {
+              "labelKey": "reference.status.active",
+              "defaultText": "Active"
+            },
+            "tone": "success"
+          },
+          {
+            "value": "deprecated",
+            "label": {
+              "labelKey": "reference.status.deprecated",
+              "defaultText": "Deprecated"
+            },
+            "tone": "warning"
+          }
+        ],
+        "semanticRole": "status"
+      },
+      {
+        "key": "created_at",
+        "label": {
+          "labelKey": "entity.timezone.fields.created_at",
+          "defaultText": "Created"
+        },
+        "type": "datetime",
+        "required": true
+      },
+      {
+        "key": "updated_at",
+        "label": {
+          "labelKey": "entity.timezone.fields.updated_at",
+          "defaultText": "Updated"
+        },
+        "type": "datetime"
+      }
+    ],
+    "columns": [
+      "code",
+      "name",
+      "utc_offset_minutes",
+      "is_alias",
+      "canonical_code",
+      "status"
+    ],
+    "searchFields": [
+      "code",
+      "name"
+    ],
+    "sections": [
+      {
+        "key": "overview",
+        "label": {
+          "labelKey": "entity.timezone.sections.overview",
+          "defaultText": "Timezones"
+        },
+        "fields": [
+          "code",
+          "name",
+          "utc_offset_minutes",
+          "is_alias",
+          "canonical_code",
+          "status"
+        ]
+      },
+      {
+        "key": "audit",
+        "label": {
+          "labelKey": "entity.timezone.sections.audit",
+          "defaultText": "Audit"
+        },
+        "fields": [
+          "created_at",
+          "updated_at"
+        ]
+      }
+    ],
+    "ai": {
+      "schemaVersion": 1,
+      "enabled": true,
+      "aliases": [
+        "timezone",
+        "timezones"
+      ],
+      "description": "Read published Timezones reference data only. Do not infer missing values or relationships. This entity is read-only.",
+      "summaryFieldKeys": [
+        "code",
+        "name",
+        "utc_offset_minutes",
+        "is_alias",
+        "canonical_code",
+        "status"
+      ],
+      "searchFieldKeys": [
+        "code",
+        "name"
+      ],
+      "relationshipKeys": [
+        "canonical_code"
+      ],
+      "contextKinds": [
+        "record",
+        "manage"
+      ],
+      "insightProviders": [
+        {
+          "id": "entity_lookup",
+          "version": 1
+        },
+        {
+          "id": "entity_read_record",
+          "version": 1
+        },
+        {
+          "id": "entity_explain_fields",
+          "version": 1
+        },
+        {
+          "id": "entity_follow_reference",
+          "version": 1
+        }
+      ],
+      "actions": [
+        {
+          "id": "open_record",
+          "version": 1,
+          "operationKey": "read"
+        }
+      ],
+      "presentationProfiles": [
+        {
+          "id": "record_brief",
+          "version": 1
+        }
+      ]
+    }
+  }
+}

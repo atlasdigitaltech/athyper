@@ -10,7 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isCustomer, isForcedInternal } from "./lib/classify.mjs";
+import { bannedTokens } from "./lib/publication-tokens.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../..");
@@ -50,36 +50,6 @@ function walkDocs(dir, base = dir, out = []) {
 
 const TEXT_EXTENSIONS = new Set([".html", ".json", ".xml", ".txt", ".js"]);
 
-// Generic filenames are too weak a signal on their own — "README.md" or
-// "index.md" will legitimately appear inside unrelated evidence/log JSON.
-// Only ever match on these as full relative paths, never as bare basenames.
-const GENERIC_BASENAMES = new Set(["readme.md", "readme.mdx", "index.md", "index.mdx"]);
-
-function bannedTokens() {
-  const docsFiles = walkDocs(DOCS_ROOT);
-  const tokens = new Set();
-
-  for (const relPath of docsFiles) {
-    if (isCustomer(relPath)) {
-      tokens.add(relPath);
-      const base = path.posix.basename(relPath);
-      if (!GENERIC_BASENAMES.has(base.toLowerCase())) tokens.add(base);
-    }
-  }
-
-  if (target === "external") {
-    for (const relPath of docsFiles) {
-      if (isForcedInternal(relPath)) {
-        const base = path.posix.basename(relPath).replace(/\.mdx?$/i, "");
-        if (!GENERIC_BASENAMES.has(base.toLowerCase())) tokens.add(base);
-        tokens.add(relPath);
-      }
-    }
-    tokens.add("server/db/ddl");
-  }
-
-  return [...tokens].filter(Boolean);
-}
 
 function main() {
   if (!fs.existsSync(DIST)) {
@@ -87,7 +57,7 @@ function main() {
     process.exit(1);
   }
 
-  const tokens = bannedTokens();
+  const tokens = bannedTokens(walkDocs(DOCS_ROOT), target);
   const files = walk(DIST).filter((f) => TEXT_EXTENSIONS.has(path.extname(f).toLowerCase()));
 
   const hits = [];

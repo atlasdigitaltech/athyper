@@ -2,7 +2,10 @@ import { RecordServiceError } from "./errors.js";
 export function parseEntityListScopeCoordinate(queryValue: Readonly<Record<string, unknown>>) {
   const parentRecordId = optionalUuid(queryValue["parentRecordId"], "parentRecordId");
   const parentEntityCode = queryValue["parentEntityCode"], relationshipKey = queryValue["relationshipKey"];
-  const hasParent = [parentRecordId, parentEntityCode, relationshipKey].some(value => value !== undefined);
+  const parentDescriptorHash = queryValue["parentDescriptorHash"];
+  if (parentDescriptorHash !== undefined && (typeof parentDescriptorHash !== "string" || !/^[a-f0-9]{64}$/.test(parentDescriptorHash)))
+    throw new RecordServiceError(400, "INVALID_PARENT_CONTEXT", "Invalid parent publication hash");
+  const hasParent = [parentRecordId, parentEntityCode, relationshipKey, parentDescriptorHash].some(value => value !== undefined);
   if (hasParent && (!parentRecordId || typeof parentEntityCode !== "string" || !/^[a-z][a-z0-9_]{1,62}$/.test(parentEntityCode) || typeof relationshipKey !== "string" || !/^[a-z][a-z0-9_]{1,62}$/.test(relationshipKey)))
     throw new RecordServiceError(400,"INVALID_PARENT_CONTEXT","Parent entity, record and relationship must be supplied together");
 
@@ -19,7 +22,7 @@ export function parseEntityListScopeCoordinate(queryValue: Readonly<Record<strin
   if ((companyCodeIds && (companyCodeId || legalEntityId)) || (operatingOrganizationIds && operatingOrganizationId)) throw new RecordServiceError(400,"INVALID_WORK_CONTEXT","Use either single or multiple coordinates, not both");
   if (Boolean(companyCodeId) !== Boolean(legalEntityId)) throw new RecordServiceError(400, "INVALID_WORK_CONTEXT", "companyCodeId and legalEntityId must be supplied together");
   if (!hasParent && !companyCodeIds && !operatingOrganizationIds && !companyCodeId && !operatingOrganizationId && !networkAccountId && !partnerRole && !eligibleOperation) return undefined;
-  return Object.freeze({ ...(hasParent ? {parentEntityCode: parentEntityCode as string, parentRecordId: parentRecordId!, relationshipKey: relationshipKey as string} : {}), ...(companyCodeIds ? {companyCodeIds} : {}), ...(operatingOrganizationIds ? {operatingOrganizationIds} : {}), ...(partnerRole?{partnerRole}:{}),...(eligibleOperation?{eligibleOperation}:{}), ...(companyCodeId ? { companyCodeId, legalEntityId: legalEntityId as string } : {}), ...(operatingOrganizationId ? { operatingOrganizationId } : {}), ...(networkAccountId ? { networkAccountId } : {}) });
+  return Object.freeze({ ...(hasParent ? {parentEntityCode: parentEntityCode as string, parentRecordId: parentRecordId!, relationshipKey: relationshipKey as string, ...(parentDescriptorHash ? {parentDescriptorHash: parentDescriptorHash as string} : {})} : {}), ...(companyCodeIds ? {companyCodeIds} : {}), ...(operatingOrganizationIds ? {operatingOrganizationIds} : {}), ...(partnerRole?{partnerRole}:{}),...(eligibleOperation?{eligibleOperation}:{}), ...(companyCodeId ? { companyCodeId, legalEntityId: legalEntityId as string } : {}), ...(operatingOrganizationId ? { operatingOrganizationId } : {}), ...(networkAccountId ? { networkAccountId } : {}) });
 }
 
 function optionalUuid(value: unknown, name: string): string | undefined {

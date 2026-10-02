@@ -6,8 +6,8 @@ BEGIN
  IF current_database()<>'athyper_'||current_setting('app.database_plane') OR current_setting('app.database_plane') NOT IN ('studio','neon','mesh') THEN RAISE EXCEPTION 'Exact DEV plane required'; END IF;
  SELECT array_agg(id ORDER BY canonical_code) INTO permissions FROM authz.permission WHERE status='published' AND canonical_code IN (
   'common.identity.principal.read','common.identity.principal_profile.read','common.identity.principal_profile.edit',
-  'common.identity.principal_notification_preference.read','common.identity.principal_notification_preference.edit','common.identity.principal.administer');
- IF cardinality(permissions) IS DISTINCT FROM 6 THEN RAISE EXCEPTION 'Identity catalog required'; END IF;
+  'common.identity.principal_notification_preference.read','common.identity.principal_notification_preference.edit','common.identity.principal.administer','common.identity.principal_ui_profile.read','common.identity.principal_ui_profile.edit');
+ IF cardinality(permissions) IS DISTINCT FROM 8 THEN RAISE EXCEPTION 'Identity catalog required'; END IF;
  FOR r IN SELECT role.id,role.tenant_id FROM authz.role role JOIN master.tenant tenant ON tenant.id=role.tenant_id
    WHERE role.code='test.full_admin' AND role.source_ref='dev:test-full-admin:v1' AND role.status='active'
      AND tenant.code IN ('athyper','cirrusatlantic') FOR UPDATE OF role LOOP

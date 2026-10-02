@@ -11,6 +11,7 @@ import React, {
 import { SubsectionHeading, type SubsectionHeader } from "./subsection-heading";
 import { createPortal } from "react-dom";
 import { Button, Dialog, DialogContent } from "@athyper/platform-ui";
+import { ChevronDownIcon } from "@athyper/platform-icons";
 import {
   dataFieldVisible,
   resolveDataInput,
@@ -461,6 +462,7 @@ export function CollectionSection({
             }}
           >
             <summary aria-controls={`${id}-${row.key}`}>
+              <ChevronDownIcon size={16} className="a-disclosure-caret" aria-hidden="true" />
               <span className="a-collection__summary">
                 <strong>{title}</strong>
                 {secondary.length ? <span>{secondary.join(" · ")}</span> : null}

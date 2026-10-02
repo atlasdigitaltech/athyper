@@ -3,7 +3,7 @@ import * as React from "react";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { COLOR_MODES, COLOR_TOKENS, DEFAULT_THEME_FAMILY, DENSITY_MODES, DENSITY_TOKENS, MONO_COLOR_TOKENS, REQUIRED_COLOR_TOKENS, THEME_FAMILIES, ThemeScript, createThemeBootstrapScript, resolveColorMode } from "../../packages/platform/foundation/theme/src/index";
+import { BREAKPOINT_SCALE, CONTAINER_ONLY_BREAKPOINTS, COLOR_MODES, COLOR_TOKENS, DEFAULT_THEME_FAMILY, DENSITY_MODES, DENSITY_TOKENS, MONO_COLOR_TOKENS, REQUIRED_COLOR_TOKENS, THEME_FAMILIES, ThemeScript, createThemeBootstrapScript, resolveColorMode } from "../../packages/platform/foundation/theme/src/index";
 import { ATLAS_MODERN_BRAND, ATLAS_MONO_BRAND } from "../../packages/platform/foundation/brand/src/index";
 
 describe("foundation theme contract", () => {
@@ -58,8 +58,54 @@ describe("foundation theme contract", () => {
   it("has complete compact, comfortable and spacious density modes with accessible touch targets", () => {
     assert.deepEqual(DENSITY_MODES, ["compact", "comfortable", "spacious"]);
     for (const density of DENSITY_MODES) {
-      assert.deepEqual(Object.keys(DENSITY_TOKENS[density]).sort(), ["controlHeight", "pageGap", "space", "touchTarget"]);
+      assert.deepEqual(Object.keys(DENSITY_TOKENS[density]).sort(), ["cellPaddingBlock", "cellPaddingInline", "controlHeight", "controlHeightSmall", "dataFontSize", "headerHeight", "iconButton", "pageGap", "panelGutter", "rowHeight", "sectionGap", "space", "stackGap", "touchTarget"]);
       assert.ok(parseFloat(DENSITY_TOKENS[density].touchTarget) >= 2.75);
+      // WCAG 2.2 target size (minimum) 24px for pointer targets.
+      assert.ok(parseFloat(DENSITY_TOKENS[density].iconButton) >= 1.5);
+    }
+    // Rows, controls and spacing grow monotonically from compact to spacious.
+    for (const key of ["rowHeight", "headerHeight", "controlHeight", "controlHeightSmall", "iconButton", "dataFontSize", "stackGap", "sectionGap"] as const)
+      assert.ok(parseFloat(DENSITY_TOKENS.compact[key]) < parseFloat(DENSITY_TOKENS.comfortable[key]) && parseFloat(DENSITY_TOKENS.comfortable[key]) < parseFloat(DENSITY_TOKENS.spacious[key]), key);
+  });
+
+  it("has one ascending breakpoint scale that the entity list tiers use", async () => {
+    const values = Object.values(BREAKPOINT_SCALE);
+    assert.deepEqual([...values].sort((a, b) => a - b), values);
+    const { LIST_NARROW_MAX_REM, LIST_WIDE_MIN_REM } = await import("../../packages/platform/entity/runtime/list-view/src/presentation-tier");
+    assert.equal(LIST_NARROW_MAX_REM, BREAKPOINT_SCALE.narrow);
+    assert.equal(LIST_WIDE_MIN_REM, BREAKPOINT_SCALE.wide);
+    // The container-only compact tier splits the side panel's own width range,
+    // so components can tell a narrow panel from a roomy one.
+    assert.deepEqual([...CONTAINER_ONLY_BREAKPOINTS], ["compact"]);
+    const { TOOL_PANEL_MIN_WIDTH, TOOL_PANEL_MAX_WIDTH } = await import("../../packages/platform/shell/shell/src/workspace-tool-panel");
+    assert.ok(BREAKPOINT_SCALE.compact * 16 > TOOL_PANEL_MIN_WIDTH && BREAKPOINT_SCALE.compact * 16 < TOOL_PANEL_MAX_WIDTH);
+    assert.ok(BREAKPOINT_SCALE.compact < BREAKPOINT_SCALE.narrow);
+  });
+
+  it("gives scripts the same viewport widths as stylesheets", async () => {
+    const { viewportQuery } = await import("../../packages/platform/foundation/theme/src/tokens");
+    assert.equal(viewportQuery({ below: "medium" }), "(width < 48rem)");
+    assert.equal(viewportQuery({ from: "extraWide" }), "(width >= 80rem)");
+    assert.equal(viewportQuery({ from: "medium", below: "extraWide" }), "(48rem <= width < 80rem)");
+    assert.throws(() => viewportQuery({}));
+    // A panel can be pinned exactly where the shell reserves its width (styles.css).
+    const { TOOL_PANEL_PIN_QUERY } = await import("../../packages/platform/shell/shell/src/workspace-tool-panel");
+    assert.equal(TOOL_PANEL_PIN_QUERY, "(width >= 80rem)");
+    const shell = readFileSync("packages/platform/shell/shell/src/styles.css", "utf8");
+    assert.match(shell, /@media \(width >= 80rem\)\{\.athyper-shell\[data-workspace-panel-pinned=true\] \.athyper-shell__body\{margin-inline-end/);
+  });
+
+  it("defines the same density token values in CSS for any [data-density] subtree", async () => {
+    const { readFileSync } = await import("node:fs");
+    const css = readFileSync("packages/platform/foundation/theme/src/styles.css", "utf8");
+    const cssName = (key: string) => `--a-${key === "space" || key === "pageGap" || key === "controlHeight" || key === "touchTarget" ? "" : "density-"}${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+    for (const density of DENSITY_MODES) {
+      const block = css.match(new RegExp(`\\[data-density="${density}"\\] \\{([^}]*)\\}`))?.[1];
+      assert.ok(block, `missing [data-density="${density}"] block`);
+      for (const [key, value] of Object.entries(DENSITY_TOKENS[density])) {
+        const declared = block!.match(new RegExp(`${cssName(key)}:([^;]+);`))?.[1];
+        assert.equal(parseFloat(declared ?? "NaN"), parseFloat(value), `${density} ${key}`);
+      }
     }
   });
 

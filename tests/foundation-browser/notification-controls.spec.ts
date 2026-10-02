@@ -1,6 +1,7 @@
 import { build } from "esbuild";
 import { resolve } from "node:path";
 import { test, expect } from "@playwright/test";
+import { collectionFixture } from "./activity-collection-fixtures";
 const fixture = resolve(
   "tooling/scripts/verification/notification-controls-fixture.tsx",
 );
@@ -95,7 +96,6 @@ test("subscriber can save preferences and cannot see operator tools", async ({
 }) => {
   await page.goto("https://notifications.test/?subscriber");
   await page.evaluate(await bundle);
-  await page.getByText("Notification preferences", { exact: true }).click();
   await expect(page.getByLabel("In-app", { exact: true })).toBeChecked();
   const saved = page.waitForRequest(
     (r) => r.method() === "PATCH" && r.url().endsWith("/preferences"),
@@ -106,16 +106,15 @@ test("subscriber can save preferences and cannot see operator tools", async ({
     { eventCode: "collaboration.comment.mentioned", channels: [] },
   ]);
   await expect(page.getByRole("status")).toHaveText("Preferences saved.");
-  await expect(page.getByText("Delivery status", { exact: true })).toHaveCount(
-    0,
-  );
+  // Without the delivery permission there is no Delivery status tab.
+  await expect(page.getByRole("tab", { name: "Delivery status" })).toHaveCount(0);
 });
 test("operator sees errors and retries through the governed endpoint", async ({
   page,
 }) => {
   await page.goto("https://notifications.test/");
   await page.evaluate(await bundle);
-  await page.locator("summary").filter({ hasText: "Delivery status" }).click();
+  await page.getByRole("tab", { name: "Delivery status" }).click();
   await expect(page.getByText("Simulated provider failure")).toBeVisible();
   const request = page.waitForRequest((r) => r.url().endsWith("/replay"));
   await page.getByRole("button", { name: "Retry delivery" }).click();
@@ -139,10 +138,10 @@ test("preference conflict offers reload without claiming success", async ({
   );
   await page.goto("https://notifications.test/?subscriber");
   await page.evaluate(await bundle);
-  await page.locator("summary").click();
   await page.getByLabel("In-app", { exact: true }).uncheck();
   await page.getByRole("button", { name: "Save preferences" }).click();
-  await expect(page.getByRole("alert")).toContainText("Reload");
+  await expect(page.getByRole("alert")).toContainText("Discard changes");
+  await expect(page.getByRole("button", { name: "Discard changes" })).toBeEnabled();
   await expect(page.getByText("Preferences saved.")).toHaveCount(0);
 });
 
@@ -163,7 +162,10 @@ test("workflow Inbox denial does not hide readable notifications", async ({
     loader: { ".css": "empty" },
     nodePaths: ["apps/neon/node_modules"],
   });
-  await page.route("https://notifications.test/**", (route) => {
+  // The activity centre reads its collection descriptor before any items.
+  const collections = collectionFixture();
+  await page.route("https://notifications.test/**", async (route) => {
+    if (await collections(route)) return;
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/notifications/inbox"))
       return route.fulfill({
@@ -210,13 +212,17 @@ test("workflow Inbox denial does not hide readable notifications", async ({
   await expect(page.getByText("A readable mention")).toBeVisible();
   await expect(page.getByText("Unread: 1")).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(page.getByRole("status")).toContainText("403");
+  // The denied Inbox explains access in words, never a raw status code.
+  await expect(page.getByRole("status")).toContainText("do not have access");
+  await expect(page.getByRole("status")).not.toContainText("403");
 });
 
 test('refresh retains all loaded notification pages',async({page})=>{
  const source=await build({entryPoints:[resolve('tooling/scripts/verification/notification-activity-source-fixture.tsx')],bundle:true,write:false,format:'iife',platform:'browser',jsx:'automatic',loader:{'.css':'empty'},nodePaths:['apps/neon/node_modules']});
  let firstPageReads=0;
- await page.route('https://notifications.test/**',route=>{
+ const collections=collectionFixture();
+ await page.route('https://notifications.test/**',async route=>{
+  if(await collections(route))return;
   const url=new URL(route.request().url());
   if(url.pathname.endsWith('/notifications/inbox')){
    const second=url.searchParams.has('cursor');if(!second)firstPageReads++;

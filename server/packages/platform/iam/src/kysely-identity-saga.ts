@@ -299,6 +299,9 @@ export class KyselyPlaneLocalIdentityAuthority implements PlaneLocalIdentityAuth
   async converge(
     input: Parameters<PlaneLocalIdentityAuthority["converge"]>[0],
   ): Promise<void> {
+    sourcePlane(input.sourcePlane);
+    if (typeof input.sourceTenantId !== "string" || !input.sourceTenantId.trim())
+      throw new Error("IDENTITY_SOURCE_TENANT_INVALID");
     for (const application of input.applications)
       await this.targets.run(application.plane, async (tx) => {
         await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${application.targetTenantId}:${input.identityId}`},0))`.execute(
@@ -311,7 +314,7 @@ export class KyselyPlaneLocalIdentityAuthority implements PlaneLocalIdentityAuth
         ).rows[0];
         if (!principal)
           principal = (
-            await sql<Row>`INSERT INTO master.principal(tenant_id,code,name,principal_type,external_ref,provisioning_source,metadata,status,created_by) VALUES(${application.targetTenantId}::uuid,${`iam.${sha256(input.identityId).slice(0, 24)}`},${input.displayName},'user',${`trustiam:${input.identityId}`},'sync',${JSON.stringify({ trustIamIdentityId: input.identityId, personId: input.personId, relationship: input.membership.relationship, sourceRef: input.membership.sourceRef })}::jsonb,'active',${this.actorId}::uuid) RETURNING id,status`.execute(
+            await sql<Row>`INSERT INTO master.principal(tenant_id,code,name,principal_type,external_ref,provisioning_source,metadata,status,created_by) VALUES(${application.targetTenantId}::uuid,${`iam.${sha256(input.identityId).slice(0, 24)}`},${input.displayName},'user',${`trustiam:${input.identityId}`},'sync',${JSON.stringify({ trustIamIdentityId: input.identityId, personId: input.personId, sourcePlane: input.sourcePlane, sourceTenantId: input.sourceTenantId, relationship: input.membership.relationship, sourceRef: input.membership.sourceRef })}::jsonb,'active',${this.actorId}::uuid) RETURNING id,status`.execute(
               tx,
             )
           ).rows[0]!;
@@ -323,7 +326,7 @@ export class KyselyPlaneLocalIdentityAuthority implements PlaneLocalIdentityAuth
         if (principal["status"] === "deactivated")
           throw new Error("IDENTITY_LOCAL_PRINCIPAL_DEACTIVATED");
 
-        await sql`INSERT INTO master.principal_identity_binding(tenant_id,principal_id,provider_code,realm_key,subject_id,username,is_primary,status,synced_at,sync_status,provider_attributes,metadata,created_by) VALUES(${application.targetTenantId}::uuid,${principalId}::uuid,'keycloak',${input.realmKey},${input.providerSubject},${input.identifier},true,'active',clock_timestamp(),'synced','{}'::jsonb,${JSON.stringify({ trustIamIdentityId: input.identityId, desiredVersion: input.desiredVersion, desiredHash: input.desiredHash })}::jsonb,${this.actorId}::uuid) ON CONFLICT(tenant_id,provider_code,realm_key,subject_id) DO UPDATE SET status='active',is_primary=true,synced_at=clock_timestamp(),sync_status='synced',sync_error_message=NULL,provider_attributes='{}'::jsonb,metadata=EXCLUDED.metadata,updated_by=${this.actorId}::uuid WHERE master.principal_identity_binding.principal_id=EXCLUDED.principal_id`.execute(
+        await sql`INSERT INTO master.principal_identity_binding(tenant_id,principal_id,provider_code,realm_key,subject_id,username,is_primary,status,synced_at,sync_status,provider_attributes,metadata,created_by) VALUES(${application.targetTenantId}::uuid,${principalId}::uuid,'keycloak',${input.realmKey},${input.providerSubject},${input.identifier},true,'active',clock_timestamp(),'synced','{}'::jsonb,${JSON.stringify({ trustIamIdentityId: input.identityId, personId: input.personId, sourcePlane: input.sourcePlane, sourceTenantId: input.sourceTenantId, relationship: input.membership.relationship, sourceRef: input.membership.sourceRef, desiredVersion: input.desiredVersion, desiredHash: input.desiredHash })}::jsonb,${this.actorId}::uuid) ON CONFLICT(tenant_id,provider_code,realm_key,subject_id) DO UPDATE SET status='active',is_primary=true,synced_at=clock_timestamp(),sync_status='synced',sync_error_message=NULL,provider_attributes='{}'::jsonb,metadata=EXCLUDED.metadata,updated_by=${this.actorId}::uuid WHERE master.principal_identity_binding.principal_id=EXCLUDED.principal_id`.execute(
           tx,
         );
         const binding = (
@@ -437,6 +440,8 @@ function mapWork(
     identityId: text(row, "id"),
     authorityTenantId: text(row, "authority_tenant_id"),
     personId: text(row, "person_id"),
+    sourcePlane: sourcePlane(row["source_plane"]),
+    sourceTenantId: text(row, "source_tenant_id"),
     identifier: text(row, "normalized_identifier"),
     displayName: text(row, "display_name"),
     realmKey: text(row, "realm_key"),
@@ -453,6 +458,11 @@ function mapWork(
     },
     applications: applications(row["desired_applications"]),
   };
+}
+function sourcePlane(value: unknown): IdentitySagaWork["sourcePlane"] {
+  if (value !== "neon" && value !== "studio" && value !== "mesh")
+    throw new Error("IDENTITY_SOURCE_PLANE_INVALID");
+  return value;
 }
 function applications(value: unknown): readonly DesiredApplicationAccess[] {
   const parsed = typeof value === "string" ? JSON.parse(value) : value;

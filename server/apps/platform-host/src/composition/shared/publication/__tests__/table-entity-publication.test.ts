@@ -87,9 +87,10 @@ function fixture(code: string, plane: "studio" | "neon" | "mesh" = "neon") {
         "entity.record.create.v1",
         "entity.record.patch.v1",
         "platform.notifications.preferences.v1",
+        "platform.experience.ui_profile.v1",
       ]),
       resolvers: new Set(["tenant.record.v1"]),
-      renderers: new Set(),
+      renderers: new Set(["platform.address.fields.v1"]),
       evaluators: new Set(),
     },
     canonicalizer: {
@@ -103,6 +104,7 @@ for (const code of [
   "principal",
   "principal_profile",
   "principal_notification_preference",
+  "principal_ui_profile",
 ])
   it(`publishes ${code} through native runtime artifacts on every plane`, () => {
     for (const plane of ["studio", "neon", "mesh"] as const) {
@@ -116,6 +118,15 @@ for (const code of [
         ),
       ).toBe(true);
     }
+  });
+
+for (const code of ["person", "employee", "external_worker", "address", "person_address_use"])
+  it(`lowers ${code}'s Neon-only read candidate through the standard publication artifacts`, () => {
+    const { graph, compiled } = fixture(code, "neon");
+    validateCompiledRuntimeContracts(compiled.artifacts.map(member => member.artifact));
+    expect(graph.operations.every(operation => operation.operationKind === "read")).toBe(true);
+    expect(graph.runtimeProfiles![0]!.writeMode).toBe("none");
+    expect(compiled.artifacts.some(member => member.artifact.artifactType === "runtime_contract")).toBe(true);
   });
 
 function qualificationDatabase(
@@ -172,6 +183,7 @@ it("qualifies the parent against independently activated children", async () => 
   const db = qualificationDatabase([
     fixture("principal_profile"),
     fixture("principal_notification_preference"),
+    fixture("principal_ui_profile"),
   ]);
   try {
     await expect(

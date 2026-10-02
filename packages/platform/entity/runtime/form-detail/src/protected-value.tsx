@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { readBrowserCsrfToken } from "@athyper/platform-shell-app-foundation";
-import { Button, Dialog, DialogContent } from "@athyper/platform-ui";
+import { Button, ChoiceSelect, Dialog, DialogContent } from "@athyper/platform-ui";
 import { ApiTransportError } from "@athyper/platform-api-client";
 import { createProtectedValueAttempt } from "./record/protected-value-attempt";
 
@@ -94,10 +94,8 @@ function ProtectedValueContent({ operation, id, allowed, verificationRequired, m
       <DialogContent portal className="a-comment-action-dialog a-file-action-dialog" title={`Reveal ${label ?? "protected value"}`} description="This access is audited. The value will be visible for up to 60 seconds.">
         <form onSubmit={event => {event.preventDefault(); if (allowed) void reveal(); else verifyIdentity();}}>
           {allowed ? <label>Reason for access
-            <select autoFocus aria-label="Reason for access" value={purpose} disabled={busy} onChange={event => setPurpose(event.target.value)}>
-              <option value="">Select a reason</option>
-              {purposes.map(option => <option key={option.value} value={option.value}>{option.label.defaultText}</option>)}
-            </select>
+            <ChoiceSelect autoFocus label="Reason for access" placeholder="Select a reason" value={purpose} disabled={busy} onChange={setPurpose}
+              options={purposes.map(option => ({ value: option.value, label: option.label.defaultText }))}/>
           </label> : <p>Verify your identity to continue. You may be asked to set up an authenticator. Verification does not reveal the value automatically.</p>}
           {allowed && !purposes.length && <p role="alert">Reveal reasons are not configured. Contact your administrator.</p>}
           {failed && <p role="alert">{failed}</p>}

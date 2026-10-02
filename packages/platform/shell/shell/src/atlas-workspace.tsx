@@ -1,6 +1,10 @@
 "use client";
-import { AtlasPanelResize } from "./atlas-panel-resize";
+import { viewportQuery } from "@athyper/platform-theme/tokens";
+import { WorkspaceToolPanel, type WorkspaceToolPanelMode } from "./workspace-tool-panel";
 import { AtlasActionHistory } from "./atlas-action-history";
+import { groupByDay } from "./atlas-day-groups";
+import { atlasResultIsSilent, atlasResultView, type AtlasResultView } from "./atlas-result-views";
+import { useOptionalPermission } from "@athyper/platform-shell-app-foundation";
 import { useAtlasSurface } from "./atlas-surface";
 
 import { AtlasContextInspector } from "./atlas-context-inspector";
@@ -16,16 +20,20 @@ import {
 import {
   CloseIcon,
   HistoryIcon,
+  PlusIcon,
   LockIcon,
   Maximize2Icon,
   InfoIcon,
-  PinIcon,
-  PinOffIcon,
   MessageSquareIcon,
+  MoreHorizontalIcon,
+  CheckIcon,
+  CopyIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
   PanelRightIcon,
   AtlasBrandIcon,
 } from "@athyper/platform-icons";
-import { PanelHeader, PanelContextRow, PanelToolbar, PanelFooter, Tooltip, useModalIsolation } from "@athyper/platform-ui";
+import { Button, Input, Menu, MenuContent, MenuItem, MenuTrigger, ObjectSearch, PanelHeader, PanelContextRow, PanelFooter, Tooltip, readBrowserStorage, useModalIsolation, writeBrowserStorage } from "@athyper/platform-ui";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -42,8 +50,6 @@ import {
 import { useShellPersonalizationScope } from "./personalization-scope";
 
 export interface AtlasWorkspaceProps {
-  readonly width?: number;
-  readonly onWidthChange?: (width: number) => void;
   readonly breadcrumbs?: readonly {
     readonly label: string;
     readonly href?: string;
@@ -55,12 +61,13 @@ export interface AtlasWorkspaceProps {
   readonly onPinnedChange?: (pinned: boolean) => void;
   readonly onClose?: () => void;
   readonly restoreFocusOnUnmount?: boolean;
+  /** In the shell, the element full view renders into (the panel moves there
+   * without remounting, so drafts, history and scroll survive). */
+  readonly fullTarget?: HTMLElement | null;
 }
 
 export function AtlasWorkspace({
   breadcrumbs,
-  width = 420,
-  onWidthChange,
   mode,
   planeName,
   currentPath = "/home",
@@ -68,17 +75,32 @@ export function AtlasWorkspace({
   onPinnedChange,
   onClose,
   restoreFocusOnUnmount = true,
+  fullTarget,
 }: AtlasWorkspaceProps) {
   const surface = useAtlasSurface();
-  const panel = useRef<HTMLElement>(null);
-  const modal = Boolean(onClose && (!pinned || mode === "fullscreen"));
-  useModalIsolation(panel, modal, {
+  const panel = useRef<HTMLElement | null>(null);
+  // In the shell Atlas uses the shared side panel frame (slot, geometry, pin,
+  // resize, modality, focus return); the standalone /atlas page is the page.
+  // The shell passes a full-view target (null until it mounts); without one,
+  // full view is a page of its own.
+  const framed = Boolean(onClose) && (mode === "dock" || fullTarget !== undefined);
+  // The docked overlay's modality belongs to the frame; full view inside the
+  // shell covers the page, so it keeps its own isolation.
+  const modalFull = Boolean(onClose) && mode === "fullscreen";
+  useModalIsolation(panel, modalFull, {
     initialFocus: () => panel.current?.querySelector<HTMLElement>('[contenteditable="true"]') ?? null,
-    outside: () => Array.from(panel.current?.parentElement?.querySelectorAll<HTMLElement>(":scope > .athyper-atlas-workspace__scrim") ?? []),
     restoreFocus: false,
   });
+  // Full view: History (left) and Context (right) open as the person last left
+  // them; otherwise by room: history from 64rem, context from 80rem.
+  const fullPanelOpen = (key: "history" | "context") => {
+    const saved = readBrowserStorage(`athyper.atlas.full.${key}`);
+    if (saved === "open" || saved === "closed") return saved === "open";
+    return window.matchMedia(viewportQuery({ from: key === "history" ? "wide" : "extraWide" })).matches;
+  };
   useEffect(() => {
-    setHistoryOpen(mode === "fullscreen");
+    setHistoryOpen(mode === "fullscreen" && fullPanelOpen("history"));
+    if (mode === "fullscreen") setInspectorOpen(fullPanelOpen("context"));
     requestAnimationFrame(() => composer.current?.focus());
   }, [mode]);
   const atlas = useAtlasAnswer(),
@@ -105,7 +127,7 @@ export function AtlasWorkspace({
       setPendingThread(undefined);
       if (
         mode !== "fullscreen" ||
-        window.matchMedia("(max-width: 760px)").matches
+        window.matchMedia(viewportQuery({ below: "medium" })).matches
       ) {
         setHistoryOpen(false);
         conversationHeading.current?.focus({ preventScroll: true });
@@ -131,7 +153,7 @@ export function AtlasWorkspace({
       setSelectedAgent(agents[0]!.code);
   }, [atlas.experience, selectedAgent]);
   useEffect(() => {
-    const narrow = window.matchMedia("(max-width: 760px)");
+    const narrow = window.matchMedia(viewportQuery({ below: "medium" }));
     const update = () => {
       if (narrow.matches) setHistoryOpen(false);
     };
@@ -144,7 +166,7 @@ export function AtlasWorkspace({
     const closeOutside = (event: PointerEvent) => {
       if (
         mode === "fullscreen" &&
-        !window.matchMedia("(max-width: 760px)").matches
+        !window.matchMedia(viewportQuery({ below: "medium" })).matches
       )
         return;
       const target = event.target as Node;
@@ -159,6 +181,9 @@ export function AtlasWorkspace({
     };
     const closeEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      // In wide full view History is a side panel, not an overlay: Escape belongs
+      // to whatever is open inside it (a menu, a rename field).
+      if (mode === "fullscreen" && !window.matchMedia(viewportQuery({ below: "medium" })).matches) return;
       event.preventDefault();
       event.stopPropagation();
       setHistoryOpen(false);
@@ -271,23 +296,8 @@ export function AtlasWorkspace({
       }
     });
   };
-  return (
-    <section
-      ref={panel}
-      role={modal ? "dialog" : undefined}
-      aria-modal={modal || undefined}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && !event.defaultPrevented && onClose) {
-          event.preventDefault();
-          onClose();
-        }
-      }}
-      className={`athyper-atlas-workspace a-context-panel athyper-atlas-workspace--${mode}`}
-      aria-label="Atlas AI workspace"
-    >
-      {mode === "dock" && onWidthChange ? (
-        <AtlasPanelResize width={width} onWidthChange={onWidthChange} />
-      ) : null}
+  const content = (frame?: { readonly mode: WorkspaceToolPanelMode; readonly capabilities: import("@athyper/platform-ui").PanelHeaderCapabilities }) => (
+    <>
       <PanelHeader
         className="athyper-atlas-workspace__header"
         icon={<AtlasBrandIcon size={20} />}
@@ -295,16 +305,23 @@ export function AtlasWorkspace({
         titleRef={conversationHeading}
         actionsLabel="Atlas workspace controls"
         capabilities={{
-          new:{label:"New Atlas conversation",tooltip:"New conversation",icon:<span aria-hidden="true">+</span>,onClick:()=>{
+          new:{label:"New Atlas conversation",tooltip:"New conversation",icon:<PlusIcon size={17}/>,onClick:()=>{
             composer.current?.clear();
             try {localStorage.removeItem(`${scope.storageKey}:atlas-draft:v2:new`);} catch {}
             setPendingThread(undefined); atlas.newConversation(); setDraft(""); composer.current?.focus();
           }},
-          history:{label:"Conversation history",icon:<HistoryIcon size={17}/>,buttonRef:historyTrigger,pressed:historyOpen,expanded:historyOpen,onClick:()=>setHistoryOpen(value=>!value)},
-          ...(mode === "dock" && onPinnedChange ? {pin:{label:pinned ? "Unpin Atlas from the right side" : "Pin Atlas to the right side",icon:pinned ? <PinOffIcon size={17}/> : <PinIcon size={17}/>,pressed:pinned,onClick:()=>onPinnedChange(!pinned)}} : {}),
+          history:{label:"Conversation history",icon:<HistoryIcon size={17}/>,buttonRef:historyTrigger,pressed:historyOpen,expanded:historyOpen,onClick:()=>setHistoryOpen(value=>{
+            if (mode === "fullscreen") writeBrowserStorage("athyper.atlas.full.history", value ? "closed" : "open");
+            return !value;
+          })},
+          ...(mode === "fullscreen" ? {context:{label:inspectorOpen ? "Hide context" : "Show context",icon:<InfoIcon size={17}/>,pressed:inspectorOpen,expanded:inspectorOpen,controls:inspectorId,onClick:()=>setInspectorOpen(value=>{
+            writeBrowserStorage("athyper.atlas.full.context", value ? "closed" : "open");
+            return !value;
+          })}} : {}),
+          ...(frame?.capabilities.pin ? {pin:frame.capabilities.pin} : {}),
           ...(mode === "dock" ? {fullView:{label:"Open Atlas in full view",icon:<Maximize2Icon size={17}/>,href:`/atlas?from=${encodeURIComponent(currentPath)}`,onClick:(event)=>{event.preventDefault();if(surface)surface.fullscreen();else window.location.assign(atlas.fullscreenHref(currentPath));}}}
             : surface && onClose ? {fullView:{label:"Return to side panel",icon:<PanelRightIcon size={17}/>,onClick:surface.minimize}} : {}),
-          close:onClose ? {label:"Close Atlas",icon:<CloseIcon size={17}/>,onClick:onClose} : {label:"Close full-screen Atlas",icon:<CloseIcon size={17}/>,href:"/home"},
+          close:frame?.capabilities.close ? {...frame.capabilities.close,label:"Close Atlas"} : onClose ? {label:"Close Atlas",icon:<CloseIcon size={17}/>,onClick:onClose} : {label:"Close full-screen Atlas",icon:<CloseIcon size={17}/>,href:"/home"},
         }}
       />
       <PanelContextRow scope={{kind:atlas.businessContext?.kind === "record" ? "record" : "global", label:(<>            <nav
@@ -341,9 +358,6 @@ export function AtlasWorkspace({
                 </small>
               ) : null}
             </nav></>), detail:entityLabel}} />
-      {mode === "fullscreen" ? <PanelToolbar className="athyper-atlas-workspace__tools">
-        <button type="button" aria-label={inspectorOpen ? "Hide context panel" : "Show context panel"} aria-expanded={inspectorOpen} aria-controls={inspectorId} onClick={()=>setInspectorOpen(open=>!open)}><InfoIcon size={17}/></button>
-      </PanelToolbar> : null}
       <div
         className="athyper-atlas-workspace__body"
         data-history={historyOpen}
@@ -413,8 +427,12 @@ export function AtlasWorkspace({
                     message.role === "assistant" ||
                     message.role === "tool",
                 )
-                .map((message) => (
+                .map((message, index, shown) => (
                   <ConversationBubble
+                    latest={index === shown.length - 1}
+                    onFollowUp={(prompt) => {
+                      composer.current?.setText(prompt);
+                    }}
                     recordLabel={
                       atlas.businessContext?.kind === "record" &&
                       contextCrumbs.at(-1)?.label
@@ -502,9 +520,71 @@ export function AtlasWorkspace({
                 : undefined
             }
             agent={agent}
+            suggestions={
+              atlas.experience?.prompts?.length
+                ? atlas.experience.prompts.map((item) => item.prompt)
+                : atlasStarterQuestions(atlas.businessContext)
+            }
+            onSuggest={(prompt) => {
+              composer.current?.setText(prompt);
+            }}
           />
         ) : null}
       </div>
+    </>
+  );
+  if (framed)
+    return (
+      <WorkspaceToolPanel
+        id="atlas"
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose?.();
+        }}
+        labels={{
+          region: "Atlas AI workspace",
+          close: "Close Atlas",
+          pin: "Pin Atlas to the right side",
+          unpin: "Unpin Atlas from the right side",
+          resize: "Resize Atlas",
+        }}
+        className={`athyper-atlas-workspace athyper-atlas-workspace--${mode}`}
+        presentation={mode === "fullscreen" ? "content" : "docked"}
+        contentTarget={fullTarget}
+        persistent
+        pinned={pinned}
+        onPinnedChange={onPinnedChange}
+        canPin={Boolean(onPinnedChange)}
+        preferenceKey="athyper.atlas.panel"
+        panelRef={panel}
+        panelProps={{
+          // Full view covers the page; Escape returns to it (the frame closes the dock itself).
+          onKeyDown: (event) => {
+            if (mode === "fullscreen" && event.key === "Escape" && !event.defaultPrevented) {
+              event.preventDefault();
+              onClose?.();
+            }
+          },
+        }}
+      >
+        {(frame) => content(frame)}
+      </WorkspaceToolPanel>
+    );
+  return (
+    <section
+      ref={panel}
+      role={modalFull ? "dialog" : undefined}
+      aria-modal={modalFull || undefined}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && !event.defaultPrevented && onClose) {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+      className={`athyper-atlas-workspace a-context-panel athyper-atlas-workspace--${mode}`}
+      aria-label="Atlas AI workspace"
+    >
+      {content()}
     </section>
   );
 }
@@ -524,6 +604,19 @@ function ConversationHistory({
 }) {
   const [tab, setTab] = useState<"conversations" | "actions">("conversations");
   const activeTab = fullView ? tab : "conversations";
+  // Search: conversations on the server (titles and message text), actions locally.
+  const [query, setQuery] = useState(""),
+    [renaming, setRenaming] = useState<string>(),
+    [renameValue, setRenameValue] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searched = useRef(false);
+  useEffect(() => {
+    if (activeTab !== "conversations") return;
+    if (!searched.current && !query) return;
+    searched.current = true;
+    const timer = window.setTimeout(() => void atlas.loadThreads(query), 300);
+    return () => window.clearTimeout(timer);
+  }, [query, activeTab]);
   const id = React.useId();
   const choose = (next: "conversations" | "actions") => {
     setTab(next);
@@ -573,13 +666,27 @@ function ConversationHistory({
           <strong>Conversations</strong>
         </header>
       ) : null}
+      <form
+        className="athyper-atlas-history__search"
+        role="search"
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <ObjectSearch
+          id={`${id}-search`}
+          ref={searchInput}
+          label={activeTab === "actions" ? "Search Atlas actions" : "Search conversations"}
+          placeholder="Search…"
+          value={query}
+          onValueChange={setQuery}
+        />
+      </form>
       <div
         id={`${id}-panel-${activeTab}`}
         role={fullView ? "tabpanel" : undefined}
         aria-labelledby={fullView ? `${id}-${activeTab}` : undefined}
       >
         {activeTab === "actions" ? (
-          <AtlasActionHistory atlas={atlas} />
+          <AtlasActionHistory atlas={atlas} query={query} />
         ) : (
           <>
             {atlas.threadsStatus === "loading" ? (
@@ -594,36 +701,96 @@ function ConversationHistory({
               </p>
             ) : null}
             {atlas.threads.length ? (
-              <ol>
-                {atlas.threads.map((thread) => (
-                  <li key={thread.threadId}>
-                    <button
-                      type="button"
-                      disabled={!!pendingThread}
-                      aria-current={
-                        (pendingThread ?? atlas.threadId) === thread.threadId
-                          ? "true"
-                          : undefined
-                      }
-                      onClick={() => onSelect(thread.threadId)}
-                    >
-                      <MessageSquareIcon size={14} />
-                      <span>
-                        <strong>
-                          {thread.title ?? "Untitled conversation"}
-                        </strong>
-                        <small>
-                          {pendingThread === thread.threadId
-                            ? "Opening…"
-                            : relativeDate(thread.updatedAt)}
-                        </small>
-                      </span>
-                    </button>
-                  </li>
+              <div className="athyper-atlas-history__groups">
+                {groupByDay(atlas.threads, (thread) => thread.updatedAt).map((group) => (
+                  <section key={group.label} aria-label={group.label}>
+                    <h3>{group.label}</h3>
+                    <ol>
+                      {group.items.map((thread) => (
+                        <li key={thread.threadId}>
+                          {renaming === thread.threadId ? (
+                            <form
+                              className="athyper-atlas-history__rename"
+                              onSubmit={(event) => {
+                                event.preventDefault();
+                                void atlas.renameThread(thread.threadId, renameValue).then(() => setRenaming(undefined));
+                              }}
+                            >
+                              <Input
+                                aria-label={`New name for ${thread.title ?? "conversation"}`}
+                                value={renameValue}
+                                maxLength={200}
+                                autoFocus
+                                onChange={(event) => setRenameValue(event.currentTarget.value)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Escape") {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    setRenaming(undefined);
+                                  }
+                                }}
+                              />
+                              <Button size="small" type="submit" disabled={!renameValue.trim()}>
+                                Save
+                              </Button>
+                            </form>
+                          ) : (
+                            <div className="athyper-atlas-history__row">
+                              <button
+                                type="button"
+                                disabled={!!pendingThread}
+                                aria-current={
+                                  (pendingThread ?? atlas.threadId) === thread.threadId
+                                    ? "true"
+                                    : undefined
+                                }
+                                onClick={() => onSelect(thread.threadId)}
+                              >
+                                <MessageSquareIcon size={14} />
+                                <span>
+                                  <strong>{thread.title ?? "Untitled conversation"}</strong>
+                                  <small>
+                                    {pendingThread === thread.threadId
+                                      ? "Opening…"
+                                      : group.label === "Today" || group.label === "Yesterday"
+                                        ? new Date(thread.updatedAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+                                        : relativeDate(thread.updatedAt)}
+                                  </small>
+                                </span>
+                              </button>
+                              <Menu>
+                                <MenuTrigger
+                                  className="athyper-atlas-history__more"
+                                  aria-label={`Actions for ${thread.title ?? "conversation"}`}
+                                >
+                                  <MoreHorizontalIcon size={16} />
+                                </MenuTrigger>
+                                <MenuContent portal>
+                                  <MenuItem
+                                    onClick={() => {
+                                      setRenaming(thread.threadId);
+                                      setRenameValue(thread.title ?? "");
+                                    }}
+                                  >
+                                    Rename
+                                  </MenuItem>
+                                  <MenuItem onClick={() => void atlas.archiveThread(thread.threadId)}>
+                                    Archive
+                                  </MenuItem>
+                                </MenuContent>
+                              </Menu>
+                            </div>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
                 ))}
-              </ol>
+              </div>
             ) : atlas.threadsStatus === "ready" ? (
-              <p>No previous conversations.</p>
+              <p className="athyper-atlas-history__empty">
+                {query.trim() ? `No conversations match “${query.trim()}”.` : "No previous conversations."}
+              </p>
             ) : null}
           </>
         )}
@@ -637,7 +804,12 @@ function ConversationBubble({
   onFeedback,
   onCorrection,
   recordLabel,
+  latest = false,
+  onFollowUp,
 }: {
+  /** The newest answer offers follow-up questions. */
+  readonly latest?: boolean;
+  readonly onFollowUp?: (prompt: string) => void;
   readonly recordLabel?: {
     readonly entityCode: string;
     readonly recordId: string;
@@ -647,6 +819,14 @@ function ConversationBubble({
   readonly onFeedback?: (value: AtlasResponseFeedbackV1) => Promise<void>;
   readonly onCorrection?: (value: AtlasVocabularyCorrection) => Promise<void>;
 }) {
+  const administrator = useOptionalPermission("atlas.admin.manage");
+  // Results with a registered view become the answer: a headline, readable data and
+  // scope notes. The deterministic text restating them is then not repeated.
+  const results = message.results.filter((result) => !atlasResultIsSilent(result));
+  const views = results.map(atlasResultView);
+  const known = views.filter((view): view is AtlasResultView => Boolean(view));
+  const viewAnswer = message.role !== "user" && results.length > 0 && known.length === results.length;
+  const unknown = results.filter((result, index) => !views[index] && !(result && typeof result === "object" && "insight" in result));
   return (
     <article
       className="athyper-atlas-workspace__message"
@@ -668,12 +848,23 @@ function ConversationBubble({
       ) : message.answer?.intent?.kind === "denied" ? (
         <p role="status">Unavailable in the current context</p>
       ) : null}
+      {viewAnswer ? (
+        <div className="athyper-atlas-result">
+          {known.map((view, index) => (
+            <section key={index} className="athyper-atlas-result__view">
+              <p className="athyper-atlas-result__headline">{view.headline}</p>
+              {view.body}
+            </section>
+          ))}
+        </div>
+      ) : null}
       {message.answer?.envelope && message.status === "completed" ? (
         <AtlasValidatedAnswer
           answer={message.answer}
           recordLabel={recordLabel}
+          hideSummary={viewAnswer}
         />
-      ) : message.text || !message.results.length ? (
+      ) : viewAnswer ? null : message.text || !message.results.length ? (
         message.role === "assistant" && message.status === "completed" ? (
           <AtlasSafeProse text={message.text || "No text was returned."} />
         ) : (
@@ -685,18 +876,36 @@ function ConversationBubble({
           </p>
         )
       ) : null}
-      {message.results.map((result, index) => (
-        <StructuredResult key={index} value={result} />
-      ))}
-      {onFeedback &&
-      message.role === "assistant" &&
-      message.status === "completed" &&
-      message.runId &&
-      !message.messageId.startsWith("local-") ? (
-        <ResponseFeedback
+      {results.map((result, index) =>
+        result && typeof result === "object" && "insight" in result ? (
+          <AtlasOwnerAssessment key={index} value={result.insight} />
+        ) : null,
+      )}
+      {viewAnswer ? (
+        <details className="athyper-atlas-answer__about">
+          <summary>About this answer</summary>
+          <ul>
+            {[...new Set(known.flatMap((view) => view.about))].map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+      {administrator && unknown.length ? (
+        <details className="athyper-atlas-answer__about">
+          <summary>Details for administrators</summary>
+          <p>{unknown.length === 1 ? "1 result has" : `${unknown.length} results have`} no answer view yet:</p>
+          <pre>{unknown.map((value) => JSON.stringify(value, null, 2)).join("\n\n")}</pre>
+        </details>
+      ) : null}
+      {message.role === "assistant" && message.status === "completed" ? (
+        <AnswerActions
           message={message}
+          copyText={viewAnswer ? known.map((view) => view.headline).join("\n") : message.text}
           submit={onFeedback}
           propose={onCorrection}
+          followUps={latest ? [...new Set(known.flatMap((view) => view.followUps ?? []))] : []}
+          onFollowUp={onFollowUp}
         />
       ) : null}
       {message.status === "failed" || message.status === "cancelled" ? (
@@ -793,90 +1002,6 @@ function contextForPath(path: string): string {
   if (clean.startsWith("/atlas")) return "Atlas workspace";
   return "Current page";
 }
-function StructuredResult({ value }: { readonly value: unknown }) {
-  if (
-    value &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    "items" in value &&
-    "section" in value &&
-    "status" in value &&
-    "hasMore" in value
-  )
-    return null;
-  if (value && typeof value === "object" && "insight" in value)
-    return <AtlasOwnerAssessment value={value.insight} />;
-  if (
-    Array.isArray(value) &&
-    value.length &&
-    value.every(
-      (item) => item && typeof item === "object" && !Array.isArray(item),
-    )
-  ) {
-    const rows = value.slice(0, 20) as readonly Record<string, unknown>[],
-      columns = Array.from(
-        new Set(rows.flatMap((row) => Object.keys(row))),
-      ).slice(0, 6);
-    return (
-      <div className="athyper-atlas-workspace__result">
-        <table>
-          <thead>
-            <tr>
-              {columns.map((column) => (
-                <th key={column}>{column}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr key={index}>
-                {columns.map((column) => (
-                  <td key={column}>{displayValue(row[column])}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {value.length > 20 ? (
-          <small>Showing 20 of {value.length} rows</small>
-        ) : null}
-      </div>
-    );
-  }
-  if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>).slice(
-      0,
-      20,
-    );
-    return (
-      <dl className="athyper-atlas-workspace__result">
-        {entries.map(([key, item]) => (
-          <div key={key}>
-            <dt>{key}</dt>
-            <dd>{displayValue(item)}</dd>
-          </div>
-        ))}
-      </dl>
-    );
-  }
-  return (
-    <pre className="athyper-atlas-workspace__result">{displayValue(value)}</pre>
-  );
-}
-function displayValue(value: unknown): string {
-  if (value === null || value === undefined) return "—";
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  )
-    return String(value);
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return "[Unsupported value]";
-  }
-}
 function timeLabel(value: string): string {
   try {
     return new Intl.DateTimeFormat(undefined, {
@@ -893,110 +1018,137 @@ function relativeDate(value: string): string {
   return days <= 0 ? "Today" : days === 1 ? "Yesterday" : `${days} days ago`;
 }
 
-function ResponseFeedback({
+const FEEDBACK_REASONS: readonly (readonly [AtlasResponseFeedbackV1["category"], string])[] = [
+  ["intent", "Not what I meant"],
+  ["evidence", "Wrong or missing sources"],
+  ["missing_context", "Missing work context"],
+  ["presentation", "Hard to read"],
+  ["vocabulary", "Wrong wording"],
+  ["unsupported_capability", "Atlas can't do this yet"],
+  ["owner_failure", "Something failed"],
+];
+/** Under an answer: Copy, Helpful / Not helpful (with what was wrong), and the
+ * questions that naturally come next. Feedback is the existing review record. */
+function AnswerActions({
   message,
+  copyText,
   submit,
   propose,
+  followUps = [],
+  onFollowUp,
 }: {
-  message: AtlasConversationMessage;
-  submit: (value: AtlasResponseFeedbackV1) => Promise<void>;
-  propose?: (value: AtlasVocabularyCorrection) => Promise<void>;
+  readonly message: AtlasConversationMessage;
+  readonly copyText: string;
+  readonly submit?: (value: AtlasResponseFeedbackV1) => Promise<void>;
+  readonly propose?: (value: AtlasVocabularyCorrection) => Promise<void>;
+  readonly followUps?: readonly string[];
+  readonly onFollowUp?: (prompt: string) => void;
 }) {
-  const [category, setCategory] =
-    useState<AtlasResponseFeedbackV1["category"]>("intent");
-  const [verdict, setVerdict] =
-    useState<AtlasResponseFeedbackV1["verdict"]>("wrong");
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">(
-    "idle",
-  );
+  const [copied, setCopied] = useState(false);
+  const [rating, setRating] = useState<"helpful" | "unhelpful">();
+  const [reason, setReason] = useState<AtlasResponseFeedbackV1["category"]>();
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const receipt = useRef<{ key: string; id: string } | undefined>(undefined);
-  const send = async () => {
+  const send = async (category: AtlasResponseFeedbackV1["category"], verdict: AtlasResponseFeedbackV1["verdict"]) => {
+    if (!submit || !message.runId) return;
     const key = `${category}:${verdict}`;
-    if (receipt.current?.key !== key)
-      receipt.current = { key, id: crypto.randomUUID() };
+    if (receipt.current?.key !== key) receipt.current = { key, id: crypto.randomUUID() };
     setStatus("saving");
     try {
-      await submit({
-        schemaVersion: 1,
-        feedbackId: receipt.current.id,
-        runId: message.runId!,
-        messageId: message.messageId,
-        category,
-        verdict,
-      });
+      await submit({ schemaVersion: 1, feedbackId: receipt.current.id, runId: message.runId, messageId: message.messageId, category, verdict });
       setStatus("saved");
     } catch {
       setStatus("error");
     }
   };
+  const canRate = Boolean(submit && message.runId && !message.messageId.startsWith("local-"));
   return (
-    <details className="athyper-atlas-feedback">
-      <summary>Response feedback</summary>
-      <fieldset disabled={status === "saving" || status === "saved"}>
-        <label>
-          Feedback about{" "}
-          <select
-            value={category}
-            onChange={(e) =>
-              setCategory(e.target.value as AtlasResponseFeedbackV1["category"])
-            }
+    <div className="athyper-atlas-answer__actions">
+      <div className="athyper-atlas-answer__action-row" role="group" aria-label="Answer actions">
+        <Tooltip label={copied ? "Copied" : "Copy answer"}>
+          <button
+            type="button"
+            aria-label="Copy answer"
+            onClick={() => {
+              void navigator.clipboard?.writeText(copyText).then(
+                () => {
+                  setCopied(true);
+                  window.setTimeout(() => setCopied(false), 1500);
+                },
+                () => setCopied(false),
+              );
+            }}
           >
-            {[
-              ["vocabulary", "Wording"],
-              ["intent", "What I meant"],
-              ["missing_context", "Missing work context"],
-              ["unsupported_capability", "Unavailable capability"],
-              ["owner_failure", "Read or service failure"],
-              ["evidence", "Evidence"],
-              ["presentation", "Presentation"],
-            ].map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Assessment{" "}
-          <select
-            value={verdict}
-            onChange={(e) =>
-              setVerdict(e.target.value as AtlasResponseFeedbackV1["verdict"])
-            }
-          >
-            {["correct", "wrong", "partial", "missing"].map((value) => (
-              <option key={value} value={value}>
-                {value.charAt(0).toUpperCase() + value.slice(1)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="button" onClick={() => void send()}>
-          Send feedback
-        </button>
-      </fieldset>
-      <p role="status">
-        {status === "saved"
-          ? "Feedback recorded for review."
-          : status === "error"
-            ? "Feedback could not be recorded. Try again."
-            : status === "saving"
-              ? "Saving feedback…"
-              : "Feedback is reviewed before vocabulary changes."}
-      </p>
-      {status === "saved" &&
-      propose &&
-      (category === "intent" || category === "vocabulary") &&
-      verdict !== "correct" ? (
-        <VocabularyCorrection
-          feedbackId={receipt.current!.id}
-          propose={propose}
-        />
+            {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+          </button>
+        </Tooltip>
+        {canRate ? (
+          <>
+            <Tooltip label="Helpful">
+              <button
+                type="button"
+                aria-label="Helpful"
+                aria-pressed={rating === "helpful"}
+                disabled={status === "saving" || status === "saved"}
+                onClick={() => {
+                  setRating("helpful");
+                  void send("presentation", "correct");
+                }}
+              >
+                <ThumbsUpIcon size={16} />
+              </button>
+            </Tooltip>
+            <Tooltip label="Not helpful">
+              <button
+                type="button"
+                aria-label="Not helpful"
+                aria-pressed={rating === "unhelpful"}
+                aria-expanded={rating === "unhelpful" && status !== "saved"}
+                disabled={status === "saving" || status === "saved"}
+                onClick={() => setRating("unhelpful")}
+              >
+                <ThumbsDownIcon size={16} />
+              </button>
+            </Tooltip>
+          </>
+        ) : null}
+        {status === "saved" ? <span role="status">Thanks — feedback recorded for review.</span> : null}
+        {status === "error" ? <span role="alert">Feedback could not be recorded. Try again.</span> : null}
+      </div>
+      {rating === "unhelpful" && status !== "saved" ? (
+        <div className="athyper-atlas-answer__reasons" role="group" aria-label="What was wrong?">
+          <span>What was wrong?</span>
+          {FEEDBACK_REASONS.map(([category, label]) => (
+            <button
+              key={category}
+              type="button"
+              aria-pressed={reason === category}
+              disabled={status === "saving"}
+              onClick={() => {
+                setReason(category);
+                void send(category, "wrong");
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       ) : null}
-    </details>
+      {status === "saved" && propose && (reason === "intent" || reason === "vocabulary") ? (
+        <VocabularyCorrection feedbackId={receipt.current!.id} propose={propose} />
+      ) : null}
+      {followUps.length && onFollowUp ? (
+        <div className="athyper-atlas-answer__follow-ups" role="group" aria-label="Ask next">
+          {followUps.slice(0, 2).map((prompt) => (
+            <button key={prompt} type="button" onClick={() => onFollowUp(prompt)}>
+              {prompt}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
-
 function VocabularyCorrection({
   feedbackId,
   propose,

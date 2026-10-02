@@ -42,6 +42,9 @@ export interface DesiredIdentityProjection {
   readonly identityId: string;
   readonly authorityTenantId: string;
   readonly personId: string;
+  /** Authoritative Person coordinate; distinct from authority and application tenants. */
+  readonly sourcePlane: PlaneKey;
+  readonly sourceTenantId: string;
   readonly identifier: string;
   readonly displayName: string;
   readonly realmKey: string;
@@ -141,6 +144,8 @@ export interface PlaneLocalIdentityAuthority {
   converge(input: {
     readonly identityId: string;
     readonly personId: string;
+    readonly sourcePlane: PlaneKey;
+    readonly sourceTenantId: string;
     readonly identifier: string;
     readonly displayName: string;
     readonly providerSubject: string;
@@ -271,6 +276,8 @@ export class IdentitySagaWorker {
         await this.options.local.converge({
           identityId: work.identityId,
           personId: work.personId,
+          sourcePlane: work.sourcePlane,
+          sourceTenantId: work.sourceTenantId,
           identifier: work.identifier,
           displayName: work.displayName,
           providerSubject,

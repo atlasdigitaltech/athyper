@@ -56,6 +56,7 @@ export function createEntityHttpRegistrars(options: EntityHttpOptions) {
     read: (application: Application) =>
       registerEntityReadHttp(application, {
         views: {
+          diagnostics: options.diagnostics ?? process.env["ENTITY_READ_DIAGNOSTICS"] === "true",
           authenticate,
           readContext,
           service: savedViews,

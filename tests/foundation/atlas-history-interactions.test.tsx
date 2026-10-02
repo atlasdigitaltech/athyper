@@ -38,38 +38,9 @@ afterEach(async () => {
   dom.window.close();
 });
 
-for (const mode of ["dock", "fullscreen"] as const) {
-  test(`Atlas ${mode} history dismisses outside and with Escape before closing the workspace`, async () => {
-    let closed = 0;
-    const client = { experience: async () => null, threads: async () => ({ items: [] }) } as unknown as AtlasAnswerClient;
-    await act(async () => root.render(
-      <AtlasAnswerProvider options={{ client }}>
-        <ShellPersonalizationScopeProvider plane="neon" tenantId="tenant" principalId="user">
-          <AtlasWorkspace mode={mode} planeName="Neon" onClose={() => { closed += 1; }} />
-        </ShellPersonalizationScopeProvider>
-      </AtlasAnswerProvider>
-    ));
-    const trigger = host.querySelector<HTMLButtonElement>('button[aria-label="Conversation history"]')!;
-    const panel = () => host.querySelector(".athyper-atlas-workspace__history");
-    const toggle = async () => act(async () => { trigger.click(); });
-    if (!panel()) await toggle();
-    await act(async () => { panel()!.dispatchEvent(new dom.window.Event("pointerdown", { bubbles: true })); });
-    assert.ok(panel(), "clicking inside keeps history open");
-    await act(async () => { host.querySelector(".athyper-atlas-workspace__conversation")!.dispatchEvent(new dom.window.Event("pointerdown", { bubbles: true })); });
-    assert.equal(panel(), null);
-    assert.equal(closed, 0);
-    await toggle();
-    await act(async () => { document.body.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
-    assert.equal(panel(), null);
-    assert.equal(document.activeElement, trigger);
-    assert.equal(closed, 0);
-    await toggle();
-    await toggle();
-    assert.equal(panel(), null, "history trigger still toggles closed");
-    await act(async () => { trigger.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
-    assert.equal(closed, 1, "Escape closes the workspace once history is closed");
-  });
-}
+// History dismissal and Escape order run in the browser, where the shared side
+// panel's portal, focus and modal isolation are real: ui-baseline.spec.ts
+// "History closes on an outside click and Escape before Escape closes Atlas".
 
 
 test("Atlas feedback binds the completed response and reuses its receipt when retrying", async () => {
@@ -80,18 +51,19 @@ test("Atlas feedback binds the completed response and reuses its receipt when re
  const client={experience:async()=>null,threads:async()=>({items:[]}),answer:async()=>({text:"Select the work context.",intent:{schemaVersion:1,kind:"clarify",strategy:"owner_scope",reason:"missing_scope",capabilityIds:[]},citations:[],attachmentCitations:[],actions:[],threadId:"thread",runId,messageId,publicModelId:"atlas-fast"}),feedback:async(value:unknown)=>{submissions.push(value);if(submissions.length===1)throw Error("offline");}} as unknown as AtlasAnswerClient;
  await act(async()=>root.render(<AtlasAnswerProvider options={{client}}><Capture/><ShellPersonalizationScopeProvider plane="neon" tenantId="tenant" principalId="user"><AtlasWorkspace mode="dock" planeName="Neon" onClose={()=>{}}/></ShellPersonalizationScopeProvider></AtlasAnswerProvider>));
  await act(async()=>controller!.ask("Show this record summary"));
- const send=()=>[...host.querySelectorAll<HTMLButtonElement>("button")].find(button=>button.textContent==="Send feedback")!;
- assert.ok(send());
- assert.match(host.textContent!,/Clarification needed/);
- await act(async()=>send().click());
- assert.match(host.textContent!,/Feedback could not be recorded/);
- await act(async()=>send().click());
+ const button=(name:string)=>[...document.querySelectorAll<HTMLButtonElement>("button")].find(item=>item.getAttribute("aria-label")===name||item.textContent===name)!;
+ assert.ok(button("Not helpful"));
+ await act(async()=>button("Not helpful").click());
+ await act(async()=>button("Not what I meant").click());
+ assert.match(document.body.textContent!,/Feedback could not be recorded/);
+ await act(async()=>button("Not what I meant").click());
  assert.equal(submissions.length,2);
  assert.deepEqual(submissions[0],submissions[1]);
  assert.equal(submissions[0].runId,runId);assert.equal(submissions[0].messageId,messageId);
  assert.deepEqual(Object.keys(submissions[0]).sort(),["schemaVersion","feedbackId","runId","messageId","category","verdict"].sort());
- assert.match(host.textContent!,/Feedback recorded for review/);
- assert.equal(send().closest("fieldset")!.disabled,true);
+ assert.equal(submissions[0].category,"intent");assert.equal(submissions[0].verdict,"wrong");
+ assert.match(document.body.textContent!,/feedback recorded for review/);
+ assert.equal(button("Not helpful").disabled,true);
 });
 
 
@@ -102,11 +74,27 @@ test("Studio learning review binds rejection to the inbox revision and separates
  await act(async()=>root.render(<AtlasLearningReviewCard item={item} run={run}/>));
  const buttons=()=>Array.from(host.querySelectorAll("button"));
  assert.equal(buttons().find(button=>button.textContent==="Evaluate and create draft")?.disabled,true);
- assert.ok(host.textContent?.includes("First unseen read question"));
+ assert.ok(host.textContent?.includes("Correction question"));
  await act(async()=>buttons().find(button=>button.textContent==="Reject correction")!.click());
  assert.deepEqual(calls,[{action:"reject",body:{revision:4}}]);
  await act(async()=>root.render(<AtlasLearningReviewCard item={{...item,state:"drafted",changeSetStatus:"in_review",changeSetRevision:7}} run={run}/>));
  assert.equal(buttons().some(button=>button.textContent?.startsWith("Publish")),false);
  await act(async()=>buttons().find(button=>button.textContent==="Approve draft")!.click());
  assert.deepEqual(calls[1],{action:"approve",body:{expectedRevision:7}});
+});
+
+
+test("Studio published fixture selection separates reviewer questions and exposes durable failures",async()=>{
+ const calls:{action:string;body:Record<string,unknown>}[]=[];
+ const item={id:"receipt",revision:4,state:"drafted",phrase:"company snapshot",capabilityId:"entity_read_record",entityCode:"business_partner",originPlane:"neon",sourceDescriptorHash:"source",proposalHash:"proposal",attemptCount:1,attempts:[{id:"attempt-1",status:"failed",startedAt:"2026-10-01T00:00:00Z",failureCode:"LEARNING_EVALUATION_FAILED"}]};
+ await act(async()=>root.render(<AtlasLearningReviewCard item={item} run={async(_item,action,body)=>{calls.push({action,body});}}/>));
+ assert.match(host.textContent!,/Evaluation attempts \(1\)/);
+ assert.match(host.textContent!,/LEARNING_EVALUATION_FAILED/);
+ const select=host.querySelector("select")!;
+ await act(async()=>{select.value="published";select.dispatchEvent(new dom.window.Event("change",{bubbles:true}));});
+ assert.equal(host.querySelectorAll("input").length,1);
+ assert.equal(host.querySelector("input")?.placeholder,"Release UUID/test key");
+ assert.ok(!host.textContent?.includes("Correction question"));
+ assert.equal([...host.querySelectorAll("button")].find(button=>button.textContent==="Re-evaluate into a new draft")?.disabled,true);
+ assert.deepEqual(calls,[]);
 });

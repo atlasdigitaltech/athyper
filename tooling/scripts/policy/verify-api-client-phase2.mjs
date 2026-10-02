@@ -31,11 +31,26 @@ const allowed = new Set([
   "@athyper/contract-platform-navigation",
   "@athyper/contract-platform-entity-list",
   "@athyper/contract-platform-dashboard",
+  "@athyper/contract-platform-entity-runtime",
+]);
+// These existing transport boundaries use shared wire-value parsers. They are
+// pure, React-free utilities; UI entrypoints and other runtime layers stay denied.
+const parserDependencies = new Map([
+  ["bootstrap.ts", new Set(["@athyper/platform-i18n"])],
+  ["localization.ts", new Set(["@athyper/platform-i18n"])],
+  ["entity-list.ts", new Set(["@athyper/platform-temporal"])],
+  ["operating-organization.ts", new Set(["@athyper/platform-temporal"])],
 ]);
 for (const file of files) {
   const source = readFileSync(file, "utf8");
   for (const specifier of importSpecifiers(source))
-    if (!specifier.startsWith(".") && !allowed.has(specifier))
+    if (
+      !specifier.startsWith(".") &&
+      !allowed.has(specifier) &&
+      !parserDependencies
+        .get(relative(join(packageRoot, "src"), file))
+        ?.has(specifier)
+    )
       violations.push(`${relative(root, file)} imports ${specifier}`);
   if (/\b(?:publicApiBase|accessToken|refreshToken)\b|Bearer\s/i.test(source))
     violations.push(

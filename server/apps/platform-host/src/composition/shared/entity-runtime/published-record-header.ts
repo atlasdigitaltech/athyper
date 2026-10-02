@@ -9,6 +9,7 @@ type Input = Parameters<EntityRuntimeHeaderRepository["readHeader"]>[0];
  * token and never authority to mutate a record. No native fallback or raw SQL. */
 export function createPublishedRecordHeader(options: {
   reader: PinnedCompiledEntityReader;
+  admitDescriptor(descriptor: EntityRuntimeDescriptor): Promise<EntityRuntimeDescriptor>;
   read(input: Input, descriptor: EntityRuntimeDescriptor, fields: readonly string[]): Promise<Readonly<Record<string, unknown>> | null>;
 }): EntityRuntimeHeaderRepository {
   return { async readHeader(input) {
@@ -17,7 +18,7 @@ export function createPublishedRecordHeader(options: {
       || release.coordinate.principalId !== context.principalId || release.coordinate.planeKey !== context.planeKey
       || release.coordinate.entityCode !== core.entityCode || core.plane !== context.planeKey || core.artifactType !== "core")
       throw Error("ENTITY_HEADER_RELEASE_SCOPE_MISMATCH");
-    const descriptor = await readCompiledRuntimeContract(options.reader, release);
+    const descriptor = await options.admitDescriptor(await readCompiledRuntimeContract(options.reader, release));
     assertCommonReferenceDescriptor(descriptor, context.planeKey);
     if (descriptor.entityCode !== core.entityCode || !descriptor.operations.read || !descriptor.operations.list)
       throw Error("ENTITY_HEADER_DESCRIPTOR_MISMATCH");

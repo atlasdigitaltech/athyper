@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Select, Button } from "@athyper/platform-ui";
+import { Button, ChoiceSelect, type ChoiceOption } from "@athyper/platform-ui";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { activityLocalDate, resolveActivityDateRange, type ActivityDateRange, type ActivityDescription, type ActivityPeriod } from "@athyper/contract-platform-entity-runtime";
 export type ActivityRangeSelection = Omit<ActivityDateRange,"timeZone">;
@@ -19,25 +19,20 @@ export function ActivityDateRangeControl({description,days,selection,onChange}:{
   const weeks=["thisWeek","lastWeek"].filter(p=>allowed(p as ActivityPeriod));
   const months=["thisMonth","lastMonth"].filter(p=>allowed(p as ActivityPeriod));
   const label=(key:string)=>intl.message(`activity.period.${key}`);
+  const group=(key:string,values:readonly string[]):ChoiceOption[]=>values.map(value=>({value,label:label(value),group:label(key)}));
+  const periodOptions:readonly ChoiceOption[]=[
+    ...group("days",description.supportsCalendarRanges?["today","yesterday"].filter(p=>allowed(p as ActivityPeriod)):[]),
+    ...lastDays.map(n=>({value:`last:${n}`,label:intl.message("activity.period.lastDays",{count:n}),group:label("days")})),
+    ...(description.supportsCalendarRanges?[...group("weeks",weeks),...group("months",months),{value:"custom",label:label("dateRange"),group:label("custom")}]:[]),
+  ];
   return <div className="a-activity-date-range">
     <label className="a-entity-activity__range">
       <span>{intl.message("activity.dateRange")}</span>
-      <Select title={intl.message("activity.period.limit",{count:description.maxRangeDays})} value={custom?"custom":!description.supportsCalendarRanges?`last:${days}`:selection.period==="lastDays"?`last:${days}`:selection.period} onChange={e=>{
-        const value=e.target.value;
+      <ChoiceSelect title={intl.message("activity.period.limit",{count:description.maxRangeDays})} value={custom?"custom":!description.supportsCalendarRanges?`last:${days}`:selection.period==="lastDays"?`last:${days}`:selection.period} options={periodOptions} onChange={value=>{
         if(value==="custom") {setStart(selection.startDate??today);setEnd(selection.endDate??today);setCustom(true);return;}
         setCustom(false);
         onChange({period:value.startsWith("last:")?"lastDays":value as ActivityPeriod},value.startsWith("last:")?Number(value.slice(5)):days);
-      }}>
-        <optgroup label={label("days")}>
-          {description.supportsCalendarRanges ? ["today","yesterday"].filter(p=>allowed(p as ActivityPeriod)).map(p=><option key={p} value={p}>{label(p)}</option>):null}
-          {lastDays.map(n=><option key={n} value={`last:${n}`}>{intl.message("activity.period.lastDays",{count:n})}</option>)}
-        </optgroup>
-        {description.supportsCalendarRanges ? <>
-          {weeks.length ? <optgroup label={label("weeks")}>{weeks.map(p=><option key={p} value={p}>{label(p)}</option>)}</optgroup>:null}
-          {months.length ? <optgroup label={label("months")}>{months.map(p=><option key={p} value={p}>{label(p)}</option>)}</optgroup>:null}
-          <optgroup label={label("custom")}><option value="custom">{label("dateRange")}</option></optgroup>
-        </>:null}
-      </Select>
+      }}/>
     </label>
     {description.supportsCalendarRanges ? <small>{zone}{selection.period==="custom"&&!custom&&valid(selection)?` · ${intl.date(selection.startDate!+"T12:00:00Z",{timeZone:"UTC"})} – ${intl.date(selection.endDate!+"T12:00:00Z",{timeZone:"UTC"})}`:""}</small>:null}
     {custom ? <div className="a-activity-date-range__custom">

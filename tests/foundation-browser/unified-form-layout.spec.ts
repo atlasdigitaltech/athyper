@@ -82,7 +82,8 @@ test("shared form navigation tracks scrolling and preserves edits and validation
     nav.getByRole("button", { name: /Addresses/ }),
   ).not.toContainText("Issues:");
   await page.setViewportSize({ width: 390, height: 844 });
-  await nav.getByRole("combobox").selectOption("contact");
+  await nav.getByRole("combobox").click();
+  await page.getByRole("option", { name: /^Contacts/ }).click();
   await expect(page.locator('[data-form-section="contact"]')).toBeFocused();
   await expect(page.getByRole("textbox", { name: "Contact" })).toHaveValue(
     "Example contact",

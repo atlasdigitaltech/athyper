@@ -8,7 +8,7 @@ import type { EntityCapabilityRequest } from "@athyper/server-platform-experienc
 import { createPublishedParentAdmission } from "../published-parent-admission.js";
 import { createPublishedRecordHeader } from "../published-record-header.js";
 
-function fixture() {
+function fixture(admitDescriptor: Parameters<typeof createPublishedParentAdmission>[0]["admitDescriptor"] = async descriptor => descriptor) {
   const graph = buildSharedReferenceGraph({ entityCode: "test_dictionary", title: "Dictionary", storageObject: "test_dictionary", codeField: "code", titleField: "code",
     fields: [{ key: "id", label: "ID", type: "uuid", required: true }, { key: "code", label: "Code", type: "string", required: true }],
     columns: ["code"], searchFields: ["code"], sections: [{ key: "main", label: "Main", fields: ["code"] }],
@@ -35,7 +35,7 @@ function fixture() {
     publicationCoordinate: vi.fn(async () => ({ releaseId: source.releaseId, releaseNo: 1 })),
   };
   const read = vi.fn(async () => true);
-  const admit = createPublishedParentAdmission({ reader: reader as never, read });
+  const admit = createPublishedParentAdmission({ admitDescriptor, reader: reader as never, read });
   return { input, release, reader, read, admit, core: result.artifacts.find(a => a.artifact.artifactType === "core")!.artifact };
 }
 it("uses the supplied release for both parent descriptor and capability admission", async () => {
@@ -80,7 +80,7 @@ it("keeps parent admission free of product imports and entity-name branches", ()
 it("reads a generic header using the exact capability release and only requested fields", async () => {
   const f = fixture();
   const read = vi.fn(async () => ({ id: "local-record", code: "AA", secret: "must not leave provider" }));
-  const headers = createPublishedRecordHeader({ reader: f.reader as never, read });
+  const headers = createPublishedRecordHeader({ admitDescriptor: async descriptor => descriptor, reader: f.reader as never, read });
   const input = { context: f.input.context, release: f.release, core: f.core, recordId: f.input.recordId, fieldKeys: ["code"] };
   const first = await headers.readHeader(input);
   expect(first?.values).toEqual({ code: "AA", id: "local-record" });
@@ -93,7 +93,7 @@ it("reads a generic header using the exact capability release and only requested
 });
 it("header reads reject wrong actor, plane, fields and provider record IDs", async () => {
   const f = fixture(); const read = vi.fn(async () => ({ id: "wrong-record", code: "AA" }));
-  const headers = createPublishedRecordHeader({ reader: f.reader as never, read });
+  const headers = createPublishedRecordHeader({ admitDescriptor: async descriptor => descriptor, reader: f.reader as never, read });
   const input = { context: f.input.context, release: f.release, core: f.core, recordId: f.input.recordId, fieldKeys: ["code"] };
   await expect(headers.readHeader({ ...input, context: { ...input.context, principalId: "other" } })).rejects.toThrow("SCOPE_MISMATCH");
   await expect(headers.readHeader({ ...input, core: { ...input.core, plane: "mesh" } })).rejects.toThrow("SCOPE_MISMATCH");
@@ -108,4 +108,17 @@ it("keeps the header provider free of product, SQL and legacy fallback imports",
   for (const node of ts.createSourceFile("header.ts", text, ts.ScriptTarget.Latest, true).statements)
     if (ts.isImportDeclaration(node)) expect(allowed.has((node.moduleSpecifier as ts.StringLiteral).text)).toBe(true);
   expect(text).not.toMatch(/country|currency|business_partner|sql`/);
+});
+
+it("blocks pinned parent and header reads when serving readiness is revoked", async () => {
+  const admitDescriptor = vi.fn(async () => { throw Error("ENTITY_DEPLOYMENT_NOT_READY"); });
+  const f = fixture(admitDescriptor);
+  await expect(f.admit(f.input, f.release)).rejects.toThrow("ENTITY_DEPLOYMENT_NOT_READY");
+  expect(f.read).not.toHaveBeenCalled();
+  const read = vi.fn(async () => null);
+  const headers = createPublishedRecordHeader({ reader: f.reader as never, admitDescriptor, read });
+  await expect(headers.readHeader({ context: f.input.context, release: f.release, core: f.core,
+    recordId: f.input.recordId, fieldKeys: ["code"] })).rejects.toThrow("ENTITY_DEPLOYMENT_NOT_READY");
+  expect(read).not.toHaveBeenCalled();
+  expect(admitDescriptor).toHaveBeenCalledTimes(2);
 });

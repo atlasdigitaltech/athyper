@@ -23,7 +23,7 @@ test("every upgrade is registered for exactly its applicable planes", async () =
   );
   assert.deepEqual(
     [...migrations].sort(),
-    upgrades.map((entry) => entry.path!.replace("migrations/", "")).sort(),
+    inventory.entries.filter(entry => entry.path?.startsWith("migrations/") && entry.path.endsWith(".sql")).map((entry) => entry.path!.replace("migrations/", "")).sort(),
   );
   for (const plane of ["studio", "neon", "mesh"]) {
     const manifest = (

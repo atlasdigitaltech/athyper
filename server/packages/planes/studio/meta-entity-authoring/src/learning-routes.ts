@@ -15,7 +15,15 @@ export function registerAtlasLearningInboxRoutes(app: Application, options: {aut
   app.post("/api/studio/atlas-learning/:id/resume", options.authenticate, route((request, context) => options.inbox.resume(context, uuid(request.params.id), options.authoring)));
   app.get("/api/studio/atlas-learning", options.authenticate, route((_request, context) => options.inbox.list(context)));
   app.post("/api/studio/atlas-learning/:id/reject", options.authenticate, route((request, context) => options.inbox.reject(context, uuid(request.params.id), revision(request.body?.revision))));
-  app.post("/api/studio/atlas-learning/:id/stage", options.authenticate, route((request, context) => options.inbox.stage(context, {id: uuid(request.params.id), revision: revision(request.body?.revision), fixtures: request.body?.fixtures})));
+  app.post("/api/studio/atlas-learning/:id/stage", options.authenticate, route(async (request, context) => {
+    const body = request.body;
+    if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some(key => !["revision", "fixtures", "fixtureSetId", "requalify"].includes(key)) ||
+        (body.requalify !== undefined && typeof body.requalify !== "boolean") ||
+        (body.fixtureSetId !== undefined && (typeof body.fixtureSetId !== "string" || !body.fixtureSetId.trim() || body.fixtureSetId.length > 200 || body.fixtures !== undefined)))
+      throw new TypeError("Provide fixtures or one controlled fixture set ID with the current revision");
+    return options.inbox.stage(context, { id: uuid(request.params.id), revision: revision(body.revision), requalify: body.requalify,
+      ...(body.fixtureSetId === undefined ? { fixtures: body.fixtures } : { fixtureSetId: body.fixtureSetId }) });
+  }));
 }
 function uuid(value: unknown): string { if (typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value)) throw new TypeError("Invalid review coordinate"); return value; }
 function revision(value: unknown): number { if (!Number.isSafeInteger(value) || Number(value) < 0) throw new TypeError("Current revision is required"); return Number(value); }

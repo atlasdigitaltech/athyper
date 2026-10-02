@@ -364,9 +364,9 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         const context = object(row["input_context"]);
         return {
           key: String(row["test_key"]),
-          assertion: (context["assertion"] === "path_equals"
+          assertion: (context["assertion"] === "learning_fixture_set" ? "learning_fixture_set" : context["assertion"] === "path_equals"
             ? "path_equals"
-            : "path_exists") as "path_exists" | "path_equals",
+            : "path_exists") as "learning_fixture_set" | "path_exists" | "path_equals",
           path: String(context["path"] ?? ""),
           ...(context["expected"] !== undefined
             ? { expected: context["expected"] }

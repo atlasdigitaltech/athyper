@@ -5,6 +5,7 @@ import { registerMetaEntityAuthoringRoutes } from "@athyper/server-plane-studio-
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import {
   createMetaEntityInspectionAuthorizer,
+  createAtlasLearningReviewAuthorizer,
   createMetaEntityAuthoringAuthorizer,
   type AuthoringReviewEvidence,
 } from "./meta-entity-authoring-authorizer.js";
@@ -325,4 +326,35 @@ it("rollback requires its own canonical permission and approved change set", asy
   expect(await a.authorize({ ...request, resource: {} })).toMatchObject({
     allowed: false,
   });
+});
+
+it("maps learning inspection to the canonical grant without approving a change set", async () => {
+  const load = vi.fn(async () => null);
+  const a = createAtlasLearningReviewAuthorizer(fallback, load);
+  expect(await a.authorize({ context: context("metadata.entity.review"), permissionCode: "metadata.entity.review", resource: { learningOperation: "list" } })).toMatchObject({ allowed: true });
+  expect(load).not.toHaveBeenCalled();
+});
+for (const [label, row, allowed] of [
+  ["independent reviewer", { tenantId: "tenant", submittedBy: "proposer", state: "pending" }, true],
+  ["requalification", { tenantId: "tenant", submittedBy: "proposer", state: "drafted" }, true],
+  ["same proposer", { tenantId: "tenant", submittedBy: "reviewer", state: "pending" }, false],
+  ["foreign tenant", { tenantId: "other", submittedBy: "proposer", state: "pending" }, false],
+  ["rejected proposal", { tenantId: "tenant", submittedBy: "proposer", state: "rejected" }, false],
+  ["missing proposal", null, false],
+] as const) it(`learning stage: ${label}`, async () => {
+  const a = createAtlasLearningReviewAuthorizer(fallback, async () => row);
+  expect(await a.authorize({ context: context("metadata.entity.review"), permissionCode: "metadata.entity.review", resource: { learningOperation: "stage", learningInboxId: id } })).toMatchObject({ allowed });
+});
+it("learning review never bypasses MFA, missing grants, explicit denies or ordinary release authority", async () => {
+  const load = vi.fn(async () => ({ tenantId: "tenant", submittedBy: "proposer", state: "pending" }));
+  const a = createAtlasLearningReviewAuthorizer(fallback, load), c = context("metadata.entity.review");
+  for (const changed of [
+    { ...c, assurance: undefined },
+    { ...c, permissions: { ...c.permissions, allowed: [] } },
+    { ...c, permissions: { ...c.permissions, denied: ["studio.metadata.contract.review"] } },
+  ]) expect(await a.authorize({ context: changed as VerifiedRequestContext, permissionCode: "metadata.entity.review", resource: { learningOperation: "stage", learningInboxId: id } })).toMatchObject({ allowed: false });
+  expect(load).not.toHaveBeenCalled();
+  const input = { context: c, permissionCode: "metadata.entity.review", resource: { changeSetId: id } };
+  await a.authorize(input);
+  expect(fallback.authorize).toHaveBeenLastCalledWith(input);
 });

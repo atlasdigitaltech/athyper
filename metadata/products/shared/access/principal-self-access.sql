@@ -1,6 +1,6 @@
 -- Principal onboarding grant recipe. Run through the authenticated provisioning
 -- connection after tenants, memberships and the identity permission catalog exist.
--- All five permissions remain subject to owner RLS. Administer is never default.
+-- All seven permissions remain subject to owner RLS. Administer is never default.
 DO $$
 DECLARE t record; r uuid; g uuid; scope uuid; actor uuid; permission_ids uuid[];
   source constant text:='entity-onboarding:principal-self:v1';
@@ -8,8 +8,9 @@ BEGIN
  IF COALESCE(current_setting('app.database_plane',true),'') NOT IN ('studio','neon','mesh') THEN RAISE EXCEPTION 'Exact plane required'; END IF;
  SELECT array_agg(id ORDER BY canonical_code) INTO permission_ids FROM authz.permission WHERE status='published' AND canonical_code IN (
   'common.identity.principal.read','common.identity.principal_profile.read','common.identity.principal_profile.edit',
-  'common.identity.principal_notification_preference.read','common.identity.principal_notification_preference.edit');
- IF cardinality(permission_ids) IS DISTINCT FROM 5 THEN RAISE EXCEPTION 'Identity catalog required'; END IF;
+  'common.identity.principal_notification_preference.read','common.identity.principal_notification_preference.edit',
+  'common.identity.principal_ui_profile.read','common.identity.principal_ui_profile.edit');
+ IF cardinality(permission_ids) IS DISTINCT FROM 7 THEN RAISE EXCEPTION 'Identity catalog required'; END IF;
  FOR t IN SELECT tenant.id,tenant.code,tenant.created_by FROM master.tenant tenant WHERE tenant.status='active' AND EXISTS(SELECT 1 FROM master.principal p JOIN authz.plane_membership m ON m.tenant_id=p.tenant_id AND m.principal_id=p.id WHERE p.tenant_id=tenant.id AND p.principal_type='user' AND m.status='active') LOOP
   SELECT id INTO actor FROM master.principal WHERE tenant_id=t.id AND status='active' AND code='seed.three-plane-provisioner';
   IF actor IS NULL THEN RAISE EXCEPTION 'Tenant provisioning actor required for %',t.code; END IF;
@@ -23,6 +24,15 @@ BEGIN
    VALUES(t.id,'entity.principal.self','My principal profile','Read own identity; edit own profile and notifications.','system','seed',source,'draft',actor) RETURNING id INTO r;
    INSERT INTO authz.role_permission(tenant_id,role_id,permission_id,created_by) SELECT t.id,r,p,actor FROM unnest(permission_ids) p;
    UPDATE authz.role SET status='active',updated_by=actor WHERE id=r;
+  ELSIF EXISTS(SELECT 1 FROM authz.role WHERE id=r AND source_ref=source AND status='active')
+    AND (SELECT count(*) FROM authz.role_permission WHERE role_id=r)=5
+    AND NOT EXISTS(SELECT 1 FROM authz.role_permission rp JOIN authz.permission p ON p.id=rp.permission_id
+      WHERE rp.role_id=r AND p.canonical_code NOT IN ('common.identity.principal.read','common.identity.principal_profile.read','common.identity.principal_profile.edit','common.identity.principal_notification_preference.read','common.identity.principal_notification_preference.edit')) THEN
+    -- Upgrade only the exact, source-owned five-capability recipe; never overwrite custom roles.
+    UPDATE authz.role SET status='suspended',updated_by=actor WHERE id=r;
+    INSERT INTO authz.role_permission(tenant_id,role_id,permission_id,created_by)
+      SELECT t.id,r,p,actor FROM unnest(permission_ids) p ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING;
+    UPDATE authz.role SET status='active',updated_by=actor WHERE id=r;
   ELSIF NOT EXISTS(SELECT 1 FROM authz.role WHERE id=r AND source_ref=source) OR
     (SELECT array_agg(permission_id ORDER BY permission_id) FROM authz.role_permission WHERE role_id=r) IS DISTINCT FROM (SELECT array_agg(p ORDER BY p) FROM unnest(permission_ids) p) THEN
     RAISE EXCEPTION 'Principal self role conflicts with onboarding recipe';

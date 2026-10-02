@@ -680,6 +680,44 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION metadata.fn_entity_key_reference_valid(p_reference jsonb, p_field_key text)
+RETURNS boolean
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = pg_catalog, metadata
+AS $$
+DECLARE
+    v_mapping jsonb;
+    v_sources text[] := ARRAY[]::text[];
+    v_targets text[] := ARRAY[]::text[];
+BEGIN
+    IF jsonb_typeof(p_reference) IS DISTINCT FROM 'object'
+       OR NOT metadata.fn_jsonb_object_has_only_keys(p_reference, ARRAY['targetEntity', 'labelField', 'fields'])
+       OR jsonb_typeof(p_reference -> 'targetEntity') IS DISTINCT FROM 'string'
+       OR jsonb_typeof(p_reference -> 'labelField') IS DISTINCT FROM 'string'
+       OR coalesce(p_reference ->> 'targetEntity', '') !~ '^[a-z][a-z0-9_]{0,62}$'
+       OR coalesce(p_reference ->> 'labelField', '') !~ '^[a-z][a-z0-9_]{0,62}$'
+       OR jsonb_typeof(p_reference -> 'fields') IS DISTINCT FROM 'array' THEN
+        RETURN false;
+    END IF;
+    IF jsonb_array_length(p_reference -> 'fields') NOT BETWEEN 1 AND 8 THEN RETURN false; END IF;
+    FOR v_mapping IN SELECT value FROM jsonb_array_elements(p_reference -> 'fields') LOOP
+        IF jsonb_typeof(v_mapping) IS DISTINCT FROM 'object'
+           OR NOT metadata.fn_jsonb_object_has_only_keys(v_mapping, ARRAY['source', 'target'])
+           OR jsonb_typeof(v_mapping -> 'source') IS DISTINCT FROM 'string'
+           OR jsonb_typeof(v_mapping -> 'target') IS DISTINCT FROM 'string'
+           OR coalesce(v_mapping ->> 'source', '') !~ '^[a-z][a-z0-9_]{0,62}$'
+           OR coalesce(v_mapping ->> 'target', '') !~ '^[a-z][a-z0-9_]{0,62}$'
+           OR (v_mapping ->> 'source') = ANY(v_sources)
+           OR (v_mapping ->> 'target') = ANY(v_targets) THEN
+            RETURN false;
+        END IF;
+        v_sources := array_append(v_sources, v_mapping ->> 'source');
+        v_targets := array_append(v_targets, v_mapping ->> 'target');
+    END LOOP;
+    RETURN p_field_key = ANY(v_sources);
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION metadata.trg_validate_entity_field_contract()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -692,13 +730,13 @@ DECLARE
     v_rule_kind text;
 BEGIN
     v_allowed := CASE NEW.data_type::text
-        WHEN 'string' THEN ARRAY['kind', 'min_length', 'max_length', 'pattern']
+        WHEN 'string' THEN ARRAY['kind', 'min_length', 'max_length', 'pattern', 'keyReference']
         WHEN 'text' THEN ARRAY['kind', 'min_length', 'max_length', 'pattern']
         WHEN 'integer' THEN ARRAY['kind', 'minimum', 'maximum']
         WHEN 'bigint' THEN ARRAY['kind', 'minimum', 'maximum']
         WHEN 'decimal' THEN ARRAY['kind', 'minimum', 'maximum', 'precision', 'scale']
         WHEN 'boolean' THEN ARRAY['kind']
-        WHEN 'uuid' THEN ARRAY['kind']
+        WHEN 'uuid' THEN ARRAY['kind', 'keyReference']
         WHEN 'date' THEN ARRAY['kind']
         WHEN 'datetime' THEN ARRAY['kind', 'timezone_mode']
         WHEN 'json' THEN ARRAY['kind', 'schema_code']
@@ -709,6 +747,12 @@ BEGIN
 
     IF NOT metadata.fn_jsonb_object_has_only_keys(NEW.type_config, v_allowed) THEN
         RAISE EXCEPTION 'type_config contains properties not allowed for data type %', NEW.data_type
+            USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+
+    IF NEW.type_config ? 'keyReference'
+       AND NOT metadata.fn_entity_key_reference_valid(NEW.type_config -> 'keyReference', NEW.field_key::text) THEN
+        RAISE EXCEPTION 'keyReference requires a strict owned field-key mapping'
             USING ERRCODE = 'invalid_parameter_value';
     END IF;
 

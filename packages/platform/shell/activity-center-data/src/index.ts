@@ -425,6 +425,37 @@ export function useActivityCenterDataSource({
     },
     [notificationsClient, refresh],
   );
+  // Collapsed copies ("Show 5 similar") act as one row: one optimistic update,
+  // the per-notification calls together, then one refresh.
+  const markReadMany = useCallback(
+    async (items: readonly ShellNotificationItem[]) => {
+      const ids = new Set(
+        items
+          .filter((item) => notifications.some((value) => value.id === item.id && !value.readAt))
+          .map((item) => item.id),
+      );
+      if (!ids.size) return;
+      const readAt = new Date().toISOString();
+      setNotifications((list) => list.map((value) => (ids.has(value.id) ? { ...value, readAt } : value)));
+      setUnreadCount((value) => Math.max(0, value - ids.size));
+      const results = await Promise.allSettled([...ids].map((id) => notificationsClient.markRead(id)));
+      if (mounted.current) refresh();
+      if (results.some((result) => result.status === "rejected"))
+        throw new Error("Could not mark notifications read");
+    },
+    [notifications, notificationsClient, refresh],
+  );
+  const dismissMany = useCallback(
+    async (items: readonly ShellNotificationItem[]) => {
+      const results = await Promise.allSettled(items.map((item) => notificationsClient.dismiss(item.id)));
+      if (!mounted.current) return;
+      const done = new Set(items.filter((_, index) => results[index]!.status === "fulfilled").map((item) => item.id));
+      setNotifications((list) => list.filter((value) => !done.has(value.id)));
+      refresh();
+      if (done.size < items.length) throw new Error("Could not dismiss notifications");
+    },
+    [notificationsClient, refresh],
+  );
   const loadMoreNotifications = useCallback(async () => {
     if (!notificationCursor || moreBusy.current.notifications) return;
     const epoch = generation.current;
@@ -564,7 +595,7 @@ export function useActivityCenterDataSource({
         ...(queries.notifications.group === "none" ? { groupLabel: "" } : {}),
       })),
       inbox: workItems.map((item) => ({
-        ...toShellInbox(item, locale),
+        ...toShellInbox(item, locale, intl),
         ...(!collections.inbox?.configuration.actionKeys.some(key=>key==="open_record"||key==="open_task")?{href:undefined}:{}),
         ...(queries.inbox.group === "none" ? { groupLabel: "" } : {}),
       })),
@@ -588,6 +619,8 @@ export function useActivityCenterDataSource({
       onMarkNotificationRead: collections.notifications?.configuration.actionKeys.includes("mark_read")?markRead:undefined,
       onMarkAllNotificationsRead: collections.notifications?.configuration.actionKeys.includes("mark_read")?markAllRead:undefined,
       onDismissNotification: collections.notifications?.configuration.actionKeys.includes("dismiss")?dismiss:undefined,
+      onMarkNotificationsRead: collections.notifications?.configuration.actionKeys.includes("mark_read")?markReadMany:undefined,
+      onDismissNotifications: collections.notifications?.configuration.actionKeys.includes("dismiss")?dismissMany:undefined,
       onLoadMoreNotifications: loadMoreNotifications,
       onLoadMoreInbox: loadMoreInbox,
       onEnableBrowserPush: enableBrowserPush,
@@ -615,6 +648,8 @@ export function useActivityCenterDataSource({
       markRead,
       markAllRead,
       dismiss,
+      markReadMany,
+      dismissMany,
       loadMoreNotifications,
       loadMoreInbox,
       enableBrowserPush,
@@ -634,7 +669,8 @@ function toShellNotification(
     actionLabel: item.actionLabel,
     ...(item.body ? { detail: item.body } : {}),
     sourceLabel: sourceLabel(item.eventCode),
-    groupLabel: item.groupLabel ?? dateGroup(item.createdAt, locale),
+    // Servers may group by calendar date ("2026-09-25"); people read "Yesterday".
+    groupLabel: item.groupLabel && !ISO_DATE.test(item.groupLabel) ? item.groupLabel : dateGroup(item.groupLabel && ISO_DATE.test(item.groupLabel) ? item.groupLabel : item.createdAt, locale),
     timestamp: item.createdAt,
     timestampLabel: relativeTime(item.createdAt, locale),
     ...(safeHref(item.href) ? { href: item.href } : {}),
@@ -642,7 +678,7 @@ function toShellNotification(
     tone: tone(item),
   });
 }
-function toShellInbox(item: WorkItem, locale: string): ShellInboxItem {
+function toShellInbox(item: WorkItem, locale: string, intl: IntlRuntime): ShellInboxItem {
   const href = safeHref(item.href) ? item.href : undefined;
   return Object.freeze({
     id: item.id,
@@ -654,12 +690,14 @@ function toShellInbox(item: WorkItem, locale: string): ShellInboxItem {
     ...(item.description ? { detail: item.description } : {}),
     sourceLabel: humanize(item.workTypeCode),
     ...(item.assignmentLabel ? { assigneeLabel: item.assignmentLabel } : {}),
-    ...(item.dueAt ? { dueLabel: dueLabel(item.dueAt, locale) } : {}),
+    ...(item.dueAt ? { dueLabel: dueLabel(item.dueAt, locale, intl) } : {}),
     groupLabel:
       item.groupLabel ??
-      (item.dueAt && new Date(item.dueAt).getTime() < Date.now()
-        ? "Overdue"
-        : "Open work"),
+      intl.message(
+        item.dueAt && new Date(item.dueAt).getTime() < Date.now()
+          ? "activity.group.overdue"
+          : "activity.group.open",
+      ),
     ...(href ? { href } : {}),
     priority:
       item.priority === "urgent"
@@ -708,6 +746,7 @@ function safeLocale(locale: string): string {
     return "en";
   }
 }
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}(?:T|$)/;
 function dateGroup(value: string, locale: string): string {
   const date = new Date(value),
     now = new Date(),
@@ -722,9 +761,12 @@ function dateGroup(value: string, locale: string): string {
       date.getDate(),
     ).getTime(),
     difference = Math.round((start - day) / 86_400_000);
-  if (difference === 0) return "Today";
-  if (difference === 1) return "Yesterday";
-  if (difference < 7) return "This week";
+  // The platform's own words in every locale: "Today", "Hari ini", "اليوم".
+  const words = new Intl.RelativeTimeFormat(safeLocale(locale), { numeric: "auto" }),
+    capitalized = (text: string) => text.charAt(0).toLocaleUpperCase(safeLocale(locale)) + text.slice(1);
+  if (difference === 0) return capitalized(words.format(0, "day"));
+  if (difference === 1) return capitalized(words.format(-1, "day"));
+  if (difference < 7) return capitalized(words.format(0, "week"));
   return new Intl.DateTimeFormat(safeLocale(locale), {
     month: "long",
     year: "numeric",
@@ -744,11 +786,18 @@ function relativeTime(value: string, locale: string): string {
     return formatter.format(Math.round(delta / 3_600_000), "hour");
   return formatter.format(Math.round(delta / 86_400_000), "day");
 }
-function dueLabel(value: string, locale: string): string {
+function dueLabel(value: string, locale: string, intl: IntlRuntime): string {
   const delta = new Date(value).getTime() - Date.now();
-  if (delta < 0)
-    return `Overdue ${relativeTime(value, locale).replace(" ago", "")}`;
-  return `Due ${relativeTime(value, locale)}`;
+  if (delta >= 0) return intl.message("activity.due", { when: relativeTime(value, locale) });
+  const absolute = -delta,
+    [amount, unit] =
+      absolute < 3_600_000
+        ? [Math.max(1, Math.round(absolute / 60_000)), "minute"]
+        : absolute < 86_400_000
+          ? [Math.round(absolute / 3_600_000), "hour"]
+          : [Math.round(absolute / 86_400_000), "day"];
+  const duration = new Intl.NumberFormat(safeLocale(locale), { style: "unit", unit, unitDisplay: "long" }).format(amount);
+  return intl.message("activity.overdue", { duration });
 }
 function localizedActivityError(cause: unknown, intl: IntlRuntime): string {
   if (cause instanceof ApiTransportError) {

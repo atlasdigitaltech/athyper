@@ -84,7 +84,11 @@ export function Tooltip({ label, children, portal = false, onlyWhenTruncated = f
     clearTimers(); if (!suppressed) openTimer.current=setTimeout(()=>{openTimer.current=undefined;show();},600);
   }} onPointerLeave={()=>{interaction.current.anchor=false;leave();}}
   onPointerDownCapture={dismiss} onClick={dismiss}
-  onFocusCapture={()=>{ interaction.current.focus=true; if(!interaction.current.dismissed && !suppressed) {clearTimers();show();} }}
+  onFocusCapture={(event)=>{ interaction.current.focus=true;
+    // Keyboard focus only: focus that returns after a click or a native dialog
+    // (for example the file picker behind Attach) must not leave a tooltip open.
+    let keyboard=true; try { keyboard=(event.target as Element).matches(":focus-visible"); } catch { /* older engines: keep showing */ }
+    if(keyboard && !interaction.current.dismissed && !suppressed) {clearTimers();show();} }}
   onBlurCapture={()=>{interaction.current.focus=false;interaction.current.dismissed=false;leave();}}>
     {cloneElement(child as ReactElement<Record<string, unknown>>, { "aria-describedby": [describedBy, open && !suppressed ? id : undefined].filter(Boolean).join(" ") })}
     {open && !suppressed ? portal ? createPortal(content,document.body) : content : null}

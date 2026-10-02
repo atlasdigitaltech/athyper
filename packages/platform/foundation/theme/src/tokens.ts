@@ -14,6 +14,35 @@ export type ColorMode = (typeof COLOR_MODES)[number];
 export type DensityMode = (typeof DENSITY_MODES)[number];
 export type ThemePreference = ColorMode | "system";
 
+/** The one responsive scale, in rem. CSS cannot read custom properties inside
+ * `@media` or `@container` preludes, so stylesheets write these literals and
+ * `policy:ui-system` checks every width query against this list.
+ * compact: a component inside a side panel at its narrowest (panels are
+ * 22.5-35rem wide); container queries only, never the viewport.
+ * narrow: phone content; medium: overlays and page chrome; wide: desktop
+ * content; extraWide: room for a pinned side panel beside wide content. */
+export const BREAKPOINT_SCALE = Object.freeze({ compact: 24, narrow: 40, medium: 48, wide: 64, extraWide: 80 });
+export type BreakpointName = keyof typeof BREAKPOINT_SCALE;
+/** Tiers that describe a component's container, never the viewport. */
+export const CONTAINER_ONLY_BREAKPOINTS: readonly BreakpointName[] = Object.freeze(["compact"]);
+/** Starlight accents for the docs sites in dark mode (build-docs-css.ts): they keep
+ * the brand hue (~215°) recognisable on a dark ground, where a plain mix toward
+ * white turns the brand into a pale lavender-grey. */
+export const DOCS_DARK_ACCENT = Object.freeze({ accent: "#5b86c9", accentHigh: "#93b3e6" });
+
+export type ViewportBreakpoint = Exclude<BreakpointName, "compact">;
+/** A viewport media query on the scale, for `matchMedia` in components, so script
+ * and stylesheet change layout at the same width: `{ below: "medium" }` is
+ * "(width < 48rem)", `{ from: "medium", below: "extraWide" }` is
+ * "(48rem <= width < 80rem)". */
+export function viewportQuery({ from, below }: { readonly from?: ViewportBreakpoint; readonly below?: ViewportBreakpoint }): string {
+  const start = from && `${BREAKPOINT_SCALE[from]}rem`, end = below && `${BREAKPOINT_SCALE[below]}rem`;
+  if (start && end) return `(${start} <= width < ${end})`;
+  if (start) return `(width >= ${start})`;
+  if (end) return `(width < ${end})`;
+  throw new TypeError("viewportQuery needs from, below or both");
+}
+
 /** Read by the blocking ThemeScript before first paint; keep in sync with any client-side preference writer. */
 export const THEME_STORAGE_KEY = "athyper.theme";
 export const DENSITY_STORAGE_KEY = "athyper.density";
@@ -332,7 +361,7 @@ export const MONO_COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
       brand: "#e0e0e0",
       brandForeground: "#121212",
       brandHover: "color-mix(in srgb, var(--a-brand) 42%, white)",
-      brandSoft: "color-mix(in srgb, var(--a-brand) 52%, black)",
+      brandSoft: "#262626",
     }),
     /** High contrast is an accessibility mode, not a brand — identical across families. */
     "high-contrast": COLOR_TOKENS["high-contrast"],
@@ -348,24 +377,58 @@ export function resolveFamilyColorTokens(family: ThemeFamily, mode: ColorMode): 
   return FAMILY_COLOR_TOKENS[family][mode];
 }
 
+/** Density token values; styles.css defines the same values for [data-density]. */
 export const DENSITY_TOKENS = Object.freeze({
   compact: Object.freeze({
     controlHeight: "2rem",
     touchTarget: "2.75rem",
     space: "0.25rem",
     pageGap: "1rem",
+    rowHeight: "2rem",
+    headerHeight: "2rem",
+    cellPaddingInline: "0.5rem",
+    cellPaddingBlock: "0.125rem",
+    dataFontSize: "0.8125rem",
+    iconButton: "1.5rem",
+    /** Small text controls: chips, drawer tabs, toolbar choices, disclosures. */
+    controlHeightSmall: "1.75rem",
+    stackGap: "0.5rem",
+    sectionGap: "1rem",
+    panelGutter: "0.75rem",
   }),
   comfortable: Object.freeze({
     controlHeight: "2.5rem",
     touchTarget: "2.75rem",
     space: "0.5rem",
     pageGap: "1.5rem",
+    rowHeight: "2.75rem",
+    headerHeight: "2.5rem",
+    cellPaddingInline: "0.75rem",
+    cellPaddingBlock: "0.25rem",
+    dataFontSize: "0.875rem",
+    iconButton: "2rem",
+    /** Small text controls: chips, drawer tabs, toolbar choices, disclosures. */
+    controlHeightSmall: "2rem",
+    stackGap: "0.75rem",
+    sectionGap: "1.5rem",
+    panelGutter: "1rem",
   }),
   spacious: Object.freeze({
     controlHeight: "3rem",
     touchTarget: "3rem",
     space: "0.75rem",
     pageGap: "2rem",
+    rowHeight: "3.5rem",
+    headerHeight: "3rem",
+    cellPaddingInline: "1rem",
+    cellPaddingBlock: "0.375rem",
+    dataFontSize: "0.9375rem",
+    iconButton: "2.25rem",
+    /** Small text controls: chips, drawer tabs, toolbar choices, disclosures. */
+    controlHeightSmall: "2.25rem",
+    stackGap: "1rem",
+    sectionGap: "2rem",
+    panelGutter: "1.25rem",
   }),
 });
 

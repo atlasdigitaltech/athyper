@@ -5,12 +5,20 @@ export interface AtlasWorkContextV1 {
   readonly legalEntityId?: string;
   readonly networkAccountId?: string;
 }
+/** Selects an existing published Entity relationship. The server authorizes the
+ * parent and derives predicates; these coordinates never supply row filters. */
+export interface AtlasParentScopeV1 {
+  readonly parentEntityCode: string;
+  readonly parentRecordId: string;
+  readonly relationshipKey: string;
+}
 interface Common {
   readonly schemaVersion: 1;
   readonly entityCode: string;
   readonly generationId: string;
   readonly locale: string;
   readonly workContext?: AtlasWorkContextV1;
+  readonly parentScope?: AtlasParentScopeV1;
 }
 export type AtlasBusinessContextV1 = Common &
   (
@@ -83,6 +91,11 @@ const common = {
   entityCode: text,
   generationId: uuid,
   locale: text,
+  parentScope: object({
+    parentEntityCode: { ...text, maxLength: 63, pattern: "^[a-z][a-z0-9_]{1,62}$" },
+    parentRecordId: uuid,
+    relationshipKey: { ...text, maxLength: 63, pattern: "^[a-z][a-z0-9_]{1,62}$" },
+  }, ["parentEntityCode", "parentRecordId", "relationshipKey"]),
   workContext: object({
     operatingOrganizationId: uuid,
     companyCodeId: uuid,

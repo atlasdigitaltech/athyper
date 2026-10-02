@@ -127,6 +127,23 @@ function MapBody() {
       }
       return out;
     }
+    /** Network colours come from the story tokens, so the illustration follows the
+     * theme; the browser resolves each token through a probe element. */
+    let wave = "", bright = "", glow = "";
+    function tone(token: string) {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${token})`;
+      cvs!.parentElement!.append(probe);
+      const value = getComputedStyle(probe).color;
+      probe.remove();
+      return value;
+    }
+    function fillWith(style: string | CanvasGradient, alpha: number) {
+      ctx!.globalAlpha = alpha;
+      ctx!.fillStyle = style;
+      ctx!.fill();
+      ctx!.globalAlpha = 1;
+    }
     function buildDots() {
       const step = Math.max(4.2, Math.min(8, mapW / 170));
       const cols = Math.round(mapW / step), rows = Math.round(mapH / step);
@@ -146,7 +163,8 @@ function MapBody() {
           const a = 0.2 + (1 - Math.min(1, Math.abs(lat) / 95)) * 0.2;
           g.beginPath();
           g.arc(p[0], p[1], r, 0, 6.2832);
-          g.fillStyle = `rgba(150,182,226,${a.toFixed(3)})`;
+          g.globalAlpha = a;
+          g.fillStyle = wave;
           g.fill();
         }
       }
@@ -165,13 +183,16 @@ function MapBody() {
       if (mapH > H * 0.86) { mapH = H * 0.86; mapW = (mapH * 360) / LAT_SPAN; }
       offX = (W - mapW) / 2;
       offY = (H - mapH) / 2 - 6;
+      wave = tone("--a-story-wave");
+      bright = tone("--a-story-wave-bright");
+      glow = tone("--a-story-foreground");
       buildDots();
       const byId: Record<string, MapNode> = {};
       NODES.forEach((n) => { byId[n.id] = n; });
       pts = NODES.map((n) => { const p = px(n.lon, n.lat); return { n, x: p[0], y: p[1] }; });
       paths = LINKS.map(([a, b], i) => ({ pts: arcPoints(byId[a], byId[b]), phase: (i * 0.37) % 1, speed: 0.055 + ((i * 7) % 5) * 0.011 }));
     }
-    function strokePath(pl: (readonly [number, number] | null)[], from: number, to: number, style: string, width: number) {
+    function strokePath(pl: (readonly [number, number] | null)[], from: number, to: number, style: string, width: number, alpha = 1) {
       ctx!.beginPath();
       let started = false;
       for (let i = from; i <= to && i < pl.length; i++) {
@@ -179,10 +200,12 @@ function MapBody() {
         if (!p) { started = false; continue; }
         if (!started) { ctx!.moveTo(p[0], p[1]); started = true; } else ctx!.lineTo(p[0], p[1]);
       }
+      ctx!.globalAlpha = alpha;
       ctx!.strokeStyle = style;
       ctx!.lineWidth = width;
       ctx!.lineCap = "round";
       ctx!.stroke();
+      ctx!.globalAlpha = 1;
     }
     function frame(ts: number) {
       if (cvs && document.body.contains(cvs) && W && H) {
@@ -191,20 +214,19 @@ function MapBody() {
         const t = (ts || 0) / 1000;
         for (const pa of paths) {
           const pl = pa.pts, n = pl.length;
-          strokePath(pl, 0, n - 1, "rgba(158,192,236,0.17)", 0.9);
+          strokePath(pl, 0, n - 1, wave, 0.9, 0.17);
           if (!reduced) {
             const prog = (t * pa.speed + pa.phase) % 1;
             const head = Math.floor(prog * (n - 1));
-            strokePath(pl, Math.max(0, head - Math.round(n * 0.17)), head, "rgba(206,229,255,0.72)", 1.2);
+            strokePath(pl, Math.max(0, head - Math.round(n * 0.17)), head, bright, 1.2, 0.72);
             const hp = pl[head];
             if (hp) {
               const gr = ctx!.createRadialGradient(hp[0], hp[1], 0, hp[0], hp[1], 6);
-              gr.addColorStop(0, "rgba(226,240,255,0.65)");
-              gr.addColorStop(1, "rgba(226,240,255,0)");
-              ctx!.fillStyle = gr;
+              gr.addColorStop(0, glow);
+              gr.addColorStop(1, "transparent");
               ctx!.beginPath();
               ctx!.arc(hp[0], hp[1], 6, 0, 6.2832);
-              ctx!.fill();
+              fillWith(gr, 0.65);
             }
           }
         }
@@ -213,17 +235,16 @@ function MapBody() {
           const rr = nd.main ? 4.8 : nd.hub ? 3.9 : 3.2;
           if (nd.hub || on) {
             const g2 = ctx!.createRadialGradient(d.x, d.y, 0, d.x, d.y, rr * (on ? 4.5 : 3.5));
-            g2.addColorStop(0, `rgba(180,214,255,${on ? 0.4 : 0.22})`);
-            g2.addColorStop(1, "rgba(180,214,255,0)");
-            ctx!.fillStyle = g2;
+            g2.addColorStop(0, bright);
+            g2.addColorStop(1, "transparent");
             ctx!.beginPath();
             ctx!.arc(d.x, d.y, rr * (on ? 4.5 : 3.5), 0, 6.2832);
-            ctx!.fill();
+            fillWith(g2, on ? 0.4 : 0.22);
           }
           ctx!.beginPath();
           ctx!.arc(d.x, d.y, rr, 0, 6.2832);
-          if (nd.hub) { ctx!.fillStyle = "rgba(232,242,255,0.96)"; ctx!.fill(); }
-          else { ctx!.strokeStyle = "rgba(206,228,255,0.82)"; ctx!.lineWidth = 1.3; ctx!.stroke(); }
+          if (nd.hub) fillWith(glow, 0.96);
+          else { ctx!.globalAlpha = 0.82; ctx!.strokeStyle = bright; ctx!.lineWidth = 1.3; ctx!.stroke(); ctx!.globalAlpha = 1; }
         }
       }
       raf = requestAnimationFrame(frame);
@@ -330,7 +351,7 @@ function AtlasBar({ acts, workspaceKey }: { readonly acts: readonly Act[]; reado
           {active.readonly
             ? <div><span>Effect</span><b>Reads only, nothing is written</b></div>
             : <><div><span>Policy</span><b>{active.policy}</b></div><div><span>Approval</span><b>{active.approver}</b></div></>}
-          <div><span>Confidence</span><b>{(active.confidence / 100).toFixed(2)}</b><i className="a-ws-meter"><u style={{ width: `${confidenceWidth}%` }} /></i></div>
+          <div><span>Confidence</span><b>{(active.confidence / 100).toFixed(2)}</b><i className="a-ws-meter"><u ref={(node) => node?.style.setProperty("--ws-meter", `${confidenceWidth}%`)} /></i></div>
         </div>
         <div className="a-ws-run">
           {done ? <div className="a-ws-ok"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>{done}</div>

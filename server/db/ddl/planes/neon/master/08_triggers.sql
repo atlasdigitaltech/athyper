@@ -1191,7 +1191,7 @@ ON master.legal_entity_internal_partner_link
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_legal_entity_partner_link();
 
 CREATE TRIGGER trg_company_code_supplier_profile_remittance
-BEFORE INSERT OR UPDATE OF tenant_id, supplier_id, company_code_id,
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, company_code_id,
     preferred_remittance_bank_link_id
 ON master.company_code_supplier_profile
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_supplier_remittance_link();

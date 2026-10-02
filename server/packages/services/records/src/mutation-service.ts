@@ -1,3 +1,4 @@
+import { meaningfulFormInput } from "@athyper/contract-platform-entity-runtime";
 import { RecordServiceError } from "./errors.js";
 import { resolveRecordMutationPolicy } from "./record-mutation-policy.js";
 import { prepareRecordOwnerAccess } from "./record-owner-access.js";
@@ -78,6 +79,7 @@ async function create<Transaction>(options: RecordMutationServiceOptions<Transac
   const ownerPrincipalId = descriptor.ownerAccess ? parentValues[descriptor.ownerAccess.ownerField] : undefined;
   if (ownerPrincipalId !== undefined && typeof ownerPrincipalId !== "string") return {kind:"Forbidden"};
   const effectiveCommand = ownerPrincipalId ? {...command,ownerPrincipalId:ownerPrincipalId as string} : command;
+  if (descriptor.formPresentation?.meaningfulFields && !meaningfulFormInput(command.input, descriptor.formPresentation.meaningfulFields)) return { kind: "ValidationFailed", code: "ENTITY_EMPTY_SETUP", message: "Enter a value before saving." };
   const fields = mergeFieldViolations(validateRecordInput(descriptor, "create", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input, "create"));
   if (Object.keys(fields).length) return { kind: "FieldsNotWritable", fields };
   return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
@@ -87,6 +89,7 @@ async function create<Transaction>(options: RecordMutationServiceOptions<Transac
       const ownerValues = await prepareRecordOwnerAccess(options.ownerAccess,{context:command.context,descriptor,operation:"create",ownerPrincipalId:effectiveCommand.ownerPrincipalId},transaction);
       const policy=resolveRecordMutationPolicy(descriptor,options.mutationPolicies);
       const values={...command.input,...parentValues,...ownerValues};
+      await validateReferences(options, command.context, descriptor, values, command.input);
       await policy?.validate({context:command.context,descriptor,action:"create",values},transaction);
       const record = await options.repository.create(descriptor, command.context.tenantId, values, transaction);
       if((descriptor.recordPredicates??[]).some(p=>p.operator==="eq"?record[p.field]!==p.value:record[p.field]===p.value))throw new RecordServiceError(400,"RECORD_SCOPE_INVALID","Record is outside the published scope.");
@@ -96,6 +99,9 @@ async function create<Transaction>(options: RecordMutationServiceOptions<Transac
       await appendRecordSideEffects(options, command, transaction, "create", recordId, record);
       return { kind: "Committed", action: "create", entityCode: command.entityCode, recordId, record, version: versionOf(descriptor, record), replayed: false };
     }, descriptor);
+  }).catch((error: unknown) => {
+    if (error && typeof error === "object" && Reflect.get(error, "code") === "23505" && Reflect.get(error, "schema") === descriptor.storage.schema && Reflect.get(error, "table") === descriptor.storage.object) throw new RecordServiceError(409, "RECORD_ALREADY_EXISTS", "A record already exists. Reload the section to review it.");
+    throw error;
   });
 }
 
@@ -115,10 +121,17 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
     return executeRecordCommand(options, command, transaction, "patch", async () => {
       const actorValues = await prepareRecordOwnerAccess(options.ownerAccess,{context:command.context,descriptor,operation:"patch"},transaction);
       const policy=resolveRecordMutationPolicy(descriptor,options.mutationPolicies);
-      if(policy){
+      if(policy || descriptor.ownerAccess || descriptor.fields.some(field => field.keyReference)){
         const current=await options.repository.get(descriptor,command.context.tenantId,command.recordId,descriptor.fields.map(f=>f.key),transaction);
         if(!current)return {kind:"NotFound",entityCode:command.entityCode,recordId:command.recordId};
-        await policy.validate({context:command.context,descriptor,action:"patch",values:{...current,...command.input,...actorValues}},transaction);
+        if (descriptor.ownerAccess) {
+          const owner = current[descriptor.ownerAccess.ownerField];
+          if (typeof owner !== "string" || !owner) throw new RecordServiceError(403,"ENTITY_OWNER_ACCESS_DENIED","Record ownership is unavailable.");
+          await prepareRecordOwnerAccess(options.ownerAccess,{context:command.context,descriptor,operation:"patch",ownerPrincipalId:owner},transaction);
+        }
+        const values={...current,...command.input,...actorValues};
+        await validateReferences(options, command.context, descriptor, values, command.input);
+        await policy?.validate({context:command.context,descriptor,action:"patch",values},transaction);
       }
       const result = await options.repository.patch(descriptor, command.context.tenantId, command.recordId, {...command.input,...actorValues}, command.expectedVersion, transaction);
       if (result.versionConflict !== undefined) return { kind: "VersionConflict", expectedVersion: command.expectedVersion!, currentVersion: result.versionConflict };
@@ -176,3 +189,24 @@ async function allowed(
   })).allowed);
 }
 function versionOf(descriptor: { storage: { versionField?: string } }, record: Readonly<Record<string, unknown>>): number | undefined { const value = descriptor.storage.versionField ? record[descriptor.storage.versionField] : undefined; const numeric = typeof value === "number" || typeof value === "string" && /^[0-9]+$/.test(value) ? Number(value) : NaN; return Number.isSafeInteger(numeric) && numeric > 0 ? numeric : undefined; }
+
+/** Validate submitted references through the same authorized resolver as choices.
+ * A database FK alone proves existence, not permission to select the target. */
+async function validateReferences<Transaction>(options: RecordMutationServiceOptions<Transaction>, context: CreateRecordCommand["context"], descriptor: import("@athyper/server-contract-metadata").EntityRuntimeDescriptor, values: Readonly<Record<string,unknown>>, input: Readonly<Record<string,unknown>>) {
+  for (const field of descriptor.fields) {
+    const reference=field.keyReference;
+    if (!reference || !reference.fields.some(mapping => Object.hasOwn(input,mapping.source))) continue;
+    const value=values[field.key];
+    if (value === null || value === undefined) continue;
+    if (!options.referenceChoices) throw new RecordServiceError(503,"ENTITY_REFERENCE_VALIDATION_UNAVAILABLE","Reference validation is unavailable.");
+    if (typeof value !== "string" || !value) throw new RecordServiceError(400,"ENTITY_REFERENCE_INVALID","Choose an available reference.");
+    const dependencies: Record<string,string>={};
+    for (const mapping of reference.fields.filter(mapping => mapping.source !== field.key)) {
+      const dependency=values[mapping.source];
+      if (typeof dependency !== "string" || !dependency) throw new RecordServiceError(400,"ENTITY_REFERENCE_INVALID","Choose the reference context first.");
+      dependencies[mapping.source]=dependency;
+    }
+    const page=await options.referenceChoices(context,descriptor.entityCode,{field:field.key,value,...(Object.keys(dependencies).length ? {dependencies} : {})});
+    if (page.options.length !== 1 || page.options[0]?.value !== value) throw new RecordServiceError(400,"ENTITY_REFERENCE_INVALID","Choose an available reference.");
+  }
+}

@@ -1,4 +1,5 @@
 "use client";
+import { ChoiceSelect } from "@athyper/platform-ui";
 import { useOptionalAppearanceProfile, type AppearancePreference } from "@athyper/platform-shell-app-foundation";
 import { localeDefinition, type SupportedLocale } from "@athyper/platform-i18n";
 import { THEME_FAMILIES, type ThemeFamily } from "@athyper/platform-theme/tokens";
@@ -59,30 +60,31 @@ export function UtilitiesMenu({
       {localePolicy && localePolicy.enabledLocales.length > 1 && onLocaleChange && currentLocale ? (
         <UtilitiesSection title={t("shell.utilities.languageRegion")}>
           <label className="athyper-shell__language athyper-shell__language--utilities">
-            <select
+            <ChoiceSelect
+              label={t("shell.profile.language")}
               value={currentLocale}
               disabled={localePending}
-              onChange={(event) => {
-                const locale = event.currentTarget.value as SupportedLocale;
+              onChange={(locale) => {
                 setLocalePending(true);
                 setLocaleError(false);
-                void onLocaleChange(locale)
+                void onLocaleChange(locale as SupportedLocale)
                   .then(() => setLocalePending(false))
                   .catch(() => {
                     setLocalePending(false);
                     setLocaleError(true);
                   });
               }}
-            >
-              {localePolicy.enabledLocales.map((locale) => {
+              options={localePolicy.enabledLocales.map((locale) => {
                 const definition = localeDefinition(locale);
-                return (
-                  <option key={locale} value={locale}>
-                    {definition.nativeName === definition.englishName ? definition.nativeName : `${definition.nativeName} — ${definition.englishName}`}
-                  </option>
-                );
+                return {
+                  value: locale,
+                  label:
+                    definition.nativeName === definition.englishName
+                      ? definition.nativeName
+                      : `${definition.nativeName} — ${definition.englishName}`,
+                };
               })}
-            </select>
+            />
             {localeError ? <small role="alert">{t("shell.profile.languageError")}</small> : null}
           </label>
         </UtilitiesSection>

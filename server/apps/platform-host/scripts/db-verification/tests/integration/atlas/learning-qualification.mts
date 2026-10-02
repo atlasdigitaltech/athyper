@@ -1,3 +1,4 @@
+import { createPublishedLearningFixtureProvider } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { qualifyLearningPublication } from "./learning-publication-qualification.mts";
 import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
@@ -12,7 +13,7 @@ import {
   AtlasLearningCandidateService,
   isAtlasLearningSourceCurrent,
 } from "@athyper/server-platform-ai/learning-candidates";
-import { evaluateAtlasLearningVocabulary } from "@athyper/server-platform-ai/learning-evaluation";
+import { ATLAS_LEARNING_RESOLVER_VERSION, ATLAS_LEARNING_SCORING_VERSION, evaluateAtlasLearningVocabulary } from "@athyper/server-platform-ai/learning-evaluation";
 import { atlasGuidance, parseAtlasIntent } from "@athyper/server-contract-ai";
 import { AtlasLearningInbox } from "@athyper/server-plane-studio-meta-entity-authoring/learning-inbox";
 import { KyselyMetaEntityAuthoringRepository } from "@athyper/server-plane-studio-meta-entity-authoring/kysely-authoring-repository";
@@ -23,12 +24,14 @@ import {
   sha256,
 } from "@athyper/server-plane-studio-meta-entity-authoring/deterministic";
 const fixtures = [
-  { question: "Show this company snapshot", expected: "read" },
+  { question: "Show this company snapshot", expected: "read", purpose: "correction" },
   {
     question: "Could you display the current company snapshot please?",
     expected: "read",
+    purpose: "correction",
   },
-  { question: "Delete this company snapshot", expected: "delegate" },
+  { question: "Delete this company snapshot", expected: "delegate", purpose: "safety" },
+  { question: "Show this summary", expected: "read", purpose: "preservation" },
 ] as const;
 const config = {
   schemaVersion: 1,
@@ -149,6 +152,18 @@ export async function qualifyLearning(
   });
   let handoff: AtlasLearningHandoff | undefined;
   let failOnce = true;
+  // Exercise the installed provider over an actual independently approved immutable Entity release.
+  // The synthetic questions qualify provenance mechanics, not human-held-out generalization.
+  const fixtureProvider = createPublishedLearningFixtureProvider(db);
+  const controlledFixtureSet = planeKey === "studio"
+    ? await fixtureProvider.resolve(reviewer, `${source.releaseId}/record-summary-v1`)
+    : undefined;
+  if (controlledFixtureSet) {
+    await assert.rejects(fixtureProvider.resolve({ ...reviewer, tenantId: randomUUID() }, controlledFixtureSet.id), { code: "LEARNING_FIXTURE_SET_UNAVAILABLE" });
+    await assert.rejects(fixtureProvider.resolve({ ...reviewer, planeKey: "neon" }, controlledFixtureSet.id), { code: "LEARNING_FIXTURE_SET_UNAVAILABLE" });
+    await assert.rejects(fixtureProvider.resolve(reviewer, `${source.releaseId}/missing-case`), { code: "LEARNING_FIXTURE_SET_UNAVAILABLE" });
+  }
+  const deployedEvaluationIdentity = { resolverVersion: ATLAS_LEARNING_RESOLVER_VERSION, scoringVersion: ATLAS_LEARNING_SCORING_VERSION };
   const inbox =
     planeKey === "studio"
       ? new AtlasLearningInbox({
@@ -157,6 +172,8 @@ export async function qualifyLearning(
           sourceCurrent: (proposal) =>
             isAtlasLearningSourceCurrent(transactions, proposal),
           evaluate: evaluateAtlasLearningVocabulary,
+    evaluationIdentity: deployedEvaluationIdentity,
+          fixtureSets: fixtureProvider,
         })
       : undefined;
   const service = new AtlasLearningCandidateService(
@@ -231,6 +248,7 @@ export async function qualifyLearning(
     `PASS ${planeKey}: response-bound source, minimized retry/ack, immutable identity, denied actor and tenant RLS`,
   );
   if (inbox) {
+    assert.ok(controlledFixtureSet);
     let items = (await inbox.list(reviewer)).items;
     assert.equal(items.length, 1);
     assert.equal(items[0]!.state, "pending");
@@ -247,8 +265,24 @@ export async function qualifyLearning(
       inbox.stage(reviewer, { id, revision: 0, fixtures: bad }),
       { code: "LEARNING_EVALUATION_FAILED" },
     );
-    assert.equal((await inbox.list(reviewer)).items[0]!.state, "pending");
-    const staged = await inbox.stage(reviewer, { id, revision: 0, fixtures });
+    const failedReview = (await inbox.list(reviewer)).items[0]!;
+    assert.equal(failedReview.state, "pending");
+    assert.equal(failedReview.changeSetId, null);
+    assert.equal(failedReview.attemptCount, 1, "unauthorized reviewer does not create an evaluation attempt");
+    assert.equal(failedReview.attempts[0]!.status, "failed");
+    assert.equal(failedReview.attempts[0]!.failureCode, "LEARNING_EVALUATION_FAILED");
+    assert.equal(failedReview.attempts[0]!.evidence!.fixtureContentHash, sha256(bad));
+    assert.equal(failedReview.attempts[0]!.evidence!.fixtureCount, fixtures.length);
+    assert.ok(!JSON.stringify(failedReview.attempts).includes("unknown phrase"), "failed history excludes fixture content");
+    let staged = await inbox.stage(reviewer, { id, revision: 0, fixtureSetId: controlledFixtureSet.id });
+    const successfulReview = (await inbox.list(reviewer)).items[0]!;
+    assert.equal(successfulReview.attemptCount, 2);
+    assert.deepEqual(successfulReview.attempts.map(attempt => attempt.status), ["succeeded", "failed"]);
+    assert.equal(staged.evaluation.receipt.fixtureGovernance, "independently-controlled");
+    assert.equal(staged.evaluation.receipt.fixtureAuthorId, controlledFixtureSet.authorId);
+    assert.deepEqual(staged.evaluation.receipt.controlledFixtureSet, { id: controlledFixtureSet.id, contentHash: controlledFixtureSet.contentHash, authorId: controlledFixtureSet.authorId, approvedBy: controlledFixtureSet.approvedBy, lockedAt: controlledFixtureSet.lockedAt });
+    assert.equal(staged.evaluation.receipt.proposalHash, handoff!.proposalHash);
+    assert.equal(staged.evaluation.receipt.resultHash, sha256(staged.evaluation.results));
     await assert.rejects(inbox.stage(reviewer, { id, revision: 0, fixtures }), {
       code: "AUTHORING_REVISION_CONFLICT",
     });
@@ -256,6 +290,26 @@ export async function qualifyLearning(
       db,
       prepareAtlasLearningRelease,
     );
+    const evaluatedGraph = await repository.loadGraph(staged.changeSetId);
+    await inbox.assertPublishable(staged.changeSetId, evaluatedGraph);
+    const editedGraph = { ...evaluatedGraph, surfaces: evaluatedGraph.surfaces?.map(surface => ({
+      ...surface, ...(surface.layoutConfig?.ai ? { layoutConfig: { ...surface.layoutConfig,
+        ai: { ...surface.layoutConfig.ai as object, aliases: ["changed after evaluation"] } } } : {}),
+    })) };
+    await assert.rejects(inbox.assertPublishable(staged.changeSetId, editedGraph), { code: "LEARNING_REVIEW_REQUIRED" });
+    // A deployed evaluator revision invalidates unpublished evidence. Stored receipts cannot be edited in place.
+    deployedEvaluationIdentity.resolverVersion = "new-deployment-resolver";
+    await assert.rejects(inbox.assertPublishable(staged.changeSetId, evaluatedGraph), { code: "LEARNING_REQUALIFICATION_REQUIRED" });
+    deployedEvaluationIdentity.resolverVersion = ATLAS_LEARNING_RESOLVER_VERSION;
+    await assert.rejects(sql`UPDATE ai.atlas_learning_inbox SET evaluation=evaluation-'receipt' WHERE id=${id}::uuid`.execute(db), { code: "23514" });
+    const previousDraft = staged.changeSetId;
+    const previousEvaluatedHash = staged.evaluation.receipt.evaluatedDescriptorHash;
+    staged = await inbox.stage(reviewer, { id, revision: staged.revision, fixtureSetId: controlledFixtureSet.id, requalify: true });
+    assert.notEqual(staged.changeSetId, previousDraft);
+    assert.equal((await repository.get(staged.changeSetId))?.status, "draft");
+    assert.equal(staged.evaluation.previousEvaluations?.[0]?.changeSetId, previousDraft);
+    assert.equal(staged.evaluation.previousEvaluations?.[0]?.evaluatedDescriptorHash, previousEvaluatedHash);
+    await assert.rejects(inbox.assertPublishable(previousDraft, evaluatedGraph), { code: "LEARNING_REVIEW_REQUIRED" });
     const dispatches: string[] = [];
     const authoring = new MetaEntityAuthoringService({
       repository,
@@ -305,12 +359,16 @@ export async function qualifyLearning(
       authoring,
     )) as any;
     assert.equal(dispatches.length, 1);
+    await assert.rejects(inbox.stage(reviewer, { id, revision: staged.revision, fixtureSetId: controlledFixtureSet.id, requalify: true }), { code: "AUTHORING_REVISION_CONFLICT" });
     const artifact = (
-      await sql<any>`SELECT a.compiled_json,a.compiled_hash,pr.status FROM snapshot.entity_release_artifact a JOIN publication.release pr ON pr.id=a.source_release_id WHERE a.source_release_id=${published.release.id}::uuid`.execute(
+      await sql<any>`SELECT a.compiled_json,a.compiled_hash,a.compliance_report,pr.metadata,pr.status FROM snapshot.entity_release_artifact a JOIN publication.release pr ON pr.id=a.source_release_id WHERE a.source_release_id=${published.release.id}::uuid`.execute(
         db,
       )
     ).rows[0];
     assert.equal(artifact.status, "approved");
+    assert.equal(artifact.compliance_report.evaluationReceiptHash, sha256(staged.evaluation.receipt));
+    assert.equal(artifact.metadata.evaluationReceiptHash, sha256(staged.evaluation.receipt));
+    assert.equal(artifact.compliance_report.evaluationReceipt.evaluatedAiHash, sha256(artifact.compiled_json.ai));
     assert.equal(
       artifact.compiled_json.ai.vocabulary.terms[0].phrase,
       proposal.phrase,
@@ -320,6 +378,7 @@ export async function qualifyLearning(
         "business_partner",
         artifact.compiled_json.ai,
         fixtures,
+        config as never,
       ).passed,
       true,
     );
@@ -328,6 +387,7 @@ export async function qualifyLearning(
         "business_partner",
         config as never,
         fixtures,
+        config as never,
       ).passed,
       false,
     );
@@ -342,7 +402,7 @@ export async function qualifyLearning(
           )
         ).rows[0].n,
       ),
-      2,
+      3,
     );
     await qualifyLearningPublication(
       db,
@@ -350,9 +410,10 @@ export async function qualifyLearning(
       principalId,
       source.releaseId,
       published.release.id,
+      context,
     );
     console.log(
-      "PASS studio: receipt -> independent review -> held-out evaluation -> draft -> independent approval -> real release and publication artifact; unpublished vocabulary does not improve questions",
+      "PASS studio: receipt -> independent reviewer -> versioned evaluation -> draft -> independent approval -> real release and publication artifact; unpublished vocabulary does not improve questions",
     );
   }
   await transactions.run(
@@ -380,6 +441,13 @@ async function seedStudioSource(
   owner: VerifiedRequestContext,
   reviewer: VerifiedRequestContext,
 ) {
+  const fixtureAuthor = randomUUID(), fixtureApprover = randomUUID();
+  for (const [id, code] of [[fixtureAuthor, "fixture_author"], [fixtureApprover, "fixture_approver"]]) {
+    await sql`INSERT INTO master.principal(id,tenant_id,code,name,principal_type,created_by)
+      VALUES(${id}::uuid,${owner.tenantId}::uuid,${code},${code},'user',${owner.principalId}::uuid)`.execute(db);
+  }
+  owner = { ...owner, principalId: fixtureAuthor };
+  reviewer = { ...reviewer, principalId: fixtureApprover };
   const module = (
     await sql<any>`SELECT id FROM control.module LIMIT 1`.execute(db)
   ).rows[0];
@@ -426,6 +494,8 @@ async function seedStudioSource(
         permissionKind: "entity_operation",
       },
     ],
+    tests: [{ key: "record-summary-v1", assertion: "learning_fixture_set", path: "entity",
+      expected: { schema: "atlas-learning-fixtures/1", entityCode: "business_partner", originPlane: owner.planeKey, fixtures } }],
     surfaces: [
       {
         surfaceKey: "detail",

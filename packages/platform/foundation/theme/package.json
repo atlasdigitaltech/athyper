@@ -17,6 +17,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "iam:build": "tsx scripts/build-iam-css.ts",
+    "docs-theme:build": "tsx scripts/build-docs-css.ts",
+    "docs-theme:check": "tsx scripts/build-docs-css.ts --check",
     "iam:check": "tsx scripts/build-iam-css.ts --check"
   },
   "dependencies": {

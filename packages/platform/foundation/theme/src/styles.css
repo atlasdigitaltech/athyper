@@ -44,8 +44,13 @@
   --a-background:#121212;--a-foreground:#ededed;--a-surface:#1c1c1c;--a-surface-raised:#242424;
   --a-muted:#262626;--a-muted-foreground:#a6a6a6;--a-border:#3d3d3d;--a-input:#595959;--a-focus:var(--a-selection-subtle-foreground);
   --a-primary:color-mix(in srgb,var(--a-brand) 32%,white);--a-primary-foreground:color-mix(in srgb,var(--a-brand) 24%,black);--a-selection-strong:#333;--a-selection-strong-foreground:#f0f0f0;--a-selection-subtle:#333;--a-selection-subtle-foreground:#f0f0f0;
-  --a-brand:#e0e0e0;--a-brand-foreground:#121212;--a-brand-hover:color-mix(in srgb,var(--a-brand) 42%,white);--a-brand-soft:color-mix(in srgb,var(--a-brand) 52%,black);
-  --a-brand-wordmark-filter:none;
+  --a-brand:#e0e0e0;--a-brand-foreground:#121212;--a-brand-hover:color-mix(in srgb,var(--a-brand) 42%,white);--a-brand-soft:#262626;
+  --a-brand-wordmark-filter:brightness(0) invert(1);
+  /* The rail and story surfaces are Mono's own, not derived from the light-grey brand:
+     a rail darker than the page, light text, a white selection marker, no grey gradient. */
+  --a-story-start:#171717;--a-story-end:#0b0b0b;--a-story-foreground:#ededed;--a-story-muted:#b3b3b3;--a-story-eyebrow:#bdbdbd;
+  --a-story-wave:#d9d9d9;--a-story-wave-bright:#fff;--a-story-glow:transparent;--a-story-dot:#8c8c8c;
+  --a-story-surface-active:#262626;--a-story-selection-border:#4d4d4d;
 }
 :root[data-theme-family="atlas-mono"][data-theme="high-contrast"] { --a-focus:#0ff; }
 :root {
@@ -70,6 +75,8 @@
   --a-motion-fast:120ms;--a-motion-normal:180ms;--a-motion-slow:260ms;--a-easing:cubic-bezier(.2,.8,.2,1);
   --a-z-sticky:20;--a-z-overlay:40;--a-z-drawer:50;--a-z-popover:60;--a-z-dialog:70;--a-z-toast:80;
   --a-control-height:2.5rem;--a-touch-target:2.75rem;--a-space:.5rem;--a-page-gap:1.5rem;
+  /* Density tokens (comfortable default). Data surfaces size from these; chrome does not. */
+  --a-density-row-height:2.75rem;--a-density-header-height:2.5rem;--a-density-cell-padding-inline:.75rem;--a-density-cell-padding-block:.25rem;--a-density-data-font-size:.875rem;--a-density-icon-button:2rem;--a-density-control-height-small:2rem;--a-density-stack-gap:.75rem;--a-density-section-gap:1.5rem;--a-density-panel-gutter:1rem;
   --a-focus-width:3px;--a-focus-offset:2px;--a-border-width:1px;--a-content-sm:32rem;--a-icon-sm:1rem;--a-icon-md:1.25rem;--a-logo-md:1.75rem;--a-opacity-interactive:.88;--a-opacity-disabled:.55;
   /* Design-token remediation Phase 2: compatibility aliases (each resolves to a token that is already themed, so no per-theme definition is needed). */
   --a-text:var(--a-foreground);--a-text-muted:var(--a-muted-foreground);--a-accent:var(--a-brand);--a-border-color:var(--a-border);--a-border-strong:var(--a-border);--a-color-surface:var(--a-surface);--a-color-surface-subtle:var(--a-muted);--a-focus-ring:var(--a-focus);--a-ring:var(--a-focus);--a-destructive:var(--a-danger);--a-destructive-subtle:var(--a-danger-subtle);--a-destructive-soft:var(--a-danger-subtle);
@@ -77,9 +84,12 @@
   --a-danger-soft:var(--a-danger-subtle);--a-success-soft:var(--a-success-subtle);--a-warning-soft:var(--a-warning-subtle);
   background:var(--a-background);color:var(--a-foreground);font-family:var(--a-font-sans);
 }
-:root[data-density="compact"] {--a-control-height:2rem;--a-touch-target:2.75rem;--a-space:.25rem;--a-page-gap:1rem;}
-:root[data-density="comfortable"] {--a-control-height:2.5rem;--a-touch-target:2.75rem;--a-space:.5rem;--a-page-gap:1.5rem;}
-:root[data-density="spacious"] {--a-control-height:3rem;--a-touch-target:3rem;--a-space:.75rem;--a-page-gap:2rem;}
+/* One density system: any element may carry data-density and its subtree
+   follows (page default from Utilities / profile; lists, panels, sections and
+   intake fields override locally). Values mirror DENSITY_TOKENS in tokens.ts. */
+[data-density="compact"] {--a-control-height:2rem;--a-touch-target:2.75rem;--a-space:.25rem;--a-page-gap:1rem;--a-density-row-height:2rem;--a-density-header-height:2rem;--a-density-cell-padding-inline:.5rem;--a-density-cell-padding-block:.125rem;--a-density-data-font-size:.8125rem;--a-density-icon-button:1.5rem;--a-density-control-height-small:1.75rem;--a-density-stack-gap:.5rem;--a-density-section-gap:1rem;--a-density-panel-gutter:.75rem;}
+[data-density="comfortable"] {--a-control-height:2.5rem;--a-touch-target:2.75rem;--a-space:.5rem;--a-page-gap:1.5rem;--a-density-row-height:2.75rem;--a-density-header-height:2.5rem;--a-density-cell-padding-inline:.75rem;--a-density-cell-padding-block:.25rem;--a-density-data-font-size:.875rem;--a-density-icon-button:2rem;--a-density-control-height-small:2rem;--a-density-stack-gap:.75rem;--a-density-section-gap:1.5rem;--a-density-panel-gutter:1rem;}
+[data-density="spacious"] {--a-control-height:3rem;--a-touch-target:3rem;--a-space:.75rem;--a-page-gap:2rem;--a-density-row-height:3.5rem;--a-density-header-height:3rem;--a-density-cell-padding-inline:1rem;--a-density-cell-padding-block:.375rem;--a-density-data-font-size:.9375rem;--a-density-icon-button:2.25rem;--a-density-control-height-small:2.25rem;--a-density-stack-gap:1rem;--a-density-section-gap:2rem;--a-density-panel-gutter:1.25rem;}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--a-background);color:var(--a-foreground)}
 :focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:var(--a-focus-offset)}

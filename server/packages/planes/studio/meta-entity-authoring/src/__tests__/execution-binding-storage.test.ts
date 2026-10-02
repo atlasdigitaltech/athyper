@@ -42,10 +42,14 @@ it("replacement removes governance bindings before their operation/field parents
   visit(ast);
   const tables = replacements.find(values => values.includes("entity_operation"))!;
   expect(tables).toBeDefined();
-  for (const table of ["entity_change_case_binding", "entity_operation_context_requirement", "entity_field_reference_binding", "entity_materialization_binding", "entity_lifecycle_binding"]) {
+  // Execution bindings moved to the conditional helper, covered behaviorally
+  // by execution-binding-replacement.test.ts. It must run before parent deletes.
+  const cleanup = source.indexOf("await clearExecutionBindings(db, input.changeSetId)");
+  expect(cleanup).toBeGreaterThan(0);
+  expect(cleanup).toBeLessThan(source.indexOf('"entity_operation",', cleanup));
+  for (const table of ["entity_lifecycle_binding"]) {
     expect(tables).toContain(table);
     expect(tables.indexOf(table)).toBeLessThan(tables.indexOf("entity_operation"));
     expect(tables.indexOf(table)).toBeLessThan(tables.indexOf("entity_field"));
   }
-  expect(source.indexOf("DELETE FROM metadata.entity_materialization_field_mapping")).toBeLessThan(source.indexOf('"entity_materialization_binding",', source.indexOf("// Mapping rows")));
 });

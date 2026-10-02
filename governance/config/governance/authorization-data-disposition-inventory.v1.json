@@ -4,18 +4,18 @@
   "policyHash": "7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 754,
+    "discoveredTables": 757,
     "externalObjects": 12,
     "exactTableOverrides": 15,
     "exactRuntimeTableOverrides": 1,
-    "schemaDefaultedTables": 738,
+    "schemaDefaultedTables": 741,
     "byDataClass": {
-      "ai_governance_and_runtime": 29,
+      "ai_governance_and_runtime": 31,
       "audit_log": 17,
       "authentication_authority": 1,
       "authorization_authority": 21,
       "authorization_cache": 1,
-      "business_master_transactional": 162,
+      "business_master_transactional": 163,
       "business_scope_context_non_authorizing": 2,
       "business_workflow_transactional": 10,
       "database_backup_object": 1,
@@ -59,10 +59,10 @@
       "migrate_as_relationship_context_only": 1,
       "migrate_authority_without_provider_credentials": 11,
       "migrate_exact_stable_ids": 1,
-      "migrate_in_declared_fk_order": 174,
+      "migrate_in_declared_fk_order": 175,
       "migrate_in_exact_plane_boundary": 21,
       "migrate_or_immutable_archive": 47,
-      "migrate_policy_and_audit_archive_runtime": 29,
+      "migrate_policy_and_audit_archive_runtime": 31,
       "migrate_published_artifacts_and_release_history": 13,
       "migrate_published_authority_and_rebuild_projections": 40,
       "migrate_with_attachment_metadata": 1,
@@ -400,6 +400,42 @@
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
           "line": 554
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ai_governance_and_runtime",
+      "disposition": "migrate_policy_and_audit_archive_runtime",
+      "retention": "AI governance, conversation, and audit retention policy",
+      "evidence": "policy revision, tenant counts, content hashes, and credential-reference validation",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "ai.atlas_learning_attempt",
+      "schema": "ai",
+      "table": "atlas_learning_attempt",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/ai/03_tables.sql",
+          "line": 68
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ai_governance_and_runtime",
+      "disposition": "migrate_policy_and_audit_archive_runtime",
+      "retention": "AI governance, conversation, and audit retention policy",
+      "evidence": "policy revision, tenant counts, content hashes, and credential-reference validation",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "ai.atlas_learning_attempt_result",
+      "schema": "ai",
+      "table": "atlas_learning_attempt_result",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/ai/03_tables.sql",
+          "line": 83
         }
       ],
       "decisionSource": "schema_default",
@@ -7583,7 +7619,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1148
+          "line": 1149
         }
       ],
       "decisionSource": "schema_default",
@@ -8537,7 +8573,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1014
+          "line": 1015
         }
       ],
       "decisionSource": "schema_default",
@@ -8933,7 +8969,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1182
+          "line": 1183
         }
       ],
       "decisionSource": "schema_default",
@@ -9599,7 +9635,25 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 888
+          "line": 889
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "business_master_transactional",
+      "disposition": "migrate_in_declared_fk_order",
+      "retention": "business and statutory retention policy",
+      "evidence": "stable-ID map, key ranges, row counts, and canonical checksums",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "master.principal_person_link",
+      "schema": "master",
+      "table": "principal_person_link",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/neon/master/36_principal_person_link.sql",
+          "line": 2
         }
       ],
       "decisionSource": "schema_default",
@@ -9653,7 +9707,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 855
+          "line": 856
         }
       ],
       "decisionSource": "schema_default",
@@ -9689,7 +9743,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1227
+          "line": 1228
         }
       ],
       "decisionSource": "schema_default",
@@ -9815,7 +9869,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 986
+          "line": 987
         }
       ],
       "decisionSource": "schema_default",
@@ -9959,7 +10013,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 923
+          "line": 924
         }
       ],
       "decisionSource": "schema_default",
@@ -10103,7 +10157,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1068
+          "line": 1069
         }
       ],
       "decisionSource": "exact_table_override",
@@ -10121,7 +10175,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1113
+          "line": 1114
         }
       ],
       "decisionSource": "exact_table_override",
@@ -10139,7 +10193,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1260
+          "line": 1261
         }
       ],
       "decisionSource": "schema_default",
@@ -10157,7 +10211,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/master/03_platform_tables.sql",
-          "line": 1294
+          "line": 1295
         }
       ],
       "decisionSource": "schema_default",

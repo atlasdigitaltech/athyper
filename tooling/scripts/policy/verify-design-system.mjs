@@ -40,9 +40,16 @@ const DEFAULT_TOKEN_AUTHORITIES = new Set([
   "packages/platform/foundation/theme/src/styles.css",
   "packages/platform/foundation/theme/src/tokens.ts",
   "packages/platform/foundation/brand/src/atlas-modern.ts",
+  // Generated from the theme tokens by theme/scripts/build-docs-css.ts (docs-theme:check).
+  "apps/docs-external/src/styles/atlas-theme.css",
+  "apps/docs-internal/src/styles/atlas-theme.css",
 ]);
+// Runtime values only (measured sizes, computed positions, metadata-driven CSS
+// variables); static presentation belongs in a stylesheet.
 const DEFAULT_DYNAMIC_INLINE_STYLE_ALLOWLIST = new Set([
   "packages/platform/shell/shell/src/client.tsx:style={{ top: navigationPeek.top }}",
+  "packages/platform/foundation/ui/src/preview-frame.tsx:style={{ width }}",
+  'packages/platform/foundation/ui/src/searchable-select.tsx:style={{ position: "fixed", ...position }}',
 ]);
 
 const colorLiteral = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|oklch\(/g;
@@ -65,6 +72,15 @@ function isGeneratedDirectory(name) {
   );
 }
 
+// stage-content.mjs copies canonical docs into these ignored build inputs.
+// Match complete repository paths; authored public assets elsewhere still count.
+const GENERATED_DOCS_PATHS = new Set([
+  "apps/docs-internal/public/assets",
+  "apps/docs-external/public/assets",
+  "apps/docs-internal/src/content/docs",
+  "apps/docs-external/src/content/docs",
+]);
+
 function lineOf(source, index = 0) {
   return source.slice(0, index).split("\n").length;
 }
@@ -81,7 +97,8 @@ async function filesBelow(root, relativeDirectory, extensions) {
   const files = [];
   for (const entry of entries) {
     const relative = path.posix.join(relativeDirectory, entry.name);
-    if (isGeneratedDirectory(entry.name)) continue;
+    if (isGeneratedDirectory(entry.name) || GENERATED_DOCS_PATHS.has(relative))
+      continue;
     if (entry.isDirectory())
       files.push(...(await filesBelow(root, relative, extensions)));
     else if (extensions.has(path.extname(entry.name))) files.push(relative);

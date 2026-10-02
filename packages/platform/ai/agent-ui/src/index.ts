@@ -43,6 +43,7 @@ export type {
   AtlasGovernedAction,
   AtlasRecordCitation,
   AtlasAttachmentCitation,
+  AtlasExternalCitation,
   AtlasExperienceAgent,
   AtlasExperienceProjection,
   AtlasExperienceDefinition,
@@ -103,10 +104,13 @@ export interface AtlasAnswerController extends AtlasAnswerState {
   declineAction(action: AtlasGovernedAction): Promise<void>;
   loadHistory(): Promise<void>;
   hideHistory(): void;
-  loadThreads(): Promise<void>;
+  /** Loads recent conversations, or those whose title or messages match `query`. */
+  loadThreads(query?: string): Promise<void>;
   selectThread(threadId: string): Promise<void>;
   newConversation(): void;
   archiveCurrent(): Promise<void>;
+  renameThread(threadId: string, title: string): Promise<void>;
+  archiveThread(threadId: string): Promise<void>;
 }
 export interface UseAtlasAnswerOptions {
   readonly proactiveBriefsEnabled?: boolean;
@@ -599,10 +603,12 @@ function useAtlasAnswerState(
     }
   }, [client]);
 
-  const loadThreads = useCallback(async () => {
+  const threadsQuery = useRef<string | undefined>(undefined);
+  const loadThreads = useCallback(async (query?: string) => {
+    threadsQuery.current = query?.trim() || undefined;
     setState((current) => ({ ...current, threadsStatus: "loading" }));
     try {
-      const page = await client.threads("active");
+      const page = await client.threads("active", undefined, threadsQuery.current);
       setState((current) => ({
         ...current,
         threadsStatus: "ready",
@@ -670,8 +676,27 @@ function useAtlasAnswerState(
     if (!current) return;
     await client.archiveThread(current);
     newConversation();
-    await loadThreads();
+    await loadThreads(threadsQuery.current);
   }, [client, loadThreads, newConversation, state.threads]);
+  const renameThread = useCallback(
+    async (id: string, title: string) => {
+      const current = state.threads.find((item) => item.threadId === id);
+      if (!current || !title.trim()) return;
+      await client.renameThread(current, title.trim());
+      await loadThreads(threadsQuery.current);
+    },
+    [client, loadThreads, state.threads],
+  );
+  const archiveThread = useCallback(
+    async (id: string) => {
+      const current = state.threads.find((item) => item.threadId === id);
+      if (!current) return;
+      await client.archiveThread(current);
+      if (threadId.current === id) newConversation();
+      await loadThreads(threadsQuery.current);
+    },
+    [client, loadThreads, newConversation, state.threads],
+  );
 
   return {
     ...state,
@@ -717,6 +742,8 @@ function useAtlasAnswerState(
     hideHistory: () =>
       setState((current) => ({ ...current, historyVisible: false })),
     loadThreads,
+    renameThread,
+    archiveThread,
     selectThread,
     newConversation,
     archiveCurrent,
@@ -840,8 +867,29 @@ function isUnavailable(error: unknown): boolean {
   );
 }
 export function atlasAnswerErrorMessage(error: unknown): string {
+  const code =
+    typeof error === "object" &&
+    error !== null &&
+    "problem" in error &&
+    typeof error.problem === "object" &&
+    error.problem !== null &&
+    "code" in error.problem
+      ? error.problem.code
+      : undefined;
+  if (code === "RELAY_CSRF_INVALID")
+    return "Your session security token could not be verified. Refresh this page and try again. If this continues, sign out and sign in again.";
+  if (code === "RELAY_CROSS_ORIGIN")
+    return "This request was blocked by browser security checks. Open Atlas from the application page and try again.";
+  if (statusOf(error) === 401)
+    return "Your session has expired. Sign in again to continue with Atlas.";
+  if (code === "BUSINESS_CONTEXT_NOT_ENABLED")
+    return "Atlas is not enabled for this Entity page in the published metadata.";
+  if (code === "BUSINESS_CONTEXT_UNAVAILABLE")
+    return "Atlas cannot access this Entity page with your current permissions. Refresh the page; if access is still unavailable, contact your administrator.";
+  if (code === "BUSINESS_CONTEXT_SERVICE_UNAVAILABLE")
+    return "Atlas could not verify this Entity page because a service is unavailable. Try again shortly.";
   if (statusOf(error) === 403)
-    return "Atlas could not access the selected record or transaction context. Check your selected organization, company and role, then try again.";
+    return "Your current permissions do not allow this Atlas request. Contact your administrator if you need access.";
   if (statusOf(error) === 404)
     return "The requested Atlas resource is unavailable. Refresh the page and start a new conversation.";
   if (statusOf(error) === 503)

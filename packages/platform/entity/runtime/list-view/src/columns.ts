@@ -10,6 +10,9 @@ export function fieldTypeLabel(valueKind: ListFieldDescriptorV1["valueKind"]): s
   return valueKind === "datetime" ? "Date and time" : valueKind.charAt(0).toLocaleUpperCase() + valueKind.slice(1);
 }
 
+/** Technical fields (identifiers, versions, audit stamps); collapsed by default in pickers. */
+export const SYSTEM_FIELD_GROUP = "Audit and system fields";
+
 export function groupAvailableColumns(fields: readonly ListFieldDescriptorV1[]): readonly { readonly label: string; readonly fields: readonly ListFieldDescriptorV1[] }[] {
   const priority = ["Recommended fields", "General fields", "Status and classification", "Related records", "Dates and time", "Audit and system fields"];
   const groups = new Map<string, ListFieldDescriptorV1[]>();

@@ -76,16 +76,16 @@ test("shared activity toolbar synchronizes presets, URL history, pagination rese
   });
   await page.goto("https://activity.test/notifications");
   await page.evaluate(await bundle);
-  await expect(page.getByText("120 matching notifications")).toBeVisible();
+  await expect(page.getByText("120 notifications", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Load more", exact: true }).click();
   await expect.poll(() => queries.at(-1)?.cursor).toBe("next");
   await page.getByRole("searchbox", { name: "Search activity" }).fill("needle");
   await page.getByRole("searchbox", { name: "Search activity" }).press("Enter");
   await expect(page.getByText("Found needle", { exact: false })).toBeVisible();
-  await expect(page.getByText("1 matching notifications")).toBeVisible();
+  await expect(page.getByText("1 notification", { exact: true })).toBeVisible();
   expect(queries.at(-1)?.cursor).toBeNull();
   await page.getByRole("searchbox", { name: "Search activity" }).press("Enter");
-  await expect(page.getByText("1 matching notifications")).toBeVisible();
+  await expect(page.getByText("1 notification", { exact: true })).toBeVisible();
   await expect(page).toHaveURL(/activityQuery=/);
   await page.getByRole("button", { name: "Select view" }).click();
   await page.getByRole("menuitem", { name: "Unread", exact: true }).click();
@@ -98,15 +98,17 @@ test("shared activity toolbar synchronizes presets, URL history, pagination rese
   await expect(page.getByText("Found needle", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Select view" }).click();
   await page.getByRole("menuitem", {name:"Manage views",exact:true}).click();
+  // The shared Views section: save the current configuration, then it is listed under My views.
+  await page.getByRole("tab",{name:"Save current configuration",exact:true}).click();
   await page.getByLabel("View name",{exact:true}).fill("My search");
-  await page.getByRole("button",{name:"Save personal view",exact:true}).click();
-  await expect(page.getByText("My search",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Save view",exact:true}).click();
+  await expect(page.getByRole("button",{name:/^My search/})).toBeVisible();
   expect(await page.evaluate(()=>Object.keys(localStorage))).not.toContain('athyper.activity.views.v1:["t","p","neon"]:notifications');
-  await page.getByRole("button",{name:"Close manage views",exact:true}).click();
+  await page.getByRole("dialog",{name:"Notifications list controls"}).getByRole("button",{name:"Close list controls",exact:true}).click();
   viewScope = '["t","another-user","neon"]';
   await page.reload();
   await page.evaluate(await bundle);
-  await expect(page.getByText("1 matching notifications")).toBeVisible();
+  await expect(page.getByText("1 notification", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Select view" }).click();
   await expect(
     page.getByRole("menuitem", { name: "My search", exact: true }),
@@ -120,7 +122,7 @@ test("shared activity toolbar synchronizes presets, URL history, pagination rese
     .fill("drawer needle");
   await page.getByRole("searchbox", { name: "Search activity" }).press("Enter");
   const href = await page
-    .getByRole("link", { name: "Open Activity center in full view" })
+    .getByRole("link", { name: "Open Notifications in full view" })
     .getAttribute("href");
   const carried = JSON.parse(
     new URL(href!, "https://activity.test").searchParams.get("activityQuery")!,

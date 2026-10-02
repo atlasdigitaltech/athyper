@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useId } from "react";
+import { useOptionalPermission } from "@athyper/platform-shell-app-foundation";
 import {
   parseAtlasInsightResult,
   parseAtlasAnswerEnvelope,
@@ -99,13 +100,146 @@ function AtlasScopedAssessmentUnavailable() {
   );
 }
 
+const entityName = (code: string) => code.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+/** The record route (mirrors entityRecordHref in the entity-runtime contract). */
+function recordHref(entityCode: string, recordId: string): string | undefined {
+  return /^[a-z][a-z0-9_]{0,62}$/.test(entityCode) && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(recordId)
+    ? `/app/entity/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`
+    : undefined;
+}
+
+/** Sources as compact chips grouped by where they came from: one chip per record
+ * (repeat citations merge into "N versions"), linking to it. Ids, revisions and
+ * tools are for administrators only. */
+type AtlasSourceItem = {
+  readonly id: string;
+  readonly key: string;
+  readonly href?: string;
+  readonly type: string;
+  readonly label: string;
+  readonly detail: string;
+  readonly external?: boolean;
+  readonly retrievedAt?: string;
+};
+/** One chip per source (repeat citations of a record merge into "N versions"),
+ * numbered in reading order so statements can point at them. */
+function mergeSources(evidence: readonly AtlasSourceItem[]) {
+  const merged = new Map<string, { number: number; label: string; type: string; href?: string; external: boolean; retrievedAt?: string; ids: string[]; details: string[] }>();
+  for (const source of evidence) {
+    const entry = merged.get(source.key) ?? {
+      number: merged.size + 1,
+      label: source.label,
+      type: source.type,
+      href: source.href,
+      external: source.external === true,
+      retrievedAt: source.retrievedAt,
+      ids: [],
+      details: [],
+    };
+    entry.ids.push(source.id);
+    entry.details.push(source.detail);
+    merged.set(source.key, entry);
+  }
+  return [...merged.entries()].map(([key, value]) => ({ key, ...value }));
+}
+
+/** Statements with numbered markers for the sources behind each, so external
+ * content is never silently blended with workspace data. */
+function AtlasStatements({
+  statements,
+  evidence,
+}: {
+  readonly statements: readonly { readonly text: string; readonly evidenceIds: readonly string[] }[];
+  readonly evidence: readonly AtlasSourceItem[];
+}) {
+  const sources = mergeSources(evidence);
+  return (
+    <div className="athyper-atlas-answer__prose">
+      {statements.map((statement, index) => {
+        const numbers = [...new Set(statement.evidenceIds.map((id) => sources.find((source) => source.ids.includes(id))?.number).filter((n): n is number => n !== undefined))];
+        return (
+          <p key={index}>
+            {statement.text}
+            {numbers.map((number) => (
+              <sup key={number} className="athyper-atlas-answer__marker" data-external={sources[number - 1]?.external || undefined}>
+                <span className="a-visually-hidden"> source </span>
+                {number}
+              </sup>
+            ))}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Sources as compact chips grouped by where they came from. Workspace records link
+ * to the record; external sources show publisher and date, open in a new tab and
+ * carry an External badge. Ids, revisions and tools are for administrators only. */
+function AtlasSources({
+  evidence,
+  prefix,
+  administrator,
+}: {
+  readonly evidence: readonly AtlasSourceItem[];
+  readonly prefix: string;
+  readonly administrator: boolean;
+}) {
+  const sources = mergeSources(evidence);
+  const groups = [
+    { label: "From this workspace", items: sources.filter((source) => !source.external) },
+    { label: "From outside", items: sources.filter((source) => source.external) },
+  ].filter((group) => group.items.length);
+  const numbered = sources.length > 1;
+  return (
+    <div className="athyper-atlas-answer__sources" role="group" aria-label="Answer sources">
+      {groups.map((group) => (
+        <section key={group.label} aria-label={group.label}>
+          <strong>{group.label}</strong>
+          <ul>
+            {group.items.map((source) => (
+              <li key={source.key} data-external={source.external || undefined}>
+                {source.href ? (
+                  <a href={source.href} {...(source.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                    {numbered ? <span className="athyper-atlas-answer__marker" aria-hidden="true">{source.number}</span> : null}
+                    {source.label}
+                  </a>
+                ) : (
+                  <span>{source.label}</span>
+                )}
+                <small>
+                  {source.external ? <span className="athyper-atlas-answer__external">External</span> : null}
+                  {source.type}
+                  {source.external && source.retrievedAt ? ` · ${new Date(source.retrievedAt).toLocaleDateString()}` : ""}
+                  {source.details.length > 1 ? ` · ${source.details.length} versions` : ""}
+                </small>
+                {administrator ? (
+                  <details id={`${prefix}-source-${source.number}`}>
+                    <summary>Details for administrators</summary>
+                    {source.details.map((detail, n) => (
+                      <p key={n}>{detail}</p>
+                    ))}
+                  </details>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 /** Both dock and fullscreen use the same trust boundary and source disclosure. */
 export function AtlasValidatedAnswer({
   answer,
   envelope = answer.envelope,
   authority: suppliedAuthority,
   recordLabel,
+  hideSummary = false,
 }: {
+  /** The answer's data is shown by a result view; keep only its sources. */
+  readonly hideSummary?: boolean;
   readonly answer: AtlasGroundedAnswer;
   readonly recordLabel?: {
     readonly entityCode: string;
@@ -116,6 +250,7 @@ export function AtlasValidatedAnswer({
   readonly authority?: AtlasAnswerAuthority;
 }) {
   const prefix = useId();
+  const administrator = useOptionalPermission("atlas.admin.manage");
   const sourceLabel = (source: { entityCode: string; recordId: string }) =>
     recordLabel?.entityCode === source.entityCode &&
     recordLabel.recordId === source.recordId
@@ -124,12 +259,29 @@ export function AtlasValidatedAnswer({
   const sources = [
     ...answer.citations.map((source, i) => ({
       id: `record:${i}`,
+      key: `${source.entityCode}:${source.recordId}`,
+      href: recordHref(source.entityCode, source.recordId),
+      type: entityName(source.entityCode),
       label: sourceLabel(source),
       caption: `${source.entityCode.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} · ${source.toolCode === "entity_read_record" ? "Record summary" : "Saved record"}`,
       detail: `Record ID: ${source.recordId} · ${source.revision.startsWith("content-sha256:") ? "Version fingerprint" : "Revision"}: ${source.revision} · Tool: ${source.toolCode}`,
     })),
+    ...(answer.externalCitations ?? []).map((source, i) => ({
+      id: `external:${i}`,
+      key: `external:${source.sourceId}`,
+      href: source.url,
+      type: source.publisher ?? new URL(source.url).hostname,
+      label: source.title,
+      caption: "External source",
+      detail: `${source.url}${source.retrievedAt ? ` · retrieved ${source.retrievedAt}` : ""}`,
+      external: true,
+      retrievedAt: source.retrievedAt,
+    })),
     ...answer.attachmentCitations.map((source, i) => ({
       id: `attachment:${i}`,
+      key: `attachment:${source.attachmentId}`,
+      href: undefined as string | undefined,
+      type: "File",
       label: source.fileName,
       caption: "Verified attachment",
       detail: "Verified attachment",
@@ -156,6 +308,9 @@ export function AtlasValidatedAnswer({
     ...sources,
     ...(insight?.evidence.map((e) => ({
       id: e.id,
+      key: `${e.entityCode}:${e.recordId}`,
+      href: recordHref(e.entityCode, e.recordId),
+      type: entityName(e.entityCode),
       label: sourceLabel(e),
       caption: "Record evidence",
       detail: `Record ID: ${e.recordId} · Revision ${e.sourceRevision} · Observed ${e.observedAt}`,
@@ -163,8 +318,12 @@ export function AtlasValidatedAnswer({
   ].filter((e) => validated.evidenceIds.includes(e.id));
   return (
     <div className="athyper-atlas-answer" data-answer-kind={validated.kind}>
-      <AtlasSafeProse text={validated.summary} />
-      {validated.explanation ? (
+      {hideSummary ? null : validated.statements ? (
+        <AtlasStatements statements={validated.statements} evidence={evidence} />
+      ) : (
+        <AtlasSafeProse text={validated.summary} />
+      )}
+      {validated.explanation && !hideSummary ? (
         <AtlasSafeProse text={validated.explanation} />
       ) : null}
       {insight &&
@@ -253,22 +412,14 @@ export function AtlasValidatedAnswer({
           ) : f.code === "scoped_assessment_unavailable" &&
             f.state === "not_evaluated" ? (
             <AtlasScopedAssessmentUnavailable key={f.id} />
-          ) : (
-            <section key={f.id} aria-label={f.code}>
-              <strong>{f.code}</strong>
-              <p>
-                {f.severity} · {f.state.replaceAll("_", " ")}
-              </p>
-              <dl>
-                {Object.entries(f.facts).map(([key, value]) => (
-                  <div key={key}>
-                    <dt>{key}</dt>
-                    <dd>{value === null ? "Unavailable" : String(value)}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ),
+          ) : administrator ? (
+            // A finding without a view is never shown as raw fields to people;
+            // administrators see it so a view can be added.
+            <details key={f.id} className="athyper-atlas-answer__about">
+              <summary>Details for administrators · {f.code}</summary>
+              <pre>{JSON.stringify(f.facts, null, 2)}</pre>
+            </details>
+          ) : null,
         )}
       {answer.insights?.map((owner, i) => (
         <AtlasOwnerAssessment key={i} value={owner} />
@@ -277,42 +428,7 @@ export function AtlasValidatedAnswer({
         <p>Next step: Review the authorized action preview below.</p>
       ) : null}
       {evidence.length ? (
-        <div
-          className="athyper-atlas-answer__sources"
-          role="group"
-          aria-label="Answer sources"
-        >
-          <strong>Sources</strong>
-          <ol>
-            {evidence.map((source, i) => (
-              <li key={source.id}>
-                <a
-                  href={`#${prefix}-source-${i}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    const target = document.getElementById(
-                      `${prefix}-source-${i}`,
-                    );
-                    if (target instanceof HTMLDetailsElement) {
-                      target.open = true;
-                      target.querySelector("summary")?.focus();
-                      target.scrollIntoView?.({ block: "nearest" });
-                    }
-                  }}
-                >
-                  {source.label}
-                </a>
-                <p className="athyper-atlas-answer__source-caption">
-                  {source.caption}
-                </p>
-                <details id={`${prefix}-source-${i}`}>
-                  <summary>Technical details</summary>
-                  <p>{source.detail}</p>
-                </details>
-              </li>
-            ))}
-          </ol>
-        </div>
+        <AtlasSources evidence={evidence} prefix={prefix} administrator={administrator} />
       ) : null}
     </div>
   );

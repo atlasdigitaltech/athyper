@@ -193,7 +193,7 @@ export default function DatePickerCalendar({
         <div className="a-date-picker__body">
           <div
             className="a-date-picker__days"
-            style={{ visibility: view === "days" ? "visible" : "hidden" }}
+            data-hidden={view !== "days" || undefined}
             inert={view !== "days"}
             aria-hidden={view !== "days" || undefined}
           >

@@ -31,7 +31,8 @@
     "experience": "@athyper/server-contract-experience",
     "control-admin": "@athyper/server-contract-control-admin",
     "finance": "@athyper/server-contract-finance",
-    "governance": "@athyper/server-contract-governance"
+    "governance": "@athyper/server-contract-governance",
+    "entity-governance": "@athyper/server-contract-entity-governance"
   },
   "duplicateSymbolAllowlist": []
 }

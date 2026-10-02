@@ -58,6 +58,7 @@ export function createTenantRollbackExecutor(
   local: Kysely<Database>,
   authority: Kysely<Database>,
   targetPlane: Plane,
+  assertTargetReady: (transaction: Kysely<Database>, appliedReleaseId: string, plane: Plane) => Promise<void>,
 ) {
   return {
     async rollback(input: PublicationRollbackPayload) {
@@ -65,6 +66,7 @@ export function createTenantRollbackExecutor(
       return local.transaction().execute(async tx => {
         await sql`SELECT set_config('app.current_tenant_id',${input.tenantId},true),
           set_config('app.current_principal_id',${input.actorId},true)`.execute(tx);
+        await sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.publicationKey},0))`.execute(tx);
         const rows = await sql<{
           current_id: string; current_source: string; current_hash: string;
           target_source: string; target_hash: string;
@@ -87,10 +89,15 @@ export function createTenantRollbackExecutor(
           appliedReleaseId: input.targetAppliedReleaseId, sourceReleaseId: row.target_source,
           artifactHash: row.target_hash,
         }))) throw new Error("PUBLICATION_ROLLBACK_TENANT_MAPPING_REQUIRED");
+        // Rollback is another activation: historical acknowledgement cannot
+        // substitute for support on the current serving deployment. Recheck
+        // even an exact retry before changing or returning the head.
+        await assertTargetReady(tx, input.targetAppliedReleaseId, targetPlane);
         return new KyselyLocalProjectionRepository(tx).rollback({
           publicationKey: input.publicationKey,
           targetAppliedReleaseId: input.targetAppliedReleaseId,
-          evidence: { actorId: input.actorId, reason: input.reason, tenantId: input.tenantId },
+          evidence: { actorId: input.actorId, reason: input.reason, tenantId: input.tenantId,
+            ...(input.operationId ? { operationId: input.operationId } : {}) },
         });
       });
     },

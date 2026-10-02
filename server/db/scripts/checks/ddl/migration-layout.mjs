@@ -110,6 +110,44 @@ for (const name of readdirSync(resolve(root, "migrations"))) {
   if (name.endsWith(".sql") && !active.has(`migrations/${name}`))
     errors.push(`Unclassified SQL: ${name}`);
 }
+// An equivalence is executable admission logic, not an unverified skip list.
+const equivalents = readFileSync(
+  resolve(root, "migrations/manifests/foundation-equivalents.sha256"),
+  "utf8",
+)
+  .split(/\r?\n/u)
+  .map((line) => line.trim())
+  .filter((line) => line && !line.startsWith("#"));
+const equivalentNames = new Set();
+for (const line of equivalents) {
+  const [name, migrationHash, validatorHash, validator, sentinel, ...extra] =
+    line.split(/\s+/u);
+  if (
+    extra.length ||
+    !name ||
+    !validator?.startsWith("equivalence/") ||
+    !sentinel ||
+    !/^[a-f0-9]{64}$/u.test(migrationHash ?? "") ||
+    !/^[a-f0-9]{64}$/u.test(validatorHash ?? "")
+  ) {
+    errors.push(`Malformed foundation equivalence: ${line}`);
+    continue;
+  }
+  if (equivalentNames.has(name))
+    errors.push(`Duplicate foundation equivalence: ${name}`);
+  equivalentNames.add(name);
+  if (active.get(`migrations/${name}`)?.sha256 !== migrationHash)
+    errors.push(`Unregistered or changed equivalent migration: ${name}`);
+  const validatorPath = safePath(`migrations/${validator}`);
+  if (
+    !existsSync(validatorPath) ||
+    createHash("sha256").update(readFileSync(validatorPath)).digest("hex") !==
+      validatorHash
+  )
+    errors.push(`Changed foundation equivalence validator: ${validator}`);
+  if (!existsSync(safePath(`ddl/${sentinel}`)))
+    errors.push(`Missing foundation sentinel: ${sentinel}`);
+}
 if (errors.length) throw new Error(errors.join("\n"));
 console.log(
   `Migration layout verified: ${inventory.entries.length} classified files, ${active.size} retained SQL files.`,

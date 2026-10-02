@@ -62,6 +62,29 @@ export function providerTools(
   return tools.map(({ entitySection: _, ...tool }) => tool);
 }
 
+/** An explicit page-section request already has server-resolved coordinates.
+ * Keep every matching section for model selection; this is neither an intent
+ * shortcut nor an authorization grant. Named/relative lookups still discover. */
+export function currentEntitySectionTools(
+  tools: readonly AtlasProviderToolDefinition[],
+  text: string,
+  page?: AtlasBusinessContextV1,
+): readonly AtlasProviderToolDefinition[] | undefined {
+  if (
+    page?.kind !== "record" || page.asOf ||
+    !/\b(?:this|current)\s+record\b/i.test(text) ||
+    /\b(?:another|other|versus|vs|instead|named|called|records)\b/i.test(text) ||
+    /\b(?:and|with)\s+(?:(?:for|of|on)\s+)?(?:this|current)\s+record\b/i.test(text) ||
+    /\b(?:this|current)\s+record\s+(?:with|and(?!\s+(?:explain|describe|report)\s+(?:the\s+)?coverage\b))\b/i.test(text)
+  ) return undefined;
+  const matches = selectEntitySectionTools(tools, text, page);
+  if (!matches?.length || matches.some(tool =>
+    tool.entitySection?.sectionKey === "record_summary" ||
+    tool.entitySection?.semanticAliases?.length
+  )) return undefined;
+  return matches;
+}
+
 /** Explicit current-record section reads have no identifier ambiguity. Domain
  * questions, mutations, attachments and multi-section requests stay with the agent. */
 export function directEntitySectionRead(

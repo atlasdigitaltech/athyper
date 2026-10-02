@@ -6,10 +6,10 @@
   --a-identity-task-padding: clamp(1.5rem, 4vw, 5rem);
   --a-identity-form-width: 30rem;
 }
-@media (max-width: 75rem) {
+@media (width < 80rem) {
   :root { --a-identity-columns: minmax(0, 52%) minmax(0, 48%); }
 }
-@media (max-width: 52rem) {
+@media (width < 64rem) {
   :root {
     --a-identity-columns: minmax(0, 1fr);
     --a-identity-story-display: none;

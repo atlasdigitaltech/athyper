@@ -51,7 +51,7 @@ import {
   Card,
   Dialog,
   DialogContent,
-  Select,
+  ChoiceSelect,
   Tooltip,
 } from "@athyper/platform-ui";
 import { createPortal } from "react-dom";
@@ -1132,28 +1132,29 @@ export function CommentCollection({
         <div className="a-comment-view-options">
           <label>
             <span className="a-visually-hidden">{intl.message("comments.order")}</span>
-            <Select
+            <ChoiceSelect
               disabled={Boolean(editing)}
+              label={intl.message("comments.order")}
               value={newestFirst ? "newest" : "oldest"}
-              onChange={(event) =>
-                setNewestFirst(event.currentTarget.value === "newest")
-              }
-            >
-              <option value="oldest">{intl.message("comments.oldest")}</option>
-              <option value="newest">{intl.message("comments.newest")}</option>
-            </Select>
+              onChange={(order) => setNewestFirst(order === "newest")}
+              options={[
+                { value: "oldest", label: intl.message("comments.oldest") },
+                { value: "newest", label: intl.message("comments.newest") },
+              ]}
+            />
           </label>
           <label>
             <span className="a-visually-hidden">{intl.message("comments.groupBy")}</span>
-            <Select
+            <ChoiceSelect
               disabled={Boolean(editing)}
-              aria-label={intl.message("comments.groupBy")}
+              label={intl.message("comments.groupBy")}
               value={groupBy}
-              onChange={(event) => setGroupBy(event.currentTarget.value)}
-            >
-              <option value="date">{intl.message("comments.groupDate")}</option>
-              <option value="user">{intl.message("comments.groupUser")}</option>
-            </Select>
+              onChange={setGroupBy}
+              options={[
+                { value: "date", label: intl.message("comments.groupDate") },
+                { value: "user", label: intl.message("comments.groupUser") },
+              ]}
+            />
           </label>
         </div>
         <div className="a-comment-view-controls" ref={toolbarRef}><RecordPanelToolbarActions/></div>
@@ -1215,22 +1216,21 @@ export function CommentCollection({
               <p>
                 {intl.message("comments.reportHelp")}
               </p>
-              <label>{intl.message("comments.reason")}<Select
-                  aria-label={intl.message("comments.reason")}
+              <label>{intl.message("comments.reason")}<ChoiceSelect
+                  label={intl.message("comments.reason")}
                   autoFocus
                   required
+                  placeholder={intl.message("comments.selectReason")}
                   value={reportReason}
-                  onChange={(event) =>
-                    setReportReason(event.currentTarget.value)
-                  }
-                >
-                  <option value="" disabled>{intl.message("comments.selectReason")}</option>
-                  <option value="spam">{intl.message("comments.spam")}</option>
-                  <option value="harassment">{intl.message("comments.harassment")}</option>
-                  <option value="misinformation">{intl.message("comments.misinformation")}</option>
-                  <option value="off_topic">{intl.message("comments.offTopic")}</option>
-                  <option value="other">{intl.message("comments.other")}</option>
-                </Select>
+                  onChange={setReportReason}
+                  options={[
+                    { value: "spam", label: intl.message("comments.spam") },
+                    { value: "harassment", label: intl.message("comments.harassment") },
+                    { value: "misinformation", label: intl.message("comments.misinformation") },
+                    { value: "off_topic", label: intl.message("comments.offTopic") },
+                    { value: "other", label: intl.message("comments.other") },
+                  ]}
+                />
               </label>
               <label>{intl.message("comments.optionalContext")}<textarea
                   value={reportDetail}

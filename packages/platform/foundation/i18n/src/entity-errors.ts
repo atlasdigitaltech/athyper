@@ -5,6 +5,7 @@ export function localizedEntityError(cause: unknown, intl: IntlRuntime, fallback
   const object = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
   const root = object(cause), problem = object(root.problem ?? cause);
   const code = problem.code;
+  if (code === "RECORD_VALIDATION_FAILED" && object(object(problem.errors).result).code === "ENTITY_EMPTY_SETUP") return intl.message("form.emptySetup");
   if (code === "INVALID_FILTER_VALUE" || code === "INVALID_FILTER") return intl.message(`error.${code}`);
   if (code === "TOO_MANY_FILTERS") {
     const params = object(object(problem.errors).params ?? problem.params);

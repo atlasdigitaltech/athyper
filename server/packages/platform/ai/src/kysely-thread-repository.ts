@@ -21,6 +21,11 @@ const selection = sql<Row>`SELECT t.*, t.created_at::text AS cursor_created_at, 
     FROM document.conversation_participant p WHERE p.tenant_id=t.tenant_id AND p.conversation_id=t.conversation_id), '[]'::jsonb) AS participants
   FROM ai.atlas_thread t JOIN document.conversation c ON c.tenant_id=t.tenant_id AND c.id=t.conversation_id`;
 
+/** A contains-match pattern; the person's % and _ are literal. */
+function likePattern(query: string): string {
+  return `%${query.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+}
+
 /** Every operation selects the verified plane database and establishes transaction-local RLS scope. */
 export class KyselyAtlasThreadRepository implements AtlasThreadRepository {
   constructor(private readonly transactions: PlaneTransactionCoordinator<Tx>) {}
@@ -82,6 +87,11 @@ export class KyselyAtlasThreadRepository implements AtlasThreadRepository {
         await sql<Row>`${selection} WHERE t.tenant_id=${input.context.tenantId}::uuid AND t.plane=${input.context.planeKey}
         AND ${visible} AND ai.fn_atlas_conversation_access(t.tenant_id,t.conversation_id,false)
         ${input.status === "all" ? sql`` : sql`AND c.status=${input.status}`}
+        ${input.query ? sql`AND (c.title ILIKE ${likePattern(input.query)} ESCAPE '\\' OR EXISTS (
+          SELECT 1 FROM ai.atlas_message m
+          CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(m.content_blocks)='array' THEN m.content_blocks ELSE '[]'::jsonb END) block
+          WHERE m.tenant_id=t.tenant_id AND m.plane=t.plane AND m.conversation_id=t.conversation_id
+          AND block->>'text' ILIKE ${likePattern(input.query)} ESCAPE '\\'))` : sql``}
         ${cursor ? sql`AND (t.created_at,t.conversation_id)<(${cursor.at}::timestamptz,${cursor.id}::uuid)` : sql``}
         ORDER BY t.created_at DESC,t.conversation_id DESC LIMIT ${input.limit + 1}`.execute(
           tx,

@@ -31,6 +31,8 @@ createRoot(document.getElementById('root')).render(<EntityPageLayout collectionH
   jsx: "automatic",
   define: { "process.env.NODE_ENV": '"test"' },
   tsconfig: resolve("tooling/config/tsconfig-react.json"),
+  // Stylesheets are injected by the page, not bundled (the date picker imports its CSS).
+  loader: { ".css": "empty" },
   logLevel: "silent",
 }).outputFiles[0]!.text;
 

@@ -35,6 +35,39 @@ const NODE_BUILTINS = new Set([
   ...builtinModules,
   ...builtinModules.map((name) => `node:${name}`),
 ]);
+// The host's local DI/bootstrap modules are composition infrastructure, not a
+// reusable business kernel. Keep this exception exact and inside that package.
+const HOST_KERNEL_FILES = new Set([
+  "bootstrap.ts",
+  "capability-registration.ts",
+  "container.ts",
+  "deployment-environment.ts",
+  "launch.ts",
+  "module-registry.ts",
+  "registration-plan.ts",
+]);
+function approvedHostKernelFile(path, owner, root) {
+  return (
+    owner.root === join(root, "server/apps/platform-host") &&
+    HOST_KERNEL_FILES.has(posix(relative(join(owner.root, "src/kernel"), path)))
+  );
+}
+function approvedHostKernelImport(file, specifier, owner, root) {
+  if (!specifier.startsWith(".")) return false;
+  const target = resolve(
+    dirname(file),
+    specifier.replace(/\.(js|mjs|cjs)$/, ".ts"),
+  );
+  const source = posix(relative(owner.root, file));
+  return (
+    approvedHostKernelFile(target, owner, root) &&
+    (source.startsWith("src/composition/") ||
+      source.startsWith("src/entrypoints/") ||
+      approvedHostKernelFile(file, owner, root) ||
+      source === "src/main.ts" ||
+      source === "src/scripts/recover-dev-publication.ts")
+  );
+}
 
 function posix(value) {
   return value.split(sep).join("/");
@@ -247,14 +280,16 @@ export function analyzeServerRebuild(repoRoot) {
     if (
       segments(relative(owner.root, file)).some((part) =>
         /^kernel(?:\.|$)/i.test(part),
-      )
+      ) &&
+      !approvedHostKernelFile(file, owner, root)
     ) {
       add(violations, "KERNEL", `${relFile} uses a kernel path`);
     }
     for (const specifier of imports(source, file)) {
       if (
-        /(^|\/)kernel(\/|$)/i.test(specifier) ||
-        /foundation-kernel/i.test(specifier)
+        (/(^|\/)kernel(\/|$)/i.test(specifier) ||
+          /foundation-kernel/i.test(specifier)) &&
+        !approvedHostKernelImport(file, specifier, owner, root)
       ) {
         add(
           violations,

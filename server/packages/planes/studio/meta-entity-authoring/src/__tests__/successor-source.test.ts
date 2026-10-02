@@ -52,7 +52,7 @@ it("requires a caller-owned transaction", async () => {
 it("enforces source-check import ownership, including dynamic-import bypasses", () => {
   const text = readFileSync(new URL("../publication/successor-source.ts", import.meta.url), "utf8");
   const tree = ts.createSourceFile("successor-source.ts", text, ts.ScriptTarget.Latest, true);
-  const allowed = new Set(["kysely", "@athyper/server-contract-publication", "@athyper/server-contract-meta-entity-authoring", "../deterministic.js", "../compilation/target-compiler.js"]);
+  const allowed = new Set(["kysely", "@athyper/server-contract-publication", "@athyper/server-contract-meta-entity-authoring", "../deterministic.js", "../compilation/entity-target-compiler.js"]);
   function visit(node: ts.Node) {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) expect(allowed.has(node.moduleSpecifier.text)).toBe(true);
     if (ts.isImportEqualsDeclaration(node) || ts.isImportTypeNode(node) || (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || node.expression.getText(tree) === "require"))) throw Error("Import bypass");

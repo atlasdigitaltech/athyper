@@ -90,7 +90,7 @@ for (const plane of ["studio", "neon", "mesh"]) {
       await toolbar.getByRole("button", { name: "Controls", exact: true }).click();
       await page.getByRole("menuitem", { name: /^Sort/ }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
-      await page.getByLabel("Direction for sort 1").selectOption("desc");
+      await page.getByRole("radiogroup", { name: "Direction for sort 1" }).getByRole("radio", { name: "Descending" }).click();
       await page.getByRole("button", { name: "Apply sort", exact: true }).click();
       await expect.poll(() => page.evaluate(() => JSON.stringify((window as any).listQueries.at(-1)))).toContain("desc");
       await toolbar.getByRole("button", { name: "Controls", exact: true }).click();

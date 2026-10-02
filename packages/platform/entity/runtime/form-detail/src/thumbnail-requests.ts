@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { shareAbortableRequest } from "./share-abortable-request";
 import type { HttpClient } from "@athyper/platform-api-client";
 import {
@@ -67,12 +68,18 @@ export function requestThumbnail(
     ready.set(client, cached);
   }
   for (const [coordinate, result] of cached) {
-    if (!result.expiresAt || Date.parse(result.expiresAt) - 5000 <= Date.now())
+    if (
+      !result.expiresAt ||
+      !(parseInstant(result.expiresAt) - 5000 > Date.now())
+    )
       cached.delete(coordinate);
   }
   const capability = cached.get(key);
   if (capability) return Promise.resolve(capability);
-  return shareAbortableRequest(requests, key, async sharedSignal => {
+  return shareAbortableRequest(
+    requests,
+    key,
+    async (sharedSignal) => {
       await slot(sharedSignal);
       try {
         const result = await client.request(attachmentPreview(id), {
@@ -84,7 +91,7 @@ export function requestThumbnail(
           result.state === "ready" &&
           result.url &&
           result.expiresAt &&
-          Date.parse(result.expiresAt) - 5000 > Date.now()
+          parseInstant(result.expiresAt) - 5000 > Date.now()
         ) {
           while (cached.size >= 128) cached.delete(cached.keys().next().value!);
           cached.set(key, result);
@@ -94,5 +101,7 @@ export function requestThumbnail(
         active--;
         waiting.values().next().value?.();
       }
-  }, signal);
+    },
+    signal,
+  );
 }

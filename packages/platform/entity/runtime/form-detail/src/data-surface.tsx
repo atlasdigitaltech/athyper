@@ -13,7 +13,7 @@ import { createPortal } from "react-dom";
 import { collectionPresentations } from "./collection-section";
 import { useDataValidation, useValidationMessage } from "./data-validation";
 import { validateDataInput } from "@athyper/contract-platform-entity-runtime";
-import { WarningIcon } from "@athyper/platform-icons";
+import { ChevronDownIcon, WarningIcon } from "@athyper/platform-icons";
 import {
   ReferenceSelect,
   type ReferenceDirectoryBinding,
@@ -25,7 +25,8 @@ import {
   Dialog,
   DialogContent,
   Input,
-  Select,
+  ChoiceSelect,
+  useUiMessages,
   choicePresentation,
 } from "@athyper/platform-ui";
 import {
@@ -100,6 +101,7 @@ export function EntityDataSurface({
 }) {
   const answers = resolveDataAnswers(surface, suppliedAnswers);
   const id = useId();
+  const uiMessages = useUiMessages();
   const [pending, setPending] = useState<{
     field: IntakeInputField;
     value: unknown;
@@ -265,7 +267,7 @@ export function EntityDataSurface({
         ) : null}
         <div
           className="a-data-surface__grid"
-          style={{ "--data-columns": section.columns ?? 12 } as CSSProperties}
+          style={columnCount("--data-columns", section.columns ?? 12)}
         >
           {section.fields.map((candidate) => {
             if (
@@ -612,20 +614,19 @@ export function EntityDataSurface({
                         onChange={update}
                       />
                     ) : f.widget === "select" ? (
-                      <Select
+                      <ChoiceSelect
                         {...common}
                         value={String(value)}
-                        onChange={(e) => update(e.currentTarget.value)}
-                      >
-                        <option value="">
-                          {f.placeholder ?? "Select an option"}
-                        </option>
-                        {f.lookup?.options?.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </Select>
+                        placeholder={f.placeholder}
+                        onChange={update}
+                        options={[
+                          // An optional field can be cleared, as with the native empty option.
+                          ...(f.required
+                            ? []
+                            : [{ value: "", label: f.placeholder ?? uiMessages.selectOption }]),
+                          ...(f.lookup?.options ?? []).map((o) => ({ value: o.value, label: o.label })),
+                        ]}
+                      />
                     ) : f.widget === "textarea" ? (
                       <textarea
                         {...common}
@@ -868,6 +869,7 @@ function DataSection({
       className="a-intake-surface__section a-data-section--collapsible"
     >
       <summary className={header ? "a-subsection-header" : undefined}>
+        {header ? <ChevronDownIcon size={16} className="a-disclosure-caret" aria-hidden="true" /> : null}
         <SubsectionHeading header={header}>
           {title}
           {populatedSummary ? (
@@ -898,4 +900,9 @@ function DataSection({
       {children}
     </section>
   );
+}
+
+/** The metadata column count, handed to the stylesheet's grid as a CSS variable. */
+function columnCount(name: string, columns: number | undefined): CSSProperties {
+  return { [name]: columns } as CSSProperties;
 }

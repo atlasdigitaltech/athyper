@@ -2,6 +2,7 @@ import { build } from "esbuild";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
+import { withSessionDefaults } from "./fixtures/session-stub";
 const bundle = build({
   stdin: {
     loader: "tsx",
@@ -36,7 +37,7 @@ const bundle = build({
         );
         builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
           loader: "js",
-          contents: `
+          contents: withSessionDefaults(`
       const client={request:async(op,input)=>{
         window.calls++;window.active++;window.peak=Math.max(window.peak,window.active);
         try{await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,80);input.signal.addEventListener('abort',()=>{clearTimeout(timer);reject(Error('aborted'))},{once:true})});return{state:'ready',url:'https://objects.thumbnail.test/pixel.png',contentType:'image/png',expiresAt:new Date(Date.now()+120000).toISOString()}}finally{window.active--}
@@ -45,7 +46,7 @@ const bundle = build({
       export const useSessionIdentity=()=>({state:'authenticated',scope:{tenantId:'tenant',principalId:'actor',authEpoch:1}});
       export const useExperienceRevision=()=>({state:'ready',revision:'release'});
       export const usePermissions=()=>['read-'+window.testEpoch];
-    `,
+    `),
         }));
       },
     },

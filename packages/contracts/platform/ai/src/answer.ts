@@ -13,6 +13,14 @@ export interface AtlasAnswerEnvelope {
   readonly findingIds: readonly string[];
   readonly evidenceIds: readonly string[];
   readonly nextActionId?: string;
+  /** The answer as statements, each naming the evidence it rests on, so people can
+   * see which source (workspace or external) backs which sentence. */
+  readonly statements?: readonly AtlasAnswerStatement[];
+}
+export interface AtlasAnswerStatement {
+  readonly text: string;
+  /** A subset of the envelope's evidenceIds. */
+  readonly evidenceIds: readonly string[];
 }
 export interface AtlasAnswerAuthority {
   readonly evidenceIds: readonly string[];
@@ -42,6 +50,7 @@ export function parseAtlasAnswerEnvelope(
           "findingIds",
           "evidenceIds",
           "nextActionId",
+          "statements",
         ].includes(key),
     )
   )
@@ -100,9 +109,24 @@ export function parseAtlasAnswerEnvelope(
     if (action?.evidenceIds.some((id) => !evidenceIds.includes(id)))
       return fail();
   }
+  let statements: readonly AtlasAnswerStatement[] | undefined;
+  if (item.statements !== undefined) {
+    if (!Array.isArray(item.statements) || !item.statements.length || item.statements.length > 50)
+      return fail();
+    statements = Object.freeze(
+      item.statements.map((raw) => {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return fail();
+        const statement = raw as Record<string, unknown>;
+        if (Object.keys(statement).some((key) => !["text", "evidenceIds"].includes(key))) return fail();
+        // A statement can only point at evidence the answer itself is authorized to cite.
+        return Object.freeze({ text: prose(statement.text, 4000), evidenceIds: refs(statement.evidenceIds, evidenceIds) });
+      }),
+    );
+  }
   return Object.freeze({
     schemaVersion: 1,
     kind: item.kind as AtlasAnswerEnvelope["kind"],
+    ...(statements ? { statements } : {}),
     summary: prose(item.summary, 16000),
     ...(item.explanation === undefined
       ? {}

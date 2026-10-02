@@ -22,7 +22,8 @@
     "@athyper/contract-platform-entity-list": "workspace:*",
     "@athyper/contract-platform-navigation": "workspace:*",
     "@athyper/platform-i18n": "workspace:*",
-    "@athyper/platform-temporal": "workspace:*"
+    "@athyper/platform-temporal": "workspace:*",
+    "@athyper/contract-platform-entity-runtime": "workspace:*"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",

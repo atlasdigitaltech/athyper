@@ -1,43 +1,52 @@
 "use client";
 import {
-  ContentHeader,
+  ManagementWorkspace,
+  ManagementNavigation,
+  PageHeader,
+  WorkspaceToolPanel,
   ActivityQueryControls,
   ActivityNotificationActions,
-  ActivityNotificationRow,
-  ActivityInboxRow,
-  type ShellInboxItem,
-  type ShellNotificationItem,
+  BrowserAlertsSetting,
+  ActivityFeed,
+  ActivityDetail,
+  activityDensityOverride,
+  activityCount,
+  activityEntries,
+  useReadingPane,
 } from "@athyper/platform-shell";
-import { BellIcon, InboxIcon } from "@athyper/platform-icons";
-import {
-  Button,
-  PanelTabs,
-  FilterChipGroup,
-  PanelEmptyState,
-} from "@athyper/platform-ui";
-import { useState } from "react";
+import { BellIcon, InboxIcon, SlidersHorizontalIcon } from "@athyper/platform-icons";
+import { Button, FilterChipGroup, PanelHeader } from "@athyper/platform-ui";
+import { useEffect, useState } from "react";
 import { defaultActivityQuery } from "@athyper/contract-platform-activity";
+import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { NotificationControls } from "./notification-controls";
 import { useActivityCenterData } from "./index";
 
+
+/** Full view of the activity panel, composed exactly like an entity list:
+ * the wide management frame, a collection header with the result count, the
+ * section navigation, then the shared toolbar and feed. Notification
+ * preferences open in the docked side panel. */
 export function ActivityCenterPage({
   kind,
 }: {
   readonly kind: "notifications" | "inbox";
 }) {
   const data = useActivityCenterData();
-  const [settings, setSettings] = useState(false),
-    [actionError, setActionError] = useState<string>();
+  const intl = useEntityI18n();
+  const text = (key: string, values?: Record<string, string | number>) => intl.message(`activity.page.${key}`, values);
+  const [settings, setSettings] = useState(false);
   const query = data.queries?.[kind];
   const defaults = defaultActivityQuery(kind, query?.timeZone);
-  const filtered =
+  const filtered = Boolean(
     query &&
-    Object.keys(defaults).some(
-      (key) =>
-        !["sort", "group", "density", "timeZone"].includes(key) &&
-        query[key as keyof typeof query] !==
-          defaults[key as keyof typeof defaults],
-    );
+      Object.keys(defaults).some(
+        (key) =>
+          !["sort", "group", "density", "timeZone"].includes(key) &&
+          query[key as keyof typeof query] !==
+            defaults[key as keyof typeof defaults],
+      ),
+  );
   const clear = () => {
     if (query)
       data.onQueryChange?.(kind, {
@@ -61,189 +70,151 @@ export function ActivityCenterPage({
           : { attention: value === "attention" }),
       });
   };
-  const error = data.errors?.[kind]?.message ?? data.error;
-  const denied = (data.errors?.[kind]?.status ?? data.errorStatus) === 403;
-  const notifications = data.notifications ?? [],
-    inbox = data.inbox ?? [];
-  const all = kind === "notifications" ? notifications : inbox;
-  const items = all;
-  const count = (tab: "notifications" | "inbox") =>
-    data.loading || data.errors?.[tab] || data.error
+  const title = text(kind === "notifications" ? "title.notifications" : "title.inbox");
+  // Reading pane (80rem and wider): the list on the left, the selected item in
+  // full on the right. The first row is shown until the person picks another.
+  const [content, setContent] = useState<HTMLDivElement | null>(null);
+  const wide = useReadingPane(content);
+  const [selectedId, setSelectedId] = useState<string>();
+  useEffect(() => setSelectedId(undefined), [kind]);
+  const items = (kind === "notifications" ? data.notifications : data.inbox) ?? [];
+  const entries = activityEntries(kind, items);
+  const selected =
+    entries.find((entry) => entry.item.id === selectedId) ??
+    entries
+      .flatMap((entry) => entry.similar.map((item) => ({ item, similar: [] })))
+      .find((entry) => entry.item.id === selectedId) ??
+    entries[0];
+  const paneId = `athyper-activity-detail-${kind}`;
+  const pane = wide && Boolean(selected) && !(data.errors?.[kind] ?? data.error);
+  const matching = data.queryInfo?.[kind]?.matchingCount;
+  const count =
+    data.loading || data.errors?.[kind] || matching === undefined
       ? undefined
-      : tab === "notifications"
-        ? data.unreadNotificationCount
-        : data.openInboxCount;
-  const more =
-    kind === "notifications" ? data.hasMoreNotifications : data.hasMoreInbox;
-  const groups = new Map<string, typeof items>();
-  for (const item of items) {
-    const group = item.groupLabel ?? "";
-    groups.set(group, [...(groups.get(group) ?? []), item]);
-  }
+      : intl.message(kind === "notifications" ? "activity.controls.notificationCount" : "activity.controls.taskCount", { count: matching });
+  const sectionCount = (tab: "notifications" | "inbox") => activityCount(data, tab);
   return (
-    <section
+    <ManagementWorkspace
       className="athyper-activity-page"
-      data-activity-density={query?.density}
-      aria-labelledby="activity-page-title"
+      header={
+        <PageHeader
+          level="collection"
+          title={title}
+          description={
+            <>
+              {/* Section-specific purpose, shown once in the page header. */}
+              <span>{text(kind === "notifications" ? "description.notifications" : "description.inbox")}</span>
+              {count ? (
+                <>
+                  <span aria-hidden="true"> · </span>
+                  <span aria-live="polite">{count}</span>
+                </>
+              ) : null}
+            </>
+          }
+          icon={kind === "notifications" ? <BellIcon /> : <InboxIcon />}
+          actions={
+            kind === "notifications" ? (
+              <Button
+                variant="secondary"
+                aria-expanded={settings}
+                onClick={() => setSettings((value) => !value)}
+              >
+                <SlidersHorizontalIcon size={16} />
+                {text("preferences")}
+              </Button>
+            ) : undefined
+          }
+        />
+      }
+      navigation={
+        <ManagementNavigation
+          label={text("type")}
+          currentKey={kind}
+          items={(["notifications", "inbox"] as const).map((key) => ({
+            key,
+            label: text(key === "notifications" ? "title.notifications" : "title.inbox"),
+            href:
+              key === "inbox"
+                ? (data.inboxHref ?? "/inbox")
+                : (data.notificationsHref ?? "/notifications"),
+            ...(sectionCount(key) !== undefined ? { count: sectionCount(key) } : {}),
+          }))}
+        />
+      }
     >
-      <ContentHeader
-        title={<span className="athyper-activity-page__title">{kind === "notifications" ? <BellIcon size={24}/> : <InboxIcon size={24}/>} {kind === "notifications" ? "Notifications" : "Inbox"}</span>}
-        titleId="activity-page-title"
-        description="Updates and work that need your attention."
-        actions={
-          kind === "notifications" ? (
-            <Button
-              variant="secondary"
-              aria-expanded={settings}
-              aria-controls="activity-preferences"
-              onClick={() => setSettings((value) => !value)}
-            >
-              Notification preferences
-            </Button>
-          ) : undefined
-        }
-      />
-      <PanelTabs
-        label="Activity type"
-        value={kind}
-        onValueChange={(value) => {
-          window.location.assign(
-            value === "inbox"
-              ? (data.inboxHref ?? "/inbox")
-              : (data.notificationsHref ?? "/notifications"),
-          );
-        }}
-        items={[
-          {
-            key: "notifications",
-            label: "Notifications",
-            count: count("notifications"),
-            panelId: "activity-content",
-          },
-          {
-            key: "inbox",
-            label: "Inbox",
-            count: count("inbox"),
-            panelId: "activity-content",
-          },
-        ]}
-      />
-      {settings ? (
-        <div id="activity-preferences">
-          <NotificationControls expanded />
-        </div>
-      ) : null}
+      {/* One list panel, as on entity lists: toolbar, quick views, then grouped rows. */}
+      <div className="athyper-activity-page__panel">
       <ActivityQueryControls kind={kind} data={data} />
       {!data.collections?.[kind] ? <div className="athyper-activity-page__toolbar">
-        {!data.collections?.[kind] ? <FilterChipGroup
-          label={
-            kind === "notifications" ? "Notification filters" : "Inbox filters"
-          }
+        <FilterChipGroup
+          label={text(kind === "notifications" ? "filters.notifications" : "filters.inbox")}
           value={scope}
           onValueChange={setScope}
           items={[
-            { value: "all", label: "All" },
+            { value: "all", label: text("scope.all") },
             {
               value: "attention",
-              label: kind === "notifications" ? "Unread" : "Needs attention",
+              label: text(kind === "notifications" ? "scope.unread" : "scope.attention"),
             },
           ]}
         />
-        : null}
         {kind === "notifications" ? <ActivityNotificationActions data={data} /> : null}
       </div> : null}
       <div
-        id="activity-content"
-        role="tabpanel"
-        aria-label={kind === "notifications" ? "Notifications" : "Inbox"}
+        ref={setContent}
+        id={`athyper-activity-content-${kind}`}
+        className="athyper-activity-page__content"
+        data-density={activityDensityOverride(data, kind)}
+        data-reading-pane={pane || undefined}
+        aria-label={title}
+        role="region"
       >
-        {actionError ? <p role="alert">{actionError}</p> : null}
-        {data.loading && !all.length ? (
-          <PanelEmptyState icon={<BellIcon />} title="Loading activity…" />
-        ) : error ? (
-          <PanelEmptyState
-            icon={<InboxIcon />}
-            title={denied ? "Access required" : "Activity couldn't be loaded"}
-            description={
-              denied
-                ? "Ask your administrator to review your access."
-                : "Please try again."
-            }
-            action={
-              !denied ? (
-                <Button variant="secondary" onClick={data.onRetry}>
-                  Try again
-                </Button>
-              ) : undefined
+        <div className="athyper-activity-page__list" data-activity-list>
+          <ActivityFeed
+            kind={kind}
+            data={data}
+            filtered={filtered}
+            onShowAll={clear}
+            selection={
+              pane ? { selectedId: selected?.item.id, onSelect: setSelectedId, controls: paneId } : undefined
             }
           />
-        ) : items.length ? (
-          <>
-            {[...groups].map(([label, rows]) => (
-              <section className="athyper-activity-page__group" key={label}>
-                {label ? <h2>{label}</h2> : null}
-                <ul className="athyper-activity-feed">
-                  {rows.map((item) => (
-                    <li key={item.id}>
-                      {kind === "notifications" ? (
-                        <ActivityNotificationRow
-                          item={item as ShellNotificationItem}
-                          onMarkRead={data.onMarkNotificationRead}
-                          onDismiss={data.onDismissNotification}
-                        />
-                      ) : (
-                        <ActivityInboxRow item={item as ShellInboxItem} />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </>
-        ) : (
-          <PanelEmptyState
-            icon={kind === "notifications" ? <BellIcon /> : <InboxIcon />}
-            title={
-              filtered
-                ? "No matching activity"
-                : kind === "notifications"
-                  ? "You're all caught up"
-                  : "Nothing needs your attention"
-            }
-            description={
-              filtered
-                ? "Try another search or clear your filters."
-                : "New activity will appear here automatically."
-            }
-            action={
-              filtered ? (
-                <Button variant="secondary" onClick={clear}>
-                  Show all
-                </Button>
-              ) : undefined
-            }
-          />
-        )}
-        {!error && more ? (
-          <div className="athyper-activity-page__more">
-            <span>{all.length} items loaded</span>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                void Promise.resolve(
-                  kind === "notifications"
-                    ? data.onLoadMoreNotifications?.()
-                    : data.onLoadMoreInbox?.(),
-                ).catch(() =>
-                  setActionError("Could not load more activity. Try again."),
-                )
-              }
-            >
-              Load more
-            </Button>
+        </div>
+        {pane && selected ? (
+          <div className="athyper-activity-page__reading">
+            <ActivityDetail id={paneId} kind={kind} item={selected.item} similar={selected.similar} data={data} />
           </div>
         ) : null}
       </div>
-    </section>
+      </div>
+      {kind === "notifications" ? (
+        <WorkspaceToolPanel
+          id="notification-preferences"
+          open={settings}
+          onOpenChange={setSettings}
+          labels={{
+            region: text("preferences"),
+            close: text("closePreferences"),
+            pin: intl.message("list.controls.pin"),
+            unpin: intl.message("list.controls.unpin"),
+            resize: text("resizePreferences"),
+          }}
+          className="athyper-notification-preferences-panel"
+        >
+          {(frame) => (
+            <>
+              <PanelHeader
+                icon={<SlidersHorizontalIcon size={18} />}
+                title={text("preferences")}
+                subtitle={text("preferencesHint")}
+                capabilities={frame.capabilities}
+              />
+              <NotificationControls deviceSettings={<BrowserAlertsSetting data={data} />} />
+            </>
+          )}
+        </WorkspaceToolPanel>
+      ) : null}
+    </ManagementWorkspace>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { EntityReferenceLink } from "./reference-preview";
 import type { EntityDetailDescriptorV1, EntityRecordV1 } from "@athyper/contract-platform-entity-runtime";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { formatEntityValue } from "@athyper/platform-i18n/entity-value";
@@ -19,15 +20,15 @@ export function EntityRecordFields({descriptor,record,fieldKeys}: {descriptor:En
                               <div key={field.key}>
                                 <dt>{field.label}</dt>
                                 <dd>
-                                  {(field.kind === "date" || field.kind === "datetime") && typeof value === "string" && Number.isFinite(Date.parse(value)) ? (
+                                  {record.references?.[field.key] ? <EntityReferenceLink sourceEntity={descriptor.entity.code} sourceRecord={record.id} field={field.key} reference={record.references[field.key]!}/> : (field.kind === "date" || field.kind === "datetime") && typeof value === "string" && Number.isFinite(Date.parse(value)) ? (
                                     <time
                                       dateTime={value as string}
                                       title={value as string}
                                     >
-                                      {formatEntityValue(value, field, intl)}
+                                      {record.displayValues?.[field.key] ?? formatEntityValue(value, field, intl)}
                                     </time>
                                   ) : (
-                                    formatEntityValue(value, field, intl)
+                                    record.displayValues?.[field.key] ?? formatEntityValue(value, field, intl)
                                   )}
                                 </dd>
                               </div>

@@ -19,6 +19,8 @@ export interface UiMessages {
   readonly companyDetails: (code: string, country: string, currency: string) => string;
   readonly noMatchingCompanies: string;
   readonly selectView: string;
+  /** ChoiceSelect placeholder when no option is chosen. */
+  readonly selectOption: string;
   readonly viewName: (name: string, modified: boolean) => string;
 }
 
@@ -32,6 +34,7 @@ export const englishUiMessages: UiMessages = Object.freeze({
   companyDetails: (code: string, country: string, currency: string) => `${code} · ${country} · ${currency}`,
   noMatchingCompanies: "No permitted companies match your search.",
   selectView: "Select view",
+  selectOption: "Select an option",
   viewName: (name: string, modified: boolean) => `View: ${name}${modified ? " (modified)" : ""}`,
 });
 

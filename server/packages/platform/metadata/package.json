@@ -13,15 +13,18 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@athyper/server-contract-publication": "workspace:*",
-    "@athyper/server-contract-metadata": "workspace:*",
-    "@athyper/server-foundation": "workspace:*",
-    "kysely": "^0.28.17",
     "@athyper/contract-platform-entity-list": "workspace:*",
-    "@athyper/contract-platform-entity-runtime": "workspace:*"
+    "@athyper/contract-platform-entity-runtime": "workspace:*",
+    "@athyper/server-contract-metadata": "workspace:*",
+    "@athyper/server-contract-object-storage": "workspace:*",
+    "@athyper/server-contract-publication": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
+    "pg": "^8.20.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

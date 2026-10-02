@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { NeonOperatingOrganization } from "@athyper/platform-api-client";
 import { CheckIcon } from "@athyper/platform-icons";
+import { ChoiceSelect } from "@athyper/platform-ui";
 import { useDismissablePicker } from "./dismissable-picker";
 
 const EN = {
@@ -140,23 +141,21 @@ export const WorkspaceContextControl = forwardRef<
         {companies.length ? (
           <fieldset>
             <legend>{labels.company}</legend>
-            <select
-              aria-label={labels.company}
+            <ChoiceSelect
+              label={labels.company}
               value={props.pendingCompanyCodeId ?? ""}
-              onChange={(event) =>
+              placeholder={labels.chooseCompany}
+              onChange={(companyCodeId) =>
                 props.onPendingChange({
-                  companyCodeId: event.target.value || undefined,
+                  companyCodeId: companyCodeId || undefined,
                   operatingOrganizationId: undefined,
                 })
               }
-            >
-              <option value="">{labels.chooseCompany}</option>
-              {companies.map((company) => (
-                <option key={company.companyCodeId} value={company.companyCodeId}>
-                  {company.code} · {company.displayName}
-                </option>
-              ))}
-            </select>
+              options={companies.map((company) => ({
+                value: company.companyCodeId,
+                label: `${company.code} · ${company.displayName}`,
+              }))}
+            />
           </fieldset>
         ) : null}
         <fieldset>

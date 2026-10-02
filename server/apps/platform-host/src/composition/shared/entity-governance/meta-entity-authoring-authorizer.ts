@@ -134,3 +134,29 @@ export function createMetaEntityInspectionAuthorizer(
         : fallback.authorize(input),
   };
 }
+
+/** Learning review precedes a change set. Resolve its own immutable proposer
+ * evidence, then use the ordinary authoring authority for release transitions. */
+export function createAtlasLearningReviewAuthorizer(
+  authoring: Authorizer,
+  load: (context: VerifiedRequestContext, id: string) => Promise<{ tenantId: string; submittedBy: string; state: string } | null>,
+): Authorizer {
+  return {
+    async authorize(input) {
+      const operation = input.resource?.["learningOperation"];
+      if (input.permissionCode !== "metadata.entity.review" || !["list", "stage", "reject"].includes(String(operation)))
+        return authoring.authorize(input);
+      return createPermissionAuthorizer({ policyGate: { async evaluate({ context, resource }) {
+        if (context.planeKey !== "studio") return { allowed: false, reason: "authoring_policy_unavailable" };
+        // This server-selected branch only lists inbox evidence; it approves nothing.
+        if (operation === "list") return { allowed: true, sodSatisfied: true };
+        const id = resource?.["learningInboxId"];
+        if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) return { allowed: false, reason: "learning_coordinate_required" };
+        const row = await load(context, id);
+        const separated = Boolean(row && row.tenantId === context.tenantId && row.submittedBy !== context.principalId &&
+          (row.state === "pending" || (operation === "stage" && row.state === "drafted")));
+        return { allowed: separated, sodSatisfied: separated, reason: "learning_reviewer_separation_required" };
+      } } }).authorize({ ...input, permissionCode: "studio.metadata.contract.review" });
+    },
+  };
+}

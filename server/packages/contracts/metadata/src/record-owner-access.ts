@@ -2,6 +2,8 @@
  * never tenant scope or field/operation permissions. */
 export interface RecordOwnerAccessV1 {
   readonly schemaVersion: 1;
+  /** Installed server resolver; never supplied by the mutation client. */
+  readonly sourceAuthority?: string;
   readonly ownerField: string;
   readonly administerPermission: string;
   readonly createdByField: string;
@@ -12,7 +14,7 @@ export function parseRecordOwnerAccess(value: unknown): RecordOwnerAccessV1 {
     throw new TypeError("Invalid record owner access");
   const row = value as Record<string, unknown>;
   if (
-    Object.keys(row).sort().join() !==
+    Object.keys(row).filter(key => key !== "sourceAuthority").sort().join() !==
       [
         "administerPermission",
         "createdByField",
@@ -21,6 +23,7 @@ export function parseRecordOwnerAccess(value: unknown): RecordOwnerAccessV1 {
         "updatedByField",
       ].join() ||
     row.schemaVersion !== 1 ||
+    (row.sourceAuthority !== undefined && (typeof row.sourceAuthority !== "string" || !/^[a-z][a-z0-9_.-]{1,126}$/.test(row.sourceAuthority))) ||
     typeof row.ownerField !== "string" ||
     !/^[a-z][a-z0-9_]{1,62}$/.test(row.ownerField) ||
     [row.createdByField, row.updatedByField].some(
@@ -33,6 +36,7 @@ export function parseRecordOwnerAccess(value: unknown): RecordOwnerAccessV1 {
     throw new TypeError("Invalid record owner access");
   return Object.freeze({
     schemaVersion: 1,
+    ...(row.sourceAuthority === undefined ? {} : { sourceAuthority: row.sourceAuthority as string }),
     ownerField: row.ownerField,
     administerPermission: row.administerPermission,
     createdByField: row.createdByField as string,

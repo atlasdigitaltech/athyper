@@ -11,8 +11,8 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
-import { KyselyMetaEntityAuthoringRepository } from "../../../../packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.js";
-import { compileGraph } from "../../../../packages/planes/studio/meta-entity-authoring/src/deterministic.js";
+import { KyselyMetaEntityAuthoringRepository } from "@athyper/server-plane-studio-meta-entity-authoring";
+import { compileGraph } from "@athyper/server-plane-studio-meta-entity-authoring";
 import {
   compileCompiledEntityArtifacts,
   compiledEntityRuntimeProjection,
@@ -27,7 +27,7 @@ import type { MetaEntityGraph } from "../../../../packages/contracts/meta-entity
 import type {
   PublicationArtifactDocumentV1,
   PublicationDeploymentBundle,
-} from "../../../../packages/contracts/publication/src/index.js";
+} from "@athyper/server-contract-publication";
 const container = process.argv[2];
 if (!container || !/^(athyper-ca02-local-|athyper-bp-integration-local-)/.test(container))
   throw new Error("An isolated athyper-ca02-local-* container is required");

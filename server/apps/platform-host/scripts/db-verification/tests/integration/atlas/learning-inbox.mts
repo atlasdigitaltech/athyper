@@ -65,7 +65,7 @@ try {
   created = true;
   for (let i = 0; ; i++) {
     try {
-      await docker("exec", container, "pg_isready", "-U", "postgres");
+      await docker("exec", container, "pg_isready", "-h", "127.0.0.1", "-U", "postgres");
       break;
     } catch (e) {
       if (i === 40) throw e;
@@ -120,7 +120,7 @@ try {
         )
         .execute(db);
       if (plane === "studio") {
-        await sql`DROP TABLE ai.atlas_learning_candidate_event,ai.atlas_learning_inbox`.execute(
+        await sql`DROP TABLE ai.atlas_learning_attempt_result,ai.atlas_learning_attempt,ai.atlas_learning_candidate_event,ai.atlas_learning_inbox`.execute(
           db,
         );
         await sql
@@ -131,6 +131,10 @@ try {
             ),
           )
           .execute(db);
+        await sql.raw(readFileSync(resolve(dbRoot,
+          "migrations/20261001_atlas_learning_requalification.sql"), "utf8")).execute(db);
+        await sql.raw(readFileSync(resolve(dbRoot,
+          "migrations/20261001_atlas_learning_attempts.sql"), "utf8")).execute(db);
       }
       console.log(`PASS ${plane}: forward F4 migration`);
       const tenantId = randomUUID(),

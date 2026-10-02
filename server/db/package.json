@@ -198,6 +198,8 @@
     "./tooling/lib/database-target": "./scripts/lib/database-target.ts",
     "./tooling/lib/cli": "./scripts/lib/cli.ts",
     "./tooling/business-partner-360/evaluate-business-partner-360-p0-approvals": "./scripts/business-partner-360/evaluate-business-partner-360-p0-approvals.ts",
-    "./tooling/business-partner-360/evaluate-business-partner-360-p1-qualification": "./scripts/business-partner-360/evaluate-business-partner-360-p1-qualification.ts"
+    "./tooling/business-partner-360/evaluate-business-partner-360-p1-qualification": "./scripts/business-partner-360/evaluate-business-partner-360-p1-qualification.ts",
+    "./tooling/prepare-reference-runtime": "./scripts/provisioning/prepare-reference-runtime.ts",
+    "./tooling/capture-dev-publication-baseline": "./scripts/operations/publication/capture-dev-publication-baseline.mjs"
   }
 }

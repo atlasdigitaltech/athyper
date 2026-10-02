@@ -1,4 +1,5 @@
 import { isEntityRuntimeKey, isEntityRuntimeUuid } from "@athyper/contract-platform-entity-runtime";
+import { TOOL_PANEL_PIN_QUERY } from "@athyper/platform-shell/tool-panel";
 import type { EntityRuntimeResourceContext } from "@athyper/platform-entity-descriptor-client";
 import { isCollaborationRequested } from "../collaboration-route";
 
@@ -14,7 +15,7 @@ export function readSection(
 }
 export function readCollaborationFull(): boolean {
   if (typeof window === "undefined") return true;
-  return window.matchMedia("(max-width:1100px)").matches ||
+  return !window.matchMedia(TOOL_PANEL_PIN_QUERY).matches ||
     new URLSearchParams(window.location.search).get("collaborationMode") !== "side";
 }
 export function readCollaborationOpen(): boolean {

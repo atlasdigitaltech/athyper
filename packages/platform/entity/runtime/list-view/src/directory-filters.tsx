@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState } from "react";
 import {
+  ChoiceSelect,
   CompanyGroups,
   ScopePickerToolbar,
   type CompanyChoice,
@@ -227,30 +228,27 @@ export function ScopeQuickFilters({
         return (
           <label key={filter.key}>
             {filter.label}
-            <select
-              aria-label={filter.label}
+            <ChoiceSelect
+              label={filter.label}
               value={
-                typeof value[filter.key] === "string" ? value[filter.key] : ""
+                typeof value[filter.key] === "string" ? String(value[filter.key]) : ""
               }
               disabled={!ready || adapter.unavailable}
-              onChange={(event) =>
+              onChange={(next) =>
                 onChange(
                   reconcileDirectorySelection(
                     filters,
                     value,
-                    { ...value, [filter.key]: event.target.value || undefined },
+                    { ...value, [filter.key]: next || undefined },
                     adapter,
                   ),
                 )
               }
-            >
-              <option value="">{filter.emptyLabel}</option>
-              {filter.options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: filter.emptyLabel },
+                ...filter.options.map((option) => ({ value: option.value, label: option.label })),
+              ]}
+            />
             {!ready ? (
               <small>Select the required filters and compatible scope.</small>
             ) : null}

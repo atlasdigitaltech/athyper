@@ -18,6 +18,7 @@ import {
   useApplicationNavigation,
   useSessionIdentity,
 } from "@athyper/platform-shell-app-foundation";
+import { contextDepartureState } from "@athyper/platform-shell";
 import { Button } from "@athyper/platform-ui";
 import { EntityFormRuntime } from "./index";
 import { EntityRecordFields } from "./record-fields";
@@ -62,6 +63,7 @@ export function EntityRelatedSection({
       entityCode={relationship.targetEntity}
       scope={scope}
       canCreate={canCreate}
+      emptyState={relationship.emptyState}
     />
   );
 }
@@ -70,7 +72,9 @@ function RelatedSingleRecord({
   scope,
   recordId,
   canCreate = false,
+  emptyState,
 }: {
+  emptyState?: EntityRelationshipV1["emptyState"];
   entityCode: string;
   recordId?: string;
   canCreate?: boolean;
@@ -95,7 +99,7 @@ function RelatedSingleRecord({
   const loaded = useAsyncResource<{
     descriptor: EntityDetailDescriptorV1;
     record: EntityRecordV1;
-  } | null>(
+  } | { sourceAuthority: 'linked' | 'unavailable'; canonical?: { descriptor: EntityDetailDescriptorV1; record: EntityRecordV1 } } | null>(
     key,
     async (signal) => {
       // Even an explicitly opened row must still belong to the locked parent scope.
@@ -109,6 +113,11 @@ function RelatedSingleRecord({
           countMode: "none",
         },
       });
+      if (list.sourceAuthority && list.sourceAuthority.state !== 'local') {
+        const reference = list.sourceAuthority.reference;
+        const canonical = reference ? await requestDetail(client, JSON.stringify([identity.scope, 'canonical', scope, reference]), reference.entityCode, reference.recordId, signal) : undefined;
+        return { sourceAuthority: list.sourceAuthority.state, ...(canonical ? { canonical } : {}) };
+      }
       if (list.rows.length > 1 || list.pagination.hasNext)
         throw Error("Related entity cardinality mismatch");
       const row = list.rows[0];
@@ -137,10 +146,16 @@ function RelatedSingleRecord({
     );
   if (value === undefined)
     return <p role="status">{intl.message("entity.related.loading")}</p>;
+  if (value && 'sourceAuthority' in value)
+    return <div role="status">
+      <p>{intl.message(value.sourceAuthority === 'linked' ? 'entity.related.sourceManaged' : 'entity.related.sourceUnavailable')}</p>
+      {value.canonical ? <EntityRecordFields descriptor={value.canonical.descriptor} record={value.canonical.record} fieldKeys={value.canonical.descriptor.presentation?.sections.flatMap(section => section.fields) ?? value.canonical.descriptor.fields.map(field => field.key)} /> : null}
+      {value.sourceAuthority === 'unavailable' ? <Button onClick={() => setRetry(retry + 1)}>{intl.message('entity.retry')}</Button> : null}
+    </div>;
   if (editing)
     return (
       <>
-        <Button onClick={() => setEditing(false)}>
+        <Button onClick={() => { const state = contextDepartureState(); if (!state.busy && (!state.dirty || window.confirm(intl.message("form.discardChanges")))) setEditing(false); }}>
           {intl.message("entity.related.cancel")}
         </Button>
         <EntityFormRuntime
@@ -148,6 +163,7 @@ function RelatedSingleRecord({
           recordId={value?.record.id}
           parentScope={scope}
           contentOnly
+          onConflictReload={() => { setEditing(false); setRetry(retry + 1); }}
           onCommitted={() => {
             setEditing(false);
             setRetry(retry + 1);
@@ -158,10 +174,10 @@ function RelatedSingleRecord({
   if (value === null)
     return (
       <>
-        <p>{intl.message("entity.related.empty")}</p>
+        <p>{emptyState?.message ?? intl.message("entity.related.empty")}</p>
         {canCreate ? (
           <Button onClick={() => setEditing(true)}>
-            {intl.message("entity.related.add")}
+            {emptyState?.setupLabel ?? intl.message("entity.related.add")}
           </Button>
         ) : null}
       </>
@@ -170,7 +186,7 @@ function RelatedSingleRecord({
     <>
       {value.descriptor.actions.some((action) => action.kind === "edit") ? (
         <Button onClick={() => setEditing(true)}>
-          {intl.message("entity.related.edit")}
+          {emptyState?.editLabel ?? intl.message("entity.related.edit")}
         </Button>
       ) : null}
       <EntityRecordFields
@@ -207,7 +223,7 @@ function RelatedRecordList({
   if (editing !== undefined)
     return (
       <>
-        <Button onClick={() => setEditing(undefined)}>
+        <Button onClick={() => { const state = contextDepartureState(); if (!state.busy && (!state.dirty || window.confirm(intl.message("form.discardChanges")))) setEditing(undefined); }}>
           {intl.message("entity.related.back")}
         </Button>
         {editing ? (

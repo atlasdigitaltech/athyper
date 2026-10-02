@@ -1,4 +1,6 @@
 "use client";
+import { ChoiceSelect } from "@athyper/platform-ui";
+import { viewportQuery } from "@athyper/platform-theme/tokens";
 import {
   WorkspaceSidePanelContext,
   type WorkspaceSidePanelRegistration,
@@ -192,21 +194,6 @@ export function ShellChrome({
     setQuickAccessTab,
     dismissTransient,
   } = useShellSurfaces();
-  const [atlasWidth, setAtlasWidth] = useState(420);
-  const [atlasWidthReady, setAtlasWidthReady] = useState(false);
-  useEffect(() => {
-    try {
-      const saved = Number(localStorage.getItem("athyper.atlas.panel.width"));
-      if (saved >= 360) setAtlasWidth(Math.min(560, saved));
-    } catch {}
-    setAtlasWidthReady(true);
-  }, []);
-  useEffect(() => {
-    if (!atlasWidthReady) return;
-    try {
-      localStorage.setItem("athyper.atlas.panel.width", String(atlasWidth));
-    } catch {}
-  }, [atlasWidth, atlasWidthReady]);
   const [collapsed, setCollapsed] = useState(initialCollapsed),
     [observedPath, setPath] = useState("/");
   const routeState = useShellRoute(),
@@ -252,7 +239,7 @@ export function ShellChrome({
       return;
     }
     if (
-      window.matchMedia("(min-width: 761px) and (max-width: 1100px)").matches
+      window.matchMedia(viewportQuery({ from: "medium", below: "extraWide" })).matches
     ) {
       setCollapsed(true);
     }
@@ -303,7 +290,7 @@ export function ShellChrome({
   const closeQuickAccess = useCallback(() => {
     setQuickAccessTab(undefined);
     requestAnimationFrame(() =>
-      (window.matchMedia("(max-width: 760px)").matches
+      (window.matchMedia(viewportQuery({ below: "medium" })).matches
         ? menuButton.current
         : quickAccessOpener.current
       )?.focus(),
@@ -351,14 +338,18 @@ export function ShellChrome({
   useEffect(() => {
     const shell = shellRef.current;
     if (!shell) return;
-    shell.style.setProperty("--atlas-panel", `${atlasWidth}px`);
     shell.style.setProperty(
       "--workspace-panel-width",
       `${sidePanel?.width ?? 420}px`,
     );
-  }, [atlasWidth, sidePanel?.width]);
+  }, [sidePanel?.width]);
   const claimSidePanel = useCallback(
     (panel: WorkspaceSidePanelRegistration) => {
+      // Atlas registers its geometry like every tool panel; it is already open.
+      if (panel.id === "atlas") {
+        setSidePanel(panel);
+        return;
+      }
       if (panel.id !== "activity-center") dismissTransient();
       setAtlasOpen(false);
       setSidePanel(panel);
@@ -371,7 +362,7 @@ export function ShellChrome({
     [],
   );
   useEffect(() => {
-    if (atlasOpen) setSidePanel(undefined);
+    if (atlasOpen) setSidePanel((current) => (current?.id === "atlas" ? current : undefined));
   }, [atlasOpen]);
   const atlasVisible = atlasOpen && !path.startsWith("/atlas");
   return (
@@ -410,9 +401,6 @@ export function ShellChrome({
               headerAction === "notifications" || headerAction === "inbox"
             }
             data-atlas-open={atlasVisible}
-            data-atlas-pinned={
-              atlasVisible && atlasPinned && !atlasFull && !compact
-            }
             data-atlas-full={atlasVisible && atlasFull}
           >
             <SkipToContent label={t("shell.skip")} />
@@ -634,8 +622,6 @@ export function ShellChrome({
                   ? {
                       breadcrumbs: crumbs,
                       mode: atlasFull ? "fullscreen" : "dock",
-                      width: atlasWidth,
-                      onWidthChange: setAtlasWidth,
                       planeName: applicationName,
                       currentPath: path,
                       pinned: atlasPinned && !compact,
@@ -1348,30 +1334,28 @@ function SidebarProfile({
                     : t("shell.profile.languageHelp")}
               </small>
             </span>
-            <select
-              value={currentLocale}
+            <ChoiceSelect
+              value={currentLocale ?? ""}
               disabled={localePending}
-              onChange={(event) => {
-                const locale = event.currentTarget.value as SupportedLocale;
+              onChange={(locale) => {
                 setLocalePending(true);
                 setLocaleError(false);
-                void onLocaleChange(locale).catch(() => {
+                void onLocaleChange(locale as SupportedLocale).catch(() => {
                   setLocalePending(false);
                   setLocaleError(true);
                 });
               }}
-            >
-              {localePolicy.enabledLocales.map((locale) => {
+              options={localePolicy.enabledLocales.map((locale) => {
                 const definition = localeDefinition(locale);
-                return (
-                  <option key={locale} value={locale}>
-                    {definition.nativeName === definition.englishName
+                return {
+                  value: locale,
+                  label:
+                    definition.nativeName === definition.englishName
                       ? definition.nativeName
-                      : `${definition.nativeName} — ${definition.englishName}`}
-                  </option>
-                );
+                      : `${definition.nativeName} — ${definition.englishName}`,
+                };
               })}
-            </select>
+            />
           </label>
         ) : null}
         <ProfileContext

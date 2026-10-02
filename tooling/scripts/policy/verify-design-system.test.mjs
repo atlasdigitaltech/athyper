@@ -108,3 +108,40 @@ test("tolerates a missing scan root instead of throwing", async () => {
   });
   assert.deepEqual(violations, []);
 });
+
+test("generated directories are excluded without hiding authored siblings", async () => {
+  const files = {
+    "packages/ui/src/authored.tsx":
+      "export const Authored = () => <span>→</span>;",
+  };
+  for (const directory of [
+    "node_modules",
+    "dist",
+    "coverage",
+    ".turbo",
+    ".next",
+    ".next-preview",
+  ])
+    files[`packages/ui/${directory}/output.tsx`] =
+      "export const Generated = () => <span style={{color:'#fff'}}>→</span>;";
+  const { violations } = await scan(fixture(files));
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /src\/authored.tsx/);
+});
+
+test("docs staging copies are excluded while authored public assets remain scanned", async () => {
+  const root = fixture({
+    "apps/docs-internal/public/assets/prototype.html": "<span>→</span>",
+    "apps/docs-external/public/assets/prototype.html": "<span>→</span>",
+    "apps/docs-internal/src/content/docs/page.tsx": "<span>→</span>",
+    "apps/docs-external/src/content/docs/page.tsx": "<span>→</span>",
+    "apps/neon/public/assets/authored.html": "<span>→</span>",
+  });
+  const { violations } = await analyzeDesignSystem({
+    root,
+    sourceRoots: ["apps"],
+    iconSourceRoots: ["apps"],
+  });
+  assert.equal(violations.length, 1);
+  assert.match(violations[0], /apps\/neon\/public\/assets\/authored.html/);
+});

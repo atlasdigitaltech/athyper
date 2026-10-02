@@ -69,6 +69,14 @@ export interface CompiledEntityReleaseEnvelopeV2 {
 }
 
 export interface CompiledEntityRegistry {
+  /** Trusted composition port. Content resolution does not establish serving readiness. */
+  readonly resolveAiToolManifest?: (id: string, version: string, plane: PublicationPlane) => Readonly<{
+    plane: PublicationPlane;
+    manifest: Readonly<{ toolCode: string; version: string }>;
+    manifestHash: string;
+    inputSchemaHash: string;
+    resultSchemaHash: string;
+  }>;
   /** Authoritative final schema catalog, when validating persisted source bindings. */
   readonly sourceObjects?: ReadonlySet<string>;
   readonly permissions?: ReadonlySet<string>;

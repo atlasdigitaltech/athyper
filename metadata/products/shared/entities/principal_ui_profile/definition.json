@@ -1,0 +1,1431 @@
+{
+  "schema": "athyper.table-entity-product/1",
+  "moduleCode": "ent",
+  "planes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
+  "definition": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "principal_ui_profile",
+      "entityClass": "configuration",
+      "ownershipModel": "system"
+    },
+    "runtimeProfiles": [
+      {
+        "id": "05310619-ef70-5c46-b552-02f5d81628ba",
+        "profileKey": "default",
+        "backingKind": "table",
+        "storagePlane": "studio",
+        "storageSchema": "master",
+        "storageObject": "principal_ui_profile",
+        "tenantFieldKey": "tenant_id",
+        "apiExposure": "api",
+        "readMode": "generic",
+        "writeMode": "generic",
+        "createMode": "form_only",
+        "concurrencyMode": "optimistic",
+        "recordVersionFieldKey": "record_version"
+      }
+    ],
+    "fields": [
+      {
+        "id": "6f4cceed-efe3-5ed2-b962-33b05c491f62",
+        "fieldKey": "id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "67e8a3f1-e08a-5cff-a4c5-b868708e7c84",
+        "fieldKey": "tenant_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "tenant_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "c89b2c89-c489-51dd-b0a6-6f89ccc346b0",
+        "fieldKey": "principal_id",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "principal_id",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "1b0ae69a-4582-5dc0-86c0-3c0b34a742b7",
+        "fieldKey": "locale_code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 64,
+          "keyReference": {
+            "targetEntity": "locale",
+            "labelField": "name",
+            "fields": [
+              {
+                "source": "locale_code",
+                "target": "code"
+              }
+            ]
+          }
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "locale_code",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "11a6676a-00ff-5be2-b0db-c6d575ac739a",
+        "fieldKey": "language_code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 64,
+          "keyReference": {
+            "targetEntity": "language",
+            "labelField": "name",
+            "fields": [
+              {
+                "source": "language_code",
+                "target": "code"
+              }
+            ]
+          }
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "language_code",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "7d16b409-0ccc-500a-b99c-6ddd67ee04e0",
+        "fieldKey": "timezone_code",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 128,
+          "keyReference": {
+            "targetEntity": "timezone",
+            "labelField": "code",
+            "fields": [
+              {
+                "source": "timezone_code",
+                "target": "code"
+              }
+            ]
+          }
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "timezone_code",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "ab5b51b9-8243-5676-9b7f-bec4fae0e535",
+        "fieldKey": "date_format",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "min_length": 1,
+          "max_length": 64
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "date_format",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "48310816-6980-5a98-becf-f66daddf2299",
+        "fieldKey": "number_format",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "min_length": 1,
+          "max_length": 64
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "number_format",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "ea7041cc-085d-5fc1-9edf-e2dc17d2613a",
+        "fieldKey": "week_start",
+        "dataType": "integer",
+        "typeConfig": {
+          "kind": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "week_start",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "56725589-fb6d-5d75-a045-3041c4c1f545",
+        "fieldKey": "appearance_mode",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.ui_appearance_mode"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "appearance_mode",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "47968b9e-23ed-5148-ab56-20f113d1c45b",
+        "fieldKey": "density_code",
+        "dataType": "enum",
+        "typeConfig": {
+          "kind": "enum",
+          "domain_code": "master.ui_density"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "mutable",
+        "storagePath": "density_code",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "74b71882-50af-5e02-b7a4-b51fdd0f5308",
+        "fieldKey": "record_version",
+        "dataType": "integer",
+        "typeConfig": {
+          "kind": "integer"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "record_version",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "3479f88f-b130-545d-bc27-6a6a12da4b65",
+        "fieldKey": "created_at",
+        "dataType": "datetime",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "created_at",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "22a9f028-885d-5618-ad54-16e51b8feb92",
+        "fieldKey": "updated_at",
+        "dataType": "datetime",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "updated_at",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "9a92fc09-b475-5c2b-b3c0-a539d0c75527",
+        "fieldKey": "created_by",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "created_by",
+        "dataClassification": "internal",
+        "status": "active"
+      },
+      {
+        "id": "01790efd-b8cc-5b5b-8db8-44dfc4d16937",
+        "fieldKey": "updated_by",
+        "dataType": "uuid",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "zero_or_one",
+        "valueOrigin": "stored",
+        "writeMode": "read_only",
+        "storagePath": "updated_by",
+        "dataClassification": "internal",
+        "status": "active"
+      }
+    ],
+    "keys": [
+      {
+        "id": "7db904ce-2aa7-5199-bd70-9627280538a9",
+        "keyKey": "primary",
+        "keyKind": "primary",
+        "uniquenessScope": "global"
+      },
+      {
+        "id": "61262d22-ea7f-52f5-994f-b4bf9777e16d",
+        "keyKey": "natural",
+        "keyKind": "natural",
+        "uniquenessScope": "tenant"
+      }
+    ],
+    "keyFields": [
+      {
+        "entityKeyId": "7db904ce-2aa7-5199-bd70-9627280538a9",
+        "entityFieldId": "6f4cceed-efe3-5ed2-b962-33b05c491f62",
+        "position": 1,
+        "id": "35a63226-ef4d-53ed-b256-a712d4930a98"
+      },
+      {
+        "entityKeyId": "61262d22-ea7f-52f5-994f-b4bf9777e16d",
+        "entityFieldId": "67e8a3f1-e08a-5cff-a4c5-b868708e7c84",
+        "position": 1,
+        "id": "06f95103-6de8-58c7-977e-b5332df656fd"
+      },
+      {
+        "entityKeyId": "61262d22-ea7f-52f5-994f-b4bf9777e16d",
+        "entityFieldId": "c89b2c89-c489-51dd-b0a6-6f89ccc346b0",
+        "position": 2,
+        "id": "700fbe9f-2759-5ed9-b0fb-0098596199ed"
+      }
+    ],
+    "operations": [
+      {
+        "id": "3a8f914d-31f4-584c-bc61-e8033f96e59d",
+        "operationKey": "list",
+        "operationKind": "read",
+        "label": "UI profiles",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "principal_id",
+          "locale_code",
+          "language_code",
+          "timezone_code",
+          "date_format",
+          "number_format",
+          "week_start",
+          "appearance_mode",
+          "density_code",
+          "record_version",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
+        ],
+        "auditEventCode": "principal_ui_profile.list"
+      },
+      {
+        "id": "99be298d-1f0f-5575-b4af-46b7129b8ec4",
+        "operationKey": "read",
+        "operationKind": "read",
+        "label": "View record",
+        "fieldKeys": [
+          "id",
+          "tenant_id",
+          "principal_id",
+          "locale_code",
+          "language_code",
+          "timezone_code",
+          "date_format",
+          "number_format",
+          "week_start",
+          "appearance_mode",
+          "density_code",
+          "record_version",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
+        ],
+        "auditEventCode": "principal_ui_profile.read"
+      },
+      {
+        "id": "8ab6539b-9c27-5d52-82ae-ea538a834e0a",
+        "operationKey": "create",
+        "operationKind": "create",
+        "label": "Add",
+        "fieldKeys": [
+          "locale_code",
+          "language_code",
+          "timezone_code",
+          "date_format",
+          "number_format",
+          "week_start",
+          "appearance_mode",
+          "density_code"
+        ],
+        "auditEventCode": "principal_ui_profile.create",
+        "idempotencyMode": "required",
+        "handlerKey": "entity.record.create.v1"
+      },
+      {
+        "id": "d2733181-baf6-5e4b-8fbf-1266f5ce2972",
+        "operationKey": "patch",
+        "operationKind": "update",
+        "label": "Save",
+        "fieldKeys": [
+          "locale_code",
+          "language_code",
+          "timezone_code",
+          "date_format",
+          "number_format",
+          "week_start",
+          "appearance_mode",
+          "density_code"
+        ],
+        "auditEventCode": "principal_ui_profile.patch",
+        "idempotencyMode": "required",
+        "handlerKey": "entity.record.patch.v1"
+      }
+    ],
+    "operationPermissions": [
+      {
+        "entityOperationId": "3a8f914d-31f4-584c-bc61-e8033f96e59d",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal_ui_profile.read",
+        "permissionKind": "capability",
+        "id": "755809c4-05f9-578f-9f93-a8a4111ba35e"
+      },
+      {
+        "entityOperationId": "99be298d-1f0f-5575-b4af-46b7129b8ec4",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal_ui_profile.read",
+        "permissionKind": "capability",
+        "id": "91d18310-76ab-56c1-8cf7-e1b98113741c"
+      },
+      {
+        "entityOperationId": "8ab6539b-9c27-5d52-82ae-ea538a834e0a",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal_ui_profile.edit",
+        "permissionKind": "capability",
+        "id": "0e629861-6cd0-5e50-8aba-0732e26c47a7"
+      },
+      {
+        "entityOperationId": "d2733181-baf6-5e4b-8fbf-1266f5ce2972",
+        "targetPlane": "studio",
+        "permissionCode": "common.identity.principal_ui_profile.edit",
+        "permissionKind": "capability",
+        "id": "a071fb82-9185-55c8-b4fd-9c4e1fd0e53e"
+      }
+    ],
+    "operationScopeBindings": [
+      {
+        "entityOperationId": "3a8f914d-31f4-584c-bc61-e8033f96e59d",
+        "bindingKey": "list_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "collection",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "e5094226-c8ff-5259-b855-f23ddaee4c16"
+      },
+      {
+        "entityOperationId": "99be298d-1f0f-5575-b4af-46b7129b8ec4",
+        "bindingKey": "read_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "4e6e08a8-ae55-5728-ade1-4e8adb473284"
+      },
+      {
+        "entityOperationId": "8ab6539b-9c27-5d52-82ae-ea538a834e0a",
+        "bindingKey": "create_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "75c9842f-4da0-51c0-aa8f-5394b6ae768b"
+      },
+      {
+        "entityOperationId": "d2733181-baf6-5e4b-8fbf-1266f5ce2972",
+        "bindingKey": "patch_tenant",
+        "targetPlane": "studio",
+        "decisionMode": "entity_resource",
+        "scopeKind": "tenant",
+        "coordinateSource": "tenant_context",
+        "missingValueBehavior": "deny",
+        "id": "75686e73-d692-594d-bd59-988d0e485f35"
+      }
+    ],
+    "searchProfiles": [
+      {
+        "id": "28e337ef-0211-5d76-872b-005c178c0137",
+        "searchKey": "default",
+        "searchKind": "keyword",
+        "minimumQueryLength": 1,
+        "isDefault": true
+      }
+    ],
+    "searchFields": [
+      {
+        "id": "aa442cf0-6310-5069-95e7-f0d1e6942462",
+        "entitySearchProfileId": "28e337ef-0211-5d76-872b-005c178c0137",
+        "entityFieldId": "1b0ae69a-4582-5dc0-86c0-3c0b34a742b7",
+        "position": 1,
+        "matchMode": "contains"
+      },
+      {
+        "id": "74d81497-62c3-51be-997c-8276e7184f53",
+        "entitySearchProfileId": "28e337ef-0211-5d76-872b-005c178c0137",
+        "entityFieldId": "11a6676a-00ff-5be2-b0db-c6d575ac739a",
+        "position": 2,
+        "matchMode": "contains"
+      },
+      {
+        "id": "d448b624-4856-5ec3-9735-69f20d7a7934",
+        "entitySearchProfileId": "28e337ef-0211-5d76-872b-005c178c0137",
+        "entityFieldId": "7d16b409-0ccc-500a-b99c-6ddd67ee04e0",
+        "position": 3,
+        "matchMode": "contains"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "surfaceKey": "list",
+        "surfaceKind": "list",
+        "title": "UI Profiles",
+        "isDefault": true,
+        "layoutConfig": {
+          "identityField": "id",
+          "defaultState": {
+            "sort": [
+              {
+                "field": "updated_at",
+                "direction": "desc"
+              }
+            ],
+            "density": "comfortable",
+            "mode": "table"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "limits": {
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              10,
+              25,
+              50,
+              100
+            ],
+            "maxSortLevels": 3,
+            "countMode": "exact"
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "principal_ui_profile",
+            "planeKey": "studio",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "permissionCode": "common.identity.principal_ui_profile.read",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "permissionCode": "common.identity.principal_ui_profile.read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "create",
+                "permissionCode": "common.identity.principal_ui_profile.edit",
+                "scope": "tenant.record.v1",
+                "target": "proposed",
+                "effect": "write",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "patch",
+                "permissionCode": "common.identity.principal_ui_profile.edit",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "write",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "principal_id",
+                "fields": [
+                  "principal_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "locale_code",
+                "fields": [
+                  "locale_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "filter",
+                  "sort",
+                  "search"
+                ]
+              },
+              {
+                "key": "language_code",
+                "fields": [
+                  "language_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "filter",
+                  "sort",
+                  "search"
+                ]
+              },
+              {
+                "key": "timezone_code",
+                "fields": [
+                  "timezone_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "filter",
+                  "sort",
+                  "search"
+                ]
+              },
+              {
+                "key": "date_format",
+                "fields": [
+                  "date_format"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "filter",
+                  "sort"
+                ]
+              },
+              {
+                "key": "number_format",
+                "fields": [
+                  "number_format"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "filter",
+                  "sort"
+                ]
+              },
+              {
+                "key": "week_start",
+                "fields": [
+                  "week_start"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "filter",
+                  "sort"
+                ]
+              },
+              {
+                "key": "appearance_mode",
+                "fields": [
+                  "appearance_mode"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "filter",
+                  "sort"
+                ]
+              },
+              {
+                "key": "density_code",
+                "fields": [
+                  "density_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ],
+                "queryUses": [
+                  "filter",
+                  "sort"
+                ]
+              },
+              {
+                "key": "record_version",
+                "fields": [
+                  "record_version"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "created_at",
+                "fields": [
+                  "created_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "filter",
+                  "sort"
+                ]
+              },
+              {
+                "key": "updated_at",
+                "fields": [
+                  "updated_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "filter",
+                  "sort"
+                ]
+              },
+              {
+                "key": "created_by",
+                "fields": [
+                  "created_by"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "updated_by",
+                "fields": [
+                  "updated_by"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "create",
+                "handler": "entity.record.create.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "patch",
+                "handler": "entity.record.patch.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "ownerAccess": {
+            "schemaVersion": 1,
+            "ownerField": "principal_id",
+            "administerPermission": "common.identity.principal.administer",
+            "createdByField": "created_by",
+            "updatedByField": "updated_by"
+          },
+          "mutationPolicy": {
+            "schemaVersion": 1,
+            "handlerKey": "platform.experience.ui_profile.v1"
+          }
+        }
+      },
+      {
+        "id": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "surfaceKey": "detail",
+        "surfaceKind": "detail",
+        "title": "UI Profile",
+        "layoutConfig": {
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "principal_id",
+            "sections": [
+              {
+                "key": "overview",
+                "label": "Overview",
+                "fields": [
+                  "locale_code",
+                  "language_code",
+                  "timezone_code",
+                  "date_format",
+                  "number_format",
+                  "week_start",
+                  "appearance_mode",
+                  "density_code"
+                ]
+              }
+            ],
+            "actions": []
+          },
+          "formPresentation": {
+            "schemaVersion": 1,
+            "create": {
+              "sections": [
+                {
+                  "key": "region",
+                  "label": "Language and region",
+                  "fields": [
+                    "language_code",
+                    "locale_code",
+                    "timezone_code"
+                  ]
+                },
+                {
+                  "key": "formatting",
+                  "label": "Formatting",
+                  "fields": [
+                    "week_start",
+                    "date_format",
+                    "number_format"
+                  ]
+                },
+                {
+                  "key": "appearance",
+                  "label": "Appearance",
+                  "fields": [
+                    "appearance_mode",
+                    "density_code"
+                  ]
+                }
+              ],
+              "submitLabel": "Customize preferences",
+              "help": {
+                "locale_code": "An empty value uses the organization default.",
+                "language_code": "An empty value uses the organization default.",
+                "timezone_code": "An empty value uses the organization default."
+              }
+            },
+            "edit": {
+              "sections": [
+                {
+                  "key": "region",
+                  "label": "Language and region",
+                  "fields": [
+                    "language_code",
+                    "locale_code",
+                    "timezone_code"
+                  ]
+                },
+                {
+                  "key": "formatting",
+                  "label": "Formatting",
+                  "fields": [
+                    "week_start",
+                    "date_format",
+                    "number_format"
+                  ]
+                },
+                {
+                  "key": "appearance",
+                  "label": "Appearance",
+                  "fields": [
+                    "appearance_mode",
+                    "density_code"
+                  ]
+                }
+              ],
+              "submitLabel": "Save preferences",
+              "help": {
+                "locale_code": "An empty value uses the organization default.",
+                "language_code": "An empty value uses the organization default.",
+                "timezone_code": "An empty value uses the organization default."
+              }
+            },
+            "meaningfulFields": [
+              "language_code",
+              "locale_code",
+              "timezone_code",
+              "week_start",
+              "date_format",
+              "number_format",
+              "appearance_mode",
+              "density_code"
+            ]
+          }
+        }
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "id": "d444d4b5-0f5e-50ae-97ab-8229d0bd19d8",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "6f4cceed-efe3-5ed2-b962-33b05c491f62",
+        "bindingKey": "list_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "560fc7e5-fee6-5ef0-9d23-8ddbb571ce86",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "67e8a3f1-e08a-5cff-a4c5-b868708e7c84",
+        "bindingKey": "list_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "f9d41dcb-e5e4-52da-b338-8cb4eff857db",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "c89b2c89-c489-51dd-b0a6-6f89ccc346b0",
+        "bindingKey": "list_principal_id",
+        "position": 2,
+        "labelOverride": "Principal",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "f7eee5a5-8e8a-5099-94d2-32bc9da7e892",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "1b0ae69a-4582-5dc0-86c0-3c0b34a742b7",
+        "bindingKey": "list_locale_code",
+        "position": 3,
+        "labelOverride": "Locale",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "291c9bdb-648e-565b-bb0f-af75236e2e9c",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "11a6676a-00ff-5be2-b0db-c6d575ac739a",
+        "bindingKey": "list_language_code",
+        "position": 4,
+        "labelOverride": "Language",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "5ad691fa-3248-5774-9433-bbf2032cb486",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "7d16b409-0ccc-500a-b99c-6ddd67ee04e0",
+        "bindingKey": "list_timezone_code",
+        "position": 5,
+        "labelOverride": "Timezone",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "0651afa8-9052-5e24-bc26-785a00cc5e21",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "ab5b51b9-8243-5676-9b7f-bec4fae0e535",
+        "bindingKey": "list_date_format",
+        "position": 6,
+        "labelOverride": "Date format",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "63ae2d4e-2d24-5f1e-b979-b2b90d117520",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "48310816-6980-5a98-becf-f66daddf2299",
+        "bindingKey": "list_number_format",
+        "position": 7,
+        "labelOverride": "Number format",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "ea566144-8d7b-5ecc-9ad2-778e871d1609",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "ea7041cc-085d-5fc1-9edf-e2dc17d2613a",
+        "bindingKey": "list_week_start",
+        "position": 8,
+        "labelOverride": "Week starts on",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "90152f86-6e5a-5f89-a7e2-144916314439",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "56725589-fb6d-5d75-a045-3041c4c1f545",
+        "bindingKey": "list_appearance_mode",
+        "position": 9,
+        "labelOverride": "Appearance",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "light",
+                "label": "Light"
+              },
+              {
+                "value": "dark",
+                "label": "Dark"
+              },
+              {
+                "value": "system",
+                "label": "System"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "479140da-5947-53d2-ae7f-94ac3013bab6",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "47968b9e-23ed-5148-ab56-20f113d1c45b",
+        "bindingKey": "list_density_code",
+        "position": 10,
+        "labelOverride": "Density",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "compact",
+                "label": "Compact"
+              },
+              {
+                "value": "comfortable",
+                "label": "Comfortable"
+              },
+              {
+                "value": "spacious",
+                "label": "Spacious"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "fdb1a685-aab7-5968-9235-4459bab2d076",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "74b71882-50af-5e02-b7a4-b51fdd0f5308",
+        "bindingKey": "list_record_version",
+        "position": 11,
+        "labelOverride": "Record version",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "e4081f0d-3651-5ba2-8569-bf0671e323cf",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "3479f88f-b130-545d-bc27-6a6a12da4b65",
+        "bindingKey": "list_created_at",
+        "position": 12,
+        "labelOverride": "Created",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "a320e578-63d2-51b1-baf1-49ba3a72ab23",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "22a9f028-885d-5618-ad54-16e51b8feb92",
+        "bindingKey": "list_updated_at",
+        "position": 13,
+        "labelOverride": "Updated",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "b4237424-22a0-5932-ac25-49ab3b1321d4",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "9a92fc09-b475-5c2b-b3c0-a539d0c75527",
+        "bindingKey": "list_created_by",
+        "position": 14,
+        "labelOverride": "Created by",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "97689a5a-4ab6-52e2-ab84-e66ada30758b",
+        "entitySurfaceId": "a02064b2-227e-5f15-b52b-8f660558a701",
+        "entityFieldId": "01790efd-b8cc-5b5b-8db8-44dfc4d16937",
+        "bindingKey": "list_updated_by",
+        "position": 15,
+        "labelOverride": "Updated by",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "7be8da90-adb6-5db3-8893-54f1b0856232",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "6f4cceed-efe3-5ed2-b962-33b05c491f62",
+        "bindingKey": "detail_id",
+        "position": 0,
+        "labelOverride": "Record ID",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "0c6d3d61-11fe-5486-a801-c01e1653187a",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "67e8a3f1-e08a-5cff-a4c5-b868708e7c84",
+        "bindingKey": "detail_tenant_id",
+        "position": 1,
+        "labelOverride": "Tenant",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "b2806ade-84ee-5e6b-ab81-d1b87fea691b",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "c89b2c89-c489-51dd-b0a6-6f89ccc346b0",
+        "bindingKey": "detail_principal_id",
+        "position": 2,
+        "labelOverride": "Principal",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "b0b000e6-5076-5e54-95fc-ccb5963841d9",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "1b0ae69a-4582-5dc0-86c0-3c0b34a742b7",
+        "bindingKey": "detail_locale_code",
+        "position": 3,
+        "labelOverride": "Locale",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "44cfe282-b80f-5617-8969-66326dcf53e4",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "11a6676a-00ff-5be2-b0db-c6d575ac739a",
+        "bindingKey": "detail_language_code",
+        "position": 4,
+        "labelOverride": "Language",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "b4f24a7e-70f2-57ad-b520-0e4ca9062e99",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "7d16b409-0ccc-500a-b99c-6ddd67ee04e0",
+        "bindingKey": "detail_timezone_code",
+        "position": 5,
+        "labelOverride": "Timezone",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "f3c3fe7b-ce5f-5174-961e-ee7424ab2cb9",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "ab5b51b9-8243-5676-9b7f-bec4fae0e535",
+        "bindingKey": "detail_date_format",
+        "position": 6,
+        "labelOverride": "Date format",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "d7ffac99-3e6f-5f9d-8213-d64b9d26f37b",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "48310816-6980-5a98-becf-f66daddf2299",
+        "bindingKey": "detail_number_format",
+        "position": 7,
+        "labelOverride": "Number format",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "6ad52a7a-8411-58a2-b13a-ad2d7d2a0091",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "ea7041cc-085d-5fc1-9edf-e2dc17d2613a",
+        "bindingKey": "detail_week_start",
+        "position": 8,
+        "labelOverride": "Week starts on",
+        "displayConfig": {
+          "defaultVisible": true
+        }
+      },
+      {
+        "id": "279d3f83-2b44-5b7b-8f1b-01ea658c9962",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "56725589-fb6d-5d75-a045-3041c4c1f545",
+        "bindingKey": "detail_appearance_mode",
+        "position": 9,
+        "labelOverride": "Appearance",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "light",
+                "label": "Light"
+              },
+              {
+                "value": "dark",
+                "label": "Dark"
+              },
+              {
+                "value": "system",
+                "label": "System"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "65550ef3-7a8b-5656-ab90-3b0418e967ec",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "47968b9e-23ed-5148-ab56-20f113d1c45b",
+        "bindingKey": "detail_density_code",
+        "position": 10,
+        "labelOverride": "Density",
+        "displayConfig": {
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "compact",
+                "label": "Compact"
+              },
+              {
+                "value": "comfortable",
+                "label": "Comfortable"
+              },
+              {
+                "value": "spacious",
+                "label": "Spacious"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "73515b5d-b1fc-5fdb-a2bd-6b54ed00331b",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "74b71882-50af-5e02-b7a4-b51fdd0f5308",
+        "bindingKey": "detail_record_version",
+        "position": 11,
+        "labelOverride": "Record version",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "fe5aa16f-2a88-52fa-9fb0-8d70cd9c97b5",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "3479f88f-b130-545d-bc27-6a6a12da4b65",
+        "bindingKey": "detail_created_at",
+        "position": 12,
+        "labelOverride": "Created",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "5030817a-6717-5978-8735-accd6d528acb",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "22a9f028-885d-5618-ad54-16e51b8feb92",
+        "bindingKey": "detail_updated_at",
+        "position": 13,
+        "labelOverride": "Updated",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "d5e61009-91c9-58de-abd7-a8c49d62fb20",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "9a92fc09-b475-5c2b-b3c0-a539d0c75527",
+        "bindingKey": "detail_created_by",
+        "position": 14,
+        "labelOverride": "Created by",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      },
+      {
+        "id": "f772b4ea-ab54-5fe7-b2e0-d4b89e41e293",
+        "entitySurfaceId": "8465d429-1cfc-52ee-b003-b3f7d990b165",
+        "entityFieldId": "01790efd-b8cc-5b5b-8db8-44dfc4d16937",
+        "bindingKey": "detail_updated_by",
+        "position": 15,
+        "labelOverride": "Updated by",
+        "displayConfig": {
+          "defaultVisible": false
+        }
+      }
+    ],
+    "fieldReferenceBindings": [
+      {
+        "id": "5403d878-a0c3-53e0-aad2-50021c337b2a",
+        "entityFieldId": "1b0ae69a-4582-5dc0-86c0-3c0b34a742b7",
+        "bindingKey": "locale_code_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "locale",
+        "status": "active"
+      },
+      {
+        "id": "1309252c-00cc-5e85-bb5e-0e243cad65fa",
+        "entityFieldId": "11a6676a-00ff-5be2-b0db-c6d575ac739a",
+        "bindingKey": "language_code_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "language",
+        "status": "active"
+      },
+      {
+        "id": "3856b572-b40e-5285-b8c9-a16eab9e5b38",
+        "entityFieldId": "7d16b409-0ccc-500a-b99c-6ddd67ee04e0",
+        "bindingKey": "timezone_code_reference",
+        "referenceKind": "entity_relation",
+        "targetEntityCode": "timezone",
+        "status": "active"
+      }
+    ]
+  }
+}

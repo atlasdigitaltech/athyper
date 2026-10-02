@@ -1,6 +1,6 @@
 import { parseEntityAuthorizationProfile, type EntityAuthorizationRuntimeRegistration } from "@athyper/server-contract-metadata";
 import type { RecordQueryService, RecordMutationService } from "@athyper/server-contract-records";
-import type { EntityScopeAdapter } from "@athyper/server-service-records";
+import type { EntityScopeAdapter, RecordTransferService } from "@athyper/server-service-records";
 
 /**
  * The sole host builder for Entity Framework authorization registrations.
@@ -8,7 +8,7 @@ import type { EntityScopeAdapter } from "@athyper/server-service-records";
  * selects only from this published callable inventory. This is deliberately not a
  * backend scope adapter, which would recursively authorize its own queries.
  */
-export function createEntityAuthorizationRegistrations(queries: RecordQueryService, rawProfile: unknown, mutations?: RecordMutationService): readonly EntityAuthorizationRuntimeRegistration[] {
+export function createEntityAuthorizationRegistrations(queries: RecordQueryService, rawProfile: unknown, mutations?: RecordMutationService, transfers?: Pick<RecordTransferService, "requestExport">): readonly EntityAuthorizationRuntimeRegistration[] {
   const profile = parseEntityAuthorizationProfile(rawProfile);
   if (profile.ownership !== "tenant.record.v1" || profile.directory.population !== "tenant"
     || profile.directory.operation !== "list" || profile.recordReadOperation !== "read") return [];
@@ -19,16 +19,16 @@ export function createEntityAuthorizationRegistrations(queries: RecordQueryServi
       const result = await queries.get({ context: input.context, entityCode: input.entityCode, recordId: input.recordId });
       return result.data ? { state: "resolved", coordinates: {} } : { state: "invalid" };
     }
-    if ((input.target === "collection" && input.operationKey === "list") || (input.target === "proposed" && input.operationKey === "create" && mutations)) {
+    if ((input.target === "collection" && ["list", ...(transfers ? ["export"] : [])].includes(input.operationKey)) || (input.target === "proposed" && input.operationKey === "create" && mutations)) {
       await queries.list({ context: input.context, entityCode: input.entityCode, limit: 1 });
       return { state: "resolved", coordinates: {} };
     }
     return { state: "invalid" };
   };
-  return (["list", "read", ...(mutations ? ["create", "patch"] as const : [])] as const).filter(key => profile.operations.some(operation => operation.key === key)).map(key => ({
+  return (["list", "read", ...(mutations ? ["create", "patch"] as const : []), ...(transfers ? ["export"] as const : [])] as const).filter(key => profile.operations.some(operation => operation.key === key)).map(key => ({
     entityCode: profile.entityCode, planeKey: profile.planeKey,
-    operation: { key, permissionCode: profile.operations.find(operation => operation.key === key)!.permissionCode, scope: "tenant.record.v1", target: key === "list" ? "collection" : key === "create" ? "proposed" : "existing", effect: key === "list" || key === "read" ? "read" : "write", requiresParentRead: false, requiresPreflight: false },
-    handler: { key: `entity.record.${key}.v1`, invoke: key === "list" ? queries.list.bind(queries) : key === "read" ? queries.get.bind(queries) : key === "create" ? mutations!.create.bind(mutations) : mutations!.patch.bind(mutations) },
+    operation: { key, permissionCode: profile.operations.find(operation => operation.key === key)!.permissionCode, scope: "tenant.record.v1", target: key === "list" || key === "export" ? "collection" : key === "create" ? "proposed" : "existing", effect: key === "list" || key === "read" || key === "export" ? "read" : "write", requiresParentRead: false, requiresPreflight: false },
+    handler: { key: `entity.record.${key}.v1`, invoke: key === "list" ? queries.list.bind(queries) : key === "read" ? queries.get.bind(queries) : key === "export" ? transfers!.requestExport.bind(transfers) : key === "create" ? mutations!.create.bind(mutations) : mutations!.patch.bind(mutations) },
     resolver: { key: "tenant.record.v1", resolve },
   }));
 }

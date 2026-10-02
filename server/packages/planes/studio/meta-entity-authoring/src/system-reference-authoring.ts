@@ -27,11 +27,12 @@ export async function importEntityProduct(
   const product = structuredClone(input.product), actorId = input.actorId;
   if (!/^[0-9a-f-]{36}$/i.test(actorId)) throw Error("SYSTEM_REFERENCE_ACTOR_REQUIRED");
   // Compile revalidates the product, including readonly storage and capability
-  // permissions. Studio is the canonical source, not three separate entities.
-  if (!product.planes.includes("studio")) throw Error("SYSTEM_REFERENCE_STUDIO_SOURCE_REQUIRED");
+  // permissions. Studio owns authoring; it need not host the product's data.
+  if (product.schema !== "athyper.table-entity-product/1" && !product.planes.includes("studio"))
+    throw Error("SYSTEM_REFERENCE_STUDIO_SOURCE_REQUIRED");
   const table = product.schema === "athyper.table-entity-product/1";
   const source = product.schema === "athyper.table-entity-product/1"
-    ? compileTableEntityProduct(product, "studio") : compileSharedReferenceProduct(product, "studio");
+    ? compileTableEntityProduct(product, product.definition.runtimeProfiles![0]!.storagePlane!) : compileSharedReferenceProduct(product, "studio");
   const entityCode = source.graph.entity.entityCode, entityClass = source.graph.entity.entityClass!;
   const title = source.graph.surfaces?.find(surface => surface.surfaceKind === "list")?.title ?? entityCode;
   const markerKey = table ? "tableEntityProduct" : "systemReferenceProduct";

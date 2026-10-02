@@ -171,6 +171,13 @@ try {
       const paths = [
         "common/audit/12_reference_seed.sql",
         "common/control/12_parameter_runtime_seed.sql",
+        "common/control/12_banking_reference_seed.sql",
+        ...(plane === "studio"
+          ? []
+          : ["common/master/12_contact_person_reference_seed.sql"]),
+        ...(plane === "neon"
+          ? ["planes/neon/master/12_business_partner_reference_seed.sql"]
+          : []),
         ...(plane === "studio"
           ? []
           : [`planes/${plane}/control/12_reference_seed.sql`]),
@@ -178,6 +185,11 @@ try {
       const tables = [
         "master.audit_event_contract",
         "control.parameter_definition",
+        "control.bank_account_validation_rule",
+        "control.lookup_domain",
+        "control.lookup_value",
+        "control.owner_type",
+        "control.owner_type_purpose",
         ...(plane === "studio"
           ? []
           : [
@@ -215,6 +227,17 @@ try {
       await seeds.query(
         "UPDATE control.parameter_definition SET name='controlled drift' WHERE code='experience.profile.default_density'",
       );
+      await seeds.query(
+        "UPDATE control.bank_account_validation_rule SET name='controlled drift' WHERE code='MY.LOCAL'",
+      );
+      if (plane !== "studio")
+        await seeds.query(
+          "UPDATE control.lookup_domain SET name='controlled drift' WHERE code='master.contact_role'",
+        );
+      if (plane === "neon")
+        await seeds.query(
+          "UPDATE control.lookup_domain SET name='controlled drift' WHERE code='master.supplier_type'",
+        );
       if (plane !== "studio")
         await seeds.query(
           "UPDATE control.owner_type SET name='controlled drift' WHERE tenant_id IS NULL AND code='tenant'",
@@ -247,6 +270,32 @@ try {
             )
           ).rows[0]?.name,
           "Tenant",
+        );
+      assert.equal(
+        (
+          await seeds.query(
+            "SELECT name FROM control.bank_account_validation_rule WHERE code='MY.LOCAL'",
+          )
+        ).rows[0]?.name,
+        "Malaysia local transfer",
+      );
+      if (plane !== "studio")
+        assert.equal(
+          (
+            await seeds.query(
+              "SELECT name FROM control.lookup_domain WHERE code='master.contact_role'",
+            )
+          ).rows[0]?.name,
+          "Contact Role",
+        );
+      if (plane === "neon")
+        assert.equal(
+          (
+            await seeds.query(
+              "SELECT name FROM control.lookup_domain WHERE code='master.supplier_type'",
+            )
+          ).rows[0]?.name,
+          "Supplier Type",
         );
       await seeds.query("SAVEPOINT wrong_plane");
       await seeds.query(
@@ -399,16 +448,9 @@ try {
     ["studio", "fixtures/publication-authority.sql"],
     ["studio", "ci-entity-release-contract.sql"],
     ["neon", "fixtures/runtime-entity-projection.sql"],
-    ["neon", "business-partner-profile-projection.sql"],
   ]) {
     const connection = await client(adminUrls[plane!]!);
     try {
-      if (file === "business-partner-profile-projection.sql") {
-        await connection.query(
-          "INSERT INTO master.principal(id,tenant_id,code,name,principal_type,status,created_by) VALUES('34ce3386-ed20-5933-91d1-699d38b197fe',$1,'ci.profile.recipient','CI Profile Recipient','service_account','active',$2)",
-          [fixture.tenant, fixture.principal],
-        );
-      }
       const source = readFileSync(
         resolve(root, "server/db/scripts/tests/integration", file!),
         "utf8",
@@ -419,6 +461,15 @@ try {
       await connection.end();
     }
   }
+  const { qualifyEntityFoundationLifecycle } =
+    await import("../../../../apps/platform-host/scripts/qualification/entity-foundation-lifecycle.mjs");
+  await qualifyEntityFoundationLifecycle({
+    adminUrls,
+    runtimeUrls,
+    fixture,
+    root,
+    pass,
+  });
   // Current stamper, real transaction-pool proxy, forced backend reuse.
   docker(
     "run",
@@ -564,6 +615,7 @@ try {
     ],
     localization: ["empty", "ATHYPER_LOCALIZATION_TEST_DATABASE_URL"],
     "standard-views": ["container"],
+    "activity-snapshot": ["isolated-container"],
   };
   const flags = {
     ATHYPER_PARAMETER_DB_TESTS: "true",
@@ -574,6 +626,7 @@ try {
     ATHYPER_AUTH_WRITER_DB_TESTS: "true",
     ATHYPER_CONTROL_REPO_DB_TESTS: "true",
     ENTITY_VIEW_POSTGRES_TEST: "1",
+    ATHYPER_ACTIVITY_DDL_IMAGE: "postgres:16.13-bookworm",
     ATHYPER_ENTITY_VIEW_TEST_CONTAINER: id,
   };
   const setup = await client(adminUrls.neon!);

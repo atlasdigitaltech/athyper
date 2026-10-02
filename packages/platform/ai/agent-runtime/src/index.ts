@@ -29,6 +29,7 @@ export {
 } from "@athyper/contract-platform-ai/business-context";
 import {
   createHttpClient,
+  readBrowserCsrfToken,
   createOperation,
   encodePathSegment,
   type HttpClient,
@@ -56,6 +57,16 @@ export interface AtlasAttachmentCitation {
   readonly fileName: string;
   readonly contentType: string;
   readonly sha256: string;
+}
+/** A source outside the workspace (web page, connected system). Shown apart from
+ * workspace records and badged as external; never merged into them. */
+export interface AtlasExternalCitation {
+  readonly sourceId: string;
+  readonly title: string;
+  /** https only. */
+  readonly url: string;
+  readonly publisher?: string;
+  readonly retrievedAt?: string;
 }
 export type AtlasActionStatus =
   | "proposed"
@@ -196,6 +207,7 @@ export interface AtlasGroundedAnswer {
   readonly text: string;
   readonly citations: readonly AtlasRecordCitation[];
   readonly attachmentCitations: readonly AtlasAttachmentCitation[];
+  readonly externalCitations?: readonly AtlasExternalCitation[];
   readonly actions: readonly AtlasGovernedAction[];
   readonly threadId: string;
   readonly runId?: string;
@@ -281,6 +293,8 @@ export interface AtlasAnswerClient {
   threads(
     status?: "active" | "archived" | "all",
     signal?: AbortSignal,
+    /** Searches titles and message text. */
+    query?: string,
   ): Promise<AtlasThreadPage>;
   messages(threadId: string, signal?: AbortSignal): Promise<AtlasMessagePage>;
   renameThread(
@@ -477,7 +491,8 @@ const experiencePublishOperation = createOperation<
 export function createAtlasAnswerClient(
   options: AtlasAnswerClientOptions = {},
 ): AtlasAnswerClient {
-  const client = options.client ?? createHttpClient({ csrfToken: browserCsrf });
+  const client =
+    options.client ?? createHttpClient({ csrfToken: readBrowserCsrfToken });
   const createId = options.createId ?? (() => globalThis.crypto.randomUUID());
   return Object.freeze({
     proposeVocabulary: async (body: AtlasVocabularyCorrection) => {
@@ -498,9 +513,9 @@ export function createAtlasAnswerClient(
       client.request(admissionOperation, { signal }),
     experience: (signal?: AbortSignal) =>
       client.request(experienceOperation, { signal }),
-    threads: (status = "active", signal?: AbortSignal) =>
+    threads: (status = "active", signal?: AbortSignal, query?: string) =>
       client.request(listThreadsOperation, {
-        query: { status, limit: 50 },
+        query: { status, limit: 50, ...(query?.trim() ? { q: query.trim() } : {}) },
         signal,
       }),
     messages: async (threadId: string, signal?: AbortSignal) => {
@@ -557,7 +572,9 @@ export function createAtlasAnswerClient(
       if (!admission.chatAllowed || !admission.persistenceAllowed)
         throw new AtlasClientError(
           "ATLAS_NOT_ADMITTED",
-          "Atlas answers are not enabled for this account or plane.",
+          admission.reasonCode === "permission_denied"
+            ? "Your account is not authorized to use Atlas in this workspace."
+            : "Atlas answers are not enabled in this workspace.",
         );
       const publicModelId =
           answerOptions.agent?.publicModelId ??
@@ -663,7 +680,8 @@ export function createAtlasAnswerClient(
 export function createAtlasExperienceAdminClient(
   options: AtlasAnswerClientOptions = {},
 ): AtlasExperienceAdminClient {
-  const client = options.client ?? createHttpClient({ csrfToken: browserCsrf }),
+  const client =
+      options.client ?? createHttpClient({ csrfToken: readBrowserCsrfToken }),
     createId = options.createId ?? (() => globalThis.crypto.randomUUID());
   return Object.freeze({
     draft: (signal?: AbortSignal) =>
@@ -728,6 +746,7 @@ async function consumeAnswerStream(
   const insights: AtlasInsightResult[] = [];
   const citations: AtlasRecordCitation[] = [],
     attachmentCitations: AtlasAttachmentCitation[] = [],
+    externalCitations: AtlasExternalCitation[] = [],
     actions: AtlasGovernedAction[] = [];
   try {
     while (true) {
@@ -771,6 +790,10 @@ async function consumeAnswerStream(
           }
         } else if (envelope.event.type === "insight.cited") {
           insights.push(parseAtlasInsightResult(envelope.event.insight));
+        } else if (envelope.event.type === "external.cited") {
+          const citation = parseExternalCitation(envelope.event);
+          if (!externalCitations.some((item) => item.sourceId === citation.sourceId))
+            externalCitations.push(citation);
         } else if (envelope.event.type === "attachment.cited") {
           const citation = parseAttachmentCitation(envelope.event);
           if (
@@ -836,12 +859,14 @@ async function consumeAnswerStream(
       evidenceIds: [
         ...citations.map((_, index) => `record:${index}`),
         ...attachmentCitations.map((_, index) => `attachment:${index}`),
+        ...externalCitations.map((_, index) => `external:${index}`),
       ],
     },
     {
       evidenceIds: [
         ...citations.map((_, index) => `record:${index}`),
         ...attachmentCitations.map((_, index) => `attachment:${index}`),
+        ...externalCitations.map((_, index) => `external:${index}`),
       ],
       actionIds: actions.map((action) => action.proposalId),
     },
@@ -853,6 +878,7 @@ async function consumeAnswerStream(
     text: answerText,
     citations: Object.freeze(citations),
     attachmentCitations: Object.freeze(attachmentCitations),
+    ...(externalCitations.length ? { externalCitations: Object.freeze(externalCitations) } : {}),
     actions: Object.freeze(actions),
     threadId,
     ...(runId ? { runId } : {}),
@@ -1073,6 +1099,20 @@ function parseAttachmentCitation(
     fileName: textValue(event.fileName, "fileName"),
     contentType: textValue(event.contentType, "contentType"),
     sha256: textValue(event.sha256, "sha256"),
+  });
+}
+function parseExternalCitation(
+  event: Readonly<Record<string, unknown>>,
+): AtlasExternalCitation {
+  const url = textValue(event.url, "url");
+  // Only plain https links reach the page; anything else is refused, not rendered.
+  if (!/^https:\/\/[^\s"'<>]+$/.test(url)) throw new TypeError("Invalid external citation url");
+  return Object.freeze({
+    sourceId: textValue(event.sourceId, "sourceId"),
+    title: textValue(event.title, "title"),
+    url,
+    ...(typeof event.publisher === "string" && event.publisher.trim() ? { publisher: event.publisher } : {}),
+    ...(typeof event.retrievedAt === "string" && event.retrievedAt.trim() ? { retrievedAt: event.retrievedAt } : {}),
   });
 }
 function parseGovernedAction(
@@ -1421,23 +1461,6 @@ function enumValue<const Values extends readonly string[]>(
     throw new TypeError(`Atlas ${label} is invalid`);
   return value as Values[number];
 }
-function browserCsrf(): string | undefined {
-  if (typeof document === "undefined") return undefined;
-  const values = document.cookie.split(";").map((part) => part.trim());
-  return (
-    values
-      .find((part) => part.startsWith("__Host-athyper-csrf="))
-      ?.split("=")
-      .slice(1)
-      .join("=") ??
-    values
-      .find((part) => part.startsWith("athyper-csrf="))
-      ?.split("=")
-      .slice(1)
-      .join("=")
-  );
-}
-
 // Token boundaries may contain only spaces, newlines, or an empty string.
 function streamText(value: unknown): string {
   if (typeof value !== "string")

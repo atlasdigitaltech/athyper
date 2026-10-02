@@ -189,6 +189,7 @@ Focus does not move.
 | P1 | `EntityRecordCard` for compact mode and the narrow tier; `list.row.*`, `list.group.*`, `list.card.moreFields` (en/ms/ar); `ViewSelector` copy through `UiMessages` (`ui.selectView`, `ui.viewName`, `ui.viewNameModified`) | Implemented; fixture-verified |
 | P2 | `cardPriority` in server metadata (`descriptors.ts`, `descriptor-parser.ts`, `native-runtime-projection.ts`), list service, browser contract (`types.ts`, `parsers.ts`); title role derived from `recordPresentation.titleField` in `entity-list-service.ts` | Implemented; unit-tested; needs platform-host restart, no republication |
 | P3 | Panel container, tier rules, table-stacking rules removed, px breakpoints snapped to the scale, breakpoint policy check | Implemented; fixture-verified |
+| Tool panel | Docked, pinnable list controls; shared panel anatomy; SegmentedControl, ChoiceChips, operator chip; controls policy check (§7) | Implemented; fixture-verified |
 
 Implementation notes:
 
@@ -222,3 +223,167 @@ detail at 1440:
 
 Status reports distinguish **implemented**, **published** and **verified in
 the running app** per [AGENTS.md](../../../AGENTS.md).
+
+## 7. List controls tool panel (Filters, Sort, Columns, Group, Display, Views)
+
+Status (2026-09-30): implemented and verified in browser fixtures with the real
+runtime and Neon CSS; not yet verified in the running app.
+
+List controls use the same side-panel family as Atlas, record collaboration and
+the Activity center. There is one anatomy and one frame, shared by every entity.
+
+```
+PanelHeader      icon · section title · description · [pin] [close]
+Context row      list (· organization scope) ········ record count / Updating…   (PanelContextRow, as in Files)
+Section tabs     Filters 2 | Sort | Columns | Group | Display | Views   (PanelTabs; Filters shows active count)
+Body             section content
+Footer           [what Apply will do, only for a changed draft] · Reset (leading) ···· one primary action
+```
+
+**Frame — `WorkspaceToolPanel` (`platform-shell`).** Claims the shell's single
+workspace side-panel slot (opening it closes Atlas or collaboration; Atlas
+opening closes it), docks at the right edge under the app bar, resizes between
+360 and 560px by pointer or keyboard, and remembers width and pin per tool in
+browser storage. It is pinnable only at ≥1101px, where the shell reserves room
+(`data-workspace-panel-pinned`); below that, and on phones (full width under the
+app bar), it is an overlay.
+
+| Mode | Semantics | Behaviour |
+|---|---|---|
+| Overlay | `role="dialog"`, `aria-modal`, focus trapped, backdrop | Applying a section closes the panel; ✕, Escape or the backdrop discard drafts |
+| Pinned | `role="region"`, no backdrop | The list stays usable; applying keeps the panel open beside the refreshed list |
+
+**Sections — `CollectionControlSections` (`collection-controls`).** Tabs replace
+the former title menu; visited sections keep drafts until the panel closes.
+The frame around them is `CollectionControlPanel`
+(`@athyper/platform-shell/tool-panel`): entity lists (`ListDrawerHost`) and the
+Notifications and Inbox pages open the same panel, with the same header,
+context row, tabs, footer, pin and resize. Only the Activity center's own side
+panel shows its filters inline, because it already owns the slot.
+
+**Each fact once.** The context row is panel-level and identical on every tab:
+it names the list and its record count, like the Files panel names the record
+and its entity. Sections have no stats strip; a fact lives where it is used —
+the active filter count on the Filters tab, the sort limit on "Add sort level ·
+1 of 3", visible columns in the Columns list heading, the active view in the
+Views footer.
+
+**Footer grammar.** Every section: **Reset** on the leading edge and one primary
+action (Show results, Apply sort, Apply columns, Apply grouping, Save settings,
+Save view). The summary line describes only what the primary action will do
+("1 filter ready to apply", "Sort changed · 2 levels", "3 columns will be
+visible") and appears only for a changed draft or an error; the current state
+belongs to the context row. There is no Cancel; closing is the panel's job.
+
+**Controls — design-system choices only** (enforced by
+`pnpm policy:entity-list-controls`, in the `workspace` and `ci` profiles):
+
+| Choice | Control |
+|---|---|
+| 2–4 options: sort direction, layout, density, search behaviour, view visibility | `SegmentedControl` (`platform-ui`) — radio group, arrow keys, RTL |
+| Field pickers: sort field, filter field, grouping | `SearchableFieldSelect` → `SearchableSelect`, whatever the field count |
+| Filter values with ≤ 8 published choices, Yes/No | `ChoiceChips` — one or none for equals / not equals, several for "any of" |
+| Larger or server-loaded value lists, relative periods | `SearchableSelect` |
+| Filter operator | `FilterOperatorMenu` chip beside the field name; plain text when only one operator is allowed |
+| Recent filter values | chips under the value, with Clear recent |
+
+**Ordered rows (Sort levels, visible Columns).** One compact row: drag handle ·
+position · content · one "⋯" menu (Move to top, Move up, Move down, Remove / Hide
+column). The menu is the keyboard and touch alternative to dragging, so rows do
+not carry separate arrow and delete buttons.
+
+- *Sort:* grip · priority · field · direction · ⋯ on one line; direction and
+  menu wrap below the field only in a narrow panel. Visible direction wording
+  follows the field's `valueKind` — text A→Z / Z→A, numbers 1→9 / 9→1, dates
+  Oldest / Newest first, Yes/No No / Yes first — while the accessible names
+  stay Ascending / Descending. The level limit is on the button
+  ("Add sort level · 1 of 3"). The field picker never offers `uuid` fields and
+  lists fields already used as "In use".
+- *Columns:* the identity column shows a lock and "Always shown" instead of a
+  disabled checkbox and cannot be hidden.
+- *Field pickers:* fields are grouped with the `columns.ts` categories; the
+  "Audit and system fields" group is collapsed until opened or searched; rows
+  show the field code, not its technical type.
+
+**Toolbar beside a pinned panel.** Below the wide tier (`width < 64rem`) the
+Filters and Controls actions are icons with their count badges, so a list
+narrowed by a pinned panel keeps one toolbar row.
+
+**Context row scope.** The server's tenant-wide fallback scope label
+(`key: "access"`) is not repeated; real collection scopes are shown
+("Business Partners · Operations"). Record counts use `list.controls.recordOne`
+/ `list.controls.records` ("1 record", "247 records") in the page header and
+the context row.
+
+**Metadata-driven, no new metadata.** Section availability comes from the list
+descriptor; quick filter fields from `surface.filterPresentation.quickFields`;
+the editor per field from `valueKind`, `filterOperators`, `filterOptions` and
+`semanticRole`. Display settings follow the width tier: in the narrow tier,
+Layout and Density are replaced by a note because records always show as cards.
+Views offer Visibility only when shared views may be created; otherwise the
+panel states that the view is personal. Section titles and descriptions come
+from `list.controls.<key>.*` (en/ms/ar).
+
+**Tests.** `entity-list-mobile-cards.spec.ts` (docking, pinning, keyboard resize,
+remembered pin, phone presentation, no horizontal overflow in any section at
+the narrowest panel and on phones, untruncated segment labels),
+`entity-drawer-selector.spec.ts` (anatomy geometry and tab reachability) and
+the jsdom list suite (drafts across tabs, focus trap, close discards drafts).
+
+**Follow-ups.** Record collaboration can adopt `WorkspaceToolPanel` in place of
+its own docking code; a live "Show N results" count needs a draft-count API;
+remaining English literals in the Views section move to the catalog.
+
+## 8. Density (Compact · Comfortable · Spacious)
+
+Status (2026-10-01): stages 1, 2 and 4 implemented and fixture-verified;
+stages 3 and 5 proposed.
+
+**Problem found.** Five unrelated density mechanisms existed (global
+`data-density` on the page, list density, Activity density, choice-card density,
+intake field density). The global one changed four tokens, one of them unused,
+and none of the spacing scale. List rows were sized by the 40px row-menu button,
+so rows measured 57 / 65 / 73px and "compact" could never be compact.
+
+**Design.** One density system, expressed as tokens (`--a-density-*` plus
+`--a-control-height`, `--a-touch-target`) defined in
+`packages/platform/foundation/theme/src/styles.css` and mirrored in
+`DENSITY_TOKENS` (`tokens.ts`; a test keeps them equal). Any element may carry
+`data-density`; its subtree follows. The page level is the app default
+(Utilities / profile); lists, panels, sections and intake fields override
+locally.
+
+| Token | Compact | Comfortable (default) | Spacious |
+|---|---|---|---|
+| Row height | 32px | 44px | 56px |
+| Header height | 32px | 40px | 48px |
+| Cell padding (block / inline) | 2 / 8px | 4 / 12px | 6 / 16px |
+| Data text | 13px | 14px | 15px |
+| Row icon button | 24px | 32px | 36px |
+| Control height | 32px | 40px | 48px |
+| Stack gap / section gap / panel gutter | 8 / 16 / 12px | 12 / 24 / 16px | 16 / 32 / 20px |
+
+On touch screens (`pointer: coarse`) rows and row targets keep a 44px floor;
+24px desktop targets meet WCAG 2.2 target size (minimum). Chrome (app bar,
+navigation rail, page and panel headers) does not change with density.
+
+**Stages.**
+1. Token foundation and scoped `[data-density]` — done.
+2. Lists and tables: the list root carries `data-density`; exact row and
+   header heights, cell padding, data text and row icon buttons from tokens;
+   touch floor; old per-density row rules removed — done.
+3. Forms, record detail, panels, Activity, Files, intake adopt the tokens;
+   their own density attributes map to the same mechanism.
+4. Settings wiring — done. Utilities → Density is the app density on the page
+   root and every list follows it. A list overrides only when the person
+   unticks "Use app density (…)" in Display settings and picks a density (saved
+   per list, per device), or opens a non-default `?density=`; only then does
+   the list root carry its own `data-density`. Host-configured lookups keep
+   their explicit density. Density is a display preference, not view data: it
+   never marks a view "(modified)".
+5. Policy ratchet against fixed control heights in platform CSS (84 today).
+
+**Tests.** `theme-contract.test.tsx` (complete, monotonic token sets; CSS equals
+TS); `entity-list-mobile-cards.spec.ts` (exact 32/44/56 rows, 32/40/48 headers,
+13/14/15px text, 24/32/36px row buttons; 44px touch floor; no ellipsis in icon
+cells).

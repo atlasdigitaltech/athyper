@@ -1,3 +1,4 @@
+import { parseEntityKeyReference } from "@athyper/server-contract-metadata";
 import { compileEntityIntakeSurfaces } from "./intake-surface-projection.js";
 import { compileEntityIntakeFlows } from "./intake-projection.js";
 import { createHash } from "node:crypto";
@@ -108,6 +109,7 @@ export function projectNativeFieldChoices(
   const list = Object.fromEntries(
     [
       "semanticRole",
+      "statusTones",
       "cardPriority",
       "filterOperators",
       "groupable",
@@ -122,7 +124,16 @@ export function projectNativeFieldChoices(
   return {
     list,
     ...(dataType === "enum" && Array.isArray(options) && options.length
-      ? { validation: { options: options.map((option: Row) => option.value), optionLabels: Object.fromEntries(options.filter((option: Row) => typeof option.label === "string").map((option: Row) => [String(option.value), option.label])) } }
+      ? {
+          validation: {
+            options: options.map((option: Row) => option.value),
+            optionLabels: Object.fromEntries(
+              options
+                .filter((option: Row) => typeof option.label === "string")
+                .map((option: Row) => [String(option.value), option.label]),
+            ),
+          },
+        }
       : {}),
   };
 }
@@ -327,7 +338,28 @@ export function compileNativeRuntimeProjection(input: {
             maximum: field.typeConfig?.maximum,
           }).filter(([, value]) => value !== undefined),
         );
+        const references = rows("fieldReferenceBindings").filter(
+          (ref) =>
+            ref.entityFieldId === field.id &&
+            ref.status !== "deprecated" &&
+            ref.referenceKind === "entity_relation",
+        );
+        if (references.length > 1)
+          throw Error("NATIVE_PROJECTION_AMBIGUOUS_REFERENCE");
+        const reference = references[0];
+        const keyReference = field.typeConfig?.keyReference === undefined ? undefined : parseEntityKeyReference(field.typeConfig.keyReference, field.fieldKey);
+        if (keyReference && (!reference || reference.targetEntityCode !== keyReference.targetEntity || keyReference.fields.some(mapping => !fields.some(source => source.fieldKey === mapping.source)))) throw Error("NATIVE_PROJECTION_REFERENCE_MAPPING_INVALID");
+        if (
+          reference &&
+          (!reference.targetEntityCode ||
+            (!keyReference && !["uuid", "reference"].includes(field.dataType)))
+        )
+          throw Error("NATIVE_PROJECTION_REFERENCE_ADAPTER_REQUIRED");
         return {
+          ...(keyReference ? { keyReference } : {}),
+          ...(reference
+            ? { referenceTargetEntity: reference.targetEntityCode }
+            : {}),
           ...choices,
           ...(Object.keys(constraints).length
             ? { validation: { ...choices.validation, ...constraints } }
@@ -379,6 +411,7 @@ export function compileNativeRuntimeProjection(input: {
         "authorizationRuntime",
         "listPresentation",
         "recordPresentation",
+        "formPresentation",
         "directoryScope",
         "collectionRelationship",
         "ai",
