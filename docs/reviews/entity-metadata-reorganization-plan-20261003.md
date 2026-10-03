@@ -1,6 +1,6 @@
 # Entity metadata reorganization review plan
 
-Date: 3 October 2026. Status: implementation pending review.
+Date: 3 October 2026. Status: prerequisite checkpoint verified; flat-layout consumer repairs implemented for review; remaining reorganization pending review.
 
 This plan preserves existing entity definitions, completes their interrupted relocation, organizes sources by owning domain, and separates format consolidation from property corrections. Country and Principal supply applicable framework conventions; Principal Profile also supplies the reference record-navigation experience.
 
@@ -58,6 +58,32 @@ This plan preserves existing entity definitions, completes their interrupted rel
    Audit active loaders, compilation and release-preparation scripts, generators, fixture paths, and runbooks for remaining obsolete references. Update current documentation, including the stale metadata README. Preserve historical reports, hashes, approved evidence, and captured historical commands. Assess evidence-bound compatibility entry points before removal; create no new compatibility copies or symlinks.
 
    Exit gate: every original source is accounted for and active consumers resolve the flat layout without semantic edits.
+
+   **Flat relocation completion evidence — 3 October 2026 (item 4)**
+
+   Implementation commit: `dc822d9ad9786d38bdc7fca7d699d1cee5db8c14`. The required GitHub checkpoint remains `f64f6ac3507f55a2f626287d9fd2058a4ca5ed01`. Sources remain at `metadata/entities/<entity>/`; no files or directories were moved, renamed, converted, duplicated or linked during this consumer repair.
+
+   | Consumer | Implemented correction |
+   | --- | --- |
+   | `prepare-coordinated-candidate.ts` | Reads the workspace manifest and enumerates flat entity directories for existing `definition.json` inputs; retains the existing native/table product parsers, compilation, database controls and independent review gates. The database-backed script was not executed. |
+   | `generate-platform-catalog.mjs` | Replaces product/entity traversal with flat entity traversal beneath the manifest entity root. Keeps placement metadata authoritative; entities without a placement remain outside catalog placement discovery. Studio's code count remains 32; no catalog/module identities or generated output changed. |
+   | `check-layout.mjs` | Uses the frozen checkpoint disposition inventory instead of the absent active relocation map. Checks all 175 destinations, duplicate old JSON sources, artifact identities and logical entity/profile references. An absent workspace `releaseEntry` is valid; an explicitly declared entry must resolve. Schema lookup now includes `schemas/entity-artifacts-v2/`. |
+   | Compilation and validation loaders | `compile-release-candidate.mts`, `prepare-compiled-review.mts`, `bootstrap-main-dev-metadata.mts`, `validate.py`, and `verify_permission_catalog.py` include relocated profiles with unchanged release-local refs. The validator distinguishes supporting JSON arrays from artifact objects. No compilation, publication, bootstrap or live permission gate was run. |
+
+   Existing catalog/layout/validator fixtures were adjusted to the flat layout and profile roots; no test cases were added or executed. Current metadata documentation, Country reference guides, source-location notices, ownership/identity guides and the current BP file inventory now point to active sources. Older reports, review catalogs, baseline captures, migration files, hashes and captured historical commands remain unchanged.
+
+   Compatibility assessment: `New_Entity/verify_live_schema.py` is retained. The source release's schema-gate command binds that historical entry point, which delegates to `tooling/scripts/metadata/verify_live_schema.py`. Its notice now links the active workspace. Removal requires separately reviewed successor evidence; this repair creates no new compatibility copies or symlinks.
+
+   Offline source checks and results:
+
+   - `pnpm metadata:check-layout --baseline`: passed — 175 accounted relocation destinations, 202 entity JSON files and 13 profile JSON files; all logical JSON references resolve and preserved JSON bytes match the checkpoint.
+   - `node tooling/scripts/catalog/generate-platform-catalog.mjs --check`: passed — generated navigation and surface text is unchanged; no output files written.
+   - `python3 tooling/scripts/metadata/validate.py`: incomplete — after repairing profile loading and array/object classification, the existing captured storage catalog references absent `server/db/ddl/planes/neon/master/18_business_partner_business_profile.sql`. The validator exits with `FileNotFoundError` before completing its wider evidence checks. No SQL/catalog correction, historical hash rewrite or replacement approval was attempted. This is an unresolved evidence gap, not a validation pass.
+   - `node --check` parsed the two changed JavaScript consumers and their two existing fixture files. TypeScript `createSourceFile` parsed the four changed TypeScript/`.mts` source files; Python `ast.parse` parsed the three changed Python files. These syntax checks execute neither the changed programs nor their tests and do not establish typecheck/build success.
+   - Offline Python byte comparison against the prerequisite checkpoint: all 247 metadata files other than `metadata/README.md` remain byte-identical; only current workspace documentation changed. This includes entity business fields, relationships, operations, workflows, permissions, all MFA properties, release envelopes, schemas, profile contents and historical/review evidence.
+   - Tracked-file scan of executable sources, fixtures and CI beneath `tooling/`, `server/`, `packages/`, `tests/` and `.github/`: no remaining `metadata/products`, `metadata/shared` or `products/mdg` references. Historical documentation and captured evidence retain their old paths intentionally. `git diff --check` passed.
+
+   Exit gate: original sources are accounted for, the flat layout resolves in active metadata consumers, and artifact semantics and filenames are preserved. The broader captured-DDL validation gap remains explicitly open. No unit/integration/browser/smoke/performance tests, builds, runtime probes, database actions, publication, deployment, permission grants or MFA changes ran. Runtime and user-flow verification remain pending. Items 5–12 require their separate implementation/review steps.
 
 5. **Introduce generic discovery before nesting sources**
 
