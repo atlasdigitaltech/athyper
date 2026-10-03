@@ -18,6 +18,10 @@ export interface RecordBookmarkInput {
 }
 export interface RecordBookmarkItem {
   readonly description?: string;
+  /** Current readable business code (the entity's identity field). */
+  readonly code?: string;
+  /** Current readable status (the field with the list status role). */
+  readonly status?: string;
   readonly id: string;
   readonly entityCode: string;
   readonly recordId: string;
@@ -114,6 +118,79 @@ export function createRecordBookmarkService(options: {
       }
     }
   };
+  /** Current readable title, code and status for one entity's favourites, through the same
+   * scope and row-policy boundary as Manage; unreadable records drop out. The title is the
+   * label, then the code; a record with neither keeps only its stored label, never its id. */
+  const revalidate = async (
+    context: VerifiedRequestContext,
+    entityCode: string,
+    items: readonly RecordBookmarkItem[],
+    scopeCoordinate?: ListRecordsQuery["scopeCoordinate"],
+  ): Promise<readonly RecordBookmarkItem[]> => {
+    if (!items.length) return items;
+    const readable = new Map<
+      string,
+      { label?: string; description?: string; code?: string; status?: string }
+    >();
+    for (let start = 0; start < items.length; start += 100) {
+      const batch = items.slice(start, start + 100);
+      const execution = await options.listExecutor.execute({
+        context,
+        entityCode,
+        recordIds: batch.map((item) => item.recordId),
+        limit: batch.length,
+        countMode: "none",
+        ...(scopeCoordinate ? { scopeCoordinate } : {}),
+      });
+      // Only fields the caller may read (the response projection). The record's title and code
+      // come from its published record presentation (as on the record page header), then the
+      // list's title role and identity field.
+      const fields = execution.responseFields ?? [];
+      const presentation = execution.descriptor.recordPresentation;
+      const readableField = (key: string | undefined) =>
+        key ? fields.find((field) => field.key === key) : undefined;
+      const title =
+        readableField(presentation?.titleField) ??
+        fields.find((field) => field.list?.semanticRole === "title");
+      const identity =
+        readableField(presentation?.codeField) ??
+        fields.find(
+          (field) =>
+            field.key === execution.descriptor.listPresentation?.identityField ||
+            field.list?.semanticRole === "identity",
+        );
+      const statusField = fields.find(
+        (field) => field.list?.semanticRole === "status",
+      );
+      const display = (value: unknown) =>
+        typeof value === "string" || typeof value === "number"
+          ? String(value).slice(0, 240)
+          : undefined;
+      for (const row of execution.result.data) {
+        const id = String(row[execution.descriptor.storage.idField]);
+        const name = title ? display(row[title.key]) : undefined;
+        const code = identity ? display(row[identity.key]) : undefined;
+        const status = statusField ? display(row[statusField.key]) : undefined;
+        const label = name || code;
+        const description = [code !== label ? code : undefined, status]
+          .filter(Boolean)
+          .join(" · ");
+        readable.set(id, {
+          ...(label ? { label } : {}),
+          ...(description ? { description: description.slice(0, 480) } : {}),
+          ...(code ? { code } : {}),
+          ...(status ? { status } : {}),
+        });
+      }
+    }
+    return Object.freeze(
+      items
+        .filter((item) => readable.has(item.recordId))
+        .map((item) =>
+          Object.freeze({ ...item, ...readable.get(item.recordId)! }),
+        ),
+    );
+  };
   const service: RecordBookmarkService = {
     async list(
       context: VerifiedRequestContext,
@@ -132,60 +209,27 @@ export function createRecordBookmarkService(options: {
           return Object.freeze(result.rows.map(bookmarkItem));
         },
       );
-      if (!entityCode || !items.length) return items;
-      const readable = new Map<
-        string,
-        { label: string; description?: string }
-      >();
-      // Revalidate stored favourites through the same scope and row-policy boundary as Manage.
-      for (let start = 0; start < items.length; start += 100) {
-        const batch = items.slice(start, start + 100);
-        const execution = await options.listExecutor.execute({
-          context,
-          entityCode,
-          recordIds: batch.map((item) => item.recordId),
-          limit: batch.length,
-          countMode: "none",
-          ...(scopeCoordinate ? { scopeCoordinate } : {}),
-        });
-        const fields = execution.responseFields ?? [];
-        const title = fields.find(
-          (field) => field.list?.semanticRole === "title",
-        );
-        const identity = fields.find(
-          (field) =>
-            field.key ===
-              execution.descriptor.listPresentation?.identityField ||
-            field.list?.semanticRole === "identity",
-        );
-        const status = fields.find(
-          (field) => field.list?.semanticRole === "status",
-        );
-        const display = (value: unknown) =>
-          typeof value === "string" || typeof value === "number"
-            ? String(value).slice(0, 240)
-            : undefined;
-        for (const row of execution.result.data) {
-          const id = String(row[execution.descriptor.storage.idField]);
-          const name = title ? display(row[title.key]) : undefined;
-          const code = identity ? display(row[identity.key]) : undefined;
-          const state = status ? display(row[status.key]) : undefined;
-          const label = name || code || id;
-          const description = [code !== label ? code : undefined, state]
-            .filter(Boolean)
-            .join(" · ");
-          readable.set(id, {
-            label,
-            ...(description ? { description: description.slice(0, 480) } : {}),
-          });
+      if (entityCode) return revalidate(context, entityCode, items, scopeCoordinate);
+      // All favourites (Quick access): each entity goes through the same scope and row-policy
+      // boundary as Manage. An entity the caller can no longer read drops out; one that needs a
+      // work context keeps its stored label (the record page enforces scope when opened).
+      const byEntity = new Map<string, RecordBookmarkItem[]>();
+      for (const item of items)
+        byEntity.set(item.entityCode, [...(byEntity.get(item.entityCode) ?? []), item]);
+      const resolved = new Map<string, RecordBookmarkItem>();
+      for (const [code, entityItems] of byEntity) {
+        try {
+          for (const item of await revalidate(context, code, entityItems))
+            resolved.set(item.id, item);
+        } catch (error) {
+          if (!(error instanceof RecordServiceError)) throw error;
+          if (error.statusCode === 409)
+            for (const item of entityItems) resolved.set(item.id, item);
+          else if (![401, 403, 404].includes(error.statusCode)) throw error;
         }
       }
       return Object.freeze(
-        items
-          .filter((item) => readable.has(item.recordId))
-          .map((item) =>
-            Object.freeze({ ...item, ...readable.get(item.recordId)! }),
-          ),
+        items.flatMap((item) => (resolved.has(item.id) ? [resolved.get(item.id)!] : [])),
       );
     },
     async membership(

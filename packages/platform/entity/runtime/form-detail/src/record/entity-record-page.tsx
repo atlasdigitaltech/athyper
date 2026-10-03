@@ -73,9 +73,9 @@ function EntityRecordPageInstance({
   useRecordPage();
   const http = useApiClient();
   const contentScrollRef = useRef<HTMLDivElement>(null);
-  const [breadcrumbLabel, setBreadcrumbLabel] = useState(adapter.label);
+  const [breadcrumb, setBreadcrumb] = useState<RecordBreadcrumb>({ label: adapter.label });
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
-  useRecordBreadcrumb(breadcrumbLabel, adapter.recordHref(recordId));
+  useRecordBreadcrumb(breadcrumb.label, adapter.recordHref(recordId), breadcrumb);
   const [section, setSection] = useState(() =>
     readSection(adapter.sectionForTab),
   );
@@ -184,7 +184,7 @@ function EntityRecordPageInstance({
               <RecordBreadcrumbRegistration
                 label={adapter.label}
                 values={values}
-                onChange={setBreadcrumbLabel}
+                onChange={setBreadcrumb}
               />
               <PageHeader
                 level="collection"
@@ -297,18 +297,22 @@ function RecordBreadcrumbRegistration({
 }: {
   readonly label: string;
   readonly values: Readonly<Record<string, unknown>>;
-  readonly onChange: (label: string) => void;
+  readonly onChange: (breadcrumb: RecordBreadcrumb) => void;
 }) {
   // `name` and `code` are semantic header bindings resolved from the published header metadata.
+  // The breadcrumb shows them together; title and code also travel separately for layouts
+  // that place them (Quick access).
   const name = text(values.name),
     code = text(values.code);
   const label =
     name && code ? `${name} (${code})` : name || code || entityLabel;
   useEffect(() => {
-    onChange(label);
-  }, [label, onChange]);
+    onChange({ label, ...(name ? { title: name } : {}), ...(code ? { code } : {}) });
+  }, [label, name, code, onChange]);
   return null;
 }
+
+interface RecordBreadcrumb { readonly label: string; readonly title?: string; readonly code?: string }
 
 function text(value: unknown, fallback = ""): string {
   return typeof value === "string" && value.trim() ? value : fallback;

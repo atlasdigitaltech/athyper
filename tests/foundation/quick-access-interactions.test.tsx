@@ -26,6 +26,7 @@ beforeEach(() => {
     Element: { configurable: true, value: dom.window.Element }, HTMLElement: { configurable: true, value: dom.window.HTMLElement }, MouseEvent: { configurable: true, value: dom.window.MouseEvent },
     KeyboardEvent: { configurable: true, value: dom.window.KeyboardEvent }, requestAnimationFrame: { configurable: true, value: animationFrame },
     CustomEvent: { configurable: true, value: dom.window.CustomEvent },
+    Node: { configurable: true, value: dom.window.Node },
     IS_REACT_ACT_ENVIRONMENT: { configurable: true, value: true },
     // Some shell sources compile with the classic JSX runtime here.
     React: { configurable: true, value: React },
@@ -182,13 +183,14 @@ describe("shell quick access", () => {
     const placed = { ...route, entities: [{ code: "person", name: "People" }] };
     const withEntities: DerivedShellNavigation = { ...navigation, routes: [placed], workspaces: [{ ...navigation.workspaces[0]!, routes: [placed] }], entityRoutes: [{ entityCode: "person", releaseId: "release-1", operation: "read" }, { entityCode: "person", releaseId: "release-1", operation: "list" }] };
     // The record page registers its title for the breadcrumb, as entity detail pages do.
-    const RecordPage = ({ title }: { readonly title?: string }) => { useRecordBreadcrumb(title ?? ""); return <section><h1>{title}</h1></section>; };
+    const RecordPage = ({ title }: { readonly title?: string }) => { useRecordBreadcrumb(`${title} (PERSON-DEMO-001)`, undefined, { title, code: "PERSON-DEMO-001" }); return <section><h1>{title}</h1></section>; };
     const at = (pathname: string, title?: string) => root.render(<ShellRouteProvider pathname={pathname}><ShellChrome applicationName="Neon" tenantId="tenant-alpha" tenantLabel="Tenant Alpha" accountLabel="User One" navigation={withEntities}>{title ? <RecordPage title={title} /> : <section><h1>People</h1></section>}</ShellChrome></ShellRouteProvider>);
-    const recent = () => JSON.parse(dom.window.localStorage.getItem(quickAccessStorageKey("Neon", "tenant-alpha", "User One")) ?? "{}").recent as { href: string; label: string; description?: string; kind: string }[];
+    const recent = () => JSON.parse(dom.window.localStorage.getItem(quickAccessStorageKey("Neon", "tenant-alpha", "User One")) ?? "{}").recent as { href: string; label: string; description?: string; kind: string; code?: string }[];
     await act(async () => at("/app/entity/person/manage"));
     await act(async () => at(`/app/entity/person/${personId}`, "Maya Example (Demo)"));
     const [record, list] = recent();
-    assert.deepEqual([record!.href, record!.label, record!.description, record!.kind], [`/app/entity/person/${personId}`, "Maya Example (Demo)", "People · Purchase Invoices", "record"]);
+    // The title and code arrive separately, not as the breadcrumb's "Name (CODE)".
+    assert.deepEqual([record!.href, record!.label, record!.code, record!.description, record!.kind], [`/app/entity/person/${personId}`, "Maya Example (Demo)", "PERSON-DEMO-001", "People · Purchase Invoices", "record"]);
     assert.deepEqual([list!.href, list!.label, list!.kind], ["/app/entity/person/manage", "People", "page"]);
     // Never under the technical id.
     assert.doesNotMatch(JSON.stringify(recent().map((item) => item.label)), /d1e630f3/);
@@ -209,15 +211,21 @@ describe("shell quick access", () => {
     const labels = () => [...panel.querySelectorAll(".a-panel-row a")].map((link) => link.textContent);
     const radio = (name: string) => [...panel.querySelectorAll<HTMLButtonElement>('.a-settings-menu [role="radio"]')].find((button) => button.textContent === name)!;
     const menu = panel.querySelector<HTMLDetailsElement>(".a-settings-menu")!;
-    // Records and pages are told apart by the type tile (the current invoice page is a record visit too).
-    assert.deepEqual([...new Set([...panel.querySelectorAll(".a-panel-row__icon")].map((icon) => icon.getAttribute("data-kind")))].sort(), ["page", "record"]);
-    // Show: Records only, with a dot on the settings trigger and a scoped clear action.
-    menu.open = true;
-    await click(radio("Records"));
+    // Defaults: Records, grouped by day, groups open; no dot while the defaults apply.
+    assert.equal(radio("Records").getAttribute("aria-checked"), "true");
+    assert.equal(radio("Day").getAttribute("aria-checked"), "true");
+    assert.equal(menu.hasAttribute("data-indicator"), false);
     assert.deepEqual(labels().sort(), ["Maya Example (Demo)", "PI 1042"]);
+    // All shows pages too, told apart by the type tile; the dot marks a changed view.
+    menu.open = true;
+    await click(radio("All"));
     assert.equal(menu.hasAttribute("data-indicator"), true);
+    assert.deepEqual([...new Set([...panel.querySelectorAll(".a-panel-row__icon")].map((icon) => icon.getAttribute("data-kind")))].sort(), ["page", "record"]);
+    await click(radio("Records"));
     assert.match(panel.querySelector(".a-panel-context")?.textContent ?? "", /2 of 3 recent/);
-    assert.ok([...panel.querySelectorAll("button")].some((button) => button.textContent === "Clear recent records"));
+    // Compact: an icon and one word, with the scoped action as its name.
+    const clear = panel.querySelector<HTMLButtonElement>('.athyper-quick-access__actions button[aria-label="Clear recent records"]')!;
+    assert.equal(clear.textContent, "Clear");
     await click(radio("All"));
     // Group by Type: records under their entity, then pages.
     await click(radio("Type"));
@@ -240,9 +248,69 @@ describe("shell quick access", () => {
     // Clearing while showing Pages removes only pages; settings persist for next time.
     menu.open = true;
     await click(radio("Pages"));
-    await click([...panel.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Clear recent pages")!);
-    await click([...panel.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Clear all")!);
+    await click(panel.querySelector('.athyper-quick-access__actions button[aria-label="Clear recent pages"]')!);
+    // The confirmation replaces it in place, counts what will go, and starts on Cancel.
+    assert.match(panel.querySelector(".athyper-quick-access__confirm")?.textContent ?? "", /^Clear 1\?$/);
+    assert.equal(document.activeElement?.textContent, "Cancel");
+    await click(panel.querySelector('.athyper-quick-access__actions button[aria-label="Clear recent pages: 1"]')!);
     assert.deepEqual(JSON.parse(dom.window.localStorage.getItem(key)!).recent.map((item: { label: string }) => item.label).sort(), ["Maya Example (Demo)", "PI 1042"]);
-    assert.deepEqual(JSON.parse(dom.window.localStorage.getItem("athyper.shell.quick-access.view")!).show, "page");
+    assert.deepEqual(JSON.parse(dom.window.localStorage.getItem("athyper.shell.quick-access.view.v2")!).show, "page");
+  });
+
+  it("shows one identity in Recent and Favourites: the title, then code · entity · module", async () => {
+    const personId = "d1e630f3-7314-5ece-8a9b-bba6ed2cb9fe", href = `/app/entity/person/${personId}`;
+    const placed = { ...route, entities: [{ code: "person", name: "People" }] };
+    const withEntities: DerivedShellNavigation = { ...navigation, routes: [placed], workspaces: [{ ...navigation.workspaces[0]!, routes: [placed] }], entityRoutes: [{ entityCode: "person", releaseId: "release-1", operation: "read" }] };
+    dom.window.localStorage.setItem(quickAccessStorageKey("Neon", "tenant-alpha", "User One"), JSON.stringify({ favourites: [], recent: [{ id: href, href, label: "Maya Example (Demo)", code: "PERSON-DEMO-001", description: "People · Purchase Invoices", kind: "record", visitedAt: new Date().toISOString() }] }));
+    const original = globalThis.fetch;
+    // The server now returns the current title as the label, with the code separately.
+    globalThis.fetch = (async () => new Response(JSON.stringify({ items: [{ id: "b1", entityCode: "person", recordId: personId, label: "Maya Example (Demo)", code: "PERSON-DEMO-001", createdAt: "2026-10-03T08:09:32.349Z" }] }), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
+    try {
+      await act(async () => root.render(<ShellChrome applicationName="Neon" tenantId="tenant-alpha" tenantLabel="Tenant Alpha" accountLabel="User One" navigation={withEntities}><section><h1>People</h1></section></ShellChrome>));
+      await click(host.querySelector('button[data-slot="quick-access"]')!);
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
+      const panel = document.body.querySelector<HTMLElement>("#athyper-quick-access")!;
+      const identity = () => { const row = [...panel.querySelectorAll(".a-panel-row")].find((candidate) => candidate.querySelector("a")?.getAttribute("href") === href)!; return [row.querySelector("a")!.textContent, row.querySelector("p")!.textContent]; };
+      const expected = ["Maya Example (Demo)", "PERSON-DEMO-001 · People · Purchase Invoices"];
+      assert.deepEqual(identity(), expected);
+      await click([...panel.querySelectorAll<HTMLButtonElement>(".a-filter-chip")].find((chip) => chip.textContent?.startsWith("Favourites"))!);
+      assert.deepEqual(identity(), expected);
+    } finally { globalThis.fetch = original; }
+  });
+
+  it("follows the app density until a density is chosen, and lays rows out for it", async () => {
+    dom.window.document.documentElement.dataset.density = "spacious";
+    await act(async () => root.render(<ShellChrome applicationName="Neon" tenantId="tenant-alpha" tenantLabel="Tenant Alpha" accountLabel="User One" navigation={navigation}><section><h1>Invoices</h1></section></ShellChrome>));
+    await click(host.querySelector('button[data-slot="quick-access"]')!);
+    const panel = () => document.body.querySelector<HTMLElement>("#athyper-quick-access")!;
+    const radio = (name: string) => [...panel().querySelectorAll<HTMLButtonElement>('.a-settings-menu [role="radio"]')].find((button) => button.textContent === name)!;
+    assert.equal(panel().getAttribute("data-density"), "spacious");
+    assert.equal(radio("Spacious").getAttribute("aria-checked"), "true");
+    await click(radio("Compact"));
+    assert.equal(panel().getAttribute("data-density"), "compact");
+    assert.equal(dom.window.localStorage.getItem("athyper.shell.quick-access.density"), "compact");
+    // Choosing the app's density again returns to following the app.
+    await click(radio("Spacious"));
+    assert.equal(panel().getAttribute("data-density"), "spacious");
+    assert.equal(dom.window.localStorage.getItem("athyper.shell.quick-access.density"), null);
+    delete dom.window.document.documentElement.dataset.density;
+  });
+
+  it("row ⋯ menu closes on an outside click, on Escape and after choosing an item", async () => {
+    dom.window.localStorage.setItem("athyper.shell.quick-access.view.v2", JSON.stringify({ show: "all" }));
+    await act(async () => root.render(<ShellChrome applicationName="Neon" tenantId="tenant-alpha" tenantLabel="Tenant Alpha" accountLabel="User One" navigation={navigation}><section><h1>Invoices</h1></section></ShellChrome>));
+    await click(host.querySelector('button[data-slot="quick-access"]')!);
+    const panel = document.body.querySelector<HTMLElement>("#athyper-quick-access")!;
+    const menu = panel.querySelector<HTMLDetailsElement>(".a-panel-row__menu")!;
+    menu.open = true;
+    await act(async () => document.body.dispatchEvent(new dom.window.MouseEvent("pointerdown", { bubbles: true })));
+    assert.equal(menu.open, false);
+    menu.open = true;
+    await act(async () => menu.querySelector("summary")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    assert.equal(menu.open, false);
+    assert.ok(document.body.querySelector("#athyper-quick-access"), "Escape closes the menu, not the panel");
+    menu.open = true;
+    await click(menu.querySelector("div > button")!);
+    assert.equal(panel.querySelectorAll(".a-panel-row").length, 0);
   });
 });

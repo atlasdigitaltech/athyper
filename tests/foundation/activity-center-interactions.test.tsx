@@ -76,22 +76,24 @@ describe("shell activity center", () => {
     assert.equal(document.activeElement, inbox);
   });
 
-  it("counts recent work on its section chip and makes clearing recoverable", async () => {
+  it("counts recent work in the scope row and makes clearing recoverable", async () => {
+    // Show all: the recent item here is a workspace page (Records is the default).
+    dom.window.localStorage.setItem("athyper.shell.quick-access.view.v2", JSON.stringify({ show: "all" }));
     await act(async () => root.render(<ShellChrome applicationName="Neon" tenantId="tenant-alpha" tenantLabel="Tenant Alpha" accountLabel="User One" navigation={navigation}><section><h1>Dashboard</h1></section></ShellChrome>));
 
     await click(host.querySelector<HTMLButtonElement>('button[data-slot="quick-access"]')!);
     const panel = document.body.querySelector<HTMLElement>('#athyper-quick-access')!;
-    // Records and pages share one Recent list; the section chip carries the count.
-    assert.match(panel.textContent ?? "", /Recent1/);
+    // Records and pages share one Recent list; the count is in the scope row, as in Notifications.
+    assert.match(panel.querySelector(".a-panel-context")?.textContent ?? "", /1 recent/);
     assert.match(panel.textContent ?? "", /Core Accounting/);
 
-    await click(Array.from(panel.querySelectorAll("button")).find((button) => button.textContent === "Clear all recent")!);
+    await click(panel.querySelector('button[aria-label="Clear all recent"]')!);
     assert.ok(Array.from(panel.querySelectorAll("button")).some((button) => button.textContent === "Cancel"));
-    await click(Array.from(panel.querySelectorAll("button")).find((button) => button.textContent === "Clear all")!);
+    await click(panel.querySelector('button[aria-label^="Clear all recent: "]')!);
     assert.match(panel.textContent ?? "", /Recent history cleared/);
 
     await click(Array.from(panel.querySelectorAll("button")).find((button) => button.textContent === "Undo")!);
-    assert.match(panel.textContent ?? "", /Recent1/);
+    assert.match(panel.querySelector(".a-panel-context")?.textContent ?? "", /1 recent/);
     assert.match(panel.textContent ?? "", /Core Accounting/);
   });
 });

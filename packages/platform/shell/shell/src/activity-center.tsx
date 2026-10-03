@@ -4,7 +4,6 @@ import {
   Maximize2Icon,
   MessageSquareIcon,
   FileTextIcon,
-  MoreHorizontalIcon,
   ChevronDownIcon,
   BellIcon,
   CheckIcon,
@@ -26,6 +25,7 @@ import {
   PanelTabs,
   PanelContextRow,
   PanelEmptyState,
+  PanelRowMenu,
   Button,
 } from "@athyper/platform-ui";
 import * as React from "react";
@@ -553,16 +553,10 @@ export function ActivityNotificationRow({
         {error ? <span role="alert">{error}</span> : null}
       </div>
       {onDismiss || (item.unread && onMarkRead) ? (
-        <details
-          className="athyper-activity-row__menu a-panel-row__menu"
-          onKeyDown={(event) => {
-            if (event.key === "Escape") event.currentTarget.open = false;
-          }}
+        <PanelRowMenu
+          className="athyper-activity-row__menu"
+          label={intl.message("activity.actionsFor", { title: item.title })}
         >
-          <summary aria-label={intl.message("activity.actionsFor", { title: item.title })}>
-            <MoreHorizontalIcon size={18} aria-hidden="true" />
-          </summary>
-          <div>
             {item.unread && onMarkRead ? (
               <Button
                 variant="ghost"
@@ -581,8 +575,7 @@ export function ActivityNotificationRow({
                 {groupSize > 1 ? intl.message("activity.dismissGroup", { count: groupSize }) : intl.message("activity.dismiss")}
               </Button>
             ) : null}
-          </div>
-        </details>
+        </PanelRowMenu>
       ) : null}
     </article>
   );

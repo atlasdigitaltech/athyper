@@ -612,10 +612,16 @@ input:is([type="date"],[type="datetime-local"]):read-only::-webkit-calendar-pick
 .a-context-panel .a-panel-tabs button[role="tab"] { overflow-wrap:anywhere; min-block-size:var(--a-touch-target); }
 .a-panel-toolbar :is(button,a) { min-block-size:var(--a-touch-target); }
 
+/* Panel chip row: a section or view chip group, then the panel's one bulk action at the end.
+   Shared by Notifications, Inbox and Quick access; no band, so the list stays the focus. */
+.a-panel-chip-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--a-space-2) var(--a-space-3);margin-top:var(--a-space-2)}
+
 /* Grouped panel list: one surface with sticky group bands (label, count) and divided
    rows. Shared by Notifications, Inbox and Quick access in the panel and on full pages. */
 .a-panel-list{display:grid;min-inline-size:0}
-.a-panel-list__group>header{position:sticky;inset-block-start:0;z-index:1;display:flex;align-items:center;gap:var(--a-space-2);padding:var(--a-space-2) var(--a-density-panel-gutter);background:var(--a-selection-subtle);color:var(--a-foreground)}
+/* A scroll area with top padding sets --a-panel-scroll-padding-top so a stuck band covers it
+   (otherwise rows show through the strip above the band while scrolling). */
+.a-panel-list__group>header{position:sticky;inset-block-start:calc(-1 * var(--a-panel-scroll-padding-top, 0px));z-index:1;display:flex;align-items:center;gap:var(--a-space-2);padding:var(--a-space-2) var(--a-density-panel-gutter);background:var(--a-selection-subtle);color:var(--a-foreground)}
 .a-panel-list__group+.a-panel-list__group>header{border-block-start:var(--a-border-width) solid var(--a-border)}
 .a-panel-list__group>header strong{overflow:hidden;font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-strong);text-overflow:ellipsis;white-space:nowrap}
 .a-panel-list__group>header span{color:var(--a-muted-foreground);font-size:var(--a-font-size-sm);font-variant-numeric:tabular-nums}
@@ -656,7 +662,9 @@ input:is([type="date"],[type="datetime-local"]):read-only::-webkit-calendar-pick
 .a-panel-row__menu>summary{display:grid;place-items:center;inline-size:var(--a-density-icon-button);block-size:var(--a-density-icon-button);border-radius:var(--a-radius-md);color:var(--a-muted-foreground);cursor:pointer;list-style:none}
 .a-panel-row__menu>summary::-webkit-details-marker{display:none}
 .a-panel-row__menu>summary:hover{background:var(--a-surface);color:var(--a-foreground)}
-.a-panel-row__menu>div{position:absolute;z-index:var(--a-z-popover);inset-inline-end:0;min-inline-size:9rem;display:grid;padding:var(--a-space-1);background:var(--a-surface-raised);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);box-shadow:var(--a-shadow-overlay)}
+.a-panel-row__menu>div{position:absolute;z-index:var(--a-z-popover);inset-inline-end:0;min-inline-size:9rem;display:grid;gap:var(--a-space-1);padding:var(--a-space-1);background:var(--a-surface-raised);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);box-shadow:var(--a-shadow-overlay)}
+/* Menu items: one compact line each, start-aligned, regular weight. */
+.a-panel-row__menu>div>button{justify-content:flex-start;inline-size:100%;min-block-size:var(--a-density-control-height-small);padding-inline:var(--a-space-2);font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-normal);text-align:start;white-space:nowrap}
 .a-panel-row a:focus-visible,.a-panel-row summary:focus-visible,.a-panel-row button:focus-visible{outline:var(--a-focus-width) solid var(--a-focus);outline-offset:2px}
 @media(pointer:coarse){.a-panel-row__menu>summary,.a-panel-row__action{inline-size:var(--a-touch-target);block-size:var(--a-touch-target)}}
 
@@ -693,7 +701,7 @@ input:is([type="date"],[type="datetime-local"]):read-only::-webkit-calendar-pick
 /* A setting is hiding something: a dot on the trigger. */
 .a-settings-menu[data-indicator]>summary::after{content:"";position:absolute;inset-block-start:.35rem;inset-inline-end:.35rem;inline-size:.45rem;block-size:.45rem;border-radius:var(--a-radius-full);background:var(--a-primary);box-shadow:0 0 0 2px var(--a-surface)}
 .a-settings-menu:not([open])>.a-settings-menu__panel{display:none}
-.a-settings-menu__panel{position:absolute;z-index:var(--a-z-popover);inset-inline-end:0;inset-block-start:calc(100% + .25rem);display:grid;gap:var(--a-space-1);min-inline-size:18rem;max-inline-size:min(22rem,calc(100vw - 2rem));padding:.5rem;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface-raised);box-shadow:var(--a-shadow-overlay)}
+.a-settings-menu__panel{position:absolute;z-index:var(--a-z-popover);inset-inline-end:0;inset-block-start:calc(100% + .25rem);display:grid;gap:var(--a-space-1);min-inline-size:20rem;max-inline-size:min(24rem,calc(100vw - 2rem));padding:.5rem;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface-raised);box-shadow:var(--a-shadow-overlay)}
 .a-settings-menu__title{margin:.4rem .5rem;font-weight:var(--a-font-weight-medium)}
 .a-settings-menu__switch{display:flex;align-items:center;justify-content:space-between;gap:.75rem;min-block-size:var(--a-control-height);padding:.5rem .65rem;border:0;border-radius:var(--a-radius-sm);background:transparent;color:inherit;font:inherit;text-align:start;cursor:pointer}
 .a-settings-menu__switch:hover:not(:disabled){background:var(--a-selection-subtle)}
@@ -709,6 +717,7 @@ input:is([type="date"],[type="datetime-local"]):read-only::-webkit-calendar-pick
 .a-settings-menu__switch:disabled .a-settings-menu__track{opacity:.7}
 .a-settings-menu__choice{display:grid;gap:.35rem;padding:.35rem .65rem .5rem}
 .a-settings-menu__choice>span{color:var(--a-muted-foreground);font-size:var(--a-font-size-sm)}
+.a-settings-menu__choice .a-segmented{grid-auto-columns:minmax(max-content,1fr)}
 .a-settings-menu__choice .a-segmented>button{padding-inline:var(--a-space-1)}
 @media(prefers-reduced-motion:reduce){.a-settings-menu__track,.a-settings-menu__track::after{transition:none}}
 

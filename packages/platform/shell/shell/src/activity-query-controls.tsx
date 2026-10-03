@@ -598,7 +598,7 @@ export function ActivityQueryControls({
           </Button>
         </div>
       </ManagementToolbar>
-      <div className="athyper-activity-query__summary">
+      <div className="a-panel-chip-row athyper-activity-query__summary">
       <FilterChipGroup
         label={intl.message("activity.controls.views")}
         value={active?.id ?? ""}

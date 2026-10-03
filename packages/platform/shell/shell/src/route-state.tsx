@@ -3,7 +3,10 @@ import React, {createContext,useContext,useState,useEffect,useMemo,type ReactNod
 import { RecordFooterProvider } from "./record-footer";
 import {deriveBreadcrumbs,type DerivedShellNavigation} from "./core";
 export interface EntityBreadcrumbBinding {readonly basePath:string;readonly sections:readonly {readonly href:string;readonly aliases:readonly string[];readonly label:string}[];}
-export interface RecordBreadcrumbBinding { readonly pathname: string; readonly label: string; readonly recordPath?: string; }
+export interface RecordBreadcrumbBinding { readonly pathname: string; readonly label: string; readonly recordPath?: string;
+  /** The record's readable title and business code from published header metadata, kept
+   * separate for surfaces that lay them out (Quick access); the breadcrumb uses `label`. */
+  readonly title?: string; readonly code?: string; }
 const ShellRouteContext=createContext<{record?:RecordBreadcrumbBinding;setRecord:React.Dispatch<React.SetStateAction<RecordBreadcrumbBinding|undefined>>;pathname:string;binding?:EntityBreadcrumbBinding;setBinding:React.Dispatch<React.SetStateAction<EntityBreadcrumbBinding|undefined>>}|undefined>(undefined);
 export function ShellRouteProvider({pathname,children}:{readonly pathname:string;readonly children:ReactNode}) {
   const [record,setRecord]=useState<RecordBreadcrumbBinding>();
@@ -30,7 +33,8 @@ export function deriveEntityBreadcrumbs(navigation:DerivedShellNavigation,pathna
   return [...deriveBreadcrumbs(navigation,binding.basePath),{label:section.label,href:section.href}];
 }
 
-export function useRecordBreadcrumb(label: string, recordPath?: string) {
+export function useRecordBreadcrumb(label: string, recordPath?: string, identity?: { readonly title?: string; readonly code?: string }) {
   const route=useShellRoute(), pathname=route?.pathname, setRecord=route?.setRecord;
-  useEffect(()=>{ if(!setRecord||!pathname)return; const record={pathname:pathname.split(/[?#]/)[0]!,label,recordPath}; setRecord(record); return()=>setRecord(current=>current===record?undefined:current); },[setRecord,pathname,label,recordPath]);
+  const title=identity?.title?.trim()||undefined, code=identity?.code?.trim()||undefined;
+  useEffect(()=>{ if(!setRecord||!pathname)return; const record={pathname:pathname.split(/[?#]/)[0]!,label,recordPath,...(title?{title}:{}),...(code?{code}:{})}; setRecord(record); return()=>setRecord(current=>current===record?undefined:current); },[setRecord,pathname,label,recordPath,title,code]);
 }

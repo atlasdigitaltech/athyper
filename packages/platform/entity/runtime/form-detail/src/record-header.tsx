@@ -25,7 +25,7 @@ export function EntityRecordHeader({
   readonly technicalDetails?: ReactNode;
   readonly breadcrumbLabel?: string;
 }) {
-  useRecordBreadcrumb(breadcrumbLabel ?? header.code ?? header.title);
+  useRecordBreadcrumb(breadcrumbLabel ?? header.code ?? header.title, undefined, { title: header.title, code: header.code });
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const dismissOutside = (event: Event) => {

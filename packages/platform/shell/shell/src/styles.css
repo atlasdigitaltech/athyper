@@ -125,16 +125,34 @@
 .athyper-quick-access svg{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.75}
 .athyper-quick-access svg[data-filled=true]{fill:currentColor}
 /* Rows, groups and the bordered list come from the shared .a-panel-list/.a-panel-row (platform-ui). */
-.athyper-quick-access__actions{display:flex;align-items:center;justify-content:flex-end;gap:var(--a-space-2);margin-inline-start:auto}
+.athyper-quick-access__actions{display:flex;align-items:center;justify-content:flex-end;gap:var(--a-space-1);margin-inline-start:auto}
+/* One quiet bulk action in every panel chip row (Mark all read, Clear): muted icon and word
+   until hovered; Quick access's confirm keeps the danger tone. */
+:is(.athyper-activity-query__actions,.athyper-quick-access__actions) .a-button--ghost{gap:var(--a-space-1);padding-inline:var(--a-space-2);color:var(--a-muted-foreground);font-size:var(--a-font-size-sm)}
+:is(.athyper-activity-query__actions,.athyper-quick-access__actions) .a-button--ghost:hover:not(:disabled){color:var(--a-foreground)}
+.athyper-quick-access__actions .a-button--danger{padding-inline:var(--a-space-2);font-size:var(--a-font-size-sm)}
+:is(.athyper-activity-query__actions,.athyper-quick-access__actions) .a-button{min-block-size:var(--a-density-control-height-small);block-size:var(--a-density-control-height-small)}
+.athyper-quick-access__confirm{color:var(--a-muted-foreground);font-size:var(--a-font-size-sm);white-space:nowrap}
 .athyper-quick-access__row .a-panel-row__heading a{color:inherit;text-decoration:none}
 .athyper-quick-access__row .a-panel-row__heading a::after{content:"";position:absolute;inset:0;border-radius:inherit}
 .athyper-quick-access__row .a-panel-row__actions{position:relative;z-index:1}
 .athyper-quick-access__row .a-panel-row__action[aria-pressed=true]{color:var(--a-warning)}
+/* Rows by density: the same title, code · entity · module and time in every density.
+   Comfortable: title (up to two lines) with time, then one meta line. Spacious: the meta line
+   may wrap. Compact: one line (title, then meta, then time); the link tooltip has the rest. */
+.athyper-quick-access__row .a-panel-row__copy>p{-webkit-line-clamp:1}
+.athyper-quick-access[data-density=spacious] .athyper-quick-access__row .a-panel-row__copy>p{-webkit-line-clamp:2}
+.athyper-quick-access[data-density=compact] .athyper-quick-access__row{align-items:center}
+.athyper-quick-access[data-density=compact] .athyper-quick-access__row .a-panel-row__copy{display:flex;align-items:baseline;gap:var(--a-space-2);min-inline-size:0}
+.athyper-quick-access[data-density=compact] .athyper-quick-access__row .a-panel-row__heading{display:contents}
+.athyper-quick-access[data-density=compact] .athyper-quick-access__row .a-panel-row__heading>strong{flex:0 1 auto;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.athyper-quick-access[data-density=compact] .athyper-quick-access__row .a-panel-row__copy>p{order:1;flex:1 1 0;min-inline-size:4rem;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.athyper-quick-access[data-density=compact] .athyper-quick-access__row .a-panel-row__heading>time{order:2}
 /* Records carry a tinted type tile; workspace pages stay neutral. */
 .athyper-quick-access__row .a-panel-row__icon[data-kind=record]{background:var(--a-selection-subtle);color:var(--a-selection-subtle-foreground)}
 .athyper-quick-access__row:has(.a-panel-row__heading a:focus-visible){outline:var(--a-focus-width) solid var(--a-focus);outline-offset:-2px}
 .athyper-quick-access__row .a-panel-row__heading a:focus-visible{outline:none}
-.athyper-quick-access__content{flex:1;min-block-size:0;overflow:auto;padding:.55rem .75rem 1rem;scrollbar-width:thin;scrollbar-color:var(--a-border) transparent}
+.athyper-quick-access__content{--a-panel-scroll-padding-top:var(--a-density-stack-gap);flex:1;min-block-size:0;overflow:auto;padding:var(--a-panel-scroll-padding-top) var(--a-density-panel-gutter) calc(var(--a-density-panel-gutter) + var(--a-space-1));scrollbar-width:thin;scrollbar-color:var(--a-border) transparent}
 .athyper-quick-access__undo{position:absolute;z-index:2;right:.75rem;bottom:.85rem;left:.75rem;min-height:2.75rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.58rem .7rem;border:var(--a-border-width) solid color-mix(in srgb,var(--a-success) 25%,var(--a-border));border-radius:var(--a-radius-md);background:var(--a-foreground);color:var(--a-background);box-shadow:var(--a-shadow-overlay);font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-strong);animation:athyper-quick-access-undo-in .18s var(--a-easing) both}
 .athyper-quick-access__undo button{padding:.3rem .48rem;border:0;border-radius:var(--a-radius-sm);background:color-mix(in srgb,var(--a-background) 14%,transparent);color:inherit;font-size:var(--a-font-size-2xs);font-weight:var(--a-font-weight-strong);cursor:pointer}
 .athyper-quick-access__undo button:hover{background:color-mix(in srgb,var(--a-background) 22%,transparent)}
@@ -179,8 +197,8 @@
 .athyper-activity-center{background:var(--a-panel-background);color:var(--a-foreground)}
 .athyper-activity-center button,.athyper-activity-center a{font-family:var(--a-font-sans)}
 .athyper-activity-center svg{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.75}
-:is(.athyper-activity-center__toolbar,.athyper-quick-access__toolbar){min-height:calc(var(--a-control-height) + var(--a-space-3));display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.48rem .75rem;border-bottom:var(--a-border-width) solid var(--a-border);background:var(--a-panel-toolbar-background)}
-.athyper-activity-center__content{flex:1;min-block-size:0;overflow:auto;padding:.55rem .75rem 1rem;scrollbar-width:thin;scrollbar-color:var(--a-border) transparent}
+.athyper-activity-center__toolbar{min-height:calc(var(--a-control-height) + var(--a-space-3));display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.48rem .75rem;border-bottom:var(--a-border-width) solid var(--a-border);background:var(--a-panel-toolbar-background)}
+.athyper-activity-center__content{--a-panel-scroll-padding-top:.55rem;flex:1;min-block-size:0;overflow:auto;padding:var(--a-panel-scroll-padding-top) .75rem 1rem;scrollbar-width:thin;scrollbar-color:var(--a-border) transparent}
 .athyper-activity-center__content .a-drawer__tab-panel{min-height:100%}
 /* Feed: the shared .a-panel-list and .a-panel-row (platform-ui), in the panel and on the
    full page; only activity-specific states (unread, tone, selection, similar) live here. */
@@ -859,7 +877,9 @@
 
 
 /* Search with the View settings menu beside it, like Notifications' search and controls. */
-.athyper-quick-access__search-row { display:flex; align-items:center; gap:var(--a-space-2); margin:var(--a-space-3); }
+.athyper-quick-access__search-row { display:flex; align-items:center; gap:var(--a-space-2); margin:var(--a-space-3) var(--a-space-3) 0; }
+/* Same inset as the activity search and chip row, so all three panels line up. */
+.athyper-quick-access__chips { margin:var(--a-space-2) var(--a-space-3) var(--a-space-3); }
 .athyper-quick-access__search-row > .athyper-quick-access__search { flex:1; min-inline-size:0; }
 
 /* Shared Activity rows: identical hierarchy in drawer and full workspace. */
@@ -937,7 +957,7 @@
 
 
 /* Activity presets and actions share one responsive summary row. */
-.athyper-activity-query__summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--a-space-2) var(--a-space-3);margin-top:var(--a-space-2)}
+/* Layout comes from the shared .a-panel-chip-row (platform-ui). */
 .athyper-activity-query__actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:var(--a-space-2);margin-inline-start:auto}
 :is(.athyper-activity-query__actions,.athyper-quick-access__actions) .a-button{font-weight:var(--a-font-weight-normal,400);white-space:nowrap}
 .athyper-activity-query__action-error{flex-basis:100%;font-size:var(--a-font-size-sm)}
@@ -957,7 +977,7 @@
   .athyper-activity-query__action{inline-size:var(--a-touch-target);min-block-size:var(--a-touch-target);justify-content:center;padding:var(--a-space-2)}
   .athyper-activity-query__badge{position:absolute;inset-block-start:.15rem;inset-inline-end:.15rem}
 }
-@media (width < 40rem){:is(.athyper-activity-center__toolbar,.athyper-quick-access__toolbar){flex-wrap:wrap}}
+@media (width < 40rem){.athyper-activity-center__toolbar{flex-wrap:wrap}}
 .athyper-record-information{position:relative;margin-inline-start:auto}
 .athyper-record-information__trigger{display:inline-flex;align-items:center;gap:var(--a-space-2);min-block-size:var(--a-touch-target);padding:var(--a-space-2);border:0;background:transparent;color:var(--a-muted-foreground);font:inherit;cursor:pointer}
 .athyper-record-information__trigger svg{inline-size:1rem;block-size:1rem}

@@ -130,6 +130,8 @@ const item = {
     recordId: uuid,
     label: { type: "string", maxLength: 240 },
     description: { type: "string", maxLength: 480 },
+    code: { type: "string", maxLength: 240 },
+    status: { type: "string", maxLength: 240 },
     createdAt: { type: "string", format: "date-time" },
   },
 } as const;
