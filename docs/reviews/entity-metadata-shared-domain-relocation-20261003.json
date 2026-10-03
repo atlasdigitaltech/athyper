@@ -1,0 +1,208 @@
+{
+  "schema": "athyper.entity-source-relocation-evidence/1",
+  "date": "2026-10-03",
+  "startingRevision": "05a423b0e812fdac924312c95e039927f07df5b0",
+  "purpose": "Owner-requested shared reference and Contact source relocation; Certification remains in MDG. Pure source-path changes, no metadata semantics or publication changes.",
+  "entities": [
+    {
+      "entityCode": "bank_branch",
+      "from": "metadata/entities/mdg/reference/bank_branch",
+      "to": "metadata/entities/common/reference/bank_branch"
+    },
+    {
+      "entityCode": "bank_identifier",
+      "from": "metadata/entities/mdg/reference/bank_identifier",
+      "to": "metadata/entities/common/reference/bank_identifier"
+    },
+    {
+      "entityCode": "bank_institution",
+      "from": "metadata/entities/mdg/reference/bank_institution",
+      "to": "metadata/entities/common/reference/bank_institution"
+    },
+    {
+      "entityCode": "classification_scheme",
+      "from": "metadata/entities/mdg/reference/classification_scheme",
+      "to": "metadata/entities/common/reference/classification_scheme"
+    },
+    {
+      "entityCode": "commodity_code",
+      "from": "metadata/entities/mdg/reference/commodity_code",
+      "to": "metadata/entities/common/reference/commodity_code"
+    },
+    {
+      "entityCode": "commodity_crosswalk",
+      "from": "metadata/entities/mdg/reference/commodity_crosswalk",
+      "to": "metadata/entities/common/reference/commodity_crosswalk"
+    },
+    {
+      "entityCode": "industry_code",
+      "from": "metadata/entities/mdg/reference/industry_code",
+      "to": "metadata/entities/common/reference/industry_code"
+    },
+    {
+      "entityCode": "industry_crosswalk",
+      "from": "metadata/entities/mdg/reference/industry_crosswalk",
+      "to": "metadata/entities/common/reference/industry_crosswalk"
+    },
+    {
+      "entityCode": "uom",
+      "from": "metadata/entities/mdg/reference/uom",
+      "to": "metadata/entities/common/reference/uom"
+    },
+    {
+      "entityCode": "contact_channel",
+      "from": "metadata/entities/mdg/bp/contact_channel",
+      "to": "metadata/entities/mdg/contact/contact_channel"
+    },
+    {
+      "entityCode": "contact_person",
+      "from": "metadata/entities/mdg/bp/contact_person",
+      "to": "metadata/entities/mdg/contact/contact_person"
+    },
+    {
+      "entityCode": "contact_person_role",
+      "from": "metadata/entities/mdg/bp/contact_person_role",
+      "to": "metadata/entities/mdg/contact/contact_person_role"
+    }
+  ],
+  "files": [
+    {
+      "from": "metadata/entities/mdg/reference/bank_branch/core.json",
+      "to": "metadata/entities/common/reference/bank_branch/core.json",
+      "sha256": "4625747c310c2204d00a64ae2837326b0bc771249bf0f1d9554c50bf384db743"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/bank_branch/entity.json",
+      "to": "metadata/entities/common/reference/bank_branch/entity.json",
+      "sha256": "e3b32eae2fa56789d9ec3c58b873a6c822b954aaf60dc81c2df1b50923e59ff8"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/bank_identifier/core.json",
+      "to": "metadata/entities/common/reference/bank_identifier/core.json",
+      "sha256": "bf17932fb37663cf89589ebd3fceff50a7e927e2e7da19e644d9140a3d85e02c"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/bank_identifier/entity.json",
+      "to": "metadata/entities/common/reference/bank_identifier/entity.json",
+      "sha256": "a504eda3a9244304c9edf8c01c0feb5279f13108628f6bef3b25c61605f7255a"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/bank_institution/core.json",
+      "to": "metadata/entities/common/reference/bank_institution/core.json",
+      "sha256": "4c2a27b8876ee4321ecfc594cf434d8be8c4312ef4d86e77bee13836e29cf581"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/bank_institution/entity.json",
+      "to": "metadata/entities/common/reference/bank_institution/entity.json",
+      "sha256": "5a2667cbc0928b918934a3949686db09647c79348faa75e20884cd3d44813018"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/classification_scheme/core.json",
+      "to": "metadata/entities/common/reference/classification_scheme/core.json",
+      "sha256": "3c4cb4f6fac73ea6399341dbd3f7e5a0ab671e60e2375d1d8c4b1966ca0c7546"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/classification_scheme/entity.json",
+      "to": "metadata/entities/common/reference/classification_scheme/entity.json",
+      "sha256": "dbe8a98021d3451ddd2e9e1ebac00a552e6de0bc1bbe99218c8de841a6101b29"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/commodity_code/core.json",
+      "to": "metadata/entities/common/reference/commodity_code/core.json",
+      "sha256": "420c52360db0e650785d4b4df879d651dc5efa1428a0b29c708a43a46626569b"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/commodity_code/entity.json",
+      "to": "metadata/entities/common/reference/commodity_code/entity.json",
+      "sha256": "097bf3372128191ded2e13207971b9d2d8e86e5402af80db1700ce913b0ee018"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/commodity_crosswalk/core.json",
+      "to": "metadata/entities/common/reference/commodity_crosswalk/core.json",
+      "sha256": "e7f38f61ead59220371e65eb779b0630fa331c11d0f3f1ae0d2e689bcc912f5c"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/commodity_crosswalk/entity.json",
+      "to": "metadata/entities/common/reference/commodity_crosswalk/entity.json",
+      "sha256": "31e522b96195a251a9ea58f2525c0d05f9005a53865b3328f8412a2c8695928b"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/industry_code/core.json",
+      "to": "metadata/entities/common/reference/industry_code/core.json",
+      "sha256": "2f0fd8ca7f7ff222aa5ea7b2f92cf50ce75be5ee84990b44431290d0ec4ca873"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/industry_code/entity.json",
+      "to": "metadata/entities/common/reference/industry_code/entity.json",
+      "sha256": "90422afa236e17900419b9c3ffca20bb14d8efa42f62821e893b2b1b6b5505d7"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/industry_crosswalk/core.json",
+      "to": "metadata/entities/common/reference/industry_crosswalk/core.json",
+      "sha256": "c91da8ad9c112d5b4aa8ae0ddcb98abb86ed18a42d3688661586798de4c83e90"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/industry_crosswalk/entity.json",
+      "to": "metadata/entities/common/reference/industry_crosswalk/entity.json",
+      "sha256": "81e4df8fe62ff5e11245d89f5fafcb9160ad2a3fc331eb2134c0b23fd63318c6"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/uom/core.json",
+      "to": "metadata/entities/common/reference/uom/core.json",
+      "sha256": "dcf53f375ac6d35e4a4af0024be48b5c6bb70cb82c693d06c232708e4101078e"
+    },
+    {
+      "from": "metadata/entities/mdg/reference/uom/entity.json",
+      "to": "metadata/entities/common/reference/uom/entity.json",
+      "sha256": "b92e77f9907188e4f5a20245c9aacfbf3c55b222178442a8a7978f4c712e18f4"
+    },
+    {
+      "from": "metadata/entities/mdg/bp/contact_channel/core.json",
+      "to": "metadata/entities/mdg/contact/contact_channel/core.json",
+      "sha256": "31dc531d0a9b11f3fe4990ac5ca8af915ca3eec828e7dd76ca0b5a9d55764902"
+    },
+    {
+      "from": "metadata/entities/mdg/bp/contact_channel/entity.json",
+      "to": "metadata/entities/mdg/contact/contact_channel/entity.json",
+      "sha256": "67f25ca2b2397b3f82f4341fa737628263ceb5c926b26f793ce1294d64a70ac2"
+    },
+    {
+      "from": "metadata/entities/mdg/bp/contact_person/core.json",
+      "to": "metadata/entities/mdg/contact/contact_person/core.json",
+      "sha256": "0d8a52c2586ca8f113fcdb4d1d84349ec75c382878cb108aef9beaa57fe549d7"
+    },
+    {
+      "from": "metadata/entities/mdg/bp/contact_person/entity.json",
+      "to": "metadata/entities/mdg/contact/contact_person/entity.json",
+      "sha256": "d6d505d82248c2df7795dc32ae151afbccef0b03527a4f0dfcdafa5eb6c82524"
+    },
+    {
+      "from": "metadata/entities/mdg/bp/contact_person/operation.json",
+      "to": "metadata/entities/mdg/contact/contact_person/operation.json",
+      "sha256": "9fab4adcb4f64d8124072f0053ae3db830afb0706293fe6e6ae0dcd58c36a123"
+    },
+    {
+      "from": "metadata/entities/mdg/bp/contact_person_role/core.json",
+      "to": "metadata/entities/mdg/contact/contact_person_role/core.json",
+      "sha256": "02a6dceb15da11dca07cbc8be2975f258227921bdde0d80d386020d957050850"
+    },
+    {
+      "from": "metadata/entities/mdg/bp/contact_person_role/entity.json",
+      "to": "metadata/entities/mdg/contact/contact_person_role/entity.json",
+      "sha256": "f5b114a4f55e92c4e0e2fd8a08f73a03a9602492857a243256d5e0b029d350a8"
+    }
+  ],
+  "validation": {
+    "movedEntities": 12,
+    "movedFiles": 25,
+    "allMovedBytesPreserved": true,
+    "publication": "not performed",
+    "runtime": "unverified",
+    "offlineChecks": {
+      "pnpm metadata:check-layout --baseline": "passed: 175 historical destinations, 202 entity JSON files, 13 profile JSON files; logical references resolve and baseline bytes preserved",
+      "node tooling/scripts/catalog/generate-platform-catalog.mjs --check": "passed: generated catalog unchanged",
+      "git diff --check": "passed",
+      "sourceInventory": "passed: 49 descriptors, 12 moved directories absent from old homes, 25 file hashes unchanged, Certification retained, updated local documentation links resolve"
+    }
+  }
+}
