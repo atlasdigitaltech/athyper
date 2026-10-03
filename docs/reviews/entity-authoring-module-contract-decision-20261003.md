@@ -2,6 +2,14 @@
 
 Date: 3 October 2026. Status: **proposed; owner decision pending**. This document responds to the review of checkpoint `b048b8900`. It authorizes no publication, module creation, permission change or successor mutation.
 
+Owner follow-up, 3 October: **record this decision for later; implementation is deferred**. No option has been selected. Deferral does not approve a temporary module mapping or waive publication gates.
+
+## Studio publication readiness after deferral
+
+Studio remains the required publication path, but this reviewed change set is **not ready to publish**. The three compiled module candidates are unsigned review artifacts, not approved releases; seven candidates need exact predecessor-source reconciliation and five await the deferred contract decision. BP publication additionally requires implemented and qualified projection readers, company/organization scope support, and resolution of the tenant override. Exact releases need the required human authorship and independent review before activation.
+
+Continue independent implementation and evidence preparation without mutating module successors while the decision is deferred. In particular, BP shared projection and scope work can progress as implementation work; it must not activate the DEV cutover. Reassess readiness per exact release and target plane rather than treating source completion or Studio catalog availability as blanket publication readiness.
+
 ## Recommendation and decision
 
 Choose **explicit, separate authoring and domain coordinates** in a versioned shared product contract. Keep Studio's registry foreign key local to Studio; retain domain ownership and each plane's navigation in their own explicit metadata. Do not copy Neon modules into Studio merely to satisfy that foreign key.
