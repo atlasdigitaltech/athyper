@@ -1,0 +1,54 @@
+{
+  "verifiedAt": "2026-10-03T05:58:06.095673+00:00",
+  "retiredFunctions": [
+    {
+      "plane": "studio",
+      "retiredFunctionsRemaining": 0
+    },
+    {
+      "plane": "neon",
+      "retiredFunctionsRemaining": 0
+    },
+    {
+      "plane": "mesh",
+      "retiredFunctionsRemaining": 0
+    }
+  ],
+  "permissions": [
+    {
+      "id": "c419be77-2067-5472-a4f6-b966f75d9f3d",
+      "code": "neon.workforce.address.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    },
+    {
+      "id": "e77ae60a-25f2-57ad-8f6b-91dc8a3d29cd",
+      "code": "neon.workforce.employee.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    },
+    {
+      "id": "d87ae277-ca75-5040-a567-7479c3dde2f3",
+      "code": "neon.workforce.external_worker.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    },
+    {
+      "id": "7d7e0817-5628-5489-a6ae-5d60eddfa661",
+      "code": "neon.workforce.person_address_use.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    },
+    {
+      "id": "01abd0ed-bd7c-5e79-af7f-ac6ed940a3e4",
+      "code": "neon.workforce.person.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    }
+  ]
+}

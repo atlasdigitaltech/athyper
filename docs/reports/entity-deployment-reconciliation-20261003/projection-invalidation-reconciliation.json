@@ -1,0 +1,17 @@
+{
+  "policy": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND authority_schema = 'authz' AND pg_trigger_depth() > 0 AND pg_has_role(SESSION_USER, 'athyper_projection_applier'::name, 'MEMBER'::text))",
+  "receipts": [
+    {
+      "plane": "studio",
+      "auditId": "01a10051-7d0d-71d8-aa6c-03cdb2ed5743"
+    },
+    {
+      "plane": "neon",
+      "auditId": "01a10051-7d47-76fc-84c4-8c0e03f8e10f"
+    },
+    {
+      "plane": "mesh",
+      "auditId": "01a10051-7d81-750f-9138-c08965e95c58"
+    }
+  ]
+}

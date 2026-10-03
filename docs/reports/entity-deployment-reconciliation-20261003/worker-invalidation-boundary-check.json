@@ -1,0 +1,20 @@
+{
+  "transactionsRolledBack": true,
+  "checks": [
+    {
+      "plane": "studio",
+      "directWorkerGlobalInvalidationDenied": true,
+      "message": "permission denied for function fn_authorization_emit_invalidation"
+    },
+    {
+      "plane": "neon",
+      "directWorkerGlobalInvalidationDenied": true,
+      "message": "permission denied for function fn_authorization_emit_invalidation"
+    },
+    {
+      "plane": "mesh",
+      "directWorkerGlobalInvalidationDenied": true,
+      "message": "permission denied for function fn_authorization_emit_invalidation"
+    }
+  ]
+}

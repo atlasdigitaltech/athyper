@@ -1,0 +1,85 @@
+{
+  "verifiedAt": "2026-10-03T05:55:35.533265+00:00",
+  "planes": [
+    {
+      "plane": "studio",
+      "head": {
+        "publication_key": "metadata.entity.principal_profile",
+        "applied_release_id": "01a10053-f44c-7fa3-8f01-808c0eb64830",
+        "source_release_no": 4,
+        "artifact_hash": "5b82e67dab5c6d11e739cdd0cbc9f2da4ede6aca821a338ca17a548825a22b04",
+        "activated_at": "2026-10-03T05:54:24.634869+00:00",
+        "row_version": 4
+      },
+      "release": {
+        "id": "01a10053-f44c-7fa3-8f01-808c0eb64830",
+        "sourceReleaseId": "cf8b7486-a683-4870-b82d-5abb65b49c08",
+        "status": "active",
+        "deploymentId": "01a1004d-7c18-79db-8280-93de314e5e6f"
+      },
+      "retiredBindingPresent": false
+    },
+    {
+      "plane": "neon",
+      "head": {
+        "publication_key": "metadata.entity.principal_profile",
+        "applied_release_id": "01a10053-f671-7794-8e76-42826ab8e781",
+        "source_release_no": 4,
+        "artifact_hash": "83ad7618cfebe093c5b1a985d4d71028b72e30aae3c18d8bff13f6574c6a415b",
+        "activated_at": "2026-10-03T05:54:25.185145+00:00",
+        "row_version": 4
+      },
+      "release": {
+        "id": "01a10053-f671-7794-8e76-42826ab8e781",
+        "sourceReleaseId": "cf8b7486-a683-4870-b82d-5abb65b49c08",
+        "status": "active",
+        "deploymentId": "01a1004d-7c39-7863-b783-062bbe133102"
+      },
+      "retiredBindingPresent": false
+    },
+    {
+      "plane": "mesh",
+      "head": {
+        "publication_key": "metadata.entity.principal_profile",
+        "applied_release_id": "01a10053-f880-7947-abd7-519b9b55eed8",
+        "source_release_no": 4,
+        "artifact_hash": "349f26d42a16e6375cb62da28b35907e6601ef8e6935a66355e7bc8280a16075",
+        "activated_at": "2026-10-03T05:54:25.712815+00:00",
+        "row_version": 4
+      },
+      "release": {
+        "id": "01a10053-f880-7947-abd7-519b9b55eed8",
+        "sourceReleaseId": "cf8b7486-a683-4870-b82d-5abb65b49c08",
+        "status": "active",
+        "deploymentId": "01a1004d-7bf5-7371-b872-ad0fad484e6f"
+      },
+      "retiredBindingPresent": false
+    }
+  ],
+  "deployments": [
+    {
+      "plane": "mesh",
+      "deploymentId": "01a1004d-7bf5-7371-b872-ad0fad484e6f",
+      "artifactHash": "349f26d42a16e6375cb62da28b35907e6601ef8e6935a66355e7bc8280a16075",
+      "status": "activated",
+      "attempt": 2,
+      "acknowledged": true
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a1004d-7c39-7863-b783-062bbe133102",
+      "artifactHash": "83ad7618cfebe093c5b1a985d4d71028b72e30aae3c18d8bff13f6574c6a415b",
+      "status": "activated",
+      "attempt": 2,
+      "acknowledged": true
+    },
+    {
+      "plane": "studio",
+      "deploymentId": "01a1004d-7c18-79db-8280-93de314e5e6f",
+      "artifactHash": "5b82e67dab5c6d11e739cdd0cbc9f2da4ede6aca821a338ca17a548825a22b04",
+      "status": "activated",
+      "attempt": 2,
+      "acknowledged": true
+    }
+  ]
+}

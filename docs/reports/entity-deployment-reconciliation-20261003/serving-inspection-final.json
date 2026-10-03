@@ -1,0 +1,1197 @@
+{
+  "schema": "athyper.entity-serving-qualification-inspection/1",
+  "inspectedAt": "2026-10-03T05:56:35.064Z",
+  "deploymentId": "athyper-dev-source-api-1",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+  },
+  "descriptors": [
+    {
+      "entityCode": "principal",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3",
+          "entity_explain_fields": "5af375c2089cd19640cabdda1931bcd2a6165952f0d4f03e5a6a21bd5237333a",
+          "entity_lookup": "a12f9a1340e41917b49e073b90de6d824706361d0a0f86bf053102bb6925dfcc",
+          "entity_read_record": "ffd18324364241289937d2412058fc848db97e7e61b3d0319e6de7c7b14e0ec8"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "1b1bc1552d006c1f9d94d14f0c22f697a1f7905f4652eeeb4ef92df9c57d2e51"
+        }
+      },
+      "requirements": [
+        {
+          "id": "entity_explain_fields",
+          "version": "1",
+          "manifestHash": "1673e8a7da1468fe16562cabc2e5c7c492f9ea075a9b984b11d4359a64aebe34",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_lookup",
+          "version": "1",
+          "manifestHash": "705d7cc01f698aff22f3ac9b865e351de9f8fea7f9d56f8c54422858765ae052",
+          "inputSchemaHash": "63d92048c5d77d6a77cfa97bfbf99babcd2f93a918734f2f72b5907deec4d862",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_read_record",
+          "version": "1",
+          "manifestHash": "b6d3bb175620135efb7863895bef9b35476b42a9c1278da84ab7b877db5549df",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        }
+      ],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": [
+          {
+            "id": "entity_explain_fields",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_lookup",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_read_record",
+            "required": false,
+            "reason": "support_lookup_failed"
+          }
+        ]
+      }
+    },
+    {
+      "entityCode": "principal_disclosure_probe",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "b5fb7305e878067729fa1e6197da2ba1aef299af584ac5d3873bde39253d9571"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "principal_notification_preference",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3",
+          "entity_explain_fields": "5af375c2089cd19640cabdda1931bcd2a6165952f0d4f03e5a6a21bd5237333a",
+          "entity_lookup": "a12f9a1340e41917b49e073b90de6d824706361d0a0f86bf053102bb6925dfcc",
+          "entity_read_record": "ffd18324364241289937d2412058fc848db97e7e61b3d0319e6de7c7b14e0ec8"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "50ee6de7e66920039f92dcf89abda9cd568dbcf95fff376397ef9f26b058f259"
+        }
+      },
+      "requirements": [
+        {
+          "id": "entity_explain_fields",
+          "version": "1",
+          "manifestHash": "1673e8a7da1468fe16562cabc2e5c7c492f9ea075a9b984b11d4359a64aebe34",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_lookup",
+          "version": "1",
+          "manifestHash": "705d7cc01f698aff22f3ac9b865e351de9f8fea7f9d56f8c54422858765ae052",
+          "inputSchemaHash": "63d92048c5d77d6a77cfa97bfbf99babcd2f93a918734f2f72b5907deec4d862",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_read_record",
+          "version": "1",
+          "manifestHash": "b6d3bb175620135efb7863895bef9b35476b42a9c1278da84ab7b877db5549df",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        }
+      ],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": [
+          {
+            "id": "entity_explain_fields",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_lookup",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_read_record",
+            "required": false,
+            "reason": "support_lookup_failed"
+          }
+        ]
+      }
+    },
+    {
+      "entityCode": "principal_profile",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "511beda408a01befacf74c8d173c578c892b566ee3bc421217fefcaf9e7a2b82"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "principal_ui_profile",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "7605afdf098646c8d7e5e2f9661d9641a08f5cf35fb5381144c00875ac3cdbfa"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "country",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "bbfdd7169bbdc280edfc3bfed17621f7678ed3ad6f6365310ae319add15d3c13"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "currency",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "3fb9d7618d437e01aea7583e5123623d7f32a691e5fda7b8054c095dc94cf8b0"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "language",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "52c1619d1fd2bc34c12d116982331f8afedfd875211add5c29c59a0603956681"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "locale",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "5a9dda25c3eaf0b4666456d6397e3113745cb51b6ba2ca90b52d4a12d24085a9"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "state_region",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "797a3858edd18ecad39710609b88bcf91aa5cde85eaff3e6f323c350b3717604"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "timezone",
+      "plane": "studio",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "studio",
+          "releaseArtifactHash": "b2d79565c8cbe68748ded993c97f9f34768832114b2640eaa602096364884b9a"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "business_partner",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "86229b9bf84cc824283245d25f951df7a352c121adf1d1992c5929029ea9a973"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "business_partner_request",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "4ff375be4ca43d595b6c78c4a43be6814cf2824cfd282930fa947547e9ee09a3"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "address",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "12df6d4ca3bdba3a3a9d0f7e3893811256d216f52281f5536db71ca8a4eb95f2"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "employee",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "beeaf0fc400a910d6a7be14fd2721749b9130912db355e3e1adbc4f579fe3385"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "external_worker",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "5ec0d720862a90dff0cf1156f1112c1536212b17e2e6dc3e700c63e64bc8161d"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "person",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "508b6c020c05e78e810d3643bd1c6901bdf62602d59821d6790c73fc68eb5c6e"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "person_address_use",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "e1f2b3e535fae074994ed20d569ffce20b7049f15f9f951e4964a32b4ef51f4d"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "principal",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3",
+          "entity_explain_fields": "314610cff70a18863813e10ce53d56129ab70a4a692f07da220565a6c86c040d",
+          "entity_lookup": "13306e26c11e1a8111a52549aea24e52052696f2270b89486109a375d867f45d",
+          "entity_read_record": "d9419ad9d1d90cebb69c4f054f06fed995edca2a56c804146ca1a0534621fb4a"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "f1a1a93c5c0582b60405bd272ad97eb90b0407efdb4cc43183b66d3a5680a8f1"
+        }
+      },
+      "requirements": [
+        {
+          "id": "entity_explain_fields",
+          "version": "1",
+          "manifestHash": "1673e8a7da1468fe16562cabc2e5c7c492f9ea075a9b984b11d4359a64aebe34",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_lookup",
+          "version": "1",
+          "manifestHash": "705d7cc01f698aff22f3ac9b865e351de9f8fea7f9d56f8c54422858765ae052",
+          "inputSchemaHash": "63d92048c5d77d6a77cfa97bfbf99babcd2f93a918734f2f72b5907deec4d862",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_read_record",
+          "version": "1",
+          "manifestHash": "b6d3bb175620135efb7863895bef9b35476b42a9c1278da84ab7b877db5549df",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        }
+      ],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": [
+          {
+            "id": "entity_explain_fields",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_lookup",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_read_record",
+            "required": false,
+            "reason": "support_lookup_failed"
+          }
+        ]
+      }
+    },
+    {
+      "entityCode": "principal_disclosure_probe",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "4199ae4983e4d3efdd7d0dcc6001dfaa3e079751125fbeeec87f53d67d4ef259"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "principal_notification_preference",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3",
+          "entity_explain_fields": "314610cff70a18863813e10ce53d56129ab70a4a692f07da220565a6c86c040d",
+          "entity_lookup": "13306e26c11e1a8111a52549aea24e52052696f2270b89486109a375d867f45d",
+          "entity_read_record": "d9419ad9d1d90cebb69c4f054f06fed995edca2a56c804146ca1a0534621fb4a"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "edb8598dfea485e100f715d0613de21042dc01ee46b0326453372ba4d21f6ce4"
+        }
+      },
+      "requirements": [
+        {
+          "id": "entity_explain_fields",
+          "version": "1",
+          "manifestHash": "1673e8a7da1468fe16562cabc2e5c7c492f9ea075a9b984b11d4359a64aebe34",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_lookup",
+          "version": "1",
+          "manifestHash": "705d7cc01f698aff22f3ac9b865e351de9f8fea7f9d56f8c54422858765ae052",
+          "inputSchemaHash": "63d92048c5d77d6a77cfa97bfbf99babcd2f93a918734f2f72b5907deec4d862",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_read_record",
+          "version": "1",
+          "manifestHash": "b6d3bb175620135efb7863895bef9b35476b42a9c1278da84ab7b877db5549df",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        }
+      ],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": [
+          {
+            "id": "entity_explain_fields",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_lookup",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_read_record",
+            "required": false,
+            "reason": "support_lookup_failed"
+          }
+        ]
+      }
+    },
+    {
+      "entityCode": "principal_profile",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "a439ec598993cf50e3d803bfe51c8b0e4f2547ef5f546661d12f3f54c3f9d1bd"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "principal_ui_profile",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "6d9ab6d833d73cbef9cf1dbd53462db8e5732f14c97f38a0f57aa058b952a75a"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "country",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "130dc526eb7c57c083f626ebd1597d28f67a17e3e8ceb94b2d46dbc82be7904e"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "currency",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "340b294f50857ca64bce1abc7cc0176ff915e925c5a61af0b09f47ecd4803e46"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "language",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "b01d2332bb6f71fc8834541544c1edbf84ae13996f2a2c56840d962d4e969608"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "locale",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "13d7206d15199639cac8498f10fad303fb1dd93d43a9a10ef9c9fa1e300d2400"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "state_region",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "d0e14ba207b72940c174b6f60719de3cb67ec616dc9bda5b9045732bc7f53de5"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "timezone",
+      "plane": "neon",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "neon",
+          "releaseArtifactHash": "d8c055e34f37bf37bc55661bccbc90c71005c129ecf31ad519c84be7741b9fb8"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "principal",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3",
+          "entity_explain_fields": "1eb55c59b934957be59477614d7bb65486130e9072fd5956c4cb6c6b2c84b5ff",
+          "entity_lookup": "2686f917d4cae050836468838a2385c09040ef2dfbc80a960216639a19e4584d",
+          "entity_read_record": "ebd16a99c813101744b24dc223354267f44ad797282d51be5edb5ab8fcea2a15"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "4e415513dc9be99e36fbb4d1313c3c71e3c575d36102d21105edb104dde63edb"
+        }
+      },
+      "requirements": [
+        {
+          "id": "entity_explain_fields",
+          "version": "1",
+          "manifestHash": "1673e8a7da1468fe16562cabc2e5c7c492f9ea075a9b984b11d4359a64aebe34",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_lookup",
+          "version": "1",
+          "manifestHash": "705d7cc01f698aff22f3ac9b865e351de9f8fea7f9d56f8c54422858765ae052",
+          "inputSchemaHash": "63d92048c5d77d6a77cfa97bfbf99babcd2f93a918734f2f72b5907deec4d862",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_read_record",
+          "version": "1",
+          "manifestHash": "b6d3bb175620135efb7863895bef9b35476b42a9c1278da84ab7b877db5549df",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        }
+      ],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": [
+          {
+            "id": "entity_explain_fields",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_lookup",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_read_record",
+            "required": false,
+            "reason": "support_lookup_failed"
+          }
+        ]
+      }
+    },
+    {
+      "entityCode": "principal_disclosure_probe",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "ef46d9706fb3bcc03125cd101626be2dd803ee77f1cc3f0d3a98056f317d26b2"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "principal_notification_preference",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3",
+          "entity_explain_fields": "1eb55c59b934957be59477614d7bb65486130e9072fd5956c4cb6c6b2c84b5ff",
+          "entity_lookup": "2686f917d4cae050836468838a2385c09040ef2dfbc80a960216639a19e4584d",
+          "entity_read_record": "ebd16a99c813101744b24dc223354267f44ad797282d51be5edb5ab8fcea2a15"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "45b9a34789bcda765260d452c660cd16076f630e9d62d54c2d1a73006bf7bf19"
+        }
+      },
+      "requirements": [
+        {
+          "id": "entity_explain_fields",
+          "version": "1",
+          "manifestHash": "1673e8a7da1468fe16562cabc2e5c7c492f9ea075a9b984b11d4359a64aebe34",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_lookup",
+          "version": "1",
+          "manifestHash": "705d7cc01f698aff22f3ac9b865e351de9f8fea7f9d56f8c54422858765ae052",
+          "inputSchemaHash": "63d92048c5d77d6a77cfa97bfbf99babcd2f93a918734f2f72b5907deec4d862",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        },
+        {
+          "id": "entity_read_record",
+          "version": "1",
+          "manifestHash": "b6d3bb175620135efb7863895bef9b35476b42a9c1278da84ab7b877db5549df",
+          "inputSchemaHash": "be423ec2aeb7ace20f3db832d8ace8c8724b8748b18c2fe153bbd68fd63d9be7",
+          "resultSchemaHash": "a2c799262a3ce3c19ef5cdd983bf3d12b43ab3c426227091b909dcb7054738c0",
+          "required": false
+        }
+      ],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": [
+          {
+            "id": "entity_explain_fields",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_lookup",
+            "required": false,
+            "reason": "support_lookup_failed"
+          },
+          {
+            "id": "entity_read_record",
+            "required": false,
+            "reason": "support_lookup_failed"
+          }
+        ]
+      }
+    },
+    {
+      "entityCode": "principal_profile",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "b39aa1dba02a48e1c731fc72bc71c6a501a9b82ede62e155b8af82bfd5a45eae"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "principal_ui_profile",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "3638f360a7d33ceaf985f854cc2a9d3ecccf8bdb6588dd890804057276ed2a03"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "country",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "3a115b0fd1074a6e4a4cb5d0b84049beb6cc1024e05a74899ebcb7e5fdecbbf4"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "currency",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "1ce2ba7f7ef73604d5503f0270f786cf9b39c3d9c044332a5276233a5dd35765"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "language",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "a8e18a12a92fa6b45a1e108f144f719309a0074c027bba98a298b89f6480f57c"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "locale",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "f173fc9457aa8e75c9978eb6aa3c7548719d11d79950c58b1dda5763d2677ade"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "state_region",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "408823d3496c3370f64d46073db78ab86ae64f61b34904983139e8963aa7b3eb"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    },
+    {
+      "entityCode": "timezone",
+      "plane": "mesh",
+      "binding": {
+        "valid": true,
+        "unavailableManifests": [],
+        "adapterVersions": {
+          "entity-host": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+        },
+        "target": {
+          "deploymentId": "athyper-dev-source-api-1",
+          "configurationRevision": "2e01cbacef679ec16dacad3edf711be508c146abe9f34dabc97a00a787786bcb",
+          "plane": "mesh",
+          "releaseArtifactHash": "f5d40702fb443c030474fcc41ccf57071c5b4df06e449c962f1ce61c19ba307a"
+        }
+      },
+      "requirements": [],
+      "readiness": {
+        "ready": true,
+        "available": [],
+        "unavailable": []
+      }
+    }
+  ],
+  "failures": []
+}

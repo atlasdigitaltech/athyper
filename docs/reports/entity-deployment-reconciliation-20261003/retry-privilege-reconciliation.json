@@ -1,0 +1,15 @@
+{
+  "auditId": "01a10053-b209-71c5-902e-6c61776095e5",
+  "role": "athyper_definer_publication",
+  "policies": [
+    "CREATE POLICY athyper_definer_publication_p_18 ON control.policy_definition FOR SELECT TO athyper_definer_publication USING (tenant_id = shared.current_tenant_id_soft() AND entity_type = 'metadata.publication');",
+    "CREATE POLICY athyper_definer_publication_p_19 ON control.policy_definition FOR UPDATE TO athyper_definer_publication USING (tenant_id = shared.current_tenant_id_soft() AND entity_type = 'metadata.publication') WITH CHECK (tenant_id = shared.current_tenant_id_soft() AND entity_type = 'metadata.publication');",
+    "CREATE POLICY athyper_definer_publication_p_20 ON control.policy_rule FOR SELECT TO athyper_definer_publication USING (EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = 'metadata.publication'));",
+    "CREATE POLICY athyper_definer_publication_p_21 ON control.policy_rule FOR UPDATE TO athyper_definer_publication USING (EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = 'metadata.publication')) WITH CHECK (EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = 'metadata.publication'));"
+  ],
+  "functions": [
+    "control.publication_policy_enrollment_is_active(uuid, text, uuid, uuid)",
+    "publication.fn_human_execution_context(uuid)",
+    "publication.fn_coordinated_deployment_recovery_source(uuid, text)"
+  ]
+}

@@ -3232,6 +3232,13 @@
           "reason": "Preserve administrative global catalog invalidation through the definer without admitting global rows for tenant application sessions.",
           "using": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, 'athyperadmin'::name, 'MEMBER'::text))",
           "check": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, 'athyperadmin'::name, 'MEMBER'::text))"
+        },
+        {
+          "relation": "event.authorization_invalidation_outbox",
+          "command": "ALL",
+          "reason": "Published global authorization projections emit invalidation within their authorized mutation trigger; projection appliers cannot directly emit arbitrary global invalidations.",
+          "using": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND authority_schema = 'authz' AND pg_trigger_depth() > 0 AND pg_has_role(SESSION_USER, 'athyper_projection_applier'::name, 'MEMBER'::text))",
+          "check": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND authority_schema = 'authz' AND pg_trigger_depth() > 0 AND pg_has_role(SESSION_USER, 'athyper_projection_applier'::name, 'MEMBER'::text))"
         }
       ]
     },
@@ -4942,7 +4949,8 @@
         "public",
         "publication",
         "shared",
-        "snapshot"
+        "snapshot",
+        "control"
       ],
       "tables": [
         {
@@ -5065,6 +5073,20 @@
             "INSERT",
             "SELECT"
           ]
+        },
+        {
+          "relation": "control.policy_definition",
+          "privileges": [
+            "SELECT",
+            "UPDATE"
+          ]
+        },
+        {
+          "relation": "control.policy_rule",
+          "privileges": [
+            "SELECT",
+            "UPDATE"
+          ]
         }
       ],
       "functions": [
@@ -5077,7 +5099,10 @@
         "shared.current_tenant_id()",
         "shared.current_tenant_id_soft()",
         "snapshot.fn_compute_entity_release_artifact_hash(uuid, uuid, uuid, text, text, text, jsonb)",
-        "shared.uuidv7()"
+        "shared.uuidv7()",
+        "control.publication_policy_enrollment_is_active(uuid, text, uuid, uuid)",
+        "publication.fn_human_execution_context(uuid)",
+        "publication.fn_coordinated_deployment_recovery_source(uuid, text)"
       ],
       "policies": [
         {
@@ -5195,6 +5220,32 @@
           "command": "INSERT",
           "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
           "check": "(tenant_id = shared.current_tenant_id_soft())"
+        },
+        {
+          "relation": "control.policy_definition",
+          "command": "SELECT",
+          "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
+          "using": "(tenant_id = shared.current_tenant_id_soft() AND entity_type = 'metadata.publication')"
+        },
+        {
+          "relation": "control.policy_definition",
+          "command": "UPDATE",
+          "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
+          "using": "(tenant_id = shared.current_tenant_id_soft() AND entity_type = 'metadata.publication')",
+          "check": "(tenant_id = shared.current_tenant_id_soft() AND entity_type = 'metadata.publication')"
+        },
+        {
+          "relation": "control.policy_rule",
+          "command": "SELECT",
+          "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
+          "using": "(EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = 'metadata.publication'))"
+        },
+        {
+          "relation": "control.policy_rule",
+          "command": "UPDATE",
+          "reason": "Read and lock the exact current-tenant publication approval during an authorized deployment retry; non-login function owner only.",
+          "using": "(EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = 'metadata.publication'))",
+          "check": "(EXISTS (SELECT 1 FROM control.policy_definition d WHERE d.id = policy_definition_id AND d.tenant_id = shared.current_tenant_id_soft() AND d.entity_type = 'metadata.publication'))"
         }
       ]
     },

@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-03T05:54:11.955Z",
+  "httpStatus": 200,
+  "result": {
+    "status": "deployment_recovery_queued",
+    "policy": {
+      "id": "2c4419af-4511-422a-913d-c4770dca2f44",
+      "version": 1,
+      "hash": "d036d19fed5d37a4924c3f7a65aaff7127770991ca3bbd194d4cf38345ce333d"
+    },
+    "targets": [
+      {
+        "deploymentId": "01a1004d-7bf5-7371-b872-ad0fad484e6f",
+        "targetPlane": "mesh"
+      },
+      {
+        "deploymentId": "01a1004d-7c18-79db-8280-93de314e5e6f",
+        "targetPlane": "studio"
+      },
+      {
+        "deploymentId": "01a1004d-7c39-7863-b783-062bbe133102",
+        "targetPlane": "neon"
+      }
+    ],
+    "jobs": [
+      "athyper-f80ee87eb0b3489e8274077a909c745e0cfc77531e7aeb4ab670839ccd632a7e",
+      "athyper-8e58fe8bd95f211b0bfa962bef90f4d4b7f6ff5cf4e9bd4889e481181a8fa0cd",
+      "athyper-a97f82bffeed24f6a1c636dff6c37ca9c9fa9f511976bfd27dcd35c76178b4d1"
+    ]
+  }
+}

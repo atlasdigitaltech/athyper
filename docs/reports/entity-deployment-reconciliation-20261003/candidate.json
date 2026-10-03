@@ -328,66 +328,10 @@
       }
     }
   },
-  "permissionCatalogReconciliation": [
-    {
-      "id": "c419be77-2067-5472-a4f6-b966f75d9f3d",
-      "canonicalCode": "neon.workforce.address.read",
-      "riskTier": "high",
-      "requiresMfa": true,
-      "status": "published",
-      "updatedAt": null,
-      "desiredRiskTier": "low",
-      "desiredRequiresMfa": false
-    },
-    {
-      "id": "e77ae60a-25f2-57ad-8f6b-91dc8a3d29cd",
-      "canonicalCode": "neon.workforce.employee.read",
-      "riskTier": "high",
-      "requiresMfa": true,
-      "status": "published",
-      "updatedAt": null,
-      "desiredRiskTier": "low",
-      "desiredRequiresMfa": false
-    },
-    {
-      "id": "d87ae277-ca75-5040-a567-7479c3dde2f3",
-      "canonicalCode": "neon.workforce.external_worker.read",
-      "riskTier": "high",
-      "requiresMfa": true,
-      "status": "published",
-      "updatedAt": null,
-      "desiredRiskTier": "low",
-      "desiredRequiresMfa": false
-    },
-    {
-      "id": "7d7e0817-5628-5489-a6ae-5d60eddfa661",
-      "canonicalCode": "neon.workforce.person_address_use.read",
-      "riskTier": "high",
-      "requiresMfa": true,
-      "status": "published",
-      "updatedAt": null,
-      "desiredRiskTier": "low",
-      "desiredRequiresMfa": false
-    },
-    {
-      "id": "01abd0ed-bd7c-5e79-af7f-ac6ed940a3e4",
-      "canonicalCode": "neon.workforce.person.read",
-      "riskTier": "high",
-      "requiresMfa": true,
-      "status": "published",
-      "updatedAt": null,
-      "desiredRiskTier": "low",
-      "desiredRequiresMfa": false
-    }
-  ],
   "liveMutationsPerformed": true,
   "testsExecuted": true,
-  "candidateStatus": "three_signed_targets_recovery_owner_review_pending",
-  "requiredGates": [
-    "Independent Platform Owner approval of exact recovery proposal 2c4419af-4511-422a-913d-c4770dca2f44, hash d036d19fed5d37a4924c3f7a65aaff7127770991ca3bbd194d4cf38345ce333d; Admin proposal is recorded",
-    "Execute approved recovery through shared worker workflow and verify three target activation heads",
-    "Remove exactly pinned retired routines/triggers after metadata replacement, preserving business model and data; verify serving readiness"
-  ],
+  "candidateStatus": "deployment_reconciled_and_serving_ready",
+  "requiredGates": [],
   "preservation": [
     "Business tables, columns, foreign keys and data",
     "Declared operation and field permissions",
@@ -426,14 +370,19 @@
     "metadataSourceChanges": 1,
     "metadataTargetPublications": 3,
     "permissionCatalogRows": 5,
-    "installedRetiredFunctionInstances": 11,
-    "installedRetiredTriggerInstances": 8
+    "installedRetiredFunctionInstances": 0,
+    "installedRetiredTriggerInstances": 0,
+    "activatedTargets": 3,
+    "removedRetiredFunctionInstances": 11,
+    "removedRetiredTriggerInstances": 8,
+    "servingDescriptors": 40,
+    "readyDescriptors": 40
   },
   "deploymentObservation": {
     "mode": "DEV source bind mount with tsx/Next development reload",
     "apiContainer": "athyper-dev-source-api-1",
-    "apiDockerHealth": "unhealthy",
-    "note": "Source-mounted API reloads changes. Source release 4 dispatched and all three artifacts signed. Initial target attempts failed before staging; UUID dependency corrected and rollback-only staging passed. No target activation yet. Control API restarted for diagnostic logging."
+    "apiDockerHealth": "healthy",
+    "note": "All three target heads activated and acknowledged. Live serving inspection: 40 descriptors, 40 ready, no failures. Browser user acceptance was not performed."
   },
   "filesSha256": {
     "admin-proposal.json": "30f2c4a7575dcd7a673f5149e1c70dfdb5d80aae555b43e366fdaa245a144344",
@@ -508,47 +457,12 @@
     "Owner approved atomic policy replacement: ac759a18-720e-4fd4-89da-4ce3283b955d active; 454002c1-716b-429c-bc60-ddc1781b7272 retired",
     "Published release cf8b7486-a683-4870-b82d-5abb65b49c08 number 4, compiled and signed three target artifacts",
     "Aligned approved-source function ownership and restored UUID allocation for publication/runtime-meta function owners with audit receipts",
-    "Installed shared recovery support for the original policy instance while retaining wildcard compatibility, earliest original attempts, artifact pins, independent approval and scope checks"
+    "Installed shared recovery support for the original policy instance while retaining wildcard compatibility, earliest original attempts, artifact pins, independent approval and scope checks",
+    "Recorded independent Owner recovery approval and activated the exact recovery policy",
+    "Restored trigger-only global invalidation for authorized projection workers and scoped retry approval read/lock dependencies; audited receipts retained",
+    "Recovered all three exact signed artifacts, activated release 4 and recorded target acknowledgements",
+    "Removed 11 pinned obsolete functions and 8 pinned triggers after activation; no CASCADE or business model/data changes"
   ],
-  "currentReviewState": {
-    "changeSet": {
-      "id": "82c2050c-898b-4f97-b46c-bb14f3a63662",
-      "tenantId": null,
-      "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
-      "entityCode": "principal_profile",
-      "branchCode": "publication.successor.entity-framework-cleanup-20261003",
-      "status": "approved",
-      "revision": 3,
-      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
-      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
-      "reviewedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
-      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693"
-    },
-    "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
-    "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730",
-    "targets": [
-      {
-        "plane": "studio",
-        "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
-        "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730"
-      },
-      {
-        "plane": "neon",
-        "contractHash": "bc26e37b4d75d0448d7dc25efb04fca580aa5f7b6949df4b46993fa99c7b45b4",
-        "descriptorHash": "43b5a1d097b429fc326d435388f982f8e6dff6d1cb295c4a8e006fa6609b7c41"
-      },
-      {
-        "plane": "mesh",
-        "contractHash": "bff1b650be0fc4144347e6d942c52060304a92f126a57ecf1d097ee579386d23",
-        "descriptorHash": "1c6177b7ae5c65c38f8e06982f268dcf72f55e58192158c924fcdccb57c5b3cc"
-      }
-    ],
-    "tests": {
-      "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
-      "passed": true,
-      "results": []
-    }
-  },
   "testingAuthorization": "Owner explicitly allowed required publication/deployment checks; unrelated suites remain excluded.",
   "requiredChecks": {
     "nativeContractValidation": {
@@ -556,7 +470,12 @@
       "declaredCases": 0,
       "note": "The persisted graph contains no contract test cases; this is not behavioral coverage."
     },
-    "servingInspection": "Failed on all three planes: installed record owner access contains the retired sourceAuthority binding.",
+    "servingInspection": {
+      "passed": true,
+      "descriptors": 40,
+      "ready": 40,
+      "failures": []
+    },
     "relationshipPreflight": {
       "passed": true,
       "planes": [
@@ -599,6 +518,22 @@
         "neon"
       ],
       "rolledBack": true
+    },
+    "fullNativeStage": {
+      "passed": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "rolledBack": true
+    },
+    "workerDirectGlobalInvalidation": {
+      "denied": true,
+      "planes": [
+        "studio",
+        "neon",
+        "mesh"
+      ]
     }
   },
   "initialCompiler": {
@@ -660,5 +595,154 @@
     "version": 1,
     "hash": "d036d19fed5d37a4924c3f7a65aaff7127770991ca3bbd194d4cf38345ce333d",
     "status": "pending_approval"
+  },
+  "recoveryActivation": {
+    "at": "2026-10-03T05:47:05.526Z",
+    "httpStatus": 200,
+    "id": "2c4419af-4511-422a-913d-c4770dca2f44",
+    "version": 1,
+    "hash": "d036d19fed5d37a4924c3f7a65aaff7127770991ca3bbd194d4cf38345ce333d",
+    "status": "active"
+  },
+  "completionEvidence": [
+    "activation-verification.json",
+    "retired-linkage-removal.json",
+    "serving-inspection-final.json",
+    "final-state-verification.json"
+  ],
+  "completedAt": "2026-10-03T05:58:06.096093+00:00",
+  "permissionCatalogBeforeReconciliation": [
+    {
+      "id": "c419be77-2067-5472-a4f6-b966f75d9f3d",
+      "canonicalCode": "neon.workforce.address.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    },
+    {
+      "id": "e77ae60a-25f2-57ad-8f6b-91dc8a3d29cd",
+      "canonicalCode": "neon.workforce.employee.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    },
+    {
+      "id": "d87ae277-ca75-5040-a567-7479c3dde2f3",
+      "canonicalCode": "neon.workforce.external_worker.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    },
+    {
+      "id": "7d7e0817-5628-5489-a6ae-5d60eddfa661",
+      "canonicalCode": "neon.workforce.person_address_use.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    },
+    {
+      "id": "01abd0ed-bd7c-5e79-af7f-ac6ed940a3e4",
+      "canonicalCode": "neon.workforce.person.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    }
+  ],
+  "permissionCatalogCurrent": [
+    {
+      "id": "c419be77-2067-5472-a4f6-b966f75d9f3d",
+      "code": "neon.workforce.address.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    },
+    {
+      "id": "e77ae60a-25f2-57ad-8f6b-91dc8a3d29cd",
+      "code": "neon.workforce.employee.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    },
+    {
+      "id": "d87ae277-ca75-5040-a567-7479c3dde2f3",
+      "code": "neon.workforce.external_worker.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    },
+    {
+      "id": "7d7e0817-5628-5489-a6ae-5d60eddfa661",
+      "code": "neon.workforce.person_address_use.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    },
+    {
+      "id": "01abd0ed-bd7c-5e79-af7f-ac6ed940a3e4",
+      "code": "neon.workforce.person.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published"
+    }
+  ],
+  "reviewedSourceSnapshot": {
+    "changeSet": {
+      "id": "82c2050c-898b-4f97-b46c-bb14f3a63662",
+      "tenantId": null,
+      "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+      "entityCode": "principal_profile",
+      "branchCode": "publication.successor.entity-framework-cleanup-20261003",
+      "status": "approved",
+      "revision": 3,
+      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "reviewedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693"
+    },
+    "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+    "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730",
+    "targets": [
+      {
+        "plane": "studio",
+        "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+        "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730"
+      },
+      {
+        "plane": "neon",
+        "contractHash": "bc26e37b4d75d0448d7dc25efb04fca580aa5f7b6949df4b46993fa99c7b45b4",
+        "descriptorHash": "43b5a1d097b429fc326d435388f982f8e6dff6d1cb295c4a8e006fa6609b7c41"
+      },
+      {
+        "plane": "mesh",
+        "contractHash": "bff1b650be0fc4144347e6d942c52060304a92f126a57ecf1d097ee579386d23",
+        "descriptorHash": "1c6177b7ae5c65c38f8e06982f268dcf72f55e58192158c924fcdccb57c5b3cc"
+      }
+    ],
+    "tests": {
+      "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+      "passed": true,
+      "results": []
+    }
+  },
+  "currentSourceState": {
+    "status": "published",
+    "revision": 4,
+    "releaseId": "cf8b7486-a683-4870-b82d-5abb65b49c08",
+    "releaseNo": 4
   }
 }

@@ -1,4 +1,4 @@
-ENTITY FRAMEWORK DEPLOYMENT RECONCILIATION — IN PROGRESS
+ENTITY FRAMEWORK DEPLOYMENT RECONCILIATION — COMPLETE
 
 Source correction 141869574 already implemented generic omitted-permission behavior. This turn adds a generic successor relationship-qualification ordering fix and control API operational-error logging. Host build passed. Owner authorized required publication/deployment checks: 6 relationship regression checks, 14 Entity authorization checks, and relationship preflight against all three DEV planes passed. Native contract validation passed with zero declared cases; it is not behavioral coverage.
 
@@ -14,8 +14,14 @@ Worker database reconciliation: aligned the original approved-source reader with
 
 The existing recovery path admitted only wildcard attempts. Shared recovery now also admits the original policy's concrete instance and environment, selects original attempts without absorbing recovery attempts, and retains exact artifact/source pins, tenant boundaries, compiler binding, independent review and acknowledgement checks. Twenty focused recovery checks and host build passed. Actual recovery preflight passed for one source and three targets. No new migration or bespoke script was created.
 
-Admin recovery proposal 2c4419af-4511-422a-913d-c4770dca2f44 is recorded, hash d036d19fed5d37a4924c3f7a65aaff7127770991ca3bbd194d4cf38345ce333d.
+Admin recovery proposal 2c4419af-4511-422a-913d-c4770dca2f44, hash d036d19fed5d37a4924c3f7a65aaff7127770991ca3bbd194d4cf38345ce333d, received independent authenticated Owner approval and was activated. Execution reused the exact signed artifacts and original source approvals. The recovery compiler is 1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3.
 
-Remaining: independent Owner approval of deployment-recovery.json; execute recovery and verify all three activation heads; remove exactly pinned retired routines/triggers after metadata replacement; verify serving readiness. Eleven retired function instances and eight triggers still exist. Private rollback definitions, ownership and ACLs are backed up and hashed. Business tables/columns/FKs/data and historical signatures are preserved. Do not drop with CASCADE, run canonical manifests wholesale, or edit signed artifacts.
+A subsequent full activation exposed missing global projection-invalidation and retry approval-lock dependencies. These were reconciled in the existing bounded non-login database owners, with audit receipts. Global invalidation is admitted for projection workers only inside the existing authorization mutation trigger. Direct worker global emission remains denied on all three planes; ordinary application global invalidation remains denied. Tenant-scoped policy reads and row locks do not grant caller access to policy mutation.
 
-DEV serves this checkout directly. Installed Principal Profile artifacts still carry the retired sourceAuthority binding until recovery activates. Implementation and signing are complete; live activation and runtime acceptance are not claimed. Existing unrelated workflow-maintenance permission errors remain outside this task.
+Completed: release 4 cf8b7486-a683-4870-b82d-5abb65b49c08 is active and acknowledged on Neon, Mesh and Studio. Activation is transactional within each target database, not across the three databases. Failed attempts remain in the deployment ledger. All installed replacement payloads exclude the retired profile-source binding.
+
+Removed exactly 11 retired function instances and 8 triggers after activation. Each definition, owner, ACL and trigger definition was checked against its private backup before removal. No CASCADE, table/column/FK/business-data change, historical signature rewrite or migration was used. Audit and backup hashes are retained in retired-linkage-removal.json.
+
+API container health is healthy. Final live serving inspection: deployment athyper-dev-source-api-1, 40 descriptors, all 40 ready, no failures. Five corrected Neon permission rows are published with low risk and requires_mfa=false; IDs, role/group grants and scopes are preserved. Valid undefined Meta Entity permissions use shared framework behavior on all three planes; explicit permissions and independent scope boundaries remain enforced. Focused checks passed: 6 relationship, 14 authorization, 20 recovery. Host build passed. No broad suite or browser automation was run. Native graph contract validation had zero cases and is not behavioral coverage.
+
+Runtime qualification and activation are verified. Fresh authenticated browser user acceptance was not performed. Existing unrelated workflow-maintenance permission errors remain outside this task. Concurrent unrelated canonical DDL edits were preserved and excluded from this task's commits.
