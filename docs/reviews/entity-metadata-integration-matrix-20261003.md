@@ -4,7 +4,7 @@ Date: 3 October 2026. Static source inventory; effective publication and runtime
 
 Current scope is Entity **View and Edit modes** through the shared Entity Framework. `business_partner_request` is removed from the current plan; intake and case requests are deferred to a later phase. Its existing source, table bindings and controls remain intact. The full JSON matrix retains the original 49-entity source inventory, including pre-move paths and deferred request bindings; the [successor relocation evidence](entity-metadata-shared-domain-relocation-20261003.json) maps moved paths and preserves byte hashes; the table below covers 48 entities in the current plan.
 
-All rows retain platform-owned Studio product-release authorship and independent Platform Owner review as the required publication model. `ownershipModel` below is the separate entity graph property. Split `plane` is not proof of all intended publication targets. The declarations below remain observed source evidence; the [current three-plane coverage decision](entity-metadata-reorganization-plan-20261003.md#three-plane-applicability-and-publication--3-october-2026) requires Neon/Mesh/Studio for all 15 shared references and recommends those targets for Person, Address, Address Link, Person Address Use and all three Contact entities. None is verified published by this inventory.
+All rows retain platform-owned Studio product-release authorship and independent Platform Owner review as the required publication model. `ownershipModel` below is the separate entity graph property. Split `plane` is not proof of all intended publication targets. The declarations below remain observed source evidence; the [current three-plane coverage decision](entity-metadata-reorganization-plan-20261003.md#three-plane-applicability-and-publication--3-october-2026) requires Neon/Mesh/Studio for all 15 shared references and all four `platform/iam/` entities, and recommends those targets for Person, Address, Address Link, Person Address Use and all three Contact entities. None is verified published by this inventory.
 
 | Entity / source home relative to `metadata/entities/` | Graph ownership | Declared native / split planes | Storage | Placement assessment |
 | --- | --- | --- | --- | --- |
@@ -48,10 +48,10 @@ All rows retain platform-owned Studio product-release authorship and independent
 | industry_code — `common/reference/industry_code` | not explicitly declared |  / neon | `shared.industry_code` | referenced supporting entity; standalone navigation intent unresolved |
 | industry_crosswalk — `common/reference/industry_crosswalk` | not explicitly declared |  / neon | `shared.industry_crosswalk` | referenced supporting entity; standalone navigation intent unresolved |
 | uom — `common/reference/uom` | not explicitly declared |  / neon | `shared.uom` | referenced supporting entity; standalone navigation intent unresolved |
-| principal — `platform/iam/principal` | system | studio,neon,mesh /  | `master.principal` | declared placement; retain module identity; target changes follow coverage decision |
-| principal_notification_preference — `platform/iam/principal_notification_preference` | system | studio,neon,mesh /  | `master.principal_notification_preference` | relationship-backed embedded exposure; exclusive embedded-only intent not established |
-| principal_profile — `platform/iam/principal_profile` | system | studio,neon,mesh /  | `master.principal_profile` | relationship-backed embedded exposure; exclusive embedded-only intent not established |
-| principal_ui_profile — `platform/iam/principal_ui_profile` | system | studio,neon,mesh /  | `master.principal_ui_profile` | relationship-backed embedded exposure; exclusive embedded-only intent not established |
+| principal — `platform/iam/principal` | system | studio,neon,mesh /  | `master.principal` | required Neon/Mesh/Studio coverage; self/admin surfaces with published tenant/record scope; activation unverified |
+| principal_notification_preference — `platform/iam/principal_notification_preference` | system | studio,neon,mesh /  | `master.principal_notification_preference` | required Neon/Mesh/Studio coverage; self/admin surfaces with published tenant/record scope; activation unverified |
+| principal_profile — `platform/iam/principal_profile` | system | studio,neon,mesh /  | `master.principal_profile` | required Neon/Mesh/Studio coverage; self/admin surfaces with published tenant/record scope; activation unverified |
+| principal_ui_profile — `platform/iam/principal_ui_profile` | system | studio,neon,mesh /  | `master.principal_ui_profile` | required Neon/Mesh/Studio coverage; self/admin surfaces with published tenant/record scope; activation unverified |
 | employee — `ppl/workforce/employee` | system | neon /  | `master.employee` | declared placement; retain module identity; target changes follow coverage decision |
 | external_worker — `ppl/workforce/external_worker` | system | neon /  | `master.external_worker` | declared placement; retain module identity; target changes follow coverage decision |
 | person — `ppl/workforce/person` | system | neon /  | `master.person` | declared placement; retain module identity; target changes follow coverage decision |
@@ -85,6 +85,20 @@ The nine former `mdg/reference/` lookup entities now live under `common/referenc
 
 ## Three-plane review follow-up
 
-Use the [22-entity coverage table and publication gate](entity-metadata-reorganization-plan-20261003.md#three-plane-applicability-and-publication--3-october-2026) as the current target proposal. It explicitly enumerates all 15 references and seven shared business entities without overwriting observed declarations above. Six references have native three-plane targets; nine references and all seven business entities need target reconciliation. Publication receipts and live behavior remain unverified for all.
+Use the [26-entity coverage table and publication gate](entity-metadata-reorganization-plan-20261003.md#three-plane-applicability-and-publication--3-october-2026) as the current target proposal. It explicitly enumerates all 15 references, four common IAM entities and seven shared business entities without overwriting observed declarations above. Six references and all four IAM entities have native three-plane targets; nine references and all seven business entities need target reconciliation. Publication receipts and live behavior remain unverified for all.
 
 The shared table-product compiler currently rewrites plane-prefixed permission codes and storage coordinates when targeting another plane. Explicit per-target governed permission bindings and verified storage/provider contracts must precede expansion; generated code names are not authorization evidence. Address/Contact operation and owner gaps remain blockers for their affected surfaces. Employee/External Worker/BP coverage is not implicitly expanded, and shared business records are not globally replicated by this plan.
+
+
+## Common IAM coverage — required in all three planes
+
+| Source home | Entity | Required publication targets | Observed native targets | Publication status |
+| --- | --- | --- | --- | --- |
+| `platform/iam/` | `principal` | Neon, Mesh, Studio | Neon, Mesh, Studio | Activation and runtime unverified |
+| `platform/iam/` | `principal_profile` | Neon, Mesh, Studio | Neon, Mesh, Studio | Activation and runtime unverified |
+| `platform/iam/` | `principal_ui_profile` | Neon, Mesh, Studio | Neon, Mesh, Studio | Activation and runtime unverified |
+| `platform/iam/` | `principal_notification_preference` | Neon, Mesh, Studio | Neon, Mesh, Studio | Activation and runtime unverified |
+
+These are common platform entities with one source home each. Three-plane availability is required, not an optional expansion. Preserve server-resolved My Account self scope and separately authorized administrative Principal/child surfaces in every plane. Enforce exact published operation permissions, tenant isolation and locked relationship scope. Availability does not authorize cross-tenant access, automatic data replication, or an Employee dependency for every Principal.
+
+Include all 12 IAM entity/plane combinations in the publication evidence gate, alongside 45 required reference combinations (57 required total). The seven recommended Person/Address/Contact entities add 21 combinations if adopted. Native target declarations alone do not prove storage/provider readiness, reviewed activation or working user flows. No source metadata, permissions, MFA or active releases changed in this documentation update.

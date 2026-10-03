@@ -91,12 +91,17 @@ require Neon, Mesh and Studio publication for all 15 entities under
 `common/reference/`: bank_branch, bank_identifier, bank_institution,
 classification_scheme, commodity_code, commodity_crosswalk, country, currency,
 industry_code, industry_crosswalk, language, locale, state_region, timezone and uom.
+Required common IAM coverage also includes `platform/iam/principal`,
+`principal_profile`, `principal_ui_profile` and `principal_notification_preference`
+in all three planes. Each retains its single source home under `platform/iam/`.
 The same applicability is recommended for person, address, address_link,
 person_address_use, contact_channel, contact_person and contact_person_role.
 Keep their domain homes and tenant/owner scope; three-plane availability does not
 mean global records, automatic replication or unrestricted user access.
 
-Six reference native definitions already declare all three targets. The other
+Six reference native definitions and all four IAM native definitions already
+declare all three targets. IAM self-service and administrative surfaces must
+preserve exact published permissions and server-enforced tenant/record scope. The other
 nine references and the seven business entities currently declare Neon only.
 Declarations do not prove publication. Exact per-target authorization, dependency,
 storage/provider, navigation and operation bindings must be reconciled first;

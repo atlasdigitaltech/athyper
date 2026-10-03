@@ -108,7 +108,7 @@ The latest [grouping and access recommendation](#revised-grouping-and-access-rec
    | Relative source home | Entity group | Count |
    | --- | --- | ---: |
    | `common/reference/` | country, currency, language, locale, state_region, timezone; bank_branch, bank_identifier, bank_institution, classification_scheme, commodity_code, commodity_crosswalk, industry_code, industry_crosswalk, uom | 15 |
-   | `platform/iam/` | principal, principal_profile, principal_ui_profile, principal_notification_preference | 4 |
+   | `platform/iam/` | principal, principal_profile, principal_ui_profile, principal_notification_preference — common to Neon, Mesh and Studio; required three-plane coverage | 4 |
    | `ppl/workforce/` | employee, person, external_worker, workforce | 4 |
    | `mdg/location/` | address, address_link, person_address_use | 3 |
    | `mdg/bp/` | business_partner and its 13 child entities; supplier, supplier_company_profile, customer, customer_company_profile | 18 |
@@ -322,7 +322,7 @@ Final implementation review must distinguish source changes, published releases 
 
 ## Three-plane applicability and publication — 3 October 2026
 
-**Owner-required target: publish all 15 named reference entities to Neon, Mesh and Studio through the shared Entity Framework.** This requirement supersedes any earlier suggestion to retain Neon-only target coverage for these references. This document update records the required outcome; it does not attest that publication has occurred. Source declarations, source folders, catalog placement, deployed storage and active publication are separate evidence.
+**Owner-required target: publish all 15 named reference entities and all four `platform/iam/` entities to Neon, Mesh and Studio through the shared Entity Framework.** This requirement supersedes any earlier suggestion to retain Neon-only target coverage for these references. This document update records the required outcome; it does not attest that publication has occurred. Source declarations, source folders, catalog placement, deployed storage and active publication are separate evidence.
 
 **Recommendation: Person, Address and Contact functionality should also be available in all three planes**, including the seven entities enumerated below. Keep their existing domain homes and tenant/owner scope. Reusable business functionality does not turn personal/contact records into globally shared lookup data. The same definition can support parent-scoped business views and authorized key-user directories through explicit published surfaces. Plane availability does not grant every user access or enable every operation.
 
@@ -347,6 +347,10 @@ Static inspection of current source JSON on 3 October 2026 found the declaration
 | `state_region` | Neon, Mesh, Studio / Neon | Neon, Mesh, Studio | Required; verify existing target delivery |
 | `timezone` | Neon, Mesh, Studio / Neon | Neon, Mesh, Studio | Required; verify existing target delivery |
 | `uom` | No native definition / Neon | Neon, Mesh, Studio | Required reference coverage |
+| `principal` | Neon, Mesh, Studio / No split artifact | Neon, Mesh, Studio | Required common IAM coverage; verify existing target delivery |
+| `principal_profile` | Neon, Mesh, Studio / No split artifact | Neon, Mesh, Studio | Required common IAM coverage; verify existing target delivery |
+| `principal_ui_profile` | Neon, Mesh, Studio / No split artifact | Neon, Mesh, Studio | Required common IAM coverage; verify existing target delivery |
+| `principal_notification_preference` | Neon, Mesh, Studio / No split artifact | Neon, Mesh, Studio | Required common IAM coverage; verify existing target delivery |
 | `person` | Neon / No split artifact | Neon, Mesh, Studio | Recommended shared business coverage |
 | `address` | Neon / Neon | Neon, Mesh, Studio | Recommended shared business coverage |
 | `address_link` | No native definition / Neon | Neon, Mesh, Studio | Recommended; validate eligible owner bindings per plane |
@@ -355,9 +359,9 @@ Static inspection of current source JSON on 3 October 2026 found the declaration
 | `contact_person` | No native definition / Neon | Neon, Mesh, Studio | Recommended; resolve governed operation dependencies |
 | `contact_person_role` | No native definition / Neon | Neon, Mesh, Studio | Recommended; preserve Contact Person parent scope |
 
-The 15 references comprise six native definitions already declaring all three targets and nine split-only definitions declaring Neon. All seven shared business entities currently declare Neon only. These are verified source observations, not live release observations. The frozen inventory JSON and historical release/hash evidence remain unchanged.
+The 15 references comprise six native definitions already declaring all three targets and nine split-only definitions declaring Neon. All four IAM native definitions already declare all three targets. All seven shared business entities currently declare Neon only. These are verified source observations, not live release observations. The frozen inventory JSON and historical release/hash evidence remain unchanged.
 
-Employee, External Worker, the existing Workforce projection, BP and BP children are not automatically added to all planes by this recommendation. They retain their separately reviewed business scope. A shared Address/Contact capability may serve supported owners in each plane without requiring every possible owner entity to exist there. Resolve actual owner and lookup dependencies per target; if a required dependency is unavailable, report a blocked surface rather than inventing it or weakening scope. Principal and its three child native definitions already declare all three planes, with self/admin boundaries still requiring reconciliation. Certification remains a separate unresolved definition-versus-assignment decision.
+Employee, External Worker, the existing Workforce projection, BP and BP children are not automatically added to all planes by this recommendation. They retain their separately reviewed business scope. A shared Address/Contact capability may serve supported owners in each plane without requiring every possible owner entity to exist there. Resolve actual owner and lookup dependencies per target; if a required dependency is unavailable, report a blocked surface rather than inventing it or weakening scope. Principal and its three child entities are required in all three planes. Their native declarations already include these targets, but active delivery and self/admin boundaries still require verification. My Account must resolve the current principal on the server; administrative directory and child access must follow exact published permissions and tenant/record scope in each plane. Common applicability neither grants cross-tenant access nor assumes identical or replicated account/preference records across planes. The optional Employee link does not make Employee a required three-plane entity. Certification remains a separate unresolved definition-versus-assignment decision.
 
 ### Shared-framework findings that must precede target expansion
 
@@ -369,7 +373,7 @@ Employee, External Worker, the existing Workforce projection, BP and BP children
 
 ### Publication completion gate
 
-Maintain one successor evidence row per **entity × target plane**: 45 rows for required references, plus 21 for the recommended shared business scope if adopted. Each row records the source release identity/hash, target artifact hash, source-to-target bindings, dependency resolution, storage/provider readiness, exact authorization and scope, human authorship/independent review, publication/activation receipt, active-release identity and verification result. A missing receipt or unsupported target stays pending/blocked; a partial three-plane rollout is not “published everywhere.”
+Maintain one successor evidence row per **entity × target plane**: 57 required rows (45 for the 15 references and 12 for the four IAM entities), plus 21 for the recommended shared business scope if adopted: 78 rows across 26 entities in total. Each row records the source release identity/hash, target artifact hash, source-to-target bindings, dependency resolution, storage/provider readiness, exact authorization and scope, human authorship/independent review, publication/activation receipt, active-release identity and verification result. A missing receipt or unsupported target stays pending/blocked; a partial three-plane rollout is not “published everywhere.”
 
 Follow the existing shared coordinated-publication path. Platform Admin authors/proposes the product release; Platform Owner independently reviews/approves it for all declared targets. Do not create duplicate tenant-owned source releases or rewrite historical evidence. Retain the existing publication failure/recovery controls and identify any incomplete target explicitly.
 

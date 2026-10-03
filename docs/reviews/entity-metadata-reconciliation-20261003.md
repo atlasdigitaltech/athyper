@@ -26,6 +26,8 @@ The source trace identifies integration points; it does not verify a running Cou
 
 ## Principal and Principal Profile
 
+Required common coverage: `principal`, `principal_profile`, `principal_ui_profile` and `principal_notification_preference` remain under `platform/iam/` and must be published to Neon, Mesh and Studio. All four native definitions already declare those targets; active publication and runtime behavior remain unverified. Include 12 entity/plane evidence rows and verify server-resolved self-service versus administrative access separately in each target, preserving tenant scope and exact published permissions.
+
 Principal's native graph declares `ownershipModel: system`; that is distinct from Studio release ownership. Its runtime authorization uses `tenant.record.v1`, list/read permission `common.identity.principal.read`, tenant-context scope with unresolved values denied, and owner access on `id` with `common.identity.principal.administer`.
 
 Principal explicitly relates `id` to `principal_id`, and `tenant_id` to `tenant_id`, for Principal Profile, notification preferences and UI profile. Its navigation declares Overview/Profile/Notifications/UI Profile in scroll mode. Preserve the exact relationship, cardinality, tenant and server parent-admission semantics.
@@ -148,7 +150,7 @@ The follow-up source relocation also moves nine lookup entities from `mdg/refere
 
 ## Three-plane target reconciliation
 
-The [current coverage decision](entity-metadata-reorganization-plan-20261003.md#three-plane-applicability-and-publication--3-october-2026) requires all 15 listed shared references in Neon, Mesh and Studio and recommends the same applicability for Person, Address, Address Link, Person Address Use, Contact Channel, Contact Person and Contact Person Role. Source inspection found six reference native definitions declaring all three planes; the other nine references are Neon split-only. The seven business entities currently declare Neon only. These observations do not verify publication.
+The [current coverage decision](entity-metadata-reorganization-plan-20261003.md#three-plane-applicability-and-publication--3-october-2026) requires all 15 listed shared references and all four `platform/iam/` entities in Neon, Mesh and Studio and recommends the same applicability for Person, Address, Address Link, Person Address Use, Contact Channel, Contact Person and Contact Person Role. Source inspection found six reference native definitions declaring all three planes; the other nine references are Neon split-only. The seven business entities currently declare Neon only. These observations do not verify publication.
 
 Before expanding targets, correct the shared table-product targeting contract: `targetTableEntityGraph` in `server/packages/planes/studio/meta-entity-authoring/src/authoring/table-product.ts` currently substitutes plane prefixes in operation/surface permission codes and changes runtime-profile storage planes. Resolve exact target permission/policy bindings through governed metadata instead of constructing codes. Verify target storage/provider availability instead of assuming the same table/data exists. Preserve Country's traced integration, Address's governed operations, Contact owner scope, tenant isolation and independent review; do not introduce entity dispatch or MFA changes.
 
