@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
 /** Add the independently signed BP Request collection contract to the existing
  * compiled BP release. This is DEV migration input only; no approval or activation. */
 import { createHash } from "node:crypto";
@@ -23,14 +24,14 @@ const directory = join(
   ".athyper/instances/dev/candidates/business-partner-package",
 );
 const previous = JSON.parse(
-  readFileSync(join(directory, `${previousHash}.json`), "utf8"),
+  readFileSync(resolveSourcePath(join(directory, `${previousHash}.json`)), "utf8"),
 );
 if (sha256(canonicalBytes(previous)) !== previousHash)
   throw Error("PREVIOUS_CANDIDATE_CHANGED");
 const root = process.env.ATHYPER_LOCAL_PREVIEW_ROOT ?? "/athyper/local-preview";
 const store = new DurableGraphPreviewStore(
   join(root, "meta-entity.sqlite"),
-  readFileSync(join(root, "public.pem"), "utf8"),
+  readFileSync(resolveSourcePath(join(root, "public.pem")), "utf8"),
 );
 const preview = store.read({
   tenantId,
@@ -49,7 +50,7 @@ if (
 )
   throw Error("REQUEST_COLLECTION_CONTRACT_INVALID");
 const password = readFileSync(
-  join(homedir(), ".athyper/instances/dev/secrets/postgres-password"),
+  resolveSourcePath(join(homedir(), ".athyper/instances/dev/secrets/postgres-password")),
   "utf8",
 ).trim();
 const host = execFileSync(
@@ -127,7 +128,7 @@ const bindings = operationBindings.map((binding: any) => ({
 descriptor.source = { entity_id: preview.id, release_hash: preview.graphHash };
 descriptor.operation_scope_bindings = bindings;
 const catalog = JSON.parse(
-  readFileSync("metadata/review/registry-catalog.json", "utf8"),
+  readFileSync(resolveSourcePath("metadata/review/registry-catalog.json"), "utf8"),
 );
 const keys = (kind: string) =>
   new Set(
@@ -161,13 +162,13 @@ const {
 } = previous.compiledRuntime.release;
 const currentRequestCore = JSON.parse(
   readFileSync(
-    "metadata/entities/business_partner_request/core.json",
+    resolveSourcePath("metadata/entities/business_partner_request/core.json"),
     "utf8",
   ),
 );
 const currentRequestOperation = JSON.parse(
   readFileSync(
-    "metadata/entities/business_partner_request/operation.json",
+    resolveSourcePath("metadata/entities/business_partner_request/operation.json"),
     "utf8",
   ),
 );

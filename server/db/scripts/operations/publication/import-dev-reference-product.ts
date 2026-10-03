@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
+import { discoverWorkspace, resolveSourcePath } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { parseTableEntityProduct } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
-import { resolve, relative } from "node:path";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
@@ -33,13 +34,12 @@ async function main() {
     throw Error(
       "Use --product=<metadata product> [--check|--confirm=DEV-IMPORT-REFERENCE-DRAFT]",
     );
-  const root = resolve("metadata/entities");
-  const path = resolve(directory);
-  const child = relative(root, path);
-  if (!child || child.startsWith("..") || child.includes("/"))
-    throw Error("Expected a direct shared metadata product directory");
+  const workspace = discoverWorkspace(resolve("metadata"));
+  const path = resolveSourcePath(resolve(directory));
+  if (![...workspace.entities.values()].some((source) => source.directory === path && source.descriptor.definition))
+    throw Error("Expected a declared entity source directory with a definition");
   const definition = JSON.parse(
-    readFileSync(resolve(path, "definition.json"), "utf8"),
+    readFileSync(resolveSourcePath(resolve(path, "definition.json")), "utf8"),
   );
   const product =
     definition.schema === "athyper.table-entity-product/1"
@@ -47,11 +47,11 @@ async function main() {
           definition,
           existsSync(resolve(path, "localization.json"))
             ? JSON.parse(
-                readFileSync(resolve(path, "localization.json"), "utf8"),
+                readFileSync(resolveSourcePath(resolve(path, "localization.json")), "utf8"),
               )
             : undefined,
         )
-      : loadReferenceProduct(path);
+      : loadReferenceProduct(resolveSourcePath(path));
   const inspected = JSON.parse(
     execFileSync("docker", ["inspect", "athyper-dev-db-1"], {
       encoding: "utf8",
@@ -86,7 +86,7 @@ async function main() {
         host: network.IPAddress,
         database: "athyper_studio",
         user: env.POSTGRES_USER,
-        password: readFileSync(secret, "utf8").trim(),
+        password: readFileSync(resolveSourcePath(secret), "utf8").trim(),
         max: 1,
       }),
     }),
@@ -126,7 +126,7 @@ async function main() {
           await sql
             .raw(
               readFileSync(
-                "server/db/migrations/20260926_entity_execution_binding_storage.sql",
+                resolveSourcePath("server/db/migrations/20260926_entity_execution_binding_storage.sql"),
                 "utf8",
               ),
             )
@@ -142,7 +142,7 @@ async function main() {
           await sql
             .raw(
               readFileSync(
-                "server/db/migrations/20260926_studio_entity_operation_bindings.sql",
+                resolveSourcePath("server/db/migrations/20260926_studio_entity_operation_bindings.sql"),
                 "utf8",
               ),
             )

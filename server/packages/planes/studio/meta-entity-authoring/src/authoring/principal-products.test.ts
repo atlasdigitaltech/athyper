@@ -1,10 +1,11 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { NOTIFICATION_EVENTS } from "@athyper/server-contract-publication";
 import { compileTableEntityProduct, parseTableEntityProduct } from "./table-product.js";
 
 const source = (entity: string) =>
-  JSON.parse(readFileSync(new URL(`../../../../../../../metadata/entities/${entity}/definition.json`, import.meta.url), "utf8"));
+  JSON.parse(readFileSync(resolveSourcePath(new URL(`../../../../../../../metadata/entities/${entity}/definition.json`, import.meta.url)), "utf8"));
 const bindings = (entity: string, suffix: string) =>
   (source(entity).definition.surfaceFieldBindings as { bindingKey: string; displayConfig?: { lookup?: { options: { value: string; label: string }[] } } }[])
     .filter((binding) => binding.bindingKey.endsWith(suffix));
@@ -45,7 +46,7 @@ it("empty one-record sections publish a short title with the message as its desc
 });
 
 it("empty-state texts are translated from the localization sidecar for every plane", () => {
-  const localization = JSON.parse(readFileSync(new URL("../../../../../../../metadata/entities/principal/localization.json", import.meta.url), "utf8"));
+  const localization = JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../../../metadata/entities/principal/localization.json", import.meta.url)), "utf8"));
   const product = parseTableEntityProduct(source("principal"), localization);
   for (const plane of ["studio", "neon", "mesh"] as const) {
     const { artifact } = compileTableEntityProduct(product, plane);
@@ -58,7 +59,7 @@ it("empty-state texts are translated from the localization sidecar for every pla
 });
 
 it("the UI profile entity is labelled for people, with translations, not derived from its code", () => {
-  const localization = JSON.parse(readFileSync(new URL("../../../../../../../metadata/entities/principal_ui_profile/localization.json", import.meta.url), "utf8"));
+  const localization = JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../../../metadata/entities/principal_ui_profile/localization.json", import.meta.url)), "utf8"));
   const product = parseTableEntityProduct(source("principal_ui_profile"), localization);
   for (const plane of ["studio", "neon", "mesh"] as const) {
     const { artifact } = compileTableEntityProduct(product, plane);

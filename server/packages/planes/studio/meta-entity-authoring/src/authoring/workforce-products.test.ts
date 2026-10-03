@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import {
@@ -12,10 +13,10 @@ import {
 const source = (entity: string) =>
   JSON.parse(
     readFileSync(
-      new URL(
+      resolveSourcePath(new URL(
         `../../../../../../../metadata/entities/${entity}/definition.json`,
         import.meta.url,
-      ),
+      )),
       "utf8",
     ),
   );

@@ -8,7 +8,15 @@ const bundle = outputs.find((file) => file.path.endsWith(".js"))!.text;
 const bundledCss = outputs.find((file) => file.path.endsWith(".css"))?.text ?? "";
 async function mount(page: import("@playwright/test").Page, width = 900, empty = false, path = "/", query = "", direction: "ltr" | "rtl" = "ltr") { const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message)); await page.setViewportSize({ width, height: 700 }); await page.route("https://shell.test/**", (route) => route.request().url().endsWith("/api/auth/session/context") ? route.fallback() : route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="${direction === "rtl" ? "ar" : "en"}" dir="${direction}"><head><style>${bundledCss}\n${css}</style></head><body><div id="root"></div></body></html>` })); await page.goto(`https://shell.test${path}${empty ? "?empty" : query}`); await page.evaluate(bundle); if (empty) await expect(page.getByRole("heading", { name: "No applications available" })).toBeVisible(); else if (path === "/forbidden") await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible(); else if (path.startsWith("/app/")) await expect(page.locator(".athyper-shell__breadcrumbs li").first()).toBeAttached(); else await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible(); expect(errors).toEqual([]); }
 
-test("desktop shell exposes landmarks, sidebar profile, context, and logout", async ({ page }) => { await mount(page); await expect(page.getByRole("complementary", { name: "Application navigation" })).toBeVisible(); await expect(page.getByRole("navigation", { name: "Home and workspaces" })).toBeVisible(); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAttribute("href", "/home"); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAccessibleName("Athyper Test home"); await expect(page.locator(".athyper-shell__mobile-brand")).toBeHidden(); await expect(page.getByRole("main")).toBeVisible(); await expect(page.getByRole("contentinfo")).toContainText("Atlas Digital Technology Solutions"); await page.keyboard.press("Tab"); await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused(); await expect(page.locator("[data-slot]" )).toHaveCount(6); await expect(page.locator(".athyper-shell__business-context")).toContainText("Tenant Alpha"); await expect(page.locator(".athyper-shell__topbar")).not.toContainText("User One"); await page.getByRole("group").filter({ has: page.getByText("User One", { exact: true }) }).locator("summary").click(); await expect(page.getByText("user.one@example.test", { exact: true })).toBeVisible(); await expect(page.getByText("Organization", { exact: true })).toBeVisible(); await expect(page.getByText("Working company", { exact: true })).toBeVisible(); await expect(page.getByRole("link", { name: "Sign out" })).toBeVisible(); const results = await new AxeBuilder({ page }).analyze(); expect(results.violations.filter((item) => item.impact === "critical")).toEqual([]); });
+/** Quick access is an app bar panel: a top-bar button on wider screens, the More menu on phones. */
+async function openQuickAccess(page: import("@playwright/test").Page, compact = false) {
+  if (compact) {
+    await page.getByRole("button", { name: "More application actions" }).click();
+    await page.locator("#shell-action-overflow").getByRole("button", { name: "Quick access", exact: true }).click();
+  } else await page.locator(".athyper-shell__actions").getByRole("button", { name: "Quick access", exact: true }).click();
+  return page.getByRole("dialog", { name: "Quick access" });
+}
+test("desktop shell exposes landmarks, sidebar profile, context, and logout", async ({ page }) => { await mount(page); await expect(page.getByRole("complementary", { name: "Application navigation" })).toBeVisible(); await expect(page.getByRole("navigation", { name: "Home and workspaces" })).toBeVisible(); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAttribute("href", "/home"); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAccessibleName("Athyper Test home"); await expect(page.locator(".athyper-shell__mobile-brand")).toBeHidden(); await expect(page.getByRole("main")).toBeVisible(); await expect(page.getByRole("contentinfo")).toContainText("Atlas Digital Technology Solutions"); await page.keyboard.press("Tab"); await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused(); await expect(page.locator("[data-slot]" )).toHaveCount(7); await expect(page.locator(".athyper-shell__business-context")).toContainText("Tenant Alpha"); await expect(page.locator(".athyper-shell__topbar")).not.toContainText("User One"); await page.getByRole("group").filter({ has: page.getByText("User One", { exact: true }) }).locator("summary").click(); await expect(page.getByText("user.one@example.test", { exact: true })).toBeVisible(); await expect(page.getByText("Organization", { exact: true })).toBeVisible(); await expect(page.getByText("Working company", { exact: true })).toBeVisible(); await expect(page.getByRole("link", { name: "Sign out" })).toBeVisible(); const results = await new AxeBuilder({ page }).analyze(); expect(results.violations.filter((item) => item.impact === "critical")).toEqual([]); });
 test("persistent desktop brand stays fixed while only the navigation rail collapses", async ({ page }) => {
   await mount(page, 1280, false, "/", "?desktopBrand");
   const brand = page.locator(".athyper-shell__desktop-brand");
@@ -83,8 +91,8 @@ test("RTL mobile profile and quick-access overlays remain inside the viewport", 
   expect(profile && Math.round(profile.x + profile.width)).toBe(414);
 
   await page.locator(".athyper-shell__profile").evaluate((details) => { (details as HTMLDetailsElement).open = false; });
-  await page.getByRole("button", { name: "Open recent items" }).click();
-  const quickAccess = page.getByRole("dialog", { name: "Quick access" });
+  await page.keyboard.press("Escape");
+  const quickAccess = await openQuickAccess(page, true);
   await expect(quickAccess).toBeVisible();
   await expect.poll(async () => Math.round((await quickAccess.boundingBox())?.x ?? -1)).toBe(0);
   const surface = await quickAccess.boundingBox();
@@ -132,9 +140,9 @@ test("RTL shell reserves the right rail and keeps the mobile header within the v
   expect(narrowGeometry.overflowWidth).toBe(narrowGeometry.viewportWidth);
   expect(narrowGeometry.visibleChildrenFit).toBe(true);
 });
-test("collapse preference keeps a badged home link, initials, and delayed navigation context", async ({ page }) => { await mount(page, 1440); await page.getByRole("button", { name: "Collapse navigation" }).click(); await expect(page.locator(".athyper-shell")).toHaveAttribute("data-collapsed", "true"); await expect(page.getByRole("button", { name: "Expand navigation" })).toBeVisible(); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAccessibleName("Athyper Test home"); await expect(page.locator(".athyper-shell__rail-brand > .athyper-shell__brand-copy")).toHaveCSS("width", "1px"); await expect(page.locator(".athyper-shell__rail-brand .athyper-shell__plane-badge")).toHaveCSS("display", "grid"); await expect(page.locator(".athyper-shell__profile-summary")).toHaveCSS("width", "1px"); await expect(page.locator(".athyper-shell__profile > summary > .athyper-shell__avatar")).toHaveText("UO"); await page.locator(".athyper-shell__rail-brand").hover(); await expect(page.locator(".athyper-shell__rail-brand .athyper-shell__brand-tooltip")).toHaveCSS("opacity", "1"); await page.getByRole("link", { name: "Finance" }).hover(); await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Finance"); const favourites=page.getByRole("button",{name:"Open favourites"});await favourites.hover();await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Quick accessFavourites");const recent=page.getByRole("button",{name:"Open recent items"});await recent.focus();await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Quick accessRecent items");expect(await page.evaluate(() => localStorage.getItem("athyper.shell.collapsed"))).toBe("true"); expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain("User One"); });
-test("quick access tracks recent work and promotes it to persistent favourites", async ({ page }) => { await mount(page, 1280); const recentTrigger = page.getByRole("button", { name: "Open recent items" }); await recentTrigger.click(); const panel = page.getByRole("dialog", { name: "Quick access" }); await expect(panel).toBeVisible(); await expect(panel.getByPlaceholder("Search recent work")).toBeFocused(); await panel.getByRole("button", { name: /Pages/ }).click(); await expect(panel.getByRole("link", { name: /General Ledger/ })).toBeVisible(); await panel.getByRole("button", { name: "Add General Ledger to favourites" }).click(); await panel.getByRole("tab", { name: /Favourites/ }).click(); await expect(panel.getByRole("link", { name: /General Ledger/ })).toBeVisible(); await panel.getByRole("button", { name: "Close quick access" }).click(); await expect(recentTrigger).toBeFocused(); await recentTrigger.click(); await panel.getByRole("tab", { name: /Favourites/ }).click(); await expect(panel.getByRole("link", { name: /General Ledger/ })).toBeVisible(); expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain("User One"); });
-test("quick access becomes a full-width mobile surface and returns focus to navigation", async ({ page }) => { await mount(page, 390); const menu = page.getByRole("button", { name: "Open navigation" }); await menu.click(); await page.getByRole("button", { name: "Open recent items" }).click(); const panel = page.getByRole("dialog", { name: "Quick access" }); await expect(panel).toBeVisible(); await expect.poll(async () => (await panel.boundingBox())?.x).toBe(0); const bounds = await panel.boundingBox(); expect(bounds?.width).toBe(390); await page.keyboard.press("Escape"); await expect(menu).toBeFocused(); await expect(page.locator(".athyper-shell")).toHaveAttribute("data-quick-access-open", "false"); });
+test("collapse preference keeps a badged home link, initials, and delayed navigation context", async ({ page }) => { await mount(page, 1440); await page.getByRole("button", { name: "Collapse navigation" }).click(); await expect(page.locator(".athyper-shell")).toHaveAttribute("data-collapsed", "true"); await expect(page.getByRole("button", { name: "Expand navigation" })).toBeVisible(); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAccessibleName("Athyper Test home"); await expect(page.locator(".athyper-shell__rail-brand > .athyper-shell__brand-copy")).toHaveCSS("width", "1px"); await expect(page.locator(".athyper-shell__rail-brand .athyper-shell__plane-badge")).toHaveCSS("display", "grid"); await expect(page.locator(".athyper-shell__profile-summary")).toHaveCSS("width", "1px"); await expect(page.locator(".athyper-shell__profile > summary > .athyper-shell__avatar")).toHaveText("UO"); await page.locator(".athyper-shell__rail-brand").hover(); await expect(page.locator(".athyper-shell__rail-brand .athyper-shell__brand-tooltip")).toHaveCSS("opacity", "1"); await page.getByRole("link", { name: "Finance" }).hover(); await expect(page.locator(".athyper-shell__navigation-peek")).toContainText("Finance"); await expect(page.locator(".athyper-shell__quick-actions")).toHaveCount(0);expect(await page.evaluate(() => localStorage.getItem("athyper.shell.collapsed"))).toBe("true"); expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain("User One"); });
+test("quick access tracks recent work and promotes it to persistent favourites", async ({ page }) => { await mount(page, 1280); const recentTrigger = page.locator(".athyper-shell__actions").getByRole("button", { name: "Quick access", exact: true }); await recentTrigger.click(); const panel = page.getByRole("dialog", { name: "Quick access" }); await expect(panel).toBeVisible(); await expect.poll(async () => { const docked = await panel.boundingBox(); return Math.round((docked?.x ?? 0) + (docked?.width ?? 0)); }).toBe(1280); await expect(panel).toHaveClass(/a-tool-panel/); await expect(panel.locator('[data-panel-action="pin"]')).toHaveCount(0); await expect(panel.getByPlaceholder("Search recent work")).toBeFocused(); await panel.getByRole("button", { name: /Pages/ }).click(); await expect(panel.getByRole("link", { name: /General Ledger/ })).toBeVisible(); await panel.getByRole("button", { name: "Add General Ledger to favourites" }).click(); await panel.getByRole("tab", { name: /Favourites/ }).click(); await expect(panel.getByRole("link", { name: /General Ledger/ })).toBeVisible(); await panel.getByRole("button", { name: "Close quick access" }).click(); await expect(recentTrigger).toBeFocused(); await recentTrigger.click(); await panel.getByRole("tab", { name: /Favourites/ }).click(); await expect(panel.getByRole("link", { name: /General Ledger/ })).toBeVisible(); expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain("User One"); });
+test("quick access becomes a full-width mobile surface from More and returns focus there", async ({ page }) => { await mount(page, 390); const panel = await openQuickAccess(page, true); await expect(panel).toBeVisible(); await expect.poll(async () => (await panel.boundingBox())?.x).toBe(0); const bounds = await panel.boundingBox(); expect(bounds?.width).toBe(390); await page.keyboard.press("Escape"); await expect(page.getByRole("button", { name: "More application actions" })).toBeFocused(); await expect(page.locator(".athyper-shell")).toHaveAttribute("data-quick-access-open", "false"); });
 test("empty entitlements render a stable accessible recovery state", async ({ page }) => { await mount(page, 900, true); await expect(page.getByRole("heading", { name: "No applications available" })).toBeVisible(); await expect(page.getByRole("link", { name: "Switch context" })).toHaveAttribute("href", "/select-context"); });
 test("a directly requested forbidden route never renders protected page content", async ({ page }) => { await mount(page, 900, false, "/forbidden"); await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible(); await expect(page.getByRole("heading", { name: "Dashboard" })).toHaveCount(0); });
 test("context switch posts only the selected tenant to the same-origin session route", async ({ page }) => { let body = ""; await page.route("https://shell.test/api/auth/session/context", async (route) => { body = route.request().postData() ?? ""; await route.fulfill({ status: 204 }); }); await mount(page, 900, false, "/", "?multi"); await page.locator("summary[aria-label*='Switch business context']").click(); await page.getByRole("button", { name: /Tenant Beta/ }).click(); await expect.poll(() => body).toBe('{"tenantId":"tenant-beta"}'); });
@@ -150,12 +158,11 @@ test("Escape belongs to the active surface after switching from search", async (
   await expect(page.getByRole("link", { name: "Home", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toBeFocused();
-  await menu.click();
-  await page.getByRole("button", { name: "Open recent items" }).click();
+  await openQuickAccess(page, true);
   await expect(page.getByPlaceholder("Search recent work")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Quick access" })).toHaveCount(0);
-  await expect(menu).toBeFocused();
+  await expect(page.getByRole("button", { name: "More application actions" })).toBeFocused();
 });
 
 test("compact overflow retains Search, Inbox, Notifications and Atlas with unknown counts", async ({ page }) => {
@@ -234,13 +241,14 @@ test("mobile modal surfaces contain focus and restore background access", async 
     await page.keyboard.press(step % 2 ? "Shift+Tab" : "Tab");
     expect(await rail.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   }
-  await page.getByRole("button", { name: "Open recent items" }).click();
-  const quick = page.getByRole("dialog", { name: "Quick access" });
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeFocused();
+  const quick = await openQuickAccess(page, true);
   await expect(quick).toHaveAttribute("aria-modal", "true");
   await page.keyboard.press("Shift+Tab");
   expect(await quick.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   await page.keyboard.press("Escape");
-  await expect(menu).toBeFocused();
+  await expect(page.getByRole("button", { name: "More application actions" })).toBeFocused();
   expect(await page.locator("main").evaluate((element) => Boolean(element.closest("[inert]")))).toBe(false);
   await expect(rail).toHaveAttribute("inert", "");
   expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
@@ -290,8 +298,7 @@ test("blocked storage and viewport adaptations do not break shell preferences", 
   await mount(page, 1280);
   await page.getByRole("button", { name: "Collapse navigation" }).click();
   await expect(page.locator(".athyper-shell")).toHaveAttribute("data-collapsed", "true");
-  await page.getByRole("button", { name: "Open recent items" }).click();
-  await expect(page.getByRole("dialog", { name: "Quick access" })).toBeVisible();
+  await expect(await openQuickAccess(page)).toBeVisible();
 });
 
 test("automatic compact navigation does not persist an explicit preference", async ({ page }) => {
@@ -304,18 +311,17 @@ test("automatic compact navigation does not persist an explicit preference", asy
 test("Recent records visits before opening and Favorites remain scoped and access-filtered", async ({ page }) => {
   await mount(page, 1280);
   expect(await page.evaluate(() => Object.entries(localStorage).some(([key, value]) => key.startsWith("athyper.shell.quick-access.v2:") && value.includes("General Ledger")))).toBe(true);
-  await page.getByRole("button", { name: "Open recent items" }).click();
-  const quick = page.getByRole("dialog", { name: "Quick access" });
+  const quick = await openQuickAccess(page);
   await quick.getByRole("button", { name: /Pages/ }).click();
   await quick.getByRole("button", { name: "Add General Ledger to favourites" }).click();
   await page.goto("https://shell.test/?plane=AnotherPlane"); await page.evaluate(bundle);
-  await page.getByRole("button", { name: "Open favourites" }).click();
+  await (await openQuickAccess(page)).getByRole("tab", { name: /Favourites/ }).click();
   await expect(page.getByRole("dialog", { name: "Quick access" }).getByRole("link", { name: /General Ledger/ })).toHaveCount(0);
   await page.goto("https://shell.test/?empty"); await page.evaluate(bundle);
-  await page.getByRole("button", { name: "Open favourites" }).click();
+  await (await openQuickAccess(page)).getByRole("tab", { name: /Favourites/ }).click();
   await expect(page.getByRole("dialog", { name: "Quick access" }).getByRole("link", { name: /General Ledger/ })).toHaveCount(0);
   await page.goto("https://shell.test/"); await page.evaluate(bundle);
-  await page.getByRole("button", { name: "Open favourites" }).click();
+  await (await openQuickAccess(page)).getByRole("tab", { name: /Favourites/ }).click();
   await expect(page.getByRole("dialog", { name: "Quick access" }).getByRole("link", { name: /General Ledger/ })).toBeVisible();
 });
 
@@ -355,8 +361,7 @@ test("persistent desktop brand wordmark inverts to white under dark theme", asyn
 
 test("quick access uses shared panel chrome, one empty state and keyboard tabs", async ({page})=>{
   await mount(page,1280);
-  await page.getByRole("button",{name:"Open recent items"}).click();
-  const panel=page.getByRole("dialog",{name:"Quick access"});
+  const panel=await openQuickAccess(page);
   const search=panel.getByRole("searchbox",{name:"Filter quick access items"});
   await expect(panel.locator(".a-search-field")).toHaveCSS("height","40px");
   await expect(search).toHaveCSS("font-size","14px");
@@ -379,11 +384,9 @@ test("quick access uses shared panel chrome, one empty state and keyboard tabs",
   await expect(favourites).toHaveAttribute("aria-selected","true");
   await expect(panel.getByRole("heading",{name:"No favourites yet"})).toBeVisible();
   await expect(panel.locator(".athyper-quick-access__summary")).toHaveCount(0);
-  const before=await panel.locator(".a-panel-header__icon").innerHTML();
   await page.keyboard.press("End");
   await expect(recent).toBeFocused();
   await expect(recent).toHaveAttribute("aria-selected","true");
-  expect(await panel.locator(".a-panel-header__icon").innerHTML()).not.toBe(before);
   await expect(panel.locator(".a-panel-header")).toBeVisible();
   await expect(panel.locator(".a-panel-tabs")).toBeVisible();
 });

@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
+from source_workspace import discover_workspace
 from verify_live_schema import connection_environment
 
 ROOT = Path(__file__).resolve().parents[3] / 'metadata/entities'
@@ -26,8 +27,8 @@ def codes(value):
             yield from codes(item)
 
 expected = set()
-for path in [*ROOT.rglob('*.json'), *(ROOT.parent / 'profiles').rglob('*.json')]:
-    artifact = json.loads(path.read_text())
+for document in discover_workspace(ROOT.parent)['documents']:
+    artifact = document['value']
     if artifact.get('artifactType'):
         expected.update(codes(artifact))
 sql = "SELECT canonical_code FROM authz.permission WHERE status='published' AND canonical_code = ANY(ARRAY[" + ','.join("'" + code.replace("'", "''") + "'" for code in sorted(expected)) + "])"

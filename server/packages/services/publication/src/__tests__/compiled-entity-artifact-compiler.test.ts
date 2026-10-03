@@ -1,5 +1,7 @@
+import { fileURLToPath } from "node:url";
+import { discoverWorkspace, resolveSourcePath } from "../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { createHash } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { compileCompiledEntityArtifacts, compiledEntityRuntimeProjection } from "../compiled-entity-artifact-compiler.js";
 
@@ -83,15 +85,11 @@ describe("compiled entity artifact compiler", () => {
       "../../../../../../metadata/entities/",
       import.meta.url,
     );
-    const paths = await jsonPaths(root);
-    const documents = await Promise.all(paths.map(async (path) => ({
-      path,
-      value: JSON.parse((await readFile(new URL(path, root))).toString("utf8")) as Record<string, unknown>,
-    })));
+    const documents = discoverWorkspace(fileURLToPath(new URL("../", root))).documents.map(({ref, value}) => ({path: ref, value}));
     const artifactDocuments = documents.filter(({ value }) =>
       ["core", "operation", "presentation_surface", "presentation_section", "flow"].includes(String(value.artifactType)),
     );
-    const registryCatalog = JSON.parse(await readFile(new URL("../review/registry-catalog.json", root), "utf8"));
+    const registryCatalog = JSON.parse(await readFile(resolveSourcePath(new URL("../review/registry-catalog.json", root)), "utf8"));
     const registryEntries = registryCatalog.entries as readonly { kind: string; key: string }[];
     const releaseDocument = documents.find(({ path }) => path === "business_partner/release.json")!.value;
     const result = compileCompiledEntityArtifacts({
@@ -139,12 +137,4 @@ function normalize(value: unknown): unknown {
 }
 function without(value: Record<string, unknown>, keys: readonly string[]) {
   return Object.fromEntries(Object.entries(value).filter(([key]) => !keys.includes(key)));
-}
-async function jsonPaths(root: URL, prefix = ""): Promise<string[]> {
-  const entries = await readdir(new URL(prefix, root), { withFileTypes: true });
-  const nested = await Promise.all(entries.map(async (entry) => {
-    const path = `${prefix}${entry.name}`;
-    return entry.isDirectory() ? jsonPaths(root, `${path}/`) : entry.isFile() && path.endsWith(".json") ? [path] : [];
-  }));
-  return nested.flat();
 }

@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
 /** CATL DEV only: carry forward the active release and replace only certificate presentation metadata. */
 import {readFileSync,statSync} from 'node:fs';
 import {execFileSync,spawnSync} from 'node:child_process';
@@ -15,7 +16,7 @@ if(process.argv.includes('--prepare')) {
   const documents = captured.payload.artifacts.map(artifact => {
     const content = artifact.content;
     return keys.includes(content.artifactKey)
-      ? JSON.parse(readFileSync(join(process.cwd(),'metadata/entities',content.artifactKey+'.json'),'utf8'))
+      ? JSON.parse(readFileSync(resolveSourcePath(join(process.cwd(),'metadata/entities',content.artifactKey+'.json')),'utf8'))
       : content;
   });
   for(const key of keys) assert.equal(documents.filter(document => document.artifactKey === key).length,1);
@@ -31,9 +32,9 @@ if(process.argv.includes('--prepare')) {
   if(process.argv.includes('--count-only')) console.log(files.length);
   else console.log('*** Begin Patch\n'+files.slice(offset,offset+count).map(([path,value])=>'*** Add File: '+path+'\n'+JSON.stringify(value,null,2).split('\n').map(line=>'+'+line).join('\n')).join('\n')+'\n*** End Patch');
 } else {
-  const baseline = JSON.parse(readFileSync(candidate+'/baseline.json','utf8'));
+  const baseline = JSON.parse(readFileSync(resolveSourcePath(candidate+'/baseline.json'),'utf8'));
   assert.equal(captured.head.artifact_hash,baseline.artifactHash,'Active release changed; prepare a new candidate');
-  const privateRead = path => {const stat=statSync(path);assert.equal(stat.mode & 0o077,0);assert.equal(stat.uid,process.getuid());return readFileSync(path,'utf8');};
+  const privateRead = path => {const stat=statSync(path);assert.equal(stat.mode & 0o077,0);assert.equal(stat.uid,process.getuid());return readFileSync(resolveSourcePath(path),'utf8');};
   const secrets=join(homedir(),'.athyper/instances/dev/secrets');
   const databaseUrl=new URL('postgresql://postgres@'+Object.values(inspection.NetworkSettings.Networks)[0].IPAddress+':5432/athyper_neon');
   databaseUrl.password=privateRead(join(secrets,'postgres-password')).trim();

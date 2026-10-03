@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
@@ -9,7 +10,7 @@ export function maskedExportProduct(
 ) {
   const product = JSON.parse(
     readFileSync(
-      `${root}/metadata/entities/principal/definition.json`,
+      resolveSourcePath(`${root}/metadata/entities/principal/definition.json`),
       "utf8",
     ),
   );

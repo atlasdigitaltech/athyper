@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { canonicalBytes, sha256 } from "@athyper/server-adapter-publication-signing";
@@ -9,7 +10,7 @@ import { parseCompiledRuntimeContract } from "@athyper/server-platform-metadata"
 import { resolveAtlasEntityToolManifest } from "@athyper/server-platform-ai";
 import type { CompiledEntityRegistry, PublicationPlane } from "@athyper/server-contract-publication";
 const id = "00000000-0000-4000-8000-000000000001";
-const source = (entity: string) => JSON.parse(readFileSync(new URL(`../../../../../../../metadata/entities/${entity}/definition.json`, import.meta.url), "utf8"));
+const source = (entity: string) => JSON.parse(readFileSync(resolveSourcePath(new URL(`../../../../../../../metadata/entities/${entity}/definition.json`, import.meta.url)), "utf8"));
 const canonicalizer = { canonicalBytes, sha256: (bytes: Uint8Array) => `sha256:${sha256(bytes)}` };
 function compile(entity: "country" | "principal", plane: PublicationPlane, enroll = true) {
   const product = source(entity);

@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { Kysely, PostgresDialect } from "kysely";
@@ -51,7 +52,7 @@ it.each(["handler", "catalog", "persistence", "storage", "scanner", "feature", "
   finally { await f.database.destroy(); }
 });
 it("enforces a product-free import boundary", () => {
-  const text = readFileSync(new URL("../capability-qualification.ts", import.meta.url), "utf8");
+  const text = readFileSync(resolveSourcePath(new URL("../capability-qualification.ts", import.meta.url)), "utf8");
   const allowed = new Set(["kysely", "@athyper/server-contract-publication", "@athyper/server-plane-studio-meta-entity-authoring"]);
   const ast = ts.createSourceFile("qualification.ts", text, ts.ScriptTarget.Latest, true);
   for (const node of ast.statements) if (ts.isImportDeclaration(node)) expect(allowed.has((node.moduleSpecifier as ts.StringLiteral).text)).toBe(true);
@@ -60,7 +61,7 @@ it("enforces a product-free import boundary", () => {
 
 it.each(["studio", "neon", "mesh"] as const)("qualifies advanced signed-source prerequisites on %s and fails closed without processing", async plane => {
   const f = fixture();
-  const members = JSON.parse(readFileSync(new URL("../../../../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8"));
+  const members = JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../../../../metadata/entities/country/capabilities.json", import.meta.url)), "utf8"));
   for (const member of members) {
     member.declaration.ownerEntityCode = member.binding.ownerEntityCode = "test_dictionary";
     if (member.binding.attachments) member.binding.attachments.bindingRef = "test_dictionary/operation#attachmentBinding";

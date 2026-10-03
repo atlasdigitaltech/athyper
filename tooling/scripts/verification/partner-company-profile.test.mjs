@@ -1,8 +1,9 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 const root = new URL('../../../', import.meta.url);
-const read = path => readFileSync(new URL(path, root), 'utf8');
+const read = path => readFileSync(resolveSourcePath(new URL(path, root)), 'utf8');
 const tables = read('server/db/ddl/planes/neon/master/03_tables.sql');
 const constraints = read('server/db/ddl/planes/neon/master/05_constraints.sql');
 const functions = read('server/db/ddl/planes/neon/master/07_functions.sql');

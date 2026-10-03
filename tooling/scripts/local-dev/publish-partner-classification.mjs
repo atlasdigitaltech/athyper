@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
 /** Frozen release-19 → classification-only DEV publication. Preparation prints apply_patch input. */
 import {readFileSync,statSync} from 'node:fs';
 import {execFileSync,spawnSync} from 'node:child_process';
@@ -14,18 +15,18 @@ if(process.argv.includes('--prepare')){
  const documents=captured.payload.artifacts.map(a=>structuredClone(a.content));
  if(collections){
   for(const key of ['business_partner/presentation.detail','business_partner/presentation.section.identity','business_partner/presentation.section.industries','business_partner/presentation.section.commodities','business_partner_industry_classification/core','business_partner_commodity_classification/core']){
-   const doc=JSON.parse(readFileSync(root+'/metadata/entities/'+key+'.json','utf8'));
+   const doc=JSON.parse(readFileSync(resolveSourcePath(root+'/metadata/entities/'+key+'.json'),'utf8'));
    const index=documents.findIndex(a=>a.artifactKey===key);if(index<0)documents.push(doc);else documents[index]=doc;
   }
- }else if(registration){ documents.push(JSON.parse(readFileSync(root+'/metadata/entities/business_partner_request/flow.partner.new.json','utf8')));
+ }else if(registration){ documents.push(JSON.parse(readFileSync(resolveSourcePath(root+'/metadata/entities/business_partner_request/flow.partner.new.json'),'utf8')));
  }else if(displayOnly||direct){
   for(const key of ['business_partner_commodity_classification/core','business_partner/presentation.section.commodities'])
-   documents[documents.findIndex(a=>a.artifactKey===key)]=JSON.parse(readFileSync(root+'/metadata/entities/'+key+'.json','utf8'));
+   documents[documents.findIndex(a=>a.artifactKey===key)]=JSON.parse(readFileSync(resolveSourcePath(root+'/metadata/entities/'+key+'.json'),'utf8'));
  }else{
  for(const key of ['business_partner_commodity_classification/core','business_partner/presentation.section.commodities','business_partner/presentation.section.certificates'])
-  documents.push(JSON.parse(readFileSync(root+'/metadata/entities/'+key+'.json','utf8')));
+  documents.push(JSON.parse(readFileSync(resolveSourcePath(root+'/metadata/entities/'+key+'.json'),'utf8')));
  const detail=documents.find(a=>a.artifactKey==='business_partner/presentation.detail');
- const source=JSON.parse(readFileSync(root+'/metadata/entities/business_partner/presentation.detail.json','utf8'));
+ const source=JSON.parse(readFileSync(resolveSourcePath(root+'/metadata/entities/business_partner/presentation.detail.json'),'utf8'));
  for(const section of ['commodities','certificates']){
   const entry=source.sections.find(s=>s.sectionKey===section);detail.sections.splice(section==='commodities'?2:detail.sections.findIndex(s=>s.sectionKey==='qualifications-certificates')+1,0,entry);
   detail.dependencies.push(entry.presentationRef.replace(/\.json$/,''));
@@ -45,7 +46,7 @@ if(process.argv.includes('--prepare')){
  if(process.argv.includes('--count-only'))console.log(patches.length);
  else process.stdout.write('*** Begin Patch\n'+patches.slice(offset,offset+count).map(([path,value])=>'*** Add File: '+path+'\n'+JSON.stringify(value,null,2).split('\n').map(line=>'+'+line).join('\n')).join('\n')+'\n*** End Patch\n');
 }else{
- function privateRead(path){const s=statSync(path);if(s.mode&0o077||s.uid!==process.getuid())throw Error('PRIVATE_FILE_REQUIRED');return readFileSync(path,'utf8');}
+ function privateRead(path){const s=statSync(path);if(s.mode&0o077||s.uid!==process.getuid())throw Error('PRIVATE_FILE_REQUIRED');return readFileSync(resolveSourcePath(path),'utf8');}
  const credentials=JSON.parse(privateRead(secrets+'/dev-publication/client.json'));
  const inspection=JSON.parse(execFileSync('docker',['inspect','athyper-dev-db-1'],{encoding:'utf8'}))[0];
  const databaseUrl=new URL('postgresql://postgres@'+Object.values(inspection.NetworkSettings.Networks)[0].IPAddress+':5432/athyper_neon');databaseUrl.password=privateRead(secrets+'/postgres-password').trim();

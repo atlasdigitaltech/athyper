@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { parseSharedReferenceProduct, compileSharedReferenceProduct } from "../authoring/product.js";
@@ -5,8 +6,8 @@ import { amendSuccessorCollaboration } from "../publication/amend-successor-coll
 
 const root = new URL("../../../../../../../metadata/entities/country/", import.meta.url);
 const product = () => parseSharedReferenceProduct(
-  JSON.parse(readFileSync(new URL("definition.json", root), "utf8")),
-  JSON.parse(readFileSync(new URL("capabilities.json", root), "utf8")),
+  JSON.parse(readFileSync(resolveSourcePath(new URL("definition.json", root)), "utf8")),
+  JSON.parse(readFileSync(resolveSourcePath(new URL("capabilities.json", root)), "utf8")),
 );
 
 for (const plane of ["studio", "neon", "mesh"] as const) it(`${plane}: changes only collaboration, preserves inputs and replays identically`, () => {

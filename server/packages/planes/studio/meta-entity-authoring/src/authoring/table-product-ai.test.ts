@@ -1,8 +1,9 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { compileTableEntityProduct, parseTableEntityProduct } from "./table-product.js";
 import { amendSuccessorAi } from "../publication/amend-successor-ai.js";
-const source = (code: string) => JSON.parse(readFileSync(new URL(`../../../../../../../metadata/entities/${code}/definition.json`, import.meta.url), "utf8"));
+const source = (code: string) => JSON.parse(readFileSync(resolveSourcePath(new URL(`../../../../../../../metadata/entities/${code}/definition.json`, import.meta.url)), "utf8"));
 it.each(["principal", "principal_notification_preference"])("projects %s AI authoring and amends only that projection on every plane", code => {
   const product = parseTableEntityProduct(source(code));
   for (const plane of ["neon", "studio", "mesh"] as const) {

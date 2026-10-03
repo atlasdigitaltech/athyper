@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from unittest import mock
 from pathlib import Path
+from source_workspace import discover_workspace
 
 TOOLS = Path(__file__).resolve().parent
 REPOSITORY = TOOLS.parents[2]
@@ -38,7 +39,11 @@ class ValidatorMutationTests(unittest.TestCase):
     def fails(self, expected, mutate):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)/'entities'
-            shutil.copytree(PACKAGE, root, ignore=shutil.ignore_patterns('__pycache__'))
+            root.mkdir()
+            for code, source in discover_workspace(PACKAGE.parent)['entities'].items():
+                shutil.copytree(source['directory'], root/code, ignore=shutil.ignore_patterns('__pycache__'))
+            shutil.copytree(PACKAGE.parent/'schemas', root.parent/'schemas')
+            shutil.copyfile(PACKAGE.parent/'manifest.json', root.parent/'manifest.json')
             shutil.copytree(PACKAGE.parent/'review', root.parent/'review')
             shutil.copytree(PACKAGE.parent/'profiles', root.parent/'profiles')
             mutate(root)

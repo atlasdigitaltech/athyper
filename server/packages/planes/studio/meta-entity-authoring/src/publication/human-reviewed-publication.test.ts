@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { expect, it, vi } from "vitest";
@@ -8,8 +9,8 @@ import type { ProductReviewReceipt } from "../product-review.js";
 import { publishHumanReviewedProducts, type HumanReviewedPublicationPlan, type HumanReviewedPublicationPorts } from "./human-reviewed-publication.js";
 
 function fixture() {
-  const product = parseTableEntityProduct(JSON.parse(readFileSync(new URL(
-    "../../../../../../../metadata/entities/address/definition.json", import.meta.url), "utf8")));
+  const product = parseTableEntityProduct(JSON.parse(readFileSync(resolveSourcePath(new URL(
+    "../../../../../../../metadata/entities/address/definition.json", import.meta.url)), "utf8")));
   const { graph } = compileTableEntityProduct(product, "neon");
   graph.surfaces!.find(s => s.surfaceKind === "list")!.layoutConfig!.tableEntityProduct = {
     schema: "athyper.table-entity-source/1", productHash: sha256(product), targetPlanes: ["neon"], moduleCode: product.moduleCode,

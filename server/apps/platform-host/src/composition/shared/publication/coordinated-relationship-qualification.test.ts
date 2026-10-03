@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { Kysely, PostgresDialect } from "kysely";
 import { expect, it } from "vitest";
@@ -10,8 +11,8 @@ function fixture(options: {
   published?: readonly { entity_code: string; artifact: unknown; release_id: string; release_no: number }[];
 } = {}) {
   const graphs = ["principal", "principal_profile", "principal_notification_preference", "principal_ui_profile"].map(code => {
-    const product = parseTableEntityProduct(JSON.parse(readFileSync(new URL(
-      `../../../../../../../metadata/entities/${code}/definition.json`, import.meta.url), "utf8")));
+    const product = parseTableEntityProduct(JSON.parse(readFileSync(resolveSourcePath(new URL(
+      `../../../../../../../metadata/entities/${code}/definition.json`, import.meta.url)), "utf8")));
     const { graph } = compileTableEntityProduct(product, "neon");
     // Isolate embedded-list dependency behavior from unrelated key-reference
     // catalogs. Live candidate preflight checks both against actual databases.

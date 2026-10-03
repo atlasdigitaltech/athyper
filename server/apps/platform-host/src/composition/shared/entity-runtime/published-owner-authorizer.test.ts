@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { expect, it, vi } from "vitest";
@@ -19,10 +20,10 @@ function fixture(code: string, plane: "studio" | "neon" | "mesh" = "neon") {
   const product = parseTableEntityProduct(
     JSON.parse(
       readFileSync(
-        new URL(
+        resolveSourcePath(new URL(
           `../../../../../../../metadata/entities/${code}/definition.json`,
           import.meta.url,
-        ),
+        )),
         "utf8",
       ),
     ),

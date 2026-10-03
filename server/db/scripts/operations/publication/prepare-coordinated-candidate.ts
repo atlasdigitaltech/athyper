@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
+import { discoverWorkspace } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 /** Read-only DEV reconciliation. Uses the shared authoring repository/compiler;
  * produces unsigned review artifacts, never approvals or publication writes. */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
@@ -78,15 +79,7 @@ const report: any = {
   planes: {},
 };
 const artifacts: Record<string, any> = {};
-const metadataRoot = resolve("metadata");
-const manifest = JSON.parse(readFileSync(join(metadataRoot, "manifest.json"), "utf8"));
-if (manifest.schema !== "athyper.metadata-workspace/1" || manifest.entitiesRoot !== "entities")
-  throw Error("UNSUPPORTED_FLAT_METADATA_WORKSPACE");
-const entitiesRoot = join(metadataRoot, manifest.entitiesRoot);
-const sourceFiles = readdirSync(entitiesRoot, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => join(entitiesRoot, entry.name, "definition.json"))
-  .filter((file) => existsSync(file));
+const workspace = discoverWorkspace(resolve("metadata"));
 const db = connect("studio");
 try {
   await db
@@ -157,9 +150,10 @@ try {
             baseline.snapshot_contract_hash === baseline.contract_hash;
           artifacts[`${first.entity_code}/baseline.json`] = contract_json;
         } else entry.baseline = null;
-        const files = sourceFiles.filter((p) =>
-          p.endsWith(`/entities/${first.entity_code}/definition.json`),
-        );
+        const source = workspace.entities.get(first.entity_code);
+        const files = source?.descriptor.definition
+          ? [workspace.resolveRef(`${source.entityCode}/${source.descriptor.definition}`)]
+          : [];
         let product: any;
         if (files.length === 1) {
           const file = files[0]!,

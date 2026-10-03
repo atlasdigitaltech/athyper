@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { canonicalBytes, sha256 as hashBytes } from "@athyper/server-adapter-publication-signing";
 import ts from "typescript";
@@ -13,7 +14,7 @@ import { createCompiledRuntimePublication } from "../compiled-runtime.js";
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 afterEach(() => vi.restoreAllMocks());
 function fixture(advanced = false) {
-  const capabilities = advanced ? JSON.parse(readFileSync(new URL("../../../../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8").replaceAll('"country"', '"test_dictionary"').replaceAll('country/operation#', 'test_dictionary/operation#')) : [];
+  const capabilities = advanced ? JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../../../../metadata/entities/country/capabilities.json", import.meta.url)), "utf8").replaceAll('"country"', '"test_dictionary"').replaceAll('country/operation#', 'test_dictionary/operation#')) : [];
   const graph = buildSharedReferenceGraph({ entityCode: "test_dictionary", title: "Dictionary", storageObject: "test_dictionary", codeField: "code", titleField: "code",
     capabilities,
     fields: [{ key: "id", label: "ID", type: "uuid", required: true }, { key: "code", label: "Code", type: "string", required: true },
@@ -146,7 +147,7 @@ it("rechecks recovery at every phase and binds its approval into the qualificati
   } finally { await f.db.destroy(); }
 });
 it("keeps the host adapter product-free with an explicit import boundary", () => {
-  const source = readFileSync(new URL("../compiled-runtime.ts", import.meta.url), "utf8");
+  const source = readFileSync(resolveSourcePath(new URL("../compiled-runtime.ts", import.meta.url)), "utf8");
   const allowed = new Set(["./human-publication-policy.js", "@athyper/server-platform-ai", "@athyper/server-adapter-publication-signing", "kysely", "@athyper/server-contract-meta-entity-authoring", "@athyper/server-contract-publication", "@athyper/server-plane-studio-meta-entity-authoring", "@athyper/server-service-publication", "./target-qualification.js", "./workload-configuration.js", "./compiler-build.js", "./successor-targets.js", "./compilation-recovery-authority.js"]);
   for (const node of ts.createSourceFile("adapter.ts", source, ts.ScriptTarget.Latest, true).statements)
     if (ts.isImportDeclaration(node)) expect(allowed.has((node.moduleSpecifier as ts.StringLiteral).text)).toBe(true);

@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { createEntityCapabilityPolicy } from "./entity-capability-policy.js";
@@ -9,7 +10,7 @@ const root = new URL(
   import.meta.url,
 );
 const read = (name: string) =>
-  JSON.parse(readFileSync(new URL(name, root), "utf8"));
+  JSON.parse(readFileSync(resolveSourcePath(new URL(name, root)), "utf8"));
 function fixture(options: {
   readonly parent?: boolean;
   readonly participant?: boolean;

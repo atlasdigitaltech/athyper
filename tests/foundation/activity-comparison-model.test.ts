@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../tooling/scripts/metadata/source-workspace.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -101,10 +102,10 @@ test("typed formatting preserves precision, historical references, calendar date
 test("Country source metadata groups authorized captured fields into its published sections", () => {
   const { definition } = JSON.parse(
     readFileSync(
-      new URL(
+      resolveSourcePath(new URL(
         "../../metadata/entities/country/definition.json",
         import.meta.url,
-      ),
+      )),
       "utf8",
     ),
   );

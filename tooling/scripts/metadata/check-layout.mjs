@@ -1,4 +1,5 @@
-import { readFileSync, existsSync, readdirSync, realpathSync } from "node:fs";
+import { discoverWorkspace, resolveSourcePath } from "./source-workspace.mjs";
+import { readFileSync, existsSync, realpathSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve, relative, sep, isAbsolute } from "node:path";
@@ -26,26 +27,15 @@ export function checkLayout(
   // Historical inventories remain unchanged and are not active definitions.
   const inventory = read("docs/reviews/entity-metadata-checkpoint-inventory-20261003.json");
   const metadataRoot = resolve(repository, "metadata");
-  const manifest = read("metadata/manifest.json");
-  assert(manifest.schema === "athyper.metadata-workspace/1", "Unsupported metadata workspace schema");
-  const entities = sourcePath(metadataRoot, manifest.entitiesRoot);
-  const profiles = sourcePath(metadataRoot, manifest.profilesRoot);
-  function walk(root) {
-    return readdirSync(root, { withFileTypes: true }).flatMap((entry) =>
-      entry.name === "__pycache__"
-        ? []
-        : entry.isDirectory()
-          ? walk(resolve(root, entry.name))
-          : entry.isFile() ? [resolve(root, entry.name)] : [],
-    );
-  }
+  const workspace = discoverWorkspace(metadataRoot);
+  const { entitiesRoot: entities, profilesRoot: profiles } = workspace;
   const targets = new Set();
   for (const entry of inventory.deletedMetadataDisposition) {
     assert(entry.byteIdenticalDestinations.length === 1, `Ambiguous relocation evidence: ${entry.source}`);
     const to = entry.byteIdenticalDestinations[0];
     assert(!targets.has(to), `Duplicate relocation destination: ${to}`);
     targets.add(to);
-    const destination = sourcePath(repository, to);
+    const destination = resolveSourcePath(sourcePath(repository, to));
     assert(existsSync(destination), `Missing relocated file: ${to}`);
     // The old compatibility README is evidence-bound documentation, not a JSON definition.
     if (to.endsWith(".json")) assert(!existsSync(sourcePath(repository, entry.source)), `Duplicate old definition: ${entry.source}`);
@@ -54,36 +44,10 @@ export function checkLayout(
       `JSON differs from relocation baseline (feature edits require review): ${to}`,
     );
   }
-  function checkRefs(value, file) {
-    if (!value || typeof value !== "object") return;
-    for (const [key, item] of Object.entries(value)) {
-      const refs = key === "ref" || key.endsWith("Ref") ? [item]
-        : key.endsWith("Refs") && Array.isArray(item) ? item : [];
-      for (const ref of refs) if (typeof ref === "string" && ref.endsWith(".json")) {
-        const candidates = [sourcePath(entities, ref), sourcePath(profiles, ref)].filter(existsSync);
-        assert(candidates.length === 1, `${candidates.length ? "Ambiguous" : "Unresolved"} logical reference: ${file}: ${ref}`);
-      }
-      checkRefs(item, file);
-    }
-  }
-  const files = walk(entities).filter((file) => file.endsWith(".json"));
-  const profileFiles = walk(profiles).filter((file) => file.endsWith(".json"));
-  const artifactKeys = new Set();
-  for (const file of [...files, ...profileFiles]) {
-    const value = JSON.parse(readFileSync(file, "utf8"));
-    if (value.artifactKey) {
-      assert(!artifactKeys.has(value.artifactKey), `Duplicate artifact identity: ${value.artifactKey}`);
-      artifactKeys.add(value.artifactKey);
-    }
-    checkRefs(value, relative(metadataRoot, file));
-  }
-  // This workspace declares roots, not a single product release. Validate an
-  // explicit releaseEntry only when supplied; never infer one from entity names.
-  if (manifest.releaseEntry !== undefined) assert(existsSync(sourcePath(entities, manifest.releaseEntry)), "Missing release entry");
-  const reviewRoot = sourcePath(metadataRoot, manifest.reviewRoot);
-  const schemasRoot = sourcePath(metadataRoot, manifest.schemasRoot);
-  assert(existsSync(resolve(reviewRoot, "registry-catalog.json")), "Missing registry evidence");
-  assert(existsSync(resolve(schemasRoot, "entity-artifacts-v2/core.schema.json")), "Missing artifact schema");
+  const files = workspace.documents.filter((document) => within(entities, document.path));
+  const profileFiles = workspace.documents.filter((document) => within(profiles, document.path));
+  assert(existsSync(resolve(workspace.reviewRoot, "registry-catalog.json")), "Missing registry evidence");
+  assert(existsSync(resolve(workspace.schemasRoot, "entity-artifacts-v2/core.schema.json")), "Missing artifact schema");
   return { relocatedFiles: targets.size, entityJsonFiles: files.length, profileJsonFiles: profileFiles.length };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

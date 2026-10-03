@@ -1,9 +1,10 @@
+import { resolveSourcePath } from "../../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { compileSharedReferenceProduct, parseSharedReferenceProduct } from "@athyper/server-plane-studio-meta-entity-authoring";
 
 it("compiles Country's public tenant-record bindings on all three planes", () => {
-  const source = JSON.parse(readFileSync(new URL("../../../../../../../../metadata/entities/country/definition.json", import.meta.url), "utf8"));
+  const source = JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../../../../metadata/entities/country/definition.json", import.meta.url)), "utf8"));
   const product = parseSharedReferenceProduct(source);
   for (const plane of ["studio", "neon", "mesh"] as const) {
     const { artifact } = compileSharedReferenceProduct(product, plane);

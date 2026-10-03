@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
@@ -13,7 +14,7 @@ const root = new URL(
   import.meta.url,
 );
 const source = (name: string) =>
-  JSON.parse(readFileSync(new URL(name, root), "utf8"));
+  JSON.parse(readFileSync(resolveSourcePath(new URL(name, root)), "utf8"));
 const bindings = () => source("operation.json");
 describe("typed entity capabilities", () => {
   it.each(["studio", "neon", "mesh"])("qualifies exact common capability permissions in %s without bypassing registration", (plane) => {

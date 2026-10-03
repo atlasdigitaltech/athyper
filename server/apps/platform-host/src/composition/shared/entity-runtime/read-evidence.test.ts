@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it, vi } from "vitest";
 import {
@@ -17,10 +18,10 @@ it("refreshes Country IAM/metadata once per read while authorizing every field a
   const product = parseSharedReferenceProduct(
     JSON.parse(
       readFileSync(
-        new URL(
+        resolveSourcePath(new URL(
           "../../../../../../../metadata/entities/country/definition.json",
           import.meta.url,
-        ),
+        )),
         "utf8",
       ),
     ),

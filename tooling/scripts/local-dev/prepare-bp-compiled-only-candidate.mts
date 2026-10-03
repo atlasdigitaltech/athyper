@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
 /** One-time migration input -> one compiled release. No approvals or activation. */
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -21,17 +22,17 @@ const directory = join(
   ".athyper/instances/dev/candidates/business-partner-package",
 );
 const previous = JSON.parse(
-  readFileSync(join(directory, previousHash + ".json"), "utf8"),
+  readFileSync(resolveSourcePath(join(directory, previousHash + ".json")), "utf8"),
 );
 assert.equal(sha256(canonicalBytes(previous)), previousHash);
 const core = JSON.parse(
   readFileSync(
-    "metadata/entities/business_partner/core.json",
+    resolveSourcePath("metadata/entities/business_partner/core.json"),
     "utf8",
   ),
 );
 const catalog = JSON.parse(
-  readFileSync("metadata/review/registry-catalog.json", "utf8"),
+  readFileSync(resolveSourcePath("metadata/review/registry-catalog.json"), "utf8"),
 );
 assert.equal(
   execFileSync(
@@ -142,7 +143,7 @@ const candidateHash = sha256(canonicalBytes(candidate)),
   path = join(directory, candidateHash + ".json");
 if (process.argv.includes("--write")) {
   const bytes = JSON.stringify(candidate, null, 2) + "\n";
-  if (existsSync(path)) assert.equal(readFileSync(path, "utf8"), bytes);
+  if (existsSync(path)) assert.equal(readFileSync(resolveSourcePath(path), "utf8"), bytes);
   else writeFileSync(path, bytes, { flag: "wx", mode: 0o600 });
 }
 console.log(

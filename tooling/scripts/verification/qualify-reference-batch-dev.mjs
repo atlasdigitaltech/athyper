@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
 /** Small Country-like batch using the existing importer and maker/checker workflow. */
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
@@ -13,7 +14,7 @@ for(const entity of ['currency','language']){
   assert.ok(result.publicationPolicyCandidate);for(const [name,value] of Object.entries({'draft':result,'policy-candidate':result.publicationPolicyCandidate}))writeFileSync(join(directory,name+'.json'),JSON.stringify(value,null,2)+'\n',{mode:0o600});
   console.log(JSON.stringify({entity,stage:'draft',changeSetId:result.publicationPolicyCandidate.changeSetId}));
  }else{
-  const candidate=JSON.parse(readFileSync(join(directory,'policy-candidate.json'),'utf8'));assert.equal(candidate.policyId.startsWith(`dev.entity.${entity}.`),true);
+  const candidate=JSON.parse(readFileSync(resolveSourcePath(join(directory,'policy-candidate.json')),'utf8'));assert.equal(candidate.policyId.startsWith(`dev.entity.${entity}.`),true);
   execFileSync('node',['tooling/scripts/verification/qualify-masked-export-dev.mjs',mode,directory],{stdio:'inherit'});
  }
 }

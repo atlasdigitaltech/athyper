@@ -1,7 +1,8 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { parseTableEntityProduct, compileTableEntityProduct } from "./table-product.js";
-const source = (file: string) => JSON.parse(readFileSync(new URL(`../../../../../../../metadata/entities/principal/${file}.json`, import.meta.url), "utf8"));
+const source = (file: string) => JSON.parse(readFileSync(resolveSourcePath(new URL(`../../../../../../../metadata/entities/principal/${file}.json`, import.meta.url)), "utf8"));
 it("hydrates Principal labels and enum translations before compiling each plane", () => {
  const product = parseTableEntityProduct(source("definition"), source("localization"));
  for (const plane of ["neon", "mesh", "studio"] as const) {

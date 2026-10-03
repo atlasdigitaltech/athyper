@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it, vi } from "vitest";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
@@ -18,10 +19,10 @@ import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata"
 
 const source = JSON.parse(
   readFileSync(
-    new URL(
+    resolveSourcePath(new URL(
       "../../../../../../../metadata/entities/country/definition.json",
       import.meta.url,
-    ),
+    )),
     "utf8",
   ),
 );

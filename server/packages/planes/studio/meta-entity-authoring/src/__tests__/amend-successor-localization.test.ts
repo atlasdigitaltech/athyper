@@ -1,11 +1,12 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { parseSharedReferenceProduct, compileSharedReferenceProduct } from "../authoring/product.js";
 import { amendSuccessorLocalization } from "../publication/amend-successor-localization.js";
 
 const root = new URL("../../../../../../../metadata/entities/country/", import.meta.url);
-const product = () => parseSharedReferenceProduct(JSON.parse(readFileSync(new URL("definition.json", root), "utf8")),
-  JSON.parse(readFileSync(new URL("capabilities.json", root), "utf8")));
+const product = () => parseSharedReferenceProduct(JSON.parse(readFileSync(resolveSourcePath(new URL("definition.json", root)), "utf8")),
+  JSON.parse(readFileSync(resolveSourcePath(new URL("capabilities.json", root)), "utf8")));
 const strip = (value: unknown): any => Array.isArray(value) ? value.map(strip)
   : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
     .filter(([key]) => key !== "localizedLabel" && key !== "localizedLabels").map(([key, child]) => [key, strip(child)])) : value;

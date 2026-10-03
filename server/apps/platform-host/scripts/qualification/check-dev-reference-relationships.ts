@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { resolveSourcePath } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 /** Read-only FK/unique-key qualification against deployed dependency contracts. */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -41,7 +42,7 @@ for (const plane of ["neon", "studio", "mesh"] as const) {
         host: network.IPAddress,
         database: `athyper_${plane}`,
         user: env.POSTGRES_USER,
-        password: readFileSync(secret, "utf8").trim(),
+        password: readFileSync(resolveSourcePath(secret), "utf8").trim(),
         max: 1,
       }),
     }),

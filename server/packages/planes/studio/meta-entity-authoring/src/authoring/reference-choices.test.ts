@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
@@ -9,7 +10,7 @@ const root = new URL(
   import.meta.url,
 );
 const source = (entity = "country") =>
-  JSON.parse(readFileSync(new URL(`${entity}/definition.json`, root), "utf8"));
+  JSON.parse(readFileSync(resolveSourcePath(new URL(`${entity}/definition.json`, root)), "utf8"));
 describe("shared reference choices", () => {
   it.each([
     "country",

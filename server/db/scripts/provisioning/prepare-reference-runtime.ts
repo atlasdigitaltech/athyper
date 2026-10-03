@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { resolveSourcePath } from "../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -8,13 +9,13 @@ import { compileNativeRuntimeProjection } from "@athyper/server-platform-metadat
 import type { AuthoringPlane } from "@athyper/server-contract-meta-entity-authoring";
 
 export function loadReferenceProduct(directory: string) {
-  const root = resolve(directory);
+  const root = resolveSourcePath(resolve(directory));
   const capabilityPath = join(root, "capabilities.json");
-  const members = existsSync(capabilityPath) ? JSON.parse(readFileSync(capabilityPath, "utf8")) : [];
-  const definition = JSON.parse(readFileSync(join(root, "definition.json"), "utf8"));
+  const members = existsSync(capabilityPath) ? JSON.parse(readFileSync(resolveSourcePath(capabilityPath), "utf8")) : [];
+  const definition = JSON.parse(readFileSync(resolveSourcePath(join(root, "definition.json")), "utf8"));
   const localizationPath = join(root, "localization.json");
   const localization = existsSync(localizationPath)
-    ? JSON.parse(readFileSync(localizationPath, "utf8"))
+    ? JSON.parse(readFileSync(resolveSourcePath(localizationPath), "utf8"))
     : undefined;
   if (!Array.isArray(members)) throw Error("CAPABILITY_SOURCE_INVALID");
   if (Array.isArray(members)) {
@@ -35,7 +36,7 @@ export function loadReferenceProduct(directory: string) {
   if (existsSync(activityPath)) {
     if (members.some(member => member.capabilityKey === "activity")) throw Error("CAPABILITY_POLICY_DUPLICATE_SOURCE");
     const lookup = createCapabilityProfileFileResolver(fileURLToPath(new URL("../../../../metadata/profiles/activity/", import.meta.url)));
-    members.push(prepareActivityCapabilityMember(definition.definition?.entityCode, JSON.parse(readFileSync(activityPath, "utf8")), lookup,
+    members.push(prepareActivityCapabilityMember(definition.definition?.entityCode, JSON.parse(readFileSync(resolveSourcePath(activityPath), "utf8")), lookup,
       { versionHistoryAvailable: false, automaticCaptureAvailable: false, writableOperations: [] }));
   }
   return parseSharedReferenceProduct(definition, members, localization);
@@ -43,7 +44,7 @@ export function loadReferenceProduct(directory: string) {
 
 /** Offline only. Never fabricates approval, signature or activation evidence. */
 export function prepareReferenceRuntime(directory: string, plane: AuthoringPlane) {
-  const product = loadReferenceProduct(directory);
+  const product = loadReferenceProduct(resolveSourcePath(directory));
   const { definition } = product;
   const { graph, artifact } = compileSharedReferenceProduct(product, plane);
   const requiredPermissions = [{ code: COMMON_REFERENCE_VIEW_PERMISSION, scopeKinds: ["tenant"] }];

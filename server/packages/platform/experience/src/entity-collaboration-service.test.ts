@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
@@ -8,7 +9,7 @@ import ts from "typescript";
 
 function fixture() {
   // Reuse validated metadata as test data, not runtime entity dispatch logic.
-  const definitions = JSON.parse(readFileSync(new URL("../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8"));
+  const definitions = JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../metadata/entities/country/capabilities.json", import.meta.url)), "utf8"));
   const context = { tenantId: "tenant-a", principalId: "actor-a", planeKey: "neon", permissions: { allowed: [] } } as unknown as VerifiedRequestContext;
   const subject = { context, entityCode: "country", recordId: "record-a" };
   const coordinate = { tenantId: context.tenantId, principalId: context.principalId, planeKey: context.planeKey, entityCode: subject.entityCode };
@@ -24,7 +25,7 @@ function fixture() {
 }
 describe("record collaboration without fabricated section artifacts", () => {
   it("keeps the service inside explicit generic package boundaries", () => {
-    const source = readFileSync(new URL("./entity-collaboration-service.ts", import.meta.url), "utf8");
+    const source = readFileSync(resolveSourcePath(new URL("./entity-collaboration-service.ts", import.meta.url)), "utf8");
     const ast = ts.createSourceFile("service.ts", source, ts.ScriptTarget.Latest, true);
     const allowed = new Set(["@athyper/server-contract-auth", "@athyper/server-platform-metadata", "./entity-capability-policy.js", "./entity-section-service.js"]);
     function walk(node: ts.Node) {

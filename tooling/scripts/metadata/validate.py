@@ -6,6 +6,7 @@ import sys
 import argparse
 from jsonschema import Draft202012Validator
 from pathlib import Path
+from source_workspace import discover_workspace
 
 arguments = argparse.ArgumentParser(add_help=False)
 arguments.add_argument('--package-root')
@@ -142,12 +143,8 @@ def assert_security_contracts(value, path):
         for index, item in enumerate(value):
             assert_security_contracts(item, f'{path}[{index}]')
 
-files = {str(p.relative_to(ROOT)): json.loads(p.read_text()) for p in ROOT.rglob('*.json')}
-for profile in (ROOT.parent / 'profiles').rglob('*.json'):
-    logical_ref = str(profile.relative_to(ROOT.parent / 'profiles'))
-    if logical_ref in files:
-        raise AssertionError((logical_ref, 'ambiguous entity/profile logical reference'))
-    files[logical_ref] = json.loads(profile.read_text())
+workspace = discover_workspace(ROOT.parent)
+files = {document['ref']: document['value'] for document in workspace['documents']}
 files.update({'review/' + str(p.relative_to(REVIEW)): json.loads(p.read_text()) for p in REVIEW.rglob('*.json')})
 release = files['business_partner/release.json']
 

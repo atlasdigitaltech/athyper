@@ -1,9 +1,10 @@
+import { discoverWorkspace } from "./source-workspace.mjs";
 /**
  * Compile one explicit MetaEntity release candidate from hash-free authoring
  * input. This never signs, publishes, or activates a release.
  */
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { compileCompiledEntityArtifacts } from "../../../server/packages/services/publication/src/compiled-entity-artifact-compiler.js";
 
@@ -21,7 +22,8 @@ for (let index = 2; index < process.argv.length; index += 2) {
   args.set(key.slice(2), value);
 }
 const repository = resolve(import.meta.dirname, "../../..");
-const entitiesRoot = resolve(repository, "metadata/entities");
+const workspace = discoverWorkspace(resolve(repository, "metadata"));
+const entitiesRoot = workspace.entitiesRoot;
 const candidatePath = resolve(
   repository,
   args.get("candidate") ?? "metadata/review/release-candidates/business-partner-collaboration-ca08.json",
@@ -32,11 +34,7 @@ const publicationProjection = args.get("publication-projection") === "true";
 const catalog = JSON.parse(
   await readFile(resolve(entitiesRoot, "../review/registry-catalog.json"), "utf8"),
 ) as { entries: readonly RegistryEntry[] };
-const documents = [
-  ...await readDocuments(entitiesRoot),
-  // Profiles keep their release-local logical refs (for example platform/...).
-  ...await readDocuments(resolve(entitiesRoot, "../profiles")),
-];
+const documents = workspace.documents;
 const byKey = new Map(
   documents
     .filter((document) => artifactTypes.has(String(document.value.artifactType)))
@@ -202,15 +200,6 @@ async function readBaseline(reference: BaselineReference, repository: string): P
   if (externalDependencyKeys.some((key) => typeof key !== "string") || new Set(externalDependencyKeys).size !== externalDependencyKeys.length)
     throw new Error("Pinned baseline external dependencies are invalid");
   return { capturedFrom, byKey, externalDependencyKeys: Object.freeze([...externalDependencyKeys].sort()) };
-}
-async function readDocuments(root: string, prefix = ""): Promise<Document[]> {
-  const entries = await readdir(resolve(root, prefix), { withFileTypes: true });
-  return (await Promise.all(entries.map(async (entry) => {
-    const ref = `${prefix}${entry.name}`;
-    if (entry.isDirectory()) return readDocuments(root, `${ref}/`);
-    if (!entry.isFile() || !ref.endsWith(".json")) return [];
-    return [{ ref, value: JSON.parse(await readFile(resolve(root, ref), "utf8")) }];
-  }))).flat();
 }
 function transitiveClosure(roots: readonly string[], byKey: ReadonlyMap<string, Document>): Set<string> {
   const result = new Set<string>();

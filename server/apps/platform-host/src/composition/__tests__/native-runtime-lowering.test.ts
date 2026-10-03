@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { expect, it } from "vitest";
 import { buildSharedReferenceGraph, compileGraph } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { lowerNativeRuntimePublication, compileCompiledEntityArtifacts } from "@athyper/server-service-publication";
@@ -39,7 +40,7 @@ it.each(["studio", "neon", "mesh"] as const)("lowers the approved native shape f
 });
 it("keeps lowering independent of entity products and host activation", () => {
   const path = new URL("../../../../../packages/services/publication/src/compilation/native-runtime.ts", import.meta.url);
-  const text = readFileSync(path, "utf8"), ast = ts.createSourceFile(path.pathname, text, ts.ScriptTarget.Latest, true);
+  const text = readFileSync(resolveSourcePath(path), "utf8"), ast = ts.createSourceFile(path.pathname, text, ts.ScriptTarget.Latest, true);
   const allowed = new Set(["@athyper/server-platform-metadata", "@athyper/server-contract-publication", "./compiled-runtime.js", "../shared/authorization/operation-projection.js"]);
   function visit(node: ts.Node) {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) expect(allowed.has(node.moduleSpecifier.text)).toBe(true);
@@ -56,7 +57,7 @@ it("refuses target drift, missing columns and missing catalog entries", () => {
 });
 it("carries collaboration policy into split members and rejects absent registered services", () => {
   const f = fixture("neon");
-  const contents = readFileSync(new URL("../../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8");
+  const contents = readFileSync(resolveSourcePath(new URL("../../../../../../metadata/entities/country/capabilities.json", import.meta.url)), "utf8");
   const members = JSON.parse(contents.replaceAll("country", "test_dictionary"));
   f.source.contract.capabilities = members;
   const result = lowerNativeRuntimePublication(f.source, f.input);

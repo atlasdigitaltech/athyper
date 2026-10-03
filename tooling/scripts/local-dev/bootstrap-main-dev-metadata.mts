@@ -1,8 +1,10 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
+import { discoverWorkspace } from "../metadata/source-workspace.mjs";
 /** Initial signed BP metadata publication after an explicitly authorized empty DEV rebuild.
  * No historical release or human approval is fabricated. Successors require an
  * explicit flag and compare-and-swap the existing DEV activation head.
  */
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { execFileSync } from 'node:child_process';
@@ -21,8 +23,8 @@ if(!process.argv.includes('--inside')){
  if(db.Config.Labels['com.docker.compose.project']!=='athyper-dev')throw Error('DEV database required');
  const dir=join(homedir(),'.athyper/instances/dev/secrets');
  const url=new URL(`postgresql://postgres@${(Object.values(db.NetworkSettings.Networks)[0] as any).IPAddress}:5432/athyper_neon`);
- url.password=readFileSync(join(dir,'postgres-password'),'utf8').trim();
- const input={databaseUrl:url.toString(),successor,credentials:JSON.parse(readFileSync(join(dir,'dev-publication/client.json'),'utf8'))};
+ url.password=readFileSync(resolveSourcePath(join(dir,'postgres-password')),'utf8').trim();
+ const input={databaseUrl:url.toString(),successor,credentials:JSON.parse(readFileSync(resolveSourcePath(join(dir,'dev-publication/client.json')),'utf8'))};
  try {const result=execFileSync('docker',['exec','-i','-w',root,'athyper-dev-source-worker-1','node','--import','tsx',join(root,'tooling/scripts/local-dev/bootstrap-main-dev-metadata.mts'),'--inside'],{input:JSON.stringify(input),encoding:'utf8',maxBuffer:4*1024*1024});writeFileSync(join(homedir(),'.athyper/instances/dev/receipts/bp-rebuild-publication.json'),result,{mode:0o600});console.log(result);}
  catch(e:any){console.error(String(e.stdout??'')+String(e.stderr??'Bootstrap failed'));process.exitCode=1;}
 }else{
@@ -57,15 +59,14 @@ if(!process.argv.includes('--inside')){
  }
  for(const role of ['author','publisher'] as const){const a=config[role];if((await studio.query(`SELECT 1 FROM master.principal WHERE tenant_id=$1 AND id=$2 AND code=$3 AND principal_type='service_account' AND status='active' AND auth_epoch=$4`,[config.tenantId,a.principalId,a.code,a.authEpoch])).rowCount!==1)throw Error('WORKLOAD_IDENTITY_INVALID');}
  const required=(name:string)=>{if(!env[name])throw Error(`MISSING_${name}`);return env[name]!;};
- store=createInfisicalSecretStore({endpoint:required('INFISICAL_URL'),token:readFileSync(required('INFISICAL_TOKEN_FILE'),'utf8').trim(),workspaceId:required('INFISICAL_WORKSPACE_ID'),environment:required('INFISICAL_ENVIRONMENT'),secretPath:env.INFISICAL_SECRET_PATH??'/'});
+ store=createInfisicalSecretStore({endpoint:required('INFISICAL_URL'),token:readFileSync(resolveSourcePath(required('INFISICAL_TOKEN_FILE')),'utf8').trim(),workspaceId:required('INFISICAL_WORKSPACE_ID'),environment:required('INFISICAL_ENVIRONMENT'),secretPath:env.INFISICAL_SECRET_PATH??'/'});
  const keyId=required('PUBLICATION_SIGNING_KEY_ID'),algorithm='Ed25519';
  const resolver=new CachedPublicationKeyResolver(store,[{keyId,privateKeyReference:required('PUBLICATION_PRIVATE_KEY_REFERENCE'),publicKeyReferences:[required('PUBLICATION_PUBLIC_KEY_REFERENCE')]}]);
  const hash=(x:Uint8Array)=>createHash('sha256').update(x).digest('hex');
  const canonicalizer={canonicalBytes,sha256:(x:Uint8Array)=>'sha256:'+hash(x)};
  const dir=join(root,'metadata/entities');
- function paths(d:string,p=''):string[]{return readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?paths(join(d,e.name),p+e.name+'/'):e.name.endsWith('.json')?[p+e.name]:[]).sort();}
- const docs=[dir,join(dir,'../profiles')].flatMap(sourceRoot=>paths(sourceRoot).map(path=>({path,value:JSON.parse(readFileSync(join(sourceRoot,path),'utf8'))})));
- const catalog=JSON.parse(readFileSync(join(dir,'../review/registry-catalog.json'),'utf8')).entries;
+ const docs=discoverWorkspace(join(root,'metadata')).documents.map(({ref,value})=>({path:ref,value}));
+ const catalog=JSON.parse(readFileSync(resolveSourcePath(join(dir,'../review/registry-catalog.json')),'utf8')).entries;
  const keys=(kind:string)=>new Set<string>(catalog.filter((e:any)=>e.kind===kind).map((e:any)=>e.key));
  const sourceObjects=new Set<string>((await neon.query(`SELECT n.nspname||'.'||c.relname AS name FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN('r','p','v','m','f') AND n.nspname NOT LIKE 'pg_%'`)).rows.map((r:any)=>r.name));
  const omit=(v:any,fields:string[])=>Object.fromEntries(Object.entries(v).filter(([k])=>!fields.includes(k)));

@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync,execFileSync } from 'node:child_process';
@@ -8,14 +9,14 @@ if(info.Config.Labels['com.docker.compose.project']!=='athyper-dev')throw Error(
 const root='server/db/ddl/';
 const plane=process.argv.find(x=>x.startsWith('--plane='))?.slice(8)??'neon';
 if(!['neon','studio','mesh'].includes(plane))throw Error('Unsupported DEV plane');
-const files=fs.readFileSync(root+'planes/'+plane+'/_manifest.txt','utf8').split(/\r?\n/).map(x=>x.trim()).filter(x=>x&&!x.startsWith('#'));
+const files=fs.readFileSync(resolveSourcePath(root+'planes/'+plane+'/_manifest.txt'),'utf8').split(/\r?\n/).map(x=>x.trim()).filter(x=>x&&!x.startsWith('#'));
 // Cluster roles, extensions and database settings already exist. Do not alter
 // cluster-wide authority or database settings during a rollback-only DDL check.
 const selected=files.filter(x=>!x.includes('/_database/')||x.endsWith('/02_schema_provisions.sql'));
 const expand=file=>{
  const absolute=path.resolve(root,file);
  if(!absolute.startsWith(path.resolve(root)+path.sep))throw Error('Include outside DDL root');
- const sql=fs.readFileSync(absolute,'utf8').replace(/^\s*\\ir\s+([^\r\n]+)$/gm,(_,include)=>expand(path.relative(path.resolve(root),path.resolve(path.dirname(absolute),include.trim()))));
+ const sql=fs.readFileSync(resolveSourcePath(absolute),'utf8').replace(/^\s*\\ir\s+([^\r\n]+)$/gm,(_,include)=>expand(path.relative(path.resolve(root),path.resolve(path.dirname(absolute),include.trim()))));
  if(/^\s*(?:COMMIT|ROLLBACK|BEGIN)\s*;/im.test(sql)||/^\s*\\/m.test(sql))throw Error('Unexpected transaction/client control in '+file);
  return sql.replace(/^\uFEFF/,'');
 };
@@ -27,7 +28,7 @@ if(process.argv.includes('--check-banking-metadata')){
  if(!emitted.startsWith('BEGIN;\n')||!emitted.includes('\nROLLBACK;\n'))throw Error('Unexpected publication fixture transaction');
  acceptance=emitted.replace(/^BEGIN;\n/,'').replace('\nROLLBACK;\n','\n');
  const documents=['business_partner_banking/core.json','business_partner_bank_account_link/core.json','business_partner_bank_provisional_reference/core.json'];
- const bindings=documents.flatMap(file=>JSON.parse(fs.readFileSync('metadata/entities/'+file,'utf8')).fields.map(f=>f.binding).filter(Boolean));
+ const bindings=documents.flatMap(file=>JSON.parse(fs.readFileSync(resolveSourcePath('metadata/entities/'+file),'utf8')).fields.map(f=>f.binding).filter(Boolean));
  acceptance+=`\nDO $$ DECLARE binding jsonb; BEGIN
  FOR binding IN SELECT value FROM jsonb_array_elements('${JSON.stringify(bindings).replaceAll("'","''")}'::jsonb) LOOP
  IF NOT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass(binding->>'sourceObject') AND attname=binding->>'column' AND attnum>0 AND NOT attisdropped)

@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 /** Disposable-only Studio persistence -> real compiler -> verified local activation. */
 import assert from "node:assert/strict";
 import {
@@ -55,10 +56,10 @@ const zero = "00000000-0000-0000-0000-000000000000",
   entityCode = "ca01_example";
 const source = JSON.parse(
   readFileSync(
-    new URL(
+    resolveSourcePath(new URL(
       "../../../../../metadata/entities/business_partner/operation.json",
       import.meta.url,
-    ),
+    )),
     "utf8",
   ),
 );

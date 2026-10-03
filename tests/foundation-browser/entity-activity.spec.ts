@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { resolve } from "node:path";
@@ -9,7 +10,7 @@ const bundle = build({
     loader: "tsx",
     resolveDir: process.cwd(),
     contents: `
- import country from './metadata/entities/country/definition.json';
+ const country = ${readFileSync(resolveSourcePath(resolve("metadata/entities/country/definition.json")), "utf8")};
  import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
  import {MetadataDetailWorkspace} from './packages/platform/entity/runtime/form-detail/src/detail-workspace';
  import {parseEntityRecordPresentation} from './packages/contracts/platform/entity-runtime/src/record-presentation';
@@ -73,7 +74,7 @@ const styles = [
   "packages/platform/entity/runtime/form-detail/src/styles.css",
   "packages/platform/entity/runtime/form-detail/src/record/record-collaboration.css",
 ]
-  .map((path) => readFileSync(path, "utf8").replace(/@import[^;]+;/g, ""))
+  .map((path) => readFileSync(resolveSourcePath(path), "utf8").replace(/@import[^;]+;/g, ""))
   .join("\n");
 async function mount(
   page: import("@playwright/test").Page,

@@ -12,8 +12,15 @@ const routes = () => ({
 function entities(files) {
   const root = mkdtempSync(path.join(tmpdir(), "placements-"));
   for (const [file, body] of Object.entries(files)) {
-    mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
-    writeFileSync(path.join(root, file), JSON.stringify(body));
+    mkdirSync(path.dirname(path.join(root, "entities", file)), { recursive: true });
+    writeFileSync(path.join(root, "entities", file), JSON.stringify(body));
+  }
+  for (const directory of ["entities", "profiles", "review", "schemas"]) mkdirSync(path.join(root, directory), { recursive: true });
+  writeFileSync(path.join(root, "manifest.json"), JSON.stringify({ schema: "athyper.metadata-workspace/1", entitiesRoot: "entities", profilesRoot: "profiles", reviewRoot: "review", schemasRoot: "schemas" }));
+  for (const code of new Set(Object.keys(files).map(file => file.split("/")[0]))) {
+    const descriptor = { schema: "athyper.entity-source/1", entityCode: code, artifacts: [], placement: "placement.json", definition: "definition.json" };
+    if (!files[`${code}/definition.json`]) writeFileSync(path.join(root, "entities", code, "definition.json"), "{}");
+    writeFileSync(path.join(root, "entities", code, "entity.json"), JSON.stringify(descriptor));
   }
   return root;
 }

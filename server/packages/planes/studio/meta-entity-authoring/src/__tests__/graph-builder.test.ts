@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { buildSharedReferenceGraph, COMMON_REFERENCE_VIEW_PERMISSION } from "../authoring/graph-builder.js";
@@ -11,13 +12,13 @@ const definition = {
 };
 describe("common reference capability enrollment", () => {
   it("reports source mode conflicts before generic unknown-property validation", () => {
-    const capabilities = JSON.parse(readFileSync(new URL("../../../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8"));
+    const capabilities = JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../../../metadata/entities/country/capabilities.json", import.meta.url)), "utf8"));
     capabilities[0].profile = { code: "platform.collaboration.comments.standard", version: 1 };
     const result = validateGraph(buildSharedReferenceGraph({ ...definition, capabilities }, "neon"));
     expect(result.issues).toEqual(expect.arrayContaining([expect.objectContaining({ code: "CAPABILITY_AUTHORING_MODE_CONFLICT", path: "capabilities[0]" })]));
   });
   it.each(["studio", "neon", "mesh"] as const)("keeps Country reference reads separate from common collaboration on %s", (plane) => {
-    const capabilities = JSON.parse(readFileSync(new URL("../../../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8"));
+    const capabilities = JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../../../metadata/entities/country/capabilities.json", import.meta.url)), "utf8"));
     const graph = buildSharedReferenceGraph({ ...definition, capabilities }, plane);
     const compiled = compileGraph(graph);
     expect(() => assertCommonReferenceGraph(graph, plane)).not.toThrow();

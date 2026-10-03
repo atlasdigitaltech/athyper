@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -12,9 +13,9 @@ const root = new URL(
   import.meta.url,
 );
 const source = () =>
-  JSON.parse(readFileSync(new URL("definition.json", root), "utf8"));
+  JSON.parse(readFileSync(resolveSourcePath(new URL("definition.json", root)), "utf8"));
 const capabilities = () =>
-  JSON.parse(readFileSync(new URL("capabilities.json", root), "utf8"));
+  JSON.parse(readFileSync(resolveSourcePath(new URL("capabilities.json", root)), "utf8"));
 describe("shared reference metadata products", () => {
   it("keeps Country plane identity, permissions and explicit target selection", () => {
     const product = parseSharedReferenceProduct(source());
@@ -293,7 +294,7 @@ describe("shared reference metadata products", () => {
   });
   it("enforces a closed dependency boundary for reference product authoring", () => {
     const path = new URL("../authoring/product.ts", import.meta.url);
-    const content = readFileSync(path, "utf8");
+    const content = readFileSync(resolveSourcePath(path), "utf8");
     const file = ts.createSourceFile(
       path.pathname,
       content,

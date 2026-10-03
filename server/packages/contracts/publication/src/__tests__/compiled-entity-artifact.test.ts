@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import {
@@ -9,10 +10,10 @@ import {
 
 const fixture = (path: string) =>
   readFile(
-    new URL(
+    resolveSourcePath(new URL(
       `../../../../../../metadata/entities/${path}`,
       import.meta.url,
-    ),
+    )),
   ).then((bytes) => JSON.parse(bytes.toString("utf8")) as unknown);
 
 describe("compiled entity artifact v2 draft contract", () => {

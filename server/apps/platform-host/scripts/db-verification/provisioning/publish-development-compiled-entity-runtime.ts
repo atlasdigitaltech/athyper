@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { discoverWorkspace, resolveSourcePath } from "../../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { navigationDisplayArtifactKeys, navigationDisplayOverlay } from "./navigation-display-overlay.js";
 import { qualificationContractArtifactKeys, qualificationContractOverlay } from "./qualification-contract-overlay.js";
 import { validatePartnerSectionPublication } from "../../../src/composition/spaces/neon/partner-section-contract.js";
@@ -249,18 +250,18 @@ async function readDecisionViewOverlay(neon: QueryClient, root: string, baseline
   const row=await one<{payload_json:Json}>(neon,`SELECT p.payload_json FROM runtime_meta.release_activation_head h
     JOIN runtime_meta.applied_release_payload p ON p.applied_release_id=h.applied_release_id
     WHERE h.publication_key='metadata.compiled_entity.business_partner' AND h.artifact_hash=$1`,[baselineHash]);
-  const bytes=await Promise.all((navigationDisplay?navigationDisplayArtifactKeys:qualificationContract?qualificationContractArtifactKeys:statusTones?statusToneArtifactKeys:capabilities?capabilityArtifactKeys:companyProfiles?companyProfileArtifactKeys:decisionViewArtifactKeys).map(key=>readFile(resolve(root,`${key}.json`),"utf8")));
+  const bytes=await Promise.all((navigationDisplay?navigationDisplayArtifactKeys:qualificationContract?qualificationContractArtifactKeys:statusTones?statusToneArtifactKeys:capabilities?capabilityArtifactKeys:companyProfiles?companyProfileArtifactKeys:decisionViewArtifactKeys).map(key=>readFile(resolveSourcePath(resolve(root,`${key}.json`)),"utf8")));
   if(createHash("sha256").update(JSON.stringify(bytes)).digest("hex")!==sourceHash)throw Error("DECISION_VIEW_SOURCES_CHANGED");
   const artifacts=(navigationDisplay?navigationDisplayOverlay:qualificationContract?qualificationContractOverlay:statusTones?statusToneOverlay:capabilities?capabilityOverlay:companyProfiles?companyProfileOverlay:decisionViewOverlay)((row.payload_json.artifacts as Json[]).map(a=>a.content),bytes.map(b=>JSON.parse(b)))
     .map(value=>({ref:`${value.artifactKey}.json`,value}));
-  const registry=JSON.parse(await readFile(resolve(root,"../review/registry-catalog.json"),"utf8")) as Json;
+  const registry=JSON.parse(await readFile(resolveSourcePath(resolve(root,"../review/registry-catalog.json")),"utf8")) as Json;
   return {release:row.payload_json.release as Json,registry,artifacts};
 }
 async function readAuthoring(rootPath: string) {
-  const root = resolve(rootPath), paths = await jsonPaths(root);
-  const documents = await Promise.all(paths.map(async (ref) => ({ ref, value: JSON.parse(await readFile(resolve(root, ref), "utf8")) as Json })));
+  const root = resolve(rootPath);
+  const documents = discoverWorkspace(resolve(root, "..")).documents;
   const release = documents.find((doc) => doc.value.artifactType === "release_envelope")?.value;
-  const registry = JSON.parse(await readFile(resolve(root, "../review/registry-catalog.json"), "utf8")) as Json;
+  const registry = JSON.parse(await readFile(resolveSourcePath(resolve(root, "../review/registry-catalog.json")), "utf8")) as Json;
   if (!release || !registry) throw new Error("authoring root lacks release or registry catalog");
   return { release, registry, artifacts: documents.filter(({ value }) => ["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow"].includes(String(value.artifactType))) };
 }
@@ -268,13 +269,13 @@ async function readFrozenCandidate(candidateOutput: string, authoringRoot: strin
   const root = resolve(candidateOutput);
   const artifactsRoot = resolve(root, "entities");
   const paths = await jsonPaths(artifactsRoot);
-  const documents = await Promise.all(paths.map(async (ref) => ({ ref, value: JSON.parse(await readFile(resolve(artifactsRoot, ref), "utf8")) as Json })));
+  const documents = await Promise.all(paths.map(async (ref) => ({ ref, value: JSON.parse(await readFile(resolveSourcePath(resolve(artifactsRoot, ref)), "utf8")) as Json })));
   const release = documents.find((doc) => doc.ref === "release.json")?.value;
   if (!release) throw new Error("frozen candidate lacks release.json");
   const artifacts = documents.filter(({ value }) => ["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow"].includes(String(value.artifactType)));
   if (!artifacts.length || !Array.isArray(release.artifacts) || artifacts.length !== release.artifacts.length)
     throw new Error("frozen candidate artifact set is incomplete");
-  const registry = JSON.parse(await readFile(resolve(authoringRoot, "../review/registry-catalog.json"), "utf8")) as Json;
+  const registry = JSON.parse(await readFile(resolveSourcePath(resolve(authoringRoot, "../review/registry-catalog.json")), "utf8")) as Json;
   return { release, registry, artifacts };
 }
 async function jsonPaths(root: string, prefix = ""): Promise<string[]> { const entries = await readdir(resolve(root, prefix), { withFileTypes: true }); return (await Promise.all(entries.map((entry) => entry.isDirectory() ? jsonPaths(root, `${prefix}${entry.name}/`) : entry.isFile() && entry.name.endsWith(".json") ? [`${prefix}${entry.name}`] : []))).flat(); }

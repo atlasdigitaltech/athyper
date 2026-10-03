@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
 /** Prepare reviewable reference drafts; this command never approves or activates a release. */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -77,7 +78,7 @@ for (const entity of [
     );
     const requestPath = join(directory, "request.json");
     const request = existsSync(requestPath)
-      ? JSON.parse(readFileSync(requestPath, "utf8"))
+      ? JSON.parse(readFileSync(resolveSourcePath(requestPath), "utf8"))
       : { id: randomUUID() };
     save(requestPath, request);
     draft = run(

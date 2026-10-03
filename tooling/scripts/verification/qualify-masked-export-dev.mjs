@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../metadata/source-workspace.mjs";
 /** DEV-only shared Entity Framework disclosure qualification. No raw descriptor
  * or activation-head updates: draft import, independent enrollment and ordinary
  * publication execution remain separate recorded stages. */
@@ -27,7 +28,7 @@ const save = (name, value) =>
     { mode: 0o600 },
   );
 const read = (name) =>
-  JSON.parse(readFileSync(join(output, name + ".json"), "utf8"));
+  JSON.parse(readFileSync(resolveSourcePath(join(output, name + ".json")), "utf8"));
 const target = JSON.parse(
   execFileSync("docker", ["inspect", "athyper-dev-db-1"], { encoding: "utf8" }),
 )[0];
@@ -48,6 +49,7 @@ if (mode === "prepare") {
   save("product", product);
   mkdirSync(directory);
   try {
+    writeFileSync(join(directory, "entity.json"), JSON.stringify({ schema: "athyper.entity-source/1", entityCode: product.definition.entity.entityCode, definition: "definition.json" }) + "\n");
     writeFileSync(
       join(directory, "definition.json"),
       JSON.stringify(product, null, 2) + "\n",
@@ -116,10 +118,10 @@ if (mode === "prepare") {
   const role = mode === "propose" ? "admin" : "owner";
   const session = JSON.parse(
     readFileSync(
-      join(
+      resolveSourcePath(join(
         homedir(),
         `.athyper/instances/dev/secrets/control-api/login/platform.${role}.json`,
-      ),
+      )),
       "utf8",
     ),
   );
@@ -157,10 +159,10 @@ if (mode === "prepare") {
   const pin = read("policy-active");
   const workload = JSON.parse(
     readFileSync(
-      join(
+      resolveSourcePath(join(
         homedir(),
         ".athyper/instances/dev/secrets/dev-publication-athyper/client.json",
-      ),
+      )),
       "utf8",
     ),
   );

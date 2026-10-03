@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 /** Called only by the runner-owned ci-integrity databases. No CLI/deployed target. */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -401,7 +402,7 @@ export async function qualifyEntityFoundationLifecycle({
     for (const plane of planes) {
       const product = JSON.parse(
         readFileSync(
-          `${root}/metadata/entities/${code}/definition.json`,
+          resolveSourcePath(`${root}/metadata/entities/${code}/definition.json`),
           "utf8",
         ),
       );

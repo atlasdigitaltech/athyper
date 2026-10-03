@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { build } from "esbuild";
@@ -51,7 +52,7 @@ const styles = [
   "packages/platform/entity/runtime/form-detail/src/record/record.css",
   "packages/platform/entity/runtime/form-detail/src/detail-workspace.css",
 ]
-  .map((path) => readFileSync(path, "utf8").replace(/@import[^;]+;/g, ""))
+  .map((path) => readFileSync(resolveSourcePath(path), "utf8").replace(/@import[^;]+;/g, ""))
   .join("\n");
 async function mount(
   page: import("@playwright/test").Page,
@@ -73,7 +74,7 @@ async function mount(
   await page.evaluate(fixture => { (window as any).fixture = fixture; }, fixture);
   await page.addScriptTag({ content: await bundle });
 }
-const countrySource = JSON.parse(readFileSync("metadata/entities/country/definition.json", "utf8")).definition;
+const countrySource = JSON.parse(readFileSync(resolveSourcePath("metadata/entities/country/definition.json"), "utf8")).definition;
 // This fixture exercises navigation, not compilation. Lower source localized text
 // to the presentation's compatible string label; the compiled path has its own tests.
 const country = {...countrySource,sections:countrySource.sections.map((section:{label:string|{defaultText:string}})=>({...section,label:typeof section.label==="string"?section.label:section.label.defaultText}))};

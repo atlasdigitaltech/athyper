@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { capabilityArtifactMembers, type EntityCapabilityAuthoringMember } from "@athyper/server-contract-publication";
@@ -6,7 +7,7 @@ import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { createEntityCapabilityPolicy } from "./entity-capability-policy.js";
 import { resolveEffectiveCollaborationControls, type CollaborationOperationalControls } from "./effective-collaboration-controls.js";
 
-const members = JSON.parse(readFileSync(new URL("../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8")) as EntityCapabilityAuthoringMember[];
+const members = JSON.parse(readFileSync(resolveSourcePath(new URL("../../../../../metadata/entities/country/capabilities.json", import.meta.url)), "utf8")) as EntityCapabilityAuthoringMember[];
 const mapped = capabilityArtifactMembers("country", members);
 const files = mapped.operationBindings.attachmentBinding!;
 const comments = mapped.operationBindings.commentBinding!;

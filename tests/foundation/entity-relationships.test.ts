@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../tooling/scripts/metadata/source-workspace.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -13,10 +14,10 @@ import {
 } from "../../packages/contracts/platform/entity-runtime/src/entity-relationship";
 const product = JSON.parse(
   readFileSync(
-    new URL(
+    resolveSourcePath(new URL(
       "../../metadata/entities/principal/definition.json",
       import.meta.url,
-    ),
+    )),
     "utf8",
   ),
 );

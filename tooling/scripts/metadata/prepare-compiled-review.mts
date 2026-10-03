@@ -1,9 +1,11 @@
+import { discoverWorkspace } from "./source-workspace.mjs";
 /** Freeze the complete compiler output for review. Never marks source published or signs it. */
 import { createHash } from "node:crypto";
-import { readFile, readdir, mkdir, writeFile } from "node:fs/promises";
+import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { compileCompiledEntityArtifacts } from "../../../server/packages/services/publication/src/compiled-entity-artifact-compiler.js";
-const root = resolve("metadata/entities");
+const workspace = discoverWorkspace(resolve("metadata"));
+const root = workspace.entitiesRoot;
 const output = resolve(
   process.argv[2] ?? "docs/reports/bp-integration-20260921/compiled-review",
 );
@@ -22,27 +24,7 @@ const canonicalizer = {
   sha256: (v: Uint8Array) =>
     `sha256:${createHash("sha256").update(v).digest("hex")}`,
 };
-async function paths(dir: string, prefix = ""): Promise<string[]> {
-  return (
-    await Promise.all(
-      (await readdir(dir, { withFileTypes: true })).map((e) =>
-        e.isDirectory()
-          ? paths(resolve(dir, e.name), `${prefix}${e.name}/`)
-          : e.name.endsWith(".json")
-            ? [`${prefix}${e.name}`]
-            : [],
-      ),
-    )
-  ).flat();
-}
-const documents = await Promise.all(
-  (await Promise.all([root, resolve(root, "../profiles")].map(async (sourceRoot) =>
-    (await paths(sourceRoot)).map((ref) => ({ sourceRoot, ref })),
-  ))).flat().map(async ({ sourceRoot, ref }) => ({
-    ref,
-    value: JSON.parse(await readFile(resolve(sourceRoot, ref), "utf8")),
-  })),
-);
+const documents = workspace.documents;
 const release = documents.find(
   (d) => d.value.artifactType === "release_envelope",
 );

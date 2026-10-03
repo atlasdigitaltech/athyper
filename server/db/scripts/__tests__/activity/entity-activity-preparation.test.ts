@@ -1,3 +1,4 @@
+import { resolveSourcePath } from "../../../../../tooling/scripts/metadata/source-workspace.mjs";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -53,7 +54,7 @@ test("generic preparation uses product identity, not a Country implementation br
   const directory = mkdtempSync(join(tmpdir(), "entity-activity-"));
   try {
     const definition = JSON.parse(
-      readFileSync(join(product, "definition.json"), "utf8"),
+      readFileSync(resolveSourcePath(join(product, "definition.json")), "utf8"),
     );
     definition.definition.entityCode = "example_reference";
     definition.definition.storageObject = "example_reference";
@@ -93,11 +94,11 @@ test("Activity source lock detects profile drift before candidate preparation", 
   try {
     writeFileSync(
       join(directory, "source-lock.json"),
-      readFileSync(join(profiles, "source-lock.json")),
+      readFileSync(resolveSourcePath(join(profiles, "source-lock.json"))),
     );
     writeFileSync(
       join(directory, "standard.v1.json"),
-      `${readFileSync(join(profiles, "standard.v1.json"), "utf8")} `,
+      `${readFileSync(resolveSourcePath(join(profiles, "standard.v1.json")), "utf8")} `,
     );
     assert.throws(
       () => createCapabilityProfileFileResolver(directory),
