@@ -1,6 +1,7 @@
 /** Offline authoring-source discovery. The index is derived on every load and is
  * never a second authoring definition or a published runtime registry. */
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -87,6 +88,31 @@ export function discoverWorkspace(metadataRoot = fileURLToPath(new URL("../../..
     add(`${owner.entityCode}/${relative(owner.directory, path).split(sep).join("/")}`, path, owner);
   }
   for (const path of files(profilesRoot).filter((path) => path.endsWith(".json"))) add(relative(profilesRoot, path).split(sep).join("/"), path);
+  // Preserve the existing capability-profile source-lock and {code, version}
+  // contracts. This resolves source identity only; native profile parsing and
+  // binding validation remain in the publication contract/compiler.
+  const capabilityProfiles = new Map();
+  for (const document of documents.filter((entry) => inside(profilesRoot, entry.path) && entry.path.endsWith(`${sep}source-lock.json`))) {
+    const lock = document.value;
+    if (lock?.schema !== "athyper.capability-profile-source-lock/1" || !Array.isArray(lock.profiles) || Object.keys(lock).some((key) => !["schema", "profiles"].includes(key))) fail(`${document.path}: unsupported capability profile source lock`);
+    for (const entry of lock.profiles) {
+      if (!entry || Object.keys(entry).sort().join() !== ["code", "file", "sha256", "version"].sort().join() || typeof entry.code !== "string" || !Number.isSafeInteger(entry.version) || entry.version < 1 || typeof entry.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(entry.sha256)) fail(`${document.path}: invalid capability profile lock entry`);
+      const path = requiredPath(dirname(document.path), entry.file);
+      const profile = documents.find((candidate) => candidate.path === path)?.value;
+      const key = `${entry.code}@${entry.version}`;
+      if (createHash("sha256").update(readFileSync(path)).digest("hex") !== entry.sha256) fail(`${path}: capability profile source hash differs from ${document.path}`);
+      if (profile?.schema !== "athyper.capability-profile/1" || profile.profileCode !== entry.code || profile.profileVersion !== entry.version) fail(`${path}: capability profile identity does not match ${key}`);
+      if (capabilityProfiles.has(key)) fail(`${document.path}: competing capability profile ${key}`);
+      capabilityProfiles.set(key, path);
+    }
+  }
+  function resolveProfile(selection) {
+    if (!selection || Object.keys(selection).sort().join() !== "code,version" || typeof selection.code !== "string" || !Number.isSafeInteger(selection.version) || selection.version < 1) fail(`invalid capability profile selection ${JSON.stringify(selection)}`);
+    const key = `${selection.code}@${selection.version}`;
+    const path = capabilityProfiles.get(key);
+    if (!path) fail(`unresolved required capability profile ${key}; declare it in a supported source-lock.json`);
+    return path;
+  }
   function resolveRef(ref) {
     safeRef(ref);
     const document = byRef.get(ref);
@@ -95,6 +121,9 @@ export function discoverWorkspace(metadataRoot = fileURLToPath(new URL("../../..
   }
   function checkRefs(value, file) {
     if (!value || typeof value !== "object") return;
+    if ((value.schema === "athyper.entity-activity-source/1" || typeof value.capabilityKey === "string") && value.profile !== undefined) {
+      try { resolveProfile(value.profile); } catch (error) { fail(`${file}: ${error.message}`); }
+    }
     for (const [key, item] of Object.entries(value)) {
       const refs = key === "ref" || key.endsWith("Ref") ? [item] : key.endsWith("Refs") && Array.isArray(item) ? item : [];
       for (const ref of refs) if (typeof ref === "string" && ref.endsWith(".json")) {
@@ -105,7 +134,7 @@ export function discoverWorkspace(metadataRoot = fileURLToPath(new URL("../../..
   }
   for (const document of documents) checkRefs(document.value, document.path);
   if (manifest.releaseEntry !== undefined) resolveRef(manifest.releaseEntry);
-  return { metadataRoot, manifest, entitiesRoot, profilesRoot, reviewRoot, schemasRoot, entities, documents, resolveRef };
+  return { metadataRoot, manifest, entitiesRoot, profilesRoot, reviewRoot, schemasRoot, entities, documents, resolveRef, resolveProfile };
 }
 
 /** Resolve existing repository-rooted logical source paths at the I/O boundary.

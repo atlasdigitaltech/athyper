@@ -15,6 +15,7 @@ export interface SourceWorkspace {
   entities: Map<string, EntitySource>;
   documents: SourceDocument[];
   resolveRef(ref: string): string;
+  resolveProfile(selection: { code: string; version: number }): string;
 }
 export function discoverWorkspace(metadataRoot?: string): SourceWorkspace;
 export function resolveSourcePath<T>(input: T): T;
