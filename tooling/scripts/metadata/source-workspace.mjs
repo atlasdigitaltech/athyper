@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "n
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const excluded = new Set(["review", "history", "generated", "dist", "build", "node_modules", "__pycache__"]);
+const excluded = new Set(["review", "history", "generated", "codegen", "dist", "build", "out", "node_modules", "__pycache__"]);
 const descriptorKeys = new Set(["schema", "entityCode", "definition", "artifacts", "placement", "localization", "capabilities", "activity", "release"]);
 const memberKeys = ["definition", "placement", "localization", "capabilities", "activity", "release"];
 const fail = (message) => { throw new Error(`Metadata source configuration: ${message}`); };
@@ -49,6 +49,7 @@ export function discoverWorkspace(metadataRoot = fileURLToPath(new URL("../../..
     if (unknown.length) fail(`${file}: unsupported descriptor properties: ${unknown.join(", ")}`);
     const code = descriptor.entityCode;
     if (typeof code !== "string" || !/^[a-z][a-z0-9_]*$/.test(code)) fail(`${file}: invalid entityCode`);
+    safeRef(code);
     if (entities.has(code)) fail(`competing declarations for ${code}: ${entities.get(code).descriptorPath} and ${file}`);
     if (descriptor.artifacts !== undefined && (!Array.isArray(descriptor.artifacts) || descriptor.artifacts.some((ref) => typeof ref !== "string"))) fail(`${file}: artifacts must be an array of file references`);
     if (!descriptor.definition && !descriptor.artifacts?.length) fail(`${file}: declare definition or artifacts`);
@@ -125,7 +126,13 @@ export function resolveSourcePath(input) {
         const workspace = discoverWorkspace(ancestor);
         const physical = [...workspace.entities.values()].some((entry) => entry.directory === path) || workspace.documents.some((entry) => entry.path === path);
         const ref = relative(root, path).split(sep).join("/");
-        const target = physical ? path : workspace.entities.get(ref)?.directory ?? workspace.resolveRef(ref);
+        const candidates = [...new Set([
+          physical ? path : undefined,
+          workspace.entities.get(ref)?.directory,
+          workspace.documents.find((document) => document.ref === ref)?.path,
+        ].filter(Boolean))];
+        if (candidates.length > 1) fail(`ambiguous rooted source path ${input}: ${candidates.join(" and ")}`);
+        const target = candidates[0] ?? workspace.resolveRef(ref);
         return input instanceof URL ? pathToFileURL(target + (input.pathname.endsWith("/") ? sep : "")) : target;
       }
     }
