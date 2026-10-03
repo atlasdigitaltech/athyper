@@ -77,7 +77,7 @@
         "defaultText": "Reference"
       },
       "dataType": "uuid",
-      "nullable": true,
+      "nullable": false,
       "valueOrigin": "derived",
       "readPolicy": "authorized_projection",
       "writePolicy": "system_managed",
@@ -1051,5 +1051,61 @@
     "search": [],
     "filters": [],
     "sorts": []
+  },
+  "listPresentation": {
+    "schemaVersion": 1,
+    "title": "Qualifications",
+    "identityField": "qualification_type_code",
+    "defaultColumns": [
+      "qualification_type_code",
+      "context_kind",
+      "decision",
+      "date_window",
+      "recorded_condition_count"
+    ],
+    "supportedModes": [
+      "table"
+    ],
+    "defaultPageSize": 25,
+    "allowedPageSizes": [
+      25,
+      50,
+      100
+    ]
+  },
+  "recordPresentation": {
+    "schemaVersion": 1,
+    "titleField": "qualification_type_code",
+    "sections": [
+      {
+        "key": "details",
+        "label": "Qualifications",
+        "fields": [
+          "qualification_type_code",
+          "context_kind",
+          "decision",
+          "recorded_condition_count",
+          "effective_from",
+          "effective_until",
+          "next_review_at",
+          "date_window",
+          "assessed_at"
+        ],
+        "placement": "direct"
+      }
+    ],
+    "navigation": {
+      "mode": "switch",
+      "tabs": [
+        {
+          "key": "record",
+          "label": "Qualifications",
+          "sectionKeys": [
+            "details"
+          ]
+        }
+      ]
+    },
+    "actions": []
   }
 }

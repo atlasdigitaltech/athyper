@@ -8,33 +8,99 @@
   "plane": "neon",
   "operations": [
     {
+      "key": "list",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "execution": {
+        "handlerKey": "entity.record.list.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "tenant.record.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "not_applicable"
+    },
+    {
       "key": "capability_supplier_manage",
       "permissionCode": "neon.relationship.business_partner.capability_supplier_manage",
-      "execution": {"handlerKey":"neon.bp.capability.supplier.v1","registryRequired":true},
-      "inputSchema": {"required":["enabled","reason"],"properties":{"enabled":{"type":"boolean"},"reason":{"type":"string"}},"additionalProperties":false},
-      "scopeBinding": {"scopeSource":"persisted_record","resolverKey":"neon.business-context.v1","denyUnresolved":true},
-      "idempotency":"required",
-      "targetBinding":{"targetEntityCode":"business_partner","targetResolution":"operation_context_only","clientSuppliedTargetEntityCode":"forbidden","handlerMustRejectTargetMismatch":true}
+      "execution": {
+        "handlerKey": "neon.bp.capability.supplier.v1",
+        "registryRequired": true
+      },
+      "inputSchema": {
+        "required": [
+          "enabled",
+          "reason"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required",
+      "targetBinding": {
+        "targetEntityCode": "business_partner",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
     },
     {
       "key": "capability_customer_manage",
       "permissionCode": "neon.relationship.business_partner.capability_customer_manage",
-      "execution": {"handlerKey":"neon.bp.capability.customer.v1","registryRequired":true},
-      "inputSchema": {"required":["enabled","reason"],"properties":{"enabled":{"type":"boolean"},"reason":{"type":"string"}},"additionalProperties":false},
-      "scopeBinding": {"scopeSource":"persisted_record","resolverKey":"neon.business-context.v1","denyUnresolved":true},
-      "idempotency":"required",
-      "targetBinding":{"targetEntityCode":"business_partner","targetResolution":"operation_context_only","clientSuppliedTargetEntityCode":"forbidden","handlerMustRejectTargetMismatch":true}
+      "execution": {
+        "handlerKey": "neon.bp.capability.customer.v1",
+        "registryRequired": true
+      },
+      "inputSchema": {
+        "required": [
+          "enabled",
+          "reason"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required",
+      "targetBinding": {
+        "targetEntityCode": "business_partner",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
     },
     {
       "key": "read",
       "permissionCode": "neon.relationship.business_partner.read",
       "execution": {
-        "handlerKey": "neon.business_partner.read.v1",
+        "handlerKey": "entity.record.read.v1",
         "registryRequired": true
       },
       "scopeBinding": {
         "scopeSource": "persisted_record_or_validated_create_input",
-        "resolverKey": "neon.business-context.v1",
+        "resolverKey": "tenant.record.v1",
         "denyUnresolved": true
       },
       "idempotency": "not_applicable"
@@ -617,6 +683,5 @@
       "bindingRef": "business_partner/operation#attachmentBinding"
     },
     "draftRetentionDays": 30
-  },
-  "artifactHash": "sha256:34350cb858dc8085dd45af40b23d2309110b87488d8f57c1715d4db52537b680"
+  }
 }

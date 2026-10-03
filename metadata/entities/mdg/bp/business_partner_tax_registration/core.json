@@ -15,18 +15,22 @@
     }
   },
   "storage": {
-    "kind": "table",
-    "sourceObjects": ["master.business_partner_tax_registration"],
+    "kind": "field_projection",
+    "sourceObjects": [
+      "master.business_partner_tax_registration",
+      "master.v_partner_tax_read"
+    ],
     "primaryObject": "master.business_partner_tax_registration",
     "idField": "id",
     "tenantField": "tenant_id",
-    "genericWriteEnabled": false
+    "genericWriteEnabled": false,
+    "readObject": "master.v_partner_tax_read"
   },
   "fields": [
     {
       "key": "tenant_id",
       "binding": {
-        "sourceObject": "master.business_partner_tax_registration",
+        "sourceObject": "master.v_partner_tax_read",
         "column": "tenant_id"
       },
       "dataType": "uuid",
@@ -47,7 +51,7 @@
     {
       "key": "id",
       "binding": {
-        "sourceObject": "master.business_partner_tax_registration",
+        "sourceObject": "master.v_partner_tax_read",
         "column": "id"
       },
       "dataType": "uuid",
@@ -68,9 +72,12 @@
     {
       "key": "business_partner_id",
       "writePolicy": "system_managed",
-      "uiFacets": { "visibility": "hidden", "editability": "readonly" },
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
       "binding": {
-        "sourceObject": "master.business_partner_tax_registration",
+        "sourceObject": "master.v_partner_tax_read",
         "column": "business_partner_id"
       },
       "dataType": "uuid",
@@ -86,10 +93,12 @@
     {
       "key": "registration_type_code",
       "display": {
-        "lookup": { "code": "master.business_partner_tax_registration_type" }
+        "lookup": {
+          "code": "master.business_partner_tax_registration_type"
+        }
       },
       "binding": {
-        "sourceObject": "master.business_partner_tax_registration",
+        "sourceObject": "master.v_partner_tax_read",
         "column": "registration_type_code"
       },
       "dataType": "string",
@@ -105,7 +114,7 @@
     {
       "key": "jurisdiction_id",
       "binding": {
-        "sourceObject": "master.business_partner_tax_registration",
+        "sourceObject": "master.v_partner_tax_read",
         "column": "jurisdiction_id"
       },
       "dataType": "uuid",
@@ -121,7 +130,7 @@
     {
       "key": "tax_type_id",
       "binding": {
-        "sourceObject": "master.business_partner_tax_registration",
+        "sourceObject": "master.v_partner_tax_read",
         "column": "tax_type_id"
       },
       "dataType": "uuid",
@@ -137,7 +146,7 @@
     {
       "key": "registration_number",
       "binding": {
-        "sourceObject": "master.business_partner_tax_registration",
+        "sourceObject": "master.v_partner_tax_read",
         "column": "registration_number"
       },
       "dataType": "string",
@@ -152,7 +161,7 @@
       "protection": {
         "normalProjection": {
           "mode": "masked",
-          "maskedDisplay": "••••",
+          "maskedDisplay": "\u2022\u2022\u2022\u2022",
           "plaintextInNormalQueries": false
         },
         "reveal": {
@@ -179,7 +188,7 @@
     {
       "key": "effective_from",
       "binding": {
-        "sourceObject": "master.business_partner_tax_registration",
+        "sourceObject": "master.v_partner_tax_read",
         "column": "effective_from"
       },
       "dataType": "date",
@@ -195,7 +204,7 @@
     {
       "key": "effective_until",
       "binding": {
-        "sourceObject": "master.business_partner_tax_registration",
+        "sourceObject": "master.v_partner_tax_read",
         "column": "effective_until"
       },
       "dataType": "date",
@@ -241,7 +250,9 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": ["platform/core-field-defaults.v1"],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
@@ -271,10 +282,59 @@
   ],
   "defaultsProfile": "platform.core-field-defaults.v1",
   "defaultsProfileRef": "platform/core-field-defaults.v1.json",
-  "artifactHash": "sha256:f9769a4ee3219674ee5082048e794046286f05a58076634dd4d436c2ddb7b03a",
   "query": {
     "search": [],
     "filters": [],
     "sorts": []
+  },
+  "listPresentation": {
+    "schemaVersion": 1,
+    "title": "Tax registrations",
+    "identityField": "registration_type_code",
+    "defaultColumns": [
+      "registration_type_code",
+      "registration_number",
+      "effective_from",
+      "effective_until"
+    ],
+    "supportedModes": [
+      "table"
+    ],
+    "defaultPageSize": 25,
+    "allowedPageSizes": [
+      25,
+      50,
+      100
+    ]
+  },
+  "recordPresentation": {
+    "schemaVersion": 1,
+    "titleField": "registration_type_code",
+    "sections": [
+      {
+        "key": "details",
+        "label": "Tax registrations",
+        "fields": [
+          "registration_type_code",
+          "registration_number",
+          "effective_from",
+          "effective_until"
+        ],
+        "placement": "direct"
+      }
+    ],
+    "navigation": {
+      "mode": "switch",
+      "tabs": [
+        {
+          "key": "record",
+          "label": "Tax registrations",
+          "sectionKeys": [
+            "details"
+          ]
+        }
+      ]
+    },
+    "actions": []
   }
 }

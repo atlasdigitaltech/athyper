@@ -16,3 +16,5 @@ export { createPublishedEntityCatalogue } from "./runtime-descriptor-repository.
 export * from "./entity-deployment-support.js";
 export * from "./entity-support-qualification.js";
 export * from "./entity-readiness-inventory.js";
+
+export * from "./split-read-runtime.js";

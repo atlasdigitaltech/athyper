@@ -15,18 +15,22 @@
     }
   },
   "storage": {
-    "kind": "table",
-    "sourceObjects": ["master.business_partner_identifier"],
+    "kind": "field_projection",
+    "sourceObjects": [
+      "master.business_partner_identifier",
+      "master.v_partner_identifier_read"
+    ],
     "primaryObject": "master.business_partner_identifier",
     "idField": "id",
     "tenantField": "tenant_id",
-    "genericWriteEnabled": false
+    "genericWriteEnabled": false,
+    "readObject": "master.v_partner_identifier_read"
   },
   "fields": [
     {
       "key": "tenant_id",
       "binding": {
-        "sourceObject": "master.business_partner_identifier",
+        "sourceObject": "master.v_partner_identifier_read",
         "column": "tenant_id"
       },
       "dataType": "uuid",
@@ -47,7 +51,7 @@
     {
       "key": "id",
       "binding": {
-        "sourceObject": "master.business_partner_identifier",
+        "sourceObject": "master.v_partner_identifier_read",
         "column": "id"
       },
       "dataType": "uuid",
@@ -68,9 +72,12 @@
     {
       "key": "business_partner_id",
       "writePolicy": "system_managed",
-      "uiFacets": { "visibility": "hidden", "editability": "readonly" },
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
       "binding": {
-        "sourceObject": "master.business_partner_identifier",
+        "sourceObject": "master.v_partner_identifier_read",
         "column": "business_partner_id"
       },
       "dataType": "uuid",
@@ -86,7 +93,7 @@
     {
       "key": "identifier_value",
       "binding": {
-        "sourceObject": "master.business_partner_identifier",
+        "sourceObject": "master.v_partner_identifier_read",
         "column": "identifier_value"
       },
       "dataType": "string",
@@ -101,7 +108,7 @@
       "protection": {
         "normalProjection": {
           "mode": "masked",
-          "maskedDisplay": "••••",
+          "maskedDisplay": "\u2022\u2022\u2022\u2022",
           "plaintextInNormalQueries": false
         },
         "sensitivity": "restricted",
@@ -128,10 +135,12 @@
     {
       "key": "scheme_code",
       "display": {
-        "lookup": { "code": "master.business_partner_identifier_scheme" }
+        "lookup": {
+          "code": "master.business_partner_identifier_scheme"
+        }
       },
       "binding": {
-        "sourceObject": "master.business_partner_identifier",
+        "sourceObject": "master.v_partner_identifier_read",
         "column": "scheme_code"
       },
       "dataType": "string",
@@ -146,9 +155,13 @@
     },
     {
       "key": "issuing_country_code",
-      "display": { "lookup": { "code": "shared.country" } },
+      "display": {
+        "lookup": {
+          "code": "shared.country"
+        }
+      },
       "binding": {
-        "sourceObject": "master.business_partner_identifier",
+        "sourceObject": "master.v_partner_identifier_read",
         "column": "issuing_country_code"
       },
       "dataType": "string",
@@ -164,7 +177,7 @@
     {
       "key": "issued_at",
       "binding": {
-        "sourceObject": "master.business_partner_identifier",
+        "sourceObject": "master.v_partner_identifier_read",
         "column": "issued_at"
       },
       "dataType": "date",
@@ -180,7 +193,7 @@
     {
       "key": "effective_until",
       "binding": {
-        "sourceObject": "master.business_partner_identifier",
+        "sourceObject": "master.v_partner_identifier_read",
         "column": "effective_until"
       },
       "dataType": "date",
@@ -226,7 +239,9 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": ["platform/core-field-defaults.v1"],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
@@ -256,10 +271,60 @@
   ],
   "defaultsProfile": "platform.core-field-defaults.v1",
   "defaultsProfileRef": "platform/core-field-defaults.v1.json",
-  "artifactHash": "sha256:624924ca8441088e17c4c636057fdc4dccaf78344eecab51c445f495879557c1",
   "query": {
     "search": [],
     "filters": [],
     "sorts": []
+  },
+  "listPresentation": {
+    "schemaVersion": 1,
+    "title": "Identifiers",
+    "identityField": "scheme_code",
+    "defaultColumns": [
+      "scheme_code",
+      "identifier_value",
+      "issuing_country_code",
+      "effective_until"
+    ],
+    "supportedModes": [
+      "table"
+    ],
+    "defaultPageSize": 25,
+    "allowedPageSizes": [
+      25,
+      50,
+      100
+    ]
+  },
+  "recordPresentation": {
+    "schemaVersion": 1,
+    "titleField": "scheme_code",
+    "sections": [
+      {
+        "key": "details",
+        "label": "Identifiers",
+        "fields": [
+          "identifier_value",
+          "scheme_code",
+          "issuing_country_code",
+          "issued_at",
+          "effective_until"
+        ],
+        "placement": "direct"
+      }
+    ],
+    "navigation": {
+      "mode": "switch",
+      "tabs": [
+        {
+          "key": "record",
+          "label": "Identifiers",
+          "sectionKeys": [
+            "details"
+          ]
+        }
+      ]
+    },
+    "actions": []
   }
 }

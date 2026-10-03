@@ -8,14 +8,27 @@
   "plane": "neon",
   "operations": [
     {
-      "key": "read",
+      "key": "list",
       "execution": {
-        "handlerKey": "neon.business_partner_governance_relation.read.v1",
+        "handlerKey": "entity.record.list.v1",
         "registryRequired": true
       },
       "scopeBinding": {
         "scopeSource": "persisted_record_or_validated_create_input",
-        "resolverKey": "neon.business-context.v1",
+        "resolverKey": "tenant.record.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "not_applicable"
+    },
+    {
+      "key": "read",
+      "execution": {
+        "handlerKey": "entity.record.read.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "tenant.record.v1",
         "denyUnresolved": true
       },
       "idempotency": "not_applicable"
@@ -48,7 +61,6 @@
     "business_partner_governance_relation/core",
     "platform/governed-child-operation.v1"
   ],
-  "artifactHash": "sha256:00d3f47b1492ff7f4980eb263ba596e52f3a1eff928a49db6e047649e4798b7f",
   "operationDefaultsProfile": "platform.governed-child-operation.v1",
   "operationDefaultsProfileRef": "platform/governed-child-operation.v1.json"
 }

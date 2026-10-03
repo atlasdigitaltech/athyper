@@ -109,7 +109,8 @@
         "labelKey": "entity.business_partner.classifications.industry_system",
         "defaultText": "Classification system"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "industry_code_id",
@@ -124,7 +125,8 @@
         "labelKey": "entity.business_partner_industry_classification.core.fields.industry_code_id.label",
         "defaultText": "Industry"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "assignment_kind",
@@ -166,7 +168,8 @@
         "labelKey": "entity.business_partner.classifications.assignment_kind",
         "defaultText": "Declaration source"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "confidence",
@@ -181,7 +184,8 @@
         "labelKey": "entity.business_partner_industry_classification.core.fields.confidence.label",
         "defaultText": "Confidence"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "source_system",
@@ -196,7 +200,8 @@
         "labelKey": "entity.business_partner_industry_classification.core.fields.source_system.label",
         "defaultText": "Source System"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "source_reference",
@@ -211,7 +216,8 @@
         "labelKey": "entity.business_partner_industry_classification.core.fields.source_reference.label",
         "defaultText": "Source Reference"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "is_primary",
@@ -226,7 +232,8 @@
         "labelKey": "entity.business_partner_industry_classification.core.fields.is_primary.label",
         "defaultText": "Primary"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "effective_from",
@@ -241,7 +248,8 @@
         "labelKey": "entity.business_partner_industry_classification.core.fields.effective_from.label",
         "defaultText": "Effective From"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "effective_until",
@@ -256,7 +264,8 @@
         "labelKey": "entity.business_partner_industry_classification.core.fields.effective_until.label",
         "defaultText": "Effective Until"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "status",
@@ -305,7 +314,8 @@
         "labelKey": "entity.business_partner_industry_classification.core.fields.status.label",
         "defaultText": "Status"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "industry_code",
@@ -459,5 +469,64 @@
     "search": [],
     "filters": [],
     "sorts": []
+  },
+  "listPresentation": {
+    "schemaVersion": 1,
+    "title": "Industry classifications",
+    "identityField": "industry_code",
+    "defaultColumns": [
+      "industry_code",
+      "industry_name",
+      "assignment_kind",
+      "verification_status",
+      "status"
+    ],
+    "supportedModes": [
+      "table"
+    ],
+    "defaultPageSize": 25,
+    "allowedPageSizes": [
+      25,
+      50,
+      100
+    ]
+  },
+  "recordPresentation": {
+    "schemaVersion": 1,
+    "titleField": "industry_code",
+    "sections": [
+      {
+        "key": "details",
+        "label": "Industry classifications",
+        "fields": [
+          "industry_domain_code",
+          "assignment_kind",
+          "confidence",
+          "source_system",
+          "source_reference",
+          "is_primary",
+          "effective_from",
+          "effective_until",
+          "status",
+          "industry_code",
+          "industry_name",
+          "verification_status"
+        ],
+        "placement": "direct"
+      }
+    ],
+    "navigation": {
+      "mode": "switch",
+      "tabs": [
+        {
+          "key": "record",
+          "label": "Industry classifications",
+          "sectionKeys": [
+            "details"
+          ]
+        }
+      ]
+    },
+    "actions": []
   }
 }

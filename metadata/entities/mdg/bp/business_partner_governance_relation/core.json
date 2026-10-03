@@ -16,7 +16,9 @@
   },
   "storage": {
     "kind": "handler_projection",
-    "sourceObjects": ["master.business_partner_governance_relation"],
+    "sourceObjects": [
+      "master.business_partner_governance_relation"
+    ],
     "primaryObject": "master.business_partner_governance_relation",
     "idField": "id",
     "tenantField": "tenant_id",
@@ -99,7 +101,8 @@
         "labelKey": "entity.business_partner_governance_relation.core.fields.relation_type_code.label",
         "defaultText": "Relation Type"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "member_name",
@@ -114,7 +117,8 @@
         "labelKey": "entity.business_partner_governance_relation.core.fields.member_name.label",
         "defaultText": "Member Name"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "member_type",
@@ -129,7 +133,8 @@
         "labelKey": "entity.business_partner_governance_relation.core.fields.member_type.label",
         "defaultText": "Member Type"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "business_title",
@@ -144,7 +149,8 @@
         "labelKey": "entity.business_partner_governance_relation.core.fields.business_title.label",
         "defaultText": "Business Title"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "ownership_pct",
@@ -159,7 +165,8 @@
         "labelKey": "entity.business_partner_governance_relation.core.fields.ownership_pct.label",
         "defaultText": "Ownership Percentage"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "appointed_date",
@@ -174,7 +181,8 @@
         "labelKey": "entity.business_partner_governance_relation.core.fields.appointed_date.label",
         "defaultText": "Appointed Date"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "end_of_term",
@@ -189,7 +197,8 @@
         "labelKey": "entity.business_partner_governance_relation.core.fields.end_of_term.label",
         "defaultText": "End of Term"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "status",
@@ -204,7 +213,8 @@
         "labelKey": "entity.business_partner_governance_relation.core.fields.status.label",
         "defaultText": "Status"
       },
-      "valueOrigin": "stored"
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
     }
   ],
   "businessContext": {
@@ -239,7 +249,9 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": ["platform/core-field-defaults.v1"],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
@@ -269,10 +281,64 @@
   ],
   "defaultsProfile": "platform.core-field-defaults.v1",
   "defaultsProfileRef": "platform/core-field-defaults.v1.json",
-  "artifactHash": "sha256:b0d5626933a0feb5f1400e4ca88fa3375409aa71c3c9cd03571bbe9bec76551d",
   "query": {
     "search": [],
     "filters": [],
     "sorts": []
+  },
+  "listPresentation": {
+    "schemaVersion": 1,
+    "title": "Governance relations",
+    "identityField": "member_name",
+    "defaultColumns": [
+      "member_name",
+      "relation_type_code",
+      "business_title",
+      "ownership_pct",
+      "status"
+    ],
+    "supportedModes": [
+      "table"
+    ],
+    "defaultPageSize": 25,
+    "allowedPageSizes": [
+      25,
+      50,
+      100
+    ]
+  },
+  "recordPresentation": {
+    "schemaVersion": 1,
+    "titleField": "member_name",
+    "sections": [
+      {
+        "key": "details",
+        "label": "Governance relations",
+        "fields": [
+          "relation_type_code",
+          "member_name",
+          "member_type",
+          "business_title",
+          "ownership_pct",
+          "appointed_date",
+          "end_of_term",
+          "status"
+        ],
+        "placement": "direct"
+      }
+    ],
+    "navigation": {
+      "mode": "switch",
+      "tabs": [
+        {
+          "key": "record",
+          "label": "Governance relations",
+          "sectionKeys": [
+            "details"
+          ]
+        }
+      ]
+    },
+    "actions": []
   }
 }

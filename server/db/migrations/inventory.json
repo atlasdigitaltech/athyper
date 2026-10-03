@@ -3,6 +3,20 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261003_partner_identity_read_models.sql",
+      "path": "migrations/20261003_partner_identity_read_models.sql",
+      "sha256": "cfd9163c537da5e85981c429cae753f8e75a46c2765dff84385c420da08aa7bc",
+      "planes": [
+        "neon"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Add tenant-safe BP identity aliases and SQL-masked identifier/tax projections; no release activation or permission retirement.",
+      "canonicalPaths": [
+        "ddl/planes/neon/master/38_partner_identity_read_models.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261003_partner_child_read_models.sql",
       "path": "migrations/20261003_partner_child_read_models.sql",
       "sha256": "5ac7761867b4e8edf82c23a2105610e53bdef3202d8c4d6cae59d5832dc67de5",

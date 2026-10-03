@@ -279,3 +279,4 @@ common/shared/98_security_definer_privileges.sql
 common/shared/99_security_definer_hardening.sql
 
 planes/neon/master/37_partner_child_read_models.sql
+planes/neon/master/38_partner_identity_read_models.sql

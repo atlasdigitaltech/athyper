@@ -1,0 +1,5217 @@
+{
+  "schema": "athyper.split-read-runtime-review/1",
+  "rootEntityCode": "business_partner",
+  "status": "read_contracts_qualified_successor_incomplete",
+  "captureByteHash": "2b5378b7c1b2fce0ad4a24a2555bdc1e3f9bd90e7ca8b9aac50c5f1298f56d70",
+  "candidates": [
+    {
+      "entityCode": "business_partner",
+      "coreHash": "sha256:7048a6ffbc79b4e8585bbc4f9244aca68e0c3fc258035e610403d1dbb6541f3c",
+      "operationHash": "sha256:ec8d48e6dc6021e689fb16345f6373a4c3eae849fe46f40c9418f302cb2c033a",
+      "runtime": {
+        "schema": "athyper.compiled-entity-artifact/2.0-draft",
+        "schemaVersion": 2,
+        "contractStatus": "unsigned_review_only",
+        "artifactType": "runtime_contract",
+        "artifactKey": "business_partner/runtime",
+        "entityCode": "business_partner",
+        "plane": "neon",
+        "dependencies": [
+          "business_partner/core",
+          "business_partner/operation"
+        ],
+        "descriptor": {
+          "schema": "athyper.entity-runtime-descriptor/1.0",
+          "entityCode": "business_partner",
+          "planeKey": "neon",
+          "storage": {
+            "schema": "master",
+            "object": "v_partner_identity_read",
+            "idField": "id",
+            "tenantField": "tenant_id",
+            "versionField": "record_version"
+          },
+          "fields": [
+            {
+              "key": "tenant_id",
+              "storagePath": "tenant_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tenant",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "supplier_enabled",
+              "storagePath": "supplier_enabled",
+              "type": "boolean",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Supplier capability enabled",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "customer_enabled",
+              "storagePath": "customer_enabled",
+              "type": "boolean",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Customer capability enabled",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "id",
+              "storagePath": "id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "code",
+              "storagePath": "code",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": true,
+              "sortable": true,
+              "searchable": true,
+              "list": {
+                "label": "Code",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "name",
+              "storagePath": "name",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": true,
+              "searchable": true,
+              "list": {
+                "label": "Display name",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "legal_name",
+              "storagePath": "legal_name",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Legal name",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "registration_country_code",
+              "storagePath": "registration_country_code",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": true,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Registration Country Code",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "partner_category",
+              "storagePath": "partner_category",
+              "type": "enum",
+              "required": true,
+              "writableOn": [],
+              "filterable": true,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "organization",
+                  "person"
+                ],
+                "optionLabels": {
+                  "organization": "Organization",
+                  "person": "Person"
+                }
+              },
+              "list": {
+                "label": "Partner Category",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "ownership_class",
+              "storagePath": "ownership_class",
+              "type": "enum",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "external",
+                  "internal"
+                ],
+                "optionLabels": {
+                  "external": "External",
+                  "internal": "Internal"
+                }
+              },
+              "list": {
+                "label": "Ownership Class",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "incorporation_date",
+              "storagePath": "incorporation_date",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Incorporation Date",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "website_url",
+              "storagePath": "website_url",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Website Url",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "description",
+              "storagePath": "description",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Description",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "status",
+              "storagePath": "status",
+              "type": "enum",
+              "required": true,
+              "writableOn": [],
+              "filterable": true,
+              "sortable": true,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "draft",
+                  "active",
+                  "inactive",
+                  "archived"
+                ],
+                "optionLabels": {
+                  "draft": "Draft",
+                  "active": "Active",
+                  "inactive": "Inactive",
+                  "archived": "Archived"
+                }
+              },
+              "list": {
+                "label": "Status",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "record_version",
+              "storagePath": "record_version",
+              "type": "integer",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Record Version",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "legal_form_value_id",
+              "storagePath": "legal_form_value_id",
+              "type": "uuid",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Legal Form",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_type_value_id",
+              "storagePath": "business_type_value_id",
+              "type": "uuid",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business Type",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "founded_year",
+              "storagePath": "founded_year",
+              "type": "integer",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Founded Year",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "employee_count",
+              "storagePath": "employee_count",
+              "type": "integer",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Number of Employees",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "employee_count_as_of",
+              "storagePath": "employee_count_as_of",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Employee Count Reporting Date",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "employee_count_scope",
+              "storagePath": "employee_count_scope",
+              "type": "enum",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "organization",
+                  "consolidated_group"
+                ],
+                "optionLabels": {
+                  "organization": "Organization",
+                  "consolidated_group": "Consolidated group"
+                }
+              },
+              "list": {
+                "label": "Employee Count Scope",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "legal_form_label",
+              "storagePath": "legal_form_label",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Legal form",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_type_label",
+              "storagePath": "business_type_label",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business type",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "legal_classification",
+              "storagePath": "legal_classification",
+              "type": "enum",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "government",
+                  "nonprofit",
+                  "sole_proprietor"
+                ],
+                "optionLabels": {
+                  "government": "Government",
+                  "nonprofit": "Nonprofit",
+                  "sole_proprietor": "Sole proprietor"
+                }
+              },
+              "list": {
+                "label": "Legal classification",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "person_code",
+              "storagePath": "person_code",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Person reference",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "person_first_name",
+              "storagePath": "person_first_name",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "First name",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "person_middle_name",
+              "storagePath": "person_middle_name",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Middle name",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "person_last_name",
+              "storagePath": "person_last_name",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Last name",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "person_preferred_name",
+              "storagePath": "person_preferred_name",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Preferred name",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "is_active",
+              "storagePath": "is_active",
+              "type": "boolean",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Active",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "updated_at",
+              "storagePath": "updated_at",
+              "type": "datetime",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Updated at",
+                "defaultVisible": false
+              }
+            }
+          ],
+          "operations": {
+            "list": {
+              "code": "list",
+              "permissionCode": "neon.relationship.business_partner.read",
+              "authorizationMode": "bound_operation"
+            },
+            "read": {
+              "code": "read",
+              "permissionCode": "neon.relationship.business_partner.read",
+              "authorizationMode": "bound_operation"
+            }
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "business_partner",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "permissionCode": "neon.relationship.business_partner.read",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "permissionCode": "neon.relationship.business_partner.read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "supplier_enabled",
+                "fields": [
+                  "supplier_enabled"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "customer_enabled",
+                "fields": [
+                  "customer_enabled"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "code",
+                "fields": [
+                  "code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort"
+                ]
+              },
+              {
+                "key": "name",
+                "fields": [
+                  "name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "search",
+                  "sort"
+                ]
+              },
+              {
+                "key": "legal_name",
+                "fields": [
+                  "legal_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "registration_country_code",
+                "fields": [
+                  "registration_country_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "filter"
+                ]
+              },
+              {
+                "key": "partner_category",
+                "fields": [
+                  "partner_category"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "filter"
+                ]
+              },
+              {
+                "key": "ownership_class",
+                "fields": [
+                  "ownership_class"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "incorporation_date",
+                "fields": [
+                  "incorporation_date"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "website_url",
+                "fields": [
+                  "website_url"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "description",
+                "fields": [
+                  "description"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": [
+                  "filter",
+                  "sort"
+                ]
+              },
+              {
+                "key": "record_version",
+                "fields": [
+                  "record_version"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "legal_form_value_id",
+                "fields": [
+                  "legal_form_value_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_type_value_id",
+                "fields": [
+                  "business_type_value_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "founded_year",
+                "fields": [
+                  "founded_year"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "employee_count",
+                "fields": [
+                  "employee_count"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "employee_count_as_of",
+                "fields": [
+                  "employee_count_as_of"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "employee_count_scope",
+                "fields": [
+                  "employee_count_scope"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "legal_form_label",
+                "fields": [
+                  "legal_form_label"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_type_label",
+                "fields": [
+                  "business_type_label"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "legal_classification",
+                "fields": [
+                  "legal_classification"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "person_code",
+                "fields": [
+                  "person_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "person_first_name",
+                "fields": [
+                  "person_first_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "person_middle_name",
+                "fields": [
+                  "person_middle_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "person_last_name",
+                "fields": [
+                  "person_last_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "person_preferred_name",
+                "fields": [
+                  "person_preferred_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "is_active",
+                "fields": [
+                  "is_active"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "updated_at",
+                "fields": [
+                  "updated_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "listPresentation": {
+            "schemaVersion": 1,
+            "title": "Business Partners",
+            "identityField": "name",
+            "defaultColumns": [
+              "code",
+              "name",
+              "partner_category",
+              "status"
+            ],
+            "supportedModes": [
+              "table"
+            ],
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              25,
+              50,
+              100
+            ]
+          },
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "name",
+            "sections": [
+              {
+                "key": "details",
+                "label": "Business Partners",
+                "fields": [
+                  "supplier_enabled",
+                  "customer_enabled",
+                  "code",
+                  "name",
+                  "legal_name",
+                  "registration_country_code",
+                  "partner_category",
+                  "ownership_class",
+                  "incorporation_date",
+                  "website_url",
+                  "description",
+                  "status",
+                  "founded_year",
+                  "employee_count",
+                  "employee_count_as_of",
+                  "employee_count_scope",
+                  "legal_form_label",
+                  "business_type_label",
+                  "legal_classification",
+                  "person_code",
+                  "person_first_name",
+                  "person_middle_name",
+                  "person_last_name",
+                  "person_preferred_name"
+                ],
+                "placement": "direct"
+              }
+            ],
+            "navigation": {
+              "mode": "switch",
+              "tabs": [
+                {
+                  "key": "record",
+                  "label": "Business Partners",
+                  "sectionKeys": [
+                    "details"
+                  ]
+                }
+              ]
+            },
+            "actions": [],
+            "entityRelationships": [
+              {
+                "key": "business_partner_banking",
+                "targetEntity": "business_partner_banking",
+                "cardinality": "many",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "business_partner_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              },
+              {
+                "key": "business_partner_governance_relation",
+                "targetEntity": "business_partner_governance_relation",
+                "cardinality": "many",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "business_partner_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              },
+              {
+                "key": "business_partner_identifier",
+                "targetEntity": "business_partner_identifier",
+                "cardinality": "many",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "business_partner_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              },
+              {
+                "key": "business_partner_industry_classification",
+                "targetEntity": "business_partner_industry_classification",
+                "cardinality": "many",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "business_partner_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              },
+              {
+                "key": "business_partner_operating_organization_assignment",
+                "targetEntity": "business_partner_operating_organization_assignment",
+                "cardinality": "many",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "business_partner_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              },
+              {
+                "key": "business_partner_qualification",
+                "targetEntity": "business_partner_qualification",
+                "cardinality": "many",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "business_partner_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              },
+              {
+                "key": "business_partner_tax_registration",
+                "targetEntity": "business_partner_tax_registration",
+                "cardinality": "many",
+                "fields": [
+                  {
+                    "source": "id",
+                    "target": "business_partner_id"
+                  }
+                ],
+                "tenant": {
+                  "source": "tenant_id",
+                  "target": "tenant_id"
+                },
+                "readOperation": "list"
+              }
+            ]
+          },
+          "detailRouteTemplate": "/app/entity/business_partner/:recordId"
+        },
+        "artifactHash": "sha256:3159138015c64a88f8fd6e02f31d59bd95aff84fc692a5659e7540eb77ac58a0"
+      },
+      "remainingOperations": [
+        "capability_supplier_manage",
+        "capability_customer_manage",
+        "request_change",
+        "assign_organization_scope",
+        "configure_company_scope",
+        "request_role_extension",
+        "print_statement",
+        "share_mesh"
+      ],
+      "sharedReadBindingsQualified": true
+    },
+    {
+      "entityCode": "business_partner_banking",
+      "coreHash": "sha256:0470ab2b2c52a7583959d9c700f98cce8f5722185569d5ca035153012e7b0d37",
+      "operationHash": "sha256:8d7b4a91c0dc172e14111e93fe1dde07e6169d65e9529e3d993f702a774ef210",
+      "runtime": {
+        "schema": "athyper.compiled-entity-artifact/2.0-draft",
+        "schemaVersion": 2,
+        "contractStatus": "unsigned_review_only",
+        "artifactType": "runtime_contract",
+        "artifactKey": "business_partner_banking/runtime",
+        "entityCode": "business_partner_banking",
+        "plane": "neon",
+        "dependencies": [
+          "business_partner_banking/core",
+          "business_partner_banking/operation"
+        ],
+        "descriptor": {
+          "schema": "athyper.entity-runtime-descriptor/1.0",
+          "entityCode": "business_partner_banking",
+          "planeKey": "neon",
+          "storage": {
+            "schema": "master",
+            "object": "v_partner_banking_read",
+            "idField": "id",
+            "tenantField": "tenant_id"
+          },
+          "fields": [
+            {
+              "key": "tenant_id",
+              "storagePath": "tenant_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tenant",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_partner_id",
+              "storagePath": "business_partner_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business Partner",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "bank_name",
+              "storagePath": "bank_name",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Bank",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "branch_name",
+              "storagePath": "branch_name",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Branch",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "branch_code",
+              "storagePath": "branch_code",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Directory branch identifier",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "bic",
+              "storagePath": "bic",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Directory BIC",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "status",
+              "storagePath": "status",
+              "type": "enum",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "active",
+                  "inactive",
+                  "closed",
+                  "retired"
+                ],
+                "optionLabels": {
+                  "active": "Active",
+                  "inactive": "Inactive",
+                  "closed": "Closed",
+                  "retired": "Retired"
+                }
+              },
+              "list": {
+                "label": "Account status",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "id",
+              "storagePath": "id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "account_holder_name",
+              "storagePath": "account_holder_name",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Account Holder Name",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "account_last4",
+              "storagePath": "account_last4",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Account number",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "currency_code",
+              "storagePath": "currency_code",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Currency Code",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "reveal_link_id",
+              "storagePath": "reveal_link_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Bank link",
+                "defaultVisible": false
+              }
+            }
+          ],
+          "operations": {
+            "list": {
+              "code": "list",
+              "authorizationMode": "bound_operation"
+            },
+            "read": {
+              "code": "read",
+              "authorizationMode": "bound_operation"
+            }
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "business_partner_banking",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_partner_id",
+                "fields": [
+                  "business_partner_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "bank_name",
+                "fields": [
+                  "bank_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "branch_name",
+                "fields": [
+                  "branch_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "branch_code",
+                "fields": [
+                  "branch_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "bic",
+                "fields": [
+                  "bic"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "account_holder_name",
+                "fields": [
+                  "account_holder_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "account_last4",
+                "fields": [
+                  "account_last4"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "currency_code",
+                "fields": [
+                  "currency_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "reveal_link_id",
+                "fields": [
+                  "reveal_link_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "directoryScope": {
+            "schemaVersion": 1,
+            "mode": "tenant",
+            "parent": {
+              "entityCode": "business_partner",
+              "relationshipKey": "business_partner_banking"
+            }
+          },
+          "listPresentation": {
+            "schemaVersion": 1,
+            "title": "Banking",
+            "identityField": "bank_name",
+            "defaultColumns": [
+              "bank_name",
+              "branch_name",
+              "account_holder_name",
+              "account_last4",
+              "currency_code",
+              "status"
+            ],
+            "supportedModes": [
+              "table"
+            ],
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              25,
+              50,
+              100
+            ]
+          },
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "bank_name",
+            "sections": [
+              {
+                "key": "details",
+                "label": "Banking",
+                "fields": [
+                  "bank_name",
+                  "branch_name",
+                  "branch_code",
+                  "bic",
+                  "status",
+                  "account_holder_name",
+                  "account_last4",
+                  "currency_code"
+                ],
+                "placement": "direct"
+              }
+            ],
+            "navigation": {
+              "mode": "switch",
+              "tabs": [
+                {
+                  "key": "record",
+                  "label": "Banking",
+                  "sectionKeys": [
+                    "details"
+                  ]
+                }
+              ]
+            },
+            "actions": []
+          },
+          "detailRouteTemplate": "/app/entity/business_partner_banking/:recordId"
+        },
+        "artifactHash": "sha256:8ace642d9e54b20d0dd45dbe0cbcd90bbfa7d72e37c16fd57a039a8cb286302d"
+      },
+      "remainingOperations": [
+        "request_change",
+        "reveal"
+      ],
+      "sharedReadBindingsQualified": true
+    },
+    {
+      "entityCode": "business_partner_governance_relation",
+      "coreHash": "sha256:f988cc31fc2c64d7076900012a4ca286a4fd811b6780f41fb1e699fada05eea2",
+      "operationHash": "sha256:7928bbdf8fa4808b8b8544e7861bd148f1b8dfec496a4ab54622ae2523d3f113",
+      "runtime": {
+        "schema": "athyper.compiled-entity-artifact/2.0-draft",
+        "schemaVersion": 2,
+        "contractStatus": "unsigned_review_only",
+        "artifactType": "runtime_contract",
+        "artifactKey": "business_partner_governance_relation/runtime",
+        "entityCode": "business_partner_governance_relation",
+        "plane": "neon",
+        "dependencies": [
+          "business_partner_governance_relation/core",
+          "business_partner_governance_relation/operation"
+        ],
+        "descriptor": {
+          "schema": "athyper.entity-runtime-descriptor/1.0",
+          "entityCode": "business_partner_governance_relation",
+          "planeKey": "neon",
+          "storage": {
+            "schema": "master",
+            "object": "business_partner_governance_relation",
+            "idField": "id",
+            "tenantField": "tenant_id"
+          },
+          "fields": [
+            {
+              "key": "tenant_id",
+              "storagePath": "tenant_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tenant",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_partner_id",
+              "storagePath": "business_partner_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business Partner",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "id",
+              "storagePath": "id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "relation_type_code",
+              "storagePath": "relation_type_code",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Relation Type",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "member_name",
+              "storagePath": "member_name",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Member Name",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "member_type",
+              "storagePath": "member_type",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Member Type",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_title",
+              "storagePath": "business_title",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business Title",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "ownership_pct",
+              "storagePath": "ownership_pct",
+              "type": "decimal",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Ownership Percentage",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "appointed_date",
+              "storagePath": "appointed_date",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Appointed Date",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "end_of_term",
+              "storagePath": "end_of_term",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "End of Term",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "status",
+              "storagePath": "status",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Status",
+                "defaultVisible": true
+              }
+            }
+          ],
+          "operations": {
+            "list": {
+              "code": "list",
+              "authorizationMode": "bound_operation"
+            },
+            "read": {
+              "code": "read",
+              "authorizationMode": "bound_operation"
+            }
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "business_partner_governance_relation",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_partner_id",
+                "fields": [
+                  "business_partner_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "relation_type_code",
+                "fields": [
+                  "relation_type_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "member_name",
+                "fields": [
+                  "member_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "member_type",
+                "fields": [
+                  "member_type"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_title",
+                "fields": [
+                  "business_title"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "ownership_pct",
+                "fields": [
+                  "ownership_pct"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "appointed_date",
+                "fields": [
+                  "appointed_date"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "end_of_term",
+                "fields": [
+                  "end_of_term"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "directoryScope": {
+            "schemaVersion": 1,
+            "mode": "tenant",
+            "parent": {
+              "entityCode": "business_partner",
+              "relationshipKey": "business_partner_governance_relation"
+            }
+          },
+          "listPresentation": {
+            "schemaVersion": 1,
+            "title": "Governance relations",
+            "identityField": "member_name",
+            "defaultColumns": [
+              "member_name",
+              "relation_type_code",
+              "business_title",
+              "ownership_pct",
+              "status"
+            ],
+            "supportedModes": [
+              "table"
+            ],
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              25,
+              50,
+              100
+            ]
+          },
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "member_name",
+            "sections": [
+              {
+                "key": "details",
+                "label": "Governance relations",
+                "fields": [
+                  "relation_type_code",
+                  "member_name",
+                  "member_type",
+                  "business_title",
+                  "ownership_pct",
+                  "appointed_date",
+                  "end_of_term",
+                  "status"
+                ],
+                "placement": "direct"
+              }
+            ],
+            "navigation": {
+              "mode": "switch",
+              "tabs": [
+                {
+                  "key": "record",
+                  "label": "Governance relations",
+                  "sectionKeys": [
+                    "details"
+                  ]
+                }
+              ]
+            },
+            "actions": []
+          },
+          "detailRouteTemplate": "/app/entity/business_partner_governance_relation/:recordId"
+        },
+        "artifactHash": "sha256:ecd28a73d6f7209523ffbfd300ac191e577576071dbfced94d2755ba11e83077"
+      },
+      "remainingOperations": [
+        "request_change"
+      ],
+      "sharedReadBindingsQualified": true
+    },
+    {
+      "entityCode": "business_partner_identifier",
+      "coreHash": "sha256:e7de4ca05d34d79924c7ac81d3d1fe03f8537646433d61d352ee4cb39b92da11",
+      "operationHash": "sha256:c93e1bcaa47e8d5f06b96dbc14c1c6bff90dc01677e545a772127ec7e9b1ce32",
+      "runtime": {
+        "schema": "athyper.compiled-entity-artifact/2.0-draft",
+        "schemaVersion": 2,
+        "contractStatus": "unsigned_review_only",
+        "artifactType": "runtime_contract",
+        "artifactKey": "business_partner_identifier/runtime",
+        "entityCode": "business_partner_identifier",
+        "plane": "neon",
+        "dependencies": [
+          "business_partner_identifier/core",
+          "business_partner_identifier/operation"
+        ],
+        "descriptor": {
+          "schema": "athyper.entity-runtime-descriptor/1.0",
+          "entityCode": "business_partner_identifier",
+          "planeKey": "neon",
+          "storage": {
+            "schema": "master",
+            "object": "v_partner_identifier_read",
+            "idField": "id",
+            "tenantField": "tenant_id"
+          },
+          "fields": [
+            {
+              "key": "tenant_id",
+              "storagePath": "tenant_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tenant",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "id",
+              "storagePath": "id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_partner_id",
+              "storagePath": "business_partner_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business Partner Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "identifier_value",
+              "storagePath": "identifier_value",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Identifier Value",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "scheme_code",
+              "storagePath": "scheme_code",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Identifier Scheme",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "issuing_country_code",
+              "storagePath": "issuing_country_code",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Issuing Country",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "issued_at",
+              "storagePath": "issued_at",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Issued On",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "effective_until",
+              "storagePath": "effective_until",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Effective Until",
+                "defaultVisible": true
+              }
+            }
+          ],
+          "operations": {
+            "list": {
+              "code": "list",
+              "authorizationMode": "bound_operation"
+            },
+            "read": {
+              "code": "read",
+              "authorizationMode": "bound_operation"
+            }
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "business_partner_identifier",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_partner_id",
+                "fields": [
+                  "business_partner_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "identifier_value",
+                "fields": [
+                  "identifier_value"
+                ],
+                "readOperation": "read",
+                "representation": "masked",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "scheme_code",
+                "fields": [
+                  "scheme_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "issuing_country_code",
+                "fields": [
+                  "issuing_country_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "issued_at",
+                "fields": [
+                  "issued_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "effective_until",
+                "fields": [
+                  "effective_until"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "directoryScope": {
+            "schemaVersion": 1,
+            "mode": "tenant",
+            "parent": {
+              "entityCode": "business_partner",
+              "relationshipKey": "business_partner_identifier"
+            }
+          },
+          "listPresentation": {
+            "schemaVersion": 1,
+            "title": "Identifiers",
+            "identityField": "scheme_code",
+            "defaultColumns": [
+              "scheme_code",
+              "identifier_value",
+              "issuing_country_code",
+              "effective_until"
+            ],
+            "supportedModes": [
+              "table"
+            ],
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              25,
+              50,
+              100
+            ]
+          },
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "scheme_code",
+            "sections": [
+              {
+                "key": "details",
+                "label": "Identifiers",
+                "fields": [
+                  "identifier_value",
+                  "scheme_code",
+                  "issuing_country_code",
+                  "issued_at",
+                  "effective_until"
+                ],
+                "placement": "direct"
+              }
+            ],
+            "navigation": {
+              "mode": "switch",
+              "tabs": [
+                {
+                  "key": "record",
+                  "label": "Identifiers",
+                  "sectionKeys": [
+                    "details"
+                  ]
+                }
+              ]
+            },
+            "actions": []
+          },
+          "detailRouteTemplate": "/app/entity/business_partner_identifier/:recordId"
+        },
+        "artifactHash": "sha256:59e07ba983d60ac2cd9de65acc48d74b96d3bfd5e658db7152c1ced7ad4460ec"
+      },
+      "remainingOperations": [
+        "reveal",
+        "request_change"
+      ],
+      "sharedReadBindingsQualified": true
+    },
+    {
+      "entityCode": "business_partner_industry_classification",
+      "coreHash": "sha256:abdb8ee36fdfe8748bcdc195fff88cb671a0d08a5f4bb8ec02aa2778181a7bff",
+      "operationHash": "sha256:b52823f1f26108a622785d8a6b64855b1047a315ad028fb1b6b3164f6247bbc9",
+      "runtime": {
+        "schema": "athyper.compiled-entity-artifact/2.0-draft",
+        "schemaVersion": 2,
+        "contractStatus": "unsigned_review_only",
+        "artifactType": "runtime_contract",
+        "artifactKey": "business_partner_industry_classification/runtime",
+        "entityCode": "business_partner_industry_classification",
+        "plane": "neon",
+        "dependencies": [
+          "business_partner_industry_classification/core",
+          "business_partner_industry_classification/operation"
+        ],
+        "descriptor": {
+          "schema": "athyper.entity-runtime-descriptor/1.0",
+          "entityCode": "business_partner_industry_classification",
+          "planeKey": "neon",
+          "storage": {
+            "schema": "master",
+            "object": "v_partner_industry_read",
+            "idField": "id",
+            "tenantField": "tenant_id"
+          },
+          "fields": [
+            {
+              "key": "tenant_id",
+              "storagePath": "tenant_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tenant",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "id",
+              "storagePath": "id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_partner_id",
+              "storagePath": "business_partner_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business Partner Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "industry_domain_code",
+              "storagePath": "industry_domain_code",
+              "type": "enum",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Classification system",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "industry_code_id",
+              "storagePath": "industry_code_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Industry",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "assignment_kind",
+              "storagePath": "assignment_kind",
+              "type": "enum",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "declared",
+                  "imported",
+                  "verified"
+                ],
+                "optionLabels": {
+                  "declared": "Declared",
+                  "imported": "Imported",
+                  "verified": "Verified"
+                }
+              },
+              "list": {
+                "label": "Declaration source",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "confidence",
+              "storagePath": "confidence",
+              "type": "integer",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Confidence",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "source_system",
+              "storagePath": "source_system",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Source System",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "source_reference",
+              "storagePath": "source_reference",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Source Reference",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "is_primary",
+              "storagePath": "is_primary",
+              "type": "boolean",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Primary",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "effective_from",
+              "storagePath": "effective_from",
+              "type": "date",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Effective From",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "effective_until",
+              "storagePath": "effective_until",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Effective Until",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "status",
+              "storagePath": "status",
+              "type": "enum",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "draft",
+                  "active",
+                  "inactive",
+                  "archived"
+                ],
+                "optionLabels": {
+                  "draft": "Draft",
+                  "active": "Active",
+                  "inactive": "Inactive",
+                  "archived": "Archived"
+                }
+              },
+              "list": {
+                "label": "Status",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "industry_code",
+              "storagePath": "industry_code",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Industry code",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "industry_name",
+              "storagePath": "industry_name",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business activity",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "verification_status",
+              "storagePath": "verification_status",
+              "type": "string",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "verified",
+                  "unverified"
+                ],
+                "optionLabels": {
+                  "verified": "Verified classification",
+                  "unverified": "Not verified"
+                }
+              },
+              "list": {
+                "label": "Classification verification",
+                "defaultVisible": true
+              }
+            }
+          ],
+          "operations": {
+            "list": {
+              "code": "list",
+              "authorizationMode": "bound_operation"
+            },
+            "read": {
+              "code": "read",
+              "authorizationMode": "bound_operation"
+            }
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "business_partner_industry_classification",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_partner_id",
+                "fields": [
+                  "business_partner_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "industry_domain_code",
+                "fields": [
+                  "industry_domain_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "industry_code_id",
+                "fields": [
+                  "industry_code_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "assignment_kind",
+                "fields": [
+                  "assignment_kind"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "confidence",
+                "fields": [
+                  "confidence"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "source_system",
+                "fields": [
+                  "source_system"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "source_reference",
+                "fields": [
+                  "source_reference"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "is_primary",
+                "fields": [
+                  "is_primary"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "effective_from",
+                "fields": [
+                  "effective_from"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "effective_until",
+                "fields": [
+                  "effective_until"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "status",
+                "fields": [
+                  "status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "industry_code",
+                "fields": [
+                  "industry_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "industry_name",
+                "fields": [
+                  "industry_name"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "verification_status",
+                "fields": [
+                  "verification_status"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "directoryScope": {
+            "schemaVersion": 1,
+            "mode": "tenant",
+            "parent": {
+              "entityCode": "business_partner",
+              "relationshipKey": "business_partner_industry_classification"
+            }
+          },
+          "listPresentation": {
+            "schemaVersion": 1,
+            "title": "Industry classifications",
+            "identityField": "industry_code",
+            "defaultColumns": [
+              "industry_code",
+              "industry_name",
+              "assignment_kind",
+              "verification_status",
+              "status"
+            ],
+            "supportedModes": [
+              "table"
+            ],
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              25,
+              50,
+              100
+            ]
+          },
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "industry_code",
+            "sections": [
+              {
+                "key": "details",
+                "label": "Industry classifications",
+                "fields": [
+                  "industry_domain_code",
+                  "assignment_kind",
+                  "confidence",
+                  "source_system",
+                  "source_reference",
+                  "is_primary",
+                  "effective_from",
+                  "effective_until",
+                  "status",
+                  "industry_code",
+                  "industry_name",
+                  "verification_status"
+                ],
+                "placement": "direct"
+              }
+            ],
+            "navigation": {
+              "mode": "switch",
+              "tabs": [
+                {
+                  "key": "record",
+                  "label": "Industry classifications",
+                  "sectionKeys": [
+                    "details"
+                  ]
+                }
+              ]
+            },
+            "actions": []
+          },
+          "detailRouteTemplate": "/app/entity/business_partner_industry_classification/:recordId"
+        },
+        "artifactHash": "sha256:7ba3daf09b70d71426b8a7ee61fa28ed88a89f70bdbbea386ec3267316a8ab64"
+      },
+      "remainingOperations": [
+        "request_change"
+      ],
+      "sharedReadBindingsQualified": true
+    },
+    {
+      "entityCode": "business_partner_operating_organization_assignment",
+      "coreHash": "sha256:96e7a30af026f14bc04019f49e91be2e797220ece09db74e27e29b35b9556329",
+      "operationHash": "sha256:f20a2fc6c2b8021a5107dd8621f30c4533d42f4f2176585c750a359b5c7485bb",
+      "runtime": {
+        "schema": "athyper.compiled-entity-artifact/2.0-draft",
+        "schemaVersion": 2,
+        "contractStatus": "unsigned_review_only",
+        "artifactType": "runtime_contract",
+        "artifactKey": "business_partner_operating_organization_assignment/runtime",
+        "entityCode": "business_partner_operating_organization_assignment",
+        "plane": "neon",
+        "dependencies": [
+          "business_partner_operating_organization_assignment/core",
+          "business_partner_operating_organization_assignment/operation"
+        ],
+        "descriptor": {
+          "schema": "athyper.entity-runtime-descriptor/1.0",
+          "entityCode": "business_partner_operating_organization_assignment",
+          "planeKey": "neon",
+          "storage": {
+            "schema": "master",
+            "object": "business_partner_operating_organization_assignment",
+            "idField": "id",
+            "tenantField": "tenant_id"
+          },
+          "fields": [
+            {
+              "key": "tenant_id",
+              "storagePath": "tenant_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tenant",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "id",
+              "storagePath": "id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_partner_id",
+              "storagePath": "business_partner_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business Partner Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "operating_organization_id",
+              "storagePath": "operating_organization_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Operating Organization Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "partner_role",
+              "storagePath": "partner_role",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Partner Role",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "effective_from",
+              "storagePath": "effective_from",
+              "type": "date",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Effective From",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "effective_until",
+              "storagePath": "effective_until",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Effective Until",
+                "defaultVisible": true
+              }
+            }
+          ],
+          "operations": {
+            "list": {
+              "code": "list",
+              "authorizationMode": "bound_operation"
+            },
+            "read": {
+              "code": "read",
+              "authorizationMode": "bound_operation"
+            }
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "business_partner_operating_organization_assignment",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_partner_id",
+                "fields": [
+                  "business_partner_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "operating_organization_id",
+                "fields": [
+                  "operating_organization_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "partner_role",
+                "fields": [
+                  "partner_role"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "effective_from",
+                "fields": [
+                  "effective_from"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "effective_until",
+                "fields": [
+                  "effective_until"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "directoryScope": {
+            "schemaVersion": 1,
+            "mode": "organization",
+            "fieldBinding": {
+              "resolver": "neon.directory.fields.v1",
+              "organizationField": "operating_organization_id"
+            },
+            "parent": {
+              "entityCode": "business_partner",
+              "relationshipKey": "business_partner_operating_organization_assignment"
+            }
+          },
+          "listPresentation": {
+            "schemaVersion": 1,
+            "title": "Organization assignments",
+            "identityField": "partner_role",
+            "defaultColumns": [
+              "partner_role",
+              "effective_from",
+              "effective_until"
+            ],
+            "supportedModes": [
+              "table"
+            ],
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              25,
+              50,
+              100
+            ]
+          },
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "partner_role",
+            "sections": [
+              {
+                "key": "details",
+                "label": "Organization assignments",
+                "fields": [
+                  "partner_role",
+                  "effective_from",
+                  "effective_until"
+                ],
+                "placement": "direct"
+              }
+            ],
+            "navigation": {
+              "mode": "switch",
+              "tabs": [
+                {
+                  "key": "record",
+                  "label": "Organization assignments",
+                  "sectionKeys": [
+                    "details"
+                  ]
+                }
+              ]
+            },
+            "actions": []
+          },
+          "detailRouteTemplate": "/app/entity/business_partner_operating_organization_assignment/:recordId"
+        },
+        "artifactHash": "sha256:b57d50f89c1a42eab55dd3c3c5015ec0ca1ed3742016be46a21b60f3ead053eb"
+      },
+      "remainingOperations": [
+        "request_change"
+      ],
+      "sharedReadBindingsQualified": true
+    },
+    {
+      "entityCode": "business_partner_qualification",
+      "coreHash": "sha256:65700b7b2b5deb21f3ed2c5b030d5a916e2c304e8d088cb974a8cf676a7bd0e2",
+      "operationHash": "sha256:143c5b46c448523e1b720c9174066851aa21dac480f1a37d9c9294046b9b3ddc",
+      "runtime": {
+        "schema": "athyper.compiled-entity-artifact/2.0-draft",
+        "schemaVersion": 2,
+        "contractStatus": "unsigned_review_only",
+        "artifactType": "runtime_contract",
+        "artifactKey": "business_partner_qualification/runtime",
+        "entityCode": "business_partner_qualification",
+        "plane": "neon",
+        "dependencies": [
+          "business_partner_qualification/core",
+          "business_partner_qualification/operation"
+        ],
+        "descriptor": {
+          "schema": "athyper.entity-runtime-descriptor/1.0",
+          "entityCode": "business_partner_qualification",
+          "planeKey": "neon",
+          "storage": {
+            "schema": "control",
+            "object": "v_partner_qualification_read",
+            "idField": "id",
+            "tenantField": "tenant_id"
+          },
+          "fields": [
+            {
+              "key": "tenant_id",
+              "storagePath": "tenant_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tenant",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_partner_id",
+              "storagePath": "business_partner_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business Partner",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "id",
+              "storagePath": "id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Reference",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "qualification_type_code",
+              "storagePath": "qualification_type_code",
+              "type": "enum",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Qualification type",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "context_kind",
+              "storagePath": "context_kind",
+              "type": "enum",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "standing",
+                  "rfp",
+                  "engagement",
+                  "contract",
+                  "project"
+                ],
+                "optionLabels": {
+                  "standing": "Standing",
+                  "rfp": "Sourcing event",
+                  "engagement": "Engagement",
+                  "contract": "Contract",
+                  "project": "Project"
+                }
+              },
+              "list": {
+                "label": "Context",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "context_reference",
+              "storagePath": "context_reference",
+              "type": "json",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "structuredProjection": {
+                "kind": "object_array",
+                "maxItems": 1,
+                "fields": [
+                  {
+                    "key": "name",
+                    "type": "string",
+                    "nullable": true
+                  },
+                  {
+                    "key": "state",
+                    "type": "string",
+                    "nullable": true
+                  }
+                ]
+              },
+              "list": {
+                "label": "Context record",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "decision",
+              "storagePath": "decision",
+              "type": "enum",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "pending",
+                  "approved",
+                  "conditional",
+                  "rejected",
+                  "suspended",
+                  "expired",
+                  "revoked"
+                ],
+                "optionLabels": {
+                  "pending": "Pending",
+                  "approved": "Approved",
+                  "conditional": "Conditional",
+                  "rejected": "Rejected",
+                  "suspended": "Suspended",
+                  "expired": "Expired",
+                  "revoked": "Revoked"
+                }
+              },
+              "list": {
+                "label": "Decision",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "coverage",
+              "storagePath": "coverage",
+              "type": "json",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "structuredProjection": {
+                "kind": "object_array",
+                "maxItems": 1000,
+                "fields": [
+                  {
+                    "key": "scope_group",
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  {
+                    "key": "scope_mode",
+                    "type": "string",
+                    "nullable": true
+                  },
+                  {
+                    "key": "scope_kind",
+                    "type": "string",
+                    "nullable": true
+                  },
+                  {
+                    "key": "selection_mode",
+                    "type": "string",
+                    "nullable": true
+                  },
+                  {
+                    "key": "commercial_capacity_code",
+                    "type": "string",
+                    "nullable": true
+                  },
+                  {
+                    "key": "operating_organization_id",
+                    "type": "uuid",
+                    "nullable": true
+                  },
+                  {
+                    "key": "company_code_id",
+                    "type": "uuid",
+                    "nullable": true
+                  },
+                  {
+                    "key": "commodity_category_id",
+                    "type": "uuid",
+                    "nullable": true
+                  },
+                  {
+                    "key": "country_code",
+                    "type": "string",
+                    "nullable": true
+                  },
+                  {
+                    "key": "country_purpose",
+                    "type": "string",
+                    "nullable": true
+                  },
+                  {
+                    "key": "commodity_classification_id",
+                    "type": "uuid",
+                    "nullable": true
+                  },
+                  {
+                    "key": "tax_jurisdiction_id",
+                    "type": "uuid",
+                    "nullable": true
+                  },
+                  {
+                    "key": "organization_unit_id",
+                    "type": "uuid",
+                    "nullable": true
+                  },
+                  {
+                    "key": "hierarchy_version",
+                    "type": "integer",
+                    "nullable": true
+                  }
+                ]
+              },
+              "list": {
+                "label": "Stored coverage (not eligibility)",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "condition_summaries",
+              "storagePath": "condition_summaries",
+              "type": "json",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "structuredProjection": {
+                "kind": "object_array",
+                "maxItems": 100,
+                "fields": [
+                  {
+                    "key": "summary",
+                    "type": "string",
+                    "nullable": true
+                  },
+                  {
+                    "key": "state",
+                    "type": "string",
+                    "nullable": true
+                  }
+                ]
+              },
+              "list": {
+                "label": "Stored conditions",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "recorded_condition_count",
+              "storagePath": "recorded_condition_count",
+              "type": "integer",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Recorded conditions (satisfaction not evaluated)",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "effective_from",
+              "storagePath": "effective_from",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Effective from",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "effective_until",
+              "storagePath": "effective_until",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Effective until (exclusive)",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "next_review_at",
+              "storagePath": "next_review_at",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Next review date",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "date_window",
+              "storagePath": "date_window",
+              "type": "enum",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "validation": {
+                "options": [
+                  "unspecified",
+                  "scheduled",
+                  "ended",
+                  "within_window"
+                ],
+                "optionLabels": {
+                  "unspecified": "Not specified",
+                  "scheduled": "Scheduled",
+                  "ended": "Ended",
+                  "within_window": "Within date window"
+                }
+              },
+              "list": {
+                "label": "Date window (UTC date basis; not eligibility)",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "assessed_at",
+              "storagePath": "assessed_at",
+              "type": "datetime",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Date window assessed at",
+                "defaultVisible": false
+              }
+            }
+          ],
+          "operations": {
+            "list": {
+              "code": "list",
+              "authorizationMode": "bound_operation"
+            },
+            "read": {
+              "code": "read",
+              "authorizationMode": "bound_operation"
+            }
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "business_partner_qualification",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_partner_id",
+                "fields": [
+                  "business_partner_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "qualification_type_code",
+                "fields": [
+                  "qualification_type_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "context_kind",
+                "fields": [
+                  "context_kind"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "context_reference",
+                "fields": [
+                  "context_reference"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "decision",
+                "fields": [
+                  "decision"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "coverage",
+                "fields": [
+                  "coverage"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "condition_summaries",
+                "fields": [
+                  "condition_summaries"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "recorded_condition_count",
+                "fields": [
+                  "recorded_condition_count"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "effective_from",
+                "fields": [
+                  "effective_from"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "effective_until",
+                "fields": [
+                  "effective_until"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "next_review_at",
+                "fields": [
+                  "next_review_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "date_window",
+                "fields": [
+                  "date_window"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "assessed_at",
+                "fields": [
+                  "assessed_at"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "directoryScope": {
+            "schemaVersion": 1,
+            "mode": "tenant",
+            "parent": {
+              "entityCode": "business_partner",
+              "relationshipKey": "business_partner_qualification"
+            }
+          },
+          "listPresentation": {
+            "schemaVersion": 1,
+            "title": "Qualifications",
+            "identityField": "qualification_type_code",
+            "defaultColumns": [
+              "qualification_type_code",
+              "context_kind",
+              "decision",
+              "date_window",
+              "recorded_condition_count"
+            ],
+            "supportedModes": [
+              "table"
+            ],
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              25,
+              50,
+              100
+            ]
+          },
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "qualification_type_code",
+            "sections": [
+              {
+                "key": "details",
+                "label": "Qualifications",
+                "fields": [
+                  "qualification_type_code",
+                  "context_kind",
+                  "decision",
+                  "recorded_condition_count",
+                  "effective_from",
+                  "effective_until",
+                  "next_review_at",
+                  "date_window",
+                  "assessed_at"
+                ],
+                "placement": "direct"
+              }
+            ],
+            "navigation": {
+              "mode": "switch",
+              "tabs": [
+                {
+                  "key": "record",
+                  "label": "Qualifications",
+                  "sectionKeys": [
+                    "details"
+                  ]
+                }
+              ]
+            },
+            "actions": []
+          },
+          "detailRouteTemplate": "/app/entity/business_partner_qualification/:recordId"
+        },
+        "artifactHash": "sha256:d39b3ff7adbdddcae7488bb2efc1f332360c04d114ea24a205ed720a3efbf6e4"
+      },
+      "remainingOperations": [
+        "request_change"
+      ],
+      "sharedReadBindingsQualified": true
+    },
+    {
+      "entityCode": "business_partner_tax_registration",
+      "coreHash": "sha256:c71111ef28bcc5d4352b7edbf40fecaec08acb8c4b6893b73e94e4da5758679d",
+      "operationHash": "sha256:58dcc2bda05bd95be80ed6f90c93195f2dceaf018f05901e3f5eeb81ad7949db",
+      "runtime": {
+        "schema": "athyper.compiled-entity-artifact/2.0-draft",
+        "schemaVersion": 2,
+        "contractStatus": "unsigned_review_only",
+        "artifactType": "runtime_contract",
+        "artifactKey": "business_partner_tax_registration/runtime",
+        "entityCode": "business_partner_tax_registration",
+        "plane": "neon",
+        "dependencies": [
+          "business_partner_tax_registration/core",
+          "business_partner_tax_registration/operation"
+        ],
+        "descriptor": {
+          "schema": "athyper.entity-runtime-descriptor/1.0",
+          "entityCode": "business_partner_tax_registration",
+          "planeKey": "neon",
+          "storage": {
+            "schema": "master",
+            "object": "v_partner_tax_read",
+            "idField": "id",
+            "tenantField": "tenant_id"
+          },
+          "fields": [
+            {
+              "key": "tenant_id",
+              "storagePath": "tenant_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tenant",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "id",
+              "storagePath": "id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "business_partner_id",
+              "storagePath": "business_partner_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Business Partner Id",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "registration_type_code",
+              "storagePath": "registration_type_code",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Registration Type Code",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "jurisdiction_id",
+              "storagePath": "jurisdiction_id",
+              "type": "uuid",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tax Jurisdiction",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "tax_type_id",
+              "storagePath": "tax_type_id",
+              "type": "uuid",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Tax Type",
+                "defaultVisible": false
+              }
+            },
+            {
+              "key": "registration_number",
+              "storagePath": "registration_number",
+              "type": "string",
+              "required": true,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Registration Number",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "effective_from",
+              "storagePath": "effective_from",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Effective From",
+                "defaultVisible": true
+              }
+            },
+            {
+              "key": "effective_until",
+              "storagePath": "effective_until",
+              "type": "date",
+              "required": false,
+              "writableOn": [],
+              "filterable": false,
+              "sortable": false,
+              "searchable": false,
+              "list": {
+                "label": "Effective Until",
+                "defaultVisible": true
+              }
+            }
+          ],
+          "operations": {
+            "list": {
+              "code": "list",
+              "authorizationMode": "bound_operation"
+            },
+            "read": {
+              "code": "read",
+              "authorizationMode": "bound_operation"
+            }
+          },
+          "authorization": {
+            "schemaVersion": 1,
+            "entityCode": "business_partner_tax_registration",
+            "planeKey": "neon",
+            "ownership": "tenant.record.v1",
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "recordReadOperation": "read",
+            "operations": [
+              {
+                "key": "list",
+                "scope": "tenant.record.v1",
+                "target": "collection",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              },
+              {
+                "key": "read",
+                "scope": "tenant.record.v1",
+                "target": "existing",
+                "effect": "read",
+                "requiresParentRead": false,
+                "requiresPreflight": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "tenant_id",
+                "fields": [
+                  "tenant_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "id",
+                "fields": [
+                  "id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "business_partner_id",
+                "fields": [
+                  "business_partner_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "registration_type_code",
+                "fields": [
+                  "registration_type_code"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "jurisdiction_id",
+                "fields": [
+                  "jurisdiction_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "tax_type_id",
+                "fields": [
+                  "tax_type_id"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "registration_number",
+                "fields": [
+                  "registration_number"
+                ],
+                "readOperation": "read",
+                "representation": "masked",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "effective_from",
+                "fields": [
+                  "effective_from"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              },
+              {
+                "key": "effective_until",
+                "fields": [
+                  "effective_until"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [],
+                "queryUses": []
+              }
+            ],
+            "surfaces": [],
+            "relationships": []
+          },
+          "authorizationRuntime": {
+            "schemaVersion": 1,
+            "runtimeVersion": "entity-authorization.v1",
+            "bindings": [
+              {
+                "operation": "list",
+                "handler": "entity.record.list.v1",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "operation": "read",
+                "handler": "entity.record.read.v1",
+                "resolver": "tenant.record.v1"
+              }
+            ]
+          },
+          "directoryScope": {
+            "schemaVersion": 1,
+            "mode": "tenant",
+            "parent": {
+              "entityCode": "business_partner",
+              "relationshipKey": "business_partner_tax_registration"
+            }
+          },
+          "listPresentation": {
+            "schemaVersion": 1,
+            "title": "Tax registrations",
+            "identityField": "registration_type_code",
+            "defaultColumns": [
+              "registration_type_code",
+              "registration_number",
+              "effective_from",
+              "effective_until"
+            ],
+            "supportedModes": [
+              "table"
+            ],
+            "defaultPageSize": 25,
+            "allowedPageSizes": [
+              25,
+              50,
+              100
+            ]
+          },
+          "recordPresentation": {
+            "schemaVersion": 1,
+            "titleField": "registration_type_code",
+            "sections": [
+              {
+                "key": "details",
+                "label": "Tax registrations",
+                "fields": [
+                  "registration_type_code",
+                  "registration_number",
+                  "effective_from",
+                  "effective_until"
+                ],
+                "placement": "direct"
+              }
+            ],
+            "navigation": {
+              "mode": "switch",
+              "tabs": [
+                {
+                  "key": "record",
+                  "label": "Tax registrations",
+                  "sectionKeys": [
+                    "details"
+                  ]
+                }
+              ]
+            },
+            "actions": []
+          },
+          "detailRouteTemplate": "/app/entity/business_partner_tax_registration/:recordId"
+        },
+        "artifactHash": "sha256:c6826952474889b3836fa1dcb795e5707e368a97a2f3964b4404ac8b7a5f8ebb"
+      },
+      "remainingOperations": [
+        "request_change",
+        "reveal"
+      ],
+      "sharedReadBindingsQualified": true
+    }
+  ],
+  "predecessorLedgers": [
+    {
+      "publicationKey": "metadata.compiled_entity.business_partner",
+      "tenantId": null,
+      "sourceReleaseId": "28bf5bff-caba-5a16-b971-dfc376b2b501",
+      "artifactHash": "0c37e4c13904b0586c4b591e906ee5e80753f3e57a99f4affd37a6c2e6e154fa",
+      "runtimeBindings": [],
+      "retainedTenantRuntimeKeys": []
+    },
+    {
+      "publicationKey": "metadata.compiled_entity.business_partner.tenant.11111111-1111-4111-8111-111111111111",
+      "tenantId": "11111111-1111-4111-8111-111111111111",
+      "sourceReleaseId": "b0515908-244d-40e9-b518-12116ddb7354",
+      "artifactHash": "bfb27ee31463398b9fd1e5e2c473e1216c16967c8e019120add54a792e779ced",
+      "runtimeBindings": [
+        {
+          "predecessor": {
+            "handler": "business_partner.activity_read.v1",
+            "resolver": "organization.record.v1",
+            "operation": "activity_read"
+          },
+          "predecessorOperation": {
+            "key": "activity_read",
+            "scope": "organization.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_activity.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.add_role.v1",
+            "resolver": "organization.record.v1",
+            "operation": "add_role",
+            "preflight": "business_partner.add_role.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "add_role",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.entity_case.create",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.addresses_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "addresses_read"
+          },
+          "predecessorOperation": {
+            "key": "addresses_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_address.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.amend_partner.v1",
+            "resolver": "organization.record.v1",
+            "operation": "amend_partner",
+            "preflight": "business_partner.amend_partner.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "amend_partner",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.entity_case.create",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.assign_organization.v1",
+            "resolver": "organization.record.v1",
+            "operation": "assign_organization",
+            "preflight": "business_partner.assign_organization.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "assign_organization",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.entity_case.create",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.attachments_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "attachments_read"
+          },
+          "predecessorOperation": {
+            "key": "attachments_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.collaboration.attachment.read",
+            "requiresPreflight": false,
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.bank_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "bank_read"
+          },
+          "predecessorOperation": {
+            "key": "bank_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.bank_reveal.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "bank_reveal",
+            "preflight": "business_partner.bank_reveal.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "bank_reveal",
+            "scope": "tenant.record.v1",
+            "effect": "reveal",
+            "target": "existing",
+            "permissionCode": "neon.relationship.bp_target.bank_reveal",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.case_create.v1",
+            "resolver": "organization.record.v1",
+            "operation": "case_create",
+            "preflight": "business_partner.case_create.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "case_create",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.entity_case.create",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.case_decide.v1",
+            "resolver": "organization.record.v1",
+            "operation": "case_decide",
+            "preflight": "business_partner.case_decide.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "case_decide",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "existing",
+            "permissionCode": "neon.relationship.entity_case.decide",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.case_materialize.v1",
+            "resolver": "organization.record.v1",
+            "operation": "case_materialize",
+            "preflight": "business_partner.case_materialize.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "case_materialize",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "existing",
+            "permissionCode": "neon.relationship.entity_case.materialize",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.case_read.v1",
+            "resolver": "organization.record.v1",
+            "operation": "case_read"
+          },
+          "predecessorOperation": {
+            "key": "case_read",
+            "scope": "organization.record.v1",
+            "effect": "read",
+            "target": "collection",
+            "permissionCode": "neon.relationship.entity_case.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.case_submit.v1",
+            "resolver": "organization.record.v1",
+            "operation": "case_submit",
+            "preflight": "business_partner.case_submit.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "case_submit",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "existing",
+            "permissionCode": "neon.relationship.entity_case.submit",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.case_update.v1",
+            "resolver": "organization.record.v1",
+            "operation": "case_update",
+            "preflight": "business_partner.case_update.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "case_update",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "existing",
+            "permissionCode": "neon.relationship.entity_case.update",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.case_validate.v1",
+            "resolver": "organization.record.v1",
+            "operation": "case_validate",
+            "preflight": "business_partner.case_validate.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "case_validate",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "existing",
+            "permissionCode": "neon.relationship.entity_case.validate",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.certificate_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "certificate_read"
+          },
+          "predecessorOperation": {
+            "key": "certificate_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_certificate.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.change_bank.v1",
+            "resolver": "organization.record.v1",
+            "operation": "change_bank",
+            "preflight": "business_partner.change_bank.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "change_bank",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.entity_case.create",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.comments_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "comments_read"
+          },
+          "predecessorOperation": {
+            "key": "comments_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.collaboration.comment.read",
+            "requiresPreflight": false,
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.configure_company.v1",
+            "resolver": "organization-company.record.v1",
+            "operation": "configure_company",
+            "preflight": "business_partner.configure_company.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "configure_company",
+            "scope": "organization-company.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.bp_target.configure_company",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.contacts_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "contacts_read"
+          },
+          "predecessorOperation": {
+            "key": "contacts_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_contact.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.credit_read.v1",
+            "resolver": "organization.record.v1",
+            "operation": "credit_read"
+          },
+          "predecessorOperation": {
+            "key": "credit_read",
+            "scope": "organization.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_credit.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.customer_company_read.v1",
+            "resolver": "organization.record.v1",
+            "operation": "customer_company_read"
+          },
+          "predecessorOperation": {
+            "key": "customer_company_read",
+            "scope": "organization.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.discover.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "discover"
+          },
+          "predecessorOperation": {
+            "key": "discover",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "collection",
+            "permissionCode": "neon.relationship.business_partner.read",
+            "requiresPreflight": false,
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.enter.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "enter"
+          },
+          "predecessorOperation": {
+            "key": "enter",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "collection",
+            "permissionCode": "neon.relationship.business_partner.read",
+            "requiresPreflight": false,
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.export.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "export",
+            "preflight": "business_partner.export.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "export",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "collection",
+            "permissionCode": "neon.relationship.bp_target.export",
+            "requiresPreflight": true,
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.identifier_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "identifier_read"
+          },
+          "predecessorOperation": {
+            "key": "identifier_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.identity_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "identity_read"
+          },
+          "predecessorOperation": {
+            "key": "identity_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_identity.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.import.governed_requests.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "import",
+            "preflight": "business_partner.import.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "import",
+            "scope": "tenant.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.bp_target.import",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.lifecycle.v1",
+            "resolver": "organization.record.v1",
+            "operation": "lifecycle",
+            "preflight": "business_partner.lifecycle.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "lifecycle",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.entity_case.create",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.navigate_manage.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "navigate_manage"
+          },
+          "predecessorOperation": {
+            "key": "navigate_manage",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "collection",
+            "permissionCode": "neon.relationship.business_partner.read",
+            "requiresPreflight": false,
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.navigate_overview.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "navigate_overview"
+          },
+          "predecessorOperation": {
+            "key": "navigate_overview",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "collection",
+            "permissionCode": "neon.relationship.business_partner.read",
+            "requiresPreflight": false,
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.navigate_review.v1",
+            "resolver": "organization.record.v1",
+            "operation": "navigate_review"
+          },
+          "predecessorOperation": {
+            "key": "navigate_review",
+            "scope": "organization.record.v1",
+            "effect": "read",
+            "target": "collection",
+            "permissionCode": "neon.relationship.entity_case.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.network_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "network_read"
+          },
+          "predecessorOperation": {
+            "key": "network_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.bp_target.network_read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.qualification.v1",
+            "resolver": "organization.record.v1",
+            "operation": "qualification",
+            "preflight": "business_partner.qualification.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "qualification",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.supplier.qualification.admin",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.qualification_company.v1",
+            "resolver": "organization-company.record.v1",
+            "operation": "qualification_company",
+            "preflight": "business_partner.qualification_company.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "qualification_company",
+            "scope": "organization-company.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.bp_target.qualification_company",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.qualification_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "qualification_read"
+          },
+          "predecessorOperation": {
+            "key": "qualification_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_qualification.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "read"
+          },
+          "predecessorOperation": {
+            "key": "read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner.read",
+            "requiresPreflight": false,
+            "requiresParentRead": false
+          },
+          "proposed": {
+            "operation": "read",
+            "handler": "entity.record.read.v1",
+            "resolver": "tenant.record.v1"
+          },
+          "proposedOperation": {
+            "key": "read",
+            "permissionCode": "neon.relationship.business_partner.read",
+            "scope": "tenant.record.v1",
+            "target": "existing",
+            "effect": "read",
+            "requiresParentRead": false,
+            "requiresPreflight": false
+          },
+          "status": "explicit_binding_migration_requires_review"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.request_supplier.v1",
+            "resolver": "organization.record.v1",
+            "operation": "request_supplier",
+            "preflight": "business_partner.request_supplier.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "request_supplier",
+            "scope": "organization.record.v1",
+            "effect": "write",
+            "target": "proposed",
+            "permissionCode": "neon.relationship.entity_case.create",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": false
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.requests_read.v1",
+            "resolver": "organization.record.v1",
+            "operation": "requests_read"
+          },
+          "predecessorOperation": {
+            "key": "requests_read",
+            "scope": "organization.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.entity_case.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.supplier_company_read.v1",
+            "resolver": "organization.record.v1",
+            "operation": "supplier_company_read"
+          },
+          "predecessorOperation": {
+            "key": "supplier_company_read",
+            "scope": "organization.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner.read",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.tax_read.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "tax_read"
+          },
+          "predecessorOperation": {
+            "key": "tax_read",
+            "scope": "tenant.record.v1",
+            "effect": "read",
+            "target": "existing",
+            "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+            "requiresPreflight": false,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.tax_reveal.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "tax_reveal",
+            "preflight": "business_partner.tax_reveal.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "tax_reveal",
+            "scope": "tenant.record.v1",
+            "effect": "reveal",
+            "target": "existing",
+            "permissionCode": "neon.relationship.bp_target.tax_reveal",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        },
+        {
+          "predecessor": {
+            "handler": "business_partner.identifier_reveal.v1",
+            "resolver": "tenant.record.v1",
+            "operation": "identifier_reveal",
+            "preflight": "business_partner.identifier_reveal.preflight.v1"
+          },
+          "predecessorOperation": {
+            "key": "identifier_reveal",
+            "scope": "tenant.record.v1",
+            "effect": "reveal",
+            "target": "existing",
+            "permissionCode": "neon.relationship.bp_target.identifier_reveal",
+            "requiresPreflight": true,
+            "discoveryOperation": "enter",
+            "requiresParentRead": true
+          },
+          "proposed": null,
+          "proposedOperation": null,
+          "status": "unresolved_preserve_predecessor_behavior"
+        }
+      ],
+      "retainedTenantRuntimeKeys": [
+        "business_partner_request/runtime"
+      ]
+    }
+  ],
+  "parentContractValidation": "passed",
+  "governedSuccessorCreated": false,
+  "publicationPerformed": false,
+  "independentApprovalRecorded": false,
+  "platformAuthor": null,
+  "platformReviewer": null,
+  "tenantAuthor": null,
+  "tenantReviewer": null
+}

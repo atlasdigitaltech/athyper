@@ -1,5 +1,7 @@
 # BP nested projection and runtime review
 
+**Follow-up:** [Read-contract implementation and exact legacy-binding ledger](bp-read-contract-and-legacy-binding-review-20261003.md) supersedes the next-build findings below. This document records the earlier checkpoint.
+
 3 October 2026. **Implementation checkpoint; publication and independent approval remain blocked.** Existing DEV only. No release head, permission, role/group relationship or persisted review was changed.
 
 ## Implemented

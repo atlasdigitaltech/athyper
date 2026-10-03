@@ -7,25 +7,27 @@
   "entityCode": "business_partner",
   "plane": "neon",
   "storage": {
-    "kind": "table",
+    "kind": "field_projection",
     "sourceObjects": [
       "master.business_partner",
       "master.business_partner_organization_identity",
       "master.person",
-      "master.business_partner_identity_current"
+      "master.business_partner_identity_current",
+      "master.v_partner_identity_read",
+      "control.lookup_value"
     ],
     "primaryObject": "master.business_partner",
     "idField": "id",
     "tenantField": "tenant_id",
     "genericWriteEnabled": false,
     "versionField": "record_version",
-    "readObject": "master.business_partner_identity_current"
+    "readObject": "master.v_partner_identity_read"
   },
   "fields": [
     {
       "key": "tenant_id",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "tenant_id"
       },
       "dataType": "uuid",
@@ -46,7 +48,7 @@
     {
       "key": "supplier_enabled",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "supplier_enabled"
       },
       "dataType": "boolean",
@@ -67,7 +69,7 @@
     {
       "key": "customer_enabled",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "customer_enabled"
       },
       "dataType": "boolean",
@@ -88,7 +90,7 @@
     {
       "key": "id",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "id"
       },
       "dataType": "uuid",
@@ -109,7 +111,7 @@
     {
       "key": "code",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "code"
       },
       "dataType": "string",
@@ -130,7 +132,7 @@
     {
       "key": "name",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "name"
       },
       "dataType": "string",
@@ -155,7 +157,7 @@
     {
       "key": "legal_name",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "legal_name"
       },
       "dataType": "string",
@@ -199,7 +201,7 @@
         }
       },
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "registration_country_code"
       },
       "dataType": "string",
@@ -237,7 +239,7 @@
     {
       "key": "partner_category",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "partner_category"
       },
       "dataType": "enum",
@@ -273,7 +275,7 @@
     {
       "key": "ownership_class",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "ownership_class"
       },
       "dataType": "enum",
@@ -309,7 +311,7 @@
     {
       "key": "incorporation_date",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "incorporation_date"
       },
       "dataType": "date",
@@ -343,7 +345,7 @@
     {
       "key": "website_url",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "website_url"
       },
       "dataType": "string",
@@ -359,7 +361,7 @@
     {
       "key": "description",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "description"
       },
       "dataType": "string",
@@ -375,7 +377,7 @@
     {
       "key": "status",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "status"
       },
       "dataType": "enum",
@@ -430,7 +432,7 @@
     {
       "key": "record_version",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "record_version"
       },
       "dataType": "integer",
@@ -451,7 +453,7 @@
     {
       "key": "legal_form_value_id",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "legal_form_value_id"
       },
       "dataType": "uuid",
@@ -487,12 +489,13 @@
           "evaluationFailure": "hide",
           "serverAuthoritative": false
         }
-      ]
+      ],
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "business_type_value_id",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "business_type_value_id"
       },
       "dataType": "uuid",
@@ -527,12 +530,13 @@
           "evaluationFailure": "hide",
           "serverAuthoritative": false
         }
-      ]
+      ],
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "founded_year",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "founded_year"
       },
       "dataType": "integer",
@@ -560,12 +564,13 @@
           "evaluationFailure": "hide",
           "serverAuthoritative": false
         }
-      ]
+      ],
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "employee_count",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "employee_count"
       },
       "dataType": "integer",
@@ -593,12 +598,13 @@
           "evaluationFailure": "hide",
           "serverAuthoritative": false
         }
-      ]
+      ],
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "employee_count_as_of",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "employee_count_as_of"
       },
       "dataType": "date",
@@ -626,12 +632,13 @@
           "evaluationFailure": "hide",
           "serverAuthoritative": false
         }
-      ]
+      ],
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "employee_count_scope",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "employee_count_scope"
       },
       "dataType": "enum",
@@ -679,13 +686,14 @@
           "evaluationFailure": "hide",
           "serverAuthoritative": false
         }
-      ]
+      ],
+      "readPolicy": "authorized_projection"
     },
     {
       "key": "legal_form_label",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
-        "column": "legal_form_value_id"
+        "sourceObject": "master.v_partner_identity_read",
+        "column": "legal_form_label"
       },
       "dataType": "string",
       "storageType": "text",
@@ -723,8 +731,8 @@
     {
       "key": "business_type_label",
       "binding": {
-        "sourceObject": "master.business_partner_organization_identity",
-        "column": "business_type_value_id"
+        "sourceObject": "master.v_partner_identity_read",
+        "column": "business_type_label"
       },
       "dataType": "string",
       "storageType": "text",
@@ -762,7 +770,7 @@
     {
       "key": "legal_classification",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "legal_classification"
       },
       "dataType": "enum",
@@ -810,8 +818,8 @@
     {
       "key": "person_code",
       "binding": {
-        "sourceObject": "master.person",
-        "column": "code"
+        "sourceObject": "master.v_partner_identity_read",
+        "column": "person_code"
       },
       "dataType": "string",
       "storageType": "text",
@@ -849,8 +857,8 @@
     {
       "key": "person_first_name",
       "binding": {
-        "sourceObject": "master.person",
-        "column": "first_name"
+        "sourceObject": "master.v_partner_identity_read",
+        "column": "person_first_name"
       },
       "dataType": "string",
       "storageType": "text",
@@ -888,8 +896,8 @@
     {
       "key": "person_middle_name",
       "binding": {
-        "sourceObject": "master.person",
-        "column": "middle_name"
+        "sourceObject": "master.v_partner_identity_read",
+        "column": "person_middle_name"
       },
       "dataType": "string",
       "storageType": "text",
@@ -927,8 +935,8 @@
     {
       "key": "person_last_name",
       "binding": {
-        "sourceObject": "master.person",
-        "column": "last_name"
+        "sourceObject": "master.v_partner_identity_read",
+        "column": "person_last_name"
       },
       "dataType": "string",
       "storageType": "text",
@@ -966,8 +974,8 @@
     {
       "key": "person_preferred_name",
       "binding": {
-        "sourceObject": "master.person",
-        "column": "preferred_name"
+        "sourceObject": "master.v_partner_identity_read",
+        "column": "person_preferred_name"
       },
       "dataType": "string",
       "storageType": "text",
@@ -1005,7 +1013,7 @@
     {
       "key": "is_active",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "is_active"
       },
       "dataType": "boolean",
@@ -1026,7 +1034,7 @@
     {
       "key": "updated_at",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.v_partner_identity_read",
         "column": "updated_at"
       },
       "dataType": "datetime",
@@ -1426,7 +1434,10 @@
       "evaluatorKey": "neon.bp.completeness.organization.legal_name.v1",
       "evaluatorStatus": "proposed_requires_registry_verification",
       "sourceFieldCode": "partner.legalName",
-      "requiredCoordinates": ["businessPartnerId", "asOf"],
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
       "evaluation": "on_demand",
       "unknownBehavior": "show_unavailable_never_authorize"
     },
@@ -1436,7 +1447,10 @@
       "evaluatorKey": "neon.bp.completeness.organization.lifecycle.v1",
       "evaluatorStatus": "proposed_requires_registry_verification",
       "sourceFieldCode": "partner.lifecycleStatus",
-      "requiredCoordinates": ["businessPartnerId", "asOf"],
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
       "evaluation": "on_demand",
       "unknownBehavior": "show_unavailable_never_authorize"
     },
@@ -1446,7 +1460,10 @@
       "evaluatorKey": "neon.bp.completeness.organization.primary_address.v1",
       "evaluatorStatus": "proposed_requires_registry_verification",
       "sourceFieldCode": "address.primary",
-      "requiredCoordinates": ["businessPartnerId", "asOf"],
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
       "evaluation": "on_demand",
       "unknownBehavior": "show_unavailable_never_authorize"
     },
@@ -1456,7 +1473,10 @@
       "evaluatorKey": "neon.bp.completeness.organization.primary_contact.v1",
       "evaluatorStatus": "proposed_requires_registry_verification",
       "sourceFieldCode": "contact.primary",
-      "requiredCoordinates": ["businessPartnerId", "asOf"],
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
       "evaluation": "on_demand",
       "unknownBehavior": "show_unavailable_never_authorize"
     },
@@ -1466,7 +1486,10 @@
       "evaluatorKey": "neon.bp.completeness.organization.identifier.v1",
       "evaluatorStatus": "proposed_requires_registry_verification",
       "sourceFieldCode": "identifier.primary",
-      "requiredCoordinates": ["businessPartnerId", "asOf"],
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
       "evaluation": "on_demand",
       "unknownBehavior": "show_unavailable_never_authorize"
     },
@@ -1476,7 +1499,10 @@
       "evaluatorKey": "neon.bp.completeness.organization.commercial_role.v1",
       "evaluatorStatus": "proposed_requires_registry_verification",
       "sourceFieldCode": "role.any_commercial",
-      "requiredCoordinates": ["businessPartnerId", "asOf"],
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
       "evaluation": "on_demand",
       "unknownBehavior": "show_unavailable_never_authorize"
     },
@@ -1486,7 +1512,10 @@
       "evaluatorKey": "neon.bp.completeness.person.name.v1",
       "evaluatorStatus": "proposed_requires_registry_verification",
       "sourceFieldCode": "person.name",
-      "requiredCoordinates": ["businessPartnerId", "asOf"],
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
       "evaluation": "on_demand",
       "unknownBehavior": "show_unavailable_never_authorize"
     },
@@ -1496,7 +1525,10 @@
       "evaluatorKey": "neon.bp.completeness.person.contact.v1",
       "evaluatorStatus": "proposed_requires_registry_verification",
       "sourceFieldCode": "contact.primary",
-      "requiredCoordinates": ["businessPartnerId", "asOf"],
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
       "evaluation": "on_demand",
       "unknownBehavior": "show_unavailable_never_authorize"
     },
@@ -1506,7 +1538,10 @@
       "evaluatorKey": "neon.bp.completeness.person.identifier.v1",
       "evaluatorStatus": "proposed_requires_registry_verification",
       "sourceFieldCode": "person.identifier.verified_presence",
-      "requiredCoordinates": ["businessPartnerId", "asOf"],
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
       "evaluation": "on_demand",
       "unknownBehavior": "show_unavailable_never_authorize"
     }
@@ -1559,7 +1594,10 @@
   ],
   "editRuntimeTier": {
     "tier": "generic",
-    "allowed": ["generic", "full_override"],
+    "allowed": [
+      "generic",
+      "full_override"
+    ],
     "fullOverrideRequiresArchitectureReview": true,
     "slotAdapterDeferredUntilGenericQA": true
   },
@@ -1633,7 +1671,10 @@
       "scopeContract": {
         "ownerEntityCode": "business_partner",
         "tenantEqualityRequired": true,
-        "responseMustBind": ["tenant_id", "owner_business_partner_id"],
+        "responseMustBind": [
+          "tenant_id",
+          "owner_business_partner_id"
+        ],
         "registryContractRequired": true
       }
     },
@@ -1683,5 +1724,74 @@
       "reason": "master.employee has no persisted business_partner ownership path"
     }
   ],
-  "artifactHash": "sha256:2d4ec7da57871b837fca4261999ca99592aac5425ed9ab2f467031827dac69e0"
+  "listPresentation": {
+    "schemaVersion": 1,
+    "title": "Business Partners",
+    "identityField": "name",
+    "defaultColumns": [
+      "code",
+      "name",
+      "partner_category",
+      "status"
+    ],
+    "supportedModes": [
+      "table"
+    ],
+    "defaultPageSize": 25,
+    "allowedPageSizes": [
+      25,
+      50,
+      100
+    ]
+  },
+  "recordPresentation": {
+    "schemaVersion": 1,
+    "titleField": "name",
+    "sections": [
+      {
+        "key": "details",
+        "label": "Business Partners",
+        "fields": [
+          "supplier_enabled",
+          "customer_enabled",
+          "code",
+          "name",
+          "legal_name",
+          "registration_country_code",
+          "partner_category",
+          "ownership_class",
+          "incorporation_date",
+          "website_url",
+          "description",
+          "status",
+          "founded_year",
+          "employee_count",
+          "employee_count_as_of",
+          "employee_count_scope",
+          "legal_form_label",
+          "business_type_label",
+          "legal_classification",
+          "person_code",
+          "person_first_name",
+          "person_middle_name",
+          "person_last_name",
+          "person_preferred_name"
+        ],
+        "placement": "direct"
+      }
+    ],
+    "navigation": {
+      "mode": "switch",
+      "tabs": [
+        {
+          "key": "record",
+          "label": "Business Partners",
+          "sectionKeys": [
+            "details"
+          ]
+        }
+      ]
+    },
+    "actions": []
+  }
 }
