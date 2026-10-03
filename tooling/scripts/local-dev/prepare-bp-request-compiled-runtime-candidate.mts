@@ -127,7 +127,7 @@ const bindings = operationBindings.map((binding: any) => ({
 descriptor.source = { entity_id: preview.id, release_hash: preview.graphHash };
 descriptor.operation_scope_bindings = bindings;
 const catalog = JSON.parse(
-  readFileSync("metadata/products/mdg/review/registry-catalog.json", "utf8"),
+  readFileSync("metadata/review/registry-catalog.json", "utf8"),
 );
 const keys = (kind: string) =>
   new Set(
@@ -161,13 +161,13 @@ const {
 } = previous.compiledRuntime.release;
 const currentRequestCore = JSON.parse(
   readFileSync(
-    "metadata/products/mdg/entities/business_partner_request/core.json",
+    "metadata/entities/business_partner_request/core.json",
     "utf8",
   ),
 );
 const currentRequestOperation = JSON.parse(
   readFileSync(
-    "metadata/products/mdg/entities/business_partner_request/operation.json",
+    "metadata/entities/business_partner_request/operation.json",
     "utf8",
   ),
 );

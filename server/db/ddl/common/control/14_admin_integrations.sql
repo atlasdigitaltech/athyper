@@ -1,22 +1,12 @@
--- Control administration persistence, shared by fresh installs and migrations.
-ALTER TABLE control.connector_instance ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK(version>0);
-ALTER TABLE control.bank_account_validation_rule ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK(version>0);
-ALTER TABLE control.lookup_domain ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK(version>0);
-ALTER TABLE control.rounding_rule ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK(version>0);
-
+-- Control administration persistence for the empty-database foundation.
+-- Legacy upgrades retain column additions and data backfills in their immutable SQL snapshots.
 CREATE FUNCTION control.trg_admin_version() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN IF TG_OP='INSERT' THEN NEW.version:=1; ELSE NEW.version:=OLD.version+1; END IF; RETURN NEW; END $$;
 CREATE TRIGGER zz_admin_version BEFORE INSERT OR UPDATE ON control.connector_instance FOR EACH ROW EXECUTE FUNCTION control.trg_admin_version();
 CREATE TRIGGER zz_admin_version BEFORE INSERT OR UPDATE ON control.bank_account_validation_rule FOR EACH ROW EXECUTE FUNCTION control.trg_admin_version();
 CREATE TRIGGER zz_admin_version BEFORE INSERT OR UPDATE ON control.lookup_domain FOR EACH ROW EXECUTE FUNCTION control.trg_admin_version();
 
-ALTER TABLE control.bank_account_validation_rule ADD COLUMN test_fixtures jsonb NOT NULL DEFAULT '[]'::jsonb CHECK(jsonb_typeof(test_fixtures)='array');
-ALTER TABLE control.rounding_rule ADD COLUMN configured_contexts jsonb NOT NULL DEFAULT '[]'::jsonb CHECK(jsonb_typeof(configured_contexts)='array');
--- Schema-only backfill preserves existing actor and timestamp evidence.
-ALTER TABLE control.rounding_rule DISABLE TRIGGER trg_rounding_rule_90_updated;
-UPDATE control.rounding_rule r SET configured_contexts=coalesce((SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object('companyCodeId',c.company_code_id,'currencyCode',c.currency_code,'slot',c.slot))) FROM control.rounding_context c WHERE c.tenant_id=r.tenant_id AND c.rounding_rule_id=r.id),'[]'::jsonb);
-ALTER TABLE control.rounding_rule ENABLE TRIGGER trg_rounding_rule_90_updated;
+-- Fresh rounding definitions receive configured_contexts from their CREATE TABLE default.
 CREATE TRIGGER zz_admin_version BEFORE INSERT OR UPDATE ON control.rounding_rule FOR EACH ROW EXECUTE FUNCTION control.trg_admin_version();
-ALTER TABLE control.lookup_domain ADD COLUMN source_revision integer NOT NULL DEFAULT 0 CHECK(source_revision>=0);
 CREATE TABLE control.lookup_revision(domain_code text NOT NULL REFERENCES control.lookup_domain(code),version integer NOT NULL CHECK(version>0),definition jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT clock_timestamp(),PRIMARY KEY(domain_code,version));
 CREATE TABLE control.lookup_tenant_revision(tenant_id uuid NOT NULL,domain_code text NOT NULL REFERENCES control.lookup_domain(code),version integer NOT NULL CHECK(version>0),values_json jsonb NOT NULL,PRIMARY KEY(tenant_id,domain_code,version));
 CREATE TABLE control.lookup_publication_receipt(desired_state_id text PRIMARY KEY,fingerprint text NOT NULL,domain_code text NOT NULL,version integer NOT NULL,FOREIGN KEY(domain_code,version) REFERENCES control.lookup_revision(domain_code,version));
@@ -79,8 +69,6 @@ CREATE FUNCTION control.trg_rounding_context_definition_immutable() RETURNS trig
 CREATE TRIGGER rounding_context_definition_immutable BEFORE UPDATE ON control.rounding_rule FOR EACH ROW EXECUTE FUNCTION control.trg_rounding_context_definition_immutable();
 REVOKE ALL ON FUNCTION control.trg_rounding_context_definition_immutable() FROM PUBLIC;
 
-ALTER TABLE control.integration_endpoint DROP CONSTRAINT integration_endpoint_code_chk;
-ALTER TABLE control.integration_endpoint ADD CONSTRAINT integration_endpoint_code_chk CHECK(code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$');
 CREATE TABLE control.connector_health_job(id uuid PRIMARY KEY,tenant_id uuid NOT NULL,connector_id uuid NOT NULL,requested_by uuid NOT NULL,status text NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','running','completed')),lease_until timestamptz,attempts integer NOT NULL DEFAULT 0,result_code text,created_at timestamptz NOT NULL DEFAULT clock_timestamp(),completed_at timestamptz,FOREIGN KEY(tenant_id,connector_id) REFERENCES control.connector_instance(tenant_id,id));
 ALTER TABLE control.connector_health_job ENABLE ROW LEVEL SECURITY;
 ALTER TABLE control.connector_health_job FORCE ROW LEVEL SECURITY;

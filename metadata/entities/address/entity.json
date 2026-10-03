@@ -1,0 +1,11 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "address",
+  "definition": "definition.json",
+  "artifacts": [
+    "core.json",
+    "operation.json",
+    "presentation.section.json"
+  ],
+  "placement": "placement.json"
+}

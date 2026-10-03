@@ -1,0 +1,6 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "employee",
+  "definition": "definition.json",
+  "placement": "placement.json"
+}

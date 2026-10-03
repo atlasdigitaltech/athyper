@@ -66,7 +66,7 @@ Notification Preference is more than a table editor: the existing mutation polic
 4. **Publish and qualify the second Atlas family.** Question and page context → eligible published metadata → authorized owner/record/relationship resolution → existing Entity operations → labeled answer with citations. Ordinary authenticated sessions suffice for admitted read questions; no additional Atlas MFA gate. Any separately protected administrative action retains its own existing policy. Begin with read-only Atlas capabilities; do not turn on AI writes as an incidental effect of browser-write onboarding.
 5. **Close per-plane release evidence.** Review the exact change, run relevant checks, publish pinned metadata successors where needed, deploy reproducibly, and capture browser/Atlas acceptance for all three planes. Stage 2 closes only after the matrix below passes, not after a single administrator page loads.
 
-Expected change owners: source products under `metadata/products/shared/entities/principal*`; common/plane DDL and a targeted migration for confirmed Entity dependencies; shared Records owner/concurrency/relationship enforcement; the notification owning-service adapter; standard Entity forms/detail/lookup components if a shared gap is demonstrated. No bespoke user application, raw AI SQL access or parallel API stack.
+Expected change owners: source products under `metadata/entities/principal*`; common/plane DDL and a targeted migration for confirmed Entity dependencies; shared Records owner/concurrency/relationship enforcement; the notification owning-service adapter; standard Entity forms/detail/lookup components if a shared gap is demonstrated. No bespoke user application, raw AI SQL access or parallel API stack.
 
 ## Required acceptance matrix
 

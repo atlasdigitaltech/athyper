@@ -46,7 +46,7 @@ describe('scoped compiled publication',()=>{
    await writeFile(join(candidate,'entities','release.json'),JSON.stringify({schema:'athyper.compiled-entity-release/2.0-draft',releaseId:'test',releaseNo:1,targetPlanes:['neon'],externalDependencies:[],artifacts:[{}]}));
    mocks.query.mockResolvedValueOnce({rows:[{tenant_id:'tenant',bundle_json:{},release_no:1,release_key:'test'}]})
     .mockResolvedValueOnce({rows:[{source_object:'document.entity_case'},{source_object:'snapshot.entity_snapshot'}]});
-   const promise=publishDevelopmentCompiledEntityRuntime({...options,entityCode:'business_partner_request',dryRun:true,candidateOutput:candidate,authoringRoot:fileURLToPath(new URL('../../../../../../metadata/products/mdg/entities',import.meta.url))});
+   const promise=publishDevelopmentCompiledEntityRuntime({...options,entityCode:'business_partner_request',dryRun:true,candidateOutput:candidate,authoringRoot:fileURLToPath(new URL('../../../../../../metadata/entities',import.meta.url))});
    if(source==='document.business_partner_request') {
     await expect(promise).rejects.toThrow('Missing source object');
     expect(mocks.query).toHaveBeenCalledTimes(2);

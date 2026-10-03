@@ -17,7 +17,7 @@ function fixture(recovery = false) {
     author: { principalId: randomUUID(), code: "dev.metadata.author", authEpoch: 0, credentialSha256: "a".repeat(64) },
     publisher: { principalId: publisher, code: "dev.metadata.publisher", authEpoch: 0, credentialSha256: "b".repeat(64) } };
   const sources = ["address", "person"].map(code => {
-    const product = parseTableEntityProduct(JSON.parse(readFileSync(new URL(`../../../../../../../metadata/products/shared/entities/${code}/definition.json`,import.meta.url),"utf8")));
+    const product = parseTableEntityProduct(JSON.parse(readFileSync(new URL(`../../../../../../../metadata/entities/${code}/definition.json`,import.meta.url),"utf8")));
     const { graph } = compileTableEntityProduct(product,"neon");
     graph.surfaces!.find(s => s.surfaceKind === "list")!.layoutConfig!.tableEntityProduct = {
       schema: "athyper.table-entity-source/1", productHash: sha256(product), targetPlanes: ["neon"], moduleCode: product.moduleCode,

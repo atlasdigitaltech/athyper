@@ -25,8 +25,8 @@ Use these sources in this order:
   and [28 September follow-up](../reports/entity-onboarding-followup-20260928.md)
   retain Country release 8's passed manual acceptance. They also describe later
   source-only changes that need normal qualification before another publication.
-- [Country product](../../metadata/products/shared/entities/country/definition.json)
-  and [capabilities](../../metadata/products/shared/entities/country/capabilities.json)
+- [Country product](../../metadata/entities/country/definition.json)
+  and [capabilities](../../metadata/entities/country/capabilities.json)
   describe the working-tree candidate, not necessarily the exact active release.
 - [Country runbook](country-entity-app.md) contains historical 26 September gates;
   its early “not activated” statements are not the latest acceptance status.
@@ -222,9 +222,9 @@ Offline compilation, with no activation, can be exercised using the existing
 Country example:
 
 ```sh
-pnpm exec tsx server/db/scripts/provisioning/prepare-reference-runtime.ts --product=metadata/products/shared/entities/country --plane=studio
-pnpm exec tsx server/db/scripts/provisioning/prepare-reference-runtime.ts --product=metadata/products/shared/entities/country --plane=neon
-pnpm exec tsx server/db/scripts/provisioning/prepare-reference-runtime.ts --product=metadata/products/shared/entities/country --plane=mesh
+pnpm exec tsx server/db/scripts/provisioning/prepare-reference-runtime.ts --product=metadata/entities/country --plane=studio
+pnpm exec tsx server/db/scripts/provisioning/prepare-reference-runtime.ts --product=metadata/entities/country --plane=neon
+pnpm exec tsx server/db/scripts/provisioning/prepare-reference-runtime.ts --product=metadata/entities/country --plane=mesh
 ```
 
 Substitute the new product path only after it exists and the helper supports its
@@ -238,7 +238,7 @@ Use the authenticated authoring service or the trusted system-reference importer
 The current DEV maintenance script offers a transaction-rollback check:
 
 ```sh
-pnpm exec tsx server/db/scripts/operations/publication/import-dev-reference-product.ts --product=metadata/products/shared/entities/country --check
+pnpm exec tsx server/db/scripts/operations/publication/import-dev-reference-product.ts --product=metadata/entities/country --check
 ```
 
 This is DEV-specific tooling with privileged database access, not a universal

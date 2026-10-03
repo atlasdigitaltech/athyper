@@ -60,7 +60,7 @@ for (const entity of [
 ]) {
   const directory = join(output, entity);
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const product = `metadata/products/shared/entities/${entity}`;
+  const product = `metadata/entities/${entity}`;
   const head = heads.find(
     (item) => item.key === `metadata.reference.${entity}`,
   );

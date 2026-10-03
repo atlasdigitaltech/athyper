@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "business_partner_bank_account_link",
+  "artifacts": [
+    "core.json"
+  ]
+}

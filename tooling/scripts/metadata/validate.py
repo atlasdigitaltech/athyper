@@ -15,7 +15,7 @@ arguments.add_argument('--release-ready', action='store_true')
 arguments.add_argument('--release-candidate')
 args, _ = arguments.parse_known_args()
 REPO = Path(args.repository_root).resolve() if args.repository_root else Path(__file__).resolve().parents[3]
-ROOT = Path(args.package_root).resolve() if args.package_root else REPO / 'metadata/products/mdg/entities'
+ROOT = Path(args.package_root).resolve() if args.package_root else REPO / 'metadata/entities'
 SCHEMAS = REPO / 'metadata/schemas/entity-artifacts-v2'
 REVIEW = ROOT.parent / 'review'
 SOURCE_BUNDLE = Path(args.source_bundle).resolve() if args.source_bundle else next((REPO / 'docs/architecture/application-experience/entity-policy-examples').glob('business-partner-definition-bundle-22ee*.json'))

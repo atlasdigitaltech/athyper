@@ -15,10 +15,10 @@ for (const role of ['supplier', 'customer']) {
     assert.doesNotMatch(body, new RegExp(`\\b${role}_id\\b`));
     const fk = constraints.slice(constraints.indexOf(`ALTER TABLE master.${name}\n`)).split(';')[0];
     assert.match(fk, /FOREIGN KEY \(tenant_id, business_partner_id\)\s+REFERENCES master.business_partner \(tenant_id, id\)/);
-    const core = JSON.parse(read(`metadata/products/mdg/entities/${role}_company_profile/core.json`));
+    const core = JSON.parse(read(`metadata/entities/${role}_company_profile/core.json`));
     assert.equal(core.fields.find(f => f.key === 'business_partner_id').binding.column, 'business_partner_id');
     assert.ok(!core.fields.some(f => f.key === `${role}_id`));
-    const bp = JSON.parse(read('metadata/products/mdg/entities/business_partner/core.json'));
+    const bp = JSON.parse(read('metadata/entities/business_partner/core.json'));
     const relation = bp.relations.find(r => r.targetEntityCode === `${role}_company_profile`);
     const segments = relation.binding.scopeContract.ownerMapping.segments;
     assert.equal(segments.length, 1);

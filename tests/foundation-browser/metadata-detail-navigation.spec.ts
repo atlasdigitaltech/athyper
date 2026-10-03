@@ -73,7 +73,7 @@ async function mount(
   await page.evaluate(fixture => { (window as any).fixture = fixture; }, fixture);
   await page.addScriptTag({ content: await bundle });
 }
-const countrySource = JSON.parse(readFileSync("metadata/products/shared/entities/country/definition.json", "utf8")).definition;
+const countrySource = JSON.parse(readFileSync("metadata/entities/country/definition.json", "utf8")).definition;
 // This fixture exercises navigation, not compilation. Lower source localized text
 // to the presentation's compatible string label; the compiled path has its own tests.
 const country = {...countrySource,sections:countrySource.sections.map((section:{label:string|{defaultText:string}})=>({...section,label:typeof section.label==="string"?section.label:section.label.defaultText}))};

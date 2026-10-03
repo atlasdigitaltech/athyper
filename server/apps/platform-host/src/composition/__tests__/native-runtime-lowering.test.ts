@@ -56,7 +56,7 @@ it("refuses target drift, missing columns and missing catalog entries", () => {
 });
 it("carries collaboration policy into split members and rejects absent registered services", () => {
   const f = fixture("neon");
-  const contents = readFileSync(new URL("../../../../../../metadata/products/shared/entities/country/capabilities.json", import.meta.url), "utf8");
+  const contents = readFileSync(new URL("../../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8");
   const members = JSON.parse(contents.replaceAll("country", "test_dictionary"));
   f.source.contract.capabilities = members;
   const result = lowerNativeRuntimePublication(f.source, f.input);

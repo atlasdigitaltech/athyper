@@ -80,7 +80,7 @@ describe("compiled entity artifact compiler", () => {
 
   it("rebuilds the complete BP review package deterministically from hash-free authoring input", async () => {
     const root = new URL(
-      "../../../../../../metadata/products/mdg/entities/",
+      "../../../../../../metadata/entities/",
       import.meta.url,
     );
     const paths = await jsonPaths(root);

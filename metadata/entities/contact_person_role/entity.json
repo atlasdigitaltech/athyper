@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "contact_person_role",
+  "artifacts": [
+    "core.json"
+  ]
+}

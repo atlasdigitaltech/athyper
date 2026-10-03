@@ -187,6 +187,7 @@ CREATE TABLE control.connector_instance (
     created_by           uuid                                NOT NULL,
     updated_at           timestamptz,
     updated_by           uuid,
+    version               integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT connector_instance_pkey PRIMARY KEY (id),
     CONSTRAINT connector_instance_tenant_id_uq UNIQUE (tenant_id, id),
@@ -243,7 +244,7 @@ CREATE TABLE control.integration_endpoint (
     CONSTRAINT integration_endpoint_code_uq
         UNIQUE (tenant_id, connector_instance_id, code),
     CONSTRAINT integration_endpoint_code_chk
-        CHECK (code ~ '^[A-Z][A-Z0-9_.-]{1,62}$'),
+        CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$'),
     CONSTRAINT integration_endpoint_name_chk CHECK (btrim(name) <> ''),
     CONSTRAINT integration_endpoint_kind_chk
         CHECK (endpoint_kind_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
@@ -630,6 +631,8 @@ CREATE TABLE control.bank_account_validation_rule (
     created_by                      uuid NOT NULL,
     updated_at                      timestamptz,
     updated_by                      uuid,
+    version                         integer NOT NULL DEFAULT 1 CHECK (version > 0),
+    test_fixtures                   jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(test_fixtures) = 'array'),
 
     CONSTRAINT bank_account_validation_rule_pkey PRIMARY KEY (id),
     CONSTRAINT bank_account_validation_rule_code_uq UNIQUE (code),
@@ -961,7 +964,9 @@ CREATE TABLE control.lookup_domain (
   created_at timestamptz DEFAULT now() NOT NULL,
   created_by uuid NOT NULL,
   updated_at timestamptz,
-  updated_by uuid
+  updated_by uuid,
+  version integer DEFAULT 1 NOT NULL CHECK (version > 0),
+  source_revision integer DEFAULT 0 NOT NULL CHECK (source_revision >= 0)
 );
 
 COMMENT ON TABLE control.lookup_domain IS
@@ -1372,6 +1377,8 @@ CREATE TABLE control.rounding_rule (
     created_by          uuid                           NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version             integer NOT NULL DEFAULT 1 CHECK (version > 0),
+    configured_contexts jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(configured_contexts) = 'array'),
 
     CONSTRAINT rounding_rule_pkey PRIMARY KEY (id),
     CONSTRAINT rounding_rule_tenant_id_uq UNIQUE (tenant_id, id),

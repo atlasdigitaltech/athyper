@@ -56,7 +56,7 @@ for (const plane of ["neon", "studio", "mesh"] as const) {
       "timezone",
     ]) {
       const candidate = prepareReferenceRuntime(
-        `metadata/products/shared/entities/${entity}`,
+        `metadata/entities/${entity}`,
         plane,
       );
       await db

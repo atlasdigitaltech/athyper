@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "classification_scheme",
+  "artifacts": [
+    "core.json"
+  ]
+}

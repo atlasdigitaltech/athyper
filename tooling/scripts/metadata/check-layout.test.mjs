@@ -22,7 +22,7 @@ function fixture(work) {
     );
     for (const path of [
       "metadata/relocation-map.json",
-      "metadata/products/mdg/manifest.json",
+      "metadata/manifest.json",
       ...inventory.files.map((e) => e.to),
     ]) {
       mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -62,7 +62,7 @@ test("relocation baseline detects content changes without prohibiting future edi
   fixture((root) => {
     const path = join(
       root,
-      "metadata/products/mdg/entities/business_partner/core.json",
+      "metadata/entities/business_partner/core.json",
     );
     writeFileSync(path, readFileSync(path, "utf8") + "\n");
     assert.doesNotThrow(() => checkLayout(root));
@@ -75,7 +75,7 @@ test("unresolved logical refs fail even when the original files remain present",
   fixture((root) => {
     const path = join(
       root,
-      "metadata/products/mdg/entities/business_partner/core.json",
+      "metadata/entities/business_partner/core.json",
     );
     const value = JSON.parse(readFileSync(path, "utf8"));
     value.exampleRef = "missing/core.json";

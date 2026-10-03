@@ -9,7 +9,7 @@ const source = () =>
   JSON.parse(
     readFileSync(
       new URL(
-        "../../../../../../../metadata/products/shared/entities/country/definition.json",
+        "../../../../../../../metadata/entities/country/definition.json",
         import.meta.url,
       ),
       "utf8",

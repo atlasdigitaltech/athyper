@@ -19,3 +19,6 @@ ALTER TABLE governance.cycle_subject ADD CONSTRAINT cycle_subject_case_fk
     FOREIGN KEY(tenant_id,entity_case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT;
 ALTER TABLE snapshot.entity_case_snapshot_lineage ADD CONSTRAINT entity_case_snapshot_lineage_case_fk
     FOREIGN KEY(tenant_id,entity_case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE document.attachment ADD CONSTRAINT attachment_draft_fk
+    FOREIGN KEY (tenant_id, draft_id) REFERENCES document.comment_draft (tenant_id, id) ON DELETE RESTRICT;

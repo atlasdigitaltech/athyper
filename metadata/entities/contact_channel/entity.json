@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "contact_channel",
+  "artifacts": [
+    "core.json"
+  ]
+}

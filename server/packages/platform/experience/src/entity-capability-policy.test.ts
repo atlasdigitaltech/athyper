@@ -5,7 +5,7 @@ import { createEntityOperationDispatcher } from "./entity-operation-dispatcher.j
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { PinnedCompiledEntityReader } from "@athyper/server-platform-metadata";
 const root = new URL(
-  "../../../../../metadata/products/mdg/entities/business_partner/",
+  "../../../../../metadata/entities/business_partner/",
   import.meta.url,
 );
 const read = (name: string) =>

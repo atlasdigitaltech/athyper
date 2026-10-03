@@ -1,0 +1,9 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "currency",
+  "definition": "definition.json",
+  "artifacts": [
+    "core.json"
+  ],
+  "placement": "placement.json"
+}

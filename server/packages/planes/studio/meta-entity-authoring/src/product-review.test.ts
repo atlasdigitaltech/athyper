@@ -19,7 +19,7 @@ function fixture() {
     JSON.parse(
       readFileSync(
         new URL(
-          "../../../../../../metadata/products/shared/entities/address/definition.json",
+          "../../../../../../metadata/entities/address/definition.json",
           import.meta.url,
         ),
         "utf8",

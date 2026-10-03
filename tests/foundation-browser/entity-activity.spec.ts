@@ -9,7 +9,7 @@ const bundle = build({
     loader: "tsx",
     resolveDir: process.cwd(),
     contents: `
- import country from './metadata/products/shared/entities/country/definition.json';
+ import country from './metadata/entities/country/definition.json';
  import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
  import {MetadataDetailWorkspace} from './packages/platform/entity/runtime/form-detail/src/detail-workspace';
  import {parseEntityRecordPresentation} from './packages/contracts/platform/entity-runtime/src/record-presentation';

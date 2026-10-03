@@ -7,8 +7,8 @@ import type { VerifiedRequestContext } from "../../../server/packages/contracts/
 import { COMMON_REFERENCE_VIEW_PERMISSION } from "../../../server/packages/contracts/metadata/src/index";
 import { compileGraph } from "../../../server/packages/planes/studio/meta-entity-authoring/src/deterministic";
 
-export const referenceSource = () => JSON.parse(readFileSync(new URL("../../../metadata/products/shared/entities/country/definition.json", import.meta.url), "utf8"));
-export const referenceLocalization = () => JSON.parse(readFileSync(new URL("../../../metadata/products/shared/entities/country/localization.json", import.meta.url), "utf8"));
+export const referenceSource = () => JSON.parse(readFileSync(new URL("../../../metadata/entities/country/definition.json", import.meta.url), "utf8"));
+export const referenceLocalization = () => JSON.parse(readFileSync(new URL("../../../metadata/entities/country/localization.json", import.meta.url), "utf8"));
 export function compiledReference(input = referenceSource(), plane: "studio" | "neon" | "mesh" = "neon") {
   const product = parseSharedReferenceProduct(input, undefined, referenceLocalization());
   const compiled = compileSharedReferenceProduct(product, plane);

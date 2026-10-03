@@ -26,12 +26,12 @@ const previous = JSON.parse(
 assert.equal(sha256(canonicalBytes(previous)), previousHash);
 const core = JSON.parse(
   readFileSync(
-    "metadata/products/mdg/entities/business_partner/core.json",
+    "metadata/entities/business_partner/core.json",
     "utf8",
   ),
 );
 const catalog = JSON.parse(
-  readFileSync("metadata/products/mdg/review/registry-catalog.json", "utf8"),
+  readFileSync("metadata/review/registry-catalog.json", "utf8"),
 );
 assert.equal(
   execFileSync(

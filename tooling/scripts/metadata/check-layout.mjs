@@ -10,8 +10,8 @@ export function checkLayout(
   const read = (path) =>
     JSON.parse(readFileSync(resolve(repository, path), "utf8"));
   const inventory = read("metadata/relocation-map.json");
-  const productRoot = resolve(repository, "metadata/products/mdg");
-  const manifest = read("metadata/products/mdg/manifest.json");
+  const productRoot = resolve(repository, "metadata");
+  const manifest = read("metadata/manifest.json");
   const entities = resolve(productRoot, manifest.entitiesRoot);
   function assert(ok, message) {
     if (!ok) throw Error(message);

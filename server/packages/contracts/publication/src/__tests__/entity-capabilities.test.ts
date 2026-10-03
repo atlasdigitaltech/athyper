@@ -9,7 +9,7 @@ import {
 import { parseCompiledEntityArtifact } from "../artifact.js";
 
 const root = new URL(
-  "../../../../../../metadata/products/mdg/entities/business_partner/",
+  "../../../../../../metadata/entities/business_partner/",
   import.meta.url,
 );
 const source = (name: string) =>

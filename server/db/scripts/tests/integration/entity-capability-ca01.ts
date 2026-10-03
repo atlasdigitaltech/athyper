@@ -56,7 +56,7 @@ const zero = "00000000-0000-0000-0000-000000000000",
 const source = JSON.parse(
   readFileSync(
     new URL(
-      "../../../../../metadata/products/mdg/entities/business_partner/operation.json",
+      "../../../../../metadata/entities/business_partner/operation.json",
       import.meta.url,
     ),
     "utf8",

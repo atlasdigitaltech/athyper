@@ -14,7 +14,7 @@ import {
 const product = JSON.parse(
   readFileSync(
     new URL(
-      "../../metadata/products/shared/entities/principal/definition.json",
+      "../../metadata/entities/principal/definition.json",
       import.meta.url,
     ),
     "utf8",

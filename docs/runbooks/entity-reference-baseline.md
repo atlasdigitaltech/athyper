@@ -33,12 +33,12 @@ Authorization is enforced before field projection and choice loading. Masked fie
 
 | Entity       | Source                                           | Publication in this change | Natural key / notes                                                                                           |
 | ------------ | ------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Country      | `metadata/products/shared/entities/country`      | Pinned successor           | `code`; existing capabilities and permissions preserved                                                       |
-| State/Region | `metadata/products/shared/entities/state_region` | Initial draft              | Composite `(country_code, code)`; not falsely declared globally unique on code alone                          |
-| Currency     | `metadata/products/shared/entities/currency`     | Pinned successor           | `code`                                                                                                        |
-| Language     | `metadata/products/shared/entities/language`     | Pinned successor           | `code`; text direction choices                                                                                |
-| Locale       | `metadata/products/shared/entities/locale`       | Initial draft              | `code`; text direction choices                                                                                |
-| Timezone     | `metadata/products/shared/entities/timezone`     | Initial draft              | `code` is the title because name is nullable; standard UTC offset is a display hint, not DST conversion logic |
+| Country      | `metadata/entities/country`      | Pinned successor           | `code`; existing capabilities and permissions preserved                                                       |
+| State/Region | `metadata/entities/state_region` | Initial draft              | Composite `(country_code, code)`; not falsely declared globally unique on code alone                          |
+| Currency     | `metadata/entities/currency`     | Pinned successor           | `code`                                                                                                        |
+| Language     | `metadata/entities/language`     | Pinned successor           | `code`; text direction choices                                                                                |
+| Locale       | `metadata/entities/locale`       | Initial draft              | `code`; text direction choices                                                                                |
+| Timezone     | `metadata/entities/timezone`     | Initial draft              | `code` is the title because name is nullable; standard UTC offset is a display hint, not DST conversion logic |
 
 All six sources declare read-only Atlas discovery/named lookup, record read and field explanation through published metadata. They declare no AI write actions. Country retains its existing collaboration and snapshot declarations. Source compilation is not proof of live inference or access.
 

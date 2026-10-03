@@ -14,7 +14,7 @@ from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent
 REPOSITORY = TOOLS.parents[2]
-PACKAGE = REPOSITORY / 'metadata/products/mdg/entities'
+PACKAGE = REPOSITORY / 'metadata/entities'
 SOURCE = next((REPOSITORY / 'docs/architecture/application-experience/entity-policy-examples').glob('business-partner-definition-bundle-22ee*.json'))
 
 def digest(value):

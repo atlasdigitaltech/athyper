@@ -242,6 +242,12 @@ apps/docs-internal/.docs-manifest.json
 # Root metadata now contains reviewed source definitions. Keep unknown local
 # exports ignored; admit only the documented source layout.
 /metadata/*
+!/metadata/manifest.json
+!/metadata/entities/
+!/metadata/access/
+!/metadata/contracts/
+!/metadata/history/
+!/metadata/review/
 !/metadata/README.md
 !/metadata/REORGANIZATION.md
 !/metadata/relocation-map.json
@@ -251,6 +257,7 @@ apps/docs-internal/.docs-manifest.json
 !/metadata/schemas/
 !/metadata/profiles/
 /metadata/profiles/*
+!/metadata/profiles/platform/
 !/metadata/profiles/activity/
 !/metadata/profiles/collaboration/
 

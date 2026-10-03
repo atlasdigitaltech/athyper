@@ -13,7 +13,7 @@ import { createCompiledRuntimePublication } from "../compiled-runtime.js";
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 afterEach(() => vi.restoreAllMocks());
 function fixture(advanced = false) {
-  const capabilities = advanced ? JSON.parse(readFileSync(new URL("../../../../../../../../metadata/products/shared/entities/country/capabilities.json", import.meta.url), "utf8").replaceAll('"country"', '"test_dictionary"').replaceAll('country/operation#', 'test_dictionary/operation#')) : [];
+  const capabilities = advanced ? JSON.parse(readFileSync(new URL("../../../../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8").replaceAll('"country"', '"test_dictionary"').replaceAll('country/operation#', 'test_dictionary/operation#')) : [];
   const graph = buildSharedReferenceGraph({ entityCode: "test_dictionary", title: "Dictionary", storageObject: "test_dictionary", codeField: "code", titleField: "code",
     capabilities,
     fields: [{ key: "id", label: "ID", type: "uuid", required: true }, { key: "code", label: "Code", type: "string", required: true },

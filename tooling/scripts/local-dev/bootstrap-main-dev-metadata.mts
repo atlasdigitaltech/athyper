@@ -62,7 +62,7 @@ if(!process.argv.includes('--inside')){
  const resolver=new CachedPublicationKeyResolver(store,[{keyId,privateKeyReference:required('PUBLICATION_PRIVATE_KEY_REFERENCE'),publicKeyReferences:[required('PUBLICATION_PUBLIC_KEY_REFERENCE')]}]);
  const hash=(x:Uint8Array)=>createHash('sha256').update(x).digest('hex');
  const canonicalizer={canonicalBytes,sha256:(x:Uint8Array)=>'sha256:'+hash(x)};
- const dir=join(root,'metadata/products/mdg/entities');
+ const dir=join(root,'metadata/entities');
  function paths(d:string,p=''):string[]{return readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?paths(join(d,e.name),p+e.name+'/'):e.name.endsWith('.json')?[p+e.name]:[]).sort();}
  const docs=paths(dir).map(path=>({path,value:JSON.parse(readFileSync(join(dir,path),'utf8'))}));
  const catalog=JSON.parse(readFileSync(join(dir,'../review/registry-catalog.json'),'utf8')).entries;

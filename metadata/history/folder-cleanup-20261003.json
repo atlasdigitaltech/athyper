@@ -1,0 +1,880 @@
+{
+  "purpose": "Local source folder cleanup; input files preserved byte-for-byte at move time. Not publication evidence.",
+  "files": [
+    {
+      "from": "metadata/products/mdg/entities/address/core.json",
+      "to": "metadata/entities/address/core.json",
+      "sha256": "0e9d98db111df081866a0aec6b73d33e2462a8adb93313d6e74a14b5f7440633"
+    },
+    {
+      "from": "metadata/products/mdg/entities/address/operation.json",
+      "to": "metadata/entities/address/operation.json",
+      "sha256": "9f0bb2521df10576eb1938ffeba73294b6d130e72f0d3498e63848848a53baad"
+    },
+    {
+      "from": "metadata/products/mdg/entities/address/presentation.section.json",
+      "to": "metadata/entities/address/presentation.section.json",
+      "sha256": "5455383e5c77cf50a96d9bec105c093cf8615c207f42a054fb5608aaee0e3697"
+    },
+    {
+      "from": "metadata/products/mdg/entities/address_link/core.json",
+      "to": "metadata/entities/address_link/core.json",
+      "sha256": "56535caa3bd762c49575a171fc371b7db3e6d686c46f70775c5681f8440e3437"
+    },
+    {
+      "from": "metadata/products/mdg/entities/address_link/operation.json",
+      "to": "metadata/entities/address_link/operation.json",
+      "sha256": "f8e3ba1e199068e6299a38abad19aaa1f167a22482da40c5447ca99cd53ff0c5"
+    },
+    {
+      "from": "metadata/products/mdg/entities/bank_branch/core.json",
+      "to": "metadata/entities/bank_branch/core.json",
+      "sha256": "4625747c310c2204d00a64ae2837326b0bc771249bf0f1d9554c50bf384db743"
+    },
+    {
+      "from": "metadata/products/mdg/entities/bank_identifier/core.json",
+      "to": "metadata/entities/bank_identifier/core.json",
+      "sha256": "bf17932fb37663cf89589ebd3fceff50a7e927e2e7da19e644d9140a3d85e02c"
+    },
+    {
+      "from": "metadata/products/mdg/entities/bank_institution/core.json",
+      "to": "metadata/entities/bank_institution/core.json",
+      "sha256": "4c2a27b8876ee4321ecfc594cf434d8be8c4312ef4d86e77bee13836e29cf581"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/core.json",
+      "to": "metadata/entities/business_partner/core.json",
+      "sha256": "1f290e880a5ae2f4d7cc4c39446f719da1888810f1dd73dec41f235a522f4f77"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/flow.intake.json",
+      "to": "metadata/entities/business_partner/flow.intake.json",
+      "sha256": "ee4c60539d92d4a1d10c0a3699d1ba9a7387832dceffa9719edaedc561bfd627"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/operation.json",
+      "to": "metadata/entities/business_partner/operation.json",
+      "sha256": "ca83d6a6ee89b6de0be47d894bec245a2becfd054a2b66ffafbd57aee6c57614"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/placement.json",
+      "to": "metadata/entities/business_partner/placement.json",
+      "sha256": "a9ea78f99c8ff52ec470534e8fcbd35808e0849b395fd67ebb8d6d8f82602d06"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.detail.json",
+      "to": "metadata/entities/business_partner/presentation.detail.json",
+      "sha256": "c0a178299b9fbd287d46109682c101f6ba6941ced71f5f7781eaac73cbb6ea78"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.list.json",
+      "to": "metadata/entities/business_partner/presentation.list.json",
+      "sha256": "a6504ec9201100031a87caf15636743d1a5183bb92c6fbdd986c0e421b586ddd"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.activity.json",
+      "to": "metadata/entities/business_partner/presentation.section.activity.json",
+      "sha256": "22135227a068253a6fde17185a9ee342b89314732d822f756fd15f41d743d9e3"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.addresses.json",
+      "to": "metadata/entities/business_partner/presentation.section.addresses.json",
+      "sha256": "1e1374c9183574ffed0d8ad6e5cce21ef0f8d8ec0691c77c521ee3661a226e7a"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.attachments.json",
+      "to": "metadata/entities/business_partner/presentation.section.attachments.json",
+      "sha256": "bd9ba3b47ee920110c878569e79adf9ffa73390b1a44e9cb287f288e29ad6603"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.banking.json",
+      "to": "metadata/entities/business_partner/presentation.section.banking.json",
+      "sha256": "00c06b5fe9be4c0278e4b68dcf21011be553a0e8c6ed35821a3b6d5c50d1f43f"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.business-activity.json",
+      "to": "metadata/entities/business_partner/presentation.section.business-activity.json",
+      "sha256": "df927e10afacc52dc2e22fbf99aa6585089574baf026a10faacf3d76710ef30b"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.certificates.json",
+      "to": "metadata/entities/business_partner/presentation.section.certificates.json",
+      "sha256": "0a7ef1843b90eb0c42b07dba6eb54428042d8dca148e21db531349ea122f649f"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.comments.json",
+      "to": "metadata/entities/business_partner/presentation.section.comments.json",
+      "sha256": "53a198516101bbd96150c1a88b28e79b9ccca649edd5074a6ec3f1e63b7a2a35"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.commodities.json",
+      "to": "metadata/entities/business_partner/presentation.section.commodities.json",
+      "sha256": "b993f767cf86a9b6dea96145494a398d72fa909a0cc2d452f1f92279489d3ca6"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.contacts.json",
+      "to": "metadata/entities/business_partner/presentation.section.contacts.json",
+      "sha256": "1c0055bb695bf184ad61774e12eabfcdcc1a842a208d304436f9a470fe161840"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.credit.json",
+      "to": "metadata/entities/business_partner/presentation.section.credit.json",
+      "sha256": "b31ee0adbd12f67ed76fae1593e8e596f56a1dc38ed1ba4f1a7cfa39c5132383"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.customer-company.json",
+      "to": "metadata/entities/business_partner/presentation.section.customer-company.json",
+      "sha256": "105043a58fe54407eda76744b6077e8c3359038dc66e20a0c27e5e3b6fbf1efd"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.identifiers-tax.json",
+      "to": "metadata/entities/business_partner/presentation.section.identifiers-tax.json",
+      "sha256": "f63198686222b0e27ee761243fac31c256762d489599de0106b148cf9f025bd7"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.identity.json",
+      "to": "metadata/entities/business_partner/presentation.section.identity.json",
+      "sha256": "366c7cda8f3fb1736ab81127128c4e9155ecd794c74049145624492486308c44"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.industries.json",
+      "to": "metadata/entities/business_partner/presentation.section.industries.json",
+      "sha256": "29f600af02f35c49fb9632b228f03e4a846905026153a2df13e580966205c21e"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.network.json",
+      "to": "metadata/entities/business_partner/presentation.section.network.json",
+      "sha256": "c7f5726f6c2b54510363a6fc3c1ba88bea84f95bdfbabd1425f15b0d1b67b5ca"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.overview.json",
+      "to": "metadata/entities/business_partner/presentation.section.overview.json",
+      "sha256": "40fb08ff971beb528f9d74c3dfc1143c89e0ad5a5e461cd8d192f5a34ef488b4"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.qualifications-certificates.json",
+      "to": "metadata/entities/business_partner/presentation.section.qualifications-certificates.json",
+      "sha256": "9876582e348318e040eadbf86c76c877f758c2b70e975fb92e947300a114404b"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.requests.json",
+      "to": "metadata/entities/business_partner/presentation.section.requests.json",
+      "sha256": "25ccded3235c56fd32c8ce3b0e516fa5359ad1a79528902a6706bc4b3a80c956"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.restrictions.json",
+      "to": "metadata/entities/business_partner/presentation.section.restrictions.json",
+      "sha256": "a5873edc294e0ffece59328a7209de613b3086ac053a392c690756af6cf42d8a"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.roles-scope.json",
+      "to": "metadata/entities/business_partner/presentation.section.roles-scope.json",
+      "sha256": "5db061fc7af307d56ced9970a82d55e11e46ee4489a529873c299e17aa4ec4da"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.supplier-company.json",
+      "to": "metadata/entities/business_partner/presentation.section.supplier-company.json",
+      "sha256": "407971b9c39274d10771e584c81e37b523d1d02aa1838dbb306fd07d237cc9ec"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/presentation.section.workforce.json",
+      "to": "metadata/entities/business_partner/presentation.section.workforce.json",
+      "sha256": "0a053afede455f965257299981debeb4d730934f5b991cb70c0e706f5dd7b2a7"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner/release.json",
+      "to": "metadata/entities/business_partner/release.json",
+      "sha256": "0a9c93ce19fa04ecb422da1412c8a532dbaff335d12d5bc74640c88f305a48d7"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_alias/core.json",
+      "to": "metadata/entities/business_partner_alias/core.json",
+      "sha256": "13ca07c8df7e4072122f756f7c9228eed6099724690b6da6e01a652185609367"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_alias/operation.json",
+      "to": "metadata/entities/business_partner_alias/operation.json",
+      "sha256": "e905f48257a85cb34620d3774780ea4e44e9309097ab266777b089f67a2a29f7"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_bank_account_link/core.json",
+      "to": "metadata/entities/business_partner_bank_account_link/core.json",
+      "sha256": "151478d000b600e4420478fb598bd3ffdb4f56f62d1ff1139edc81047d12f770"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_bank_provisional_reference/core.json",
+      "to": "metadata/entities/business_partner_bank_provisional_reference/core.json",
+      "sha256": "7fdbaa38ecff550d5af607e72de3628de4c28615b907b82d1d729da70b3d9710"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_banking/core.json",
+      "to": "metadata/entities/business_partner_banking/core.json",
+      "sha256": "0136c871b9e1d1ac93fe146b0d0eb88cf89ed6e53c7fbf04738555310e531f73"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_banking/operation.json",
+      "to": "metadata/entities/business_partner_banking/operation.json",
+      "sha256": "bf659ea919ad377f0bd5d58ff2b30cffb47539e81703cf2baaf6605e9c30ca88"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_commodity_classification/core.json",
+      "to": "metadata/entities/business_partner_commodity_classification/core.json",
+      "sha256": "5000fbead9501983d3ac4f4e381d62f6033a56911326843abcb638403b07fe6e"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_governance_relation/core.json",
+      "to": "metadata/entities/business_partner_governance_relation/core.json",
+      "sha256": "d74f1eececb08f85683517b59eccd516d89e65b54b24db60c4fd763ff05fecbe"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_governance_relation/operation.json",
+      "to": "metadata/entities/business_partner_governance_relation/operation.json",
+      "sha256": "acaa5b9161b49b72ed6cd1bc0b2b976015c811f016f18602ef650b643e8f0fa6"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_identifier/core.json",
+      "to": "metadata/entities/business_partner_identifier/core.json",
+      "sha256": "55e3017c681bf13cd6e2ceb5e028583542933385c486f01aebb072ae0d1a89c1"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_identifier/operation.json",
+      "to": "metadata/entities/business_partner_identifier/operation.json",
+      "sha256": "5bb507981602050d17ff6e4c7c0a4790d00d3521fb3d67f6d9c60d67854162a2"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_industry_classification/core.json",
+      "to": "metadata/entities/business_partner_industry_classification/core.json",
+      "sha256": "ffb129eda9fbeeb8afca7175c7ca596a3ba73aa817709d364d2ce824a49afe6a"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_industry_classification/operation.json",
+      "to": "metadata/entities/business_partner_industry_classification/operation.json",
+      "sha256": "489872b9f2af176ffc686cc100f02263f5470a591799a4f428794c947471b856"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_operating_organization_assignment/core.json",
+      "to": "metadata/entities/business_partner_operating_organization_assignment/core.json",
+      "sha256": "14ef9b2acb0f7371889818da69a9f8d1658a6022a3112a35f0da4c37c1f52080"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_operating_organization_assignment/operation.json",
+      "to": "metadata/entities/business_partner_operating_organization_assignment/operation.json",
+      "sha256": "961a24d691166be22723913636e215416a401df16db681f11a6d4e3c832f41c1"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_qualification/core.json",
+      "to": "metadata/entities/business_partner_qualification/core.json",
+      "sha256": "71aa69ea0e1884615577f6acd54104f937beae47e20e32b570c3663ecfebab44"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_qualification/operation.json",
+      "to": "metadata/entities/business_partner_qualification/operation.json",
+      "sha256": "bfb7e3eb30d7b69e37a698c30f2b36e6fafd8b35865ab5e5d57a88d02c20b255"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_relationship/core.json",
+      "to": "metadata/entities/business_partner_relationship/core.json",
+      "sha256": "eb54583f7601d99e48cc121e7a26b108ec2bbb64f7961c04da34a49c3ef13df0"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_relationship/operation.json",
+      "to": "metadata/entities/business_partner_relationship/operation.json",
+      "sha256": "c91ec016273ddce8ff3f2ee787049a46a8ea2b6a5eadc2b67257f595d40e1115"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/core.json",
+      "to": "metadata/entities/business_partner_request/core.json",
+      "sha256": "47eae624fa5b2ac2ca6e6cd8048008b99b3f47e5b348e232fa5cadd255fb8d63"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.base.json",
+      "to": "metadata/entities/business_partner_request/flow.base.json",
+      "sha256": "7bae7a773ba9f1048b69e913c0832ff3ae58c753f29b8380856a7958f8983cf7"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.customer.add.json",
+      "to": "metadata/entities/business_partner_request/flow.customer.add.json",
+      "sha256": "27b638600e1525521d4b224c97b49a8133fad195b90dae925015bfc2d79fa7ee"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.customer.company.json",
+      "to": "metadata/entities/business_partner_request/flow.customer.company.json",
+      "sha256": "86f41fe70a37730a1fd7382e12e0ceb6975661fd06271ae30ab346592cb17466"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.customer.credit.json",
+      "to": "metadata/entities/business_partner_request/flow.customer.credit.json",
+      "sha256": "4f0aa70e12197418f450521f919b08b8a78cd1e19b33444ce0bc9f018041820c"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.customer.new.json",
+      "to": "metadata/entities/business_partner_request/flow.customer.new.json",
+      "sha256": "789d4162c1c63cfc67eb1f7226ac8002a9ac85ef865a22e7a91bb2065fb4b591"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.partner.amend.json",
+      "to": "metadata/entities/business_partner_request/flow.partner.amend.json",
+      "sha256": "a0856aa45aaa21f8feaac7dc2f3d036a6ffde977a4cc9989123cfcd3ce146e5a"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.partner.archive.json",
+      "to": "metadata/entities/business_partner_request/flow.partner.archive.json",
+      "sha256": "6da1dd63380bc0624eca765634f119135921d8eb7bea462ef31b8a2a0d5b255f"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.partner.assign.json",
+      "to": "metadata/entities/business_partner_request/flow.partner.assign.json",
+      "sha256": "61c9e3b9d41604b85963123e9d4360385df8197809c8310b5d66b420c536d827"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.partner.deactivate.json",
+      "to": "metadata/entities/business_partner_request/flow.partner.deactivate.json",
+      "sha256": "975c9c39836a22703f782451a20e9f9f285c6fb35153f05d67feb84cbdba7927"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.partner.new.json",
+      "to": "metadata/entities/business_partner_request/flow.partner.new.json",
+      "sha256": "ec4e4199c21879a7778ad593485c19bfcc989ecf534a0332c8070bd50c092acd"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.partner.reactivate.json",
+      "to": "metadata/entities/business_partner_request/flow.partner.reactivate.json",
+      "sha256": "b63e0eac328781bea9d0c3e042dc1761a98da05168bb40a3a7c93727f8c84ea1"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.supplier.activate.json",
+      "to": "metadata/entities/business_partner_request/flow.supplier.activate.json",
+      "sha256": "5c729617bfaf783cb953c19ac9fe24e0de97c4b546add7960bd5c58999a026e0"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.supplier.add.json",
+      "to": "metadata/entities/business_partner_request/flow.supplier.add.json",
+      "sha256": "e40ab12ae4ca81a38e37383405c6327cd5c07eb49ada658b46b37d9464eb51db"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.supplier.bank.json",
+      "to": "metadata/entities/business_partner_request/flow.supplier.bank.json",
+      "sha256": "3dd2f75e7837fc8df56cf7ec698e19ef03254319119e096e12494f86f49f2d55"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.supplier.company.json",
+      "to": "metadata/entities/business_partner_request/flow.supplier.company.json",
+      "sha256": "bdf8172d49b7c34eb54a366743c2c358388c3d1ee8467f38fbee51a2690a1fac"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.supplier.new.json",
+      "to": "metadata/entities/business_partner_request/flow.supplier.new.json",
+      "sha256": "1c734f54141c7b897596a5948d76fadbf1e03a40cdae5960ecf3c0135ca03b4d"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.supplier.qualify.json",
+      "to": "metadata/entities/business_partner_request/flow.supplier.qualify.json",
+      "sha256": "15079d14036b0fdef458c770c21d289dfdfcb29fda9825b0fed3ac4c91eb5800"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.workforce.add.json",
+      "to": "metadata/entities/business_partner_request/flow.workforce.add.json",
+      "sha256": "64a0385dcb05a44116996204a5b0ebebe4fc6c532f5af05be668d1ee53a49c04"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.workforce.change.json",
+      "to": "metadata/entities/business_partner_request/flow.workforce.change.json",
+      "sha256": "fd0e4b9d099c325bec683bb24528c362d34d66f20a928e2f0ac35b35d8666ec9"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.workforce.new.json",
+      "to": "metadata/entities/business_partner_request/flow.workforce.new.json",
+      "sha256": "b50e4637c6ae9fda8b57f58745f22a4020b3177e8d93b3545a62f31c0ad02dd4"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/flow.workforce.offboard.json",
+      "to": "metadata/entities/business_partner_request/flow.workforce.offboard.json",
+      "sha256": "c9491681c5d74c1f13a9821c18e0ee181612f658f5a97fba489feaec72c8b6b3"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/operation.json",
+      "to": "metadata/entities/business_partner_request/operation.json",
+      "sha256": "68b99960c3324678e97b458c76519746732742a0d8f7d0d62288231a5b976809"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/placement.json",
+      "to": "metadata/entities/business_partner_request/placement.json",
+      "sha256": "41257d3582d1dac379feb2d94f9093a3a996d7339ae99d2ca7a15f1e60f3b0ed"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.detail.json",
+      "to": "metadata/entities/business_partner_request/presentation.detail.json",
+      "sha256": "a55d5c2fe4dc9f525233464d1fef99621a92f3dfe931bc11c22c6258373bfa86"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.list.json",
+      "to": "metadata/entities/business_partner_request/presentation.list.json",
+      "sha256": "796c28f6ecffbd2fa943b2c588229299cecddd96f79739c314c45d1558f5049c"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.review.json",
+      "to": "metadata/entities/business_partner_request/presentation.review.json",
+      "sha256": "1ae6b639558921030690cdd423f8773a080b031179c34d537e326f5bd8794b24"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.section.capture.json",
+      "to": "metadata/entities/business_partner_request/presentation.section.capture.json",
+      "sha256": "c6a0a062082589af52fcf84f3ee688d2bbd64085395040bed0efe9baaa6b9fe6"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.section.evidence.json",
+      "to": "metadata/entities/business_partner_request/presentation.section.evidence.json",
+      "sha256": "710eb625dd3d0f1d1cfa90f5b4c1e4dd030e0d1f1aef4e30888952836f8872ff"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.customerCredit.json",
+      "to": "metadata/entities/business_partner_request/presentation.section.form.customerCredit.json",
+      "sha256": "14cf4b2222f88269ba3f120745d41143d9103faaed519eeda37fe12b480a770c"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.request.json",
+      "to": "metadata/entities/business_partner_request/presentation.section.form.request.json",
+      "sha256": "375bc94e9f2eaafca90a6292aa966d713161923214c5c1995c64ff1125475fc3"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.supplierQualification.json",
+      "to": "metadata/entities/business_partner_request/presentation.section.form.supplierQualification.json",
+      "sha256": "3fe075fe4cc2bf5beaed384bde1f504b0b57b7d6e33053835baeb9a656f31b12"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.supplierRequest.json",
+      "to": "metadata/entities/business_partner_request/presentation.section.form.supplierRequest.json",
+      "sha256": "d7629d2e34d1266ab1aa94b3759d63280b514bb616b8ef8e7cc057d6dd6d3937"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_request/presentation.section.form.workforceReview.json",
+      "to": "metadata/entities/business_partner_request/presentation.section.form.workforceReview.json",
+      "sha256": "6937c03151f3034481618569eb7707f813246ddc372fa950d57ef1a834f5889d"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_restriction/core.json",
+      "to": "metadata/entities/business_partner_restriction/core.json",
+      "sha256": "a1bbda69f449dd708a7fa34a6d3ac8e9f969e89d41bebbd1080371ecc6823b55"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_tax_registration/core.json",
+      "to": "metadata/entities/business_partner_tax_registration/core.json",
+      "sha256": "70fb2e03645ddf6e838b85f10c617ee9e22b81833cf794a7a1b030681a9b4b2d"
+    },
+    {
+      "from": "metadata/products/mdg/entities/business_partner_tax_registration/operation.json",
+      "to": "metadata/entities/business_partner_tax_registration/operation.json",
+      "sha256": "ae7f0b920252a592256358902af25059890fbc32660b5d96f1b0d887ad126f4f"
+    },
+    {
+      "from": "metadata/products/mdg/entities/certification/core.json",
+      "to": "metadata/entities/certification/core.json",
+      "sha256": "fa3d6651576eaae41d971773edcb65dc908739e050332d5ffab0055acce9d9d1"
+    },
+    {
+      "from": "metadata/products/mdg/entities/certification/operation.json",
+      "to": "metadata/entities/certification/operation.json",
+      "sha256": "145630adc1b2402d86dcd411d5e0d0a2624fa1040a023fb341b8c4217382f83a"
+    },
+    {
+      "from": "metadata/products/mdg/entities/classification_scheme/core.json",
+      "to": "metadata/entities/classification_scheme/core.json",
+      "sha256": "3c4cb4f6fac73ea6399341dbd3f7e5a0ab671e60e2375d1d8c4b1966ca0c7546"
+    },
+    {
+      "from": "metadata/products/mdg/entities/commodity_code/core.json",
+      "to": "metadata/entities/commodity_code/core.json",
+      "sha256": "420c52360db0e650785d4b4df879d651dc5efa1428a0b29c708a43a46626569b"
+    },
+    {
+      "from": "metadata/products/mdg/entities/commodity_crosswalk/core.json",
+      "to": "metadata/entities/commodity_crosswalk/core.json",
+      "sha256": "e7f38f61ead59220371e65eb779b0630fa331c11d0f3f1ae0d2e689bcc912f5c"
+    },
+    {
+      "from": "metadata/products/mdg/entities/contact_channel/core.json",
+      "to": "metadata/entities/contact_channel/core.json",
+      "sha256": "31dc531d0a9b11f3fe4990ac5ca8af915ca3eec828e7dd76ca0b5a9d55764902"
+    },
+    {
+      "from": "metadata/products/mdg/entities/contact_person/core.json",
+      "to": "metadata/entities/contact_person/core.json",
+      "sha256": "0d8a52c2586ca8f113fcdb4d1d84349ec75c382878cb108aef9beaa57fe549d7"
+    },
+    {
+      "from": "metadata/products/mdg/entities/contact_person/operation.json",
+      "to": "metadata/entities/contact_person/operation.json",
+      "sha256": "9fab4adcb4f64d8124072f0053ae3db830afb0706293fe6e6ae0dcd58c36a123"
+    },
+    {
+      "from": "metadata/products/mdg/entities/contact_person_role/core.json",
+      "to": "metadata/entities/contact_person_role/core.json",
+      "sha256": "02a6dceb15da11dca07cbc8be2975f258227921bdde0d80d386020d957050850"
+    },
+    {
+      "from": "metadata/products/mdg/entities/country/core.json",
+      "to": "metadata/entities/country/core.json",
+      "sha256": "37c04e51d7f82fad4a648d9d21f540fcba95e8e1c599ffceaf58a1756fe3e376"
+    },
+    {
+      "from": "metadata/products/mdg/entities/currency/core.json",
+      "to": "metadata/entities/currency/core.json",
+      "sha256": "63fe4070abf24b5bba69ff3d4bda73fe7333a52ded00b8fb096c927e268e2c6d"
+    },
+    {
+      "from": "metadata/products/mdg/entities/customer/core.json",
+      "to": "metadata/entities/customer/core.json",
+      "sha256": "5a0b36012d2d0696a4a28bfb35d98db1a9382827d19cc5f13c9cf07185372207"
+    },
+    {
+      "from": "metadata/products/mdg/entities/customer/operation.json",
+      "to": "metadata/entities/customer/operation.json",
+      "sha256": "168666b91e0de086daa97429b9334f41bed534ba20d8b92bf0e9326ac65f7cfd"
+    },
+    {
+      "from": "metadata/products/mdg/entities/customer_company_profile/core.json",
+      "to": "metadata/entities/customer_company_profile/core.json",
+      "sha256": "30ab58d12fba37f2887c750417e69f1322c0a0e802ff741c4349faf53f67e57e"
+    },
+    {
+      "from": "metadata/products/mdg/entities/customer_company_profile/operation.json",
+      "to": "metadata/entities/customer_company_profile/operation.json",
+      "sha256": "f2ac3e99470be357b101feeb83de28679881245332d2f4a56481174ba0da6f73"
+    },
+    {
+      "from": "metadata/products/mdg/entities/industry_code/core.json",
+      "to": "metadata/entities/industry_code/core.json",
+      "sha256": "2f0fd8ca7f7ff222aa5ea7b2f92cf50ce75be5ee84990b44431290d0ec4ca873"
+    },
+    {
+      "from": "metadata/products/mdg/entities/industry_crosswalk/core.json",
+      "to": "metadata/entities/industry_crosswalk/core.json",
+      "sha256": "c91da8ad9c112d5b4aa8ae0ddcb98abb86ed18a42d3688661586798de4c83e90"
+    },
+    {
+      "from": "metadata/products/mdg/entities/language/core.json",
+      "to": "metadata/entities/language/core.json",
+      "sha256": "bc60c3179a5fe5d7ff62e69b05086dfb5018e713dd6d1681c5835b84254f32b5"
+    },
+    {
+      "from": "metadata/products/mdg/entities/locale/core.json",
+      "to": "metadata/entities/locale/core.json",
+      "sha256": "eadd0b3b7187f30d2a4f68e06ac3232c1cc9116239438262b6b4487705a6bbff"
+    },
+    {
+      "from": "metadata/products/mdg/entities/platform/core-field-defaults.v1.json",
+      "to": "metadata/profiles/platform/core-field-defaults.v1.json",
+      "sha256": "51c24147b77dcbccd6dccd8676a2798664d74657c853b3713ee2c9db0568aa6b"
+    },
+    {
+      "from": "metadata/products/mdg/entities/platform/governed-child-operation.v1.json",
+      "to": "metadata/profiles/platform/governed-child-operation.v1.json",
+      "sha256": "eaa1bd00c2463ccd716b9098288054e3276b1a3e4c1604136ee57535c90a6152"
+    },
+    {
+      "from": "metadata/products/mdg/entities/state_region/core.json",
+      "to": "metadata/entities/state_region/core.json",
+      "sha256": "6f7f76a874e4e9602a5cbdc4b39d7f1738d6f0ccfc5a2fde5e5dbd14b76419bc"
+    },
+    {
+      "from": "metadata/products/mdg/entities/supplier/core.json",
+      "to": "metadata/entities/supplier/core.json",
+      "sha256": "b8ba988489fa237dde366315202c29f2212452298b27ec86008ecf64698ef3e3"
+    },
+    {
+      "from": "metadata/products/mdg/entities/supplier/operation.json",
+      "to": "metadata/entities/supplier/operation.json",
+      "sha256": "91c5af9b5bce5cfae2bd6e5d65195d3fa605ec4e4ca3dffb4c79d75d90c4baa8"
+    },
+    {
+      "from": "metadata/products/mdg/entities/supplier_company_profile/core.json",
+      "to": "metadata/entities/supplier_company_profile/core.json",
+      "sha256": "3e410d9b5a3e21e5292e30b1d5aad9e27650aeae40a61c8e165a47053375a691"
+    },
+    {
+      "from": "metadata/products/mdg/entities/supplier_company_profile/operation.json",
+      "to": "metadata/entities/supplier_company_profile/operation.json",
+      "sha256": "daa50b842970c222d5b8772e44cfda4632022f6c9d89ffa006b712770bb31f90"
+    },
+    {
+      "from": "metadata/products/mdg/entities/timezone/core.json",
+      "to": "metadata/entities/timezone/core.json",
+      "sha256": "bbd853f9a979d241ef6580249fe591dbe46a37a74ea0141bd29994a2795031dc"
+    },
+    {
+      "from": "metadata/products/mdg/entities/uom/core.json",
+      "to": "metadata/entities/uom/core.json",
+      "sha256": "dcf53f375ac6d35e4a4af0024be48b5c6bb70cb82c693d06c232708e4101078e"
+    },
+    {
+      "from": "metadata/products/mdg/entities/workforce/core.json",
+      "to": "metadata/entities/workforce/core.json",
+      "sha256": "6d9ea5caaa57dbbbb0f7da499c3c944e3132b819f70d0a4606be02f440408b09"
+    },
+    {
+      "from": "metadata/products/mdg/entities/workforce/operation.json",
+      "to": "metadata/entities/workforce/operation.json",
+      "sha256": "7e2b225f2f3fb3ecbd2ba836c74ac6a44f8022623d2e4fe22289a1ada49a1b59"
+    },
+    {
+      "from": "metadata/products/shared/entities/address/definition.json",
+      "to": "metadata/entities/address/definition.json",
+      "sha256": "8179ec1bc2587d8e26c18609ba5c829bc1e8f18d0c31ffd48eb824ecf30d8980"
+    },
+    {
+      "from": "metadata/products/shared/entities/address/placement.json",
+      "to": "metadata/entities/address/placement.json",
+      "sha256": "270ec76f2e0c7d611a47b5604bcf1c6ae46bed70f2a4a32e23cbb58bbb8cb6d1"
+    },
+    {
+      "from": "metadata/products/shared/entities/country/activity.json",
+      "to": "metadata/entities/country/activity.json",
+      "sha256": "b577dc9693d91088f40a48b5ccceaf3089c846df69804bc038c0f5095fe7e154"
+    },
+    {
+      "from": "metadata/products/shared/entities/country/capabilities.json",
+      "to": "metadata/entities/country/capabilities.json",
+      "sha256": "0b32a54577249e5adda951762eac98fca8072ccbc2ae216a77b6ea758629f3b8"
+    },
+    {
+      "from": "metadata/products/shared/entities/country/definition.json",
+      "to": "metadata/entities/country/definition.json",
+      "sha256": "5173bdc9bc7dad533c401619d357b37547798fdd140dbee673f100407b78684b"
+    },
+    {
+      "from": "metadata/products/shared/entities/country/localization.json",
+      "to": "metadata/entities/country/localization.json",
+      "sha256": "fd976a5f1d6a33f5a410f34b6162532ef6ce78df66d9fbaef12cbc0b5e5b07cd"
+    },
+    {
+      "from": "metadata/products/shared/entities/country/placement.json",
+      "to": "metadata/entities/country/placement.json",
+      "sha256": "ee85c321ffcde14d4ee5fcf387d7ca1fa47de1ca1d4e29aa7442f2a5f7f4c711"
+    },
+    {
+      "from": "metadata/products/shared/entities/currency/definition.json",
+      "to": "metadata/entities/currency/definition.json",
+      "sha256": "3845906f22111b2565f3988590f96abab745a3d7fc2c05579f735d91605fa300"
+    },
+    {
+      "from": "metadata/products/shared/entities/currency/placement.json",
+      "to": "metadata/entities/currency/placement.json",
+      "sha256": "a5389eabba02920499d06f86c036f7274de5340664863678e8b2ba482bd33054"
+    },
+    {
+      "from": "metadata/products/shared/entities/employee/definition.json",
+      "to": "metadata/entities/employee/definition.json",
+      "sha256": "0272905d158e1bd2b5f36f57d77816a38d4aab574f860c5415cd2bba5412f024"
+    },
+    {
+      "from": "metadata/products/shared/entities/employee/placement.json",
+      "to": "metadata/entities/employee/placement.json",
+      "sha256": "a3c44da6c488950ad4b39067718c7bdf1296b7a1e0e653c5dd2c21d7c4a621a9"
+    },
+    {
+      "from": "metadata/products/shared/entities/external_worker/definition.json",
+      "to": "metadata/entities/external_worker/definition.json",
+      "sha256": "3eb223ba76dce674998517fd6488f2cd7c7b9e1204b286fc1d895bfd99f81f32"
+    },
+    {
+      "from": "metadata/products/shared/entities/external_worker/placement.json",
+      "to": "metadata/entities/external_worker/placement.json",
+      "sha256": "0b55ce1ff6b7ee43997c00e01d6c227ef0e8370a3c2d375b133bb8554b1e01eb"
+    },
+    {
+      "from": "metadata/products/shared/entities/language/definition.json",
+      "to": "metadata/entities/language/definition.json",
+      "sha256": "3a0af367fe51e597b5b09d6ffe484894cb1ae54c105458d319cd94d49f1e7460"
+    },
+    {
+      "from": "metadata/products/shared/entities/language/placement.json",
+      "to": "metadata/entities/language/placement.json",
+      "sha256": "0c630ba4cd6a2cce096b139ce064a2d416542e60f07a063189f1566202af7ede"
+    },
+    {
+      "from": "metadata/products/shared/entities/locale/definition.json",
+      "to": "metadata/entities/locale/definition.json",
+      "sha256": "44b7ce9eaf2e60575c46baee603252322150caeccda831c7897da9d43eaf59a3"
+    },
+    {
+      "from": "metadata/products/shared/entities/locale/placement.json",
+      "to": "metadata/entities/locale/placement.json",
+      "sha256": "09fac402c1693c7e01d6139862a1abd1406edd57afc1fdfcd79b6203a2a2a2b7"
+    },
+    {
+      "from": "metadata/products/shared/entities/person/definition.json",
+      "to": "metadata/entities/person/definition.json",
+      "sha256": "0cb56d1d58a9e76abf9b0619d295d96f123ace81e931a279a11f34b19be117f4"
+    },
+    {
+      "from": "metadata/products/shared/entities/person/placement.json",
+      "to": "metadata/entities/person/placement.json",
+      "sha256": "c0051a4b50e594d820cb79add5c8319757f9a6a9b368f0ee1a9bcc0ceb03bde1"
+    },
+    {
+      "from": "metadata/products/shared/entities/person_address_use/definition.json",
+      "to": "metadata/entities/person_address_use/definition.json",
+      "sha256": "9d18d55d43a465042ef4fbea08686276422dfb5c01f7eecd53b473461b84e2c3"
+    },
+    {
+      "from": "metadata/products/shared/entities/person_address_use/placement.json",
+      "to": "metadata/entities/person_address_use/placement.json",
+      "sha256": "f70e653d370659e3dcd2e7eeb3a7a74c6db934d123e7864ca8ff7248a25d58b7"
+    },
+    {
+      "from": "metadata/products/shared/entities/principal/definition.json",
+      "to": "metadata/entities/principal/definition.json",
+      "sha256": "3d00a53c2c7cfbcdd3a2613616548382bc926bd084e2c82319e2dcdea9fbac06"
+    },
+    {
+      "from": "metadata/products/shared/entities/principal/localization.json",
+      "to": "metadata/entities/principal/localization.json",
+      "sha256": "959632fae99654e7175987cc07c8a94f405574d7259ea25c817516b022f4c551"
+    },
+    {
+      "from": "metadata/products/shared/entities/principal/placement.json",
+      "to": "metadata/entities/principal/placement.json",
+      "sha256": "14f9e03ec3b34b96b568496ebcf2f500262f9c9a91f4a2348c100fa8310e3418"
+    },
+    {
+      "from": "metadata/products/shared/entities/principal_notification_preference/definition.json",
+      "to": "metadata/entities/principal_notification_preference/definition.json",
+      "sha256": "fd408ef536d1aa5bd3210ad7ed6fbab757905cce6cc1aafba7b53600abee818a"
+    },
+    {
+      "from": "metadata/products/shared/entities/principal_profile/definition.json",
+      "to": "metadata/entities/principal_profile/definition.json",
+      "sha256": "a4d35d857ebcf8c24ae1f5415e95b84c98086d3f0f7d769241a6617536405ed4"
+    },
+    {
+      "from": "metadata/products/shared/entities/principal_ui_profile/definition.json",
+      "to": "metadata/entities/principal_ui_profile/definition.json",
+      "sha256": "03699ab48eae780680d604e09b2a61d378c027c1fcf20c086792ec3530cdc7c9"
+    },
+    {
+      "from": "metadata/products/shared/entities/principal_ui_profile/localization.json",
+      "to": "metadata/entities/principal_ui_profile/localization.json",
+      "sha256": "3a24c4e1dbf1c2303a4488c91ab9889a094d236c45b247ee4312c0dcc793371a"
+    },
+    {
+      "from": "metadata/products/shared/entities/state_region/definition.json",
+      "to": "metadata/entities/state_region/definition.json",
+      "sha256": "f964e913b645d294c7d7301f31e22c0267286df0fd2e02bcab0e4ba5fcd869cc"
+    },
+    {
+      "from": "metadata/products/shared/entities/state_region/placement.json",
+      "to": "metadata/entities/state_region/placement.json",
+      "sha256": "6652ed1f2ee327217c98deb112acac2e6fc35b94d8439e1af263dbed7f16a62b"
+    },
+    {
+      "from": "metadata/products/shared/entities/timezone/definition.json",
+      "to": "metadata/entities/timezone/definition.json",
+      "sha256": "37d6a0cff1ef844035d9d6856bbb98e141c07770744fd0512f1520dc7e1b01ba"
+    },
+    {
+      "from": "metadata/products/shared/entities/timezone/placement.json",
+      "to": "metadata/entities/timezone/placement.json",
+      "sha256": "1f5f4cd5bb422f8215ab2f54d4fa38c93b8595ed26023dd3adc12858aa31aeca"
+    },
+    {
+      "from": "metadata/products/mdg/review/baselines/business-partner-runtime-neon-r9.json",
+      "to": "metadata/review/baselines/business-partner-runtime-neon-r9.json",
+      "sha256": "1d44919802b4bef5dd78d1f7f48515d631c31786ad6fc3daa1fb7ed13776308d"
+    },
+    {
+      "from": "metadata/products/mdg/review/business-partner-collaboration-ca08-qualification.json",
+      "to": "metadata/review/business-partner-collaboration-ca08-qualification.json",
+      "sha256": "95613b409d86e7c6ac087e30666dd24aee05522faf6a222f31c6c50a56e8df49"
+    },
+    {
+      "from": "metadata/products/mdg/review/field-catalogue.json",
+      "to": "metadata/review/field-catalogue.json",
+      "sha256": "23f74cdd245f120ec07522b707d56116d143940e0693e4a6e8eedff6546e7bb7"
+    },
+    {
+      "from": "metadata/products/mdg/review/index-catalog.json",
+      "to": "metadata/review/index-catalog.json",
+      "sha256": "cb63fe89f452b81563ba95f8bd23fbb31515cd9ab3cd7ee49f82365364bd842d"
+    },
+    {
+      "from": "metadata/products/mdg/review/legacy-retirement.json",
+      "to": "metadata/review/legacy-retirement.json",
+      "sha256": "7deb1902c8ca12cf6c8f48307dd8b4722b4701ff7ed404b5e9d38ca6cd034c3e"
+    },
+    {
+      "from": "metadata/products/mdg/review/owner-profile.purchase_order.json",
+      "to": "metadata/review/owner-profile.purchase_order.json",
+      "sha256": "d78d4de616e94e32b294c70c4127a5cf5f4a23b41998266b05b06c472c614e1d"
+    },
+    {
+      "from": "metadata/products/mdg/review/permission-catalog.json",
+      "to": "metadata/review/permission-catalog.json",
+      "sha256": "175ed18c1efe22ae12337619f76dc631f8c06f120a494f0ddc17590390f64a08"
+    },
+    {
+      "from": "metadata/products/mdg/review/registry-catalog.json",
+      "to": "metadata/review/registry-catalog.json",
+      "sha256": "c7af3f5cb093b8381c5d17149cc4cd8b598f81d8f135ee40a0ea8dc5e3456815"
+    },
+    {
+      "from": "metadata/products/mdg/review/release-candidates/business-partner-collaboration-ca08.json",
+      "to": "metadata/review/release-candidates/business-partner-collaboration-ca08.json",
+      "sha256": "409477564a58d40fb0424f7e018f47fdefbd264c2a060335602c02d3b9d5b026"
+    },
+    {
+      "from": "metadata/products/mdg/review/shape-catalog.json",
+      "to": "metadata/review/shape-catalog.json",
+      "sha256": "b6b8d82607f2499ba22973c96ffc8b51d4b2c86c71e0232257a591763063ffa0"
+    },
+    {
+      "from": "metadata/products/mdg/review/source-coverage.json",
+      "to": "metadata/review/source-coverage.json",
+      "sha256": "fdc3f311d2f6734b01f9e6506591ca3fa1d2b151fe8d2f2ec09050b5a7cd8f56"
+    },
+    {
+      "from": "metadata/products/mdg/review/storage-catalog.json",
+      "to": "metadata/review/storage-catalog.json",
+      "sha256": "d0cc71896ce0ba5ed10ab783fac4999ea6194c5b6831825c3ac816aa964b9bc5"
+    },
+    {
+      "from": "metadata/products/mdg/review/workflow-policy-fixtures.json",
+      "to": "metadata/review/workflow-policy-fixtures.json",
+      "sha256": "64dffdf237ed1f187c248a3b7f30187940ed8ec0b94214459c5808b1c82a9026"
+    },
+    {
+      "from": "metadata/products/shared/access/principal-self-access.sql",
+      "to": "metadata/access/principal-self-access.sql",
+      "sha256": "32d029fdb8d5a45b76c66ec1306bff99f1388e3d7ae4fdae320d9b0d76df122b"
+    },
+    {
+      "from": "metadata/products/mdg/CONTRACT.md",
+      "to": "metadata/contracts/compiled-artifacts.md",
+      "sha256": "e24d46cf07593f7773b5cf9b64418d11be81efbbd0622786c6d0b5271772ead5"
+    },
+    {
+      "from": "metadata/products/mdg/README.md",
+      "to": "metadata/contracts/business-partner-draft.md",
+      "sha256": "4b3d3f1d6c52e8beca7da159640569849984481f5f951791c93ea4da264aaf58"
+    },
+    {
+      "from": "metadata/products/mdg/manifest.json",
+      "to": "metadata/history/mdg-layout-manifest.json",
+      "sha256": "80f588a6e274531f042e607c090ab2df27653eff84397ca77dae6e5171699275"
+    },
+    {
+      "from": "metadata/relocation-map.json",
+      "to": "metadata/history/relocation-map-20260921.json",
+      "sha256": "914c91d59f4e7a9ca990b73b09278408aab4b3db84e26555806c8633ab3bd935"
+    },
+    {
+      "from": "metadata/REORGANIZATION.md",
+      "to": "metadata/history/reorganization-20260921.md",
+      "sha256": "2621b233c6a4ac32e70ad0f15986ea2e5431e952371dc54e05dd001311d131ef"
+    },
+    {
+      "from": "metadata/shared/README.md",
+      "to": "metadata/history/shared-placeholder.md",
+      "sha256": "0183e8701aedd098e5f0b8ce7a6ee69bb56afd6228771c9b17933ed0c0083f32"
+    }
+  ]
+}

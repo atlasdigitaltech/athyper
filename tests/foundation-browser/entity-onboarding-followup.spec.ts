@@ -16,7 +16,7 @@ for (const mode of ["light", "dark", "high-contrast"]) {
 }
 
 test("Country source preserves the accepted private default", () => {
-  const source=JSON.parse(readFileSync("metadata/products/shared/entities/country/capabilities.json", "utf8"));
+  const source=JSON.parse(readFileSync("metadata/entities/country/capabilities.json", "utf8"));
   const defaults: string[]=[];
   function visit(value:unknown){if(value && typeof value==='object')for(const [key,child] of Object.entries(value)){if(key==='defaultAudience')defaults.push(String(child));visit(child);}}
   visit(source);

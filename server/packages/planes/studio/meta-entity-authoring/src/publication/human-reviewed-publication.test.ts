@@ -9,7 +9,7 @@ import { publishHumanReviewedProducts, type HumanReviewedPublicationPlan, type H
 
 function fixture() {
   const product = parseTableEntityProduct(JSON.parse(readFileSync(new URL(
-    "../../../../../../../metadata/products/shared/entities/address/definition.json", import.meta.url), "utf8")));
+    "../../../../../../../metadata/entities/address/definition.json", import.meta.url), "utf8")));
   const { graph } = compileTableEntityProduct(product, "neon");
   graph.surfaces!.find(s => s.surfaceKind === "list")!.layoutConfig!.tableEntityProduct = {
     schema: "athyper.table-entity-source/1", productHash: sha256(product), targetPlanes: ["neon"], moduleCode: product.moduleCode,

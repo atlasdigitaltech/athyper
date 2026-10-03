@@ -149,7 +149,7 @@ Source fingerprints (SHA-256; working tree, not a release):
 | --- | --- |
 | `server/packages/contracts/metadata/src/common-reference-permission.ts` | ff1d69b07d0963bc987a4037aaff21ffa8de47486fa7bdbcb12ccb515b4a77b3 |
 | `server/packages/contracts/publication/src/common-capability-permissions.ts` | ffe0446826763c6590b9ab3fbd0fcfbc10ac958c07651eb8c9d0864d1c836510 |
-| `metadata/products/shared/entities/country/capabilities.json` | 40928c66493d7529ec6246bbf794e7e9de6e6a06646827eaa16ccc2c27b514c7 |
+| `metadata/entities/country/capabilities.json` | 40928c66493d7529ec6246bbf794e7e9de6e6a06646827eaa16ccc2c27b514c7 |
 
 The worktree contained 538 short-status entries at inspection. That count is not a
 file ownership claim; existing unrelated edits must be preserved.
@@ -163,7 +163,7 @@ Approved destination discipline for subsequent work:
 - Studio reference authoring: `server/packages/planes/studio/meta-entity-authoring/src/reference/`.
 - Generic parent qualification: `server/packages/services/records/src/reference/`.
 - Thin host construction: `server/apps/platform-host/src/composition/shared/publication/`.
-- Entity declarations only: `metadata/products/shared/entities/<entity>/`.
+- Entity declarations only: `metadata/entities/<entity>/`.
 - Operational entrypoints: `server/db/scripts/operations/publication/`.
 
 Paths above are proposed destinations relative to the repository root.

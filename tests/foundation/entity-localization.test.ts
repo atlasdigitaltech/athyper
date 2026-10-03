@@ -129,7 +129,7 @@ it("projects Principal enum translations through the compiler, server descriptor
   const { compileNativeRuntimeProjection } = await import("../../server/packages/platform/metadata/src/native-runtime-projection");
   const { parseEntityRuntimeDescriptor } = await import("../../server/packages/platform/metadata/src/descriptor-parser");
   const { createEntityListService } = await import("../../server/packages/services/records/src/entity-list-service");
-  const read = (file: string) => JSON.parse(readFileSync(new URL(`../../metadata/products/shared/entities/principal/${file}.json`, import.meta.url), "utf8"));
+  const read = (file: string) => JSON.parse(readFileSync(new URL(`../../metadata/entities/principal/${file}.json`, import.meta.url), "utf8"));
   const product = parseTableEntityProduct(read("definition"), read("localization"));
   for (const plane of ["neon", "mesh", "studio"] as const) {
     const { graph, artifact } = compileTableEntityProduct(product, plane);

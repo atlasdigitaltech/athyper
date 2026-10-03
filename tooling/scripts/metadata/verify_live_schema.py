@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-ROOT = Path(__file__).resolve().parents[3] / 'metadata/products/mdg'
+ROOT = Path(__file__).resolve().parents[3] / 'metadata'
 QUERY = """
 SELECT coalesce(json_agg(json_build_object(
  'table', i.table_schema||'.'||i.table_name, 'column', i.column_name,

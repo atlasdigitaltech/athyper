@@ -65,7 +65,7 @@ const { Client } = require(process.cwd() + "/server/db/node_modules/pg");
       await qualifyMigration("20260929_entity_owner_access.sql");
       await client.query(
         readFileSync(
-          "metadata/products/shared/access/principal-self-access.sql",
+          "metadata/access/principal-self-access.sql",
           "utf8",
         ),
       );

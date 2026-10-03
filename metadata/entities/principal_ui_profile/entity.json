@@ -1,0 +1,6 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "principal_ui_profile",
+  "definition": "definition.json",
+  "localization": "localization.json"
+}

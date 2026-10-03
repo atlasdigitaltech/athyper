@@ -53,17 +53,7 @@ REVOKE ALL ON document.comment_revision FROM PUBLIC,athyperapp;
 GRANT SELECT ON document.comment_revision TO athyperapp;
 
 -- A series display label can change without renaming an immutable stored file.
-ALTER TABLE document.attachment_series ADD COLUMN display_name text
- CHECK(display_name IS NULL OR (btrim(display_name)<>'' AND length(display_name)<=1024)),
- ADD COLUMN revision_no integer NOT NULL DEFAULT 1 CHECK(revision_no>0);
-ALTER TABLE document.attachment_link ADD COLUMN category_code text
- CHECK(category_code IS NULL OR category_code ~ '^[a-z][a-z0-9_]{1,62}$');
 -- Exact owner coordinates are stored at admission; raw policy JSON is not a client field.
-ALTER TABLE document.attachment ADD COLUMN admitted_release_hash text CHECK(admitted_release_hash IS NULL OR admitted_release_hash ~ '^sha256:[a-f0-9]{64}$'),
- ADD COLUMN admitted_policy_hash text CHECK(admitted_policy_hash IS NULL OR admitted_policy_hash ~ '^sha256:[a-f0-9]{64}$'),
- ADD COLUMN draft_id uuid,
- ADD CONSTRAINT attachment_draft_fk FOREIGN KEY(tenant_id,draft_id) REFERENCES document.comment_draft(tenant_id,id) ON DELETE RESTRICT,
- ADD CONSTRAINT attachment_admission_pair CHECK((admitted_release_hash IS NULL)=(admitted_policy_hash IS NULL));
 
 -- Existing plane guards validate owner coordinates and recursively reject cycles.
 -- Serialize record-local hierarchy changes so two concurrent moves cannot form one.
@@ -98,5 +88,4 @@ CREATE TRIGGER attachment_immutable_bytes BEFORE UPDATE ON document.attachment
 FOR EACH ROW EXECUTE FUNCTION document.trg_attachment_immutable_bytes();
 
 -- Draft expiry is persisted from the admitted policy on each successful save.
-ALTER TABLE document.comment_draft ADD COLUMN expires_at timestamptz NOT NULL DEFAULT (now()+interval '30 days');
 CREATE INDEX comment_draft_expiry_idx ON document.comment_draft(expires_at,tenant_id,id);

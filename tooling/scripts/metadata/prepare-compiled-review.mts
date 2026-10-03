@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile, readdir, mkdir, writeFile } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { compileCompiledEntityArtifacts } from "../../../server/packages/services/publication/src/compiled-entity-artifact-compiler.js";
-const root = resolve("metadata/products/mdg/entities");
+const root = resolve("metadata/entities");
 const output = resolve(
   process.argv[2] ?? "docs/reports/bp-integration-20260921/compiled-review",
 );

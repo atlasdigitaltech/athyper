@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { partnerSectionContract, validatePartnerSectionPublication } from "../partner-section-contract.js";
 import { qualificationContractOverlay } from "../../../../../scripts/db-verification/provisioning/qualification-contract-overlay.js";
-const artifact = (name: string) => JSON.parse(readFileSync(new URL(`../../../../../../../../metadata/products/mdg/entities/business_partner/presentation.${name}.json`, import.meta.url), "utf8"));
+const artifact = (name: string) => JSON.parse(readFileSync(new URL(`../../../../../../../../metadata/entities/business_partner/presentation.${name}.json`, import.meta.url), "utf8"));
 const qualification = artifact("section.qualifications-certificates");
 const certificate = artifact("section.certificates");
 const restriction = artifact("section.restrictions");

@@ -15,7 +15,7 @@ owner authorization and optimistic versions. Do not make the identity parent
 writable to satisfy a qualification checklist. PII classification does not by
 itself establish `masked_only` enforcement.
 
-- Canonical definitions: `metadata/products/shared/entities/{country,principal,principal_profile,principal_notification_preference}`.
+- Canonical definitions: `metadata/entities/{country,principal,principal_profile,principal_notification_preference}`.
 - Authoring: `server/packages/planes/studio/meta-entity-authoring/src/authoring/{product,table-product}.ts`.
 - Publication: shared host publication composition, native lowering, compiled
   runtime contracts and the authorization activation guard. Native lowering's

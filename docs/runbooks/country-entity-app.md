@@ -58,7 +58,7 @@ the native list/detail descriptor alone does not enable collaboration.
 
 ## Implemented source setup
 
-`metadata/products/shared/entities/country/definition.json` and `capabilities.json`
+`metadata/entities/country/definition.json` and `capabilities.json`
 hold the entity-specific declarations. The generic product parser and
 `buildSharedReferenceGraph` authoring factory replace the old executable
 `country-graph.ts` definition. They are independent of the MDG `country/core`
@@ -88,7 +88,7 @@ The routes intentionally do not contain Country data or schema definitions.
 From the repository root, run for each plane:
 
 ```sh
-pnpm exec tsx server/db/scripts/provisioning/prepare-reference-runtime.ts --product=metadata/products/shared/entities/country --plane=neon
+pnpm exec tsx server/db/scripts/provisioning/prepare-reference-runtime.ts --product=metadata/entities/country --plane=neon
 ```
 
 Use `--plane=mesh` or `--plane=studio` for the other planes. Add `--json` to emit
@@ -378,7 +378,7 @@ with a fixture registry is not proof of these live dependencies. No handler is
 inferred from Country's entity name, and no missing requirement is bypassed.
 
 ```sh
-pnpm exec tsx server/db/scripts/operations/publication/import-dev-reference-product.ts --product=metadata/products/shared/entities/country --check
+pnpm exec tsx server/db/scripts/operations/publication/import-dev-reference-product.ts --product=metadata/entities/country --check
 ```
 
 The command authenticates to the named DEV database and performs its check in a

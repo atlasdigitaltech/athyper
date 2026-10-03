@@ -9,7 +9,7 @@ it("lowers entity permission codes and authorization profiles together for each 
   const source = JSON.parse(
     readFileSync(
       new URL(
-        "../../../../../../../metadata/products/shared/entities/principal/definition.json",
+        "../../../../../../../metadata/entities/principal/definition.json",
         import.meta.url,
       ),
       "utf8",

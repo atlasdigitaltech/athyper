@@ -8,7 +8,7 @@ import {
 import { isCanonicalEntityCode } from "@athyper/contract-platform-entity-runtime";
 
 const root = new URL(
-  "../../../../../../../metadata/products/shared/entities/country/",
+  "../../../../../../../metadata/entities/country/",
   import.meta.url,
 );
 const source = () =>

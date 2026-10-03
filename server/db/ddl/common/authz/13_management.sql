@@ -1,17 +1,4 @@
 -- Transaction-bound authorization management persistence. Existing authority guards remain in force.
-ALTER TABLE authz.scope_target ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.role ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.role_permission ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.principal_group ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.group_member ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.group_role ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.deny_rule ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.delegation ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.delegation_grant ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.override ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.record_acl ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-ALTER TABLE authz.trusted_device ADD COLUMN version integer NOT NULL DEFAULT 1 CHECK (version > 0);
-
 CREATE FUNCTION authz.trg_management_version() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
 BEGIN
  IF TG_OP='INSERT' THEN NEW.version:=1; ELSE NEW.version:=OLD.version+1; END IF;

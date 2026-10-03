@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { parseSharedReferenceProduct, compileSharedReferenceProduct } from "../authoring/product.js";
 import { amendSuccessorCollaboration } from "../publication/amend-successor-collaboration.js";
 
-const root = new URL("../../../../../../../metadata/products/shared/entities/country/", import.meta.url);
+const root = new URL("../../../../../../../metadata/entities/country/", import.meta.url);
 const product = () => parseSharedReferenceProduct(
   JSON.parse(readFileSync(new URL("definition.json", root), "utf8")),
   JSON.parse(readFileSync(new URL("capabilities.json", root), "utf8")),

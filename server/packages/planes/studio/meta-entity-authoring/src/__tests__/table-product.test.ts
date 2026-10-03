@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { compileTableEntityProduct, parseTableEntityProduct } from "../authoring/table-product.js";
 import { parseEntityRelationships, qualifyEntityRelationship } from "@athyper/contract-platform-entity-runtime";
-const source = (entity: string) => JSON.parse(readFileSync(new URL(`../../../../../../../metadata/products/shared/entities/${entity}/definition.json`, import.meta.url), "utf8"));
+const source = (entity: string) => JSON.parse(readFileSync(new URL(`../../../../../../../metadata/entities/${entity}/definition.json`, import.meta.url), "utf8"));
 for (const entity of ["principal", "principal_profile", "principal_notification_preference", "principal_ui_profile"]) it(`compiles ${entity} through standard entity graphs on all three planes`, () => {
   const product = parseTableEntityProduct(source(entity));
   for (const plane of ["studio", "neon", "mesh"] as const) {

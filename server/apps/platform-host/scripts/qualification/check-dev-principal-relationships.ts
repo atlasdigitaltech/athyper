@@ -54,7 +54,7 @@ for (const plane of ["neon", "studio", "mesh"] as const) {
         parseTableEntityProduct(
           JSON.parse(
             readFileSync(
-              `metadata/products/shared/entities/${entity}/definition.json`,
+              `metadata/entities/${entity}/definition.json`,
               "utf8",
             ),
           ),

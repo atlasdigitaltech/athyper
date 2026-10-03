@@ -1,0 +1,9 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "timezone",
+  "definition": "definition.json",
+  "artifacts": [
+    "core.json"
+  ],
+  "placement": "placement.json"
+}

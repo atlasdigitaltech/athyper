@@ -27,7 +27,7 @@ if(process.argv.includes('--check-banking-metadata')){
  if(!emitted.startsWith('BEGIN;\n')||!emitted.includes('\nROLLBACK;\n'))throw Error('Unexpected publication fixture transaction');
  acceptance=emitted.replace(/^BEGIN;\n/,'').replace('\nROLLBACK;\n','\n');
  const documents=['business_partner_banking/core.json','business_partner_bank_account_link/core.json','business_partner_bank_provisional_reference/core.json'];
- const bindings=documents.flatMap(file=>JSON.parse(fs.readFileSync('metadata/products/mdg/entities/'+file,'utf8')).fields.map(f=>f.binding).filter(Boolean));
+ const bindings=documents.flatMap(file=>JSON.parse(fs.readFileSync('metadata/entities/'+file,'utf8')).fields.map(f=>f.binding).filter(Boolean));
  acceptance+=`\nDO $$ DECLARE binding jsonb; BEGIN
  FOR binding IN SELECT value FROM jsonb_array_elements('${JSON.stringify(bindings).replaceAll("'","''")}'::jsonb) LOOP
  IF NOT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass(binding->>'sourceObject') AND attname=binding->>'column' AND attnum>0 AND NOT attisdropped)

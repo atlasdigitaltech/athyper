@@ -1,0 +1,1889 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-03T06:11:47.294Z",
+  "baselineCommit": "9c681afe060ff5ea9c2ec08499ec15cfd6046211",
+  "postgresImage": "postgres:16.15-bookworm",
+  "scope": "Only the eight cleanup files and three corrected view files use baseline bytes; every other manifest input is the same current source on both sides.",
+  "initialRegression": {
+    "relation": "document.active_attachment",
+    "addedColumns": [
+      "admitted_release_hash",
+      "admitted_policy_hash",
+      "draft_id"
+    ],
+    "results": [
+      {
+        "plane": "studio",
+        "equivalent": false,
+        "differences": [
+          "relations",
+          "columns"
+        ],
+        "counts": {
+          "schemas": 18,
+          "relations": 411,
+          "columns": 6649,
+          "constraints": 4774,
+          "indexes": 1626,
+          "triggers": 962,
+          "policies": 1284,
+          "routines": 695,
+          "types": 180,
+          "sequences": 2,
+          "roles": 63,
+          "memberships": 3,
+          "defaultPrivileges": 0
+        },
+        "beforeHash": "0b156760e2fadfbf6d0a3b5b83446e4de0d86d84fca6acb6647f0fba4ad797df",
+        "afterHash": "74c30972fbbb2b7297d61cbf84fdbc8b34683ddd1dae3c86ace80342ed5e2336"
+      },
+      {
+        "plane": "neon",
+        "equivalent": false,
+        "differences": [
+          "relations",
+          "columns"
+        ],
+        "counts": {
+          "schemas": 15,
+          "relations": 694,
+          "columns": 13183,
+          "constraints": 9316,
+          "indexes": 3305,
+          "triggers": 2229,
+          "policies": 1837,
+          "routines": 985,
+          "types": 420,
+          "sequences": 2,
+          "roles": 63,
+          "memberships": 3,
+          "defaultPrivileges": 0
+        },
+        "beforeHash": "0158dc7fd64b432e4743aac60fc7770453867b91b322f1b6e79194848f3f920a",
+        "afterHash": "b28f6227762f661696bac8bb52b346cf4cfe7a7a45cc40d6c699bbe66deee9d5"
+      },
+      {
+        "plane": "mesh",
+        "equivalent": false,
+        "differences": [
+          "relations",
+          "columns"
+        ],
+        "counts": {
+          "schemas": 15,
+          "relations": 369,
+          "columns": 6061,
+          "constraints": 4147,
+          "indexes": 1435,
+          "triggers": 958,
+          "policies": 1057,
+          "routines": 667,
+          "types": 136,
+          "sequences": 2,
+          "roles": 63,
+          "memberships": 3,
+          "defaultPrivileges": 0
+        },
+        "beforeHash": "80d11e23920178048f5a77e631156f33c90565375aa43f073fddc52e5e860dc8",
+        "afterHash": "2fb9bd1c2b140a2fa7bc3ba3dc5353d451a494831e21bba8cf1d0d69daa28f4f"
+      }
+    ]
+  },
+  "correctedResults": [
+    {
+      "plane": "studio",
+      "equivalent": true,
+      "differences": [],
+      "counts": {
+        "schemas": 18,
+        "relations": 411,
+        "columns": 6646,
+        "constraints": 4774,
+        "indexes": 1626,
+        "triggers": 962,
+        "policies": 1284,
+        "routines": 695,
+        "types": 180,
+        "sequences": 2,
+        "roles": 63,
+        "memberships": 3,
+        "defaultPrivileges": 0
+      },
+      "beforeHash": "0b156760e2fadfbf6d0a3b5b83446e4de0d86d84fca6acb6647f0fba4ad797df",
+      "afterHash": "0b156760e2fadfbf6d0a3b5b83446e4de0d86d84fca6acb6647f0fba4ad797df"
+    },
+    {
+      "plane": "neon",
+      "equivalent": true,
+      "differences": [],
+      "counts": {
+        "schemas": 15,
+        "relations": 694,
+        "columns": 13180,
+        "constraints": 9316,
+        "indexes": 3305,
+        "triggers": 2229,
+        "policies": 1837,
+        "routines": 985,
+        "types": 420,
+        "sequences": 2,
+        "roles": 63,
+        "memberships": 3,
+        "defaultPrivileges": 0
+      },
+      "beforeHash": "0158dc7fd64b432e4743aac60fc7770453867b91b322f1b6e79194848f3f920a",
+      "afterHash": "0158dc7fd64b432e4743aac60fc7770453867b91b322f1b6e79194848f3f920a"
+    },
+    {
+      "plane": "mesh",
+      "equivalent": true,
+      "differences": [],
+      "counts": {
+        "schemas": 15,
+        "relations": 369,
+        "columns": 6058,
+        "constraints": 4147,
+        "indexes": 1435,
+        "triggers": 958,
+        "policies": 1057,
+        "routines": 667,
+        "types": 136,
+        "sequences": 2,
+        "roles": 63,
+        "memberships": 3,
+        "defaultPrivileges": 0
+      },
+      "beforeHash": "80d11e23920178048f5a77e631156f33c90565375aa43f073fddc52e5e860dc8",
+      "afterHash": "80d11e23920178048f5a77e631156f33c90565375aa43f073fddc52e5e860dc8"
+    }
+  ],
+  "sourceHashes": {
+    "before": {
+      "common/ops/03_tables.sql": "1ded99b5d404d1a0ce7eddf05c52d750d9045f97d4a0e9b30fcabc094ec074a5",
+      "common/authz/03_tables.sql": "228d9b3856cba411c3f36265dfc270329676b3468a71b7bab9423f3b07ef2f76",
+      "common/authz/13_management.sql": "b872e6abaf418cce359539459656a041529ead44e253997778487773f9be3d72",
+      "common/control/03_tables.sql": "40180af9ccdf6b8564dd6aa4ad3fcb03547e9627c786c7fdfada1e3ac18917f6",
+      "common/control/14_admin_integrations.sql": "314b91ae4607e5a68d9bc94fb82ca0c30c100931703e4a93221cd8636b471c1d",
+      "common/document/03_foundation_tables.sql": "6615d54fde0653fa6193deec2ddabb7e4eb3aeefd900140861dd8df06f2ab632",
+      "common/document/05_constraints.sql": "5c5cabe6c7e5e16f489eafb7a6978bb8e47e4cce59c2921643c08126511b40a3",
+      "common/document/12_collaboration_integrity.sql": "bfc926f1cd76e14e41c9c9a26018e6491021985db98bc969b6325bbf3db9d348",
+      "planes/studio/document/09_views.sql": "3778689af7f10cf198ae7f6237c35987d195099d7d20769cb51ff871e9b6366d",
+      "planes/neon/document/09_views.sql": "c379624154ceff7f1f1fc1723c55f19d56aa71e1ea7bbbb96642ecbdcf6e843d",
+      "planes/mesh/document/09_views.sql": "3778689af7f10cf198ae7f6237c35987d195099d7d20769cb51ff871e9b6366d"
+    },
+    "after": {
+      "common/ops/03_tables.sql": "776f827ba2a04f5851b5458c08ed572e5ac5a7925901dda89673809f193665f0",
+      "common/authz/03_tables.sql": "ab7339abbbabb8fa96fec74401fdab5355607f423246531f4f2dfb64a99eeccb",
+      "common/authz/13_management.sql": "b6aebc21e92515691c0028b7e74b548846470fc451fdc6ab8452aad96b7b2eda",
+      "common/control/03_tables.sql": "d27322d610ab3332eef116e67613211a0d8f6370cfecc52775cce17c5a87185e",
+      "common/control/14_admin_integrations.sql": "3118d52e98d89314e06301619df2aaf535811ad5d68e46da58942d81dfd95fc9",
+      "common/document/03_foundation_tables.sql": "3d1000e35a08cac2fadf40ccf345092e455d2b3c27a65a7f795b2544d83e58c9",
+      "common/document/05_constraints.sql": "2b56fa6520a3466512e9caee8291f822ca89a43af8e44dc4f403683baeedd137",
+      "common/document/12_collaboration_integrity.sql": "72ab94cf862dc467b8114aee5380f9a131f1ad5a3c3d0475653d080fad2f5ff8",
+      "planes/studio/document/09_views.sql": "8e8f4c2d9152714285ca31524da50cc5e63591f717c3695dd71b7420975ba09d",
+      "planes/neon/document/09_views.sql": "689da301002603555f01ac59775b8cb333ba9e0c15bdc7332ae2a325441ba933",
+      "planes/mesh/document/09_views.sql": "8e8f4c2d9152714285ca31524da50cc5e63591f717c3695dd71b7420975ba09d"
+    }
+  },
+  "freshRoundingRows": {
+    "before/studio": {
+      "rules": 0,
+      "contexts": 0
+    },
+    "before/neon": {
+      "rules": 0,
+      "contexts": 0
+    },
+    "before/mesh": {
+      "rules": 0,
+      "contexts": 0
+    },
+    "after/studio": {
+      "rules": 0,
+      "contexts": 0
+    },
+    "after/neon": {
+      "rules": 0,
+      "contexts": 0
+    },
+    "after/mesh": {
+      "rules": 0,
+      "contexts": 0
+    }
+  },
+  "retainedSql": {
+    "verified": 112,
+    "retained": [
+      {
+        "path": "migrations/20261003_entity_framework_security.sql",
+        "sha256": "8b07d28e9ba39ae9d543bfc5bd6de3f26577c73ab5eb5842660c9a0d5af88626",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_product_publication_tenant_reads.sql",
+        "sha256": "f3951750dc71d7db1f14751c5ac9e02c97bd06fc3d94148155790013b2daff35",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_human_reviewed_publication.sql",
+        "sha256": "95a54024cd5db4c90c6d49189b6f46bd4401c2f917c08abc93c4fff63603a9ed",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_product_human_review.sql",
+        "sha256": "fcdd122c75f116f69d64e6b4377fe8b48702f8e9d47aa1bd07ae3c01caadb1f8",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261002_security_definer_ownership.sql",
+        "sha256": "feba53d01d71b04752f2fd17d04ce51374d1699be47e2b825e51509eba24b93c",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260930_atlas_authenticated_session.sql",
+        "sha256": "3abe5f23d4f8b45c5772c71273cb3e4cd688ff13c04a81142708e0ff99b035bc",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260930_publication_ack_recovery.sql",
+        "sha256": "b58ba0f553da0a8e26c284391d25c0b7c28dd68c89aac6de16d41b18c49170e7",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260930_entity_record_audit_contracts.sql",
+        "sha256": "c2e2aa270692903aad21f09366bc75dae22bde8c57d44174d1a8fe80f5d924a9",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260928_capability_profile_authoring.sql",
+        "sha256": "03c6119885a73d8e479bf383bc942a5c3ff9aaed68b862f3fa60a02e0a6774c6",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260930_publication_recovery_discovery.sql",
+        "sha256": "6cdbb21e9743f3be422b9c3ba8df57a4a81f7483369dc5653bedda10d1a223ce",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260929_compiled_entity_verification.sql",
+        "sha256": "164fa958bafc7a75e5791b950d63873ceaad685e04c697a150c060a85e00b0d5",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260929_identity_operation_projection.sql",
+        "sha256": "d45ed71dac79267bb53d7b9908946fbb769f781de10c3db7695c24620bdb576b",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260929_table_entity_publication.sql",
+        "sha256": "bf0f2eca4c0c7cc4f56d779a2afb651093bf664a6220d32556dd282bd57f6247",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260929_entity_owner_access.sql",
+        "sha256": "f2ec68d1801156d4ead6368cdcf998183f67f7f66d5d442beb6ec27ed6262731",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260928_comment_mention_directory.sql",
+        "sha256": "1f454de470ce144e6d8bc514fbc22fc3171ded8f595bfd6217626c9ebb822209",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260928_comment_attachment_drafts.sql",
+        "sha256": "afe4b9abd8a76b0d4cb5ed1dea219bbf1798a41c445bdbaad763d8f52c899209",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260926_compiled_runtime_publication_source.sql",
+        "sha256": "d91d893e215fc4c530c20fdb4ea5a5f506d0b4baf1212f632c07193bce5e7ec7",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260926_entity_execution_binding_storage.sql",
+        "sha256": "3ef87b26ad0f35e8b2483fee8edb8bf41f7adc2a70cf9ba7605e0433f63d9ea1",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260926_common_reference_permission.sql",
+        "sha256": "69a5a8a474b4fe7475640349937b72cf92163fc9870810b2aec705f2ab13fdf9",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260926_studio_entity_operation_bindings.sql",
+        "sha256": "76144a44d3ac0c80944a75a6366719c857ef150765be8c53955a2c5295044945",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260924_publication_recovery_audit.sql",
+        "sha256": "af7265650c08eaf3d4fff9d2ab40457ab7954b98425c7264ce9511cdd32d8eaf",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260924_publication_recovery_successor.sql",
+        "sha256": "de63f4c56ea6ec18214d670ce9cd950725ea444bd27d9d57d5d7ff926e3a124b",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260924_publication_provenance_recovery.sql",
+        "sha256": "7a56639c3350798adb0328c2b972389f4cce34cee6ab41b239831755ccbea7e4",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260906_identity_replay_approval.sql",
+        "sha256": "b7ce9db91f5a77852a407297d6f1ffb41166c2cbdee25a285b6ac221092435d7",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260906_mesh_exchange_readiness.sql",
+        "sha256": "116b4d4a28d46b83a67c5e11a65c6e3b24f4aa4073cfeaccf46f5182ff8f7692",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260907_atlas_conversation_runtime_access.sql",
+        "sha256": "1df2f7ea13a61a7fb5a9c3ac13f7e4ca40d1652bb16c10e29a380bd1c002928b",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260907_lookup_reference_governance.sql",
+        "sha256": "77bbc239b83d4605960aeade9a93c927e6ef9d2f18aaf7883f1eca812cdcaed2",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260908_entity_saved_views.sql",
+        "sha256": "2674c77ebfdef8ace5570b42e8a3e2b663a4239a7ced4474f24462571581dbae",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260908_entity_standard_view_defaults.sql",
+        "sha256": "169eae1568bb727073af423f051c07d011e856b15d6d91b8288978a2d982deab",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260908_supplier_preference_normalized_scope.sql",
+        "sha256": "28107f99c9317d38408f1c3a9d05354e5c30d865aba022aecad348061a85a797",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260909_atlas_tool_only_completion.sql",
+        "sha256": "1e60a0acdf8755681b192c18f9f62bc922744b6987f10b8a0d040a155ff9b618",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_account_cache_isolation.sql",
+        "sha256": "927ee38105ae325843fc7c8975f8523f9fdb3ed9ab5f75a25d6c7d2a9d5fdcf0",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_ai_call_usage_constraint.sql",
+        "sha256": "68eb618027d0564c2d270d64bc3e3f69cf10ce14e0c8dfa0e17da46630def80c",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_ai_call_usage_preflight.sql",
+        "sha256": "403c7c8ade568b8030b4ceed9c1156278a44de4ca1bde55361aee79b4d2998f1",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_atlas_intent_feedback.sql",
+        "sha256": "caeddc1f25be1e3ef29b8f8ed0bdf410e9ae5d9dea8ea50c6bb50b29c32d1950",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_atlas_learning_common.sql",
+        "sha256": "4d2d47d485fcaa2fbbc44c4a3a73c8ba597dbd9501ac06a4105804533a1f4925",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_atlas_learning_studio.sql",
+        "sha256": "6b23c3d57b9684ca986900f02d2e9666b7ab50edfd21578600e295252fc4c0fe",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql",
+        "sha256": "9168b4fc0b5554beae05ee5782844904a78c377bc59434baafd0a1e646be1c90",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_activation_precondition.sql",
+        "sha256": "f9fa84303487ece2f791a129853baa807136048bcdd9398368967beee8fc80ef",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_compilation_source.sql",
+        "sha256": "fbf35a8ea4b0185b0dd97f20ae7b6e3cd2817b7476526b3423a9f71d433528a5",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_publication_locking.sql",
+        "sha256": "d9b5356d21ae2b1abdf1ecf0578f68b86675aa2c29d2381a4ac207a3e6fa7f8b",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_publication_materializer.sql",
+        "sha256": "07cf2e8f8b828784ce4f032f7c99b4856ccd1f8c14975a029e03bb717f29d147",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_entity_baseline_import.sql",
+        "sha256": "66911df82c2edb23a5e6fb2401fd82fab85ecc1bf08eaaa8a84d78f08bb4237e",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_experience_foundation.sql",
+        "sha256": "8056865e30aa2575dbb55226c585656c371af3332f3fc9cbf5f9ba64fa7cc876",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_identity_replay_context_hardening.sql",
+        "sha256": "0907315d745877360e1e199fdf98257de05baacb838083ab2c587fa203b54733",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_capability_constraint_preflight.sql",
+        "sha256": "0c92b64b49f545fa2acc05f9c66e191e99251691cce99ecdf4bc347e7e1526d4",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_command_hardening.sql",
+        "sha256": "dfd849f56a06556d0f81a418062e1bcf8911b8078b32d8cfc4d3554674317677",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_discovery_current_status.sql",
+        "sha256": "fe70a17c583c1fd7060e7b76eb30830d39f4cd46c3766d70bce1e13666f7bbdd",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/publication/20260910_mesh_global_baseline_import.sql",
+        "sha256": "15f15c1f8ccab064eb9470cc4c0492d3ada1b8b8581b04465c51294f4cfbcec6",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/publication/20260910_mesh_tenant_fork_activation.sql",
+        "sha256": "36ce6573ae3dd14b13c46f25ae1033c45cc30c5e6eed5c2af68028828b7d503d",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/publication/20260910_mesh_tenant_fork_publication.sql",
+        "sha256": "ad7f160bef2b59b6956c6b26314b08ebd5601bc3dd4d943a69fabf267f4b0a07",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_metadata_activation_confirmation.sql",
+        "sha256": "75b21a5486a1acc0373477df0838c43c8c4a8ce8decbbe2dd2782fc5c5f8059d",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_neon_attachment_knowledge_writer.sql",
+        "sha256": "afb3c11f3bca0323e97340ce2abe17f6038cbe37821bfd24836fc68d203dc915",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_operation_projection_release_identity.sql",
+        "sha256": "d7a11980d424719a0b3703299ee8f9c9e21a8fba4e054b12c67a97cad00c0afb",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_saved_view_legacy_grant_cleanup.sql",
+        "sha256": "3594210b8d00f771d1bad11348088242775c6a773616e043fd041ff347730a21",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_saved_view_runtime_grants.sql",
+        "sha256": "847f2fb5ee70300b3b525097bc7ac5527988b4cd51f5980089e4901ca0f64dd1",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_tenant_view_isolation.sql",
+        "sha256": "a1e66a13109ce12c06352816489482f5550e2057c66800593fcd0738ad5964fd",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/tests/integration/fixtures/legacy-upgrades/20260911_company_owned_case_draft.sql",
+        "sha256": "817986953bb04d395d9de5d6873668da2504fd018cb184aba347de44e6c62402",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/tests/integration/fixtures/legacy-upgrades/20260911_company_owned_case_pilot.sql",
+        "sha256": "37128de3851946f0009b7ca083cf76ea033b203ffb22874b75504e3f818bcfc2",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260911_derivative_scan_evidence.sql",
+        "sha256": "a86fcfa6fdffc423d7ba37e5975262a32145a0b4b49ae4e4ede0c4d73d52fc9f",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/repair/reference-permissions/20260911_restore_neon_account_bank_permission_reference.sql",
+        "sha256": "133a4de45b19cdbb34cc5df91490614961e97b5e0730963d47b214dca9fcb5b7",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/publication/20260911_runtime_restoration_hash_dependency.sql",
+        "sha256": "e79a1912e3d9fa3719cc45e3fcb8b5a38e732a060833636cd92d2f29a3c2923b",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260911_runtime_restoration_neon.sql",
+        "sha256": "35d23698686e0dc555bfec69ebdcfb6fabdf1871f979623fe28a435c45295b23",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260911_runtime_restoration_studio.sql",
+        "sha256": "57b6cad0333ab89749752367b06b406acbf531ed9779aad5e6e9ea12cace7620",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql",
+        "sha256": "21724a1f3a0f0e7879cb4dcf23ef57a36931ec4999d6d3eed49ac3da29a93440",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/tests/integration/fixtures/legacy-upgrades/20260912_business_partner_reveal_audit_contract.sql",
+        "sha256": "e5351ddc1aee628668e97236f09430d7149bbb16077370de11433d44d0d75e99",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_case_contract_initial_publication.sql",
+        "sha256": "aab08c4a6d5ebdefd835e52aa8996891acb1424e9e95549370d14d8ce68552bf",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_case_validation_guard.sql",
+        "sha256": "c1f3b85440781c00a1f04ff1b02f771805d24ebd689530e789629aa635a1eda7",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/tests/integration/fixtures/legacy-upgrades/20260912_company_pilot_approver_visibility.sql",
+        "sha256": "9e5b505d52054bc2f93ee5aaff4e165a8648d828dee4508aeea97df768b1e43c",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_company_pilot_lifecycle.sql",
+        "sha256": "64b5aec446700eb4177c40a7678dbb97c704182ae5de3d43dd56efd406bd8aa8",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_control_admin_foundation.sql",
+        "sha256": "254d9fe7d2eb50bba008e2c7982c3734178732fffb56f5f8e534216940a855fd",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_document_collection_publication.sql",
+        "sha256": "ee7f77b9c2731c869b7f26a6b4fa2d408eb18213994165207707126bd24d871a",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/repair/reference-permissions/20260912_finance_journal_activity_permission.sql",
+        "sha256": "d7ef409696569c9bfe29051fae16e2fd37a2555c40b09ed253959aef917a1ec7",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_identity_saga_foundation.sql",
+        "sha256": "51571669e71b71d2e0cb5cff55b973d2dea16511ca4a3752d81318cb8ea5c94a",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_invalidation_scope_regex.sql",
+        "sha256": "14cff72bfb729e341ff788d39c497a03aa6a00c9a26c6f4b8711b59c753b68cd",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_neon_case_lifecycle_restore.sql",
+        "sha256": "518636a8fffd9b7b0b9022370e3c93750196da96e6f59db1780f7b232efdec8f",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/tests/integration/fixtures/legacy-upgrades/20260912_protected_bank_display_suffix.sql",
+        "sha256": "7472e72fa758572e9ce9d11b730d863cb58ec6a2a93e8a036926532098348d1c",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_runtime_contract_code_identity.sql",
+        "sha256": "963326f6dc7e84857deec5339b94e8a49ad1517f19e8aed8964dce62e0a53b23",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260913_reference_choice_recent.sql",
+        "sha256": "08954407b83c3d9465aaae094a2763163b8a1d9f99ed6271e540880b20beb5c9",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/bp-integration-20260921/studio.sql",
+        "sha256": "77bc8bb4b2b41554fcbd090a22f3e29bacae5f8b87058bb13030577b6d9719ae",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/bp-integration-20260921/neon.sql",
+        "sha256": "8ab6bfde2aad357844c6cc07928ca6d9abac8682b1c28305b22d22623d4f1acd",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/bp-integration-20260921/publication-audit.sql",
+        "sha256": "ec73b7bb71645095890cd7384d7e654006d482c4bb15f0040fc899ab220ac383",
+        "matchesBaseline": true
+      },
+      {
+        "path": "scripts/operations/upgrades/bp-integration-20260921/runtime-publication-audit.sql",
+        "sha256": "d0d9df400db4485154895fa729c596d6ba15348510438e0f252fe2b979c90ecc",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260923_collection_configuration.sql",
+        "sha256": "e6a890614ef5a4af13bc6e47ea9f3367d60920c7cf73b89a5efed59146d75847",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260923_notification_configuration.sql",
+        "sha256": "cb2ad1ca79bfd464df25424b1b953fe89e7543da00a00c9329fdbfea8d28dd5d",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260923_notification_compilation_source.sql",
+        "sha256": "31d6f1e9a1652c4c81f812361029cb523597fc756ffb6b8c575e6bd4749c8818",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260923_entity_notification_discovery.sql",
+        "sha256": "5c9a1acb51616024aaab96140a32e65c079ba4e5fea2ffeb416e19a288f01e90",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260923_notification_operations_permissions.sql",
+        "sha256": "53a64412ec4f729b252c6e61caaa58e0e1c1864793f84812429e02f8bdefa6b2",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260922_workforce_as_of_projection.sql",
+        "sha256": "e24f71fd2ea51bf00d8140f46d7e9d0759cc762dfe249241c35e656f70e632d6",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260928_entity_activity_permissions.sql",
+        "sha256": "c276a9f88d343cd2aa4395899c923c217132d7dac6ffb43c258da1131a424e68",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260928_entity_activity_authoring.sql",
+        "sha256": "f18793cdedaa493491785ab5f1285f4363684c471518c38e28eb107753ac49e7",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260928_record_history.sql",
+        "sha256": "c8c671d065dc538e5d17c3b054b9b99ee060eaf687e9da5229840a8b8a26a801",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20260930_entity_export_audit_contracts.sql",
+        "sha256": "0d4ddeb4cca8a0bca74a7d8c44fb4006b0449ea589c69e5c0e56008439af5519",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261001_principal_family_editing.sql",
+        "sha256": "ed0878d7289fb15b3c69f7070bd193ef68adf124ca8f158a280f56abfd47e92f",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261001_entity_key_reference_contract.sql",
+        "sha256": "2fb12b5e60de897e7a472324a46ce4b4454e24559f367f8bd813bc0697418424",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261001_publication_rollback_retry.sql",
+        "sha256": "bbf02e988ad7dc5f2ba1c82f2fc93448e70719c69deecf15d2814962b0c1da1e",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261001_atlas_learning_requalification.sql",
+        "sha256": "7314af7a3190a96847c10de378f59a5de99432604a87847ae7b123aff81915ce",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261001_atlas_learning_attempts.sql",
+        "sha256": "e268ffaad5817f9f6fcb6a54761df439c05c9076027b069964a6700847036cd8",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261001_entity_uuid_key_reference.sql",
+        "sha256": "0bcb63a11b38be1e47daf6f6bde954a25c28c823ad1e4ee21f16f1d49b13fedc",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261001_principal_person_source_authority.sql",
+        "sha256": "0be06079370482c8af7f1e12917680998cfea46d695dffcb843a0b466705ebe8",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261002_projected_profile_source_authority.sql",
+        "sha256": "3d4570e4f2d4eb9efe4ac6fce17288f9d6997643659c9dc953d95a22dc8779f9",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261002_principal_person_link_target.sql",
+        "sha256": "987b280731392a01b17b7c0abc1d9e389329e2aa6aa8ed04e508984a2e5e8a26",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261002_entity_publication_role_prerequisite.sql",
+        "sha256": "edbeb2d1b923332d3b9a8c443d45aebb03ec78356b79c19ddd0e1a1c5dcd2c49",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261002_entity_learning_ancestry.sql",
+        "sha256": "57906c6b3198d7787571324e26dfc49069dd69a709befb105a4a28c72bff6304",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_workforce_entity_read_permissions.sql",
+        "sha256": "098a0bc28b84dc502ea8934b141c83e4d2bfa465b653363958622f6c1892b2ff",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_publication_policy_replacement.sql",
+        "sha256": "d50fb020335acf22d2297226f5bb39612270e107f72f789e079dd0ab77dbde1a",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_coordinated_worker_source_read.sql",
+        "sha256": "08605e15613a8b321d977528c336341faaffd96f3385ee000bafb2535a66b64c",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_coordinated_deployment_recovery.sql",
+        "sha256": "e047b550deb88974629f5765d80d2d648d4ed4d543b0fc825701b3130ee3b1ea",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_deployment_recovery_search_path.sql",
+        "sha256": "54fe4493ce6ca249a3fb58e2e6fccb937efef593a67f41520e33f971aa541492",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_deployment_recovery_worker_access.sql",
+        "sha256": "7610c07de981b6c1584355c0023af61e94598931e4178bc2665a6350b04972e5",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_reviewed_deployment_permission_retry.sql",
+        "sha256": "160371c699ed0146416f24f7444f298db472e72401f03fca2df7e660fed68b0c",
+        "matchesBaseline": true
+      },
+      {
+        "path": "migrations/20261003_mesh_publication_worker_identity.sql",
+        "sha256": "464ffc5a35acfdf40ada0acbc2094eadfc9bc91d09a65f794261c0cb9dde4fca",
+        "matchesBaseline": true
+      }
+    ]
+  },
+  "generatedTypePresence": [
+    {
+      "path": "server/db/prisma/schema.neon.prisma",
+      "reviewedColumnsPresent": true
+    },
+    {
+      "path": "server/db/prisma/schema.studio.prisma",
+      "reviewedColumnsPresent": true
+    },
+    {
+      "path": "server/db/prisma/schema.mesh.prisma",
+      "reviewedColumnsPresent": true
+    },
+    {
+      "path": "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
+      "reviewedColumnsPresent": true
+    },
+    {
+      "path": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+      "reviewedColumnsPresent": true
+    },
+    {
+      "path": "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
+      "reviewedColumnsPresent": true
+    }
+  ],
+  "limits": [
+    "Complete fresh manifests were compared; this is not a live deployment or legacy-baseline runtime qualification.",
+    "Catalog snapshots compare stable definitions and ACLs, excluding OIDs, seed-row identities/timestamps, sequence counters and physical storage.",
+    "No permission, MFA, metadata publication, human-review controls or serving databases were changed."
+  ],
+  "tableInventory": {
+    "scope": "Unique schema-qualified CREATE TABLE declarations with a parenthesized definition in ddl/common/**/*.sql; excludes PARTITION OF declarations and tables generated at runtime. Saved-catalog checks intersect these names with installed ordinary/partitioned tables.",
+    "uniqueNamedDeclarations": 256,
+    "schemasIncludingPublic": 14,
+    "schemaCounts": {
+      "ai": 26,
+      "audit": 10,
+      "authz": 21,
+      "control": 52,
+      "document": 21,
+      "event": 21,
+      "governance": 14,
+      "log": 4,
+      "master": 35,
+      "ops": 19,
+      "public": 1,
+      "runtime_meta": 12,
+      "shared": 15,
+      "snapshot": 5
+    },
+    "sourceDeclarations": [
+      {
+        "table": "ai.ai_action_policy",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_agent_call",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_agent_run",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_calibration_log",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_call_transcript",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_confidence_threshold",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_drift_baseline",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_feedback_log",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_inference_log",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_monitoring_log",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.ai_tool_invocation",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_conversation_retention_policy",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_experience_release",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_knowledge_chunk",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_knowledge_revision",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_knowledge_source",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_learning_candidate",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_message",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_provider_usage",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_run",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_tenant_provider_credential",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_tenant_provider_credential_epoch",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_tenant_quota_policy",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_tenant_quota_reservation",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_tenant_quota_window",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "ai.atlas_thread",
+        "path": "server/db/ddl/common/ai/03_tables.sql"
+      },
+      {
+        "table": "audit.audit_log",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "audit.authorization_decision_evidence",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "audit.export_manifest",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "audit.export_request",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "audit.hash_anchor",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "audit.integrity_check_evidence",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "audit.legal_hold",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "audit.legal_hold_manifest",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "audit.retention_policy",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "audit.security_event",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "authz.application_projection",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.delegation",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.delegation_grant",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.deny_rule",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.entity_operation_binding",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.entity_operation_scope_binding",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.group_member",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.group_role",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.management_receipt",
+        "path": "server/db/ddl/common/authz/13_management.sql"
+      },
+      {
+        "table": "authz.override",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.permission",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.permission_scope_kind",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.plane_membership",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.principal_group",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.projection_provider",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.projection_scope",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.record_acl",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.role",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.role_permission",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.scope_target",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "authz.trusted_device",
+        "path": "server/db/ddl/common/authz/03_tables.sql"
+      },
+      {
+        "table": "control.bank_account_validation_rule",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.connector_health_job",
+        "path": "server/db/ddl/common/control/14_admin_integrations.sql"
+      },
+      {
+        "table": "control.connector_instance",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.connector_type",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cron_schedule",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cron_schedule_change_log",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cycle_carryforward_rule",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cycle_cross_dependency",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cycle_phase",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cycle_task_category",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cycle_task_dependency",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cycle_task_template",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cycle_template_revision",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.cycle_type",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.feature_flag_catalog",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.feature_flag_override",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.integration_endpoint",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.lookup_domain",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.lookup_publication_receipt",
+        "path": "server/db/ddl/common/control/14_admin_integrations.sql"
+      },
+      {
+        "table": "control.lookup_revision",
+        "path": "server/db/ddl/common/control/14_admin_integrations.sql"
+      },
+      {
+        "table": "control.lookup_tenant_revision",
+        "path": "server/db/ddl/common/control/14_admin_integrations.sql"
+      },
+      {
+        "table": "control.lookup_value",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.lookup_value_reference",
+        "path": "server/db/ddl/common/control/14_admin_integrations.sql"
+      },
+      {
+        "table": "control.module",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.notification_provider",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.notification_routing_rule",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.notification_template",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.numbering_policy",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.parameter_definition",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.policy_activation",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.policy_definition",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.policy_evaluation_history",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.policy_rule",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.policy_test_case",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.policy_test_result",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.process_selection_catalog_revision",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.process_selection_publication",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.process_task_rule_proposal",
+        "path": "server/db/ddl/common/control/17_process_task_rule_publication.sql"
+      },
+      {
+        "table": "control.process_task_rule_release",
+        "path": "server/db/ddl/common/control/17_process_task_rule_publication.sql"
+      },
+      {
+        "table": "control.rounding_context",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.rounding_rule",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.subscription_plan_module",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.subscription_plan_usage_limit",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.supplier_activation_policy",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.tenant_module_entitlement_override",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.tenant_parameter_value",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.tenant_usage_limit_override",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.ui_locale_catalog",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.usage_metric_catalog",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.webhook_subscription",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.workspace",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "control.workspace_module",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "document.attachment",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.attachment_derivative",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.attachment_folder",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.attachment_legal_hold",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.attachment_legal_hold_event",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.attachment_link",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.attachment_series",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.attachment_workspace",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.comment",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.comment_draft",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.comment_feed_cursor",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.comment_mention",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.comment_reaction",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.comment_revision",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.content_item",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.content_item_link",
+        "path": "server/db/ddl/common/document/03_foundation_tables.sql"
+      },
+      {
+        "table": "document.entity_case",
+        "path": "server/db/ddl/common/document/03_tables.sql"
+      },
+      {
+        "table": "document.entity_case_command_evidence",
+        "path": "server/db/ddl/common/document/03_tables.sql"
+      },
+      {
+        "table": "document.entity_case_materialization",
+        "path": "server/db/ddl/common/document/03_tables.sql"
+      },
+      {
+        "table": "document.entity_case_validation",
+        "path": "server/db/ddl/common/document/03_tables.sql"
+      },
+      {
+        "table": "document.work_item",
+        "path": "server/db/ddl/common/document/03_tables.sql"
+      },
+      {
+        "table": "event.authorization_invalidation_outbox",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.channel_consent_event",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.command_execution",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.comment_flag",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.descriptor_invalidation_outbox",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.digest_staging",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.integration_delivery",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.integration_inbound_receipt",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.invalidation_dead_letter",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.notification_delivery",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.notification_delivery_claim",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.notification_email_suppression",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.notification_inbox_state",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.notification_message",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.notification_message_attachment",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.notification_outbox_state",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.notification_provider_event",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.outbox",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.push_subscription",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.webhook_subscription",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "event.whatsapp_consent",
+        "path": "server/db/ddl/common/event/03_tables.sql"
+      },
+      {
+        "table": "governance.channel_consent",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.comment_moderation",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.cycle_certification",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.cycle_deviation",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.cycle_run",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.cycle_subject",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.cycle_task",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.cycle_task_dependency",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.legal_hold",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.legal_hold_manifest",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.process_attempt",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.process_document_job",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.process_selection_evidence",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "governance.report_pack",
+        "path": "server/db/ddl/common/governance/03_tables.sql"
+      },
+      {
+        "table": "log.integration_delivery_attempt",
+        "path": "server/db/ddl/common/log/03_tables.sql"
+      },
+      {
+        "table": "log.integration_dlq",
+        "path": "server/db/ddl/common/log/03_tables.sql"
+      },
+      {
+        "table": "log.notification_delivery_attempt",
+        "path": "server/db/ddl/common/log/03_tables.sql"
+      },
+      {
+        "table": "log.notification_dlq",
+        "path": "server/db/ddl/common/log/03_tables.sql"
+      },
+      {
+        "table": "master.address",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.address_event",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.address_link",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.audit_event_contract",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "master.audit_reason_code",
+        "path": "server/db/ddl/common/audit/03_tables.sql"
+      },
+      {
+        "table": "master.brand_profile",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.contact_email",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.contact_link",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.contact_person",
+        "path": "server/db/ddl/common/master/03_tables.sql"
+      },
+      {
+        "table": "master.contact_person_role",
+        "path": "server/db/ddl/common/master/03_tables.sql"
+      },
+      {
+        "table": "master.contact_phone",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.external_reference",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.letterhead",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.module",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.principal",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.principal_identity_binding",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.principal_notification_preference",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.principal_profile",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.principal_surface_arrangement",
+        "path": "server/db/ddl/common/master/22_principal_surface_arrangement.sql"
+      },
+      {
+        "table": "master.principal_ui_preference",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.principal_ui_profile",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.print_profile",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.record_bookmark",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.reference_choice_recent",
+        "path": "server/db/ddl/common/master/21_reference_choice_recent.sql"
+      },
+      {
+        "table": "master.saved_view",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.saved_view_default",
+        "path": "server/db/ddl/common/master/19_entity_saved_views.sql"
+      },
+      {
+        "table": "master.team",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.team_member",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.template",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.template_binding",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.tenant",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.tenant_locale_activation",
+        "path": "server/db/ddl/common/control/03_tables.sql"
+      },
+      {
+        "table": "master.tenant_profile",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.tenant_relationship",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "master.workspace",
+        "path": "server/db/ddl/common/master/03_platform_tables.sql"
+      },
+      {
+        "table": "ops.authorization_operation_cutover_drill",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.authorization_operation_rollout",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.authorization_parity_certification",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.authorization_qualification_cohort_requirement",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.authorization_session_shadow_comparison",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.authorization_shadow_comparison",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.control_runtime_command_approval_decision",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.control_runtime_command_approval_request",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.control_runtime_command_history",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.control_runtime_command_submission",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.identity_admission_shadow_comparison",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.job_execution",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.job_execution_attempt",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.job_execution_command",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.record_edit_lock",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.record_export_request",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.record_import_chunk",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.record_import_session",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "ops.record_transfer_retention_policy",
+        "path": "server/db/ddl/common/ops/03_tables.sql"
+      },
+      {
+        "table": "public.schema_provisions",
+        "path": "server/db/ddl/common/_database/02_schema_provisions.sql"
+      },
+      {
+        "table": "runtime_meta.applied_release",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.applied_release_payload",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.authorization_epoch",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.entity_contract",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.entity_descriptor",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.entity_number_allocation",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.entity_number_counter",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.experience_surface_projection",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.release_activation_event",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.release_activation_head",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.tenant_usage_counter",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "runtime_meta.usage_reservation",
+        "path": "server/db/ddl/common/runtime_meta/03_tables.sql"
+      },
+      {
+        "table": "shared.bank_branch",
+        "path": "server/db/ddl/common/shared/03_bank_master.sql"
+      },
+      {
+        "table": "shared.bank_identifier",
+        "path": "server/db/ddl/common/shared/03_bank_master.sql"
+      },
+      {
+        "table": "shared.bank_institution",
+        "path": "server/db/ddl/common/shared/03_bank_master.sql"
+      },
+      {
+        "table": "shared.classification_scheme",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.commodity_code",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.commodity_crosswalk",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.country",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.currency",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.industry_code",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.industry_crosswalk",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.language",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.locale",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.state_region",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.timezone",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "shared.uom",
+        "path": "server/db/ddl/common/shared/03_tables.sql"
+      },
+      {
+        "table": "snapshot.entity_case_snapshot_lineage",
+        "path": "server/db/ddl/common/snapshot/03_tables.sql"
+      },
+      {
+        "table": "snapshot.entity_snapshot",
+        "path": "server/db/ddl/common/snapshot/03_tables.sql"
+      },
+      {
+        "table": "snapshot.entity_snapshot_identity",
+        "path": "server/db/ddl/common/snapshot/03_tables.sql"
+      },
+      {
+        "table": "snapshot.record_version",
+        "path": "server/db/ddl/common/snapshot/12_record_history.sql"
+      },
+      {
+        "table": "snapshot.subscription_plan_entitlement",
+        "path": "server/db/ddl/common/snapshot/03_tables.sql"
+      }
+    ],
+    "savedCatalogPrimaryKeyChecks": [
+      {
+        "plane": "studio",
+        "instantiatedNamedCommonTables": 254,
+        "allHavePrimaryKey": true,
+        "missingPrimaryKeys": [],
+        "notInstantiated": [
+          "master.contact_person",
+          "master.contact_person_role"
+        ],
+        "savedCatalogHash": "0b156760e2fadfbf6d0a3b5b83446e4de0d86d84fca6acb6647f0fba4ad797df",
+        "rawSnapshotSha256": "98042cec6bc41d58a5d62b7cd903ede9f47aad5fd4a5a0c0423f4c4972916f56"
+      },
+      {
+        "plane": "neon",
+        "instantiatedNamedCommonTables": 256,
+        "allHavePrimaryKey": true,
+        "missingPrimaryKeys": [],
+        "notInstantiated": [],
+        "savedCatalogHash": "0158dc7fd64b432e4743aac60fc7770453867b91b322f1b6e79194848f3f920a",
+        "rawSnapshotSha256": "c5e17169e0eb466a03f243d1aa90990cddba13f19916918155a74e0e04aebac2"
+      },
+      {
+        "plane": "mesh",
+        "instantiatedNamedCommonTables": 256,
+        "allHavePrimaryKey": true,
+        "missingPrimaryKeys": [],
+        "notInstantiated": [],
+        "savedCatalogHash": "80d11e23920178048f5a77e631156f33c90565375aa43f073fddc52e5e860dc8",
+        "rawSnapshotSha256": "232c5ebafe178058492e102a4239406bcbf86ce6f364d4e5f4819fcfcc0f5e92"
+      }
+    ]
+  }
+}

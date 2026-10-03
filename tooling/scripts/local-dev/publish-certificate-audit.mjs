@@ -15,7 +15,7 @@ if(process.argv.includes('--prepare')) {
   const documents = captured.payload.artifacts.map(artifact => {
     const content = artifact.content;
     return keys.includes(content.artifactKey)
-      ? JSON.parse(readFileSync(join(process.cwd(),'metadata/products/mdg/entities',content.artifactKey+'.json'),'utf8'))
+      ? JSON.parse(readFileSync(join(process.cwd(),'metadata/entities',content.artifactKey+'.json'),'utf8'))
       : content;
   });
   for(const key of keys) assert.equal(documents.filter(document => document.artifactKey === key).length,1);
@@ -37,7 +37,7 @@ if(process.argv.includes('--prepare')) {
   const secrets=join(homedir(),'.athyper/instances/dev/secrets');
   const databaseUrl=new URL('postgresql://postgres@'+Object.values(inspection.NetworkSettings.Networks)[0].IPAddress+':5432/athyper_neon');
   databaseUrl.password=privateRead(join(secrets,'postgres-password')).trim();
-  const input={credentials:JSON.parse(privateRead(join(secrets,'dev-publication/client.json'))),databaseUrl:databaseUrl.toString(),candidateOutput:candidate,sourceCompiledRelease:true,authoringRoot:join(process.cwd(),'metadata/products/mdg/entities'),sourceDefinitionReleaseId:baseline.sourceDefinitionReleaseId,expectedActiveArtifactHash:baseline.artifactHash,dryRun:!process.argv.includes('--apply')};
+  const input={credentials:JSON.parse(privateRead(join(secrets,'dev-publication/client.json'))),databaseUrl:databaseUrl.toString(),candidateOutput:candidate,sourceCompiledRelease:true,authoringRoot:join(process.cwd(),'metadata/entities'),sourceDefinitionReleaseId:baseline.sourceDefinitionReleaseId,expectedActiveArtifactHash:baseline.artifactHash,dryRun:!process.argv.includes('--apply')};
   const result=spawnSync('docker',['exec','-i','athyper-dev-source-worker-1','node','--import','tsx',join(process.cwd(),'tooling/scripts/local-dev/publish-scoped-dev-candidate.mts')],{input:JSON.stringify(input),encoding:'utf8',maxBuffer:4194304});
   process.stdout.write(result.stdout);process.stderr.write(result.stderr);process.exitCode=result.status??1;
 }

@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 from verify_live_schema import connection_environment
 
-ROOT = Path(__file__).resolve().parents[3] / 'metadata/products/mdg/entities'
+ROOT = Path(__file__).resolve().parents[3] / 'metadata/entities'
 URL = os.environ.get('NEON_SCHEMA_DATABASE_URL')
 if not URL:
     raise SystemExit('NEON_SCHEMA_DATABASE_URL is required for the permission-catalog release gate')

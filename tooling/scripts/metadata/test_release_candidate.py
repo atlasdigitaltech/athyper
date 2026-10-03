@@ -8,7 +8,7 @@ from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent
 REPOSITORY = TOOLS.parents[2]
-CANDIDATE = REPOSITORY / 'metadata/products/mdg/review/release-candidates/business-partner-collaboration-ca08.json'
+CANDIDATE = REPOSITORY / 'metadata/review/release-candidates/business-partner-collaboration-ca08.json'
 
 
 class ReleaseCandidateTests(unittest.TestCase):

@@ -9,7 +9,7 @@ import { EntitySuccessorPublicationWorkflow, type EntitySuccessorPublicationPort
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 function fixture() {
-  const product = parseTableEntityProduct(JSON.parse(readFileSync(new URL("../../../../../../../metadata/products/shared/entities/principal/definition.json", import.meta.url), "utf8")));
+  const product = parseTableEntityProduct(JSON.parse(readFileSync(new URL("../../../../../../../metadata/entities/principal/definition.json", import.meta.url), "utf8")));
   const graph = structuredClone(product.definition);
   const surface = graph.surfaces!.find(s => s.surfaceKind === "list")!;
   surface.layoutConfig = { ...surface.layoutConfig, tableEntityProduct: { schema: "athyper.table-entity-source/1", moduleCode: product.moduleCode, productHash: "a".repeat(64), targetPlanes: product.planes } };

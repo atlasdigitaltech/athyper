@@ -11,7 +11,7 @@ function fixture(options: {
 } = {}) {
   const graphs = ["principal", "principal_profile", "principal_notification_preference", "principal_ui_profile"].map(code => {
     const product = parseTableEntityProduct(JSON.parse(readFileSync(new URL(
-      `../../../../../../../metadata/products/shared/entities/${code}/definition.json`, import.meta.url), "utf8")));
+      `../../../../../../../metadata/entities/${code}/definition.json`, import.meta.url), "utf8")));
     const { graph } = compileTableEntityProduct(product, "neon");
     // Isolate embedded-list dependency behavior from unrelated key-reference
     // catalogs. Live candidate preflight checks both against actual databases.

@@ -266,8 +266,9 @@ AS $$
     SELECT CASE coalesce(
         nullif(current_setting('app.current_plane_key', true), ''),
         CASE current_database()
+            WHEN 'athyper_studio' THEN 'studio'
             WHEN 'athyper_mesh' THEN 'mesh'
-            ELSE 'neon'
+            WHEN 'athyper_neon' THEN 'neon'
         END
     )
         WHEN 'studio' THEN 'studio'

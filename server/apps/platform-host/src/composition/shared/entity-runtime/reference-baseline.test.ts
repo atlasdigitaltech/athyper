@@ -15,7 +15,7 @@ it.each([
     const candidate = prepareReferenceRuntime(
       fileURLToPath(
         new URL(
-          `../../../../../../../metadata/products/shared/entities/${entity}/`,
+          `../../../../../../../metadata/entities/${entity}/`,
           import.meta.url,
         ),
       ),

@@ -111,6 +111,7 @@ CREATE TABLE authz.scope_target (
     created_by              uuid                 NOT NULL,
     updated_at              timestamptz,
     updated_by              uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT scope_target_pkey PRIMARY KEY (id),
     CONSTRAINT scope_target_tenant_id_uq UNIQUE (tenant_id, id),
@@ -160,6 +161,7 @@ CREATE TABLE authz.role (
     created_by          uuid                       NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT role_pkey PRIMARY KEY (id),
     CONSTRAINT role_tenant_id_uq UNIQUE (tenant_id, id),
@@ -198,6 +200,7 @@ CREATE TABLE authz.role_permission (
     created_by          uuid        NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT role_permission_pkey PRIMARY KEY (id),
     CONSTRAINT role_permission_tenant_id_uq UNIQUE (tenant_id, id),
@@ -226,6 +229,7 @@ CREATE TABLE authz.principal_group (
     created_by          uuid                      NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT principal_group_pkey PRIMARY KEY (id),
     CONSTRAINT principal_group_tenant_id_uq UNIQUE (tenant_id, id),
@@ -283,6 +287,7 @@ CREATE TABLE authz.group_member (
     created_by          uuid                     NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT group_member_pkey PRIMARY KEY (id),
     CONSTRAINT group_member_tenant_id_uq UNIQUE (tenant_id, id),
@@ -317,6 +322,7 @@ CREATE TABLE authz.group_role (
     created_by          uuid                     NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT group_role_pkey PRIMARY KEY (id),
     CONSTRAINT group_role_tenant_id_uq UNIQUE (tenant_id, id),
@@ -353,6 +359,7 @@ CREATE TABLE authz.deny_rule (
     created_by          uuid                     NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT deny_rule_pkey PRIMARY KEY (id),
     CONSTRAINT deny_rule_tenant_id_uq UNIQUE (tenant_id, id),
@@ -399,6 +406,7 @@ CREATE TABLE authz.delegation (
     created_by          uuid                     NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT delegation_pkey PRIMARY KEY (id),
     CONSTRAINT delegation_tenant_id_uq UNIQUE (tenant_id, id),
@@ -459,6 +467,7 @@ CREATE TABLE authz.delegation_grant (
     scope_target_id     uuid        NOT NULL,
     created_at          timestamptz NOT NULL DEFAULT now(),
     created_by          uuid        NOT NULL,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT delegation_grant_pkey PRIMARY KEY (id),
     CONSTRAINT delegation_grant_tenant_id_uq UNIQUE (tenant_id, id),
@@ -492,6 +501,7 @@ CREATE TABLE authz.override (
     created_by          uuid                     NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT override_pkey PRIMARY KEY (id),
     CONSTRAINT override_tenant_id_uq UNIQUE (tenant_id, id),
@@ -558,6 +568,7 @@ CREATE TABLE authz.record_acl (
     created_by          uuid                 NOT NULL,
     updated_at          timestamptz,
     updated_by          uuid,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT record_acl_pkey PRIMARY KEY (id),
     CONSTRAINT record_acl_tenant_id_uq UNIQUE (tenant_id, id),
@@ -616,6 +627,7 @@ CREATE TABLE authz.trusted_device (
     revocation_reason   text,
     created_at          timestamptz NOT NULL DEFAULT now(),
     created_by          uuid        NOT NULL,
+    version                 integer NOT NULL DEFAULT 1 CHECK (version > 0),
 
     CONSTRAINT trusted_device_pkey PRIMARY KEY (id),
     CONSTRAINT trusted_device_tenant_id_uq UNIQUE (tenant_id, id),

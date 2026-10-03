@@ -5,7 +5,7 @@ import {
   compileSharedReferenceProduct,
 } from "./product.js";
 const root = new URL(
-  "../../../../../../../metadata/products/shared/entities/",
+  "../../../../../../../metadata/entities/",
   import.meta.url,
 );
 const source = (entity = "country") =>

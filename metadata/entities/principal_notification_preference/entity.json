@@ -1,0 +1,5 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "principal_notification_preference",
+  "definition": "definition.json"
+}

@@ -19,9 +19,20 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 
 ## Entity list identity and record navigation
 
+- Define navigation groups, section behavior, visible columns and readable
+  identity explicitly in Meta Entity properties and governed, published metadata.
+  The shared Entity Framework must render those properties and report missing
+  configuration instead of inventing tabs or choosing a display field.
+- Do not synthesize an Overview tab, infer section behavior from section keys,
+  or select the first available field as a display identity. The absence of
+  entity-name branches does not make such presentation fallbacks metadata-driven.
 - Never display UUIDs in Entity List Views, including default or saved-view
   columns, embedded lists, cards, search hints, or fallback record labels.
   Keep technical identities internal for routing, selection and API operations.
+- Enforce the no-UUID presentation requirement through shared metadata validation.
+  Reject invalid list presentation configuration with an actionable configuration
+  error; silently hiding fields or substituting another field at runtime is not
+  a replacement for valid Meta Entity properties.
 - Use readable business codes, names and reference labels from published Meta
   Entity properties. Never synthesize a visible Record ID column when presentation
   metadata is missing. Missing display configuration requires a shared framework
@@ -30,8 +41,9 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
   the existing Navigation Tabs and Section Tabs/menu components. Honor published
   navigation groups and section order for every entity.
 - The full-width "Record sections" dropdown fallback on Entity detail pages is
-  deprecated and must not be restored. Section-only metadata must use the same
-  shared navigation components; do not add another entity-specific presentation.
+  deprecated and must not be restored. Section-only metadata must declare its
+  navigation configuration before using the shared navigation components; do not
+  invent that configuration or add another entity-specific presentation.
 
 ## No hardcoded entities
 
@@ -57,6 +69,21 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 - Before implementing an entity fix, verify that the same implementation works
   for every eligible entity through metadata. A successful request for a named
   entity does not establish framework correctness.
+
+## No hardcoded business permissions or entity codes in SQL
+
+- Do not hardcode business permission codes or entity codes in SQL scripts,
+  routines, migrations, seeds, or SQL embedded in application code. Resolve
+  these values through governed, published metadata and the existing shared
+  Entity Framework; do not use fixed codes to select entity behavior or grant
+  roles or permissions to users.
+- The only exception is an explicit, finite list of permission codes or entity
+  codes used to identify records for a scoped data correction. Document the
+  correction's purpose, tenant and plane scope, and affected records. This
+  exception does not authorize runtime dispatch, authorization exceptions,
+  onboarding grants, or bypassing publication and independent-review controls.
+- Preserve immutable applied migration hashes. Correct historical behavior
+  through a forward migration rather than rewriting an applied SQL migration.
 
 ## Permissions are defined in Meta Entity properties
 

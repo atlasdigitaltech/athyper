@@ -14,18 +14,18 @@ if(process.argv.includes('--prepare')){
  const documents=captured.payload.artifacts.map(a=>structuredClone(a.content));
  if(collections){
   for(const key of ['business_partner/presentation.detail','business_partner/presentation.section.identity','business_partner/presentation.section.industries','business_partner/presentation.section.commodities','business_partner_industry_classification/core','business_partner_commodity_classification/core']){
-   const doc=JSON.parse(readFileSync(root+'/metadata/products/mdg/entities/'+key+'.json','utf8'));
+   const doc=JSON.parse(readFileSync(root+'/metadata/entities/'+key+'.json','utf8'));
    const index=documents.findIndex(a=>a.artifactKey===key);if(index<0)documents.push(doc);else documents[index]=doc;
   }
- }else if(registration){ documents.push(JSON.parse(readFileSync(root+'/metadata/products/mdg/entities/business_partner_request/flow.partner.new.json','utf8')));
+ }else if(registration){ documents.push(JSON.parse(readFileSync(root+'/metadata/entities/business_partner_request/flow.partner.new.json','utf8')));
  }else if(displayOnly||direct){
   for(const key of ['business_partner_commodity_classification/core','business_partner/presentation.section.commodities'])
-   documents[documents.findIndex(a=>a.artifactKey===key)]=JSON.parse(readFileSync(root+'/metadata/products/mdg/entities/'+key+'.json','utf8'));
+   documents[documents.findIndex(a=>a.artifactKey===key)]=JSON.parse(readFileSync(root+'/metadata/entities/'+key+'.json','utf8'));
  }else{
  for(const key of ['business_partner_commodity_classification/core','business_partner/presentation.section.commodities','business_partner/presentation.section.certificates'])
-  documents.push(JSON.parse(readFileSync(root+'/metadata/products/mdg/entities/'+key+'.json','utf8')));
+  documents.push(JSON.parse(readFileSync(root+'/metadata/entities/'+key+'.json','utf8')));
  const detail=documents.find(a=>a.artifactKey==='business_partner/presentation.detail');
- const source=JSON.parse(readFileSync(root+'/metadata/products/mdg/entities/business_partner/presentation.detail.json','utf8'));
+ const source=JSON.parse(readFileSync(root+'/metadata/entities/business_partner/presentation.detail.json','utf8'));
  for(const section of ['commodities','certificates']){
   const entry=source.sections.find(s=>s.sectionKey===section);detail.sections.splice(section==='commodities'?2:detail.sections.findIndex(s=>s.sectionKey==='qualifications-certificates')+1,0,entry);
   detail.dependencies.push(entry.presentationRef.replace(/\.json$/,''));
@@ -49,7 +49,7 @@ if(process.argv.includes('--prepare')){
  const credentials=JSON.parse(privateRead(secrets+'/dev-publication/client.json'));
  const inspection=JSON.parse(execFileSync('docker',['inspect','athyper-dev-db-1'],{encoding:'utf8'}))[0];
  const databaseUrl=new URL('postgresql://postgres@'+Object.values(inspection.NetworkSettings.Networks)[0].IPAddress+':5432/athyper_neon');databaseUrl.password=privateRead(secrets+'/postgres-password').trim();
- const input={credentials,databaseUrl:databaseUrl.toString(),candidateOutput:candidate,authoringRoot:root+'/metadata/products/mdg/entities',sourceDefinitionReleaseId:'cf773137-0b77-48ca-89ca-3d3c24c67933',expectedActiveArtifactHash:captured.head.artifact_hash,dryRun:!process.argv.includes('--apply')};
+ const input={credentials,databaseUrl:databaseUrl.toString(),candidateOutput:candidate,authoringRoot:root+'/metadata/entities',sourceDefinitionReleaseId:'cf773137-0b77-48ca-89ca-3d3c24c67933',expectedActiveArtifactHash:captured.head.artifact_hash,dryRun:!process.argv.includes('--apply')};
  const result=spawnSync('docker',['exec','-i','athyper-dev-source-worker-1','node','--import','tsx',root+'/tooling/scripts/local-dev/publish-scoped-dev-candidate.mts'],{input:JSON.stringify(input),encoding:'utf8',maxBuffer:4194304});
  process.stdout.write(result.stdout);process.stderr.write(result.stderr);process.exitCode=result.status??1;
 }

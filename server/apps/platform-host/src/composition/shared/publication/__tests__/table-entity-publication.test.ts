@@ -19,7 +19,7 @@ function fixture(code: string, plane: "studio" | "neon" | "mesh" = "neon") {
     JSON.parse(
       readFileSync(
         new URL(
-          `../../../../../../../../metadata/products/shared/entities/${code}/definition.json`,
+          `../../../../../../../../metadata/entities/${code}/definition.json`,
           import.meta.url,
         ),
         "utf8",

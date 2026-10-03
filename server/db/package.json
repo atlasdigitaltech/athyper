@@ -103,6 +103,7 @@
     "db:operate:studio:project-admin-identities": "tsx scripts/operations/studio/project-meta-entity-admin-identities.ts",
     "db:operate:publication:canary": "tsx scripts/operations/publication/rehearse-publication-canary.ts",
     "db:verify:ddl-model": "tsx scripts/checks/ddl/three-plane-model.ts",
+    "db:verify:common-ddl-equivalence": "tsx scripts/checks/ddl/common-ddl-equivalence.ts",
     "db:verify:governed-lifecycle-g0": "tsx scripts/checks/ddl/governed-lifecycle-g0.ts",
     "db:verify:business-partner-live-catalog-parity": "tsx scripts/checks/ddl/business-partner-live-catalog-parity.ts",
     "db:verify:archetypes": "tsx scripts/checks/ddl/archetypes.ts",

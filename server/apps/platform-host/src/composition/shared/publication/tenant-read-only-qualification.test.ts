@@ -11,7 +11,7 @@ function target() {
     JSON.parse(
       readFileSync(
         new URL(
-          "../../../../../../../metadata/products/shared/entities/person/definition.json",
+          "../../../../../../../metadata/entities/person/definition.json",
           import.meta.url,
         ),
         "utf8",

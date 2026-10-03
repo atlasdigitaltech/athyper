@@ -60,7 +60,7 @@ it("enforces a product-free import boundary", () => {
 
 it.each(["studio", "neon", "mesh"] as const)("qualifies advanced signed-source prerequisites on %s and fails closed without processing", async plane => {
   const f = fixture();
-  const members = JSON.parse(readFileSync(new URL("../../../../../../../../metadata/products/shared/entities/country/capabilities.json", import.meta.url), "utf8"));
+  const members = JSON.parse(readFileSync(new URL("../../../../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8"));
   for (const member of members) {
     member.declaration.ownerEntityCode = member.binding.ownerEntityCode = "test_dictionary";
     if (member.binding.attachments) member.binding.attachments.bindingRef = "test_dictionary/operation#attachmentBinding";

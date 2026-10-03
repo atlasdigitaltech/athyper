@@ -1,0 +1,6 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "person_address_use",
+  "definition": "definition.json",
+  "placement": "placement.json"
+}

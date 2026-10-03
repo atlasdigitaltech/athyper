@@ -13,7 +13,7 @@ const source = (entity: string) =>
   JSON.parse(
     readFileSync(
       new URL(
-        `../../../../../../../metadata/products/shared/entities/${entity}/definition.json`,
+        `../../../../../../../metadata/entities/${entity}/definition.json`,
         import.meta.url,
       ),
       "utf8",

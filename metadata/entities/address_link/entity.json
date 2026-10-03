@@ -1,0 +1,8 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "address_link",
+  "artifacts": [
+    "core.json",
+    "operation.json"
+  ]
+}

@@ -9,7 +9,7 @@ export function maskedExportProduct(
 ) {
   const product = JSON.parse(
     readFileSync(
-      `${root}/metadata/products/shared/entities/principal/definition.json`,
+      `${root}/metadata/entities/principal/definition.json`,
       "utf8",
     ),
   );

@@ -8,7 +8,7 @@ import ts from "typescript";
 
 function fixture() {
   // Reuse validated metadata as test data, not runtime entity dispatch logic.
-  const definitions = JSON.parse(readFileSync(new URL("../../../../../metadata/products/shared/entities/country/capabilities.json", import.meta.url), "utf8"));
+  const definitions = JSON.parse(readFileSync(new URL("../../../../../metadata/entities/country/capabilities.json", import.meta.url), "utf8"));
   const context = { tenantId: "tenant-a", principalId: "actor-a", planeKey: "neon", permissions: { allowed: [] } } as unknown as VerifiedRequestContext;
   const subject = { context, entityCode: "country", recordId: "record-a" };
   const coordinate = { tenantId: context.tenantId, principalId: context.principalId, planeKey: context.planeKey, entityCode: subject.entityCode };

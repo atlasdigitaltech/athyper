@@ -33,7 +33,7 @@ async function main() {
     throw Error(
       "Use --product=<metadata product> [--check|--confirm=DEV-IMPORT-REFERENCE-DRAFT]",
     );
-  const root = resolve("metadata/products/shared/entities");
+  const root = resolve("metadata/entities");
   const path = resolve(directory);
   const child = relative(root, path);
   if (!child || child.startsWith("..") || child.includes("/"))

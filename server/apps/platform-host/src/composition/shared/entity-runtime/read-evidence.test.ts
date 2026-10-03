@@ -18,7 +18,7 @@ it("refreshes Country IAM/metadata once per read while authorizing every field a
     JSON.parse(
       readFileSync(
         new URL(
-          "../../../../../../../metadata/products/shared/entities/country/definition.json",
+          "../../../../../../../metadata/entities/country/definition.json",
           import.meta.url,
         ),
         "utf8",

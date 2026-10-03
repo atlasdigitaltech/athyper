@@ -7,7 +7,7 @@ import { amendSuccessorCapabilities } from "../publication/amend-successor-capab
 
 it.each(["studio","neon","mesh"] as const)("enrolls Activity into an immutable successor on %s, preserving read-only operations",plane=>{
   const root=new URL("../../../../../../../metadata/",import.meta.url);
-  const definition=JSON.parse(readFileSync(new URL("products/shared/entities/country/definition.json",root),"utf8"));
+  const definition=JSON.parse(readFileSync(new URL("entities/country/definition.json",root),"utf8"));
   definition.definition.entityCode="example_reference";definition.definition.storageObject="example_reference";
   const profile=JSON.parse(readFileSync(new URL("profiles/activity/standard.v1.json",root),"utf8"));
   const member=prepareActivityCapabilityMember("example_reference",{schema:"athyper.entity-activity-source/1",profile:{code:profile.profileCode,version:1}},()=>profile,

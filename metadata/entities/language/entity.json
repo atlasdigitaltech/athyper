@@ -1,0 +1,9 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "language",
+  "definition": "definition.json",
+  "artifacts": [
+    "core.json"
+  ],
+  "placement": "placement.json"
+}

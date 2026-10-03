@@ -1,0 +1,12 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "country",
+  "definition": "definition.json",
+  "artifacts": [
+    "core.json"
+  ],
+  "placement": "placement.json",
+  "localization": "localization.json",
+  "capabilities": "capabilities.json",
+  "activity": "activity.json"
+}

@@ -38,7 +38,7 @@ if (mode === "prepare") {
   const product = maskedExportProduct(root);
   const directory = join(
     root,
-    "metadata/products/shared/entities",
+    "metadata/entities",
     product.definition.entity.entityCode,
   );
   assert.ok(

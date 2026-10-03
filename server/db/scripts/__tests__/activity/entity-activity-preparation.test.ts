@@ -9,7 +9,7 @@ import { createCapabilityProfileFileResolver } from "@athyper/server-plane-studi
 
 const product = fileURLToPath(
   new URL(
-    "../../../../../metadata/products/shared/entities/country/",
+    "../../../../../metadata/entities/country/",
     import.meta.url,
   ),
 );

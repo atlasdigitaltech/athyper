@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.entity-source/1",
+  "entityCode": "industry_code",
+  "artifacts": [
+    "core.json"
+  ]
+}

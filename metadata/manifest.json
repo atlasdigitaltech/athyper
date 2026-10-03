@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.metadata-workspace/1",
+  "entitiesRoot": "entities",
+  "profilesRoot": "profiles",
+  "schemasRoot": "schemas",
+  "reviewRoot": "review"
+}

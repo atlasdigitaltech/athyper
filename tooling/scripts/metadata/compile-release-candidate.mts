@@ -21,10 +21,10 @@ for (let index = 2; index < process.argv.length; index += 2) {
   args.set(key.slice(2), value);
 }
 const repository = resolve(import.meta.dirname, "../../..");
-const entitiesRoot = resolve(repository, "metadata/products/mdg/entities");
+const entitiesRoot = resolve(repository, "metadata/entities");
 const candidatePath = resolve(
   repository,
-  args.get("candidate") ?? "metadata/products/mdg/review/release-candidates/business-partner-collaboration-ca08.json",
+  args.get("candidate") ?? "metadata/review/release-candidates/business-partner-collaboration-ca08.json",
 );
 const candidate = JSON.parse(await readFile(candidatePath, "utf8")) as Candidate;
 assertCandidate(candidate);

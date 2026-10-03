@@ -408,6 +408,7 @@ CREATE TABLE ops.record_import_session (
     error_code text, error_detail text, started_at timestamptz,
     created_at timestamptz NOT NULL, created_by uuid NOT NULL,
     cancelled_at timestamptz, completed_at timestamptz, updated_at timestamptz,
+    source_purged_at timestamptz, chunks_purged_at timestamptz, error_report_purged_at timestamptz,
     CONSTRAINT record_import_session_pkey PRIMARY KEY (tenant_id,id),
     CONSTRAINT record_import_session_entity_chk CHECK(entity_code~'^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT record_import_session_operation_chk CHECK(import_operation IN('create','update','upsert','delete','replace')),
@@ -422,12 +423,6 @@ CREATE TABLE ops.record_import_session (
     CONSTRAINT record_import_session_runtime_json_chk CHECK(jsonb_typeof(progress)='object' AND jsonb_typeof(receipt)='object'),
     CONSTRAINT record_import_session_error_chk CHECK((error_code IS NULL OR length(error_code)<=200) AND (error_detail IS NULL OR length(error_detail)<=2000))
 );
-
-ALTER TABLE ops.record_import_session ADD COLUMN IF NOT EXISTS import_operation text NOT NULL DEFAULT 'create';
-DO $$ BEGIN
-  ALTER TABLE ops.record_import_session ADD CONSTRAINT record_import_session_operation_chk CHECK(import_operation IN('create','update','upsert','delete','replace'));
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
 
 CREATE TABLE ops.record_import_chunk (
     tenant_id uuid NOT NULL, session_id uuid NOT NULL, chunk_index integer NOT NULL,
@@ -447,6 +442,7 @@ CREATE TABLE ops.record_export_request (
     progress jsonb NOT NULL DEFAULT '{}'::jsonb, receipt jsonb NOT NULL DEFAULT '{}'::jsonb,
     requested_at timestamptz NOT NULL DEFAULT now(), started_at timestamptz,
     completed_at timestamptz, cancelled_at timestamptz,
+    artifact_purged_at timestamptz,
     CONSTRAINT record_export_request_pkey PRIMARY KEY(tenant_id,id),
     CONSTRAINT record_export_request_entity_chk CHECK(entity_code~'^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT record_export_request_filter_chk CHECK(jsonb_typeof(exact_filter)='object'),
@@ -456,12 +452,6 @@ CREATE TABLE ops.record_export_request (
     CONSTRAINT record_export_request_error_chk CHECK((error_code IS NULL OR length(error_code)<=200) AND (error_detail IS NULL OR length(error_detail)<=2000))
 );
 
-ALTER TABLE ops.record_import_session
-  ADD COLUMN IF NOT EXISTS source_purged_at timestamptz,
-  ADD COLUMN IF NOT EXISTS chunks_purged_at timestamptz,
-  ADD COLUMN IF NOT EXISTS error_report_purged_at timestamptz;
-ALTER TABLE ops.record_export_request
-  ADD COLUMN IF NOT EXISTS artifact_purged_at timestamptz;
 
 CREATE TABLE ops.record_transfer_retention_policy (
     tenant_id uuid NOT NULL,

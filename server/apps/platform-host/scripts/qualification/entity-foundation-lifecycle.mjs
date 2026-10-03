@@ -401,7 +401,7 @@ export async function qualifyEntityFoundationLifecycle({
     for (const plane of planes) {
       const product = JSON.parse(
         readFileSync(
-          `${root}/metadata/products/shared/entities/${code}/definition.json`,
+          `${root}/metadata/entities/${code}/definition.json`,
           "utf8",
         ),
       );

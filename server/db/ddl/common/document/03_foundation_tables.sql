@@ -15,6 +15,9 @@ CREATE TABLE document.attachment_series (
     created_by               uuid                                NOT NULL,
     updated_at               timestamptz,
     updated_by               uuid,
+    display_name             text
+        CHECK (display_name IS NULL OR (btrim(display_name) <> '' AND length(display_name) <= 1024)),
+    revision_no              integer NOT NULL DEFAULT 1 CHECK (revision_no > 0),
 
     CONSTRAINT attachment_series_pkey PRIMARY KEY (id),
     CONSTRAINT attachment_series_tenant_id_uq UNIQUE (tenant_id, id),
@@ -63,6 +66,11 @@ CREATE TABLE document.attachment (
     pii_types                     jsonb                        NOT NULL DEFAULT '[]'::jsonb,
     pii_scanned_at                timestamptz,
     series_id                     uuid                         NOT NULL,
+    admitted_release_hash         text
+        CHECK (admitted_release_hash IS NULL OR admitted_release_hash ~ '^sha256:[a-f0-9]{64}$'),
+    admitted_policy_hash          text
+        CHECK (admitted_policy_hash IS NULL OR admitted_policy_hash ~ '^sha256:[a-f0-9]{64}$'),
+    draft_id                      uuid,
 
     CONSTRAINT attachment_pkey PRIMARY KEY (id),
     CONSTRAINT attachment_tenant_id_uq UNIQUE (tenant_id, id),
@@ -94,6 +102,8 @@ CREATE TABLE document.attachment (
             text_extraction_status IS NULL
             OR text_extraction_status IN ('pending', 'extracted', 'skipped', 'failed')
         ),
+    CONSTRAINT attachment_admission_pair
+        CHECK ((admitted_release_hash IS NULL) = (admitted_policy_hash IS NULL)),
     CONSTRAINT attachment_status_audit_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT attachment_audit_pair_chk
@@ -166,6 +176,8 @@ CREATE TABLE document.attachment_link (
     folder_id     uuid,
     created_at    timestamptz NOT NULL DEFAULT now(),
     created_by    uuid        NOT NULL,
+    category_code            text
+        CHECK (category_code IS NULL OR category_code ~ '^[a-z][a-z0-9_]{1,62}$'),
 
     CONSTRAINT attachment_link_pkey PRIMARY KEY (id),
     CONSTRAINT attachment_link_tenant_id_uq UNIQUE (tenant_id, id),
@@ -262,6 +274,7 @@ CREATE TABLE document.comment_draft (
     created_by        uuid                              NOT NULL,
     updated_at        timestamptz,
     updated_by        uuid,
+    expires_at              timestamptz NOT NULL DEFAULT (now()+interval '30 days'),
 
     CONSTRAINT comment_draft_pkey PRIMARY KEY (id),
     CONSTRAINT comment_draft_tenant_id_uq UNIQUE (tenant_id, id),
