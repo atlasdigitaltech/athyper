@@ -29,6 +29,7 @@ type ScopeAdapterProps = {
 /** Only published resolver identifiers in this registry may receive a context selector. */
 const workContextResolvers = new Set([
   "platform.document_relationship.v1",
+  "neon.directory.fields.v1",
   "neon.business_partner.operating_organization.v1",
 ]);
 

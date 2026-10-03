@@ -148,3 +148,10 @@ it("the seven BP authoring removals carry explicit scope and cannot publish with
     ).toThrow("PARENT_RUNTIME_REQUIRED");
   }
 });
+
+it("requires an enforcing runtime for field-scoped split sources", () => {
+  const core = { artifactType: "core", artifactKey: "shipment/core", entityCode: "shipment", content: {
+    directoryScope: { schemaVersion: 1, mode: "organization", fieldBinding: { resolver: "neon.directory.fields.v1", organizationField: "org_id" } },
+  } } as unknown as CompiledEntityArtifactV2;
+  expect(() => validateCompiledRuntimeContracts([core])).toThrow("COMPILED_ENTITY_DIRECTORY_RUNTIME_REQUIRED");
+});

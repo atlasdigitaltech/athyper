@@ -1,3 +1,4 @@
+import { resolveDirectoryFieldScope } from "./directory-field-scope.js";
 import {
   DOCUMENT_RELATIONSHIP_RESOLVER,
   documentCollectionRegistry,
@@ -56,6 +57,7 @@ export function createNeonRecordCollectionScopeResolver(
       input: Parameters<RecordCollectionScopeResolver["resolve"]>[0],
     ): Promise<RecordCollectionScopeResolution> {
       const rule = input.descriptor.directoryScope;
+      if (rule?.fieldBinding) return resolveDirectoryFieldScope(input, catalog);
       if (
         input.coordinate?.partnerRole &&
         !["supplier", "customer"].includes(input.coordinate.partnerRole)

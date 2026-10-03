@@ -8,7 +8,7 @@
   "plane": "neon",
   "directoryScope": {
     "schemaVersion": 1,
-    "mode": "company",
+    "mode": "tenant",
     "parent": {
       "entityCode": "business_partner",
       "relationshipKey": "business_partner_tax_registration"
@@ -210,7 +210,7 @@
     }
   ],
   "businessContext": {
-    "scopeKind": "company_optional",
+    "scopeKind": "tenant",
     "recordOwnershipSource": "persisted_record",
     "selectorMayChangeOwnership": false,
     "aggregateAccess": "explicit_authorization_only"
@@ -271,7 +271,7 @@
   ],
   "defaultsProfile": "platform.core-field-defaults.v1",
   "defaultsProfileRef": "platform/core-field-defaults.v1.json",
-  "artifactHash": "sha256:bf05178bc34f75f000a1c668b816d31d874b82cbb7236eb535ddd221be56c442",
+  "artifactHash": "sha256:f9769a4ee3219674ee5082048e794046286f05a58076634dd4d436c2ddb7b03a",
   "query": {
     "search": [],
     "filters": [],

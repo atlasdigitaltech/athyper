@@ -9,6 +9,10 @@
   "directoryScope": {
     "schemaVersion": 1,
     "mode": "organization",
+    "fieldBinding": {
+      "resolver": "neon.directory.fields.v1",
+      "organizationField": "operating_organization_id"
+    },
     "parent": {
       "entityCode": "business_partner",
       "relationshipKey": "business_partner_operating_organization_assignment"
@@ -87,6 +91,8 @@
     },
     {
       "key": "operating_organization_id",
+      "writePolicy": "system_managed",
+      "uiFacets": { "visibility": "hidden", "editability": "readonly" },
       "binding": {
         "sourceObject": "master.business_partner_operating_organization_assignment",
         "column": "operating_organization_id"
@@ -232,7 +238,7 @@
   ],
   "defaultsProfile": "platform.core-field-defaults.v1",
   "defaultsProfileRef": "platform/core-field-defaults.v1.json",
-  "artifactHash": "sha256:c966d6e649ad1a522727a745831afb1345e688816614c239fe5b9ed6d47b7482",
+  "artifactHash": "sha256:b12626c2c87386e1ece9cd42e465784487ec0cda5d77644322d6ee2a73676a13",
   "query": {
     "search": [],
     "filters": [],

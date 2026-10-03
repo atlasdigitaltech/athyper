@@ -67,6 +67,8 @@ export function validateCompiledRuntimeContracts(
       !byKey.has(`${core.entityCode}/runtime`)
     )
       throw new Error("COMPILED_ENTITY_PARENT_RUNTIME_REQUIRED");
+    if (scope?.fieldBinding && !byKey.has(`${core.entityCode}/runtime`))
+      throw new Error("COMPILED_ENTITY_DIRECTORY_RUNTIME_REQUIRED");
   }
   for (const artifact of artifacts.filter(
     (artifact) => artifact.artifactType === "runtime_contract",
@@ -92,9 +94,10 @@ export function validateCompiledRuntimeContracts(
         ? undefined
         : parseEntityDirectoryScope(core.content.directoryScope);
     if (
+      JSON.stringify(coreScope?.fieldBinding ?? null) !== JSON.stringify(descriptor.directoryScope?.fieldBinding ?? null) ||
       JSON.stringify(coreScope?.parent ?? null) !==
         JSON.stringify(descriptor.directoryScope?.parent ?? null) ||
-      (coreScope?.parent !== undefined &&
+      ((coreScope?.parent !== undefined || coreScope?.fieldBinding !== undefined) &&
         coreScope.mode !== descriptor.directoryScope?.mode)
     )
       throw new Error("COMPILED_ENTITY_PARENT_SCOPE_MISMATCH");

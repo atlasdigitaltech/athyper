@@ -8,7 +8,7 @@
   "plane": "neon",
   "directoryScope": {
     "schemaVersion": 1,
-    "mode": "company",
+    "mode": "tenant",
     "parent": {
       "entityCode": "business_partner",
       "relationshipKey": "business_partner_banking"
@@ -259,7 +259,7 @@
     }
   ],
   "businessContext": {
-    "scopeKind": "company_optional",
+    "scopeKind": "tenant",
     "recordOwnershipSource": "persisted_record",
     "selectorMayChangeOwnership": false,
     "aggregateAccess": "explicit_authorization_only"
@@ -358,5 +358,5 @@
     "filters": [],
     "sorts": []
   },
-  "artifactHash": "sha256:da057870ac534dac1d5363bdfab51c6db5b9e05ecbc8860d4b7c24aacf761dd9"
+  "artifactHash": "sha256:2d95cd3dc57d91651ba1124620d985664920f4aabb22726ee778a39200d2c1de"
 }

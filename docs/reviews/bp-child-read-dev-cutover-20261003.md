@@ -109,10 +109,13 @@ this DEV process.
    Qualification's context references, coverage and condition summaries require
    their complete authorized projections. Banking still needs its lifecycle and
    reveal-link projection; industry needs its readable lookup projection.
-2. Complete supported company/organization scope bindings for banking, tax and
-   operating-organization assignment. The new source modes deliberately fail
-   closed with the current unsupported resolver; changing them to tenant-wide is
-   not an acceptable completion step. Preserve masked identifier/tax reads.
+2. Apply the owner's subsequent clarification: banking and tax have no company
+   relation at this stage. Their drafts now require tenant plus BP parent scope.
+   Organization assignment uses the new explicit field-bound resolver; qualify
+   the complete published runtime before activation. See the
+   [scope implementation checkpoint](bp-child-scope-implementation-20261003.md).
+   Preserve masked identifier/tax reads. The owner-directed scope change does not
+   waive parent admission or authorize a fallback for unresolved organization scope.
 3. Produce the complete successor through Studio's existing product workflow,
    including list operations, readable identity/navigation and all current BP
    behavior. Source owner mappings alone are insufficient to qualify this release.

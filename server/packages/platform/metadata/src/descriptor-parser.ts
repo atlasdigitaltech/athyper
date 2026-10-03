@@ -1,4 +1,4 @@
-import { parseEntityKeyReference } from "@athyper/server-contract-metadata";
+import { validateDirectoryScopeFields, parseEntityKeyReference } from "@athyper/server-contract-metadata";
 import {
   parseRecordOwnerAccess,
   parseRecordMutationPolicy,
@@ -270,6 +270,11 @@ export function parseEntityRuntimeDescriptor(
     value["lifecycle"] === undefined
       ? undefined
       : object(value["lifecycle"], "lifecycle");
+  const directoryScope = value["directoryScope"] === undefined
+    ? undefined : parseEntityDirectoryScope(value["directoryScope"]);
+  if (directoryScope?.fieldBinding && (planeKey !== "neon" || !storage["tenantField"]))
+    throw new TypeError("Directory field scope requires Neon tenant storage");
+  validateDirectoryScopeFields(directoryScope, fields);
   const releaseNo = Number(row.release_no);
   if (!Number.isSafeInteger(releaseNo) || releaseNo < 1)
     throw new Error("Invalid descriptor release number");
@@ -343,9 +348,7 @@ export function parseEntityRuntimeDescriptor(
     ...(value["mutationPolicy"] === undefined
       ? {}
       : { mutationPolicy: parseRecordMutationPolicy(value["mutationPolicy"]) }),
-    ...(value["directoryScope"] === undefined
-      ? {}
-      : { directoryScope: parseEntityDirectoryScope(value["directoryScope"]) }),
+    ...(directoryScope ? { directoryScope } : {}),
     ...(collectionRelationship ? { collectionRelationship } : {}),
     operations,
     ...(lifecycleValue

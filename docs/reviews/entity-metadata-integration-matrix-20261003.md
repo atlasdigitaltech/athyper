@@ -1,5 +1,7 @@
 # Per-entity source integration matrix and current plan
 
+**Current BP scope correction:** banking and tax use tenant plus mandatory BP parent scope, with no company relation at this stage per the owner. Organization assignment declares the shared organization-field binding. See [implementation and publication status](bp-child-scope-implementation-20261003.md); none of these draft changes establishes DEV activation.
+
 **Current review gate:** the [authoring-module decision](entity-authoring-module-contract-decision-20261003.md) must precede further registry successor preparation. Studio registry identity, domain module and runtime navigation are separate concerns; declaring Studio authorship does not prove publication in any target plane. The proposed separation and five affected products await an owner decision.
 
 Date: 3 October 2026. Static source inventory; effective publication and runtime behavior are unverified. Exact operation, permission, policy, ownership, scope, profile, navigation and storage declarations are recorded with source JSON pointers in [the full matrix](entity-metadata-integration-matrix-20261003.json). Null evidence is not an authorization decision.

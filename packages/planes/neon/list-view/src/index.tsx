@@ -222,7 +222,12 @@ function NeonRequiredContext({
           operatingOrganizationIds: organizationId ? [organizationId] : [],
           companyCodeIds: nextCompany ? [nextCompany] : [],
         });
-        onChange(organizationId ? { operatingOrganizationId: organizationId } : undefined);
+        onChange({
+          ...(value?.parentEntityCode ? { parentEntityCode: value.parentEntityCode,
+            parentRecordId: value.parentRecordId, relationshipKey: value.relationshipKey,
+            parentDescriptorHash: value.parentDescriptorHash } : {}),
+          ...(organizationId ? { operatingOrganizationId: organizationId } : {}),
+        });
         setPendingCompanyCodeId(undefined);
         setPendingOrganizationId(undefined);
       }}

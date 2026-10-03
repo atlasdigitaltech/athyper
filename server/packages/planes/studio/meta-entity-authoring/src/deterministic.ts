@@ -564,6 +564,14 @@ export function compileGraph(
       ? []
       : [parseEntityDirectoryScope(surface.layoutConfig["directoryScope"])],
   );
+  for (const rule of directoryRules) {
+    for (const key of [rule.fieldBinding?.companyField, rule.fieldBinding?.organizationField]) {
+      if (key === undefined) continue;
+      const field = graph.fields.find(field => field.fieldKey === key);
+      if (!field || field.dataType !== "uuid" || field.writeMode !== "read_only" || field.valueOrigin !== "stored")
+        throw new TypeError("Directory scope requires an immutable stored UUID field: " + key);
+    }
+  }
   if (directoryRules.length > 1)
     throw new TypeError("Only one directory scope rule is allowed");
   const ownerAccessBindings = (graph.surfaces ?? []).flatMap(surface => surface.layoutConfig?.ownerAccess === undefined ? [] : [parseRecordOwnerAccess(surface.layoutConfig.ownerAccess)]);

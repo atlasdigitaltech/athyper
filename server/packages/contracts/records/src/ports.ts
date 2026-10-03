@@ -67,6 +67,13 @@ export type RecordCollectionScopeConstraint =
       readonly predicates: readonly { readonly field: string; readonly value: string | number | boolean }[];
     }>
   | Readonly<{
+      readonly kind: "entity.directory.fields.v1";
+      readonly entityCode: string;
+      readonly storageSchema: string;
+      readonly storageObject: string;
+      readonly predicates: readonly { readonly field: string; readonly value: string | number | boolean }[];
+    }>
+  | Readonly<{
       readonly kind: "neon.business_partner.directory.v1";
       readonly partnerRole?: "supplier" | "customer";
       readonly eligibleIds?: readonly string[];

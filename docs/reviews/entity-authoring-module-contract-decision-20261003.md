@@ -6,6 +6,8 @@ Owner follow-up, 3 October: **record this decision for later; implementation is 
 
 ## Studio publication readiness after deferral
 
+Subsequent owner scope decision: banking and tax require no company relation at this stage. The [scope implementation checkpoint](bp-child-scope-implementation-20261003.md) supersedes company-scope requirements for those two children; organization scope and the projection/publication gates still apply.
+
 Studio remains the required publication path, but this reviewed change set is **not ready to publish**. The three compiled module candidates are unsigned review artifacts, not approved releases; seven candidates need exact predecessor-source reconciliation and five await the deferred contract decision. BP publication additionally requires implemented and qualified projection readers, company/organization scope support, and resolution of the tenant override. Exact releases need the required human authorship and independent review before activation.
 
 Continue independent implementation and evidence preparation without mutating module successors while the decision is deferred. In particular, BP shared projection and scope work can progress as implementation work; it must not activate the DEV cutover. Reassess readiness per exact release and target plane rather than treating source completion or Studio catalog availability as blanket publication readiness.

@@ -151,3 +151,14 @@ it("does not hide malformed legacy display metadata", () => {
     },
   } })).toThrow();
 });
+
+it("rejects a directory binding whose scope field is unavailable or not immutable UUID storage", () => {
+  const source = row({});
+  const scoped = { ...source, compiled_json: { ...source.compiled_json,
+    directoryScope: { schemaVersion: 1, mode: "organization", fieldBinding: { resolver: "neon.directory.fields.v1", organizationField: "org_id" } },
+  } };
+  expect(() => parseEntityRuntimeDescriptor(scoped)).toThrow("immutable stored UUID field");
+  const scopeField = { key: "org_id", storagePath: "org_id", type: "uuid", required: true, writableOn: [] };
+  expect(parseEntityRuntimeDescriptor({ ...scoped, compiled_json: { ...scoped.compiled_json, fields: [scopeField] } }).directoryScope?.fieldBinding?.organizationField).toBe("org_id");
+  expect(() => parseEntityRuntimeDescriptor({ ...scoped, compiled_json: { ...scoped.compiled_json, fields: [{ ...scopeField, writableOn: ["patch"] }] } })).toThrow("immutable stored UUID field");
+});

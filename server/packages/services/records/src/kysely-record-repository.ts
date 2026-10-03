@@ -1,3 +1,4 @@
+import { validateDirectoryFieldConstraint } from "./directory-field-constraint.js";
 import { entityListRelativeDateRange } from "@athyper/contract-platform-entity-list";
 import { compileStandardViewRelationship } from "./standard-view-relationship-sql.js";
 import { validateFilterValue } from "./filter-value-validation.js";
@@ -113,7 +114,8 @@ function baseConditions(descriptor: EntityRuntimeDescriptor, tenantId: string, a
 export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeDescriptor, tenantId: string, constraint: RecordRepositoryListInput["collectionScope"][number], compilers?: ReadonlyMap<string, RecordCollectionScopeSqlCompiler>): RawBuilder<unknown> {
   const registered = compilers?.get(constraint.kind);
   if (registered) return registered.compile(descriptor, tenantId, constraint);
-  if (constraint.kind === "entity.parent.v1") {
+  if (constraint.kind === "entity.parent.v1" || constraint.kind === "entity.directory.fields.v1") {
+    validateDirectoryFieldConstraint(descriptor, constraint);
     if (descriptor.entityCode !== constraint.entityCode || descriptor.storage.schema !== constraint.storageSchema || descriptor.storage.object !== constraint.storageObject || !constraint.predicates.length)
       throw new Error("Parent scope storage mismatch");
     return sql`(${sql.join(constraint.predicates.map(predicate => {

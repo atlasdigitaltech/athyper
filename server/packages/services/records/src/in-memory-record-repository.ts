@@ -1,3 +1,4 @@
+import { validateDirectoryFieldConstraint } from "./directory-field-constraint.js";
 import { entityListRelativeDateRange } from "@athyper/contract-platform-entity-list";
 import { randomUUID } from "node:crypto";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
@@ -91,7 +92,8 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
 function toStorage(descriptor: EntityRuntimeDescriptor, input: Readonly<Row>): Row { const fields = new Map(descriptor.fields.map((field) => [field.key, field.storagePath])); return Object.fromEntries(Object.entries(input).map(([key, value]) => [fields.get(key) ?? key, value])); }
 function visible(descriptor: EntityRuntimeDescriptor, row: Row): boolean { return (!descriptor.storage.softDeleteField || row[descriptor.storage.softDeleteField] === null || row[descriptor.storage.softDeleteField] === undefined) && (descriptor.recordPredicates ?? []).every(predicate => matches(row, descriptor, predicate)); }
 function collectionScopeMatches(descriptor: EntityRuntimeDescriptor, row: Row, constraint: RecordRepositoryListInput["collectionScope"][number]): boolean {
-  if (constraint.kind === "entity.parent.v1") {
+  if (constraint.kind === "entity.parent.v1" || constraint.kind === "entity.directory.fields.v1") {
+    validateDirectoryFieldConstraint(descriptor, constraint);
     if (constraint.entityCode !== descriptor.entityCode || constraint.storageSchema !== descriptor.storage.schema ||
         constraint.storageObject !== descriptor.storage.object || !constraint.predicates.length ||
         constraint.predicates.some(predicate => !descriptor.fields.some(field => field.key === predicate.field)))
