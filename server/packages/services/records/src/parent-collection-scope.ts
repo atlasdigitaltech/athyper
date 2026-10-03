@@ -15,6 +15,10 @@ export function createParentCollectionScopeResolver(options: {
     async resolve(input) {
       const { parentEntityCode, parentRecordId, relationshipKey, parentDescriptorHash, ...rest } =
         input.coordinate ?? {};
+      const required = input.descriptor.directoryScope?.parent;
+      if (required && (parentEntityCode !== required.entityCode || relationshipKey !== required.relationshipKey ||
+          !parentRecordId || !parentDescriptorHash))
+        return { status: "forbidden" as const, code: "ENTITY_PARENT_ACCESS_DENIED", message: "Published parent scope is required.", labels: [] };
       const baseline = (await options.fallback?.resolve({
         ...input,
         coordinate: rest,
@@ -57,6 +61,7 @@ export function createParentCollectionScopeResolver(options: {
       );
       if (
         !parent ||
+        parent.directoryScope?.parent !== undefined ||
         parent.entityCode !== parentEntityCode ||
         parent.planeKey !== input.context.planeKey ||
         (parentDescriptorHash !== undefined && parent.compiledHash !== parentDescriptorHash) ||
@@ -93,6 +98,10 @@ export function createParentCollectionScopeResolver(options: {
       });
       if (!record.data || record.data[parent.storage.idField] !== parentRecordId ||
         (Object.hasOwn(record.data, parent.storage.tenantField) && record.data[parent.storage.tenantField] !== input.context.tenantId)) return denied;
+      if (required && (!parentTitle(parent, record.data) ||
+          parent.fields.find(field => field.key === parent.recordPresentation?.titleField)?.type !== "string"))
+        return { status: "forbidden" as const, code: "ENTITY_PARENT_PRESENTATION_REQUIRED",
+          message: "Publish a readable string title for the parent record scope.", labels: [] };
       const predicates: { field: string; value: string | number | boolean }[] =
         [];
       for (const mapping of relation.fields) {

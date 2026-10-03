@@ -164,6 +164,45 @@
     },
     "serverDependencies": {},
     "storage": {},
-    "validationAuthority": {}
+    "validationAuthority": {},
+    "directoryScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "mode"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "mode": {
+          "enum": [
+            "tenant",
+            "organization",
+            "company",
+            "organization_company"
+          ]
+        },
+        "parent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "entityCode",
+            "relationshipKey"
+          ],
+          "properties": {
+            "entityCode": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{1,62}$"
+            },
+            "relationshipKey": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{1,62}$"
+            }
+          }
+        }
+      }
+    }
   }
 }

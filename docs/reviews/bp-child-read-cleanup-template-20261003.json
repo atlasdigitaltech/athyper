@@ -1,0 +1,79 @@
+{
+  "schema": "permission-cleanup/1",
+  "plane": "neon",
+  "tenantIds": [],
+  "actorId": null,
+  "permissions": [
+    {
+      "code": "neon.business_partner_banking.read",
+      "entityCode": "business_partner_banking",
+      "successorReleaseId": null,
+      "successorArtifactHash": null,
+      "expectedParent": {
+        "entityCode": "business_partner",
+        "relationshipKey": null
+      }
+    },
+    {
+      "code": "neon.business_partner_governance_relation.read",
+      "entityCode": "business_partner_governance_relation",
+      "successorReleaseId": null,
+      "successorArtifactHash": null,
+      "expectedParent": {
+        "entityCode": "business_partner",
+        "relationshipKey": null
+      }
+    },
+    {
+      "code": "neon.business_partner_identifier.read",
+      "entityCode": "business_partner_identifier",
+      "successorReleaseId": null,
+      "successorArtifactHash": null,
+      "expectedParent": {
+        "entityCode": "business_partner",
+        "relationshipKey": null
+      }
+    },
+    {
+      "code": "neon.business_partner_industry_classification.read",
+      "entityCode": "business_partner_industry_classification",
+      "successorReleaseId": null,
+      "successorArtifactHash": null,
+      "expectedParent": {
+        "entityCode": "business_partner",
+        "relationshipKey": null
+      }
+    },
+    {
+      "code": "neon.business_partner_operating_organization_assignment.read",
+      "entityCode": "business_partner_operating_organization_assignment",
+      "successorReleaseId": null,
+      "successorArtifactHash": null,
+      "expectedParent": {
+        "entityCode": "business_partner",
+        "relationshipKey": null
+      }
+    },
+    {
+      "code": "neon.business_partner_qualification.read",
+      "entityCode": "business_partner_qualification",
+      "successorReleaseId": null,
+      "successorArtifactHash": null,
+      "expectedParent": {
+        "entityCode": "business_partner",
+        "relationshipKey": null
+      }
+    },
+    {
+      "code": "neon.business_partner_tax_registration.read",
+      "entityCode": "business_partner_tax_registration",
+      "successorReleaseId": null,
+      "successorArtifactHash": null,
+      "expectedParent": {
+        "entityCode": "business_partner",
+        "relationshipKey": null
+      }
+    }
+  ],
+  "purpose": "Remove seven redundant BP child-read permission identities and their scoped role-permission edges after parent-scoped successor publication. Preserve roles, groups, group membership, denies and immutable history. Tenant scope and actor must be filled from reviewed target inventory."
+}

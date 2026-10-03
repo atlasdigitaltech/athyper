@@ -5,11 +5,12 @@ import { registerEntityListRoutes } from "./entity-list-routes.js";
 
 it("admits the parent publication pin through the HTTP contract and rejects incomplete scope", async () => {
   const list = vi.fn(async () => ({ rows: [] }));
+  const detailRead = vi.fn(async () => ({ descriptor: {}, record: {} }));
   const app = express();
   registerEntityListRoutes(app, {
     authenticate: (_req, _res, next) => next(),
     readContext: () => ({ tenantId: "tenant", principalId: "principal", planeKey: "neon" }) as never,
-    lists: { list } as never,
+    lists: { list, detailRead } as never,
   });
   app.use((error: { statusCode?: number }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     res.status(error.statusCode ?? 500).json({ rejected: true });
@@ -28,6 +29,12 @@ it("admits the parent publication pin through the HTTP contract and rejects inco
     };
     expect((await fetch(`${url}?${new URLSearchParams(scope)}`)).status).toBe(200);
     expect(list).toHaveBeenCalledWith(expect.objectContaining({ scopeCoordinate: scope }));
+    const detailUrl = url.replace('/list', `/records/${scope.parentRecordId}/detail`);
+    expect((await fetch(`${detailUrl}?${new URLSearchParams(scope)}`)).status).toBe(200);
+    expect(detailRead).toHaveBeenCalledWith(expect.any(Object), 'principal_notification_preference', scope.parentRecordId, expect.any(Function), scope);
+    detailRead.mockClear();
+    expect((await fetch(`${detailUrl}?parentDescriptorHash=${scope.parentDescriptorHash}`)).status).toBe(400);
+    expect(detailRead).not.toHaveBeenCalled();
     list.mockClear();
     expect((await fetch(`${url}?parentDescriptorHash=${scope.parentDescriptorHash}`)).status).toBe(400);
     expect(list).not.toHaveBeenCalled();

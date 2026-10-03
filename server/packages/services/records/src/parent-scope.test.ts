@@ -82,3 +82,29 @@ it("names the parent scope by its published title, never by its id when the titl
   const fallback = await f.collectionScopes.resolve({ context: f.context, descriptor: f.child, operationCode: "read", coordinate: f.scope } as never);
   expect(fallback.labels.find((label) => label.key === "parent")?.value).toBe(f.scope.parentRecordId);
 });
+
+it.each([['account_root', 'account_line'], ['shipment', 'shipment_item']])(
+  'requires published parent admission for %s/%s without a child grant', async (parentCode, childCode) => {
+    const f = fixture();
+    Object.assign(f.parent, { entityCode: parentCode, recordPresentation: { ...f.parent.recordPresentation, titleField: 'name' } });
+    Object.assign(f.child, {
+      entityCode: childCode,
+      operations: { read: { code: 'read', permissionCode: 'parent.read' }, list: { code: 'list', permissionCode: 'parent.read' } },
+      directoryScope: { schemaVersion: 1, mode: 'tenant', parent: { entityCode: parentCode, relationshipKey: 'notifications' } },
+    });
+    const relation = f.parent.recordPresentation!.entityRelationships![0]!;
+    Object.assign(relation, { targetEntity: childCode });
+    Object.assign(f.scope, { parentEntityCode: parentCode });
+    Object.assign(f.context.permissions, { allowed: ['parent.read'] });
+    // Storage remains the original fixture tables: the contract does not dispatch by entity name.
+    expect((await f.list()).data.map(row => row.id)).toEqual([childId(1), childId(2)]);
+    await expect(f.list({ scopeCoordinate: undefined })).rejects.toMatchObject({ code: 'ENTITY_PARENT_ACCESS_DENIED' });
+    await expect(f.list({ scopeCoordinate: { ...f.scope, parentDescriptorHash: undefined } })).rejects.toMatchObject({ code: 'ENTITY_PARENT_ACCESS_DENIED' });
+    await expect(f.list({ scopeCoordinate: { ...f.scope, parentEntityCode: 'another_parent' } })).rejects.toThrow();
+    await expect(f.queries.get({ context: f.context, entityCode: childCode, recordId: childId(1) })).rejects.toThrow();
+    expect((await f.queries.get({ context: f.context, entityCode: childCode, recordId: childId(1), scopeCoordinate: f.scope })).data?.id).toBe(childId(1));
+    expect((await f.queries.get({ context: f.context, entityCode: childCode, recordId: childId(3), scopeCoordinate: f.scope })).data).toBeNull();
+    f.revoke();
+    await expect(f.list()).rejects.toThrow();
+  },
+);

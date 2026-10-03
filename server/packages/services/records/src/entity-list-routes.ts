@@ -133,7 +133,7 @@ export function registerEntityListRoutes(
   registerReadRoute(application, options, contracts.ownRecord, (request, context) =>
     options.lists.ownRecord(context, entityCodeParameter(request.params["entityCode"])));
   registerReadRoute(application, options, contracts.detailRead, (request, context, timing) =>
-    options.lists.detailRead(context, entityCodeParameter(request.params["entityCode"]), recordId(request.params["recordId"]), timing));
+    options.lists.detailRead(context, entityCodeParameter(request.params["entityCode"]), recordId(request.params["recordId"]), timing, parseEntityListScopeCoordinate(request.query)));
   registerReadRoute(
     application,
     options,
@@ -468,7 +468,7 @@ const contracts = {
     summary: "Read an authorized detail descriptor and projected record together",
     tags: ["Entity runtime"],
     authenticated: true,
-    request: {},
+    request: { query: { type: "object", additionalProperties: false, properties: scopeProperties } },
     responses: {
       200: { description: "Authorized detail read", body: { type: "object", additionalProperties: false,
         required: ["descriptor", "record"], properties: { descriptor: body, record: body } } },

@@ -57,6 +57,7 @@ export interface ListRecordsQuery {
 }
 
 export interface GetRecordQuery {
+  readonly scopeCoordinate?: RecordListScopeCoordinate;
   readonly context: VerifiedRequestContext;
   readonly entityCode: string;
   readonly recordId: string;

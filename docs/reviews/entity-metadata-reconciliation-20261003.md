@@ -279,3 +279,48 @@ Current common-code exceptions also differ between compiler and database paths. 
 No entity-specific apps, duplicate routes, parallel authorization engines, hardcoded entity/permission dispatch or new MFA flows are permitted. All fixes belong in the shared Entity Framework with business handlers behind registered owning-domain contracts. This update corrects planning inputs only; active permissions and runtime behavior are unchanged.
 
 Cleanup-input validation: all 69 worksheet rows retained; 82 unique decisions reconcile to 18 keep / 19 replace / 14 remove / 31 review-required; every explicit removal matches its ledger occurrences. All 248 before-values, 215 source/profile hashes and four MFA properties remain unchanged. Local document links/anchors and whitespace checks pass. These are offline review-input checks, not evidence that active catalog cleanup or user-flow validation has occurred.
+
+## BP child-read implementation checkpoint — 3 October 2026
+
+**Implementation started; the seven active permission removals are not complete.** The owner explicitly authorized proving parent-scoped access and keeping a cleanup script. Focused unit and disposable-database checks for this slice supersede the earlier documentation-only no-test boundary; no live deployment/publication or permission mutation has occurred.
+
+Implemented in the existing Entity Framework:
+
+- `EntityDirectoryScopeV1.parent` explicitly requires a published parent entity and relationship. The existing parent-collection resolver rejects absent/wrong coordinates, missing parent descriptor hash, inaccessible parents and unsupported nested parent requirements. It retains baseline tenant/company constraints and requires a readable title for this new scope mode.
+- Standard record/detail queries carry the same scope coordinate into the existing list executor, so a supplied child ID cannot escape the locked parent filter. Generic records and Entity detail routes accept that coordinate through the existing parser. No new endpoint, provider stack, entity dispatch or permission-name inference was introduced.
+- Split publication validation rejects a required-parent core without an enforcing runtime contract and rejects mismatched core/runtime parent rules. Native compilation already carries the validated directory scope into the descriptor. No existing child source permission has been cleared merely because a new type exists.
+
+Focused tests demonstrate the same behavior for two unrelated entity pairs using only the parent's read permission: scoped rows are returned; missing/wrong parent, stale/missing hash, wrong-parent detail and revocation are denied. Existing parent tests cover tenant, search/filter/count/cursor constraints. This proves the shared query mechanism, not the actual seven BP projections or deployed user flows.
+
+### Seven-entity cutover blockers
+
+The [finite cleanup template](bp-child-read-cleanup-template-20261003.json) enumerates the seven owner-requested redundant read codes. All remain **required removals**, with entity cutover pending:
+
+| Child | Source storage contract | Remaining prerequisite before clearing its old binding |
+| --- | --- | --- |
+| `business_partner_banking` | Handler projection over account/instrument/bank-directory sources | Registered owning-domain projection and actual payment-instrument owner relationship; no inferred direct BP foreign key. |
+| `business_partner_governance_relation` | Handler projection | Publish immutable owner/tenant mapping; the current visible projection has no BP owner field. |
+| `business_partner_identifier` | Table | Complete published parent relationship and enforcing runtime descriptor; preserve reveal/masked projection. |
+| `business_partner_industry_classification` | Handler projection with industry lookup | Validate owning-domain projection, parent mapping and readable lookup dependency. |
+| `business_partner_operating_organization_assignment` | Table | Publish exact BP mapping while preserving operating-organization scope. |
+| `business_partner_qualification` | Handler projection | Publish immutable owner/tenant mapping and preserve qualification domain semantics; current projected fields do not establish owner equality. |
+| `business_partner_tax_registration` | Table | Complete published parent/runtime binding while preserving tax reveal/protection. |
+
+The current split operation sources reference proposed entity-specific reader handlers. The inspected runtime sources do not establish callable implementations for those names; a registry-catalog entry is not implementation evidence. Existing source relation templates also are not the standard runtime `recordPresentation.entityRelationships` contract. Do not synthesize that relationship or replace handler projections with raw table reads to make permission removal appear complete. Resolve these owning-domain/shared-provider prerequisites, then prepare and independently publish the exact successor. Active target release IDs and hashes have not been obtained.
+
+### Cleanup script and operator procedure
+
+[prepare-permission-cleanup.py](../../tooling/scripts/operations/prepare-permission-cleanup.py) generates SQL and **never connects or executes it**. Copy the seven-row template into a reviewed, environment-specific manifest; fill the explicit tenant IDs, audit actor, exact expected parent relationships and active successor source-release IDs/artifact hashes. Unresolved template values deliberately prevent generating apply SQL. No tenant, actor or approval identity is inferred.
+
+```sh
+python3 tooling/scripts/operations/prepare-permission-cleanup.py --manifest /path/to/reviewed-cleanup.json --output /path/to/permission-cleanup-inventory.sql
+python3 tooling/scripts/operations/prepare-permission-cleanup.py --manifest /path/to/reviewed-cleanup.json --output /path/to/permission-cleanup-apply.sql --apply
+```
+
+The first output reports permission → role → group relationships and every catalog foreign-key dependency, then rolls back. The second output uses a transaction and locks, verifies the configured database plane and explicit tenant scope, refuses active roles, unresolved FK dependencies (including denies/delegations/ACLs), any old-code reference in active release payloads, or missing/mismatched active platform-owned parent-scoped successors. It removes only role-permission edges and retires the old catalog identity, preserving roles, group-role memberships, groups and audit identity. Catalog retirement keeps historical identity while making it unavailable for assignment; it is not physical deletion of immutable history. Unknown dependencies stop the correction for explicit reconciliation; the script never drops constraints or deletes denies to force success.
+
+Run generated SQL only through the existing authorized database administration process after independent release review and verification. Required roles must already be in a state allowing governed modification; this script does not suspend roles or grant replacement access. PostgreSQL `row_security=off` is used to make filtered inventories error rather than silently omit tenant dependencies; it does not confer bypass privileges or disable table policies. Capture the report/receipt in the environment's approved audit location. An error rolls back the correction.
+
+**Rebuild gate remains open:** the historical Neon runtime-permission seed still contains these codes. Preserve applied migration hashes. Prepare and validate the forward cleanup/bootstrap strategy before claiming obsolete permissions cannot be recreated. Running the retirement script alone does not close this gate. The live catalog, role/deny dependencies, all target deployments and non-recreation behavior remain unverified.
+
+Validation: 63 focused records tests, one directory-scope contract test and eight compiled-runtime-contract tests passed. Production TypeScript checks passed for records, metadata contracts and platform metadata. The full records test typecheck reports existing optional-permission fixture errors outside this change. The cleanup script passed against a network-isolated disposable PostgreSQL 16 fixture: read-only report rollback, active-role refusal, deny dependency refusal, out-of-scope tenant refusal, active old-code refusal, wrong/missing successor refusal, role/group preservation, retirement and repeat execution. The fixture does not certify production schema triggers, grants or live release state. No MFA settings/code, active entity definitions, applied migrations or live permissions changed.

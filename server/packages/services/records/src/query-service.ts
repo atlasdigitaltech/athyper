@@ -414,6 +414,8 @@ export function createRecordQueryService<Transaction = unknown>(
         query.context,
         descriptor,
       );
+      if (query.scopeCoordinate && !descriptor.directoryScope && !descriptor.collectionRelationship)
+        throw new RecordServiceError(409, "ENTITY_PARENT_DETAIL_SCOPE_REQUIRED", "Publish a directory scope before using parent-scoped detail reads");
       if (descriptor.directoryScope || descriptor.collectionRelationship) {
         await authorizeRecordListRead(
           options.authorizer,
@@ -425,6 +427,7 @@ export function createRecordQueryService<Transaction = unknown>(
           context: query.context,
           entityCode: query.entityCode,
           recordIds: [query.recordId],
+          scopeCoordinate: query.scopeCoordinate,
           limit: 1,
         });
         return { data: result.result.data[0] ?? null, descriptor: result.descriptor, readableFields: result.readableFields };
@@ -515,7 +518,7 @@ async function resolveCollectionScope(
 ): Promise<RecordCollectionScopeResolution> {
   if (
     !resolver &&
-    (query.scopeCoordinate?.parentEntityCode ||
+    (descriptor.directoryScope?.parent || query.scopeCoordinate?.parentEntityCode ||
       query.scopeCoordinate?.parentRecordId ||
       query.scopeCoordinate?.relationshipKey || query.scopeCoordinate?.parentDescriptorHash)
   )

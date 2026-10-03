@@ -106,7 +106,8 @@ export interface EntityListService {
     timing?: (stage: string, durationMs: number) => void,
   ): Promise<EntityDetailDescriptorV1>;
   detailRead(context: VerifiedRequestContext, entityCode: string, recordId: string,
-    timing?: (stage: string, durationMs: number) => void): Promise<EntityDetailReadV1>;
+    timing?: (stage: string, durationMs: number) => void,
+    scopeCoordinate?: ListRecordsQuery["scopeCoordinate"]): Promise<EntityDetailReadV1>;
   record(
     context: VerifiedRequestContext,
     entityCode: string,
@@ -157,6 +158,7 @@ export function createEntityListService(options: {
       entityCode: string,
       recordId?: string,
       timing: (stage: string, durationMs: number) => void = () => {},
+      scopeCoordinate?: ListRecordsQuery["scopeCoordinate"],
     ) {
       let previous = performance.now();
       const stage = (name: string) => {
@@ -171,7 +173,7 @@ export function createEntityListService(options: {
       if (recordId && !options.queries)
         throw new RecordServiceError(503, "ENTITY_RECORD_ADAPTER_UNAVAILABLE", "The record adapter is unavailable");
       const admitted = recordId && options.queries?.getWithProjection
-        ? await options.queries.getWithProjection({ context, entityCode, recordId }) : undefined;
+        ? await options.queries.getWithProjection({ context, entityCode, recordId, scopeCoordinate }) : undefined;
       const descriptor = admitted?.descriptor ?? await descriptorFor(options.metadata, context, entityCode);
       stage(admitted ? "authorized_record" : "metadata");
       if (!admitted) await requireOperation(
@@ -184,7 +186,7 @@ export function createEntityListService(options: {
       stage("authorization");
       let data = admitted?.data;
       if (recordId) {
-        data = admitted ? admitted.data : (await options.queries!.get({ context, entityCode, recordId })).data;
+        data = admitted ? admitted.data : (await options.queries!.get({ context, entityCode, recordId, scopeCoordinate })).data;
         if (!data)
           throw new RecordServiceError(
             404,

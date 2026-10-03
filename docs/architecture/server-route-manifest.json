@@ -1093,7 +1093,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 49,
+          "line": 59,
           "declaredPath": "/api/records/:entityCode/:recordId",
           "kind": "contract"
         }
@@ -10445,7 +10445,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 48,
+          "line": 58,
           "declaredPath": "/api/records/:entityCode/:recordId",
           "kind": "contract"
         }
@@ -16470,7 +16470,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 47,
+          "line": 57,
           "declaredPath": "/api/records/:entityCode",
           "kind": "contract"
         }
@@ -16635,7 +16635,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/records-routes.ts",
-          "line": 50,
+          "line": 60,
           "declaredPath": "/api/records/:entityCode/:recordId/transitions/:transitionCode",
           "kind": "contract"
         }

@@ -1,3 +1,4 @@
+import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
 import type { CompiledEntityArtifactV2 } from "@athyper/server-contract-publication";
 import type {
   EntityRuntimeDescriptor,
@@ -47,6 +48,11 @@ export function validateCompiledRuntimeContracts(
   const byKey = new Map(
     artifacts.map((artifact) => [artifact.artifactKey, artifact]),
   );
+  for (const core of artifacts.filter(artifact => artifact.artifactType === "core")) {
+    const scope = core.content.directoryScope === undefined ? undefined : parseEntityDirectoryScope(core.content.directoryScope);
+    if (scope?.parent !== undefined && !byKey.has(`${core.entityCode}/runtime`))
+      throw new Error("COMPILED_ENTITY_PARENT_RUNTIME_REQUIRED");
+  }
   for (const artifact of artifacts.filter(
     (artifact) => artifact.artifactType === "runtime_contract",
   )) {
@@ -58,6 +64,10 @@ export function validateCompiledRuntimeContracts(
     const operation = byKey.get(`${artifact.entityCode}/operation`);
     if (!core || !operation)
       throw new Error("COMPILED_ENTITY_RUNTIME_DEPENDENCY_MISSING");
+    const coreScope = core.content.directoryScope === undefined ? undefined : parseEntityDirectoryScope(core.content.directoryScope);
+    if (JSON.stringify(coreScope?.parent ?? null) !== JSON.stringify(descriptor.directoryScope?.parent ?? null) ||
+        (coreScope?.parent !== undefined && coreScope.mode !== descriptor.directoryScope?.mode))
+      throw new Error("COMPILED_ENTITY_PARENT_SCOPE_MISMATCH");
     const storage = core.content.storage as Record<string, unknown> | undefined;
     if (
       !storage ||
