@@ -40,6 +40,9 @@ try:
  wrong_parent=json.loads(json.dumps(manifest));wrong_parent['permissions'][0]['expectedParent']['entityCode']='unrelated'
  r=sql("SET app.database_plane='neon';\n"+m.prepare(wrong_parent,True),False)
  assert r.returncode and 'successor' in r.stderr,r.stderr
+ sql("UPDATE runtime_meta.applied_release_payload SET payload_json=payload_json #- '{release,artifacts,0,content,descriptor,planeKey}'")
+ r=sql(apply,False);assert r.returncode and 'successor' in r.stderr,r.stderr
+ sql("UPDATE runtime_meta.applied_release_payload SET payload_json=jsonb_set(payload_json,'{release,artifacts,0,content,descriptor,planeKey}','\"neon\"'::jsonb)")
  plan=sql(m.prepare(manifest));assert 'affected_relationship' in plan.stdout
  assert sql('SELECT count(*) FROM authz.role_permission;').stdout.find('1')>=0
  r=sql(apply);assert 'retired' in r.stdout,r.stdout

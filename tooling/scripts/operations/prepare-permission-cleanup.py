@@ -141,7 +141,7 @@ BEGIN
      RAISE EXCEPTION 'Exactly one active platform successor required for %', row.canonical_code;
    END;
    rule := doc->'directoryScope'->'parent';
-   IF doc IS NULL OR doc->>'planeKey'<>(SELECT value->>'plane' FROM cleanup_input)
+   IF doc IS NULL OR doc->>'planeKey' IS DISTINCT FROM (SELECT value->>'plane' FROM cleanup_input)
      OR rule IS DISTINCT FROM row.requested->'expectedParent' THEN
      RAISE EXCEPTION 'Active platform-owned successor with enforced parent scope required for %', row.canonical_code;
    END IF;
