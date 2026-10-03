@@ -2,10 +2,11 @@ export interface EntitySource {
   entityCode: string;
   directory: string;
   descriptorPath: string;
-  descriptor: { schema: string; entityCode: string; definition?: string; artifacts?: string[]; placement?: string; localization?: string; capabilities?: string; activity?: string; release?: string };
+  descriptor: { schema: string; entityCode: string; authoringOwnership?: "platform"; entityClass?: string | null; ownershipModel?: string | null; targets?: { declared: string[]; required: string[]; recommended: string[] }; definition?: string; artifacts?: string[]; placement?: string; localization?: string; capabilities?: string; activity?: string; release?: string };
 }
 export interface SourceDocument { ref: string; path: string; value: Record<string, any>; }
 export interface SourceWorkspace {
+  coverage: { schema: string; publicationVerified: false; entities: { entityCode: string; declared: string[]; required: string[]; recommended: string[]; missingRequired: string[]; missingRecommended: string[]; classificationStatus: string; placementStatus: string }[]; counts: { entities: number; missingRequiredPlanes: number; missingRecommendedPlanes: number; unresolvedClassifications: number } };
   metadataRoot: string;
   manifest: Record<string, any>;
   entitiesRoot: string;

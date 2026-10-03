@@ -4,6 +4,13 @@ This repository contains platform-owned MetaEntity **authoring inputs**. A file
 move does not validate, approve, sign, publish or activate a definition. Studio
 remains the authority for governed release state and independent review.
 
+On 4 October 2026, the remaining seven MDG entities were moved to the owner-selected
+source homes: Contact to `common/master/`, Location to
+`common/master/`, and Certification to `common/master/certification/`. All 22 moved
+files retain their bytes. `entities/mdg/` no longer exists. Folder names do not
+change record scope, permissions, storage, navigation or publication status.
+The active workspace contains 30 entities. No BP replacement location is declared.
+
 ## Domain layout and ownership
 
 | Directory | Responsibility |
@@ -21,9 +28,10 @@ remains the authority for governed release state and independent review.
 `manifest.json` declares the physical roots. Entity descriptors are discovered
 recursively beneath the entity root. Folder placement does not assign domain
 ownership, storage schemas, module codes, publication targets or navigation.
-Format/property corrections remain separate review steps.
+The [audit correction review](../docs/reviews/entity-metadata-audit-corrections-20261003.md)
+records the subsequent source-property corrections and outstanding publication gates.
 
-Logical artifact references such as `business_partner/core.json` resolve through
+Logical artifact references such as `address/core.json` resolve through
 the derived `entityCode` index, independently of physical domain directories.
 Profile references such as `platform/core-field-defaults.v1.json`
 resolve relative to the profile root while retaining their existing release-local
@@ -37,7 +45,13 @@ paths are not the active workspace layout. This workspace does not declare a
 single `releaseEntry`; release preparation uses explicitly selected inputs.
 
 The shared offline resolver is `tooling/scripts/metadata/source-workspace.mjs`.
-Only `entity.json` with schema `athyper.entity-source/1` declares an entity.
+Only `entity.json` with schema `athyper.entity-source/1` or `/2` declares an entity.
+All 30 current descriptors use `/2`; `/1` remains supported for existing consumers
+and fixtures. The [v2 source contract](contracts/entity-source-v2.md) makes
+platform authoring ownership, graph classification and publication target intent
+explicit. Unresolved graph properties are recorded as null draft decisions,
+never runtime authorization. Required/recommended targets do not expand compiled
+artifact planes or attest activation.
 Competing declarations fail with both source paths; artifacts may repeat their
 owner's `entityCode`. Unknown descriptor schemas/properties, invalid or escaping
 paths, unresolved members, duplicate artifact identities and ambiguous logical
@@ -58,10 +72,7 @@ never saved as a hand-maintained source definition.
 | `entities/common/reference/` | 15 |
 | `entities/platform/iam/` | 4 |
 | `entities/ppl/workforce/` | 4 |
-| `entities/mdg/location/` | 3 |
-| `entities/mdg/bp/` | 19 |
-| `entities/mdg/contact/` | 3 |
-| `entities/mdg/reference/` | 1 |
+| `entities/common/master/` | 7 |
 
 The [domain relocation inventory](../docs/reviews/entity-metadata-domain-relocation-20261003.json)
 records the original domain relocation of all 49 source/destination homes and the SHA-256 of each of the 202 moved
@@ -69,9 +80,10 @@ files. It is historical audit evidence, never a runtime source index. The
 [shared-domain relocation evidence](../docs/reviews/entity-metadata-shared-domain-relocation-20261003.json)
 records the subsequent nine lookup moves from `mdg/reference/` to
 `common/reference/` and three Contact moves from `mdg/bp/` to `mdg/contact/`,
-with preserved byte hashes. Certification stays in `mdg/reference/`.
+with preserved byte hashes. These are historical paths. The current source homes
+are listed above; the owner removed the BP source tree before the 4 October cleanup.
 
-Contact is shared MDG business functionality, with owner-scoped records distinct
+Contact is shared business functionality, with owner-scoped records distinct
 from global reference data, HR persons and login identities. The documented
 exposure is owner-scoped business views with standard Entity detail navigation
 and separately authorized Data Stewardship directories for key users. The move implements source organization only;
@@ -80,9 +92,9 @@ metadata remain separate corrections. Keep existing tables and entity codes.
 Neon-only declarations remain source evidence; three-plane applicability follows
 the coverage decision below and requires governed implementation/publication.
 See the [current integration plan](../docs/reviews/entity-metadata-integration-matrix-20261003.md).
-Intake and case requests are deferred; `business_partner_request` remains a
-preserved source in the 49-entity workspace but is outside the 48-entity current
-View/Edit plan.
+The BP family, including `business_partner_request`, is absent from the active
+source workspace following the owner's removal. Historical inventories retain
+their captured paths and hashes; they do not restore removed sources.
 
 ## Required and recommended plane coverage
 
@@ -108,11 +120,19 @@ storage/provider, navigation and operation bindings must be reconciled first;
 the table compiler's current permission-prefix substitution is a shared contract
 gap, not a valid source of new permission codes. Track independent release review,
 activation receipts and verification per entity/plane before claiming completion.
-This planning update changes no source definitions or active releases.
+The subsequent audit correction records required/recommended targets in every
+descriptor. The nine split references still have Neon-only compiled artifacts;
+their descriptors explicitly require all three publication targets. Provider,
+authorization and supported authoring gaps remain before multi-plane compilation.
+Native product module identities are corrected to their owning modules; target
+navigation placements remain separate. No active releases changed.
 
 ## Development rules
 
 - Edit each entity's owning source, preserving existing artifact filenames.
+  `definition` is the native product input where present; complementary split
+  `artifacts` preserve separate dependency contracts. They must not be interpreted
+  as competing native product definitions or deleted without contract reconciliation.
 - Coordinate overlapping files and release-envelope/hash updates. Do not
   regenerate or publish another workstream's draft merely because it exists.
 - Business handlers stay in their owning services. Shared Entity Framework
@@ -128,6 +148,7 @@ This planning update changes no source definitions or active releases.
 
 ```sh
 pnpm metadata:check-layout
+pnpm metadata:check-layout --release-ready
 pnpm metadata:check-layout --baseline
 node tooling/scripts/catalog/generate-platform-catalog.mjs --check
 python3 tooling/scripts/metadata/validate.py
@@ -138,8 +159,15 @@ references, schemas and registry evidence. `--baseline` compares JSON bytes with
 the checkpoint; later property edits require their own review. Catalog `--check`
 compares generated text without writing outputs or changing module identities.
 These checks do not verify runtime behavior or establish publication approval.
-The broader validator can fail on stale captured DDL evidence; relocation must
-not rewrite historical hashes or reconcile SQL to make that gate pass.
+Draft checks report required/recommended source coverage deltas; `--release-ready`
+rejects unmet required coverage. The derived report tracks each unresolved graph
+classification without selecting one at runtime. See the
+[successor audit follow-up](../docs/reviews/entity-metadata-audit-followup-20261003.md)
+for registry inventory and unsigned module-correction plans.
+The broader validator verifies frozen DDL hashes against current bytes or an
+exact matching Git revision, reporting historical-only matches explicitly.
+Historical-only evidence blocks release readiness until reviewed current evidence
+is captured. Never recreate retired SQL or rewrite historical hashes to pass.
 
 After separate implementation/build approval, the collaboration candidate uses
 an explicit closure of declared roots and transitive dependencies:
@@ -154,8 +182,8 @@ python3 tooling/scripts/metadata/validate.py \
 `--release-ready` remains an explicit freeze gate. It rejects unsigned,
 unapproved or unpublished dependencies; a source move does not satisfy it.
 Live schema and permission gates require their configured database access and
-are outside the offline relocation checks. No tests or runtime probes run for
-this activity.
+are outside the offline relocation checks. Audit correction tests are recorded
+in the successor review; publication and live runtime probes remain unverified.
 
 ## Retained locations
 

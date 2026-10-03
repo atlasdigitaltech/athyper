@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MetaEntity authoring source descriptor v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "entityCode",
+    "authoringOwnership",
+    "entityClass",
+    "ownershipModel",
+    "targets"
+  ],
+  "properties": {
+    "schema": {
+      "const": "athyper.entity-source/2"
+    },
+    "entityCode": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "authoringOwnership": {
+      "const": "platform"
+    },
+    "entityClass": {
+      "enum": [
+        "business",
+        "configuration",
+        "reference",
+        "process",
+        "projection",
+        "technical",
+        null
+      ]
+    },
+    "ownershipModel": {
+      "enum": [
+        "system",
+        "package",
+        "tenant",
+        "overlay",
+        null
+      ]
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "declared",
+        "required",
+        "recommended"
+      ],
+      "properties": {
+        "declared": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "studio",
+              "neon",
+              "mesh"
+            ]
+          },
+          "minItems": 1
+        },
+        "required": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "studio",
+              "neon",
+              "mesh"
+            ]
+          }
+        },
+        "recommended": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "studio",
+              "neon",
+              "mesh"
+            ]
+          }
+        }
+      }
+    },
+    "definition": {
+      "type": "string",
+      "pattern": ".+\\.json$"
+    },
+    "placement": {
+      "type": "string",
+      "pattern": ".+\\.json$"
+    },
+    "localization": {
+      "type": "string",
+      "pattern": ".+\\.json$"
+    },
+    "capabilities": {
+      "type": "string",
+      "pattern": ".+\\.json$"
+    },
+    "activity": {
+      "type": "string",
+      "pattern": ".+\\.json$"
+    },
+    "release": {
+      "type": "string",
+      "pattern": ".+\\.json$"
+    },
+    "artifacts": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": ".+\\.json$"
+      }
+    }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "definition"
+      ]
+    },
+    {
+      "required": [
+        "artifacts"
+      ],
+      "properties": {
+        "artifacts": {
+          "minItems": 1
+        }
+      }
+    }
+  ]
+}

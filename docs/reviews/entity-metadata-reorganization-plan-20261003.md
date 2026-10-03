@@ -1,5 +1,15 @@
 # Entity metadata reorganization review plan
 
+> **Current source layout — 4 October 2026:** `metadata/entities/mdg/` has been
+> removed. Contact sources are now in `common/master/`, Location in
+> `common/master/`, and Certification in `common/master/certification/`, relative to
+> `metadata/entities/`. The owner has removed the BP source family; no new BP
+> source is declared. The active workspace contains 30 entities. Earlier BP
+> implementation/publication recommendations below are historical and do not
+> authorize rebuilding BP commands, cases or workflows. Frozen JSON inventories
+> retain their captured paths and hashes; use `metadata/README.md` for current homes.
+
+
 **Latest domain build:** [Capability handlers and approved parent-amendment design](bp-read-contract-and-legacy-binding-review-20261003.md#latest-capability-and-amendment-implementation). Two capability handlers are implemented through the shared transaction runner. Eight amendment source bindings and a server-derived parent/child target resolver are implemented. Sixteen handler implementations, full runtime qualification, tenant conflict resolution and independent approval remain incomplete. No DEV release or permission cleanup occurred.
 
 **Current successor build:** [Operation coverage and tenant reconciliation](bp-read-contract-and-legacy-binding-review-20261003.md#latest-successor-reconciliation-build). Shared publication now rejects omitted source operations. The pinned tenant comparison identifies two conflicts (BP Core/runtime) and retains BP Request artifacts. All 43 legacy operations and 18 source runtime gaps are recorded. Governed successor creation, full runtime implementation and independent human review remain incomplete; no DEV activation or permission retirement occurred.

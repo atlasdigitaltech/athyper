@@ -1,7 +1,11 @@
 {
   "schema": "athyper.shared-reference-product/1",
-  "moduleCode": "ent",
-  "planes": ["studio", "neon", "mesh"],
+  "moduleCode": "rel",
+  "planes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
   "definition": {
     "runtimeBindings": [
       {
@@ -240,14 +244,24 @@
       "calling_code",
       "status"
     ],
-    "searchFields": ["code", "code3", "name", "official_name"],
+    "searchFields": [
+      "code",
+      "code3",
+      "name",
+      "official_name"
+    ],
     "navigation": {
       "mode": "scroll",
       "tabs": [
         {
           "key": "overview",
           "label": "Overview",
-          "sectionKeys": ["overview", "phone", "address", "audit"],
+          "sectionKeys": [
+            "overview",
+            "phone",
+            "address",
+            "audit"
+          ],
           "localizedLabel": {
             "labelKey": "navigation.overview",
             "defaultText": "Overview"
@@ -308,7 +322,10 @@
           "labelKey": "entity.country.sections.audit",
           "defaultText": "Audit"
         },
-        "fields": ["created_at", "updated_at"]
+        "fields": [
+          "created_at",
+          "updated_at"
+        ]
       }
     ],
     "entityLabel": {
@@ -346,9 +363,17 @@
         "address_format",
         "status"
       ],
-      "searchFieldKeys": ["code", "code3", "name", "official_name"],
+      "searchFieldKeys": [
+        "code",
+        "code3",
+        "name",
+        "official_name"
+      ],
       "relationshipKeys": [],
-      "contextKinds": ["record", "manage"],
+      "contextKinds": [
+        "record",
+        "manage"
+      ],
       "insightProviders": [
         {
           "id": "entity_lookup",

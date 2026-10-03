@@ -1,6 +1,20 @@
 {
-  "schema": "athyper.entity-source/1",
+  "schema": "athyper.entity-source/2",
   "entityCode": "person",
+  "authoringOwnership": "platform",
+  "entityClass": "business",
+  "ownershipModel": "system",
+  "targets": {
+    "declared": [
+      "neon"
+    ],
+    "required": [],
+    "recommended": [
+      "neon",
+      "mesh",
+      "studio"
+    ]
+  },
   "definition": "definition.json",
   "placement": "placement.json"
 }

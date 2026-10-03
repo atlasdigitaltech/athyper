@@ -1,8 +1,0 @@
-{
-  "schema": "athyper.entity-source/1",
-  "entityCode": "business_partner_qualification",
-  "artifacts": [
-    "core.json",
-    "operation.json"
-  ]
-}

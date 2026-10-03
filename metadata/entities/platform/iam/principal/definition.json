@@ -1,6 +1,6 @@
 {
   "schema": "athyper.table-entity-product/1",
-  "moduleCode": "ent",
+  "moduleCode": "iam",
   "planes": [
     "studio",
     "neon",

@@ -1,8 +1,0 @@
-{
-  "schema": "athyper.entity-source/1",
-  "entityCode": "certification",
-  "artifacts": [
-    "core.json",
-    "operation.json"
-  ]
-}

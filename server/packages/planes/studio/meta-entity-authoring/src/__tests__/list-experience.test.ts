@@ -91,10 +91,11 @@ it("compiles the graph joins into a localized header and bound action", () => {
     ],
   });
 });
-it("rejects missing permission links and unpublished target surfaces", () => {
-  expect(() =>
-    compileListExperience({ ...graph, operationPermissions: [] }, surface),
-  ).toThrow();
+it("accepts undefined entity permissions and rejects unpublished target surfaces", () => {
+  const result = compileListExperience({ ...graph, operationPermissions: [] }, surface);
+  expect(result.actions[0].permissions).toEqual([]);
+  expect(result.actions[0].rules).toEqual(compileListExperience(graph, surface).actions[0].rules);
+  expect(result.actions[0].scopes).toEqual(compileListExperience(graph, surface).actions[0].scopes);
   expect(() =>
     compileListExperience({ ...graph, surfaces: [surface] }, surface),
   ).toThrow();

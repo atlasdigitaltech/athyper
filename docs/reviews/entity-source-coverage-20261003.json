@@ -1,0 +1,820 @@
+{
+  "purpose": "Derived offline source report; not a runtime registry, publication receipt or classification source",
+  "coverage": {
+    "schema": "athyper.entity-source-coverage/1",
+    "publicationVerified": false,
+    "entities": [
+      {
+        "entityCode": "address",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "missingRequired": [],
+        "missingRecommended": [
+          "mesh",
+          "studio"
+        ],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "address_link",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "missingRequired": [],
+        "missingRecommended": [
+          "mesh",
+          "studio"
+        ],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "bank_branch",
+        "declared": [
+          "neon"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [
+          "mesh",
+          "studio"
+        ],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "bank_identifier",
+        "declared": [
+          "neon"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [
+          "mesh",
+          "studio"
+        ],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "bank_institution",
+        "declared": [
+          "neon"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [
+          "mesh",
+          "studio"
+        ],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "business_partner_alias",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_bank_account_link",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_bank_provisional_reference",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_banking",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_commodity_classification",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_governance_relation",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_identifier",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_industry_classification",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_operating_organization_assignment",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_qualification",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_relationship",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_request",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "business_partner_restriction",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "business_partner_tax_registration",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "certification",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "classification_scheme",
+        "declared": [
+          "neon"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [
+          "mesh",
+          "studio"
+        ],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "commodity_code",
+        "declared": [
+          "neon"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [
+          "mesh",
+          "studio"
+        ],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "commodity_crosswalk",
+        "declared": [
+          "neon"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [
+          "mesh",
+          "studio"
+        ],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "contact_channel",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "missingRequired": [],
+        "missingRecommended": [
+          "mesh",
+          "studio"
+        ],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "contact_person",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "missingRequired": [],
+        "missingRecommended": [
+          "mesh",
+          "studio"
+        ],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "contact_person_role",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "missingRequired": [],
+        "missingRecommended": [
+          "mesh",
+          "studio"
+        ],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "country",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "currency",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "customer",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "customer_company_profile",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "employee",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "external_worker",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "industry_code",
+        "declared": [
+          "neon"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [
+          "mesh",
+          "studio"
+        ],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "industry_crosswalk",
+        "declared": [
+          "neon"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [
+          "mesh",
+          "studio"
+        ],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "language",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "locale",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "person",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "missingRequired": [],
+        "missingRecommended": [
+          "mesh",
+          "studio"
+        ],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "person_address_use",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "missingRequired": [],
+        "missingRecommended": [
+          "mesh",
+          "studio"
+        ],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "principal",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "principal_notification_preference",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "principal_profile",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "principal_ui_profile",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "state_region",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "supplier",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "supplier_company_profile",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "timezone",
+        "declared": [
+          "studio",
+          "neon",
+          "mesh"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "resolved",
+        "placementStatus": "declared"
+      },
+      {
+        "entityCode": "uom",
+        "declared": [
+          "neon"
+        ],
+        "required": [
+          "neon",
+          "mesh",
+          "studio"
+        ],
+        "recommended": [],
+        "missingRequired": [
+          "mesh",
+          "studio"
+        ],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      },
+      {
+        "entityCode": "workforce",
+        "declared": [
+          "neon"
+        ],
+        "required": [],
+        "recommended": [],
+        "missingRequired": [],
+        "missingRecommended": [],
+        "classificationStatus": "unresolved",
+        "placementStatus": "exposure_decision_pending"
+      }
+    ],
+    "counts": {
+      "entities": 49,
+      "missingRequiredPlanes": 18,
+      "missingRecommendedPlanes": 14,
+      "unresolvedClassifications": 34
+    }
+  },
+  "unresolvedClassifications": [
+    "address_link",
+    "bank_branch",
+    "bank_identifier",
+    "bank_institution",
+    "business_partner",
+    "business_partner_alias",
+    "business_partner_bank_account_link",
+    "business_partner_bank_provisional_reference",
+    "business_partner_banking",
+    "business_partner_commodity_classification",
+    "business_partner_governance_relation",
+    "business_partner_identifier",
+    "business_partner_industry_classification",
+    "business_partner_operating_organization_assignment",
+    "business_partner_qualification",
+    "business_partner_relationship",
+    "business_partner_request",
+    "business_partner_restriction",
+    "business_partner_tax_registration",
+    "certification",
+    "classification_scheme",
+    "commodity_code",
+    "commodity_crosswalk",
+    "contact_channel",
+    "contact_person",
+    "contact_person_role",
+    "customer",
+    "customer_company_profile",
+    "industry_code",
+    "industry_crosswalk",
+    "supplier",
+    "supplier_company_profile",
+    "uom",
+    "workforce"
+  ],
+  "missingPlacementsBySourceHome": {
+    "common/reference": 9,
+    "mdg/bp": 17,
+    "mdg/contact": 3,
+    "mdg/location": 1,
+    "mdg/reference": 1,
+    "platform/iam": 3,
+    "ppl/workforce": 1
+  }
+}

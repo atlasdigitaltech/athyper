@@ -1,6 +1,22 @@
 {
-  "schema": "athyper.entity-source/1",
+  "schema": "athyper.entity-source/2",
   "entityCode": "timezone",
+  "authoringOwnership": "platform",
+  "entityClass": "reference",
+  "ownershipModel": "system",
+  "targets": {
+    "declared": [
+      "studio",
+      "neon",
+      "mesh"
+    ],
+    "required": [
+      "neon",
+      "mesh",
+      "studio"
+    ],
+    "recommended": []
+  },
   "definition": "definition.json",
   "artifacts": [
     "core.json"

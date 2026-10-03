@@ -1,6 +1,6 @@
 {
   "schema": "athyper.shared-reference-product/1",
-  "moduleCode": "ent",
+  "moduleCode": "rel",
   "planes": [
     "studio",
     "neon",

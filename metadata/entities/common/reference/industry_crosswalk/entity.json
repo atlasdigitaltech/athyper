@@ -1,6 +1,20 @@
 {
-  "schema": "athyper.entity-source/1",
+  "schema": "athyper.entity-source/2",
   "entityCode": "industry_crosswalk",
+  "authoringOwnership": "platform",
+  "entityClass": null,
+  "ownershipModel": null,
+  "targets": {
+    "declared": [
+      "neon"
+    ],
+    "required": [
+      "neon",
+      "mesh",
+      "studio"
+    ],
+    "recommended": []
+  },
   "artifacts": [
     "core.json"
   ]

@@ -60,7 +60,7 @@ test("missing files and duplicate old source copies fail", () =>
     assert.throws(() => checkLayout(root), /Duplicate old definition/);
     rmSync(join(root, item.source));
     rmSync(resolveSourcePath(join(root, item.byteIdenticalDestinations[0])));
-    assert.throws(() => checkLayout(root), /Missing relocated file/);
+    assert.throws(() => checkLayout(root), /missing or escaping source path core\.json/);
   }));
 test("relocation baseline detects content changes without prohibiting future edits", () =>
   fixture((root) => {
@@ -84,5 +84,5 @@ test("unresolved logical refs fail even when the original files remain present",
     const value = JSON.parse(readFileSync(resolveSourcePath(path), "utf8"));
     value.exampleRef = "missing/core.json";
     writeFileSync(path, JSON.stringify(value));
-    assert.throws(() => checkLayout(root), /Unresolved logical reference/);
+    assert.throws(() => checkLayout(root), /unresolved required logical reference missing\/core\.json/);
   }));

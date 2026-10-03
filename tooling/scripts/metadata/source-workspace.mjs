@@ -4,9 +4,14 @@ import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "n
 import { createHash } from "node:crypto";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { coverageReport } from "./coverage-report.mjs";
 
 const excluded = new Set(["review", "history", "generated", "codegen", "dist", "build", "out", "node_modules", "__pycache__"]);
 const descriptorKeys = new Set(["schema", "entityCode", "definition", "artifacts", "placement", "localization", "capabilities", "activity", "release"]);
+const classificationKeys = ["authoringOwnership", "entityClass", "ownershipModel", "targets"];
+const planes = new Set(["studio", "neon", "mesh"]);
+const entityClasses = new Set(["business", "configuration", "reference", "process", "projection", "technical"]);
+const ownershipModels = new Set(["system", "package", "tenant", "overlay"]);
 const memberKeys = ["definition", "placement", "localization", "capabilities", "activity", "release"];
 const fail = (message) => { throw new Error(`Metadata source configuration: ${message}`); };
 const json = (path) => { try { return JSON.parse(readFileSync(path, "utf8")); } catch (error) { fail(`${path}: ${error.message}`); } };
@@ -31,6 +36,46 @@ function files(root) {
   });
 }
 
+/** Draft classification records unresolved graph properties as null. Target
+ * intent never expands an artifact's compiled plane or attests publication. */
+function validateClassification(descriptor, directory, file) {
+  if (descriptor.authoringOwnership !== "platform") fail(`${file}: authoringOwnership must be platform for product defaults`);
+  for (const key of ["entityClass", "ownershipModel"]) {
+    const value = descriptor[key];
+    const supported = key === "entityClass" ? entityClasses : ownershipModels;
+    if (value !== null && !supported.has(value)) fail(`${file}: ${key} must be one of ${[...supported].join(", ")} or null for an unresolved draft`);
+  }
+  const targets = descriptor.targets;
+  if (!targets || Object.keys(targets).sort().join() !== ["declared", "recommended", "required"].sort().join()) fail(`${file}: targets must declare declared, required and recommended plane arrays`);
+  for (const [kind, values] of Object.entries(targets)) {
+    if (!Array.isArray(values) || values.some((plane) => !planes.has(plane)) || new Set(values).size !== values.length || (kind === "declared" && !values.length)) fail(`${file}: targets.${kind} contains missing, duplicate or unsupported planes`);
+  }
+  if (targets.required.some((plane) => targets.recommended.includes(plane))) fail(`${file}: required and recommended targets overlap`);
+  const native = descriptor.definition ? json(requiredPath(directory, descriptor.definition)) : undefined;
+  const artifacts = (descriptor.artifacts ?? []).map((ref) => json(requiredPath(directory, ref)));
+  const observed = native?.planes ?? [...new Set(artifacts.filter((artifact) => artifact.artifactType === "core").map((artifact) => artifact.plane))];
+  if (!Array.isArray(observed) || observed.length !== targets.declared.length || !observed.every((plane) => targets.declared.includes(plane))) fail(`${file}: targets.declared must match the canonical definition or split core planes`);
+  for (const artifact of artifacts) {
+    if (artifact.artifactType === "core" && artifact.entityCode !== descriptor.entityCode) fail(`${file}: core artifact ${artifact.artifactKey} belongs to another entity`);
+    if (artifact.plane && !targets.declared.includes(artifact.plane)) fail(`${file}: artifact plane ${artifact.plane} is outside declared targets`);
+  }
+  if (native) {
+    const reference = native.schema === "athyper.shared-reference-product/1";
+    const entity = reference ? { entityCode: native.definition?.entityCode, entityClass: "reference", ownershipModel: "system" } : native.definition?.entity;
+    if (!entity || entity.entityCode !== descriptor.entityCode || entity.entityClass !== descriptor.entityClass || entity.ownershipModel !== descriptor.ownershipModel) fail(`${file}: classification must match the native product graph`);
+  }
+  if (descriptor.placement) {
+    const placement = json(requiredPath(directory, descriptor.placement));
+    if (placement.schema !== "athyper.entity-placement/1" || placement.entityCode !== descriptor.entityCode || !Array.isArray(placement.placements)) fail(`${file}: invalid placement identity or placements`);
+    if (placement.placements.some((entry) => !targets.declared.includes(entry.plane))) fail(`${file}: placement plane is outside declared targets`);
+    // Native products use one authoring module identity. Prefer the Studio
+    // source placement; target navigation remains independently configured.
+    const sourcePlane = targets.declared.includes("studio") ? "studio" : targets.declared[0];
+    const sourcePlacement = placement.placements.find((entry) => entry.plane === sourcePlane);
+    if (native && sourcePlacement && native.moduleCode !== sourcePlacement.module) fail(`${file}: native moduleCode must match the ${sourcePlane} authoring placement module ${sourcePlacement.module}`);
+  }
+}
+
 export function discoverWorkspace(metadataRoot = fileURLToPath(new URL("../../../metadata/", import.meta.url))) {
   metadataRoot = resolve(metadataRoot);
   const manifest = json(resolve(metadataRoot, "manifest.json"));
@@ -45,8 +90,9 @@ export function discoverWorkspace(metadataRoot = fileURLToPath(new URL("../../..
   const entities = new Map();
   for (const file of entityFiles.filter((path) => path.endsWith(`${sep}entity.json`))) {
     const descriptor = json(file);
-    if (!descriptor || descriptor.schema !== "athyper.entity-source/1") fail(`${file}: unsupported entity descriptor schema; expected athyper.entity-source/1`);
-    const unknown = Object.keys(descriptor).filter((key) => !descriptorKeys.has(key));
+    if (!descriptor || !["athyper.entity-source/1", "athyper.entity-source/2"].includes(descriptor.schema)) fail(`${file}: unsupported entity descriptor schema; expected athyper.entity-source/1 or /2`);
+    const classified = descriptor.schema === "athyper.entity-source/2";
+    const unknown = Object.keys(descriptor).filter((key) => !descriptorKeys.has(key) && !(classified && classificationKeys.includes(key)));
     if (unknown.length) fail(`${file}: unsupported descriptor properties: ${unknown.join(", ")}`);
     const code = descriptor.entityCode;
     if (typeof code !== "string" || !/^[a-z][a-z0-9_]*$/.test(code)) fail(`${file}: invalid entityCode`);
@@ -61,6 +107,7 @@ export function discoverWorkspace(metadataRoot = fileURLToPath(new URL("../../..
       if (typeof ref !== "string" || !ref.endsWith(".json")) fail(`${file}: expected a JSON member reference, received ${JSON.stringify(ref)}`);
       requiredPath(directory, ref);
     }
+    if (classified) validateClassification(descriptor, directory, file);
     entities.set(code, { entityCode: code, directory, descriptorPath: file, descriptor });
   }
   if (!entities.size) fail(`${entitiesRoot}: no entity.json declarations found`);
@@ -72,7 +119,7 @@ export function discoverWorkspace(metadataRoot = fileURLToPath(new URL("../../..
     const value = json(path);
     // Only entity.json declares an entity. Core, operations and presentations
     // may repeat the owning entityCode without declaring competing entities.
-    if (owner && value?.schema === "athyper.entity-source/1" && path !== owner.descriptorPath) fail(`${path}: entity descriptors must be named entity.json`);
+    if (owner && ["athyper.entity-source/1", "athyper.entity-source/2"].includes(value?.schema) && path !== owner.descriptorPath) fail(`${path}: entity descriptors must be named entity.json`);
     if (value?.artifactKey) {
       if (byArtifact.has(value.artifactKey)) fail(`duplicate artifact identity ${value.artifactKey}: ${byArtifact.get(value.artifactKey)} and ${path}`);
       byArtifact.set(value.artifactKey, path);
@@ -134,7 +181,7 @@ export function discoverWorkspace(metadataRoot = fileURLToPath(new URL("../../..
   }
   for (const document of documents) checkRefs(document.value, document.path);
   if (manifest.releaseEntry !== undefined) resolveRef(manifest.releaseEntry);
-  return { metadataRoot, manifest, entitiesRoot, profilesRoot, reviewRoot, schemasRoot, entities, documents, resolveRef, resolveProfile };
+  return { metadataRoot, manifest, entitiesRoot, profilesRoot, reviewRoot, schemasRoot, entities, documents, coverage: coverageReport(entities), resolveRef, resolveProfile };
 }
 
 /** Resolve existing repository-rooted logical source paths at the I/O boundary.
@@ -172,5 +219,5 @@ export function resolveSourcePath(input) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const workspace = discoverWorkspace(process.argv[2]);
-  console.log(JSON.stringify({ entitiesRoot: workspace.entitiesRoot, profilesRoot: workspace.profilesRoot, reviewRoot: workspace.reviewRoot, schemasRoot: workspace.schemasRoot, entities: Object.fromEntries(workspace.entities), documents: workspace.documents }));
+  console.log(JSON.stringify({ entitiesRoot: workspace.entitiesRoot, profilesRoot: workspace.profilesRoot, reviewRoot: workspace.reviewRoot, schemasRoot: workspace.schemasRoot, entities: Object.fromEntries(workspace.entities), documents: workspace.documents, coverage: workspace.coverage }));
 }

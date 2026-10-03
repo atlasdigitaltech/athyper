@@ -1,6 +1,22 @@
 {
-  "schema": "athyper.entity-source/1",
+  "schema": "athyper.entity-source/2",
   "entityCode": "principal_ui_profile",
+  "authoringOwnership": "platform",
+  "entityClass": "configuration",
+  "ownershipModel": "system",
+  "targets": {
+    "declared": [
+      "studio",
+      "neon",
+      "mesh"
+    ],
+    "required": [
+      "neon",
+      "mesh",
+      "studio"
+    ],
+    "recommended": []
+  },
   "definition": "definition.json",
   "localization": "localization.json"
 }

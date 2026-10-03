@@ -1,7 +1,11 @@
 {
   "schema": "athyper.shared-reference-product/1",
-  "moduleCode": "ent",
-  "planes": ["studio", "neon", "mesh"],
+  "moduleCode": "rel",
+  "planes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
   "definition": {
     "runtimeBindings": [
       {
@@ -152,7 +156,10 @@
       "direction",
       "status"
     ],
-    "searchFields": ["code", "name"],
+    "searchFields": [
+      "code",
+      "name"
+    ],
     "sections": [
       {
         "key": "overview",
@@ -175,13 +182,19 @@
           "labelKey": "entity.language.sections.audit",
           "defaultText": "Audit"
         },
-        "fields": ["created_at", "updated_at"]
+        "fields": [
+          "created_at",
+          "updated_at"
+        ]
       }
     ],
     "ai": {
       "schemaVersion": 1,
       "enabled": true,
-      "aliases": ["language", "languages"],
+      "aliases": [
+        "language",
+        "languages"
+      ],
       "description": "Read published Languages reference data only. Do not infer missing values or relationships. This entity is read-only.",
       "summaryFieldKeys": [
         "code",
@@ -191,9 +204,15 @@
         "direction",
         "status"
       ],
-      "searchFieldKeys": ["code", "name"],
+      "searchFieldKeys": [
+        "code",
+        "name"
+      ],
       "relationshipKeys": [],
-      "contextKinds": ["record", "manage"],
+      "contextKinds": [
+        "record",
+        "manage"
+      ],
       "insightProviders": [
         {
           "id": "entity_lookup",

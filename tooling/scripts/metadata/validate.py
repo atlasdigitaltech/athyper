@@ -7,6 +7,7 @@ import argparse
 from jsonschema import Draft202012Validator
 from pathlib import Path
 from source_workspace import discover_workspace
+from historical_evidence import verify_evidence
 
 arguments = argparse.ArgumentParser(add_help=False)
 arguments.add_argument('--package-root')
@@ -144,6 +145,11 @@ def assert_security_contracts(value, path):
             assert_security_contracts(item, f'{path}[{index}]')
 
 workspace = discover_workspace(ROOT.parent)
+coverage = workspace['coverage']
+print('Source coverage:', json.dumps(coverage['counts'], sort_keys=True), '(publication unverified)')
+for row in coverage['entities']:
+    if row['missingRequired'] or row['missingRecommended']:
+        print(row['entityCode'], 'required gaps:', ','.join(row['missingRequired']), 'recommended gaps:', ','.join(row['missingRecommended']))
 files = {document['ref']: document['value'] for document in workspace['documents']}
 files.update({'review/' + str(p.relative_to(REVIEW)): json.loads(p.read_text()) for p in REVIEW.rglob('*.json')})
 release = files['business_partner/release.json']
@@ -184,14 +190,13 @@ catalog = {(r['table'], r['column']): r for r in catalog_document['columns']}
 tables = {}
 for table, column in catalog:
     tables.setdefault(table, set()).add(column)
-for source in catalog_document.get('ddlFallbacks', []):
-    if not (hashlib.sha256((REPO / source['path']).read_bytes()).hexdigest() == source['sha256']):
-        raise AssertionError('DDL snapshot changed; recapture evidence')
+evidence_receipts = [verify_evidence(REPO, source) for source in catalog_document.get('ddlFallbacks', [])]
 index_document = files['review/index-catalog.json']
 indexes = {item['ref']: item for item in index_document['indexes']}
-for source in index_document.get('source', {}).get('ddlEvidence', []):
-    if not ((REPO / source['path']).is_file() and hashlib.sha256((REPO / source['path']).read_bytes()).hexdigest() == source['sha256']):
-        raise AssertionError('Index DDL evidence changed; recapture the reviewed index catalog')
+evidence_receipts.extend(verify_evidence(REPO, source) for source in index_document.get('source', {}).get('ddlEvidence', []))
+for receipt in evidence_receipts:
+    if receipt['status'] == 'historical_only':
+        print('Historical DDL evidence verified:', receipt['path'], receipt['revision'], '(current release evidence requires recapture)')
 permission_document = files['review/permission-catalog.json']
 permissions = {item['code']: item for item in permission_document['permissions']}
 registry_document = files['review/registry-catalog.json']
@@ -837,6 +842,13 @@ for path, artifact in artifacts.items():
             raise AssertionError(path)
 if args.release_ready:
     readiness_failures = []
+    selected_codes = {artifact.get('entityCode') for artifact in (candidate_scope['artifacts'] if candidate_scope else artifacts).values() if artifact.get('entityCode')}
+    for row in coverage['entities']:
+        if row['entityCode'] in selected_codes and row['missingRequired']:
+            readiness_failures.append(row['entityCode'] + ': required planes not declared: ' + ','.join(row['missingRequired']))
+    historical = [receipt['path'] for receipt in evidence_receipts if receipt['status'] == 'historical_only']
+    if historical:
+        readiness_failures.append('current DDL evidence requires recapture: ' + ','.join(historical))
     ready_artifacts = candidate_scope['artifacts'] if candidate_scope else artifacts
     ready_release = candidate_scope['release'] if candidate_scope else release
     if len(ready_release['artifacts']) != len(ready_artifacts):

@@ -1,0 +1,18 @@
+{
+  "schema": "athyper.entity-source/2",
+  "entityCode": "certification",
+  "authoringOwnership": "platform",
+  "entityClass": null,
+  "ownershipModel": null,
+  "targets": {
+    "declared": [
+      "neon"
+    ],
+    "required": [],
+    "recommended": []
+  },
+  "artifacts": [
+    "core.json",
+    "operation.json"
+  ]
+}

@@ -1,7 +1,11 @@
 {
   "schema": "athyper.shared-reference-product/1",
-  "moduleCode": "ent",
-  "planes": ["studio", "neon", "mesh"],
+  "moduleCode": "rel",
+  "planes": [
+    "studio",
+    "neon",
+    "mesh"
+  ],
   "definition": {
     "runtimeBindings": [
       {
@@ -126,8 +130,18 @@
         "type": "datetime"
       }
     ],
-    "columns": ["code", "name", "symbol", "minor_units", "numeric3", "status"],
-    "searchFields": ["code", "name"],
+    "columns": [
+      "code",
+      "name",
+      "symbol",
+      "minor_units",
+      "numeric3",
+      "status"
+    ],
+    "searchFields": [
+      "code",
+      "name"
+    ],
     "sections": [
       {
         "key": "overview",
@@ -150,13 +164,19 @@
           "labelKey": "entity.currency.sections.audit",
           "defaultText": "Audit"
         },
-        "fields": ["created_at", "updated_at"]
+        "fields": [
+          "created_at",
+          "updated_at"
+        ]
       }
     ],
     "ai": {
       "schemaVersion": 1,
       "enabled": true,
-      "aliases": ["currency", "currencies"],
+      "aliases": [
+        "currency",
+        "currencies"
+      ],
       "description": "Read published Currencies reference data only. Do not infer missing values or relationships. This entity is read-only.",
       "summaryFieldKeys": [
         "code",
@@ -166,9 +186,15 @@
         "numeric3",
         "status"
       ],
-      "searchFieldKeys": ["code", "name"],
+      "searchFieldKeys": [
+        "code",
+        "name"
+      ],
       "relationshipKeys": [],
-      "contextKinds": ["record", "manage"],
+      "contextKinds": [
+        "record",
+        "manage"
+      ],
       "insightProviders": [
         {
           "id": "entity_lookup",

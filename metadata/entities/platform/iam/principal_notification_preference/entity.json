@@ -1,5 +1,21 @@
 {
-  "schema": "athyper.entity-source/1",
+  "schema": "athyper.entity-source/2",
   "entityCode": "principal_notification_preference",
+  "authoringOwnership": "platform",
+  "entityClass": "configuration",
+  "ownershipModel": "system",
+  "targets": {
+    "declared": [
+      "studio",
+      "neon",
+      "mesh"
+    ],
+    "required": [
+      "neon",
+      "mesh",
+      "studio"
+    ],
+    "recommended": []
+  },
   "definition": "definition.json"
 }

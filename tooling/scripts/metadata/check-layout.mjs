@@ -3,10 +3,11 @@ import { readFileSync, existsSync, realpathSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve, relative, sep, isAbsolute } from "node:path";
+import { requiredCoverageFailures } from "./coverage-report.mjs";
 
 export function checkLayout(
   repository = fileURLToPath(new URL("../../../", import.meta.url)),
-  { baseline = false } = {},
+  { baseline = false, releaseReady = false } = {},
 ) {
   function assert(ok, message) {
     if (!ok) throw Error(message);
@@ -48,9 +49,15 @@ export function checkLayout(
   const profileFiles = workspace.documents.filter((document) => within(profiles, document.path));
   assert(existsSync(resolve(workspace.reviewRoot, "registry-catalog.json")), "Missing registry evidence");
   assert(existsSync(resolve(workspace.schemasRoot, "entity-artifacts-v2/core.schema.json")), "Missing artifact schema");
-  return { relocatedFiles: targets.size, entityJsonFiles: files.length, profileJsonFiles: profileFiles.length };
+  if (releaseReady) {
+    const failures = requiredCoverageFailures(workspace.coverage);
+    assert(!failures.length, `Release readiness failed: ${failures.join("; ")}`);
+  }
+  return { relocatedFiles: targets.size, entityJsonFiles: files.length, profileJsonFiles: profileFiles.length, coverage: workspace.coverage };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const result = checkLayout(undefined, { baseline: process.argv.includes("--baseline") });
+  const result = checkLayout(undefined, { baseline: process.argv.includes("--baseline"), releaseReady: process.argv.includes("--release-ready") });
   console.log(`Layout verified: ${result.relocatedFiles} relocated files, ${result.entityJsonFiles} entity JSON files, ${result.profileJsonFiles} profile JSON files; logical references resolve. No publication performed.`);
+  console.log(`Source coverage: ${result.coverage.counts.missingRequiredPlanes} required and ${result.coverage.counts.missingRecommendedPlanes} recommended plane declarations missing; ${result.coverage.counts.unresolvedClassifications} graph classifications unresolved. Publication unverified.`);
+  for (const row of result.coverage.entities.filter(row => row.missingRequired.length || row.missingRecommended.length)) console.log(`${row.entityCode}: declared=${row.declared.join(",")} required=${row.required.join(",")} recommended=${row.recommended.join(",")} missing-required=${row.missingRequired.join(",")} missing-recommended=${row.missingRecommended.join(",")}`);
 }

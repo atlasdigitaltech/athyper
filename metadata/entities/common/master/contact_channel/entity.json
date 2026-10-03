@@ -1,0 +1,21 @@
+{
+  "schema": "athyper.entity-source/2",
+  "entityCode": "contact_channel",
+  "authoringOwnership": "platform",
+  "entityClass": null,
+  "ownershipModel": null,
+  "targets": {
+    "declared": [
+      "neon"
+    ],
+    "required": [],
+    "recommended": [
+      "neon",
+      "mesh",
+      "studio"
+    ]
+  },
+  "artifacts": [
+    "core.json"
+  ]
+}
