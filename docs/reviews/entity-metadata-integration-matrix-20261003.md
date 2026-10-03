@@ -182,4 +182,11 @@ The publication tracker contains 57 required and 21 recommended entity/plane row
 
 The [exact permission ledger](entity-metadata-permission-ledger-20261003.json) records 248 source permission-property occurrences, all 83 proposed surface transitions, 90 reference list/read target rows and nine explicit collaboration migration pairs. It preserves four existing MFA properties. Source/profile/compiler observations remain distinct from active permissions. Unresolved targets are not permission omissions or access grants.
 
-See the [shared-contract design](entity-metadata-reconciliation-20261003.md#exact-permission-ledger-and-shared-contract-design--3-october-2026) for reusable integration points, self/parent/directory boundaries, exact plane bindings, migration ordering and acceptance criteria. No source bindings or runtime behavior changed. Next is implementation of the shared contract changes, preserving current permission semantics before any governed migration.
+See the [shared-contract design](entity-metadata-reconciliation-20261003.md#exact-permission-ledger-and-shared-contract-design--3-october-2026) for reusable integration points, self/parent/directory boundaries, exact plane bindings, migration ordering and acceptance criteria. No source bindings or runtime behavior changed. The corrected cleanup input governs next work: inventory all active consumers and resolve final dispositions, then implement required removals/replacements through shared contracts. Preserving enforcement during cutover is not a final keep decision.
+
+
+## Corrected permission cleanup authority
+
+Use the [cleanup input](entity-metadata-permission-cleanup-20261003.json) and [controlling requirements](entity-metadata-reconciliation-20261003.md#owner-directed-permission-cleanup--controlling-correction) for final permission dispositions. The earlier surface JSON is a proposal/evidence capture, not an instruction to keep legacy direct-child permissions indefinitely. Its scope gates still apply; obsolete permissions must be removed from all active direct and scoped consumers through the shared framework.
+
+The current 82-code input records 18 keep, 19 replace, 14 remove and 31 review-required decisions. Explicit worksheet removals are not deferred merely because onboarding is deferred. A full active system inventory and runtime verification remain outstanding. No new active permission, grant, MFA behavior or bespoke route/provider is introduced by these review artifacts.

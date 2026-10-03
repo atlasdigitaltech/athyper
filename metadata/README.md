@@ -170,3 +170,15 @@ The old `New_Entity/verify_live_schema.py` entry point is retained because an
 unchanged review release records its historical command. It delegates to the
 current live schema gate. Remove it only through separately reviewed successor
 release evidence; never rewrite historical hashes to remove that binding.
+
+
+## Permission cleanup review input
+
+The [owner-directed cleanup input](../docs/reviews/entity-metadata-permission-cleanup-20261003.json)
+and [controlling design](../docs/reviews/entity-metadata-reconciliation-20261003.md#owner-directed-permission-cleanup--controlling-correction)
+replace earlier retain-by-default recommendations. These files are review data,
+not metadata discovery inputs or permission grants. Explicit removals require
+migration of active consumers and removal of old catalog/provisioning references;
+a source move or permission rename alone does not complete cleanup. Preserve
+historical release/migration evidence and existing MFA controls. Implement all
+surface admission through the shared Entity Framework, with no bespoke stack.

@@ -1,0 +1,2551 @@
+{
+  "schema": "review-cleanup-input/1",
+  "date": "2026-10-03",
+  "purpose": "Authoritative owner-directed cleanup dispositions for this review; NOT runtime metadata, SQL input, grant authority or an activation receipt. Supersedes earlier retain-by-default recommendations.",
+  "worksheet": {
+    "attachmentName": "Pasted text.txt",
+    "sha256": "85298b5f02e40a2512ddd1fd60a787da1d86cd1ebb657d266e103dbd27f2457f",
+    "rows": [
+      {
+        "row": 2,
+        "permission": "common.platform.reference.view",
+        "instruction": "common.platform.reference.read",
+        "cells": {
+          "Permission": "common.platform.reference.view",
+          "Revised Permission / Notes": "common.platform.reference.read",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 3,
+        "permission": "",
+        "instruction": "common.platform.reference.print",
+        "cells": {
+          "Permission": "",
+          "Revised Permission / Notes": "common.platform.reference.print",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 4,
+        "permission": "common.collaboration.attachment.create",
+        "instruction": "common.collaboration.attachment.create",
+        "cells": {
+          "Permission": "common.collaboration.attachment.create",
+          "Revised Permission / Notes": "common.collaboration.attachment.create",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 5,
+        "permission": "common.collaboration.attachment.read",
+        "instruction": "common.collaboration.attachment.read",
+        "cells": {
+          "Permission": "common.collaboration.attachment.read",
+          "Revised Permission / Notes": "common.collaboration.attachment.read",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 6,
+        "permission": "common.collaboration.attachment.download",
+        "instruction": "common.collaboration.attachment.download",
+        "cells": {
+          "Permission": "common.collaboration.attachment.download",
+          "Revised Permission / Notes": "common.collaboration.attachment.download",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 7,
+        "permission": "common.collaboration.attachment.finalize",
+        "instruction": "common.collaboration.attachment.finalize",
+        "cells": {
+          "Permission": "common.collaboration.attachment.finalize",
+          "Revised Permission / Notes": "common.collaboration.attachment.finalize",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 8,
+        "permission": "common.collaboration.attachment.archive",
+        "instruction": "common.collaboration.attachment.archive",
+        "cells": {
+          "Permission": "common.collaboration.attachment.archive",
+          "Revised Permission / Notes": "common.collaboration.attachment.archive",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 9,
+        "permission": "common.collaboration.comment.create",
+        "instruction": "common.collaboration.comment.create",
+        "cells": {
+          "Permission": "common.collaboration.comment.create",
+          "Revised Permission / Notes": "common.collaboration.comment.create",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 10,
+        "permission": "common.collaboration.comment.read",
+        "instruction": "common.collaboration.comment.read",
+        "cells": {
+          "Permission": "common.collaboration.comment.read",
+          "Revised Permission / Notes": "common.collaboration.comment.read",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 11,
+        "permission": "common.collaboration.comment.update_own",
+        "instruction": "common.collaboration.comment.update_own",
+        "cells": {
+          "Permission": "common.collaboration.comment.update_own",
+          "Revised Permission / Notes": "common.collaboration.comment.update_own",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 12,
+        "permission": "common.collaboration.comment.archive_own",
+        "instruction": "common.collaboration.comment.archive_own",
+        "cells": {
+          "Permission": "common.collaboration.comment.archive_own",
+          "Revised Permission / Notes": "common.collaboration.comment.archive_own",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 13,
+        "permission": "neon.collaboration.attachment.archive",
+        "instruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+        "cells": {
+          "Permission": "neon.collaboration.attachment.archive",
+          "Revised Permission / Notes": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+          "Entity Level": "Replace and Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 14,
+        "permission": "neon.collaboration.attachment.create",
+        "instruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+        "cells": {
+          "Permission": "neon.collaboration.attachment.create",
+          "Revised Permission / Notes": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+          "Entity Level": "Replace and Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 15,
+        "permission": "neon.collaboration.attachment.download",
+        "instruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+        "cells": {
+          "Permission": "neon.collaboration.attachment.download",
+          "Revised Permission / Notes": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+          "Entity Level": "Replace and Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 16,
+        "permission": "neon.collaboration.attachment.finalize",
+        "instruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+        "cells": {
+          "Permission": "neon.collaboration.attachment.finalize",
+          "Revised Permission / Notes": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+          "Entity Level": "Replace and Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 17,
+        "permission": "neon.collaboration.attachment.read",
+        "instruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+        "cells": {
+          "Permission": "neon.collaboration.attachment.read",
+          "Revised Permission / Notes": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+          "Entity Level": "Replace and Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 18,
+        "permission": "neon.collaboration.comment.archive_own",
+        "instruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+        "cells": {
+          "Permission": "neon.collaboration.comment.archive_own",
+          "Revised Permission / Notes": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+          "Entity Level": "Replace and Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 19,
+        "permission": "neon.collaboration.comment.create",
+        "instruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+        "cells": {
+          "Permission": "neon.collaboration.comment.create",
+          "Revised Permission / Notes": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+          "Entity Level": "Replace and Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 20,
+        "permission": "neon.collaboration.comment.read",
+        "instruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+        "cells": {
+          "Permission": "neon.collaboration.comment.read",
+          "Revised Permission / Notes": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+          "Entity Level": "Replace and Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 21,
+        "permission": "neon.collaboration.comment.update_own",
+        "instruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+        "cells": {
+          "Permission": "neon.collaboration.comment.update_own",
+          "Revised Permission / Notes": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+          "Entity Level": "Replace and Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 22,
+        "permission": "neon.relationship.business_partner.read",
+        "instruction": "neon.relationship.business_partner.read",
+        "cells": {
+          "Permission": "neon.relationship.business_partner.read",
+          "Revised Permission / Notes": "neon.relationship.business_partner.read",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 23,
+        "permission": "",
+        "instruction": "neon.relationship.business_partner.edit (Direct Edit to BP and Child)",
+        "cells": {
+          "Permission": "",
+          "Revised Permission / Notes": "neon.relationship.business_partner.edit (Direct Edit to BP and Child)",
+          "Entity Level": "Yes",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 24,
+        "permission": "neon.relationship.business_partner_identity.read",
+        "instruction": "Parent Entity Permission sufficient",
+        "cells": {
+          "Permission": "neon.relationship.business_partner_identity.read",
+          "Revised Permission / Notes": "Parent Entity Permission sufficient",
+          "Entity Level": "Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "Remove",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 25,
+        "permission": "neon.relationship.business_partner_network.read",
+        "instruction": "Parent Entity Permission sufficient",
+        "cells": {
+          "Permission": "neon.relationship.business_partner_network.read",
+          "Revised Permission / Notes": "Parent Entity Permission sufficient",
+          "Entity Level": "Remove",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "Remove",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 26,
+        "permission": "neon.relationship.business_partner_bank.reveal",
+        "instruction": "neon.relationship.business_partner_bank.reveal",
+        "cells": {
+          "Permission": "neon.relationship.business_partner_bank.reveal",
+          "Revised Permission / Notes": "neon.relationship.business_partner_bank.reveal",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "Yes",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 27,
+        "permission": "neon.relationship.business_partner_identifier.reveal",
+        "instruction": "neon.relationship.business_partner_identifier.reveal",
+        "cells": {
+          "Permission": "neon.relationship.business_partner_identifier.reveal",
+          "Revised Permission / Notes": "neon.relationship.business_partner_identifier.reveal",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "Yes",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 28,
+        "permission": "neon.relationship.business_partner_tax.reveal",
+        "instruction": "neon.relationship.business_partner_tax.reveal",
+        "cells": {
+          "Permission": "neon.relationship.business_partner_tax.reveal",
+          "Revised Permission / Notes": "neon.relationship.business_partner_tax.reveal",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "Yes",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 29,
+        "permission": "neon.business_partner_banking.read",
+        "instruction": "Remove",
+        "cells": {
+          "Permission": "neon.business_partner_banking.read",
+          "Revised Permission / Notes": "Remove",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 30,
+        "permission": "neon.business_partner_governance_relation.read",
+        "instruction": "Remove",
+        "cells": {
+          "Permission": "neon.business_partner_governance_relation.read",
+          "Revised Permission / Notes": "Remove",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 31,
+        "permission": "neon.business_partner_identifier.read",
+        "instruction": "Remove",
+        "cells": {
+          "Permission": "neon.business_partner_identifier.read",
+          "Revised Permission / Notes": "Remove",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 32,
+        "permission": "neon.business_partner_industry_classification.read",
+        "instruction": "Remove",
+        "cells": {
+          "Permission": "neon.business_partner_industry_classification.read",
+          "Revised Permission / Notes": "Remove",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 33,
+        "permission": "neon.business_partner_operating_organization_assignment.read",
+        "instruction": "Remove",
+        "cells": {
+          "Permission": "neon.business_partner_operating_organization_assignment.read",
+          "Revised Permission / Notes": "Remove",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 34,
+        "permission": "neon.business_partner_qualification.read",
+        "instruction": "Remove",
+        "cells": {
+          "Permission": "neon.business_partner_qualification.read",
+          "Revised Permission / Notes": "Remove",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 35,
+        "permission": "neon.business_partner_tax_registration.read",
+        "instruction": "Remove",
+        "cells": {
+          "Permission": "neon.business_partner_tax_registration.read",
+          "Revised Permission / Notes": "Remove",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 36,
+        "permission": "neon.relationship.business_partner.capability_customer_manage",
+        "instruction": "neon.relationship.business_partner.capability_customer_manage",
+        "cells": {
+          "Permission": "neon.relationship.business_partner.capability_customer_manage",
+          "Revised Permission / Notes": "neon.relationship.business_partner.capability_customer_manage",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "Yes",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 37,
+        "permission": "neon.relationship.business_partner.capability_supplier_manage",
+        "instruction": "neon.relationship.business_partner.capability_supplier_manage",
+        "cells": {
+          "Permission": "neon.relationship.business_partner.capability_supplier_manage",
+          "Revised Permission / Notes": "neon.relationship.business_partner.capability_supplier_manage",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "Yes",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 38,
+        "permission": "neon.relationship.business_partner.mesh_publish",
+        "instruction": "neon.relationship.business_partner.mesh_publish",
+        "cells": {
+          "Permission": "neon.relationship.business_partner.mesh_publish",
+          "Revised Permission / Notes": "neon.relationship.business_partner.mesh_publish",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "Yes",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 39,
+        "permission": "neon.relationship.business_partner.print",
+        "instruction": "neon.relationship.business_partner.print",
+        "cells": {
+          "Permission": "neon.relationship.business_partner.print",
+          "Revised Permission / Notes": "neon.relationship.business_partner.print",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "Yes",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 40,
+        "permission": "neon.business_partner_request.create_draft",
+        "instruction": "neon.relationship.business_partner_request.create_draft",
+        "cells": {
+          "Permission": "neon.business_partner_request.create_draft",
+          "Revised Permission / Notes": "neon.relationship.business_partner_request.create_draft",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "Yes",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 41,
+        "permission": "neon.relationship.business_partner_amend.create",
+        "instruction": "neon.relationship.business_partner_amend.create",
+        "cells": {
+          "Permission": "neon.relationship.business_partner_amend.create",
+          "Revised Permission / Notes": "neon.relationship.business_partner_amend.create",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "Yes",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 42,
+        "permission": "neon.business_partner_request.save_draft",
+        "instruction": "neon.relationship.business_partner_request.save_draft",
+        "cells": {
+          "Permission": "neon.business_partner_request.save_draft",
+          "Revised Permission / Notes": "neon.relationship.business_partner_request.save_draft",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "Yes",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 43,
+        "permission": "neon.business_partner_request.approve",
+        "instruction": "neon.relationship.business_partner_request.approve",
+        "cells": {
+          "Permission": "neon.business_partner_request.approve",
+          "Revised Permission / Notes": "neon.relationship.business_partner_request.approve",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "Yes",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 44,
+        "permission": "neon.business_partner_request.reject",
+        "instruction": "neon.relationship.business_partner_request.reject",
+        "cells": {
+          "Permission": "neon.business_partner_request.reject",
+          "Revised Permission / Notes": "neon.relationship.business_partner_request.reject",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "Yes",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 45,
+        "permission": "neon.business_partner_request.return",
+        "instruction": "neon.relationship.business_partner_request.return",
+        "cells": {
+          "Permission": "neon.business_partner_request.return",
+          "Revised Permission / Notes": "neon.relationship.business_partner_request.return",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "Yes",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 46,
+        "permission": "neon.relationship.entity_case.create",
+        "instruction": "REMOVE",
+        "cells": {
+          "Permission": "neon.relationship.entity_case.create",
+          "Revised Permission / Notes": "REMOVE",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 47,
+        "permission": "neon.relationship.entity_case.materialize",
+        "instruction": "REMOVE",
+        "cells": {
+          "Permission": "neon.relationship.entity_case.materialize",
+          "Revised Permission / Notes": "REMOVE",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 48,
+        "permission": "neon.relationship.entity_case.read",
+        "instruction": "REMOVE",
+        "cells": {
+          "Permission": "neon.relationship.entity_case.read",
+          "Revised Permission / Notes": "REMOVE",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 49,
+        "permission": "neon.relationship.entity_case.submit",
+        "instruction": "REMOVE",
+        "cells": {
+          "Permission": "neon.relationship.entity_case.submit",
+          "Revised Permission / Notes": "REMOVE",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 50,
+        "permission": "neon.customer.read",
+        "instruction": "if used replace with neon.relationship.business_partner.capability_customer_manage",
+        "cells": {
+          "Permission": "neon.customer.read",
+          "Revised Permission / Notes": "if used replace with neon.relationship.business_partner.capability_customer_manage",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 51,
+        "permission": "neon.customer_company_profile.read",
+        "instruction": "if used replace with neon.relationship.business_partner.capability_customer_manage",
+        "cells": {
+          "Permission": "neon.customer_company_profile.read",
+          "Revised Permission / Notes": "if used replace with neon.relationship.business_partner.capability_customer_manage",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 52,
+        "permission": "neon.supplier.read",
+        "instruction": "if used replace with neon.relationship.business_partner.capability_supplier_manage",
+        "cells": {
+          "Permission": "neon.supplier.read",
+          "Revised Permission / Notes": "if used replace with neon.relationship.business_partner.capability_supplier_manage",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 53,
+        "permission": "neon.supplier_company_profile.read",
+        "instruction": "if used replace with neon.relationship.business_partner.capability_supplier_manage",
+        "cells": {
+          "Permission": "neon.supplier_company_profile.read",
+          "Revised Permission / Notes": "if used replace with neon.relationship.business_partner.capability_supplier_manage",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 54,
+        "permission": "neon.certification.read",
+        "instruction": "Really we need separate permission. Remove and parent entity sufficient",
+        "cells": {
+          "Permission": "neon.certification.read",
+          "Revised Permission / Notes": "Really we need separate permission. Remove and parent entity sufficient",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 55,
+        "permission": "common.identity.principal.read",
+        "instruction": "common.identity.principal.read",
+        "cells": {
+          "Permission": "common.identity.principal.read",
+          "Revised Permission / Notes": "common.identity.principal.read",
+          "Entity Level": "",
+          "ME Access": "Yes. Default for everyone irrespective of their permission",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 56,
+        "permission": "common.identity.principal_notification_preference.read",
+        "instruction": "common.identity.principal_notification_preference.read",
+        "cells": {
+          "Permission": "common.identity.principal_notification_preference.read",
+          "Revised Permission / Notes": "common.identity.principal_notification_preference.read",
+          "Entity Level": "",
+          "ME Access": "Yes. Default for everyone irrespective of their permission",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 57,
+        "permission": "common.identity.principal_notification_preference.edit",
+        "instruction": "common.identity.principal_notification_preference.edit",
+        "cells": {
+          "Permission": "common.identity.principal_notification_preference.edit",
+          "Revised Permission / Notes": "common.identity.principal_notification_preference.edit",
+          "Entity Level": "",
+          "ME Access": "Yes. Default for everyone irrespective of their permission",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 58,
+        "permission": "common.identity.principal_profile.read",
+        "instruction": "common.identity.principal_profile.read",
+        "cells": {
+          "Permission": "common.identity.principal_profile.read",
+          "Revised Permission / Notes": "common.identity.principal_profile.read",
+          "Entity Level": "",
+          "ME Access": "Yes. Default for everyone irrespective of their permission",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 59,
+        "permission": "common.identity.principal_profile.edit",
+        "instruction": "common.identity.principal_profile.edit",
+        "cells": {
+          "Permission": "common.identity.principal_profile.edit",
+          "Revised Permission / Notes": "common.identity.principal_profile.edit",
+          "Entity Level": "",
+          "ME Access": "Yes. Default for everyone irrespective of their permission",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 60,
+        "permission": "common.identity.principal_ui_profile.read",
+        "instruction": "common.identity.principal_ui_profile.read",
+        "cells": {
+          "Permission": "common.identity.principal_ui_profile.read",
+          "Revised Permission / Notes": "common.identity.principal_ui_profile.read",
+          "Entity Level": "",
+          "ME Access": "Yes. Default for everyone irrespective of their permission",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 61,
+        "permission": "common.identity.principal_ui_profile.edit",
+        "instruction": "common.identity.principal_ui_profile.edit",
+        "cells": {
+          "Permission": "common.identity.principal_ui_profile.edit",
+          "Revised Permission / Notes": "common.identity.principal_ui_profile.edit",
+          "Entity Level": "",
+          "ME Access": "Yes. Default for everyone irrespective of their permission",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 62,
+        "permission": "neon.workforce.person.read",
+        "instruction": "Need to revisit",
+        "cells": {
+          "Permission": "neon.workforce.person.read",
+          "Revised Permission / Notes": "Need to revisit",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 63,
+        "permission": "neon.workforce.person_address_use.read",
+        "instruction": "Need to revisit",
+        "cells": {
+          "Permission": "neon.workforce.person_address_use.read",
+          "Revised Permission / Notes": "Need to revisit",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 64,
+        "permission": "neon.workforce.employee.read",
+        "instruction": "Need to revisit",
+        "cells": {
+          "Permission": "neon.workforce.employee.read",
+          "Revised Permission / Notes": "Need to revisit",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 65,
+        "permission": "neon.workforce.external_worker.read",
+        "instruction": "Need to revisit",
+        "cells": {
+          "Permission": "neon.workforce.external_worker.read",
+          "Revised Permission / Notes": "Need to revisit",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 66,
+        "permission": "neon.workforce.address.read",
+        "instruction": "Need to revisit",
+        "cells": {
+          "Permission": "neon.workforce.address.read",
+          "Revised Permission / Notes": "Need to revisit",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 67,
+        "permission": "neon.workforce.read",
+        "instruction": "Need to revisit",
+        "cells": {
+          "Permission": "neon.workforce.read",
+          "Revised Permission / Notes": "Need to revisit",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 68,
+        "permission": "neon.address.read",
+        "instruction": "Need to revisit",
+        "cells": {
+          "Permission": "neon.address.read",
+          "Revised Permission / Notes": "Need to revisit",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 69,
+        "permission": "neon.address_link.read",
+        "instruction": "Need to revisit",
+        "cells": {
+          "Permission": "neon.address_link.read",
+          "Revised Permission / Notes": "Need to revisit",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      },
+      {
+        "row": 70,
+        "permission": "neon.contact_person.read",
+        "instruction": "Need to revisit",
+        "cells": {
+          "Permission": "neon.contact_person.read",
+          "Revised Permission / Notes": "Need to revisit",
+          "Entity Level": "",
+          "ME Access": "",
+          "Special Entity Action": "",
+          "Intake Request Level": "",
+          "Navigation Tab": "",
+          "Section Tab": "",
+          "Field Level": "",
+          "Reference Link Level": ""
+        }
+      }
+    ]
+  },
+  "inventoryScope": "Worksheet plus distinct codes observed in the 215-file Entity/profile ledger. NOT a complete system-wide permission inventory. Full active catalog/consumer inventory is a prerequisite to implementation completion.",
+  "decisions": [
+    {
+      "permission": "common.collaboration.attachment.archive",
+      "decision": "keep",
+      "target": "common.collaboration.attachment.archive",
+      "worksheetRow": 8,
+      "ownerInstruction": "common.collaboration.attachment.archive",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0177",
+        "binding-0182"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.collaboration.attachment.create",
+      "decision": "keep",
+      "target": "common.collaboration.attachment.create",
+      "worksheetRow": 4,
+      "ownerInstruction": "common.collaboration.attachment.create",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0174",
+        "binding-0179",
+        "binding-0180",
+        "binding-0181"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.collaboration.attachment.download",
+      "decision": "keep",
+      "target": "common.collaboration.attachment.download",
+      "worksheetRow": 6,
+      "ownerInstruction": "common.collaboration.attachment.download",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0176",
+        "binding-0183"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.collaboration.attachment.finalize",
+      "decision": "keep",
+      "target": "common.collaboration.attachment.finalize",
+      "worksheetRow": 7,
+      "ownerInstruction": "common.collaboration.attachment.finalize",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0175"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.collaboration.attachment.read",
+      "decision": "keep",
+      "target": "common.collaboration.attachment.read",
+      "worksheetRow": 5,
+      "ownerInstruction": "common.collaboration.attachment.read",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0173",
+        "binding-0178",
+        "binding-0184",
+        "binding-0185"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.collaboration.comment.archive_own",
+      "decision": "keep",
+      "target": "common.collaboration.comment.archive_own",
+      "worksheetRow": 12,
+      "ownerInstruction": "common.collaboration.comment.archive_own",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0166"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.collaboration.comment.create",
+      "decision": "keep",
+      "target": "common.collaboration.comment.create",
+      "worksheetRow": 9,
+      "ownerInstruction": "common.collaboration.comment.create",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0164",
+        "binding-0167",
+        "binding-0168",
+        "binding-0169"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.collaboration.comment.read",
+      "decision": "keep",
+      "target": "common.collaboration.comment.read",
+      "worksheetRow": 10,
+      "ownerInstruction": "common.collaboration.comment.read",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0163",
+        "binding-0170",
+        "binding-0171",
+        "binding-0172"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.collaboration.comment.update_own",
+      "decision": "keep",
+      "target": "common.collaboration.comment.update_own",
+      "worksheetRow": 11,
+      "ownerInstruction": "common.collaboration.comment.update_own",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0165"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.identity.principal.administer",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0210",
+        "binding-0219",
+        "binding-0228",
+        "binding-0237"
+      ]
+    },
+    {
+      "permission": "common.identity.principal.read",
+      "decision": "review_required",
+      "target": {
+        "self": "no entity grant; server-enforced self scope",
+        "administration": "exact minimal administrative bindings to be selected"
+      },
+      "worksheetRow": 55,
+      "ownerInstruction": "common.identity.principal.read",
+      "reason": "Remove grant requirement from supported self-service. Do not keep a defined permission and bypass it; decide whether code remains needed for administration.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0206",
+        "binding-0207",
+        "binding-0208",
+        "binding-0209"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.identity.principal_notification_preference.edit",
+      "decision": "review_required",
+      "target": {
+        "self": "no entity grant; server-enforced self scope",
+        "administration": "exact minimal administrative bindings to be selected"
+      },
+      "worksheetRow": 57,
+      "ownerInstruction": "common.identity.principal_notification_preference.edit",
+      "reason": "Remove grant requirement from supported self-service. Do not keep a defined permission and bypass it; decide whether code remains needed for administration.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0213",
+        "binding-0214",
+        "binding-0217",
+        "binding-0218"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.identity.principal_notification_preference.read",
+      "decision": "review_required",
+      "target": {
+        "self": "no entity grant; server-enforced self scope",
+        "administration": "exact minimal administrative bindings to be selected"
+      },
+      "worksheetRow": 56,
+      "ownerInstruction": "common.identity.principal_notification_preference.read",
+      "reason": "Remove grant requirement from supported self-service. Do not keep a defined permission and bypass it; decide whether code remains needed for administration.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0211",
+        "binding-0212",
+        "binding-0215",
+        "binding-0216"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.identity.principal_profile.edit",
+      "decision": "review_required",
+      "target": {
+        "self": "no entity grant; server-enforced self scope",
+        "administration": "exact minimal administrative bindings to be selected"
+      },
+      "worksheetRow": 59,
+      "ownerInstruction": "common.identity.principal_profile.edit",
+      "reason": "Remove grant requirement from supported self-service. Do not keep a defined permission and bypass it; decide whether code remains needed for administration.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0222",
+        "binding-0223",
+        "binding-0226",
+        "binding-0227"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.identity.principal_profile.read",
+      "decision": "review_required",
+      "target": {
+        "self": "no entity grant; server-enforced self scope",
+        "administration": "exact minimal administrative bindings to be selected"
+      },
+      "worksheetRow": 58,
+      "ownerInstruction": "common.identity.principal_profile.read",
+      "reason": "Remove grant requirement from supported self-service. Do not keep a defined permission and bypass it; decide whether code remains needed for administration.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0220",
+        "binding-0221",
+        "binding-0224",
+        "binding-0225"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.identity.principal_ui_profile.edit",
+      "decision": "review_required",
+      "target": {
+        "self": "no entity grant; server-enforced self scope",
+        "administration": "exact minimal administrative bindings to be selected"
+      },
+      "worksheetRow": 61,
+      "ownerInstruction": "common.identity.principal_ui_profile.edit",
+      "reason": "Remove grant requirement from supported self-service. Do not keep a defined permission and bypass it; decide whether code remains needed for administration.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0231",
+        "binding-0232",
+        "binding-0235",
+        "binding-0236"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.identity.principal_ui_profile.read",
+      "decision": "review_required",
+      "target": {
+        "self": "no entity grant; server-enforced self scope",
+        "administration": "exact minimal administrative bindings to be selected"
+      },
+      "worksheetRow": 60,
+      "ownerInstruction": "common.identity.principal_ui_profile.read",
+      "reason": "Remove grant requirement from supported self-service. Do not keep a defined permission and bypass it; decide whether code remains needed for administration.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0229",
+        "binding-0230",
+        "binding-0233",
+        "binding-0234"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "common.platform.reference.view",
+      "decision": "replace",
+      "target": "common.platform.reference.read",
+      "worksheetRow": 2,
+      "ownerInstruction": "common.platform.reference.read",
+      "reason": "Exact owner-specified rename; remove old active code and business-code compiler coupling.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.address.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": 68,
+      "ownerInstruction": "Need to revisit",
+      "reason": "Owner explicitly requests reassessment; no final permission inferred.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0005"
+      ],
+      "completion": "Exact final scope, published binding and active use verified.",
+      "formatReview": {
+        "catalogSyntax": "passes generic three-or-more-part table regex",
+        "canonicalEntityOperationPublication": "fails four-part compiler/staging requirement",
+        "requiredAction": "select governed replacement or remove requirement according to surface; do not merely add a guessed namespace",
+        "replacement": null
+      }
+    },
+    {
+      "permission": "neon.address_link.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": 69,
+      "ownerInstruction": "Need to revisit",
+      "reason": "Owner explicitly requests reassessment; no final permission inferred.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0007"
+      ],
+      "completion": "Exact final scope, published binding and active use verified.",
+      "formatReview": {
+        "catalogSyntax": "passes generic three-or-more-part table regex",
+        "canonicalEntityOperationPublication": "fails four-part compiler/staging requirement",
+        "requiredAction": "select governed replacement or remove requirement according to surface; do not merely add a guessed namespace",
+        "replacement": null
+      }
+    },
+    {
+      "permission": "neon.business_partner_banking.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 29,
+      "ownerInstruction": "Remove",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0130"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_classification.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0045",
+        "binding-0097"
+      ]
+    },
+    {
+      "permission": "neon.business_partner_governance_relation.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 30,
+      "ownerInstruction": "Remove",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0133"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_identifier.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 31,
+      "ownerInstruction": "Remove",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0137"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_industry_classification.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 32,
+      "ownerInstruction": "Remove",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0139"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_operating_organization_assignment.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 33,
+      "ownerInstruction": "Remove",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0141"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_qualification.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 34,
+      "ownerInstruction": "Remove",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0143"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_request.approve",
+      "decision": "replace",
+      "target": "neon.relationship.business_partner_request.approve",
+      "worksheetRow": 43,
+      "ownerInstruction": "neon.relationship.business_partner_request.approve",
+      "reason": "Exact owner-specified request rename. Deferred onboarding does not defer permission cleanup.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0153"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_request.create_draft",
+      "decision": "replace",
+      "target": "neon.relationship.business_partner_request.create_draft",
+      "worksheetRow": 40,
+      "ownerInstruction": "neon.relationship.business_partner_request.create_draft",
+      "reason": "Exact owner-specified request rename. Deferred onboarding does not defer permission cleanup.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0148"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_request.reject",
+      "decision": "replace",
+      "target": "neon.relationship.business_partner_request.reject",
+      "worksheetRow": 44,
+      "ownerInstruction": "neon.relationship.business_partner_request.reject",
+      "reason": "Exact owner-specified request rename. Deferred onboarding does not defer permission cleanup.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0152"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_request.return",
+      "decision": "replace",
+      "target": "neon.relationship.business_partner_request.return",
+      "worksheetRow": 45,
+      "ownerInstruction": "neon.relationship.business_partner_request.return",
+      "reason": "Exact owner-specified request rename. Deferred onboarding does not defer permission cleanup.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0151"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_request.save_draft",
+      "decision": "replace",
+      "target": "neon.relationship.business_partner_request.save_draft",
+      "worksheetRow": 42,
+      "ownerInstruction": "neon.relationship.business_partner_request.save_draft",
+      "reason": "Exact owner-specified request rename. Deferred onboarding does not defer permission cleanup.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0149"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.business_partner_tax_registration.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 35,
+      "ownerInstruction": "Remove",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0156"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.certification.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 54,
+      "ownerInstruction": "Really we need separate permission. Remove and parent entity sufficient",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0159"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.collaboration.attachment.archive",
+      "decision": "replace",
+      "target": "common.collaboration.attachment.archive",
+      "worksheetRow": 13,
+      "ownerInstruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+      "reason": "Use exact common collaboration binding; remove old code from active system.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0027",
+        "binding-0028",
+        "binding-0076",
+        "binding-0077"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.collaboration.attachment.create",
+      "decision": "replace",
+      "target": "common.collaboration.attachment.create",
+      "worksheetRow": 14,
+      "ownerInstruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+      "reason": "Use exact common collaboration binding; remove old code from active system.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0019",
+        "binding-0023",
+        "binding-0024",
+        "binding-0025",
+        "binding-0026",
+        "binding-0069",
+        "binding-0072",
+        "binding-0073",
+        "binding-0074",
+        "binding-0075"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.collaboration.attachment.download",
+      "decision": "replace",
+      "target": "common.collaboration.attachment.download",
+      "worksheetRow": 15,
+      "ownerInstruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+      "reason": "Use exact common collaboration binding; remove old code from active system.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0022",
+        "binding-0029",
+        "binding-0071",
+        "binding-0078"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.collaboration.attachment.finalize",
+      "decision": "replace",
+      "target": "common.collaboration.attachment.finalize",
+      "worksheetRow": 16,
+      "ownerInstruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+      "reason": "Use exact common collaboration binding; remove old code from active system.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0020",
+        "binding-0070"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.collaboration.attachment.read",
+      "decision": "replace",
+      "target": "common.collaboration.attachment.read",
+      "worksheetRow": 17,
+      "ownerInstruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+      "reason": "Use exact common collaboration binding; remove old code from active system.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0018",
+        "binding-0021",
+        "binding-0030",
+        "binding-0031",
+        "binding-0062",
+        "binding-0068",
+        "binding-0079",
+        "binding-0080"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.collaboration.comment.archive_own",
+      "decision": "replace",
+      "target": "common.collaboration.comment.archive_own",
+      "worksheetRow": 18,
+      "ownerInstruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+      "reason": "Use exact common collaboration binding; remove old code from active system.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0035",
+        "binding-0090",
+        "binding-0247"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.collaboration.comment.create",
+      "decision": "replace",
+      "target": "common.collaboration.comment.create",
+      "worksheetRow": 19,
+      "ownerInstruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+      "reason": "Use exact common collaboration binding; remove old code from active system.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0033",
+        "binding-0036",
+        "binding-0037",
+        "binding-0038",
+        "binding-0088",
+        "binding-0091",
+        "binding-0092",
+        "binding-0093",
+        "binding-0245",
+        "binding-0248"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.collaboration.comment.read",
+      "decision": "replace",
+      "target": "common.collaboration.comment.read",
+      "worksheetRow": 20,
+      "ownerInstruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+      "reason": "Use exact common collaboration binding; remove old code from active system.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0032",
+        "binding-0039",
+        "binding-0040",
+        "binding-0041",
+        "binding-0063",
+        "binding-0087",
+        "binding-0094",
+        "binding-0095",
+        "binding-0096",
+        "binding-0244"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.collaboration.comment.update_own",
+      "decision": "replace",
+      "target": "common.collaboration.comment.update_own",
+      "worksheetRow": 21,
+      "ownerInstruction": "Remove timebeing - we use common one… Later introduce Plane, Entity specific - replace with common.collaboration.*",
+      "reason": "Use exact common collaboration binding; remove old code from active system.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0034",
+        "binding-0089",
+        "binding-0246"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.contact_person.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": 70,
+      "ownerInstruction": "Need to revisit",
+      "reason": "Owner explicitly requests reassessment; no final permission inferred.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0161"
+      ],
+      "completion": "Exact final scope, published binding and active use verified.",
+      "formatReview": {
+        "catalogSyntax": "passes generic three-or-more-part table regex",
+        "canonicalEntityOperationPublication": "fails four-part compiler/staging requirement",
+        "requiredAction": "select governed replacement or remove requirement according to surface; do not merely add a guessed namespace",
+        "replacement": null
+      }
+    },
+    {
+      "permission": "neon.customer.read",
+      "decision": "replace",
+      "target": {
+        "read": "neon.relationship.business_partner.read",
+        "management": "neon.relationship.business_partner.capability_customer_manage",
+        "note": "Separate operations, not an OR or AND combination. Viewing refinement is the recommended design; preserve original worksheet instruction for review."
+      },
+      "worksheetRow": 50,
+      "ownerInstruction": "if used replace with neon.relationship.business_partner.capability_customer_manage",
+      "reason": "Remove standalone profile read code. BP-scoped viewing uses parent read; management uses its exact capability permission.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0186"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.customer_company_profile.read",
+      "decision": "replace",
+      "target": {
+        "read": "neon.relationship.business_partner.read",
+        "management": "neon.relationship.business_partner.capability_customer_manage",
+        "note": "Separate operations, not an OR or AND combination. Viewing refinement is the recommended design; preserve original worksheet instruction for review."
+      },
+      "worksheetRow": 51,
+      "ownerInstruction": "if used replace with neon.relationship.business_partner.capability_customer_manage",
+      "reason": "Remove standalone profile read code. BP-scoped viewing uses parent read; management uses its exact capability permission.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0188"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.relationship.bp_target.network_read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0061",
+        "binding-0111"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner.capability_customer_manage",
+      "decision": "keep",
+      "target": "neon.relationship.business_partner.capability_customer_manage",
+      "worksheetRow": 36,
+      "ownerInstruction": "neon.relationship.business_partner.capability_customer_manage",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0010"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.relationship.business_partner.capability_supplier_manage",
+      "decision": "keep",
+      "target": "neon.relationship.business_partner.capability_supplier_manage",
+      "worksheetRow": 37,
+      "ownerInstruction": "neon.relationship.business_partner.capability_supplier_manage",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0009"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.relationship.business_partner.mesh_publish",
+      "decision": "keep",
+      "target": "neon.relationship.business_partner.mesh_publish",
+      "worksheetRow": 38,
+      "ownerInstruction": "neon.relationship.business_partner.mesh_publish",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0017"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.relationship.business_partner.print",
+      "decision": "keep",
+      "target": "neon.relationship.business_partner.print",
+      "worksheetRow": 39,
+      "ownerInstruction": "neon.relationship.business_partner.print",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0016"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.relationship.business_partner.read",
+      "decision": "keep",
+      "target": "neon.relationship.business_partner.read",
+      "worksheetRow": 22,
+      "ownerInstruction": "neon.relationship.business_partner.read",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0011",
+        "binding-0042",
+        "binding-0049",
+        "binding-0050",
+        "binding-0051",
+        "binding-0060",
+        "binding-0083",
+        "binding-0103",
+        "binding-0113",
+        "binding-0121",
+        "binding-0123"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.relationship.business_partner_activity.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0059",
+        "binding-0064"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner_address.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0047",
+        "binding-0066"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner_amend.create",
+      "decision": "keep",
+      "target": "neon.relationship.business_partner_amend.create",
+      "worksheetRow": 41,
+      "ownerInstruction": "neon.relationship.business_partner_amend.create",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0012"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.relationship.business_partner_bank.read_masked",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0052",
+        "binding-0081"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner_bank.reveal",
+      "decision": "keep",
+      "target": "neon.relationship.business_partner_bank.reveal",
+      "worksheetRow": 26,
+      "ownerInstruction": "neon.relationship.business_partner_bank.reveal",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0129",
+        "binding-0132"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.relationship.business_partner_certificate.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0055",
+        "binding-0085"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner_contact.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0046",
+        "binding-0099"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner_credit.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0056",
+        "binding-0101"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner_identifier.read_masked",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0048",
+        "binding-0105"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner_identifier.reveal",
+      "decision": "keep",
+      "target": "neon.relationship.business_partner_identifier.reveal",
+      "worksheetRow": 27,
+      "ownerInstruction": "neon.relationship.business_partner_identifier.reveal",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0135",
+        "binding-0136"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.relationship.business_partner_identity.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 24,
+      "ownerInstruction": "Parent Entity Permission sufficient",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0043",
+        "binding-0044",
+        "binding-0107",
+        "binding-0109",
+        "binding-0127"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.relationship.business_partner_network.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 25,
+      "ownerInstruction": "Parent Entity Permission sufficient",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0145"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.relationship.business_partner_person.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": []
+    },
+    {
+      "permission": "neon.relationship.business_partner_qualification.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0053",
+        "binding-0115"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner_restriction.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0054",
+        "binding-0119"
+      ]
+    },
+    {
+      "permission": "neon.relationship.business_partner_tax.read_masked",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": []
+    },
+    {
+      "permission": "neon.relationship.business_partner_tax.reveal",
+      "decision": "keep",
+      "target": "neon.relationship.business_partner_tax.reveal",
+      "worksheetRow": 28,
+      "ownerInstruction": "neon.relationship.business_partner_tax.reveal",
+      "reason": "Explicit worksheet keep; verify actual operation/scope and publication.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0155",
+        "binding-0158"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.relationship.business_partner_workforce.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": null,
+      "ownerInstruction": null,
+      "reason": "Observed outside explicit worksheet rows; not automatically grandfathered as keep. Reduce to a real operation/access boundary or remove.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0057",
+        "binding-0125"
+      ]
+    },
+    {
+      "permission": "neon.relationship.entity_case.create",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 46,
+      "ownerInstruction": "REMOVE",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0006",
+        "binding-0008",
+        "binding-0013",
+        "binding-0014",
+        "binding-0015",
+        "binding-0128",
+        "binding-0131",
+        "binding-0134",
+        "binding-0138",
+        "binding-0140",
+        "binding-0142",
+        "binding-0144",
+        "binding-0146",
+        "binding-0157",
+        "binding-0160",
+        "binding-0162",
+        "binding-0187",
+        "binding-0189",
+        "binding-0239",
+        "binding-0241",
+        "binding-0243"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.relationship.entity_case.materialize",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 47,
+      "ownerInstruction": "REMOVE",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0154"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.relationship.entity_case.read",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 48,
+      "ownerInstruction": "REMOVE",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0058",
+        "binding-0117",
+        "binding-0147"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.relationship.entity_case.submit",
+      "decision": "remove",
+      "target": null,
+      "worksheetRow": 49,
+      "ownerInstruction": "REMOVE",
+      "reason": "Explicit owner removal; dependency work is required to complete removal, not permission to retain.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0150"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.supplier.read",
+      "decision": "replace",
+      "target": {
+        "read": "neon.relationship.business_partner.read",
+        "management": "neon.relationship.business_partner.capability_supplier_manage",
+        "note": "Separate operations, not an OR or AND combination. Viewing refinement is the recommended design; preserve original worksheet instruction for review."
+      },
+      "worksheetRow": 52,
+      "ownerInstruction": "if used replace with neon.relationship.business_partner.capability_supplier_manage",
+      "reason": "Remove standalone profile read code. BP-scoped viewing uses parent read; management uses its exact capability permission.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0238"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.supplier_company_profile.read",
+      "decision": "replace",
+      "target": {
+        "read": "neon.relationship.business_partner.read",
+        "management": "neon.relationship.business_partner.capability_supplier_manage",
+        "note": "Separate operations, not an OR or AND combination. Viewing refinement is the recommended design; preserve original worksheet instruction for review."
+      },
+      "worksheetRow": 53,
+      "ownerInstruction": "if used replace with neon.relationship.business_partner.capability_supplier_manage",
+      "reason": "Remove standalone profile read code. BP-scoped viewing uses parent read; management uses its exact capability permission.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0240"
+      ],
+      "completion": "All active consumers migrated and obsolete catalog/grant/policy/provisioning dependencies removed or safely reconciled; historical evidence preserved."
+    },
+    {
+      "permission": "neon.workforce.address.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": 66,
+      "ownerInstruction": "Need to revisit",
+      "reason": "Owner explicitly requests reassessment; no final permission inferred.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0001",
+        "binding-0002",
+        "binding-0003",
+        "binding-0004"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.workforce.employee.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": 64,
+      "ownerInstruction": "Need to revisit",
+      "reason": "Owner explicitly requests reassessment; no final permission inferred.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0190",
+        "binding-0191",
+        "binding-0192",
+        "binding-0193"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.workforce.external_worker.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": 65,
+      "ownerInstruction": "Need to revisit",
+      "reason": "Owner explicitly requests reassessment; no final permission inferred.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0194",
+        "binding-0195",
+        "binding-0196",
+        "binding-0197"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.workforce.person.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": 62,
+      "ownerInstruction": "Need to revisit",
+      "reason": "Owner explicitly requests reassessment; no final permission inferred.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0198",
+        "binding-0199",
+        "binding-0200",
+        "binding-0201"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.workforce.person_address_use.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": 63,
+      "ownerInstruction": "Need to revisit",
+      "reason": "Owner explicitly requests reassessment; no final permission inferred.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0202",
+        "binding-0203",
+        "binding-0204",
+        "binding-0205"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    },
+    {
+      "permission": "neon.workforce.read",
+      "decision": "review_required",
+      "target": null,
+      "worksheetRow": 67,
+      "ownerInstruction": "Need to revisit",
+      "reason": "Owner explicitly requests reassessment; no final permission inferred.",
+      "implementationStatus": "not_started",
+      "liveCatalogStatus": "unverified",
+      "occurrences": [
+        "binding-0242"
+      ],
+      "completion": "Exact final scope, published binding and active use verified."
+    }
+  ],
+  "newOperationProposals": [
+    {
+      "worksheetRow": 3,
+      "instruction": "common.platform.reference.print",
+      "status": "proposed_only; supported operation and publication required"
+    },
+    {
+      "worksheetRow": 23,
+      "instruction": "neon.relationship.business_partner.edit (Direct Edit to BP and Child)",
+      "status": "proposed_only; supported operation and publication required"
+    }
+  ],
+  "decisionSemantics": {
+    "keep": "Final minimal model retains a demonstrated access boundary",
+    "replace": "Migrate to exact governed target(s); remove old active permission identity",
+    "remove": "Eliminate old active permission; migrate the business operation to scoped parent/self authority or a reviewed successor",
+    "review_required": "No final disposition yet; never interpreted as keep, omit or allow; prevents claiming cleanup complete"
+  },
+  "implementationGates": [
+    "Inventory active source/profile/compiler/API/UI/policy/grant/catalog/provisioning consumers and all target planes.",
+    "Implement missing capability in existing shared Entity Framework; no parallel routes/providers or entity-name permission dispatch.",
+    "Validate exact optional permission properties and locked self/parent/tenant scope on all entry points.",
+    "Resolve explicit denies and actor/scope changes before replacing grants; no blanket grants, source-code aliases or permissive fallback.",
+    "Independently reviewed publication and target evidence before active cutover.",
+    "Remove obsolete active definitions and regeneration inputs; immutable historical releases/migrations remain evidence only.",
+    "Verify clean rebuild plus authorized and denied user flows under agreed testing scope; runtime verification remains pending."
+  ],
+  "counts": {
+    "replace": 19,
+    "keep": 18,
+    "remove": 14,
+    "review_required": 31
+  }
+}
