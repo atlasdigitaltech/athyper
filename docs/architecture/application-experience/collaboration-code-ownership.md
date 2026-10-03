@@ -89,7 +89,7 @@ These server paths are already generic. `platform/collaboration` and `services/a
 | `packages/planes/neon/business-partner/src/record-runtime.tsx` | Supplies Business Partner breadcrumbs, navigation, summary/domain actions and operating context. |
 | `packages/planes/neon/business-partner/src/index.tsx` | Owns product forms and calls the generic edit Collaboration adapter. |
 | `packages/planes/neon/business-partner/src/request-attachment-field.tsx` | Adapts a product request-form field and draft lifecycle. The actual upload lifecycle is already shared; moving the whole product field would also move its domain responsibilities. |
-| `metadata/products/mdg/entities/business_partner/*` | Declares this entity's capabilities, permissions and presentations. Other entities need their own declarations pointing to shared services/renderers. |
+| `metadata/entities/business_partner/*` | Declares this entity's capabilities, permissions and presentations. Other entities need their own declarations pointing to shared services/renderers. |
 | `apps/neon/lib/relay.ts` and app API entry | Host registration belongs to the host; shared relay operation definitions belong to the platform gateway. |
 
 Production source checks over the Comments/Files workspaces, Collaboration helpers/composer, Comments service and attachment service found no MDG/Business Partner literals in those shared implementations. Product names in fixtures and integration tests are valid examples, not runtime dependencies.

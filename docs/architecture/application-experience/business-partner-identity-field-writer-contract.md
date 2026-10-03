@@ -85,13 +85,13 @@ Runtime dispatch is in kysely-business-partner-case-repository.ts. Its amend_par
 
 | Consumer | Required alignment |
 | --- | --- |
-| [business_partner/core.json](../../../metadata/products/mdg/entities/business_partner/core.json) | Keep common fields bound to header; move organization field bindings to subtype metadata/projection. Preserve genericWriteEnabled=false. No references to dropped header columns |
-| [Identity presentation](../../../metadata/products/mdg/entities/business_partner/presentation.section.identity.json) and overview | Conditional organization/person fieldsets. Label header name “Display name” and subtype legal_name “Legal name”; person must not render organization fields |
+| [business_partner/core.json](../../../metadata/entities/business_partner/core.json) | Keep common fields bound to header; move organization field bindings to subtype metadata/projection. Preserve genericWriteEnabled=false. No references to dropped header columns |
+| [Identity presentation](../../../metadata/entities/business_partner/presentation.section.identity.json) and overview | Conditional organization/person fieldsets. Label header name “Display name” and subtype legal_name “Legal name”; person must not render organization fields |
 | Common section reader | Current organization-only filter, flat legal fields and parent join must change together; aliases already derive from alias rows |
 | 360 repository | Core/summary reads still select registration_country_code from header; use coherent subtype projection, not a dangling column |
 | Provider projection | Explicitly allow only authorized common/subtype fields; never use a broad person join/SELECT * to feed the generic field renderer |
 | Case repository and Mesh comparisons | Rebuild old/current values and result snapshots from aggregate projection. Versioned old payload adapters must distinguish old name-as-legal-name from new display label; never reinterpret signed/approved old payloads silently |
-| [Operations](../../../metadata/products/mdg/entities/business_partner/operation.json) | Keep existing read and request_change IDs tied to verified consumers. New field projection is not an authorization grant |
+| [Operations](../../../metadata/entities/business_partner/operation.json) | Keep existing read and request_change IDs tied to verified consumers. New field projection is not an authorization grant |
 
 Current permission anchors: neon.relationship.business_partner.read for the parent; neon.relationship.business_partner_identity.read for identity; neon.relationship.business_partner_amend.create for the existing change entry; role-free registration uses neon.business_partner_registration.* via casePermission. These are observed source bindings, not proof of every live scope/assurance check. Read/author/decide/materialize remain separate responsibilities.
 

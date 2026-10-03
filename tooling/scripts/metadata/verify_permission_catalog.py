@@ -26,7 +26,7 @@ def codes(value):
             yield from codes(item)
 
 expected = set()
-for path in ROOT.rglob('*.json'):
+for path in [*ROOT.rglob('*.json'), *(ROOT.parent / 'profiles').rglob('*.json')]:
     artifact = json.loads(path.read_text())
     if artifact.get('artifactType'):
         expected.update(codes(artifact))

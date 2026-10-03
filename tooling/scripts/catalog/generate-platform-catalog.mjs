@@ -102,33 +102,37 @@ export function generateDefaultSurfaces(catalog) {
   return { schema: "athyper-experience-surface-bundle/1", catalogSourceHash: catalog.sourceHash, surfaces };
 }
 
-/** Entity placements: each entity's own metadata names the plane, workspace and
- * module it belongs to (metadata/products/<product>/entities/<code>/placement.json). */
-export async function readEntityPlacements(base = resolve(root, "metadata/products")) {
+/** Entity placements are authored in metadata/entities/<code>/placement.json.
+ * The flat source directory does not assign workspace or module ownership. */
+export async function readEntityPlacements(base) {
+  if (base === undefined) {
+    const manifest = JSON.parse(await readFile(resolve(root, "metadata/manifest.json"), "utf8"));
+    if (manifest.schema !== "athyper.metadata-workspace/1" || manifest.entitiesRoot !== "entities") fail("unsupported flat metadata workspace");
+    base = resolve(root, "metadata", manifest.entitiesRoot);
+  }
   const placements = [];
-  for (const product of (await readdir(base, { withFileTypes: true })).filter((entry) => entry.isDirectory())) {
-    const entitiesDir = resolve(base, product.name, "entities");
-    const entities = await readdir(entitiesDir, { withFileTypes: true }).catch(() => []);
-    for (const entity of entities.filter((entry) => entry.isDirectory())) {
-      const file = resolve(entitiesDir, entity.name, "placement.json");
-      const text = await readFile(file, "utf8").catch(() => undefined);
-      if (text === undefined) continue;
-      const source = JSON.parse(text);
-      const where = `${product.name}/${entity.name}/placement.json`;
-      if (source.schema !== "athyper.entity-placement/1" || source.entityCode !== entity.name) fail(`${where} must declare athyper.entity-placement/1 for ${entity.name}`);
-      let name = source.name;
-      if (name === undefined) {
-        const definition = await readFile(resolve(entitiesDir, entity.name, "definition.json"), "utf8").then(JSON.parse).catch(() => undefined);
-        name = definition?.definition?.title?.defaultText;
-      }
-      if (typeof name !== "string" || !name.trim() || name.length > 120) fail(`${where} needs a name (or a definition title)`);
-      if (!Array.isArray(source.placements) || !source.placements.length) fail(`${where} needs at least one placement`);
-      for (const placement of source.placements) {
-        const keys = Object.keys(placement);
-        if (keys.some((key) => !["plane", "workspace", "module", "routeSlug", "default"].includes(key))) fail(`${where} has unknown placement keys`);
-        if (!(placement.plane in expectedCounts) || !codePattern.test(placement.workspace) || !codePattern.test(placement.module) || !slugPattern.test(placement.routeSlug)) fail(`${where} has an invalid placement`);
-        placements.push({ entityCode: entity.name, name: name.trim(), where, ...placement, default: placement.default === true });
-      }
+  for (const entity of (await readdir(base, { withFileTypes: true })).filter((entry) => entry.isDirectory())) {
+    const file = resolve(base, entity.name, "placement.json");
+    const text = await readFile(file, "utf8").catch((error) => {
+      if (error.code === "ENOENT") return undefined;
+      throw error;
+    });
+    if (text === undefined) continue;
+    const source = JSON.parse(text);
+    const where = `${entity.name}/placement.json`;
+    if (source.schema !== "athyper.entity-placement/1" || source.entityCode !== entity.name) fail(`${where} must declare athyper.entity-placement/1 for ${entity.name}`);
+    let name = source.name;
+    if (name === undefined) {
+      const definition = await readFile(resolve(base, entity.name, "definition.json"), "utf8").then(JSON.parse).catch(() => undefined);
+      name = definition?.definition?.title?.defaultText;
+    }
+    if (typeof name !== "string" || !name.trim() || name.length > 120) fail(`${where} needs a name (or a definition title)`);
+    if (!Array.isArray(source.placements) || !source.placements.length) fail(`${where} needs at least one placement`);
+    for (const placement of source.placements) {
+      const keys = Object.keys(placement);
+      if (keys.some((key) => !["plane", "workspace", "module", "routeSlug", "default"].includes(key))) fail(`${where} has unknown placement keys`);
+      if (!(placement.plane in expectedCounts) || !codePattern.test(placement.workspace) || !codePattern.test(placement.module) || !slugPattern.test(placement.routeSlug)) fail(`${where} has an invalid placement`);
+      placements.push({ entityCode: entity.name, name: name.trim(), where, ...placement, default: placement.default === true });
     }
   }
   return placements;

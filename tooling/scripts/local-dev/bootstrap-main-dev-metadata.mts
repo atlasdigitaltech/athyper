@@ -64,7 +64,7 @@ if(!process.argv.includes('--inside')){
  const canonicalizer={canonicalBytes,sha256:(x:Uint8Array)=>'sha256:'+hash(x)};
  const dir=join(root,'metadata/entities');
  function paths(d:string,p=''):string[]{return readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?paths(join(d,e.name),p+e.name+'/'):e.name.endsWith('.json')?[p+e.name]:[]).sort();}
- const docs=paths(dir).map(path=>({path,value:JSON.parse(readFileSync(join(dir,path),'utf8'))}));
+ const docs=[dir,join(dir,'../profiles')].flatMap(sourceRoot=>paths(sourceRoot).map(path=>({path,value:JSON.parse(readFileSync(join(sourceRoot,path),'utf8'))})));
  const catalog=JSON.parse(readFileSync(join(dir,'../review/registry-catalog.json'),'utf8')).entries;
  const keys=(kind:string)=>new Set<string>(catalog.filter((e:any)=>e.kind===kind).map((e:any)=>e.key));
  const sourceObjects=new Set<string>((await neon.query(`SELECT n.nspname||'.'||c.relname AS name FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN('r','p','v','m','f') AND n.nspname NOT LIKE 'pg_%'`)).rows.map((r:any)=>r.name));

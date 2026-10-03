@@ -22,12 +22,12 @@ def digest(value):
 
 def rehash(root):
     entries = []
-    for path in sorted(root.rglob('*.json')):
+    for path in sorted([*root.rglob('*.json'), *(root.parent/'profiles').rglob('*.json')]):
         value = json.loads(path.read_text())
         if value.get('artifactType') in {'core', 'operation', 'presentation_surface', 'presentation_section', 'flow'}:
             value['artifactHash'] = digest({key: item for key, item in value.items() if key != 'artifactHash'})
             path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + '\n')
-            entries.append({'artifactKey': value['artifactKey'], 'artifactType': value['artifactType'], 'entityCode': value['entityCode'], 'ref': str(path.relative_to(root)), 'hash': value['artifactHash']})
+            entries.append({'artifactKey': value['artifactKey'], 'artifactType': value['artifactType'], 'entityCode': value['entityCode'], 'ref': str(path.relative_to(root if path.is_relative_to(root) else root.parent/'profiles')), 'hash': value['artifactHash']})
     release_path = root/'business_partner/release.json'
     release = json.loads(release_path.read_text())
     release['artifacts'] = entries
@@ -40,6 +40,7 @@ class ValidatorMutationTests(unittest.TestCase):
             root = Path(temporary)/'entities'
             shutil.copytree(PACKAGE, root, ignore=shutil.ignore_patterns('__pycache__'))
             shutil.copytree(PACKAGE.parent/'review', root.parent/'review')
+            shutil.copytree(PACKAGE.parent/'profiles', root.parent/'profiles')
             mutate(root)
             rehash(root)
             result = subprocess.run([

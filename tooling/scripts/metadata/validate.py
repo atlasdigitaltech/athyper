@@ -143,6 +143,11 @@ def assert_security_contracts(value, path):
             assert_security_contracts(item, f'{path}[{index}]')
 
 files = {str(p.relative_to(ROOT)): json.loads(p.read_text()) for p in ROOT.rglob('*.json')}
+for profile in (ROOT.parent / 'profiles').rglob('*.json'):
+    logical_ref = str(profile.relative_to(ROOT.parent / 'profiles'))
+    if logical_ref in files:
+        raise AssertionError((logical_ref, 'ambiguous entity/profile logical reference'))
+    files[logical_ref] = json.loads(profile.read_text())
 files.update({'review/' + str(p.relative_to(REVIEW)): json.loads(p.read_text()) for p in REVIEW.rglob('*.json')})
 release = files['business_partner/release.json']
 
@@ -160,7 +165,7 @@ def compiler_boundary_artifact(path, source):
 artifacts = {
     path: compiler_boundary_artifact(path, artifact)
     for path, artifact in files.items()
-    if artifact.get('artifactType') in TYPES
+    if isinstance(artifact, dict) and artifact.get('artifactType') in TYPES
 }
 schemas = {
     kind: Draft202012Validator(json.loads((SCHEMAS/f'{kind}.schema.json').read_text()))

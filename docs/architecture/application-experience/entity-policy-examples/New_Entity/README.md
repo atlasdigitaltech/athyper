@@ -1,7 +1,7 @@
 # Metadata sources moved
 
 The complete working-tree package (including uncommitted BP Phase 2 definitions)
-has moved to [the MDG metadata product](../../../../../metadata/products/mdg/README.md).
+has moved to [the metadata source workspace](../../../../../metadata/README.md).
 See [the source ownership guide](../../../../../metadata/README.md).
 
 There are no canonical entity definitions at this old path. The sole Python

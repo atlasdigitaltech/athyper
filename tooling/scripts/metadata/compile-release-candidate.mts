@@ -32,7 +32,11 @@ const publicationProjection = args.get("publication-projection") === "true";
 const catalog = JSON.parse(
   await readFile(resolve(entitiesRoot, "../review/registry-catalog.json"), "utf8"),
 ) as { entries: readonly RegistryEntry[] };
-const documents = await readDocuments(entitiesRoot);
+const documents = [
+  ...await readDocuments(entitiesRoot),
+  // Profiles keep their release-local logical refs (for example platform/...).
+  ...await readDocuments(resolve(entitiesRoot, "../profiles")),
+];
 const byKey = new Map(
   documents
     .filter((document) => artifactTypes.has(String(document.value.artifactType)))

@@ -2,7 +2,7 @@
 /** Read-only DEV reconciliation. Uses the shared authoring repository/compiler;
  * produces unsigned review artifacts, never approvals or publication writes. */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
@@ -78,12 +78,15 @@ const report: any = {
   planes: {},
 };
 const artifacts: Record<string, any> = {};
-const sourceFiles = execFileSync("rg", ["--files", "metadata/products"], {
-  encoding: "utf8",
-})
-  .trim()
-  .split("\n")
-  .filter((p) => p.endsWith("/definition.json"));
+const metadataRoot = resolve("metadata");
+const manifest = JSON.parse(readFileSync(join(metadataRoot, "manifest.json"), "utf8"));
+if (manifest.schema !== "athyper.metadata-workspace/1" || manifest.entitiesRoot !== "entities")
+  throw Error("UNSUPPORTED_FLAT_METADATA_WORKSPACE");
+const entitiesRoot = join(metadataRoot, manifest.entitiesRoot);
+const sourceFiles = readdirSync(entitiesRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => join(entitiesRoot, entry.name, "definition.json"))
+  .filter((file) => existsSync(file));
 const db = connect("studio");
 try {
   await db

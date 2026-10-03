@@ -1,7 +1,7 @@
 # Draft Neon compiled entity descriptors
 
 The actively edited split-artifact package now lives in
-[metadata/products/mdg](../../../../metadata/products/mdg/README.md).
+[metadata](../../../../metadata/README.md).
 The descriptor snapshots, original source bundle and older examples remaining
 here are historical/review evidence, not alternate canonical definitions.
 

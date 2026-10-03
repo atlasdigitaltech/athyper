@@ -36,9 +36,11 @@ async function paths(dir: string, prefix = ""): Promise<string[]> {
   ).flat();
 }
 const documents = await Promise.all(
-  (await paths(root)).map(async (ref) => ({
+  (await Promise.all([root, resolve(root, "../profiles")].map(async (sourceRoot) =>
+    (await paths(sourceRoot)).map((ref) => ({ sourceRoot, ref })),
+  ))).flat().map(async ({ sourceRoot, ref }) => ({
     ref,
-    value: JSON.parse(await readFile(resolve(root, ref), "utf8")),
+    value: JSON.parse(await readFile(resolve(sourceRoot, ref), "utf8")),
   })),
 );
 const release = documents.find(

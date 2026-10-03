@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   mkdirSync,
   copyFileSync,
+  cpSync,
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,24 +19,25 @@ function fixture(work) {
   const root = mkdtempSync(join(tmpdir(), "metadata-layout-"));
   try {
     const inventory = JSON.parse(
-      readFileSync(join(repo, "metadata/relocation-map.json"), "utf8"),
+      readFileSync(join(repo, "docs/reviews/entity-metadata-checkpoint-inventory-20261003.json"), "utf8"),
     );
     for (const path of [
-      "metadata/relocation-map.json",
+      "docs/reviews/entity-metadata-checkpoint-inventory-20261003.json",
       "metadata/manifest.json",
-      ...inventory.files.map((e) => e.to),
+      ...inventory.deletedMetadataDisposition.flatMap((e) => e.byteIdenticalDestinations),
     ]) {
       mkdirSync(dirname(join(root, path)), { recursive: true });
       copyFileSync(join(repo, path), join(root, path));
     }
+    cpSync(join(repo, "metadata"), join(root, "metadata"), { recursive: true });
     // Each synthetic fixture owns its baseline; later legitimate feature edits
     // must not be blocked by the historical relocation evidence.
-    for (const item of inventory.files)
+    for (const item of inventory.deletedMetadataDisposition)
       item.sha256 = createHash("sha256")
-        .update(readFileSync(join(root, item.to)))
+        .update(readFileSync(join(root, item.byteIdenticalDestinations[0])))
         .digest("hex");
     writeFileSync(
-      join(root, "metadata/relocation-map.json"),
+      join(root, "docs/reviews/entity-metadata-checkpoint-inventory-20261003.json"),
       JSON.stringify(inventory),
     );
     work(root, inventory);
@@ -44,18 +46,18 @@ function fixture(work) {
   }
 }
 test("current layout retains all mapped files and logical references", () => {
-  assert.equal(checkLayout(repo).relocatedFiles, 132);
+  assert.equal(checkLayout(repo).relocatedFiles, 175);
 });
 test("missing files and duplicate old source copies fail", () =>
   fixture((root, inventory) => {
-    const item = inventory.files.find((e) =>
-      e.to.endsWith("business_partner/core.json"),
+    const item = inventory.deletedMetadataDisposition.find((e) =>
+      e.byteIdenticalDestinations[0].endsWith("business_partner/core.json"),
     );
-    mkdirSync(dirname(join(root, item.from)), { recursive: true });
-    copyFileSync(join(root, item.to), join(root, item.from));
+    mkdirSync(dirname(join(root, item.source)), { recursive: true });
+    copyFileSync(join(root, item.byteIdenticalDestinations[0]), join(root, item.source));
     assert.throws(() => checkLayout(root), /Duplicate old definition/);
-    rmSync(join(root, item.from));
-    rmSync(join(root, item.to));
+    rmSync(join(root, item.source));
+    rmSync(join(root, item.byteIdenticalDestinations[0]));
     assert.throws(() => checkLayout(root), /Missing relocated file/);
   }));
 test("relocation baseline detects content changes without prohibiting future edits", () =>
