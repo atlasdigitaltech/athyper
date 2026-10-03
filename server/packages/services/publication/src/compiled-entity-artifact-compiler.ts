@@ -10,7 +10,7 @@ import {
   type CompiledEntityRuntimeProjectionV2,
   type PublicationCanonicalizer,
 } from "@athyper/server-contract-publication";
-import { validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
+import { assertCompleteRuntimeOperations, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
 import { compileEntityAiManifestBindings } from "./entity-ai-manifest-compiler.js";
 
 export const COMPILED_ENTITY_ARTIFACT_COMPILER_VERSION = "1.0.0";
@@ -144,6 +144,7 @@ export function compileCompiledEntityArtifacts(
     input.registry,
   );
   validateCompiledRuntimeContracts(compiled.map(item => item.artifact));
+  assertCompleteRuntimeOperations(compiled.map(item => item.artifact));
   const report = Object.freeze({
     schema: "athyper.compiled-entity-artifact-compile-report/1" as const,
     compilerVersion: COMPILED_ENTITY_ARTIFACT_COMPILER_VERSION,

@@ -167,7 +167,9 @@ async function load(qualify?: (profile: unknown, bindings: unknown) => void, mod
     ...input, runtimeContracts: { [entityCode]: { ...descriptor, source } },
   } : mode === "unsafe-pattern" ? { ...input, runtimeContracts: { [entityCode]: {
     ...descriptor, fields: descriptor.fields.map((field: Record<string, unknown>) => ({ ...field, validation: { pattern: "^(a+)+$" } })),
-  } } } : input);
+  } } } : mode === "incomplete-operation" ? { ...input, artifacts: input.artifacts.map(artifact =>
+    artifact.content.artifactType === "operation" ? { ...artifact, content: { ...artifact.content,
+      operations: [...profile.operations, { key: "approve_extra" }] } } : artifact) } : input);
   const releaseId = "00000000-0000-4000-8000-000000000001",
     at = "2026-09-25T00:00:00Z",
     publicationKey = `metadata.compiled_entity.${entityCode}`;
@@ -262,6 +264,15 @@ it("qualifies the compiled server authorization before accepting a signed releas
     ...descriptor.authorizationRuntime,
     bindings: expect.arrayContaining(descriptor.authorizationRuntime.bindings),
   });
+});
+it("blocks omitted source operations at compilation and independently at signed admission", async () => {
+  await expect(load(vi.fn(), "incomplete-operation")).rejects.toThrow("OPERATION_UNLOWERED");
+  // Simulate an older compiler. A valid signature must not bypass target admission.
+  const coverage = vi.spyOn(metadataRuntime, "assertCompleteRuntimeOperations").mockImplementationOnce(() => {});
+  try {
+    await expect(load(vi.fn(), "incomplete-operation")).rejects.toThrow("RUNTIME_INCOMPATIBLE");
+    expect(coverage.mock.calls.length).toBeGreaterThanOrEqual(2);
+  } finally { coverage.mockRestore(); }
 });
 it("rejects signed compiled runtime contracts without a target runtime qualifier", async () => {
   await expect(load()).rejects.toThrow("RUNTIME_INCOMPATIBLE");

@@ -5,7 +5,7 @@ import {
   type CompiledEntityRegistry, type CompiledEntityRuntimeProjectionV2,
   type PublicationArtifactDocumentV1, type PublicationCanonicalizer, type PublicationPlane,
 } from "@athyper/server-contract-publication";
-import { parseCompiledRuntimeContract, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
+import { parseCompiledRuntimeContract, assertCompleteRuntimeOperations, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
 import { compileCompiledEntityArtifacts, compiledEntityRuntimeProjection, type CompiledEntityArtifactCompilationInputV2 } from "../compiled-entity-artifact-compiler.js";
 import { assertOperationProjection } from "../shared/authorization/operation-projection.js";
 import { assertEntityAiManifestBindings } from "../entity-ai-manifest-compiler.js";
@@ -97,6 +97,7 @@ export async function qualifyRuntimePublication(document: UnsignedPublication, d
   const registry = await dependencies.registry(e.targetPlane);
   validateCompiledEntityRelease(e.payload.release, e.payload.artifacts, registry);
   validateCompiledRuntimeContracts(e.payload.artifacts);
+  assertCompleteRuntimeOperations(e.payload.artifacts);
   const runtimes = e.payload.artifacts.filter(a => a.artifactType === "runtime_contract");
   if (!runtimes.length) throw Error("COMPILED_PUBLICATION_RUNTIME_REQUIRED");
   for (const artifact of runtimes) {

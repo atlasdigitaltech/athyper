@@ -18,3 +18,4 @@ export * from "./entity-support-qualification.js";
 export * from "./entity-readiness-inventory.js";
 
 export * from "./split-read-runtime.js";
+export * from "./runtime-operation-coverage.js";

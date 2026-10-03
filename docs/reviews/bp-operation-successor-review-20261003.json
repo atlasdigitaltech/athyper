@@ -1,0 +1,2872 @@
+{
+  "schema": "athyper.compiled-successor-build-review/1",
+  "status": "blocked_before_governed_draft",
+  "rootEntityCode": "business_partner",
+  "captureByteHash": "572c1c9f62a7d16c511f721b25a477445a82d58a8c58582a0d861cbdcfde2122",
+  "baseline": {
+    "publicationKey": "metadata.compiled_entity.business_partner",
+    "sourceReleaseId": "28bf5bff-caba-5a16-b971-dfc376b2b501",
+    "sourceReleaseNo": 22,
+    "artifactHash": "0c37e4c13904b0586c4b591e906ee5e80753f3e57a99f4affd37a6c2e6e154fa",
+    "tenantId": null,
+    "entityCode": "business_partner",
+    "plane": "neon"
+  },
+  "tenant": {
+    "publicationKey": "metadata.compiled_entity.business_partner.tenant.11111111-1111-4111-8111-111111111111",
+    "sourceReleaseId": "b0515908-244d-40e9-b518-12116ddb7354",
+    "sourceReleaseNo": 2,
+    "artifactHash": "bfb27ee31463398b9fd1e5e2c473e1216c16967c8e019120add54a792e779ced",
+    "tenantId": "11111111-1111-4111-8111-111111111111",
+    "entityCode": "business_partner",
+    "plane": "neon"
+  },
+  "proposedProductContentHash": "1e1e4b2dd584ed75a8f7930c8bfabce091039d202aebaba86957c8c5d62201bb",
+  "proposedMembers": [
+    {
+      "artifactKey": "address/core",
+      "artifactHash": "sha256:a6ab0917ba5bba396c81645bd0adc5fc4feaa115310eb12d208f6adfbedc455d",
+      "contentHash": "sha256:70eab857012c97eca789b6fc3e65006384dc28e762235014bfad224c23e4b958"
+    },
+    {
+      "artifactKey": "address/operation",
+      "artifactHash": "sha256:98090fd79b4625bcb7dd7be74383e151c226a963ee06d7949d25628138ab7460",
+      "contentHash": "sha256:acf9f6620bbf8a377c1df18fd81388b6bbb60d2c374734d22d7bcb98f73de280"
+    },
+    {
+      "artifactKey": "address/presentation.section",
+      "artifactHash": "sha256:6b2c135359522a5ace3c6ba6d877a1ae4419a1008bfc78b44d53c0535a2ce41b",
+      "contentHash": "sha256:e4b5e99ea044b6791de160e5588f90635b2229d63590b58a47aba56f26fe85eb"
+    },
+    {
+      "artifactKey": "address_link/core",
+      "artifactHash": "sha256:e2f7aa774f4b5a1f837d6e96ef07a9b2223ac0022d7fc7fd75034f6b9f1bbc3a",
+      "contentHash": "sha256:756adc2aef6c1ba5c005a35a821a49f136e9cae74cc467cf73adb9ecc565cc4c"
+    },
+    {
+      "artifactKey": "address_link/operation",
+      "artifactHash": "sha256:22725449d360505ab177f88c0e919de689c4e176c77507dca00e6be1385f9542",
+      "contentHash": "sha256:558b6a80bd1ca223c31772f382a90b71e29fa299ce67d413aeecc3166233a8f2"
+    },
+    {
+      "artifactKey": "bank_branch/core",
+      "artifactHash": "sha256:d4de7e218d01bc0f569c000ca940d352541c3acad2870289f3e98cd4ded0c693",
+      "contentHash": "sha256:13c9f85358b40f4fd0f323574543bb69a5093f92a900a9a43e94082ec83ed9ce"
+    },
+    {
+      "artifactKey": "bank_identifier/core",
+      "artifactHash": "sha256:6d76b37f40affc4ff555f40048a07836d5bfdf03dd14e4022f984069013779df",
+      "contentHash": "sha256:4025412fb40418faaff2d1c0d0d35373d39d2c8acb3ba00d88a0cc8a58c81d62"
+    },
+    {
+      "artifactKey": "bank_institution/core",
+      "artifactHash": "sha256:c32521d8f5149a46265a589ad59dede2d4444c57ba7d6c5273450b4408c6e725",
+      "contentHash": "sha256:2db38b2deb14d3d9c73090a03c1bf3add923271c642fb85706a52343ef06c342"
+    },
+    {
+      "artifactKey": "business_partner/core",
+      "artifactHash": "sha256:7048a6ffbc79b4e8585bbc4f9244aca68e0c3fc258035e610403d1dbb6541f3c",
+      "contentHash": "sha256:1afd4990fb9c4a14b79dd9920e34ea8849b0bae32c8db90a06227962a90508e9"
+    },
+    {
+      "artifactKey": "business_partner/flow.intake",
+      "artifactHash": "sha256:30add3302a858818cf9cd78f39e29296c98fd66ab941b12403df8ab1218c567e",
+      "contentHash": "sha256:46f5154eae4815804ca9d9565207eafbd837f82b491e6d24d0ab1e68af0a8ab9"
+    },
+    {
+      "artifactKey": "business_partner/operation",
+      "artifactHash": "sha256:ec8d48e6dc6021e689fb16345f6373a4c3eae849fe46f40c9418f302cb2c033a",
+      "contentHash": "sha256:49c3c2e74d9d6b66d808ef7ffeceb15dfc3802d3928f14310e545a7614a28805"
+    },
+    {
+      "artifactKey": "business_partner/presentation.detail",
+      "artifactHash": "sha256:a0c797f62d820482fb0e5c93dc72d5e73fb9c68b974a73eb44e43b1f564b4189",
+      "contentHash": "sha256:1c283c427a24022e4f37f2488d2cb219641625d09adcaea3d5a345e4e4fb30a6"
+    },
+    {
+      "artifactKey": "business_partner/presentation.list",
+      "artifactHash": "sha256:7672a822926140b79336392028454180a22dd106887087fb87034dd177b44db0",
+      "contentHash": "sha256:75da84d6b0e43b910c467f9237b14dd7cad954eb59db1858527f55401558e8e8"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.activity",
+      "artifactHash": "sha256:710fbb19a9e87b671a0f2456a3a1d919c4ed0d9d65c2fdc4a77f79e49357c01f",
+      "contentHash": "sha256:72fa98da24abb2bc87e7834e2962fabc59d9b444261462e7c67bd08f001cf823"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.addresses",
+      "artifactHash": "sha256:7c548d94956152cdf090ee25fe24331aac1427166cb7cd4e03421b6ba71a3186",
+      "contentHash": "sha256:9dfd6f39fe294adbb8af6294743274f4fbaf65e33419e74892915e7f0ef3e724"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.attachments",
+      "artifactHash": "sha256:ef5b0013222fa72255f141d78a13c5ce999a1f9bde9d770161011446269dfff9",
+      "contentHash": "sha256:43bd733b54eb3a636a99fe02f8039f74deb7b8a55eddcfea09ffc04e6896be0c"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.banking",
+      "artifactHash": "sha256:3526eb049fef872fe39eb404acbb57323751053c284ec8419a207eb71d5cde7d",
+      "contentHash": "sha256:c78e04be8c18c8ad6bd45a92fb7f829de6c6a66cebe76ac6229a136e2600bb74"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.business-activity",
+      "artifactHash": "sha256:975c23dfb049b1555b71fe4a021228d32020b2acf4f4da2db12e2c0000319ff9",
+      "contentHash": "sha256:f5593ca616d5c7f73af5357c08fcc61d26d4377167c1bd1c075dbcfdaf2c7061"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.certificates",
+      "artifactHash": "sha256:69bb6906d1fce132a10d73de8b8ea30e6e17a25f84ea8be23ee63f7aa3944f35",
+      "contentHash": "sha256:9154ad34c578d78f37cd8de1f0259dc71eea4d47a4c83245c531c2e4dcbac90f"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.comments",
+      "artifactHash": "sha256:e477dc45e9410ef7a6d7b142cae073d032de7e3f1caf91d07238aceaceb2071a",
+      "contentHash": "sha256:0472bd65af147572e13e46fa92c22044cfa4422f7c4e3d4b7f36e1ced8d8526a"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.commodities",
+      "artifactHash": "sha256:39b1b91ab9627b889817d21ca1ea79ba8f78aaf9b9fe074b7ee216b00986b974",
+      "contentHash": "sha256:4d48a5d0772eb467f93e09a8a08b793e2dc14ab35df8ec584a07aca3c25fc3e9"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.contacts",
+      "artifactHash": "sha256:042071563b79c1c292f45cb3e8c44b6afca8b52ffe5db1e8c97aa6dbecb551b0",
+      "contentHash": "sha256:f8a6de48867df07c6d37c917e64d89c627e1d38b7f5309db5aee6e1ec2f8f40b"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.credit",
+      "artifactHash": "sha256:a94cd20e5986dd258af8cdbd4971a7826596b2cffafe55c0a51702fdc4665d34",
+      "contentHash": "sha256:243e05c9b9e6f3d7655f7b6c53599108efe4b3395a9d830f83ded3c470f3ddc3"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.customer-company",
+      "artifactHash": "sha256:779fca09ef9a092e1ac4d13cb7cd4ac17584470bb65653fbefeb4b5a725d4386",
+      "contentHash": "sha256:8fc2762af78c1cb391bb0cd1a9ab4768a88368e891e8b743570133af6c51921f"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.identifiers-tax",
+      "artifactHash": "sha256:6e1d1acb9c02219ff1e3dae78589cd84614ab94de9d71ec9f34d5fe10975ca41",
+      "contentHash": "sha256:8c3fabd2aac28c0d5ecc65c031bed0310621994ddb9db0b868ca1e897acfe850"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.identity",
+      "artifactHash": "sha256:5e879e441b593aedfab77ff100d5af92be361773bf7cf80bc472c9f42e05aa70",
+      "contentHash": "sha256:69fc57989cec972de48f40ff37fcc463fd9ee4dec038d349becad440e01fa464"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.industries",
+      "artifactHash": "sha256:546ccf315439252a4135c4e708417efa8529dae6822563c6608ab50826fc8649",
+      "contentHash": "sha256:ae5727c0bd1806185f94a845bcbab198d1c1cf7755e42e179377770e2c292c2c"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.network",
+      "artifactHash": "sha256:9a4f10f265458f7987a124fc0d25793e884edb1b4bb769caff5356ac31dea155",
+      "contentHash": "sha256:990362524f8816f2cdf4719ca4c344d2c96ff0ce18f3424768dfecd672001c40"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.overview",
+      "artifactHash": "sha256:6aa17d5be972128ebbc5c11f03fa6089aa40317504a6cf44175efd44b15b0c1b",
+      "contentHash": "sha256:faa0f9107b6dd8b218a78bcc77824a449904220a3c4812fd5a2101c0c2513452"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.qualifications-certificates",
+      "artifactHash": "sha256:2e4d621b7a25b0664947774479b06d06a33c8fb070854d8877c334e66aca11f8",
+      "contentHash": "sha256:a33c7e685251a96a5fb84da2c018025cb20279e4ea03422ad93141a5ecf225fd"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.requests",
+      "artifactHash": "sha256:0d827c758bde45119ed9d5f568bed4c31cdb73885b3d44bc3144fc3d4889c895",
+      "contentHash": "sha256:ca3943fa3b2f5320ecfe3230c3723a2f4bd3592f7c685902c53f9177c985cfce"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.restrictions",
+      "artifactHash": "sha256:2092923eb71603eec8fa5d840d7ea65f0ba0f5341cb0c6f259c74511dd9cf53b",
+      "contentHash": "sha256:e3ca06904df403f723e57243ef996d3e466af0a96f83fe4f9c8ffb8c9aaff11e"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.roles-scope",
+      "artifactHash": "sha256:f1533ccbefc25cc8a2fc8cbc22b4acf6ac625633153eec28d98cced3a9f3f472",
+      "contentHash": "sha256:bf9d0f2f1b3a4ef625ed542ce143011abc49f33024bfd5158ab7b46ad8ae184b"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.supplier-company",
+      "artifactHash": "sha256:2cc3ad9dc6703742b378f4d667e496ca33b227f46c8445856d75bd93aca0b778",
+      "contentHash": "sha256:7d74d3e59f037b49f4201642282d7b23a886692df9a4502dd14256d83b8ddb5a"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.workforce",
+      "artifactHash": "sha256:06f52d4362defff6c9291866d29bfdfd3c7d1a8f257c3b2e8714113cf925c050",
+      "contentHash": "sha256:c6e0484c22bd999ced8be5967c3a3aa58768fc935cf19b07272db7d89ae951b5"
+    },
+    {
+      "artifactKey": "business_partner_alias/core",
+      "artifactHash": "sha256:b8a8f77f4fb9d55db149715954316a861892aeace1a951b875a6170797ac6a98",
+      "contentHash": "sha256:1cd2e325c494bb8aab01701477d2f5457389aeead0765cb8e4d1d669bfca7b14"
+    },
+    {
+      "artifactKey": "business_partner_alias/operation",
+      "artifactHash": "sha256:44db14134cc7865cb4e6c4c0d8db26a482acea151388f56c0513218c1193c970",
+      "contentHash": "sha256:c1789c7e27197eb23528c5a8259e069ca6caf2fc2ed9a5551d8acf885819e3f5"
+    },
+    {
+      "artifactKey": "business_partner_bank_account_link/core",
+      "artifactHash": "sha256:088cf401fe9d107db0ffc3e6ed2a8e015a87846fc28f1689059d4cf15a5759d8",
+      "contentHash": "sha256:269028393a362153af57f970438b2bfb5755e0e7b44acb5c5a50e7f8a45a0aaf"
+    },
+    {
+      "artifactKey": "business_partner_bank_provisional_reference/core",
+      "artifactHash": "sha256:9bc976abb94585f4b8126bfbe10a26a7ec5f63ae5ce3ed8cd0ca97474c46f234",
+      "contentHash": "sha256:07a0fad0649271dbf7fc75244a3312da6f31a7a23855fab7672eb35c60147571"
+    },
+    {
+      "artifactKey": "business_partner_banking/core",
+      "artifactHash": "sha256:0470ab2b2c52a7583959d9c700f98cce8f5722185569d5ca035153012e7b0d37",
+      "contentHash": "sha256:201e835834b36a15566ace3bb809f9d0c367bb5f264230c31b7af33d72835e9a"
+    },
+    {
+      "artifactKey": "business_partner_banking/operation",
+      "artifactHash": "sha256:8d7b4a91c0dc172e14111e93fe1dde07e6169d65e9529e3d993f702a774ef210",
+      "contentHash": "sha256:a1dcfbea94d76082feb9f40847bd01d027ede8698561d3268423369eca7c85fc"
+    },
+    {
+      "artifactKey": "business_partner_commodity_classification/core",
+      "artifactHash": "sha256:50c59d1d7efc17be3085057dc06996b7987390a0b174283b486b6a5e846bfbda",
+      "contentHash": "sha256:bd5836700da4f3dea2dcedfae1eadec7ea85976fffce4a901e907cf2981a5721"
+    },
+    {
+      "artifactKey": "business_partner_governance_relation/core",
+      "artifactHash": "sha256:f988cc31fc2c64d7076900012a4ca286a4fd811b6780f41fb1e699fada05eea2",
+      "contentHash": "sha256:b8d6f975ee6f92f0ae1775df4a7ac437d43c37d3d962b7621f13ab581a1f5428"
+    },
+    {
+      "artifactKey": "business_partner_governance_relation/operation",
+      "artifactHash": "sha256:7928bbdf8fa4808b8b8544e7861bd148f1b8dfec496a4ab54622ae2523d3f113",
+      "contentHash": "sha256:d8a73ee9d1cff6da31d53850bad99104854316bfc7b867fd7c9963d953b55163"
+    },
+    {
+      "artifactKey": "business_partner_identifier/core",
+      "artifactHash": "sha256:e7de4ca05d34d79924c7ac81d3d1fe03f8537646433d61d352ee4cb39b92da11",
+      "contentHash": "sha256:813d47c097396a6fa0dc910fb1247a686cbed873e1d1546457408adf0efb3684"
+    },
+    {
+      "artifactKey": "business_partner_identifier/operation",
+      "artifactHash": "sha256:c93e1bcaa47e8d5f06b96dbc14c1c6bff90dc01677e545a772127ec7e9b1ce32",
+      "contentHash": "sha256:f421b8dd7537f29b741f074218e8d1bb48cd06e8c118c2df698d44e61390c11f"
+    },
+    {
+      "artifactKey": "business_partner_industry_classification/core",
+      "artifactHash": "sha256:abdb8ee36fdfe8748bcdc195fff88cb671a0d08a5f4bb8ec02aa2778181a7bff",
+      "contentHash": "sha256:7406428e40d6a8e3430ad567167a4d73f2f7cf40a5b71fff9a58d0c742f9ca00"
+    },
+    {
+      "artifactKey": "business_partner_industry_classification/operation",
+      "artifactHash": "sha256:b52823f1f26108a622785d8a6b64855b1047a315ad028fb1b6b3164f6247bbc9",
+      "contentHash": "sha256:9e6bf7f248015ed8d40ebb99b1888b9123c634f8cc97a1df8c327141f2573de0"
+    },
+    {
+      "artifactKey": "business_partner_operating_organization_assignment/core",
+      "artifactHash": "sha256:96e7a30af026f14bc04019f49e91be2e797220ece09db74e27e29b35b9556329",
+      "contentHash": "sha256:6aea6926c14feff153a8f9db9261034be45c9a76b3f7d7f5015ff1ecdeed9dc4"
+    },
+    {
+      "artifactKey": "business_partner_operating_organization_assignment/operation",
+      "artifactHash": "sha256:f20a2fc6c2b8021a5107dd8621f30c4533d42f4f2176585c750a359b5c7485bb",
+      "contentHash": "sha256:b695aa5610a0d429ce20820c538c542801089e6f89b8802288ac255edc02e5ef"
+    },
+    {
+      "artifactKey": "business_partner_qualification/core",
+      "artifactHash": "sha256:65700b7b2b5deb21f3ed2c5b030d5a916e2c304e8d088cb974a8cf676a7bd0e2",
+      "contentHash": "sha256:e403718d226612d4d330225a74fc08485ec4c2fdfd5c40624f09d8a3aabd4242"
+    },
+    {
+      "artifactKey": "business_partner_qualification/operation",
+      "artifactHash": "sha256:143c5b46c448523e1b720c9174066851aa21dac480f1a37d9c9294046b9b3ddc",
+      "contentHash": "sha256:3a044e3389c14b0e44aea0a45ab659885fd07b5e42aae034ab11a1bdfef3abe7"
+    },
+    {
+      "artifactKey": "business_partner_relationship/core",
+      "artifactHash": "sha256:2365b24184e15986672188010a8f9bafd51710676892e4005fb7dabb04ed14ee",
+      "contentHash": "sha256:6475963b807b8bd99db0351b6d24d336f7e44665602ec4b8090b3bd2e5f60731"
+    },
+    {
+      "artifactKey": "business_partner_relationship/operation",
+      "artifactHash": "sha256:15020df8ebb3ae28c2d80dd325034f7c1d1eeb9021bd1773463ed4c68e60a639",
+      "contentHash": "sha256:125b970942b478c8482b2f18aac627683bfc57eeeec19bd3b3cd445c42549635"
+    },
+    {
+      "artifactKey": "business_partner_request/core",
+      "artifactHash": "sha256:24c6c6910402fc5476d8bc0ac74f984c3d7eb67c299e83836634acfd71aa952a",
+      "contentHash": "sha256:54f63aa1c303b165f545852f8b3ec6e77e5836c849dcdd1b210bf46b1923e6d0"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.base",
+      "artifactHash": "sha256:a3d1f60a5433ac7c9eb5688f7554f5eec0992fb4998c4a63f3d90b3e64f629ce",
+      "contentHash": "sha256:8cee0ccfbb2dd611cdae19f440e8da4d141f3b7806e5f674688a9c4f3633df6c"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.add",
+      "artifactHash": "sha256:7a72a14ebe37309b402036712a97c0a1295a9a3d594ebbe4bbced32417845ce4",
+      "contentHash": "sha256:2f4216e28922476216ea124ed00c7209a9405846bc4ec558d1e237e099232b35"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.company",
+      "artifactHash": "sha256:948c0167f694d98abaabafe8fa4a6941edbbdee5b3de033d6dcc8a52336ebcae",
+      "contentHash": "sha256:6999cd33da9342cd18e0a3ad2e4a8ef8c3158ac30d8ea9768e8985c5aaee270b"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.credit",
+      "artifactHash": "sha256:6807346a88981c3438514a45b5b50a4000946ece17bada12f340a4c3e6082c91",
+      "contentHash": "sha256:3324cad466229deec0211604c6d0969503aea2893ccdf363d93df6ca3bb6e8ce"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.new",
+      "artifactHash": "sha256:ae3c73835c0152c4235daa7b2065ceabd0dfe6ad3c710dc2752e2e043e0f61d3",
+      "contentHash": "sha256:528ed976e6ee4678c7b80c7561385724ad2b7c47306c24be213f8a0e4e429d97"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.amend",
+      "artifactHash": "sha256:b1c9f9d2a22e4521f7d701722c0444014a612fd02501124d8cc7dda1a49eb4f3",
+      "contentHash": "sha256:a1c55f7cbad5cd7195e9622927845e2a001dfadfce7d8dd6072a95164f41998c"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.archive",
+      "artifactHash": "sha256:51e6634c0860315f48726617c2df0bc0a2437ffc54304ac2249d2074e52ebdaf",
+      "contentHash": "sha256:7880ddc2e088ffb5d4844dc5d39f01db7ff55d6515fd0d8799d01b15f63cd321"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.assign",
+      "artifactHash": "sha256:a406d7f7cacb7859b3d69abb1043a8eac8816b4dc12579a44b7fb5f45dff81fc",
+      "contentHash": "sha256:ef5653a1fa5ca33dcf17aa2c57d325226c8502263c9cfa2ff1490df6fc47a270"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.deactivate",
+      "artifactHash": "sha256:c8746e9d66dcf92e54f67ce9a08990461f53016379388d7b0967900808b86237",
+      "contentHash": "sha256:9a1e78f6baa4aafd21e84e07c3af64c6712c913213fa99cfb53dd35152c1bffc"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.new",
+      "artifactHash": "sha256:c69d52fa5732bc431adaee87be4dbd57427151b8c04ad7a076d26f18f5bdb369",
+      "contentHash": "sha256:edc8c8301f240b7b6c1588ae588ece36091f6821374293b71bf2c642604b70bd"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.reactivate",
+      "artifactHash": "sha256:13a5e342271cd2ed7ec432e1715e67a6bb301d0b0469a9454868552bb4b0c3e0",
+      "contentHash": "sha256:2a733d7f61f71c5342620394ed627bea09d633db832f0df9503a89c88f629054"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.activate",
+      "artifactHash": "sha256:4c8458937c968cb3ba6b014a1f8dba1cff703ec86fd3362f759e77413aad74b5",
+      "contentHash": "sha256:ebbbb245e517be92ae39130af789a5da83881be18605366c10a5edb140e7f6d3"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.add",
+      "artifactHash": "sha256:2cf0163dac2733e4e4399ddfa4261a24260da05cb704c9d57fb782c496e9de64",
+      "contentHash": "sha256:a30c4746d9a7bac24fd03d393902e545cb489c2abf66b8381d0b4333b078bf3e"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.bank",
+      "artifactHash": "sha256:75e916aaf781eb8b14b7f0e8b8523136608ab1210ae7b6b49a18a414d92474d5",
+      "contentHash": "sha256:ec5b54d6406a35ed261285d5f1ef225b5234252a3e5d6db259fcd2d04ead28e9"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.company",
+      "artifactHash": "sha256:1e2a27be58dc42652739b4df35e398a94edc8cd3adc40a4e45d83e67738b7bb6",
+      "contentHash": "sha256:b00da3442f59f61a32a3d9c0de90854399b54cc3420b8cc6cc90e255d991f71b"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.new",
+      "artifactHash": "sha256:be9bcf2e880686ab4d71f6d42224ad8accc5cacf8ff221e089f2e2a17d501cc8",
+      "contentHash": "sha256:a6669d669f68663c8fe332f6018586719dc2778b8a769d04a9bf7758bafa1da1"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.qualify",
+      "artifactHash": "sha256:c0e5020de88709a9540a89aad2ad0a2cb031031b660527483bbe91fbd23e856a",
+      "contentHash": "sha256:3806bfab8e8bc24b4d87ca8e660ecbeeebbd59ec3286c0d1222b49f64ef3efb1"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.add",
+      "artifactHash": "sha256:f1d8b2956f9a0de2e0c76f59325266a3cd1dbe037eee14608463b632314af925",
+      "contentHash": "sha256:e42c4d69086524f8526a8fc56a01fb1ad92ef560a525923837d81563b896c6e5"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.change",
+      "artifactHash": "sha256:8ea0dc6d9b5b2b1f3220da2316fa72a2149010b7174b81d1c48860215b5b7294",
+      "contentHash": "sha256:bbc76c2e001abee20544ba6bece9ff7e40cf5c2b37ec46d9a74ef778852cb7dc"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.new",
+      "artifactHash": "sha256:0a5bfeb98a12e235b8079eb27f2525e8f68faba45934f3463b3dd39a45bff804",
+      "contentHash": "sha256:8cb3ebba5956428bc578f637218d5d1276d4a9ff0fe9b393d21308d634d33bc8"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.offboard",
+      "artifactHash": "sha256:c45db2092ecd0c9696aa41355eb19cc096d889941f9420ef9ac7ba765f545a32",
+      "contentHash": "sha256:843068ead7631220ef014a87dd041d44ce0ea95af1223482ef045b4777f799a3"
+    },
+    {
+      "artifactKey": "business_partner_request/operation",
+      "artifactHash": "sha256:f8475e320a31d73e1923aa1cf897b6987fc4f5e85d8ce5ee23dba72a7b3495d0",
+      "contentHash": "sha256:86580eb2984168cfa53454ba6882656395fc4fbe4966487d03a0d0b64c6a3992"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.detail",
+      "artifactHash": "sha256:170edea2cfbad2d9d3559a183f5cbf03d445ac1713c4a072e0908346f2c092fd",
+      "contentHash": "sha256:5fb8daea9ee02710264f0018e3fdb5f227ea531223a1f1250aea945e6753112f"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.list",
+      "artifactHash": "sha256:855331a48b2e9100435b5f2c0dce54b6e5f0be0fdfcf693538addcb969b06155",
+      "contentHash": "sha256:d5c2801a5f9ae4b95d6d345091fc77fcfc1f4340e72b3f646866a082809444fb"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.review",
+      "artifactHash": "sha256:91b98c43dbf79785f7529a513e2258f1a2cd97c4eae2f19a3005799533e1d485",
+      "contentHash": "sha256:8f52efa93724a3bf25ed6e6797bd20904e1598299b024c6afd28b60ba82b97cc"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.capture",
+      "artifactHash": "sha256:dde8929affb685718b2c84372e0e887cc6708ea507dea0840c1c5612f0c7d5b8",
+      "contentHash": "sha256:2123fca4a2ea498b3caf7d986359b214e346832c3599315224f418b007212165"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.evidence",
+      "artifactHash": "sha256:9ba2f93a752571262855b06051ea18b1fa9a1053889e6349f83e20035093ee0b",
+      "contentHash": "sha256:401e3da0f2d29b7d1d7517b789e839718e386baaf637feb1d2837ed92b0a6bc0"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.customerCredit",
+      "artifactHash": "sha256:8268bd825cbe89638ac7db89f66180efec304518489004eb79353be4398a4b06",
+      "contentHash": "sha256:4f98d376622185c69130642e4478ef03a435b21f44c05c4549c5cb74670c4d5a"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.request",
+      "artifactHash": "sha256:d7c5653a439755f3cf8e6e58aac1e6e5a81087d8267280858b4f900a8e8aab54",
+      "contentHash": "sha256:fbdbbb7428cea158c4652286607c23147de12c24e45d33869ccc7e1bcbcdf6f6"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.supplierQualification",
+      "artifactHash": "sha256:224e6326a462da7f1021bc455c0b358a34acd4937ae0ab8e5241f61936f61331",
+      "contentHash": "sha256:b63fed1fcbf063982862c6331d127aa961f08bffbf1230fb70a66f5b2e54e9ad"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.supplierRequest",
+      "artifactHash": "sha256:d38519ded019b0efd0448b69229e65b745050a5ae9e6116ad36659448f63973f",
+      "contentHash": "sha256:1a3d1a7da21b06641ce5c688f12e70e78d046e41fc2dd20fc7fcbd08c75dab19"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.workforceReview",
+      "artifactHash": "sha256:0bf84e4fab7916e2f5a691b455c218d859a666d5e7644e358da92924603f1440",
+      "contentHash": "sha256:b6c6e81455f937df59613ab465c9a535b0c89a6b706658f6361b9fdf444d47a4"
+    },
+    {
+      "artifactKey": "business_partner_restriction/core",
+      "artifactHash": "sha256:acc325bd1a82455947d09ef630ec84c960adda00f5679c6b8e7feb08697b70ac",
+      "contentHash": "sha256:f2be2f15025af5681c883782636d356e50ca2dce292379c03ef21e4c26000cd0"
+    },
+    {
+      "artifactKey": "business_partner_tax_registration/core",
+      "artifactHash": "sha256:c71111ef28bcc5d4352b7edbf40fecaec08acb8c4b6893b73e94e4da5758679d",
+      "contentHash": "sha256:7701d2902a1dffb72f31cb96d3d2c5e7c8c0908e02c97a53e040641eca09f2e8"
+    },
+    {
+      "artifactKey": "business_partner_tax_registration/operation",
+      "artifactHash": "sha256:58dcc2bda05bd95be80ed6f90c93195f2dceaf018f05901e3f5eeb81ad7949db",
+      "contentHash": "sha256:f9c01d9b1e163346ac013a6e4a5a18fb4d8f774df9007cee9de3a4c7540350a2"
+    },
+    {
+      "artifactKey": "certification/core",
+      "artifactHash": "sha256:77cb0ab71e4a5b1e07eb4abe36093eaadebab9f0e863508c0e874573bc5aab9b",
+      "contentHash": "sha256:bc6f5e1469cd7fc791f08e55154fc8b91b2157f97a320550f70bd8439b10cdd2"
+    },
+    {
+      "artifactKey": "certification/operation",
+      "artifactHash": "sha256:5d65f0264d73109c5c01b6ce03f2bea1b8efa66d0465197004604e6755f07992",
+      "contentHash": "sha256:c2b3e1ef11fcd57cec29ec66121f948b9eedae42476488a5132b75f0f4aa9496"
+    },
+    {
+      "artifactKey": "classification_scheme/core",
+      "artifactHash": "sha256:c16ac41d3a1d82faecf23703e67c445946c62645476b6ac9195b6b00973739cd",
+      "contentHash": "sha256:84ca6218d7b8c0ac39f6a434e88d8fa1fa9f41b3daa77cb7ff3b37f7ee237214"
+    },
+    {
+      "artifactKey": "commodity_code/core",
+      "artifactHash": "sha256:7d663fe8de27080141054a701f25f8b3cf5a73e59d81a7c8fb3ad5d40c6f8437",
+      "contentHash": "sha256:95fc993c6e80a0a04626c07ccc81f07eebca6d57c64cc34ad92401999d09ad28"
+    },
+    {
+      "artifactKey": "commodity_crosswalk/core",
+      "artifactHash": "sha256:7a0c18b14abae9508b134af483d3d1615b6a31ad420bfa57ce4773012d473e8a",
+      "contentHash": "sha256:f7dc7a502485d7c69d022ff1fd216a7608e71ad8a236d2407662413be9702a96"
+    },
+    {
+      "artifactKey": "contact_channel/core",
+      "artifactHash": "sha256:c26385737e3c200d37aa03472154b97f557067bb9e2426942137cc56aa8d7fc0",
+      "contentHash": "sha256:4a38adc3a786b3e9ebeeaee0c1012a9d35826d32a8c9c5cb6c695203a3a5a070"
+    },
+    {
+      "artifactKey": "contact_person/core",
+      "artifactHash": "sha256:a8f212810dea645580d5bdee6e858a9ea36096f9b90385c4d9737000944fc276",
+      "contentHash": "sha256:bc32fd10522d640fd4d630557f9fa2c3474777f7a14b03ed63692c7cbb6b1680"
+    },
+    {
+      "artifactKey": "contact_person/operation",
+      "artifactHash": "sha256:703aebdc6f862f160642310cb626751c075263c26511591dded902d933d1e8d8",
+      "contentHash": "sha256:488ebffb742f55538f69edbf6ec018ad7d3b3043b438209c3492a7ce50d9b840"
+    },
+    {
+      "artifactKey": "contact_person_role/core",
+      "artifactHash": "sha256:eb0e7f0f7a8b0f81b80454ba7954a9b8bda2f7ec608d1155098997e199c881de",
+      "contentHash": "sha256:42a87683cb2d4791b34ffcbf27f7aa74b404f3d26e103c36f1d13bc53dd005c9"
+    },
+    {
+      "artifactKey": "country/core",
+      "artifactHash": "sha256:74310b9b6682a95671989698fab817b5e8273c7e8e08f106356974d1d4423c62",
+      "contentHash": "sha256:a46be66eb6f65888679bb77c3ff393fcf8f5c2c6b4ae54e4e7a4ff82481bcd05"
+    },
+    {
+      "artifactKey": "currency/core",
+      "artifactHash": "sha256:3ca5be9106503c0fe8615a41f0e5de4774aae160c7c63fb6e0fabe69a0a525fd",
+      "contentHash": "sha256:40e415e0d8014cacaaee2aba3f5660bdb3b6477d031004101b3e0f86eebc9f89"
+    },
+    {
+      "artifactKey": "customer/core",
+      "artifactHash": "sha256:3ed5e59767af3a3714b689d8eb98ca9cd251b55733f8736c92d87faba585f4bc",
+      "contentHash": "sha256:bbc74cf126dc4b231342687f3393cd6a957a6f89920b1a56efe4e628ebd3ca11"
+    },
+    {
+      "artifactKey": "customer/operation",
+      "artifactHash": "sha256:6c01de214c00a5534f79fc04428d8345133579f1f9631e908b7b7623a3e7d716",
+      "contentHash": "sha256:50cb9d30aad9a88bbe2b8dbceb015bc5fbf6622aa1bc891b27ea1ef146583a50"
+    },
+    {
+      "artifactKey": "customer_company_profile/core",
+      "artifactHash": "sha256:401d46c0c283861fe6331dfdc66beb06ea7389fcecc55a1f1cffd8efd1ef070f",
+      "contentHash": "sha256:a918018d6fa262f29ff65b4b9ddc213b5d79141daa3fcc8a54493d6ee3c78e04"
+    },
+    {
+      "artifactKey": "customer_company_profile/operation",
+      "artifactHash": "sha256:5e19685d91f7b1306e2da38e7e325d952227932a2882614935c86bf20a0ba09e",
+      "contentHash": "sha256:31f98e923a6aff50fde50e0bde32d21fcaf4632b48d20b4687bbe2e18bad76f5"
+    },
+    {
+      "artifactKey": "industry_code/core",
+      "artifactHash": "sha256:6bf936f6c78ef7321759c554ea1ff025cfca35be75513f901f7d3d973f754769",
+      "contentHash": "sha256:b499b8e4aec1507fb7afb11c08b0fbc7e3242d9c20508064c967eba162a09d6f"
+    },
+    {
+      "artifactKey": "industry_crosswalk/core",
+      "artifactHash": "sha256:30eb0917739302c0d65e379a893b65838565bf6f526530092bf0d1b25a571e63",
+      "contentHash": "sha256:60c6c53307e81591c764494a6350ab0dfe294f7b23b9fb53f4df9d193d5d37fe"
+    },
+    {
+      "artifactKey": "language/core",
+      "artifactHash": "sha256:02a292399c9a005e4e8d63c31ae388229a91066a9bb7a0b178fa2aefdebcdfe3",
+      "contentHash": "sha256:8893d252cc7074bf21647948dad9526a963f4ff57a9ceb2b48ea48a6c334f32c"
+    },
+    {
+      "artifactKey": "locale/core",
+      "artifactHash": "sha256:dc657fa6d578bbb66a6946103409b0df407430eb6f7f7ed797a2601a96b98202",
+      "contentHash": "sha256:e058b051dede09024d11d16e6faf3b1da4c7dd48c8b2ca9dc59a049907cad32d"
+    },
+    {
+      "artifactKey": "platform/core-field-defaults.v1",
+      "artifactHash": "sha256:012ac19538cd2a9c5eb6f594eb9a7b252fc58a18c5539ae4a48414e49427a72a",
+      "contentHash": "sha256:f9a8ba751883481fcb87559b4dc6dd884e7cef4899b929a088af3a21a6404337"
+    },
+    {
+      "artifactKey": "platform/governed-child-operation.v1",
+      "artifactHash": "sha256:379dcfa64cca40d1161893cd45ae0c0a2ab1eaf4e722f239a7e8b45d7607fa6d",
+      "contentHash": "sha256:f01272a85f04c89dc44562a5a90f196e30eb1b5aa7eee6bead31b9400c92b806"
+    },
+    {
+      "artifactKey": "state_region/core",
+      "artifactHash": "sha256:8ba223571abcaba849e24f576a1ada3907c0ef438d2207a0f814fcf0557dd242",
+      "contentHash": "sha256:a8eeaffa9e0a2fecd6db0c8659165b98cb2d664d39b52462b7003fcd73765f4b"
+    },
+    {
+      "artifactKey": "supplier/core",
+      "artifactHash": "sha256:61150a7d6a00694b9de8cfc3e301d17c4004a2e0d6f186503fe20c9c34de7376",
+      "contentHash": "sha256:b8d3af5e0e93c381554465b37f5ddd7065cc2e7d66f5d681959d7e05d7e97c4e"
+    },
+    {
+      "artifactKey": "supplier/operation",
+      "artifactHash": "sha256:969dd5e0f389944b765f249389156ed7dc30c93ab87d2d27943e6998c8bd45bc",
+      "contentHash": "sha256:a73dc8357c235e9a58cba3cf709e55de345699ac008e8afcd5434a797c74db27"
+    },
+    {
+      "artifactKey": "supplier_company_profile/core",
+      "artifactHash": "sha256:6e6519240b597bf0f360d97adc885d624742d3e5cc94584cfc2a2b802f9bb1a7",
+      "contentHash": "sha256:edc6b280e73c5246933062a05a2976652b218ea913aa007c87adc8348c7d5a55"
+    },
+    {
+      "artifactKey": "supplier_company_profile/operation",
+      "artifactHash": "sha256:6d7cca692cf1817102b898235da917b29fe3c9edf2fbcfbb85500d2dbd42158c",
+      "contentHash": "sha256:0bbac21cc16deea5e1717a84eafff46941e71348e0f16f887a6f9b71ec24ebad"
+    },
+    {
+      "artifactKey": "timezone/core",
+      "artifactHash": "sha256:3b33e4768b185326761ba828c5cb513ca6b8d3043f70bdb1394ffdd25f5e970b",
+      "contentHash": "sha256:d8d88b446315331de3dd3a4675159fd517c28fda8dc0ff623bf47a59c2f7798c"
+    },
+    {
+      "artifactKey": "uom/core",
+      "artifactHash": "sha256:c8eb1036024cd416c579b0efd11c20f09d1041af13b665fd02464a947bc70e63",
+      "contentHash": "sha256:ae8e312a1add9f788ebbb602531238700463c83e2697709340118a934c466a1e"
+    },
+    {
+      "artifactKey": "workforce/core",
+      "artifactHash": "sha256:8a34e18829b7a193f10150add37ac56c3b102ffad65eca25a526104461e46c7c",
+      "contentHash": "sha256:f8caf48d5f4aa381da0a7e20ae17e678e3ddd560c80250e7e3eb8b4c6f64f154"
+    },
+    {
+      "artifactKey": "workforce/operation",
+      "artifactHash": "sha256:7a59aeb7d9be9485aca5746b0996eef46921fa952a29d313eaf085a0fb5b2c34",
+      "contentHash": "sha256:ffb474e970aec3b4851277cb180a8fda654ee366d8a3843809300e03ec60d6aa"
+    },
+    {
+      "artifactKey": "business_partner/runtime",
+      "artifactHash": "sha256:3159138015c64a88f8fd6e02f31d59bd95aff84fc692a5659e7540eb77ac58a0",
+      "contentHash": "sha256:cd5c48c90a1b2520ecf4ad876ceae13ad21b4e7ac2fcdd4fe9de189b65e873c2"
+    },
+    {
+      "artifactKey": "business_partner_banking/runtime",
+      "artifactHash": "sha256:8ace642d9e54b20d0dd45dbe0cbcd90bbfa7d72e37c16fd57a039a8cb286302d",
+      "contentHash": "sha256:5cb950603f18e1754a39f16e1faa1680580730309bcbad7f684b400160968ff8"
+    },
+    {
+      "artifactKey": "business_partner_governance_relation/runtime",
+      "artifactHash": "sha256:ecd28a73d6f7209523ffbfd300ac191e577576071dbfced94d2755ba11e83077",
+      "contentHash": "sha256:641602a6a4e381e75d41fda5dcad22fc25ca9f91a7edd6e87c4ffd49c687e63c"
+    },
+    {
+      "artifactKey": "business_partner_identifier/runtime",
+      "artifactHash": "sha256:59e07ba983d60ac2cd9de65acc48d74b96d3bfd5e658db7152c1ced7ad4460ec",
+      "contentHash": "sha256:7f30808f498d7282bd1317f464d10e6d4527f25f4d83abdb5d4757f56bf6a60e"
+    },
+    {
+      "artifactKey": "business_partner_industry_classification/runtime",
+      "artifactHash": "sha256:7ba3daf09b70d71426b8a7ee61fa28ed88a89f70bdbbea386ec3267316a8ab64",
+      "contentHash": "sha256:84047dd1859d0027c938b1e6ba9ad5d27b0568525f4a677595e3d75442c51cc3"
+    },
+    {
+      "artifactKey": "business_partner_operating_organization_assignment/runtime",
+      "artifactHash": "sha256:b57d50f89c1a42eab55dd3c3c5015ec0ca1ed3742016be46a21b60f3ead053eb",
+      "contentHash": "sha256:2ed8ccd33999fb4833e6a1ff864705b4dcba22faedf7d32ed04684bb6139575f"
+    },
+    {
+      "artifactKey": "business_partner_qualification/runtime",
+      "artifactHash": "sha256:d39b3ff7adbdddcae7488bb2efc1f332360c04d114ea24a205ed720a3efbf6e4",
+      "contentHash": "sha256:08df049bd6ea360269569c88929e59259cb0dfcff3a20c7549e72d06b4a623ee"
+    },
+    {
+      "artifactKey": "business_partner_tax_registration/runtime",
+      "artifactHash": "sha256:c6826952474889b3836fa1dcb795e5707e368a97a2f3964b4404ac8b7a5f8ebb",
+      "contentHash": "sha256:e9c37c3223bdd6a795ccbe8d64ce9b09423cc9b42692309687a71682b9ab718d"
+    }
+  ],
+  "tenantArtifactDispositions": [
+    {
+      "artifactKey": "address/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "address/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "address/presentation.section",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "address_link/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "address_link/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "bank_branch/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "bank_identifier/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "bank_institution/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/core",
+      "disposition": "authority_conflict"
+    },
+    {
+      "artifactKey": "business_partner/flow.intake",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.detail",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.list",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.activity",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.addresses",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.attachments",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.banking",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.business-activity",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.certificates",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.comments",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.commodities",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.contacts",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.credit",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.customer-company",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.identifiers-tax",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.identity",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.industries",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.network",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.overview",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.qualifications-certificates",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.requests",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.restrictions",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.roles-scope",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.supplier-company",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.workforce",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner/runtime",
+      "disposition": "authority_conflict"
+    },
+    {
+      "artifactKey": "business_partner_alias/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_alias/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_bank_account_link/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_bank_provisional_reference/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_banking/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_banking/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_banking/runtime",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_commodity_classification/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_governance_relation/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_governance_relation/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_governance_relation/runtime",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_identifier/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_identifier/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_identifier/runtime",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_industry_classification/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_industry_classification/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_industry_classification/runtime",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_operating_organization_assignment/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_operating_organization_assignment/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_operating_organization_assignment/runtime",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_qualification/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_qualification/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_qualification/runtime",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_relationship/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_relationship/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/core",
+      "disposition": "tenant_delta_retained"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.base",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.add",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.company",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.credit",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.customer.new",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.amend",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.archive",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.assign",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.deactivate",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.new",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.partner.reactivate",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.activate",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.add",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.bank",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.company",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.new",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.supplier.qualify",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.add",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.change",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.new",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.workforce.offboard",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/operation",
+      "disposition": "tenant_delta_retained"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.detail",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.list",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.review",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.capture",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.evidence",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.customerCredit",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.request",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.supplierQualification",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.supplierRequest",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/presentation.section.form.workforceReview",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_request/runtime",
+      "disposition": "tenant_delta_retained"
+    },
+    {
+      "artifactKey": "business_partner_restriction/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_tax_registration/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_tax_registration/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "business_partner_tax_registration/runtime",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "certification/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "certification/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "classification_scheme/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "commodity_code/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "commodity_crosswalk/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "contact_channel/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "contact_person/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "contact_person/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "contact_person_role/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "country/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "currency/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "customer/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "customer/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "customer_company_profile/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "customer_company_profile/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "industry_code/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "industry_crosswalk/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "language/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "locale/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "platform/core-field-defaults.v1",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "platform/governed-child-operation.v1",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "state_region/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "supplier/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "supplier/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "supplier_company_profile/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "supplier_company_profile/operation",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "timezone/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "uom/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "workforce/core",
+      "disposition": "product_successor"
+    },
+    {
+      "artifactKey": "workforce/operation",
+      "disposition": "product_successor"
+    }
+  ],
+  "conflicts": [
+    {
+      "artifactKey": "business_partner/core",
+      "baseline": {
+        "artifactKey": "business_partner/core",
+        "artifactHash": "sha256:8a8b1bebb864e9759a1086b0692da29ee9c29753ab4c074deff89463c111da10",
+        "contentHash": "sha256:4b96d21702583408624a979c0eb6ab05cac8195b9d1e8f6609543f009480e270"
+      },
+      "tenant": {
+        "artifactKey": "business_partner/core",
+        "artifactHash": "sha256:fce6d2dd0aba55381fe0ebfee8c9d867f7fbb8ca9ee5f1c1f012b2d89a324b33",
+        "contentHash": "sha256:7e14146530c385fd1d71d51456c4b69928051f04ac8d4b8d0e8ea1e7d3c02d9b"
+      },
+      "proposedProduct": {
+        "artifactKey": "business_partner/core",
+        "artifactHash": "sha256:7048a6ffbc79b4e8585bbc4f9244aca68e0c3fc258035e610403d1dbb6541f3c",
+        "contentHash": "sha256:1afd4990fb9c4a14b79dd9920e34ea8849b0bae32c8db90a06227962a90508e9"
+      }
+    },
+    {
+      "artifactKey": "business_partner/runtime",
+      "baseline": null,
+      "tenant": {
+        "artifactKey": "business_partner/runtime",
+        "artifactHash": "sha256:86229b9bf84cc824283245d25f951df7a352c121adf1d1992c5929029ea9a973",
+        "contentHash": "sha256:2891fc958acef5be5648f9e40614e56a65435115b42ea6492102dbed400f61ff"
+      },
+      "proposedProduct": {
+        "artifactKey": "business_partner/runtime",
+        "artifactHash": "sha256:3159138015c64a88f8fd6e02f31d59bd95aff84fc692a5659e7540eb77ac58a0",
+        "contentHash": "sha256:cd5c48c90a1b2520ecf4ad876ceae13ad21b4e7ac2fcdd4fe9de189b65e873c2"
+      }
+    }
+  ],
+  "completeRuntimeOperations": false,
+  "completenessError": "Error: COMPILED_ENTITY_OPERATION_UNLOWERED:business_partner:capability_supplier_manage",
+  "operationGaps": [
+    {
+      "entityCode": "business_partner",
+      "operation": "capability_supplier_manage",
+      "source": {
+        "key": "capability_supplier_manage",
+        "permissionCode": "neon.relationship.business_partner.capability_supplier_manage",
+        "execution": {
+          "handlerKey": "neon.bp.capability.supplier.v1",
+          "registryRequired": true
+        },
+        "inputSchema": {
+          "required": [
+            "enabled",
+            "reason"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "targetBinding": {
+          "targetEntityCode": "business_partner",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner",
+      "operation": "capability_customer_manage",
+      "source": {
+        "key": "capability_customer_manage",
+        "permissionCode": "neon.relationship.business_partner.capability_customer_manage",
+        "execution": {
+          "handlerKey": "neon.bp.capability.customer.v1",
+          "registryRequired": true
+        },
+        "inputSchema": {
+          "required": [
+            "enabled",
+            "reason"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "targetBinding": {
+          "targetEntityCode": "business_partner",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner",
+      "operation": "request_change",
+      "source": {
+        "key": "request_change",
+        "permissionCode": "neon.relationship.business_partner_amend.create",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.create.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "targetBinding": {
+          "targetEntityCode": "business_partner",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner",
+      "operation": "assign_organization_scope",
+      "source": {
+        "key": "assign_organization_scope",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.organization-scope.v1",
+          "registryRequired": true
+        },
+        "inputSchema": {
+          "required": [
+            "operatingOrganizationId",
+            "requestedRole",
+            "proposedPayload"
+          ],
+          "properties": {
+            "operatingOrganizationId": {
+              "type": "string"
+            },
+            "requestedRole": {
+              "type": "string",
+              "enum": [
+                "supplier",
+                "customer"
+              ]
+            },
+            "proposedPayload": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "scopeBinding": {
+          "scopeSource": "validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "requiredContextCoordinates": [
+            "operatingOrganizationId"
+          ],
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "targetBinding": {
+          "targetEntityCode": "business_partner",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner",
+      "operation": "configure_company_scope",
+      "source": {
+        "key": "configure_company_scope",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.company-scope.v1",
+          "registryRequired": true
+        },
+        "inputSchema": {
+          "required": [
+            "operatingOrganizationId",
+            "requestedRole",
+            "companyCodeId",
+            "proposedPayload"
+          ],
+          "properties": {
+            "operatingOrganizationId": {
+              "type": "string"
+            },
+            "companyCodeId": {
+              "type": "string"
+            },
+            "requestedRole": {
+              "type": "string",
+              "enum": [
+                "supplier",
+                "customer"
+              ]
+            },
+            "proposedPayload": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "scopeBinding": {
+          "scopeSource": "validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "requiredContextCoordinates": [
+            "operatingOrganizationId"
+          ],
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "targetBinding": {
+          "targetEntityCode": "business_partner",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner",
+      "operation": "request_role_extension",
+      "source": {
+        "key": "request_role_extension",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.role-extension.v1",
+          "registryRequired": true
+        },
+        "inputSchema": {
+          "required": [
+            "operatingOrganizationId",
+            "requestedRole",
+            "proposedPayload"
+          ],
+          "properties": {
+            "operatingOrganizationId": {
+              "type": "string"
+            },
+            "companyCodeId": {
+              "type": "string"
+            },
+            "requestedRole": {
+              "type": "string",
+              "enum": [
+                "supplier",
+                "customer"
+              ]
+            },
+            "proposedPayload": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "scopeBinding": {
+          "scopeSource": "validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "requiredContextCoordinates": [
+            "operatingOrganizationId"
+          ],
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "targetBinding": {
+          "targetEntityCode": "business_partner",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner",
+      "operation": "print_statement",
+      "source": {
+        "key": "print_statement",
+        "permissionCode": "neon.relationship.business_partner.print",
+        "permissionStatus": "proposed_requires_catalog_verification",
+        "execution": {
+          "handlerKey": "neon.business_partner.print_statement.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required"
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner",
+      "operation": "share_mesh",
+      "source": {
+        "key": "share_mesh",
+        "permissionCode": "neon.relationship.business_partner.mesh_publish",
+        "permissionStatus": "proposed_requires_catalog_verification",
+        "execution": {
+          "handlerKey": "neon.business_partner.share_mesh.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required"
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_banking",
+      "operation": "request_change",
+      "source": {
+        "key": "request_change",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionStatus": "requires_catalog_verification",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.create.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record_or_validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "draftEntityCode": "business_partner_request",
+        "targetBinding": {
+          "targetEntityCode": "business_partner_banking",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_banking",
+      "operation": "reveal",
+      "source": {
+        "key": "reveal",
+        "permissionCode": "neon.relationship.business_partner_bank.reveal",
+        "execution": {
+          "handlerKey": "neon.bp.bank.reveal.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "single_use_claim",
+        "cache": "no_store",
+        "policyRequirements": [
+          "elevated_assurance",
+          "purpose_bound_claim",
+          "audit_in_same_transaction"
+        ]
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_governance_relation",
+      "operation": "request_change",
+      "source": {
+        "key": "request_change",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionStatus": "requires_catalog_verification",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.create.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record_or_validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "draftEntityCode": "business_partner_request",
+        "targetBinding": {
+          "targetEntityCode": "business_partner_governance_relation",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_identifier",
+      "operation": "reveal",
+      "source": {
+        "key": "reveal",
+        "permissionCode": "neon.relationship.business_partner_identifier.reveal",
+        "execution": {
+          "handlerKey": "neon.bp.identifier.reveal.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "single_use_claim",
+        "cache": "no_store",
+        "policyRequirements": [
+          "elevated_assurance",
+          "purpose_bound_claim",
+          "audit_in_same_transaction"
+        ]
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_identifier",
+      "operation": "request_change",
+      "source": {
+        "key": "request_change",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionStatus": "requires_catalog_verification",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.create.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record_or_validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "draftEntityCode": "business_partner_request",
+        "targetBinding": {
+          "targetEntityCode": "business_partner_identifier",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_industry_classification",
+      "operation": "request_change",
+      "source": {
+        "key": "request_change",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionStatus": "requires_catalog_verification",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.create.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record_or_validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "draftEntityCode": "business_partner_request",
+        "targetBinding": {
+          "targetEntityCode": "business_partner_industry_classification",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_operating_organization_assignment",
+      "operation": "request_change",
+      "source": {
+        "key": "request_change",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionStatus": "requires_catalog_verification",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.create.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record_or_validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "draftEntityCode": "business_partner_request",
+        "targetBinding": {
+          "targetEntityCode": "business_partner_operating_organization_assignment",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_qualification",
+      "operation": "request_change",
+      "source": {
+        "key": "request_change",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionStatus": "requires_catalog_verification",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.create.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record_or_validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "draftEntityCode": "business_partner_request",
+        "targetBinding": {
+          "targetEntityCode": "business_partner_qualification",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_tax_registration",
+      "operation": "request_change",
+      "source": {
+        "key": "request_change",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionStatus": "requires_catalog_verification",
+        "execution": {
+          "handlerKey": "neon.bp.governed-request.create.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record_or_validated_create_input",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "required",
+        "draftEntityCode": "business_partner_request",
+        "targetBinding": {
+          "targetEntityCode": "business_partner_tax_registration",
+          "targetResolution": "operation_context_only",
+          "clientSuppliedTargetEntityCode": "forbidden",
+          "handlerMustRejectTargetMismatch": true
+        }
+      },
+      "status": "implementation_and_runtime_binding_required"
+    },
+    {
+      "entityCode": "business_partner_tax_registration",
+      "operation": "reveal",
+      "source": {
+        "key": "reveal",
+        "permissionCode": "neon.relationship.business_partner_tax.reveal",
+        "execution": {
+          "handlerKey": "neon.bp.tax.reveal.v1",
+          "registryRequired": true
+        },
+        "scopeBinding": {
+          "scopeSource": "persisted_record",
+          "resolverKey": "neon.business-context.v1",
+          "denyUnresolved": true
+        },
+        "idempotency": "single_use_claim",
+        "cache": "no_store",
+        "policyRequirements": [
+          "elevated_assurance",
+          "purpose_bound_claim",
+          "audit_in_same_transaction"
+        ]
+      },
+      "status": "implementation_and_runtime_binding_required"
+    }
+  ],
+  "predecessorOperationLedger": [
+    {
+      "operation": "enter",
+      "before": {
+        "key": "enter",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "collection",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "requiresPreflight": false,
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.enter.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "enter"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "app",
+          "level": "application",
+          "operation": "enter"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "discover",
+      "before": {
+        "key": "discover",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "collection",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "requiresPreflight": false,
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.discover.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "discover"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "directory",
+          "level": "workspace",
+          "operation": "discover"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "read",
+      "before": {
+        "key": "read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "requiresPreflight": false,
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "read"
+      },
+      "after": {
+        "key": "read",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "scope": "tenant.record.v1",
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": false,
+        "requiresPreflight": false
+      },
+      "afterBinding": {
+        "operation": "read",
+        "handler": "entity.record.read.v1",
+        "resolver": "tenant.record.v1"
+      },
+      "referencingSurfaces": [],
+      "status": "changed_contract_requires_explicit_review"
+    },
+    {
+      "operation": "navigate_manage",
+      "before": {
+        "key": "navigate_manage",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "collection",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "requiresPreflight": false,
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.navigate_manage.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "navigate_manage"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "navigate_overview",
+      "before": {
+        "key": "navigate_overview",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "collection",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "requiresPreflight": false,
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.navigate_overview.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "navigate_overview"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "export",
+      "before": {
+        "key": "export",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "collection",
+        "permissionCode": "neon.relationship.bp_target.export",
+        "requiresPreflight": true,
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.export.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "export",
+        "preflight": "business_partner.export.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "navigate_review",
+      "before": {
+        "key": "navigate_review",
+        "scope": "organization.record.v1",
+        "effect": "read",
+        "target": "collection",
+        "permissionCode": "neon.relationship.entity_case.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.navigate_review.v1",
+        "resolver": "organization.record.v1",
+        "operation": "navigate_review"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "request_supplier",
+      "before": {
+        "key": "request_supplier",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.request_supplier.v1",
+        "resolver": "organization.record.v1",
+        "operation": "request_supplier",
+        "preflight": "business_partner.request_supplier.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "add_role",
+      "before": {
+        "key": "add_role",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.add_role.v1",
+        "resolver": "organization.record.v1",
+        "operation": "add_role",
+        "preflight": "business_partner.add_role.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "amend_partner",
+      "before": {
+        "key": "amend_partner",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.amend_partner.v1",
+        "resolver": "organization.record.v1",
+        "operation": "amend_partner",
+        "preflight": "business_partner.amend_partner.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "assign_organization",
+      "before": {
+        "key": "assign_organization",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.assign_organization.v1",
+        "resolver": "organization.record.v1",
+        "operation": "assign_organization",
+        "preflight": "business_partner.assign_organization.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "configure_company",
+      "before": {
+        "key": "configure_company",
+        "scope": "organization-company.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.bp_target.configure_company",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.configure_company.v1",
+        "resolver": "organization-company.record.v1",
+        "operation": "configure_company",
+        "preflight": "business_partner.configure_company.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "change_bank",
+      "before": {
+        "key": "change_bank",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.change_bank.v1",
+        "resolver": "organization.record.v1",
+        "operation": "change_bank",
+        "preflight": "business_partner.change_bank.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "lifecycle",
+      "before": {
+        "key": "lifecycle",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.lifecycle.v1",
+        "resolver": "organization.record.v1",
+        "operation": "lifecycle",
+        "preflight": "business_partner.lifecycle.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "import",
+      "before": {
+        "key": "import",
+        "scope": "tenant.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.bp_target.import",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.import.governed_requests.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "import",
+        "preflight": "business_partner.import.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "identity_read",
+      "before": {
+        "key": "identity_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_identity.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.identity_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "identity_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "identity",
+          "level": "section",
+          "operation": "identity_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "contacts_read",
+      "before": {
+        "key": "contacts_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_contact.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.contacts_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "contacts_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "contacts",
+          "level": "section",
+          "operation": "contacts_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "addresses_read",
+      "before": {
+        "key": "addresses_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_address.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.addresses_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "addresses_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "addresses",
+          "level": "section",
+          "operation": "addresses_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "identifier_read",
+      "before": {
+        "key": "identifier_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.identifier_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "identifier_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "identifier",
+          "level": "section",
+          "operation": "identifier_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "tax_read",
+      "before": {
+        "key": "tax_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.tax_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "tax_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "tax",
+          "level": "section",
+          "operation": "tax_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "bank_read",
+      "before": {
+        "key": "bank_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.bank_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "bank_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "bank",
+          "level": "section",
+          "operation": "bank_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "qualification_read",
+      "before": {
+        "key": "qualification_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_qualification.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.qualification_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "qualification_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "qualification",
+          "level": "section",
+          "operation": "qualification_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "certificate_read",
+      "before": {
+        "key": "certificate_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_certificate.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.certificate_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "certificate_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "certificate",
+          "level": "section",
+          "operation": "certificate_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "credit_read",
+      "before": {
+        "key": "credit_read",
+        "scope": "organization.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_credit.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.credit_read.v1",
+        "resolver": "organization.record.v1",
+        "operation": "credit_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "credit",
+          "level": "section",
+          "operation": "credit_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "requests_read",
+      "before": {
+        "key": "requests_read",
+        "scope": "organization.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.entity_case.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.requests_read.v1",
+        "resolver": "organization.record.v1",
+        "operation": "requests_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "requests",
+          "level": "section",
+          "operation": "requests_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "activity_read",
+      "before": {
+        "key": "activity_read",
+        "scope": "organization.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner_activity.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.activity_read.v1",
+        "resolver": "organization.record.v1",
+        "operation": "activity_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "activity",
+          "level": "section",
+          "operation": "activity_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "network_read",
+      "before": {
+        "key": "network_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.bp_target.network_read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.network_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "network_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "network",
+          "level": "section",
+          "operation": "network_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "comments_read",
+      "before": {
+        "key": "comments_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.collaboration.comment.read",
+        "requiresPreflight": false,
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.comments_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "comments_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "comments",
+          "level": "section",
+          "operation": "comments_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "attachments_read",
+      "before": {
+        "key": "attachments_read",
+        "scope": "tenant.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.collaboration.attachment.read",
+        "requiresPreflight": false,
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.attachments_read.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "attachments_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [
+        {
+          "key": "attachments",
+          "level": "section",
+          "operation": "attachments_read"
+        }
+      ],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "bank_reveal",
+      "before": {
+        "key": "bank_reveal",
+        "scope": "tenant.record.v1",
+        "effect": "reveal",
+        "target": "existing",
+        "permissionCode": "neon.relationship.bp_target.bank_reveal",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.bank_reveal.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "bank_reveal",
+        "preflight": "business_partner.bank_reveal.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "tax_reveal",
+      "before": {
+        "key": "tax_reveal",
+        "scope": "tenant.record.v1",
+        "effect": "reveal",
+        "target": "existing",
+        "permissionCode": "neon.relationship.bp_target.tax_reveal",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.tax_reveal.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "tax_reveal",
+        "preflight": "business_partner.tax_reveal.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "case_create",
+      "before": {
+        "key": "case_create",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.entity_case.create",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.case_create.v1",
+        "resolver": "organization.record.v1",
+        "operation": "case_create",
+        "preflight": "business_partner.case_create.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "case_read",
+      "before": {
+        "key": "case_read",
+        "scope": "organization.record.v1",
+        "effect": "read",
+        "target": "collection",
+        "permissionCode": "neon.relationship.entity_case.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.case_read.v1",
+        "resolver": "organization.record.v1",
+        "operation": "case_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "case_update",
+      "before": {
+        "key": "case_update",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "existing",
+        "permissionCode": "neon.relationship.entity_case.update",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.case_update.v1",
+        "resolver": "organization.record.v1",
+        "operation": "case_update",
+        "preflight": "business_partner.case_update.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "case_validate",
+      "before": {
+        "key": "case_validate",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "existing",
+        "permissionCode": "neon.relationship.entity_case.validate",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.case_validate.v1",
+        "resolver": "organization.record.v1",
+        "operation": "case_validate",
+        "preflight": "business_partner.case_validate.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "case_submit",
+      "before": {
+        "key": "case_submit",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "existing",
+        "permissionCode": "neon.relationship.entity_case.submit",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.case_submit.v1",
+        "resolver": "organization.record.v1",
+        "operation": "case_submit",
+        "preflight": "business_partner.case_submit.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "case_decide",
+      "before": {
+        "key": "case_decide",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "existing",
+        "permissionCode": "neon.relationship.entity_case.decide",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.case_decide.v1",
+        "resolver": "organization.record.v1",
+        "operation": "case_decide",
+        "preflight": "business_partner.case_decide.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "case_materialize",
+      "before": {
+        "key": "case_materialize",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "existing",
+        "permissionCode": "neon.relationship.entity_case.materialize",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.case_materialize.v1",
+        "resolver": "organization.record.v1",
+        "operation": "case_materialize",
+        "preflight": "business_partner.case_materialize.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "qualification",
+      "before": {
+        "key": "qualification",
+        "scope": "organization.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.supplier.qualification.admin",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.qualification.v1",
+        "resolver": "organization.record.v1",
+        "operation": "qualification",
+        "preflight": "business_partner.qualification.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "qualification_company",
+      "before": {
+        "key": "qualification_company",
+        "scope": "organization-company.record.v1",
+        "effect": "write",
+        "target": "proposed",
+        "permissionCode": "neon.relationship.bp_target.qualification_company",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": false
+      },
+      "beforeBinding": {
+        "handler": "business_partner.qualification_company.v1",
+        "resolver": "organization-company.record.v1",
+        "operation": "qualification_company",
+        "preflight": "business_partner.qualification_company.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "supplier_company_read",
+      "before": {
+        "key": "supplier_company_read",
+        "scope": "organization.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.supplier_company_read.v1",
+        "resolver": "organization.record.v1",
+        "operation": "supplier_company_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "customer_company_read",
+      "before": {
+        "key": "customer_company_read",
+        "scope": "organization.record.v1",
+        "effect": "read",
+        "target": "existing",
+        "permissionCode": "neon.relationship.business_partner.read",
+        "requiresPreflight": false,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.customer_company_read.v1",
+        "resolver": "organization.record.v1",
+        "operation": "customer_company_read"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    },
+    {
+      "operation": "identifier_reveal",
+      "before": {
+        "key": "identifier_reveal",
+        "scope": "tenant.record.v1",
+        "effect": "reveal",
+        "target": "existing",
+        "permissionCode": "neon.relationship.bp_target.identifier_reveal",
+        "requiresPreflight": true,
+        "discoveryOperation": "enter",
+        "requiresParentRead": true
+      },
+      "beforeBinding": {
+        "handler": "business_partner.identifier_reveal.v1",
+        "resolver": "tenant.record.v1",
+        "operation": "identifier_reveal",
+        "preflight": "business_partner.identifier_reveal.preflight.v1"
+      },
+      "after": null,
+      "afterBinding": null,
+      "referencingSurfaces": [],
+      "status": "missing_successor_operation_preserve_predecessor"
+    }
+  ],
+  "retainedTenantArtifacts": [
+    "business_partner_request/core",
+    "business_partner_request/operation",
+    "business_partner_request/runtime"
+  ],
+  "governedSuccessorCreated": false,
+  "publicationPerformed": false,
+  "independentApprovalRecorded": false,
+  "platformAuthor": null,
+  "platformReviewer": null,
+  "tenantAuthor": null,
+  "tenantReviewer": null
+}

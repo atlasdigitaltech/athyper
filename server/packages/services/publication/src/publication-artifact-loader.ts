@@ -1,6 +1,6 @@
 import { runtimeVersionCompatible } from "./runtime-version.js";
 import {collectionPublicationFromGraph,parseCollectionPublicationDescriptor,collectionPublicationKey} from "@athyper/server-contract-publication";
-import { parseEntityRuntimeDescriptor, parseCompiledRuntimeContract, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
+import { parseEntityRuntimeDescriptor, parseCompiledRuntimeContract, assertCompleteRuntimeOperations, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
 import { authoredAuthorization } from "./entity-authorization-compiler.js";
 import {
   parseEntityAuthorizationProfile,
@@ -132,6 +132,7 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       }
       try {
         validateCompiledRuntimeContracts(envelope.payload.artifacts);
+        assertCompleteRuntimeOperations(envelope.payload.artifacts);
         for (const artifact of envelope.payload.artifacts.filter(item => item.artifactType === "runtime_contract")) {
           // Source release identity is not the compiled package hash. Recheck
           // the compiler's provenance assertion against the signed manifest.
