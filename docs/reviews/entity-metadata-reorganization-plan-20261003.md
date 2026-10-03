@@ -1,14 +1,16 @@
 # Entity metadata reorganization review plan
 
-Date: 3 October 2026. Status: checkpoint verified; flat-layout repairs, recursive discovery and domain relocation implemented for review; reference trace and reconciliation proposal recorded; format/property corrections and builds pending review.
+Date: 3 October 2026. Status: revised grouping and access plan ready for manual review. The original checkpoint, flat-layout repairs, recursive discovery and initial domain relocation are recorded as complete. Follow-up shared-domain moves exist in the working tree; their commit/publication status is separate. Format/property corrections, permission reconciliation, builds, publication and runtime acceptance remain pending.
 
 This plan preserves existing entity definitions, completes their interrupted relocation, organizes sources by owning domain, and separates format consolidation from property corrections. Country and Principal supply applicable framework conventions; Principal Profile also supplies the reference record-navigation experience.
 
-**Before starting this activity, commit and push all existing repository changes to GitHub, including the currently ignored metadata sources. Verify that the remote branch contains the checkpoint commit.** The checkpoint preserves work in progress and does not certify its correctness or authorize publication. The owner has requested this prerequisite; the reorganization and builds remain pending review.
+The latest [grouping and access recommendation](#revised-grouping-and-access-recommendation--3-october-2026) below revisits the proposed user navigation and permission model. It is the current design recommendation throughout this plan: business users work through Business Partners and Workforce; authorized key users also have independent Person, Address and Contact directories; Principal self-service and administration are separate scopes. Historical evidence remains historical and does not establish implementation of this access model.
+
+**Original checkpoint prerequisite: completed as recorded in item 3.** The original instruction to capture all existing changes applied to that checkpoint only; this document refresh does not repeat it or include unrelated workspace changes. The checkpoint preserves work in progress and does not certify correctness or authorize publication. Further metadata/framework implementation follows the review gates below.
 
 1. **Scope and controls**
 
-   Work covers entity authoring sources, supporting metadata, and affected shared Entity Framework discovery, loaders, generators, and documentation. Preserve business fields, relationships, operations, workflows, tenant isolation, server-enforced record scope, explicit denies, audit, transactions, idempotency, and independent publication review.
+   Work covers Entity View and Edit modes, entity authoring sources, supporting metadata, and affected shared Entity Framework discovery, loaders, generators, and documentation. Remove `business_partner_request` from the current plan; introduce intake or case requests in a later phase. Retain existing request sources and controls as preserved dependencies, not current onboarding deliverables. Preserve business fields, relationships, operations, workflows, tenant isolation, server-enforced record scope, explicit denies, audit, transactions, idempotency, and independent publication review.
 
    No database resets, publication, deployment, permission grants, MFA changes, or incidental catalog/SQL reconciliation. Do not modify immutable applied migrations. No bespoke entity applications, parallel providers, entity-name dispatch, or runtime allowlists. Keep domain handlers in their owning services and select them through reusable capability bindings.
 
@@ -101,16 +103,19 @@ This plan preserves existing entity definitions, completes their interrupted rel
 
 6. **Move sources by domain ownership**
 
-   Use `metadata/entities/` as the single entity root. Proposed destinations are below; confirm ownership against domain contracts before moving disputed entries. Folder placement does not assign storage schemas, module codes, publication targets, or navigation exposure.
+   Use `metadata/entities/` as the single entity root. Current source homes, including the follow-up working-tree moves, are below; preserve these homes for the navigation regrouping. Folder placement does not assign storage schemas, module codes, publication targets, or navigation exposure.
 
    | Relative source home | Entity group | Count |
    | --- | --- | ---: |
-   | `common/reference/` | country, currency, language, locale, state_region, timezone | 6 |
+   | `common/reference/` | country, currency, language, locale, state_region, timezone; bank_branch, bank_identifier, bank_institution, classification_scheme, commodity_code, commodity_crosswalk, industry_code, industry_crosswalk, uom | 15 |
    | `platform/iam/` | principal, principal_profile, principal_ui_profile, principal_notification_preference | 4 |
    | `ppl/workforce/` | employee, person, external_worker, workforce | 4 |
    | `mdg/location/` | address, address_link, person_address_use | 3 |
-   | `mdg/bp/` | business_partner and its 13 child entities; business_partner_request; supplier, supplier_company_profile, customer, customer_company_profile; contact_channel, contact_person, contact_person_role | 22 |
-   | `mdg/reference/` | bank_branch, bank_identifier, bank_institution, certification, classification_scheme, commodity_code, commodity_crosswalk, industry_code, industry_crosswalk, uom | 10 |
+   | `mdg/bp/` | business_partner and its 13 child entities; supplier, supplier_company_profile, customer, customer_company_profile | 18 |
+   | `mdg/contact/` | contact_channel, contact_person, contact_person_role — shared Contact domain; owner-scoped business views plus explicitly authorized Data Stewardship directories | 3 |
+   | `mdg/reference/` | certification | 1 |
+
+   This revised destination proposal covers 48 entities in the current View/Edit plan. The frozen inventories below account for all 49 original source homes. The owner-requested follow-up relocation places Contact under `mdg/contact/` and nine additional lookups under `common/reference/`; Certification stays under `mdg/reference/`. `business_partner_request` remains preserved under `mdg/bp/` as deferred intake/case-request material. All 49 descriptors remain present; see the follow-up working-tree status in [Owner-requested shared-domain relocation](#owner-requested-shared-domain-relocation--3-october-2026).
 
    The 13 BP children are business_partner_alias, business_partner_bank_account_link, business_partner_bank_provisional_reference, business_partner_banking, business_partner_commodity_classification, business_partner_governance_relation, business_partner_identifier, business_partner_industry_classification, business_partner_operating_organization_assignment, business_partner_qualification, business_partner_relationship, business_partner_restriction, and business_partner_tax_registration.
 
@@ -120,7 +125,7 @@ This plan preserves existing entity definitions, completes their interrupted rel
 
    **Domain relocation completion evidence — 3 October 2026 (item 6)**
 
-   Pure relocation commit: `eb74c396b`. Git reported exactly **202 renames at 100% similarity, zero inserted lines and zero deleted lines**, covering all 49 entities in the six homes above (6/4/4/3/22/10). Every original descriptor, artifact, definition, placement and localization file retains its filename and bytes. Supporting roots remain in place; only populated domain/group directories were created.
+   Pure relocation commit: `eb74c396b`. Git reported exactly **202 renames at 100% similarity, zero inserted lines and zero deleted lines**, covering all 49 entities in the six original homes recorded in that commit (6/4/4/3/22/10). Those historical counts precede the follow-up moves and are not the current seven-home table above. Every original descriptor, artifact, definition, placement and localization file retains its filename and bytes. Supporting roots remain in place; only populated domain/group directories were created.
 
    The [complete relocation inventory](entity-metadata-domain-relocation-20261003.json) records all 49 old/new source directories, all 202 old/new file paths and SHA-256 hashes, the discovery starting revision, the relocation commit and ownership evidence. It is audit evidence and is never consumed as an alternative source index. Discovery remains the authority for the physical homes.
 
@@ -156,19 +161,23 @@ This plan preserves existing entity definitions, completes their interrupted rel
 
    Declare readable record identity, list columns, navigation groups, section behavior, and ordering explicitly. Shared validation must reject UUID presentation configurations rather than silently hiding fields or selecting fallback labels. Reuse Navigation Tabs and Section Tabs/menu components. Do not synthesize Overview tabs, first-field display identities, or the deprecated full-width section dropdown.
 
+   Focus on shared Entity View and Edit modes. Declare supported edit operations and exact permission/policy bindings in governed metadata; existing `request_change` bindings do not establish direct Edit support. Where Edit support is missing, resolve the shared capability and owning-domain operation contract without bypassing existing governed controls. Intake/case requests are deferred.
+
    Expose search, filtering, sorting, pagination, and controls only when metadata and APIs support them. Preserve locked server-side parent scope for embedded lists, explicit projections for read models, and all necessary BP/workforce operations and workflows. Generalize missing capabilities through shared contracts rather than entity-specific runtime branches.
+
+   Recommend Contact as a shared MDG domain under `mdg/contact/`, reusable by BP and other eligible owners. Business users use owner-scoped record navigation; authorized key users also use explicitly configured standard Entity directories under Data Stewardship. Use owner-scoped Channels and Contacts lists, standard Contact detail navigation, and embedded Responsibilities under a contact person. Declare readable contact name, channel value/type and responsibility labels; never UUIDs. Sharing functionality does not share records between owners or turn Contact into global reference data. The proposed independent directories require exact published access bindings and authorized tenant/record scope; their menu placement does not authorize cross-owner access. Keep tables, entity codes and Neon declarations unchanged until additional targets are deliberately approved and published. Resolve Contact Channel’s fixed owner target and Contact Person’s BP request-bound operations through validated published capability bindings. See the [Contact recommendation and source gaps](entity-metadata-integration-matrix-20261003.md#shared-contact-domain-recommendation).
 
    Product defaults remain platform-owned Studio releases with independent Platform Owner review. Tenant extensions remain tenant-isolated with independent Tenant Owner review. File moves and commits do not establish publication approval.
 
    **Reference trace and reconciliation proposal — 3 October 2026 (items 7–9)**
 
-   The [reference trace and correction plan](entity-metadata-reconciliation-20261003.md) identifies the existing Country compilation/publication/resolution/provider/authorization/route/UI integration, Principal ownership and parent scope, Principal Profile navigation gaps, and BP continuous-section behavior before any property or framework edits. The [49-entity summary matrix](entity-metadata-integration-matrix-20261003.md) and [exact source declarations](entity-metadata-integration-matrix-20261003.json) separate physical home, graph/release ownership, declared planes, storage/runtime, placement and authorization. Supporting-profile permissions are separately identified; effective compiled/publication authorization remains unverified.
+   The [reference trace and correction plan](entity-metadata-reconciliation-20261003.md) identifies the existing Country compilation/publication/resolution/provider/authorization/route/UI integration, Principal ownership and parent scope, Principal Profile navigation gaps, and BP continuous-section behavior before any property or framework edits. The [current-scope summary matrix with 49-entity source evidence](entity-metadata-integration-matrix-20261003.md) and [exact source declarations](entity-metadata-integration-matrix-20261003.json) separate physical home, graph/release ownership, declared planes, storage/runtime, placement and authorization. Supporting-profile permissions are separately identified; effective compiled/publication authorization remains unverified.
 
    The [seven-format comparison](entity-metadata-format-comparison-20261003.json) preserves every inspected field property and records the retained location of every artifact/native definition property. Country's native definition is the proposed editable baseline for its existing native experience; its split lookup core remains required. Address retains native reads and split governed `request_change`; its native `neon.workforce.address.read` and split `neon.address.read` bindings are an unresolved conflict. No source has been archived, deleted or converted. Consolidation is not complete.
 
    Concrete shared corrections are identified, not silently implemented: the shared-reference builder currently supplies `common.platform.reference.view` outside the definition; the native detail renderer synthesizes Overview navigation when missing; Principal Profile lacks explicit navigation and includes hidden UUID list bindings. Explicit permission authoring and unsupported tab/section semantics require the separate contract phase. Supported metadata properties must be corrected with before/after permission evidence and shared validation, preserving server scope and collaboration controls.
 
-   Fourteen entities have placement files. Three of the 35 without placement have explicit Principal relationship exposure; 32 have other supporting references. Exclusive embedded-only intent is not established by source absence. Those navigation-role decisions remain open; no Principal placement was copied.
+   Fourteen entities have placement files. Three of the 35 without placement have explicit Principal relationship exposure; 32 have other supporting references. Exclusive embedded-only intent is not established by source absence. At the time of that trace, Contact was proposed as embedded-only. The current recommendation supersedes that proposal with owner-scoped business exposure plus authorized Data Stewardship directories; the historical source observations remain unchanged. No Principal placement was copied. These counts describe the original source inventory, not completed configuration changes.
 
    Missing-DDL investigation found that historical `18_business_partner_business_profile.sql` altered BP organization attributes, while current DDL retains BP and defines organization identity/projection in `33_partner_organization_identity.sql`. A missing historical filename does not justify removing the entity. The captured storage-catalog evidence/hash and its previously observed validator failure remain unchanged. Genuinely obsolete sources may be removed only after storage, domain and dependency accounting; applied migrations and historical evidence remain protected.
 
@@ -196,4 +205,116 @@ This plan preserves existing entity definitions, completes their interrupted rel
 
     Deliver the remote checkpoint identity, final tree, all 49 source/destination mappings, file disposition inventory with reasons, canonical-format decisions, property and permission diffs, confirmation of unchanged MFA, affected shared components, historical/successor evidence accounting, exact commands/results, and unresolved gaps. Distinguish implemented changes, static/build validation, publication, and runtime verification. Automated and manual user-flow testing remain pending.
 
-    Deferred work includes the new unified authoring language, component composer/compiler, and `sections/` or `flows/` filename conversion. It needs a separate design review and agreed testing scope. Approval of this document does not authorize that redesign, publication, deployment, MFA changes, or catalog/SQL reconciliation.
+    Deferred work includes intake and case-request integration (`business_partner_request`), the new unified authoring language, component composer/compiler, and `sections/` or `flows/` filename conversion. It needs a separate design review and agreed testing scope. Approval of this document does not authorize that redesign, publication, deployment, MFA changes, or catalog/SQL reconciliation.
+
+## Owner-requested shared-domain relocation — 3 October 2026
+
+Working-tree implementation recorded before this document refresh: folder moves for nine `mdg/reference/` entities into `common/reference/`, excluding Certification, and for three Contact entities from `mdg/bp/` into `mdg/contact/`. The local successor evidence file `docs/reviews/entity-metadata-shared-domain-relocation-20261003.json` records all 12 moves and 25 file hashes. At this review refresh it is untracked, and the moves are uncommitted; this plan-only commit does not deliver that evidence or those moves. They need their own reviewed commit before GitHub readers can inspect them. Existing recursive descriptor discovery and logical entity-code references handle these paths; no shared resolver or runtime code changes are required. Prior relocation evidence and captured source matrices remain unchanged.
+
+This implements source organization only. Contact owner bindings, governed View/Edit operation bindings, presentation validation and explicit exposure metadata remain pending. Source moves do not alter entity codes, tables, fields, permission/policy bindings, workflows, MFA, plane declarations or publication ownership. Current scope remains View/Edit; intake and case requests are deferred. Unrelated concurrent source changes are preserved.
+
+Offline verification passed: `pnpm metadata:check-layout --baseline` (175 historical destinations, 202 entity JSON files, 13 profile JSON files; logical references and baseline bytes preserved), catalog `--check` (generated outputs unchanged), all 25 moved byte hashes, 49 descriptors, updated local document links, and `git diff --check`. No tests, builds, database operations, publication or runtime probes ran. Publication and runtime behavior remain unverified.
+
+## Revised grouping and access recommendation — 3 October 2026
+
+Status: current recommendation for manual review, based on the owner's grouping request and the permission worksheet referenced by the prior review. Exact worksheet bindings below remain proposals requiring source and published-binding reconciliation. This section changes the plan only. Earlier source matrices remain observations of existing definitions, not declarations of this proposed access model.
+
+### Recommended user navigation
+
+Organize navigation around the task and audience while keeping entity sources with their owning domains. A menu group does not establish a parent-child relationship, permission inheritance, storage ownership or a new application. Every entry below uses standard Entity list/detail surfaces and published placement and presentation metadata.
+
+| Area | Group or entry | Entities and exposure |
+| --- | --- | --- |
+| Reference Data | Banking | Bank Institutions (`bank_institution`), Bank Branches (`bank_branch`), Bank Identifiers (`bank_identifier`). Offer grouped reference lists and declared relationship navigation; institution-scoped branches require a validated relationship binding. |
+| Reference Data | Commodities | Commodity Codes (`commodity_code`) and Commodity Crosswalks (`commodity_crosswalk`). Crosswalks are primarily a maintenance task; expose related mappings from a code record where supported. |
+| Reference Data | Industries | Industry Codes (`industry_code`) and Industry Crosswalks (`industry_crosswalk`), using the same presentation pattern as commodities. |
+| Reference Data | Classification Schemes | `classification_scheme` is shared classification infrastructure, with its own entry rather than duplicated ownership under both Commodities and Industries. Related navigation requires explicit bindings. |
+| Reference Data | Geography | Countries (`country`), States / Regions (`state_region`) and Time Zones (`timezone`). |
+| Reference Data | Languages & Locales | Languages (`language`) and Locales (`locale`). Locale may reference geography without moving its source or duplicating its definition. |
+| Reference Data | Currencies & Units | Currencies (`currency`) and Units of Measure (`uom`). |
+| Business Records | Business Partners | `business_partner` is the primary entry. Its 13 BP child entities and Customer/Supplier company profiles are reached through declared record navigation. Customer and Supplier remain BP capabilities in this proposal, without duplicate primary directories. |
+| Business Records | Workforce | Employees (`employee`) and External Workers (`external_worker`) are peer entries under one menu group. Show linked Person, Addresses and Contacts within the authorized record experience. |
+| My Account | My Principal | Current principal and its Profile, UI Profile and Notification Preferences. This is a self-scoped standard Entity experience. |
+| Administration | Principals | Directory for authorized administrators, with all Principal child records and the optional Employee relationship. General business access to a principal reference does not imply directory access. |
+| Data Stewardship | Addresses, Contacts, Persons | Independent directories for authorized key users/administrators. Other business users access permitted data through BP or Workforce records. Contacts groups the existing Contact entities; it does not introduce an additional `contact` entity or custom explorer. |
+
+These are suggested labels and groupings, not new module codes. Reference read access and reference maintenance are separate decisions: broad lookup availability need not grant edit access or put crosswalk maintenance in every user's primary menu. Existing declared planes and module identities remain unchanged until separately reconciled through publication.
+
+### Relationship decisions
+
+**Employee and External Worker should be peers.** The current [Employee definition](../../metadata/entities/ppl/workforce/employee/definition.json) and [External Worker definition](../../metadata/entities/ppl/workforce/external_worker/definition.json) each reference `person_id`; Employee additionally declares `principal_id`. Treating External Worker as an Employee child would assert ownership that this evidence does not establish. Use Workforce as a navigation group initially. The existing `workforce` entity shares Employee storage in the source inventory; it is not evidence of a combined Employee/External Worker directory. A combined list would require an explicit read model onboarded through the Entity Framework.
+
+**Person, Address and Contact are reusable records, not automatically owned copies.** Keep Person under `ppl/workforce/`, Address and address-use/link entities under `mdg/location/`, and Contact under `mdg/contact/`. A business user's relationship view can expose only the linked record/projection authorized for that context. Editing a shared Person or Address can affect other linked records: distinguish editing the owner's link/use from editing the shared record itself through published operation contracts. A parent edit permission alone must not silently authorize cross-owner changes. A BP contact person is not automatically a workforce Person; declare any actual relationship before exposing one.
+
+**Principal is an account identity with an optional Employee link.** Explicitly account for `principal_profile`, `principal_ui_profile` and `principal_notification_preference` in both the self-service and administrator surface matrix; each surface declares its own supported operations and scope. Do not require an Employee for every Principal or infer Principal access from Employee access. My Account resolves the current principal on the server. Following Employee → Principal must evaluate the target's published access and record scope; a readable reference label does not grant permission to open its target.
+
+**Certification needs its own scope decision.** Keep `certification` under `mdg/reference/`. Distinguish a reusable certification definition from a BP's qualification/assignment before applying the worksheet's “parent sufficient” proposal. An independent reference directory has no BP parent from which to inherit access.
+
+### Permission worksheet recommendations
+
+| Worksheet proposal | Recommendation and required condition |
+| --- | --- |
+| `common.platform.reference.view` → `common.platform.reference.read`; add `common.platform.reference.print` | Adopt as a proposed vocabulary change through exact published bindings. Reconcile all existing consumers and grants before retiring the old binding. Print is separate from read and should appear only with a supported shared print capability. Do not inject either permission as a compiler/runtime default. |
+| BP read/edit at parent level; remove redundant child and navigation permissions | Agree for explicitly bound BP-scoped surfaces. `neon.relationship.business_partner.read` and proposed `neon.relationship.business_partner.edit` are the worksheet's exact bindings, not names to generate in code. Prove parent admission and locked child scope before removing redundant checks. Direct Edit still requires a supported domain operation; existing request operations are not direct Edit. |
+| Keep banking, identifier and tax reveal permissions | Keep the exact field-level reveal bindings independent of parent read/edit. Enforce protected projection/reveal on the server across lists, detail, search, print and other supported output paths; hiding a field in the UI is insufficient. |
+| Customer/Supplier read → capability management permissions | Recommend a refinement: ordinary viewing through an authorized BP uses BP read; capability activation/change uses the exact customer/supplier management action permission. Requiring a management permission merely to view a profile would unnecessarily mix viewing and management. Any standalone scope needs its own explicit binding. |
+| Replace plane-specific collaboration permissions with `common.collaboration.*` | Reasonable as a governed consolidation proposal. Map each supported action exactly, retaining record access, ownership conditions such as `update_own`, explicit denies and attachment controls. A common attachment permission does not grant access to every entity's attachments. Remove old bindings only after dependency reconciliation. |
+| Principal and child permissions “default for everyone irrespective of their permission” | Express self-service operations with no entity permission requirement in their applicable valid Meta Entity properties, plus mandatory server-resolved self scope. Do not retain a defined permission and bypass it. Administrative operations use separate declared scope/policy bindings and enforce any exact permissions they define. Never remove a tenant-wide read permission and mistake the result for self-only access. |
+| Person, Address, Contact and workforce permissions “need to revisit” | Separate parent-scoped business exposure from independent directory access. Define the applicable exact directory and operation permissions in metadata; do not invent codes in implementation or grant based on a hardcoded administrator role. Business users need no additional child permission where valid metadata explicitly defines the supported parent-scoped surface. |
+| Remove Certification permission because parent is sufficient | Valid only for a genuinely parent-scoped operation. Resolve the definition-versus-assignment distinction first; do not make a global directory implicitly accessible by deleting its permission. |
+| Rename intake permissions; remove entity-case permissions | Record for the deferred intake/case phase. Existing Address/Contact request operations still depend on governed request contracts; do not remove active permissions or dependencies during this regrouping. |
+
+The key rule is **explicit scope, not automatic permission inheritance**. With valid metadata, an absent permission means no entity permission grant is required; it does not establish which parent or record is authorized. Shared contracts must separately declare and enforce parent admission, self scope, independent-directory scope and allowed operations. If the existing contract cannot distinguish these surfaces, extend the shared contract and its validators before changing permission properties. Missing or invalid metadata remains an error.
+
+Tab/section permissions should exist only where there is a real additional access boundary; ordinary BP organization tabs can use parent admission. Field reveal, special actions and target reference access remain independent where declared. This is a design for metadata-driven enforcement for every eligible entity, never a BP/Employee/Principal branch in runtime code.
+
+### Source organization and implementation order
+
+Keep the implemented source homes in item 6 for now. All 15 shared reference entities can remain under `common/reference/`; their published navigation groups provide the requested Banking, Commodities and Industries organization without another relocation. If finer source folders become useful later, use a separate byte-preserving move after verifying recursive discovery. Source folders must never select permissions or navigation behavior.
+
+1. Revise the current proposal matrix with explicit exposure for each entity: standalone directory, parent-scoped relationship, self-service, lookup, and supported combinations. Record declared owner relationships and readable identity for every exposed surface. Do not rewrite frozen source evidence.
+2. Produce the worksheet's exact before/after permission ledger, including retained dependencies, scope changes and action/field/reference requirements. Resolve Address's competing read bindings and the Contact owner/operation gaps already recorded in the reference trace.
+3. Reuse Country's traced publication/provider/routes and Country/Principal Profile's navigation components. Extend shared publication contracts, authorization/scope bindings and presentation validation only where required for the selected exposure model. No new bespoke routes or directories outside the Entity Framework.
+4. Configure the entity definitions, placement and published navigation: BP children, Workforce peer entries, self/admin Principal surfaces, and key-user directories. Declare section order explicitly and validate readable identities and no UUID presentation across default/saved/embedded views. Publish no unsupported controls.
+5. Under the existing approved validation scope, check compilation and metadata consistency. Runtime acceptance remains pending and must eventually cover: parent A cannot retrieve child B; a deep link cannot bypass directory/record scope; self-service cannot retrieve another principal; parent read does not imply reveal or management; directory access follows exact published bindings; linked shared-record edits cannot escape their declared authority. These are future acceptance criteria, not executed tests or authorization to expand the current no-test scope.
+
+This review implements documentation only. Metadata corrections, contract changes, permission migration, publication and user-flow verification remain pending. No MFA changes are proposed or authorized.
+
+
+### Manual-review decisions and deliverables
+
+The recommended foundation separates **source ownership**, **user navigation**, **record relationships** and **authorization**. Approving a menu grouping settles only navigation intent. It does not create relationships, grant access, enable Edit, or approve a release.
+
+| Decision | Recommended review baseline | Required implementation evidence |
+| --- | --- | --- |
+| Reference organization | Banking; Commodities; Industries; Classification Schemes; Geography; Languages & Locales; Currencies & Units, as listed above. Retain current source homes. | Explicit published group labels/order and entity placement; lookup/read versus maintenance operations declared independently. |
+| Business Partner record | One primary BP directory; all 13 enumerated children and Customer/Supplier capability/profile surfaces through declared record navigation. Include linked Address and Contact surfaces where supported. | Complete child/surface inventory with relationship keys, parent admission, locked server scope, readable identity, navigation/section order and supported operations. No implied permission inheritance. |
+| Workforce | Employee and External Worker as peer entries, each with explicitly linked Person, Address and Contact views. | Validate each actual relationship and provider binding; missing links are contract gaps, not inferred joins. Retain the existing `workforce` source without adding a duplicate or combined directory until its projection/exposure is reconciled. |
+| Principal | My Account for the current principal; Administration for the principal directory and child records. Employee linking stays optional. | Server-resolved self scope, explicit administrative scope and exact published permissions; target access checked when following references. |
+| Data Stewardship | Independent Person and Address directories and a Contact group using the existing Contact entities, for authorized key users. | Defined directory permission/policy bindings, tenant/record scope and shared-record edit authority. “Key user” is an audience description, not a role-name bypass. Missing permission in valid metadata means no entity grant is required, so restricted directories must declare their intended restriction. |
+| Remaining scope | Certification definition/assignment exposure needs a decision; `workforce` needs projection reconciliation. BP intake/case requests remain deferred and preserved. | Account for all 48 current-scope entities plus the preserved `business_partner_request`; do not silently omit unresolved entities or expose them by fallback. |
+
+Before implementation, prepare a successor proposal matrix with **one row per entity and exposure surface**. Include source entity, audience/task, standalone/parent/self/lookup mode, owner and relationship binding, published navigation and section order, readable identity/list columns, provider/capability, supported View/Edit operations, exact existing/proposed permission and policy bindings, source release identity/hash, target planes, unresolved gaps and review disposition. Multiple surfaces for one entity remain one definition resolved through shared contracts.
+
+A restricted standalone directory and an allowed parent-scoped view must be separately expressible and enforced by the shared framework. Hiding navigation is not authorization. Removing a child permission must not accidentally open its direct API, deep link, search, saved view or other supported output surface. When contracts cannot express this distinction, the shared contract/validator correction precedes the permission edit.
+
+Manual review should resolve these outstanding decisions before their dependent implementation:
+
+- Confirm the proposed labels/order and which reference maintenance entries belong in each audience's navigation.
+- Confirm the exact directory and edit bindings for Person, Address and Contact, and permitted shared-record changes from BP/Workforce contexts.
+- Reconcile the permission worksheet with actual source and published bindings, including Address's competing reads, reference read/print naming, collaboration actions and Customer/Supplier management boundaries.
+- Resolve Contact owner/operation gaps, Certification definition versus assignment, and the existing `workforce` projection's exposure.
+- Approve the successor metadata/contract design and its validation scope separately from this documentation review. Preserve existing MFA controls; no MFA change is proposed or authorized.
+
+### Completion and acceptance boundaries
+
+| Stage | Status for this document refresh | Exit evidence |
+| --- | --- | --- |
+| Plan | Updated for manual review; recommendation consolidated across current planning sections. | Reviewer disposition of the decisions above. Committing/pushing this document delivers the plan only. |
+| Source organization | Initial relocation committed historically; follow-up shared-domain moves and evidence remain separate working-tree work at review time. | Separate reviewed relocation commit, complete file/hash accounting and remote commit verification. |
+| Metadata/framework implementation | Pending for this revised navigation and access model. | Successor surface matrix, exact permission ledger, resolved contract gaps and reviewable implementation changes. |
+| Static/build validation | Prior checks retain only their recorded scope; wider validation has the captured-DDL evidence gap. No new implementation validation is claimed here. | Approved offline checks/build results with failures and unsupported checks reported explicitly. |
+| Governed publication | Pending. A GitHub push is not publication. | Platform Admin authors/proposes product defaults; Platform Owner independently reviews/approves. Tenant extensions follow Tenant Admin/Tenant Owner review and tenant isolation. Record release identities/hashes and receipts for declared Neon, Mesh and Studio targets. |
+| Runtime/user-flow acceptance | Pending; no tests or runtime probes are authorized by this refresh. | Under separately agreed testing scope, verify each eligible surface and the negative scope cases in the implementation order above. Confirm standard search/filter/sort/pagination/views work where declared, navigation follows metadata and no UUID presentation is possible. |
+
+Final implementation review must distinguish source changes, published releases and observed runtime behavior. A successful named-entity request or build alone does not establish shared-framework correctness.
