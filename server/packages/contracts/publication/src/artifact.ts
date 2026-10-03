@@ -1,3 +1,4 @@
+import { parseChangeRequestBinding } from "./change-request-binding.js";
 import { validateReferencePresentation } from "./reference-presentation.js";
 import { PublicationContractError } from "./errors.js";
 import { parseCapabilityProfile } from "./capability-profile.js";
@@ -216,6 +217,9 @@ export function parseCompiledEntityArtifact(value: unknown): CompiledEntityArtif
     for(const kind of ["comments","attachments","activity"] as const) parseCapabilityDeclaration(value.capabilities[kind],kind,String(value.entityCode));
   }
   if(type === "operation") {
+    if (Array.isArray(value.operations)) for (const operation of value.operations) {
+      if (isRecord(operation) && operation.changeRequestBinding !== undefined) parseChangeRequestBinding(operation.changeRequestBinding);
+    }
     if(value.activityBinding !== undefined) parseCapabilityBinding(value.activityBinding,"activity",String(value.entityCode));
     if(value.commentBinding !== undefined) parseCapabilityBinding(value.commentBinding,"comments",String(value.entityCode));
     if(value.attachmentBinding !== undefined) parseCapabilityBinding(value.attachmentBinding,"attachments",String(value.entityCode));
@@ -320,6 +324,22 @@ export function validateCompiledEntityRelease(
       throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", `Release artifact does not match: ${entry.artifactKey}`);
   }
   for (const artifact of artifacts) {
+    if (artifact.artifactType === "operation" && Array.isArray(artifact.content.operations)) {
+      for (const operation of artifact.content.operations) {
+        if (!isRecord(operation) || operation.changeRequestBinding === undefined) continue;
+        const binding = parseChangeRequestBinding(operation.changeRequestBinding);
+        const flow = byKey.get(binding.flowArtifactKey);
+        const request = flow?.content.requestContract;
+        const core = byKey.get(`${artifact.entityCode}/core`);
+        const directory = core?.content.directoryScope;
+        const parent = isRecord(directory) ? directory.parent : undefined;
+        if (!artifact.dependencies.includes(binding.flowArtifactKey) || flow?.artifactType !== "flow"
+          || flow.entityCode !== binding.draftEntityCode || flow.plane !== artifact.plane
+          || !isRecord(request) || request.requestKind !== binding.requestKind
+          || !core || (binding.owner === "required_parent" ? !isRecord(parent) : parent !== undefined))
+          throw new PublicationContractError("COMPILED_ENTITY_REFERENCE_MISSING", `Invalid change request binding: ${artifact.artifactKey}`);
+      }
+    }
     if (registry.sourceObjects) {
       const sources = new Set([
         ...compiledReferences(artifact.content, "sourceObject"),

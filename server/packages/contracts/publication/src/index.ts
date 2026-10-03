@@ -28,3 +28,5 @@ export * from "./activity-binding.js";
 export * from "./activity-permissions.js";
 
 export * from "./activity-collections.js";
+
+export * from "./change-request-binding.js";

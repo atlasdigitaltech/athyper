@@ -1,3 +1,4 @@
+import { createPartnerCapabilityActionHandlers } from "../../../server/packages/services/master-data/src/index.js";
 /** Offline draft evidence; never authors, approves, publishes or activates. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -54,6 +55,7 @@ if (new Set(codes).size !== codes.length) throw Error("Duplicate relationship");
 const proposed = new Map<string, any>(
   baseline.payload.artifacts.map((a: any) => [a.artifactKey, a]),
 );
+const implementedHandlers = createPartnerCapabilityActionHandlers();
 const operationGaps: any[] = [],
   candidates: any[] = [];
 for (const code of codes) {
@@ -81,7 +83,9 @@ for (const code of codes) {
       entityCode: code,
       operation: source.key,
       source,
-      status: "implementation_and_runtime_binding_required",
+      status: implementedHandlers.has(source.execution?.handlerKey)
+        ? "domain_handler_implemented_runtime_binding_pending"
+        : "implementation_and_runtime_binding_required",
     });
 }
 validateCompiledRuntimeContracts(candidates);
@@ -170,6 +174,13 @@ const review = {
   completeRuntimeOperations: completenessError === null,
   completenessError,
   operationGaps,
+  implementedDomainHandlerCount: operationGaps.filter(
+    (gap) =>
+      gap.status === "domain_handler_implemented_runtime_binding_pending",
+  ).length,
+  remainingHandlerImplementationCount: operationGaps.filter(
+    (gap) => gap.status === "implementation_and_runtime_binding_required",
+  ).length,
   predecessorOperationLedger: ledger,
   retainedTenantArtifacts: reconciliation.changes
     .filter((c) => c.disposition === "tenant_delta_retained")
@@ -188,6 +199,9 @@ console.log(
     proposedProductArtifacts: proposed.size,
     legacyOperations: ledger.length,
     sourceOperationGaps: operationGaps.length,
+    implementedDomainHandlerCount: review.implementedDomainHandlerCount,
+    remainingHandlerImplementationCount:
+      review.remainingHandlerImplementationCount,
     authorityConflicts: reconciliation.conflicts.map((c) => c.artifactKey),
     retainedTenantArtifacts: review.retainedTenantArtifacts,
     completeRuntimeOperations: review.completeRuntimeOperations,

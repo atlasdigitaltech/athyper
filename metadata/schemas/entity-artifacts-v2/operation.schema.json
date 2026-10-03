@@ -269,7 +269,52 @@
     "numberingBinding": {},
     "operationDefaultsProfile": {},
     "operationDefaultsProfileRef": {},
-    "operations": {},
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "changeRequestBinding": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schemaVersion",
+              "owner",
+              "draftEntityCode",
+              "flowArtifactKey",
+              "requestKind",
+              "amendmentTarget"
+            ],
+            "properties": {
+              "schemaVersion": {
+                "const": 1
+              },
+              "owner": {
+                "enum": [
+                  "self",
+                  "required_parent"
+                ]
+              },
+              "draftEntityCode": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{1,62}$"
+              },
+              "flowArtifactKey": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{1,62}/flow\\.[a-z][a-z0-9_.-]{0,126}$"
+              },
+              "requestKind": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_.-]{0,126}$"
+              },
+              "amendmentTarget": {
+                "const": "operation_context"
+              }
+            }
+          }
+        }
+      }
+    },
     "plane": {
       "const": "neon"
     },

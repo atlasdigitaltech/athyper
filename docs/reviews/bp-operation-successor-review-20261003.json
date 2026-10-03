@@ -21,7 +21,7 @@
     "entityCode": "business_partner",
     "plane": "neon"
   },
-  "proposedProductContentHash": "1e1e4b2dd584ed75a8f7930c8bfabce091039d202aebaba86957c8c5d62201bb",
+  "proposedProductContentHash": "357fde2a074e0756018eca4deac078218367d2aa10e175df76d6db99631531cc",
   "proposedMembers": [
     {
       "artifactKey": "address/core",
@@ -75,8 +75,8 @@
     },
     {
       "artifactKey": "business_partner/operation",
-      "artifactHash": "sha256:ec8d48e6dc6021e689fb16345f6373a4c3eae849fe46f40c9418f302cb2c033a",
-      "contentHash": "sha256:49c3c2e74d9d6b66d808ef7ffeceb15dfc3802d3928f14310e545a7614a28805"
+      "artifactHash": "sha256:55a6947bacba5d74a87d720929b0fa8fb347dc75330f927054ec01ba1c363f27",
+      "contentHash": "sha256:e9a77482e93b202e27994b505ad32f110af17c48cc494d2a1539b1d5bfb3c852"
     },
     {
       "artifactKey": "business_partner/presentation.detail",
@@ -225,8 +225,8 @@
     },
     {
       "artifactKey": "business_partner_banking/operation",
-      "artifactHash": "sha256:8d7b4a91c0dc172e14111e93fe1dde07e6169d65e9529e3d993f702a774ef210",
-      "contentHash": "sha256:a1dcfbea94d76082feb9f40847bd01d027ede8698561d3268423369eca7c85fc"
+      "artifactHash": "sha256:1ba4612203e2681017e4e8dd98782fd6c80d3e1f27baf542d1e027b447b46bf3",
+      "contentHash": "sha256:53c61e149ae0a2b94476a5ebaaf15966c9a119ed7a40fed5ad6cfb1670f948ea"
     },
     {
       "artifactKey": "business_partner_commodity_classification/core",
@@ -240,8 +240,8 @@
     },
     {
       "artifactKey": "business_partner_governance_relation/operation",
-      "artifactHash": "sha256:7928bbdf8fa4808b8b8544e7861bd148f1b8dfec496a4ab54622ae2523d3f113",
-      "contentHash": "sha256:d8a73ee9d1cff6da31d53850bad99104854316bfc7b867fd7c9963d953b55163"
+      "artifactHash": "sha256:2e16d4981f0e7b44c5071279defc7ea1ec4341de084b367e52b3428a923408bc",
+      "contentHash": "sha256:4e34e69611a9ccffd24dab9d84e3e46c8e7fb0b9f6674c53a7b46e96c6465a08"
     },
     {
       "artifactKey": "business_partner_identifier/core",
@@ -250,8 +250,8 @@
     },
     {
       "artifactKey": "business_partner_identifier/operation",
-      "artifactHash": "sha256:c93e1bcaa47e8d5f06b96dbc14c1c6bff90dc01677e545a772127ec7e9b1ce32",
-      "contentHash": "sha256:f421b8dd7537f29b741f074218e8d1bb48cd06e8c118c2df698d44e61390c11f"
+      "artifactHash": "sha256:9014ae916b0812b8fd7d9eba316f28f7e2021e0a2191de9d3cbc883020959365",
+      "contentHash": "sha256:c2c66e404b0ad0e686f00d7da4ef311ed94c03c7f2a5ef2731fefce7ec9072af"
     },
     {
       "artifactKey": "business_partner_industry_classification/core",
@@ -260,8 +260,8 @@
     },
     {
       "artifactKey": "business_partner_industry_classification/operation",
-      "artifactHash": "sha256:b52823f1f26108a622785d8a6b64855b1047a315ad028fb1b6b3164f6247bbc9",
-      "contentHash": "sha256:9e6bf7f248015ed8d40ebb99b1888b9123c634f8cc97a1df8c327141f2573de0"
+      "artifactHash": "sha256:5bb06f79bff14ccdfcc068a4fcd33f22aa403c22afdf34c555f75100ad7ba8b8",
+      "contentHash": "sha256:0446bf9a17ad9b52e6d1abc2014fca860a4a1d886b4718613684f39b63ba74fc"
     },
     {
       "artifactKey": "business_partner_operating_organization_assignment/core",
@@ -270,8 +270,8 @@
     },
     {
       "artifactKey": "business_partner_operating_organization_assignment/operation",
-      "artifactHash": "sha256:f20a2fc6c2b8021a5107dd8621f30c4533d42f4f2176585c750a359b5c7485bb",
-      "contentHash": "sha256:b695aa5610a0d429ce20820c538c542801089e6f89b8802288ac255edc02e5ef"
+      "artifactHash": "sha256:63281d29addf448f47700d4f924bd3acdcb1db27d8e1e96c2de710a935325998",
+      "contentHash": "sha256:dea29ce909d7d44351f9d6b1a638ec6054ba66bc9e155a167345118c117d0d61"
     },
     {
       "artifactKey": "business_partner_qualification/core",
@@ -280,8 +280,8 @@
     },
     {
       "artifactKey": "business_partner_qualification/operation",
-      "artifactHash": "sha256:143c5b46c448523e1b720c9174066851aa21dac480f1a37d9c9294046b9b3ddc",
-      "contentHash": "sha256:3a044e3389c14b0e44aea0a45ab659885fd07b5e42aae034ab11a1bdfef3abe7"
+      "artifactHash": "sha256:1508c1983a72723e4e0bb8945d10677d1d145c2698be32225bccbd70dad86c62",
+      "contentHash": "sha256:c6d53cc459d24595d1442a9293979f7086c4e9785e64b8df0f0d11d1bb897cd0"
     },
     {
       "artifactKey": "business_partner_relationship/core",
@@ -470,8 +470,8 @@
     },
     {
       "artifactKey": "business_partner_tax_registration/operation",
-      "artifactHash": "sha256:58dcc2bda05bd95be80ed6f90c93195f2dceaf018f05901e3f5eeb81ad7949db",
-      "contentHash": "sha256:f9c01d9b1e163346ac013a6e4a5a18fb4d8f774df9007cee9de3a4c7540350a2"
+      "artifactHash": "sha256:7656703ec70d12f329d42f20842a5fb310ced5372bfa3ff6ce12951f90ed779f",
+      "contentHash": "sha256:d31c11ddc9337ba8ee58181b14fd8b017369c9ae720db41dfff396847bcee8d6"
     },
     {
       "artifactKey": "certification/core",
@@ -1257,7 +1257,7 @@
           "handlerMustRejectTargetMismatch": true
         }
       },
-      "status": "implementation_and_runtime_binding_required"
+      "status": "domain_handler_implemented_runtime_binding_pending"
     },
     {
       "entityCode": "business_partner",
@@ -1297,7 +1297,7 @@
           "handlerMustRejectTargetMismatch": true
         }
       },
-      "status": "implementation_and_runtime_binding_required"
+      "status": "domain_handler_implemented_runtime_binding_pending"
     },
     {
       "entityCode": "business_partner",
@@ -1320,6 +1320,14 @@
           "targetResolution": "operation_context_only",
           "clientSuppliedTargetEntityCode": "forbidden",
           "handlerMustRejectTargetMismatch": true
+        },
+        "changeRequestBinding": {
+          "schemaVersion": 1,
+          "owner": "self",
+          "draftEntityCode": "business_partner_request",
+          "flowArtifactKey": "business_partner_request/flow.partner.amend",
+          "requestKind": "partner.amend",
+          "amendmentTarget": "operation_context"
         }
       },
       "status": "implementation_and_runtime_binding_required"
@@ -1547,6 +1555,14 @@
           "targetResolution": "operation_context_only",
           "clientSuppliedTargetEntityCode": "forbidden",
           "handlerMustRejectTargetMismatch": true
+        },
+        "changeRequestBinding": {
+          "schemaVersion": 1,
+          "owner": "required_parent",
+          "draftEntityCode": "business_partner_request",
+          "flowArtifactKey": "business_partner_request/flow.partner.amend",
+          "requestKind": "partner.amend",
+          "amendmentTarget": "operation_context"
         }
       },
       "status": "implementation_and_runtime_binding_required"
@@ -1599,6 +1615,14 @@
           "targetResolution": "operation_context_only",
           "clientSuppliedTargetEntityCode": "forbidden",
           "handlerMustRejectTargetMismatch": true
+        },
+        "changeRequestBinding": {
+          "schemaVersion": 1,
+          "owner": "required_parent",
+          "draftEntityCode": "business_partner_request",
+          "flowArtifactKey": "business_partner_request/flow.partner.amend",
+          "requestKind": "partner.amend",
+          "amendmentTarget": "operation_context"
         }
       },
       "status": "implementation_and_runtime_binding_required"
@@ -1651,6 +1675,14 @@
           "targetResolution": "operation_context_only",
           "clientSuppliedTargetEntityCode": "forbidden",
           "handlerMustRejectTargetMismatch": true
+        },
+        "changeRequestBinding": {
+          "schemaVersion": 1,
+          "owner": "required_parent",
+          "draftEntityCode": "business_partner_request",
+          "flowArtifactKey": "business_partner_request/flow.partner.amend",
+          "requestKind": "partner.amend",
+          "amendmentTarget": "operation_context"
         }
       },
       "status": "implementation_and_runtime_binding_required"
@@ -1678,6 +1710,14 @@
           "targetResolution": "operation_context_only",
           "clientSuppliedTargetEntityCode": "forbidden",
           "handlerMustRejectTargetMismatch": true
+        },
+        "changeRequestBinding": {
+          "schemaVersion": 1,
+          "owner": "required_parent",
+          "draftEntityCode": "business_partner_request",
+          "flowArtifactKey": "business_partner_request/flow.partner.amend",
+          "requestKind": "partner.amend",
+          "amendmentTarget": "operation_context"
         }
       },
       "status": "implementation_and_runtime_binding_required"
@@ -1705,6 +1745,14 @@
           "targetResolution": "operation_context_only",
           "clientSuppliedTargetEntityCode": "forbidden",
           "handlerMustRejectTargetMismatch": true
+        },
+        "changeRequestBinding": {
+          "schemaVersion": 1,
+          "owner": "required_parent",
+          "draftEntityCode": "business_partner_request",
+          "flowArtifactKey": "business_partner_request/flow.partner.amend",
+          "requestKind": "partner.amend",
+          "amendmentTarget": "operation_context"
         }
       },
       "status": "implementation_and_runtime_binding_required"
@@ -1732,6 +1780,14 @@
           "targetResolution": "operation_context_only",
           "clientSuppliedTargetEntityCode": "forbidden",
           "handlerMustRejectTargetMismatch": true
+        },
+        "changeRequestBinding": {
+          "schemaVersion": 1,
+          "owner": "required_parent",
+          "draftEntityCode": "business_partner_request",
+          "flowArtifactKey": "business_partner_request/flow.partner.amend",
+          "requestKind": "partner.amend",
+          "amendmentTarget": "operation_context"
         }
       },
       "status": "implementation_and_runtime_binding_required"
@@ -1759,6 +1815,14 @@
           "targetResolution": "operation_context_only",
           "clientSuppliedTargetEntityCode": "forbidden",
           "handlerMustRejectTargetMismatch": true
+        },
+        "changeRequestBinding": {
+          "schemaVersion": 1,
+          "owner": "required_parent",
+          "draftEntityCode": "business_partner_request",
+          "flowArtifactKey": "business_partner_request/flow.partner.amend",
+          "requestKind": "partner.amend",
+          "amendmentTarget": "operation_context"
         }
       },
       "status": "implementation_and_runtime_binding_required"
@@ -1789,6 +1853,8 @@
       "status": "implementation_and_runtime_binding_required"
     }
   ],
+  "implementedDomainHandlerCount": 2,
+  "remainingHandlerImplementationCount": 16,
   "predecessorOperationLedger": [
     {
       "operation": "enter",

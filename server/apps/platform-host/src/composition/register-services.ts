@@ -1,6 +1,6 @@
 import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
-import { businessPartnerCollaborationBinding } from "@athyper/server-service-master-data";
+import { businessPartnerCollaborationBinding, createPartnerCapabilityActionHandlers } from "@athyper/server-service-master-data";
 import { assertRollbackEntityReadiness } from "./shared/publication/rollback-readiness.js";
 import { admitEntityDescriptor, createHostEntityReadiness } from "./shared/entity-runtime/deployment-readiness.js";
 import { registerEntitySupportQualification, type EntitySupportQualificationRegistration } from "./shared/entity-runtime/support-qualification.js";
@@ -796,6 +796,7 @@ export function registerServices(
     );
   const { iam, authorizer: baseAuthorizer, audit } = container.platform;
   if (!iam || !baseAuthorizer || !audit) return;
+  const partnerCapabilityHandlers = createPartnerCapabilityActionHandlers<RecordTransaction>();
   const refreshEntityContext = createKyselyContextRefresh({
     run: (identity, work) => {
       const adapter =
@@ -853,9 +854,9 @@ export function registerServices(
     ownerAccess: true,
     actionAuthority: createPublishedActionAuthorizer(
       { getEntityDescriptor: (context, entityCode) => metadata.getEntityDescriptor(context, entityCode) },
-      new Set((dependencies.activityAdapters ?? []).flatMap(
+      new Set([...partnerCapabilityHandlers.keys(), ...(dependencies.activityAdapters ?? []).flatMap(
         registration => [...(registration.domainHandlers?.keys() ?? [])],
-      )),
+      )]),
     ),
     ownerAuthority: createPublishedOwnerAdministrationAuthorizer({
       getEntityDescriptor: (context, entityCode) =>
@@ -2225,7 +2226,7 @@ export function registerServices(
   const activityDomainHandlers = new Map<
     string,
     import("@athyper/server-service-records").TransactionalRecordActionHandler<RecordTransaction>
-  >();
+  >(partnerCapabilityHandlers);
   for (const registration of activityRegistrations.values())
     for (const [key, handler] of registration.domainHandlers ?? []) {
       if (activityDomainHandlers.has(key))

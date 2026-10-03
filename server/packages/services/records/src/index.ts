@@ -73,3 +73,5 @@ export { createRecordOwnerAccessAdapter, scopeRecordOwnerRead } from "./record-o
 
 export * from "./record-mutation-policy.js";
 
+
+export * from "./governed-amendment-target.js";

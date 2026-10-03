@@ -1,5 +1,33 @@
 # BP read contracts and legacy binding reconciliation
 
+## Latest capability and amendment implementation
+
+The owner selected **parent BP amendment cases for child changes**, carrying the child target. Eight source operations (BP `request_change` plus its seven children) now declare a validated `changeRequestBinding` to the existing `business_partner_request/flow.partner.amend` flow and its exact `partner.amend` request kind. BP owns its own case; each child selects its required published parent. The flow is an explicit artifact dependency. The other three organization/company/role request operations retain their existing declarations pending implementation.
+
+Two domain handlers are implemented and installed in host composition: Supplier and Customer capability management. They invoke the existing `control.command_business_partner_capability` command through the existing shared transactional action service. The database command owns active-status rules, independent capability flags, optimistic versioning, tenant/actor matching, reason and immutable mutation evidence. The shared runner owns current authorization before receipt replay, transaction boundaries, idempotency, audit and outbox. The adapters neither construct permissions nor dispatch by entity name. No direct table-update alternative or new route was introduced.
+
+The adapters require an exact published registered action, matching boolean projection and record-version contract. They validate input and command results; failures roll back. Handler implementation/host installation is **not** runtime-contract or release qualification. The source still needs complete operation lowering, registered scope contracts and publication admission before these handlers are available through a BP release.
+
+The shared `createGovernedAmendmentTargetResolver` implements server-side case-owner selection. It discovers the stored child FK using the declared relationship, admits the parent and child through the normal authorized record reader, retains organization/company restrictions, verifies metadata pins and rechecks relationship predicates. Caller-supplied parent coordinates, reparenting, cross-tenant records, denied reads and changed metadata fail closed. Its result contains the parent/version and child target with immutable descriptor pins. It prepares target evidence; it does **not** yet create, submit, approve or materialize a case. A required-path flow contract is not a full payload schema, so no payload validator or materializer is inferred from it.
+
+| Remaining area | Current status |
+| --- | --- |
+| Two capability operations | Domain implementations and host registration complete; runtime qualification and governed publication pending |
+| Eleven request operations | Eight amendment bindings and a shared target resolver implemented; case persistence, full payload policies and workflow execution pending |
+| Three protected reveals | Handler/runtime integration pending; no MFA code/configuration changed |
+| Print and Mesh sharing | Handler/provider integration pending |
+| BP Core conflict | Recommend the proposed product Core: no predecessor field key is removed, and corrected projections preserve aliases. This is a review recommendation, not an accepted tenant resolution |
+| BP runtime conflict | Unresolved: all 43 predecessor operations/surfaces must receive explicit successor treatment |
+| Independent human review | Not yet requested for publication; no complete governed release is available to approve |
+
+The refreshed [machine-readable evidence](bp-operation-successor-review-20261003.json) distinguishes **two implemented domain handlers**, **sixteen remaining handler implementations**, and **eighteen operations still lacking complete runtime contracts**. Those counts describe different stages; they must not be collapsed into a publication-complete claim.
+
+Verification for this checkpoint: four domain/shared-runner tests, seven amendment/shared-action tests, three change-binding contract tests and nineteen host authorization/publication tests pass (**33**). Production typechecks pass for master-data, Records, publication contracts and platform host; the master-data test typecheck also passes. Existing DEV PostgreSQL rollback fixtures prove capability enable/disable, independent flags, unchanged lifecycle status, replay, stale-version denial, tenant rejection and three mutation-evidence rows. They run as a database fixture and do not prove authenticated application-role access or human approval. All fixture data was rolled back.
+
+Existing DEV already grants the capability database function to its application/admin database roles; this was observed read-only and no grants were changed. The repository baseline DDL still keeps execution private pending cutover. Deployment qualification must reconcile that difference rather than infer publication authority from the existing grant. No migration, governed case, release head, role/group relationship or business permission was changed. The seven child-read permissions remain unretired.
+
+---
+
 ## Latest successor reconciliation build
 
 The shared publication path now rejects **omitted source operations**, unauthored runtime operations and changed permission, handler, resolver or explicitly authored scope/effect/target/preflight/parent-read controls. This check runs during compilation, repeated signing/dispatch qualification, and signed target artifact admission. Partial read-contract preparation remains available for diagnostics; it cannot pass this publication gate. A correctly signed artifact from an older compiler also cannot bypass the target check. Collection contracts retain their separate existing scope-binding path.

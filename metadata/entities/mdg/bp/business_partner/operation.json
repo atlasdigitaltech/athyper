@@ -123,6 +123,14 @@
         "targetResolution": "operation_context_only",
         "clientSuppliedTargetEntityCode": "forbidden",
         "handlerMustRejectTargetMismatch": true
+      },
+      "changeRequestBinding": {
+        "schemaVersion": 1,
+        "owner": "self",
+        "draftEntityCode": "business_partner_request",
+        "flowArtifactKey": "business_partner_request/flow.partner.amend",
+        "requestKind": "partner.amend",
+        "amendmentTarget": "operation_context"
       }
     },
     {
@@ -413,7 +421,8 @@
     "downstreamAccept": "governed_request_only"
   },
   "dependencies": [
-    "business_partner/core"
+    "business_partner/core",
+    "business_partner_request/flow.partner.amend"
   ],
   "consumedBy": [
     "server_reads",

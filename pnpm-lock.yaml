@@ -4558,6 +4558,9 @@ importers:
       '@athyper/server-contract-metadata':
         specifier: workspace:*
         version: link:../../contracts/metadata
+      '@athyper/server-contract-records':
+        specifier: workspace:*
+        version: link:../../contracts/records
       '@athyper/server-contract-secrets':
         specifier: workspace:*
         version: link:../../contracts/secrets
@@ -4567,6 +4570,9 @@ importers:
       '@athyper/server-runtime-http':
         specifier: workspace:*
         version: link:../../runtime/http
+      '@athyper/server-service-records':
+        specifier: workspace:*
+        version: link:../records
       express:
         specifier: ^5.2.1
         version: 5.2.1
