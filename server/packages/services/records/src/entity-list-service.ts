@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { createEntityReferenceReader, type EntityReferenceRequest, type EntityReferencePage } from "./entity-reference-reader.js";
 import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
 import { exportableClassification } from "./transfer/export-admission.js";
@@ -835,9 +836,9 @@ async function operationAllowed(
 ): Promise<boolean> {
   const published = descriptor.operations[operation],
     permissionCode = published?.permissionCode;
-  if (!permissionCode) return false;
+  if (!published) return false;
   return (
-    await authorizer.authorize({
+    await authorizeEntityOperation(authorizer, {
       context,
       permissionCode,
       resource:
@@ -1220,15 +1221,16 @@ async function effectiveDataOperations(
       ? collectionScope.authorizationResource
       : { entityCode: descriptor.entityCode };
   const allowed = async (operation: "import" | "export") => {
-    const permission = descriptor.operations[operation]?.permissionCode;
-    return permission
+    const published = descriptor.operations[operation];
+    const permission = published?.permissionCode;
+    return published
       ? {
           permission,
           allowed: (
-            await authorizer.authorize({
+            await authorizeEntityOperation(authorizer, {
               context,
               permissionCode: permission,
-              resource: { ...resource, ...(usesEntityBackendAuthorization(authorizer, context, descriptor)
+              resource: { ...resource, tenantId: context.tenantId, entityCode: descriptor.entityCode, operationKey: operation, ...(usesEntityBackendAuthorization(authorizer, context, descriptor)
                 ? {entityCode: descriptor.entityCode, operationKey: operation, authorizationDescriptorHash: descriptor.compiledHash} : {}) },
               observation: {
                 entityCode: descriptor.entityCode,
@@ -1315,7 +1317,7 @@ async function effectiveDataOperations(
     mode: "create" | "update" | "upsert" | "delete" | "replace",
   ) => {
     const permissions = config?.importOperationPermissions?.[mode] ?? [];
-    if (!permissions.length) return false;
+    if (!importModes.has(mode)) return false;
     const decisions = await Promise.all(
       permissions.map((permissionCode) =>
         authorizer.authorize({ context, permissionCode, resource }),

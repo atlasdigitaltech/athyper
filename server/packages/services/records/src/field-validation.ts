@@ -43,7 +43,7 @@ export function validateRecordInput(descriptor: EntityRuntimeDescriptor, action:
 }
 
 export function fieldWriteAuthorizationResource(context: VerifiedRequestContext, entityCode: string, operationKey: "create" | "patch", field: string) {
-  return { tenantId: context.tenantId, entityCode, operationKey, field };
+  return { tenantId: context.tenantId, entityCode, operationKey, field, entityFieldPermission: "write" };
 }
 
 export async function validateFieldWriteAuthorization(authorizer: Authorizer, context: VerifiedRequestContext, descriptor: EntityRuntimeDescriptor, input: Readonly<Record<string, unknown>>, operationKey: "create" | "patch"): Promise<MutationFieldViolations> {

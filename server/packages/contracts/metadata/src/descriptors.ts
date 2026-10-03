@@ -279,7 +279,8 @@ export interface EntityRegisteredActionDescriptor {
 
 export interface EntityOperationDescriptor {
   readonly code: string;
-  readonly permissionCode: string;
+  /** Omission on a valid published operation requires no entity permission grant. */
+  readonly permissionCode?: string;
   /** System-action backed catalog projections have no entity-operation binding.
    * They must opt in explicitly; governed entity operations remain bound by default. */
   readonly authorizationMode?: "bound_operation" | "permission_only";

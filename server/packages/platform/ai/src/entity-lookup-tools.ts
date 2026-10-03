@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import type {
   Authorizer,
   VerifiedRequestContext,
@@ -61,7 +62,7 @@ export function createAtlasEntityLookupTools(
       return denied();
     if (
       !(
-        await authorizer.authorize({
+        await authorizeEntityOperation(authorizer, {
           context,
           permissionCode: d.operations.read.permissionCode,
           resource: {
@@ -98,7 +99,7 @@ export function createAtlasEntityLookupTools(
       if (
         f.readPermissionCode &&
         !(
-          await authorizer.authorize({
+          await authorizeEntityOperation(authorizer, {
             context,
             permissionCode: f.readPermissionCode,
             resource: { tenantId: context.tenantId },

@@ -1,5 +1,7 @@
 import type {
   Authorizer,
+  AuthorizationRequest,
+  AuthorizationDecision,
   VerifiedRequestContext,
 } from "@athyper/server-contract-auth";
 import type {
@@ -85,6 +87,7 @@ function recordProfileSupported(value: unknown, owned: boolean): boolean {
     const binding = runtime.bindings.find((b) => b.operation === key);
     if (
       !operation ||
+      !d.operations[key] ||
       operation.scope !== "tenant.record.v1" ||
       operation.effect !==
         (["create", "patch"].includes(key) ? "write" : "read") ||
@@ -162,39 +165,12 @@ export function createPublishedTenantRecordAuthorizer(options: {
     readEvidence(options.metadata, context, entityCode, () =>
       options.metadata.getEntityDescriptor(context, entityCode),
     );
-  return {
-    ...(authority.enforcedEntityProfile
-      ? {
-          enforcedEntityProfile:
-            authority.enforcedEntityProfile.bind(authority),
-        }
-      : {}),
-    ...(authority.checkSourceConstraints
-      ? {
-          checkSourceConstraints:
-            authority.checkSourceConstraints.bind(authority),
-        }
-      : {}),
-    aggregateAuthorizationCovered(context, descriptor) {
-      const entity = descriptor as EntityRuntimeDescriptor;
-      // These qualified profiles enforce record scope through the repository:
-      // tenant predicates and, for owner profiles, transaction-local owner RLS.
-      // The list executor prepares owner scope before rows and aggregates.
-      // Explicit rollout backends retain their own record-level enforcement.
-      return (
-        !authority.enforcedEntityProfile?.(
-          context.planeKey,
-          entity.entityCode,
-        ) && supported(entity)
-      );
-    },
-    entityDescriptorSupported: supported,
-    async authorize(request) {
+  const evaluate = async (request: Omit<AuthorizationRequest, "permissionCode"> & { readonly permissionCode?: string }): Promise<AuthorizationDecision> => {
       const entityCode = request.resource?.entityCode;
-      if (typeof entityCode !== "string") return authority.authorize(request);
+      if (typeof entityCode !== "string") return permissionDecision(authority, request);
       try {
         const published = await descriptor(request.context, entityCode);
-        if (!published?.authorization) return authority.authorize(request);
+        if (!published?.authorization) return permissionDecision(authority, request);
         const context = await readEvidence(
           options.refreshContext,
           request.context,
@@ -213,7 +189,7 @@ export function createPublishedTenantRecordAuthorizer(options: {
           return { allowed: false, reason: "entity_authorization_unavailable" };
         // Explicit qualified rollout backends retain ownership of their profiles.
         if (authority.enforcedEntityProfile?.(context.planeKey, entityCode))
-          return authority.authorize({ ...request, context });
+          return permissionDecision(authority, { ...request, context });
         if (d.planeKey !== context.planeKey || !supported(d))
           return { allowed: false, reason: "entity_authorization_unavailable" };
         const resource = request.resource!;
@@ -237,7 +213,21 @@ export function createPublishedTenantRecordAuthorizer(options: {
           const action=d.actions?.find(action=>action.code===resource.actionCode);
           if(!options.actionAuthority || !action || action.permissionCode!==request.permissionCode || action.handlerKey!==resource.actionHandlerKey || resource.operationKey!==action.code || typeof resource.recordId!=='string')
             return {allowed:false,reason:'entity_authorization_unmapped'};
-          return options.actionAuthority.authorize({...request,context});
+          return permissionDecision(options.actionAuthority, {...request,context});
+        }
+        // Field permissions are additional to the operation's admission. An
+        // omitted operation permission cannot remove an explicit field grant.
+        if (resource.entityFieldPermission === "read" || resource.entityFieldPermission === "write") {
+          const field = d.fields.find(field => field.key === resource.field);
+          const fieldPermission = resource.entityFieldPermission === "read"
+            ? field?.readPermissionCode : field?.writePermissionCode;
+          if (!field || !fieldPermission || fieldPermission !== request.permissionCode ||
+              !d.operations[String(resource.operationKey)])
+            return { allowed: false, reason: "entity_field_permission_unmapped" };
+          return permissionDecision(authority, { ...request, context, resource: {
+            tenantId: context.tenantId, resourceCode: entityCode, field: field.key,
+            ...(typeof resource.recordId === "string" ? { recordId: resource.recordId } : {}),
+          } });
         }
         // Separate internal owner-administration check. It never substitutes for
         // the operation permission; the record pipeline requires both boundaries.
@@ -250,9 +240,8 @@ export function createPublishedTenantRecordAuthorizer(options: {
             )
           )
             return { allowed: false, reason: "entity_authorization_unmapped" };
-          const decision = await (
-            options.ownerAuthority ?? authority
-          ).authorize({
+          const decision = await permissionDecision(
+            options.ownerAuthority ?? authority, {
             ...request,
             context,
             // This capability has its own tenant grant, not an entity-operation
@@ -275,7 +264,20 @@ export function createPublishedTenantRecordAuthorizer(options: {
         );
         if (!operation || operation.permissionCode !== request.permissionCode)
           return { allowed: false, reason: "entity_authorization_unmapped" };
-        const decision = await authority.authorize({ ...request, context });
+        if (request.permissionCode === undefined) {
+          // Permission omission never disables an independently published policy.
+          if (d.policyBindings?.some(binding => binding.enforcement === "enforce"))
+            return { allowed: false, reason: "entity_policy_evaluator_required" };
+          const snapshot = context.permissions;
+          if (snapshot.tenantId !== context.tenantId || snapshot.planeKey !== context.planeKey || snapshot.principalId !== context.principalId)
+            return { allowed: false, reason: "entity_scope_mismatch" };
+          // A stale permission projection must be reconciled, not treated as omission.
+          if (snapshot.operationBindings?.some(binding => binding.entityCode === entityCode && binding.operationKey === operation.key))
+            return { allowed: false, reason: "entity_permission_projection_conflict" };
+        }
+        const decision: AuthorizationDecision = request.permissionCode === undefined
+          ? { allowed: true }
+          : await permissionDecision(authority, { ...request, context });
         if (!decision.allowed) return decision;
         if (decision.scope && !decision.scope.tenantWide)
           return { allowed: false, reason: "entity_scope_mismatch" };
@@ -338,6 +340,41 @@ export function createPublishedTenantRecordAuthorizer(options: {
       } catch {
         return { allowed: false, reason: "entity_authorization_unavailable" };
       }
-    },
   };
+  return {
+    ...(authority.enforcedEntityProfile
+      ? {
+          enforcedEntityProfile:
+            authority.enforcedEntityProfile.bind(authority),
+        }
+      : {}),
+    ...(authority.checkSourceConstraints
+      ? {
+          checkSourceConstraints:
+            authority.checkSourceConstraints.bind(authority),
+        }
+      : {}),
+    aggregateAuthorizationCovered(context, descriptor) {
+      const entity = descriptor as EntityRuntimeDescriptor;
+      // These qualified profiles enforce record scope through the repository:
+      // tenant predicates and, for owner profiles, transaction-local owner RLS.
+      // The list executor prepares owner scope before rows and aggregates.
+      // Explicit rollout backends retain their own record-level enforcement.
+      return (
+        !authority.enforcedEntityProfile?.(
+          context.planeKey,
+          entity.entityCode,
+        ) && supported(entity)
+      );
+    },
+    entityDescriptorSupported: supported,
+    authorize: evaluate,
+    authorizeEntityOperation: evaluate,
+  };
+}
+
+function permissionDecision(authority: Authorizer, request: Omit<AuthorizationRequest, "permissionCode"> & { readonly permissionCode?: string }): Promise<AuthorizationDecision> {
+  return request.permissionCode === undefined
+    ? Promise.resolve({ allowed: false, reason: "entity_authorization_unavailable" })
+    : authority.authorize({ ...request, permissionCode: request.permissionCode });
 }

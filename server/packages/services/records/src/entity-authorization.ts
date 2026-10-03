@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { randomUUID } from "node:crypto";
 import {
   entityAccessReasons,
@@ -111,7 +112,7 @@ export function createEntityAccessEvaluator(options: {
             networkRelationshipId: "network_relationship",
           })[key],
       );
-      if (
+      if (operation.permissionCode !== undefined && (
         !bindings?.length ||
         bindings.some(
           (binding) =>
@@ -125,7 +126,7 @@ export function createEntityAccessEvaluator(options: {
               (kind) => kind !== "tenant" && !requiredKinds.includes(kind),
             ),
         )
-      )
+      ))
         return result("denied");
       stage = "record";
       if (
@@ -190,7 +191,7 @@ export function createEntityAccessEvaluator(options: {
           ...(input.recordId ? { recordId: input.recordId } : {}),
         };
         stage = "permission";
-        const authority = await authorizer.authorize({
+        const authority = await authorizeEntityOperation(authorizer, {
           context: input.context,
           permissionCode: operation.permissionCode,
           resource,
@@ -201,7 +202,7 @@ export function createEntityAccessEvaluator(options: {
             (item) => item.key === operation.discoveryOperation,
           )!;
           return (
-            await authorizer.authorize({
+            await authorizeEntityOperation(authorizer, {
               context: input.context,
               permissionCode: entry.permissionCode,
               resource: {

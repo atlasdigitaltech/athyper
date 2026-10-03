@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { meaningfulFormInput } from "@athyper/contract-platform-entity-runtime";
 import { RecordServiceError } from "./errors.js";
 import { resolveRecordMutationPolicy } from "./record-mutation-policy.js";
@@ -109,7 +110,7 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
   const invalidIdempotency = idempotencyFailure(command); if (invalidIdempotency) return invalidIdempotency;
   const descriptor = await safeDescriptor(options.metadata, command);
   if (!descriptor) return { kind: "CapabilityUnavailable", entityCode: command.entityCode };
-  const permission = descriptor.operations["patch"]?.permissionCode ?? descriptor.operations["update"]?.permissionCode;
+  const permission = (descriptor.operations["patch"] ?? descriptor.operations["update"])?.permissionCode;
   if (!await allowed(options.authorizer, command, permission, descriptor.operations["patch"] ? "patch" : "update")) return { kind: "Forbidden", ...(permission ? { permissionCode: permission } : {}) };
   if (descriptor.storage.versionField && command.expectedVersion === undefined) return { kind: "VersionRequired" };
   if (!Object.keys(command.input).length) return { kind: "FieldsNotWritable", fields: { _record: [{ code: "EMPTY_PATCH", message: "At least one field is required" }] } };
@@ -175,7 +176,7 @@ async function allowed(
   permissionCode: string | undefined,
   operationKey: string,
 ): Promise<boolean> {
-  return Boolean(permissionCode && (await authorizer.authorize({
+  return (await authorizeEntityOperation(authorizer, {
     context: command.context,
     permissionCode,
     resource: {
@@ -186,7 +187,7 @@ async function allowed(
       ...(command.input ? { authorizationWriteFields: Object.keys(command.input) } : {}),
       ...(command.recordId ? { recordId: command.recordId } : {}),
     },
-  })).allowed);
+  })).allowed;
 }
 function versionOf(descriptor: { storage: { versionField?: string } }, record: Readonly<Record<string, unknown>>): number | undefined { const value = descriptor.storage.versionField ? record[descriptor.storage.versionField] : undefined; const numeric = typeof value === "number" || typeof value === "string" && /^[0-9]+$/.test(value) ? Number(value) : NaN; return Number.isSafeInteger(numeric) && numeric > 0 ? numeric : undefined; }
 

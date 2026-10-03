@@ -99,10 +99,9 @@ export function parseEntityRuntimeDescriptor(
         key,
         {
           code: string(item["code"], `operations.${key}.code`),
-          permissionCode: string(
-            item["permissionCode"],
-            `operations.${key}.permissionCode`,
-          ),
+          ...(item["permissionCode"] === undefined ? {} : {
+            permissionCode: string(item["permissionCode"], `operations.${key}.permissionCode`),
+          }),
           ...(item["authorizationMode"] === undefined
             ? {}
             : {

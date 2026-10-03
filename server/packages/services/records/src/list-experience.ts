@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { canDiscoverScopedNavigation } from "./navigation-context-discovery.js";
 import {
   resolveEntityText,
@@ -27,9 +28,9 @@ export async function effectiveListActions(
       (item) => item.plane === context.planeKey,
     );
     if (
-      !permission ||
+      !descriptor.operations[action.operationKey] ||
       descriptor.operations[action.operationKey]?.permissionCode !==
-        permission.permissionCode
+        permission?.permissionCode
     )
       continue;
     const bindings = context.permissions.operationBindings?.filter(
@@ -38,18 +39,18 @@ export async function effectiveListActions(
         item.operationKey === action.operationKey,
     );
     // Fail closed if a release has not installed its authorization bindings.
-    if (
+    if (permission && (
       !bindings?.length ||
-      bindings.some((item) => item.permissionCode !== permission.permissionCode)
-    )
+      bindings.some((item) => item.permissionCode !== permission?.permissionCode)
+    ))
       continue;
     const publishedScopes = action.scopes.filter(
       (item) => item.plane === context.planeKey,
     );
-    if (
+    if (permission &&
       publishedScopes.some(
         (item) =>
-          !bindings.every(
+          !bindings?.every(
             (binding) =>
               binding.requiredScopeKinds.includes(item.scopeKind) &&
               binding.decisionMode === item.decisionMode,
@@ -94,11 +95,11 @@ export async function effectiveListActions(
       surface: "action" as const,
       phase: "discover" as const,
     };
-    let decision = await authorizer.authorize({
+    let decision = await authorizeEntityOperation(authorizer, {
       observation,
       context,
-      permissionCode: permission.permissionCode,
-      ...(permissionOnlyEntry ? {} : { resource }),
+      permissionCode: permission?.permissionCode,
+      ...(permissionOnlyEntry && permission ? {} : { resource }),
     });
     if (
       !decision.allowed &&
@@ -107,14 +108,15 @@ export async function effectiveListActions(
       descriptor.directoryScope &&
       scope.status === "ready"
     ) {
-      decision = await authorizer.authorize({
+      decision = await authorizeEntityOperation(authorizer, {
         context,
-        permissionCode: permission.permissionCode,
+        permissionCode: permission?.permissionCode,
         observation,
       });
     }
     const discoveredContext =
       directoryNavigation &&
+      permission !== undefined &&
       !decision.allowed &&
       decision.reason !== "entity_authorization_unavailable" &&
       !action.requiresPreflight &&
@@ -128,10 +130,10 @@ export async function effectiveListActions(
     if (!decision.allowed && !discoveredContext) {
       // Only contextual failures are useful to display; inaccessible actions stay hidden.
       if (decision.reason === "scope_coordinate_missing") {
-        const baseAuthority = await authorizer.authorize({
+        const baseAuthority = await authorizeEntityOperation(authorizer, {
           observation,
           context,
-          permissionCode: permission.permissionCode,
+          permissionCode: permission?.permissionCode,
         });
         if (baseAuthority.allowed)
           result.push(disabled(action, "context_required"));

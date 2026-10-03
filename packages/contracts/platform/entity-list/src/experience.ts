@@ -219,10 +219,6 @@ export function parsePublishedListExperience(
     });
     unique(permissions.map((permission) => permission.plane));
     permissions.sort((a, b) => compare(a.plane, b.plane));
-    if (!permissions.length)
-      throw new TypeError(
-        "A published action requires an operation permission binding",
-      );
     const rules = list(action.rules).map((item) => {
       const rule = record(item);
       return Object.freeze({

@@ -32,15 +32,17 @@ export interface ExperienceBootstrap {
 export interface EntityRouteAdmission {
   readonly sharedInfrastructure?: boolean;
   readonly entityCode: string; readonly releaseId: string; readonly operation: "list" | "read";
-  readonly permissionCode: string; readonly workspaceCode: string; readonly moduleCode: string;
+  readonly permissionCode?: string; readonly workspaceCode?: string; readonly moduleCode?: string;
 }
 
 function parseEntityRoutes(value: unknown): readonly EntityRouteAdmission[] {
   return array(value, "entityRoutes").map(candidate => {
     const row = object(candidate, "entityRoute"), entityCode = text(row.entityCode, "entityCode"), releaseId = text(row.releaseId, "releaseId");
     if (!/^[a-z][a-z0-9_]{1,62}$/.test(entityCode) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(releaseId)) throw new TypeError("Invalid published entity route");
+    if (row.permissionCode === undefined && [row.workspaceCode, row.moduleCode, row.sharedInfrastructure].some(value => value !== undefined))
+      throw new TypeError("Permission-free Entity routes cannot grant workspace access");
     return Object.freeze({ entityCode, releaseId, ...(row.sharedInfrastructure === undefined ? {} : { sharedInfrastructure: boolean(row.sharedInfrastructure, "sharedInfrastructure") }), operation: oneOf(row.operation, ["list", "read"] as const, "operation"),
-      permissionCode: code(row.permissionCode, "permissionCode"), workspaceCode: code(row.workspaceCode, "workspaceCode"), moduleCode: code(row.moduleCode, "moduleCode") });
+      ...(row.permissionCode === undefined ? {} : { permissionCode: code(row.permissionCode, "permissionCode"), workspaceCode: code(row.workspaceCode, "workspaceCode"), moduleCode: code(row.moduleCode, "moduleCode") }) });
   });
 }
 

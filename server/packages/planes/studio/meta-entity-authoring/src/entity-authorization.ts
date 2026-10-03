@@ -30,9 +30,9 @@ export function compileEntityAuthorization(graph: MetaEntityGraph) {
             binding.targetPlane === profile.planeKey &&
             binding.status !== "deprecated",
         );
-        if (bindings.length !== 1)
+        if (bindings.length > 1)
           throw new TypeError(
-            "Authorization requires one exact-plane operation permission binding",
+            "Authorization permits at most one exact-plane operation permission binding",
           );
         const policy = profile.operations.find(
           (operation) => operation.key === item.operationKey,
@@ -67,7 +67,7 @@ export function compileEntityAuthorization(graph: MetaEntityGraph) {
           throw new TypeError("Authorization scope bindings mismatch");
         return [
           item.operationKey,
-          { permissionCode: bindings[0]!.permissionCode },
+          bindings[0] ? { permissionCode: bindings[0].permissionCode } : {},
         ];
       }),
   );

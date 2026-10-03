@@ -1,0 +1,145 @@
+{
+  "schema": "athyper.entity-permission-omission-correction/1",
+  "date": "2026-10-03",
+  "baseCommit": "602af48ac",
+  "branch": "recovery/entity-framework-cleanup-20261003",
+  "status": "source correction built; not published or deployed",
+  "correctedBehavior": [
+    "A valid published Entity operation may omit permissionCode in its runtime descriptor and authorization profile.",
+    "Omission is proved against current published metadata by the shared Entity authorizer. Both configured and omitted permissions use its existing scope, field-use and record-existence checks.",
+    "A declared permission still requires its exact IAM grant and catalog/binding evidence. Missing operation, malformed permission value, broken declared permission reference, unsupported runtime, and required unavailable policy remain denials.",
+    "Native lowering and publication projection compile an omitted permission without inventing a catalog permission or projection row; scope and runtime bindings remain published.",
+    "Read/list, mutation admission, descriptor actions and transfer admission use the common optional-permission entry point. Import mode support remains separately declared; missing additional mode permissions do not invent a grant requirement.",
+    "Explicit field permissions remain separate checks even when the enclosing operation has no permission.",
+    "Direct published Entity routes with no permission are admitted without fabricating permission-derived workspace/module membership; permission-bearing routes retain their existing module entitlement checks.",
+    "AI record discovery/read callers and document operation checks accept omitted Entity permissions while retaining their separate capability and document-service controls."
+  ],
+  "scopeLimits": [
+    "Installed generic tenant-record and owner-record authorization profiles are supported. Other backends/resolvers/policy evaluators must be installed and qualified; omission does not activate an unsupported capability.",
+    "Legacy or domain capability contracts that independently mandate their own action permission are not globally weakened.",
+    "Product metadata definitions, permission catalog settings and source approvals were not changed. Country and existing workforce definitions retain their explicit permissions.",
+    "The source correction requires coordinated publication/deployment before it changes running behavior. Existing workforce permission MFA/risk settings and retired installed linkage functions remain outstanding from the previous handover."
+  ],
+  "builds": [
+    {
+      "package": "@athyper/server-contract-auth",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-contract-auth run build"
+    },
+    {
+      "package": "@athyper/server-contract-metadata",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-contract-metadata run build"
+    },
+    {
+      "package": "@athyper/server-platform-metadata",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-platform-metadata run build"
+    },
+    {
+      "package": "@athyper/server-platform-experience",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-platform-experience run build"
+    },
+    {
+      "package": "@athyper/server-platform-ai",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-platform-ai run build"
+    },
+    {
+      "package": "@athyper/server-service-publication",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-service-publication run build"
+    },
+    {
+      "package": "@athyper/server-service-documents",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-service-documents run build"
+    },
+    {
+      "package": "@athyper/server-service-records",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-service-records run build"
+    },
+    {
+      "package": "@athyper/server-plane-studio-meta-entity-authoring",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-plane-studio-meta-entity-authoring run build"
+    },
+    {
+      "package": "@athyper/server-platform-host",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/server-platform-host run build"
+    },
+    {
+      "package": "@athyper/neon",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/neon run build"
+    },
+    {
+      "package": "@athyper/mesh",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/mesh run build"
+    },
+    {
+      "package": "@athyper/studio",
+      "status": "passed",
+      "command": "pnpm --filter @athyper/studio run build"
+    }
+  ],
+  "frontendBuildEnvironment": {
+    "ATHYPER_NEXT_DIST_DIR": ".next-permission-correction",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "testsRun": false,
+  "testsAdded": false,
+  "liveApiProbesRun": false,
+  "browserAutomationRun": false,
+  "sqlExecuted": false,
+  "ddlChanged": false,
+  "migrationsAdded": false,
+  "mfaCodeChanged": false,
+  "publishedMetadataChanged": false,
+  "changedSourceFiles": [
+    "packages/contracts/platform/entity-list/src/experience.ts",
+    "packages/platform/foundation/api-client/src/bootstrap.ts",
+    "packages/platform/shell/shell/src/core.ts",
+    "server/apps/platform-host/src/composition/register-services.ts",
+    "server/packages/contracts/auth/src/entity-operation-authorization.ts",
+    "server/packages/contracts/auth/src/index.ts",
+    "server/packages/contracts/auth/src/ports.ts",
+    "server/packages/contracts/metadata/src/descriptors.ts",
+    "server/packages/contracts/metadata/src/entity-authorization.ts",
+    "server/packages/planes/studio/meta-entity-authoring/src/authoring/table-product.ts",
+    "server/packages/planes/studio/meta-entity-authoring/src/entity-authorization.ts",
+    "server/packages/platform/ai/src/entity-lookup-tools.ts",
+    "server/packages/platform/ai/src/entity-record-tool.ts",
+    "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
+    "server/packages/platform/experience/src/contracts.ts",
+    "server/packages/platform/experience/src/entity-operation-dispatcher.ts",
+    "server/packages/platform/experience/src/entity-page-planner.ts",
+    "server/packages/platform/experience/src/entity-route-admission.ts",
+    "server/packages/platform/experience/src/service.ts",
+    "server/packages/platform/metadata/src/descriptor-parser.ts",
+    "server/packages/platform/metadata/src/native-runtime-projection.ts",
+    "server/packages/services/documents/src/document-service.ts",
+    "server/packages/services/publication/src/entity-authorization-compiler.ts",
+    "server/packages/services/publication/src/shared/authorization/operation-projection.ts",
+    "server/packages/services/records/src/entity-authorization.ts",
+    "server/packages/services/records/src/entity-list-service.ts",
+    "server/packages/services/records/src/field-validation.ts",
+    "server/packages/services/records/src/list-experience.ts",
+    "server/packages/services/records/src/mutation-service.ts",
+    "server/packages/services/records/src/published-tenant-authorizer.ts",
+    "server/packages/services/records/src/query-service.ts",
+    "server/packages/services/records/src/record-read-access.ts",
+    "server/packages/services/records/src/transfer/transfer-jobs.ts",
+    "server/packages/services/records/src/transfer/transfer-service.ts"
+  ],
+  "handoverNotes": [
+    "Build success is compilation evidence, not functional acceptance, authorization regression evidence or runtime qualification.",
+    "The previous cleanup report remains historical. This report supersedes its generic operation-permission-omission source gap for the supported shared Entity runtime.",
+    "No entity names, allowlists, derived permission codes, new entity apps or bespoke deployment scripts were introduced.",
+    "Use the existing governed workflow for exact compiler/release approvals and remaining database/publication/deployment reconciliation. Do not reuse older compiler qualification evidence for this build."
+  ]
+}

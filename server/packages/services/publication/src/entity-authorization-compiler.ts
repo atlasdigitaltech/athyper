@@ -183,6 +183,9 @@ export async function compileEntityAuthorizationPublication(
     throw new TypeError("Exact operation coverage required");
   const rows = profile.operations
     .flatMap((operation) => {
+      // No permission property produces no permission projection row. The
+      // published operation, runtime binding and scope profile remain signed.
+      if (operation.permissionCode === undefined) return [];
       const permission = catalog.get(operation.permissionCode);
       if (
         !permission ||

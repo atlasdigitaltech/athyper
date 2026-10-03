@@ -40,7 +40,7 @@ export function createDocumentService<Transaction>(options: DocumentServiceOptio
       if (!descriptor) throw new DocumentError(404, "ENTITY_DESCRIPTOR_NOT_FOUND", `No active descriptor for ${command.entityType}`);
       const operation = Object.hasOwn(descriptor.operations, command.operationCode) ? descriptor.operations[command.operationCode] : undefined;
       if (!operation) throw new DocumentError(422, "DOCUMENT_OPERATION_NOT_PUBLISHED", `Document operation is not published: ${command.operationCode}`);
-      if (operation.permissionCode !== "documents.render") await requirePermission(options.authorizer, command.context, operation.permissionCode, resource);
+      if (operation.permissionCode !== undefined && operation.permissionCode !== "documents.render") await requirePermission(options.authorizer, command.context, operation.permissionCode, resource);
       }
       if (command.idempotencyKey) {
         const replay = await options.transactions.run(command.context.planeKey, actor(command.context), async (transaction) => {

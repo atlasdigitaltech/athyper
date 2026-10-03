@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { usesEntityBackendAuthorization } from "../entity-backend-authorizer.js";
 import { createHash, randomUUID } from "node:crypto";
 import type {
@@ -1928,11 +1929,12 @@ async function authorizeDescriptorOperation(
   operation: "import" | "export",
   resource: Readonly<Record<string, unknown>>,
 ) {
-  const permissionCode = descriptor.operations[operation]?.permissionCode;
+  const published = descriptor.operations[operation];
+  const permissionCode = published?.permissionCode;
   if (
-    !permissionCode ||
+    !published ||
     !(
-      await authorizer.authorize({
+      await authorizeEntityOperation(authorizer, {
         context,
         permissionCode,
         observation: {
@@ -1944,9 +1946,7 @@ async function authorizeDescriptorOperation(
         resource: {
           tenantId: context.tenantId,
           ...resource,
-          ...(usesEntityBackendAuthorization(authorizer, context, descriptor)
-            ? { entityCode: descriptor.entityCode, operationKey: operation }
-            : {}),
+          entityCode: descriptor.entityCode, operationKey: operation,
         },
       })
     ).allowed
@@ -1968,7 +1968,7 @@ async function authorizeImportMode(
     descriptor.listPresentation?.dataOperations?.importOperationPermissions?.[
       operation
     ] ?? [];
-  if (!permissions.length)
+  if (!(descriptor.listPresentation?.dataOperations?.importOperations ?? ["create", "update", "upsert"]).includes(operation))
     throw new RecordServiceError(
       403,
       "IMPORT_MODE_NOT_PUBLISHED",
@@ -1977,7 +1977,7 @@ async function authorizeImportMode(
   for (const permissionCode of permissions)
     if (
       !(
-        await authorizer.authorize({
+        await authorizeEntityOperation(authorizer, {
           context,
           permissionCode,
           resource: { tenantId: context.tenantId, ...resource },

@@ -31,7 +31,7 @@ export function admitsEntityRecord(
         (ref) => ref.id === ENTITY_RECORD_TOOL && ref.version === 1,
       ) &&
       descriptor.operations.read &&
-      hasPermission(context, descriptor.operations.read.permissionCode),
+      (descriptor.operations.read.permissionCode === undefined || hasPermission(context, descriptor.operations.read.permissionCode)),
     )
   );
 }

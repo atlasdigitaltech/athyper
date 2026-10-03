@@ -34,6 +34,11 @@ export interface Authorizer {
     entityCode: string,
   ): string | undefined;
   authorize(request: AuthorizationRequest): Promise<AuthorizationDecision>;
+  /** Shared Entity admission only. Reload published metadata and verify that the
+   * operation exists without a permission; retain independent scope controls. */
+  authorizeEntityOperation?(
+    request: Omit<AuthorizationRequest, "permissionCode">,
+  ): Promise<AuthorizationDecision>;
   /** Constraint result is never a grant. Only a separately published canonical
    * admission contract may combine it with an explicit target authorization. */
   checkSourceConstraints?(

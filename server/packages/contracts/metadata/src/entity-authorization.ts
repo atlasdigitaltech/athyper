@@ -16,7 +16,7 @@ export type EntityScopeCoordinate =
 export type EntityAuthorizationPlane = "studio" | "neon" | "mesh";
 export interface EntityAuthorizationOperationV1 {
   readonly key: string;
-  readonly permissionCode: string;
+  readonly permissionCode?: string;
   readonly scope: EntityScopeResolverKey;
   readonly target: "existing" | "proposed" | "collection";
   readonly effect: "read" | "write" | "reveal";
@@ -66,7 +66,7 @@ export interface EntityAuthorizationReferences {
   readonly planeKey?: string;
   readonly fields: readonly string[];
   readonly operations: Readonly<
-    Record<string, { readonly permissionCode: string }>
+    Record<string, { readonly permissionCode?: string }>
   >;
 }
 
@@ -151,7 +151,7 @@ export function parseEntityAuthorizationProfile(
     ]);
     return Object.freeze({
       key: name(item.key),
-      permissionCode: name(item.permissionCode),
+      ...(item.permissionCode === undefined ? {} : { permissionCode: name(item.permissionCode) }),
       scope: resolver(item.scope),
       target: choice(item.target, [
         "existing",
@@ -329,6 +329,7 @@ export function parseEntityAuthorizationProfile(
       throw new TypeError("Incomplete authorization field coverage");
     for (const item of operations)
       if (
+        !references.operations[item.key] ||
         references.operations[item.key]?.permissionCode !== item.permissionCode
       )
         throw new TypeError("Authorization permission binding mismatch");

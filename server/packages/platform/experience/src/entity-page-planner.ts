@@ -176,7 +176,7 @@ function operationActions(artifact: CompiledEntityArtifactV2, granted: ReadonlyS
     const permission = value.permissionCode;
     // Proposed catalog entries cannot be advertised as executable actions.
     if (value.permissionStatus !== undefined && value.permissionStatus !== "verified") return [];
-    return typeof permission === "string" && granted.has(permission) ? [key] : [];
+    return permission === undefined || typeof permission === "string" && granted.has(permission) ? [key] : [];
   }));
 }
 

@@ -136,8 +136,11 @@ export function createEntityOperationDispatcher(options: {
         );
       const permission = string(operation.permissionCode);
       if (
-        !permission ||
-        !input.context.permissions.allowed.includes(permission)
+        (operation.permissionCode !== undefined && !permission) ||
+        (permission !== undefined && (
+          !input.context.permissions.allowed.includes(permission) ||
+          input.context.permissions.denied.includes(permission)
+        ))
       )
         throw new EntityRuntimeOperationError(
           403,

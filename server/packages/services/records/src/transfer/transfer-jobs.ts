@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { usesEntityBackendAuthorization } from "../entity-backend-authorizer.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { Authorizer } from "@athyper/server-contract-auth";
@@ -1232,19 +1233,18 @@ async function requireTransferAuthority(
   operation: "import" | "export",
   resource: Readonly<Record<string, unknown>> = {},
 ) {
-  const permissionCode = descriptor.operations[operation]?.permissionCode;
+  const published = descriptor.operations[operation];
+  const permissionCode = published?.permissionCode;
   if (
-    !permissionCode ||
+    !published ||
     !(
-      await authorizer.authorize({
+      await authorizeEntityOperation(authorizer, {
         context,
         permissionCode,
         resource: {
           tenantId: context.tenantId,
           ...resource,
-          ...(usesEntityBackendAuthorization(authorizer, context, descriptor)
-            ? { entityCode: descriptor.entityCode, operationKey: operation }
-            : {}),
+          entityCode: descriptor.entityCode, operationKey: operation,
         },
       })
     ).allowed
@@ -1264,14 +1264,14 @@ async function requireImportModeAuthority(
     descriptor.listPresentation?.dataOperations?.importOperationPermissions?.[
       operation
     ] ?? [];
-  if (!permissions.length)
+  if (!(descriptor.listPresentation?.dataOperations?.importOperations ?? ["create", "update", "upsert"]).includes(operation))
     throw new Error(
       `Import ${operation} capability was revoked before execution`,
     );
   for (const permissionCode of permissions)
     if (
       !(
-        await authorizer.authorize({
+        await authorizeEntityOperation(authorizer, {
           context,
           permissionCode,
           resource: { tenantId: context.tenantId, ...resource },

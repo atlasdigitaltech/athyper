@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
 import { entityAuthorizationProfileHash } from "./entity-authorization-rollout.js";
 import type { AuthorizationDecision, Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
@@ -12,11 +13,12 @@ export async function authorizeRecordListRead(
 ): Promise<Extract<AuthorizationDecision, { readonly allowed: true }>> {
   const profile = usesEntityBackendAuthorization(authorizer,context,descriptor) ? descriptor.authorization : undefined;
   const operationKey = profile && !scopeResource?.["recordId"] ? profile.directory.operation : "read";
-  const permissionCode = profile?.operations.find(operation => operation.key === operationKey)?.permissionCode ?? descriptor.operations["read"]?.permissionCode;
-  if (!permissionCode) throw new RecordServiceError(409, "ENTITY_OPERATION_UNAVAILABLE", "Entity read operation is not published");
+  const operation = profile ? profile.operations.find(operation => operation.key === operationKey) : descriptor.operations["read"];
+  const permissionCode = operation?.permissionCode;
+  if (!operation) throw new RecordServiceError(409, "ENTITY_OPERATION_UNAVAILABLE", "Entity read operation is not published");
   const permissionOnly = descriptor.operations["read"]?.authorizationMode === "permission_only";
   const observation = { entityCode: descriptor.entityCode, operationKey: scopeResource?.["recordId"] ? "read" : "discover", ...(scopeResource?.["recordId"] ? { recordId: scopeResource["recordId"] } : {}), surface: scopeResource?.["recordId"] ? "record" as const : "list" as const, phase: "discover" as const };
-  const effective = await authorizer.authorize({
+  const effective = await authorizeEntityOperation(authorizer, {
     observation,
     context,
     permissionCode,
@@ -36,11 +38,11 @@ export async function authorizeRecordListRead(
   // Published directory contracts own row scope; coarse permission admission
   // still enforces denials, entitlements, and policy gates. Never retry a deny.
   if (!profile && descriptor.directoryScope && effective.reason === "scope_not_contained") {
-    const base = await authorizer.authorize({ context, permissionCode, observation });
+    const base = await authorizeEntityOperation(authorizer, { context, permissionCode, observation });
     if (base.allowed) return base;
   }
   if (!profile && !permissionOnly && effective.reason === "scope_coordinate_missing") {
-    const base = await authorizer.authorize({ context, permissionCode, observation });
+    const base = await authorizeEntityOperation(authorizer, { context, permissionCode, observation });
     if (base.allowed && base.scope && !base.scope.tenantWide) return base;
   }
   throw new RecordServiceError(403, "FORBIDDEN", "Record operation is not permitted");
@@ -60,9 +62,16 @@ export async function readableRecordFields(
   const decisions = await Promise.all(descriptor.fields.map(async (field) => {
     const policy = profile?.fieldPolicies.find(group => group.fields.includes(field.key));
     const operationKey = profile && policy?.readOperation === profile.recordReadOperation && profile.ownership === "tenant.record.v1" && profile.directory.population === "tenant" ? profile.directory.operation : policy?.readOperation ?? "read";
-    const permissionCode = profile?.operations.find(operation => operation.key === operationKey)?.permissionCode ?? field.readPermissionCode;
-    if (!permissionCode) return !profile;
-    const decision = await authorizer.authorize({
+    const permissionCode = profile ? profile.operations.find(operation => operation.key === operationKey)?.permissionCode : field.readPermissionCode;
+    if (profile && field.readPermissionCode !== undefined) {
+      const fieldDecision = await authorizer.authorize({ context, permissionCode: field.readPermissionCode,
+        resource: { tenantId: context.tenantId, entityCode: descriptor.entityCode, operationKey,
+          field: field.key, entityFieldPermission: "read", authorizationDescriptorHash: descriptor.compiledHash },
+      });
+      if (!fieldDecision.allowed) return false;
+    }
+    if (permissionCode === undefined && !profile) return true;
+    const decision = await authorizeEntityOperation(authorizer, {
       context,
       permissionCode,
       observation: { entityCode: descriptor.entityCode, surface: "field", phase: "discover" },

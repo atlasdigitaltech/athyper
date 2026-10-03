@@ -200,7 +200,7 @@ export class AtlasRegisteredToolCoordinator implements AtlasRuntimeToolCoordinat
         ) &&
         this.manifestCompatible(candidate, ENTITY_LOOKUP, context.planeKey) &&
         candidate.operations.read &&
-        hasPermission(context, candidate.operations.read.permissionCode)
+        (candidate.operations.read.permissionCode === undefined || hasPermission(context, candidate.operations.read.permissionCode))
       ) {
         crossEntityPublished = true;
         break;

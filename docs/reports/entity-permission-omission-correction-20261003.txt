@@ -1,0 +1,30 @@
+META ENTITY PERMISSION CORRECTION — 2026-10-03
+
+Status: source correction complete for the supported shared Entity runtime; 13 builds passed. Not published, deployed or runtime-verified.
+Branch: recovery/entity-framework-cleanup-20261003
+Previous cleanup commit: 602af48ac
+Detailed file inventory and build list: entity-permission-omission-correction-20261003.json
+
+BEHAVIOR
+A valid published operation without permissionCode requires no entity permission grant. This is distinct from an unpublished/missing operation, null/blank/invalid permission, broken declared permission reference, missing policy evaluator or unsupported capability; those remain unavailable or denied.
+The shared Entity authorizer reloads the published descriptor and current actor context. Permission omission uses the same evaluator as permission-bearing operations, retaining tenant/plane consistency, runtime/profile binding checks, field-use controls and existing-record checks. Transactional owner scope remains applied by the record pipeline.
+An explicit field permission is independently enforced; omission of the operation permission cannot discard it. Explicit permissions continue through the normal IAM authorizer, including existing denies and independent platform controls.
+The compiler, native projection and signed permission projection permit omission without inventing a permission code. Published scope and handler bindings remain mandatory.
+Read/list, mutation, list actions, transfers and direct Entity route admission carry the distinction. Missing additional import-mode permissions do not grant an unsupported mode. Route admission without a permission grants no workspace/module access.
+AI record discovery/read callers and document operation callers retain their separate capability/service checks while accepting omitted Entity operation permissions.
+
+SCOPE AND PRESERVATION
+Generic tenant-record and owner-record profiles use the installed shared implementation. Uninstalled or unqualified custom backends/resolvers remain fail-closed; omission does not establish capability qualification.
+Existing independent capability action contracts are not globally relaxed. No entity-specific dispatch, allowlist, generated permission name or bespoke application was added.
+Country and workforce product definitions retain their explicit permissions. This change does not silently remove existing grants or alter published metadata.
+No DDL edits, SQL execution, new migrations, MFA changes, live API probes, browser automation, tests or test additions were performed.
+
+BUILDS
+Passed: Auth contracts, Metadata contracts, Metadata platform, Experience platform, AI platform, Publication service, Documents service, Records service, Studio Meta Entity authoring, Platform Host, Neon, Mesh and Studio.
+Frontend output is isolated in apps/<plane>/.next-permission-correction.
+Builds prove compilation only. Functional acceptance and authorization regression evidence were not collected under the owner's no-testing restriction.
+
+STILL OUTSTANDING
+The earlier live database reconciliation, reviewed metadata publication and deployment work remain outstanding. Existing DEV permissions may still contain the old risk/MFA defaults and existing databases may still contain retired linkage functions/triggers.
+Current compiler/build identities need current governed approval/qualification evidence. Existing source approvals and prior runtime receipts are not new acceptance evidence.
+The previous cleanup report remains historical; its generic permission-omission source gap is superseded by this correction for the supported shared Entity runtime.

@@ -229,14 +229,14 @@ export function compileNativeRuntimeProjection(input: {
         const bound = links.filter(
           (link) => link.entityOperationId === operation.id,
         );
-        if (bound.length !== 1)
+        if (bound.length > 1)
           throw Error(
-            `NATIVE_PROJECTION_PERMISSION_REQUIRED:${operation.operationKey}`,
+            `NATIVE_PROJECTION_PERMISSION_AMBIGUOUS:${operation.operationKey}`,
           );
         const permission = input.permissions.filter(
-          (permission) => permission.code === bound[0]!.permissionCode,
+          (permission) => permission.code === bound[0]?.permissionCode,
         );
-        if (permission.length !== 1)
+        if (bound.length && permission.length !== 1)
           throw Error(
             `NATIVE_PROJECTION_CATALOG_REQUIRED:${bound[0]!.permissionCode}`,
           );
@@ -246,7 +246,7 @@ export function compileNativeRuntimeProjection(input: {
         if (
           !required.length ||
           required.some(
-            (binding) => !permission[0]!.scopeKinds.includes(binding.scopeKind),
+            (binding) => permission[0] && !permission[0].scopeKinds.includes(binding.scopeKind),
           )
         )
           throw Error(
@@ -256,7 +256,7 @@ export function compileNativeRuntimeProjection(input: {
           operation.operationKey,
           {
             code: operation.operationKey,
-            permissionCode: permission[0]!.code,
+            ...(permission[0] ? { permissionCode: permission[0].code } : {}),
             authorizationMode: "bound_operation",
           },
         ];

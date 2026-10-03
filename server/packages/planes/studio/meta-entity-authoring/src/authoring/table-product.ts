@@ -188,11 +188,11 @@ export function targetTableEntityGraph(
             planeKey: plane,
             operations: (
               Reflect.get(authorization, "operations") as {
-                permissionCode: string;
+                permissionCode?: string;
               }[]
             ).map((operation) => ({
               ...operation,
-              permissionCode: permission(operation.permissionCode),
+              ...(operation.permissionCode === undefined ? {} : { permissionCode: permission(operation.permissionCode) }),
             })),
           },
         },

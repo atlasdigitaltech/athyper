@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
 import { businessPartnerCollaborationBinding } from "@athyper/server-service-master-data";
 import { assertRollbackEntityReadiness } from "./shared/publication/rollback-readiness.js";
@@ -5130,7 +5131,7 @@ export function registerAtlas(
               if (
                 !read ||
                 !(
-                  await container.platform.authorizer!.authorize({
+                  await authorizeEntityOperation(container.platform.authorizer!, {
                     context,
                     permissionCode: read.permissionCode,
                     resource: {

@@ -227,7 +227,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
         ...new Set(
           context.permissions.allowed.filter((code) => {
             const moduleId = knownPermissions.get(code);
-            return moduleId !== undefined && entitledModuleIds.has(moduleId);
+            return moduleId !== undefined && entitledModuleIds.has(moduleId) && !context.permissions.denied.includes(code);
           }),
         ),
       ].sort();

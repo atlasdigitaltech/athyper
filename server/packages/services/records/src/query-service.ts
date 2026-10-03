@@ -1,3 +1,4 @@
+import { authorizeEntityOperation } from "@athyper/server-contract-auth";
 import { isEntityRecordId } from "@athyper/contract-platform-entity-runtime";
 import {
   prepareRecordOwnerAccess,
@@ -149,7 +150,7 @@ export function createRecordListExecutor<Transaction = unknown>(
           (operation) =>
             operation.key === descriptor.authorization!.directory.operation,
         )!;
-        const permitted = await options.authorizer.authorize({
+        const permitted = await authorizeEntityOperation(options.authorizer, {
           context: query.context,
           permissionCode: directory.permissionCode,
           resource: {
@@ -288,7 +289,7 @@ export function createRecordListExecutor<Transaction = unknown>(
               authorize: aggregateAuthorizationCovered
                 ? async () => true
                 : async (recordId) => {
-                    const decision = await options.authorizer.authorize({
+                    const decision = await authorizeEntityOperation(options.authorizer, {
                       context: query.context,
                       permissionCode:
                         descriptor.operations["read"]!.permissionCode,
@@ -662,13 +663,7 @@ export async function authorize(
   permissionCode: string | undefined,
   resource: Readonly<Record<string, unknown>>,
 ): Promise<Extract<AuthorizationDecision, { readonly allowed: true }>> {
-  if (!permissionCode)
-    throw new RecordServiceError(
-      409,
-      "ENTITY_OPERATION_UNAVAILABLE",
-      "Entity operation is not published",
-    );
-  const decision = await authorizer.authorize({
+  const decision = await authorizeEntityOperation(authorizer, {
     context,
     permissionCode,
     resource,

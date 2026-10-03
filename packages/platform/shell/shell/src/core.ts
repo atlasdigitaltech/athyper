@@ -70,7 +70,7 @@ export interface DerivedShellNavigation {
 export interface PublishedEntityRoute {
   readonly sharedInfrastructure?: boolean;
   readonly entityCode: string; readonly releaseId: string; readonly operation: "list" | "read";
-  readonly permissionCode: string; readonly workspaceCode: string; readonly moduleCode: string;
+  readonly permissionCode?: string; readonly workspaceCode?: string; readonly moduleCode?: string;
 }
 export interface NavigationDiagnostic {
   readonly kind: "unknown-active-module";
@@ -234,7 +234,9 @@ export function deriveShellNavigation(
     routes: Object.freeze(routes),
     entityRoutes: Object.freeze((experience.entityRoutes ?? []).filter(entry =>
       /^[a-z][a-z0-9_]{1,62}$/.test(entry.entityCode) && !!entry.releaseId &&
-      experience.permissions.includes(entry.permissionCode) &&
+      (entry.permissionCode === undefined
+        ? entry.workspaceCode === undefined && entry.moduleCode === undefined && entry.sharedInfrastructure === undefined
+        : experience.permissions.includes(entry.permissionCode) &&
       (routes.some(route => route.workspaceCode === entry.workspaceCode && route.moduleCode === entry.moduleCode) ||
         // Hidden infrastructure is entitled and permission-filtered by the server
         // but intentionally absent from workspace navigation. Still require its
@@ -242,7 +244,7 @@ export function deriveShellNavigation(
         (entry.sharedInfrastructure === true && registry.some(route => route.moduleCode === entry.moduleCode
           && route.presentation?.workspaceCode === entry.workspaceCode
           && route.requiredPermissions.every(p => experience.permissions.includes(p))
-          && route.requiredFeatures.every(f => experience.features[f]?.enabled === true)))))),
+          && route.requiredFeatures.every(f => experience.features[f]?.enabled === true))))))),
     ...(firstWorkspace
       ? { landingHref: firstWorkspace.href }
       : visible[0]

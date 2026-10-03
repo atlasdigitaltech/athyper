@@ -10,9 +10,9 @@ export interface EntityRouteAdmission {
   readonly entityCode: string;
   readonly releaseId: string;
   readonly operation: "list" | "read";
-  readonly permissionCode: string;
-  readonly workspaceCode: string;
-  readonly moduleCode: string;
+  readonly permissionCode?: string;
+  readonly workspaceCode?: string;
+  readonly moduleCode?: string;
   readonly sharedInfrastructure?: boolean;
 }
 /** The signed operation permission binds navigation to its published catalog
@@ -24,7 +24,15 @@ export function admitEntityRoutes(candidates: readonly PublishedEntityRouteCandi
   for (const candidate of candidates) {
     if (!isCanonicalEntityCode(candidate.entityCode) || !candidate.releaseId) continue;
     for (const operation of ["list", "read"] as const) {
+      if (!Object.hasOwn(candidate.operations, operation)) continue;
       const permissionCode = candidate.operations[operation];
+      // A direct Entity route has no permission-derived module requirement when
+      // the published operation has no permission. This grants no workspace or
+      // module access; the record API still enforces scope and owner policies.
+      if (permissionCode === undefined) {
+        result.push({ entityCode: candidate.entityCode, releaseId: candidate.releaseId, operation });
+        continue;
+      }
       if (!permissionCode || !allowed.has(permissionCode)) continue;
       const modules = new Set(catalog.permissions.filter(p => p.code === permissionCode).map(p => p.moduleId));
       if (modules.size !== 1) continue;

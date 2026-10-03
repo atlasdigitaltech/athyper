@@ -19,7 +19,7 @@ const scopeKinds = new Set(["tenant", "workspace", "module", "company_code", "le
  * operation must carry its reviewed, source-pinned IAM projection. */
 export function assertOperationProjection(descriptor: Row): void {
   const operations = row(descriptor.operations);
-  const bound = Object.entries(operations).filter(([, op]) => row(op).authorizationMode !== "permission_only");
+  const bound = Object.entries(operations).filter(([, op]) => row(op).authorizationMode !== "permission_only" && row(op).permissionCode !== undefined);
   const bindings = rows(descriptor.operation_scope_bindings ?? []);
   if (!bound.length && !bindings.length) return;
   const source = row(descriptor.source);
@@ -78,7 +78,12 @@ export function compileOperationProjection(input: {
   check([...links, ...scopes].every(b => operations.some(o => o.id === b.entityOperationId)), "ORPHAN_BINDING");
   const bindings = operations.flatMap(operation => {
     const linked = links.filter(b => b.entityOperationId === operation.id);
-    check(linked.length === 1, "PERMISSION_REQUIRED");
+    check(linked.length <= 1, "PERMISSION_AMBIGUOUS");
+    if (!linked.length) {
+      const published = row(row(descriptor.operations)[String(operation.operationKey)]);
+      check(published.permissionCode === undefined, "PERMISSION_REQUIRED");
+      return [];
+    }
     const link = linked[0]!;
     const catalog = input.permissions.filter(p => p.code === link.permissionCode && p.kind === link.permissionKind);
     check(catalog.length === 1, "CATALOG_REQUIRED");

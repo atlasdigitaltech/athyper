@@ -156,7 +156,11 @@ export const experienceBootstrapSchema = {
   required: ["schemaVersion", "state", "planeKey", "tenantId", "principalId", "revision", "identity", "tenant", "profile", "localization", "localePolicy", "workspaces", "permissions", "features", "nextActions"],
   properties: {
     entityRoutes: { type: "array", items: { type: "object", additionalProperties: false,
-      required: ["entityCode", "releaseId", "operation", "permissionCode", "workspaceCode", "moduleCode"], properties: {
+      required: ["entityCode", "releaseId", "operation"],
+      oneOf: [
+        { required: ["permissionCode", "workspaceCode", "moduleCode"] },
+        { not: { anyOf: [{ required: ["permissionCode"] }, { required: ["workspaceCode"] }, { required: ["moduleCode"] }, { required: ["sharedInfrastructure"] }] } },
+      ], properties: {
         entityCode: { type: "string", pattern: "^[a-z][a-z0-9_]{1,62}$" }, releaseId: { type: "string", format: "uuid" },
         operation: { enum: ["list", "read"] }, permissionCode: { type: "string" }, workspaceCode: { type: "string" }, moduleCode: { type: "string" }, sharedInfrastructure: { type: "boolean" },
       } } },
