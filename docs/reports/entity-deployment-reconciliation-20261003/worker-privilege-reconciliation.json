@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-03T05:37:58.746591+00:00",
+  "sourceReaderOwnerAuditId": "01a10043-3a4c-7cd3-8563-40bdb562c52c",
+  "sourceReaderOwner": "athyper_definer_product_publication",
+  "workerAuthoritySourceRows": 3,
+  "workerOtherTenantSourceRows": 0,
+  "uuidGrantReceipts": [
+    {
+      "plane": "studio",
+      "auditId": "01a10044-e95a-7c37-aab5-d9bd8862c717"
+    },
+    {
+      "plane": "neon",
+      "auditId": "01a10044-e995-7f0c-b359-4b115293b949"
+    },
+    {
+      "plane": "mesh",
+      "auditId": "01a10044-e9d1-7006-bbed-b09341ec3921"
+    }
+  ],
+  "runtimeUuidGrantReceipts": [
+    {
+      "plane": "studio",
+      "auditId": "01a10046-fdbd-7815-a9f7-bd77e303960f"
+    },
+    {
+      "plane": "neon",
+      "auditId": "01a10046-fdf7-752d-a90f-34ccca7642b9"
+    },
+    {
+      "plane": "mesh",
+      "auditId": "01a10046-fe30-7596-9415-cf4e9d6ebc54"
+    }
+  ]
+}

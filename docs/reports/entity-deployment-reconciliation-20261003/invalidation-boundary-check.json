@@ -1,0 +1,7 @@
+{
+  "plane": "neon",
+  "applicationRole": "athyperapp",
+  "globalInvalidationDenied": true,
+  "committed": false,
+  "evidence": "NOTICE:  EXPECTED_GLOBAL_INVALIDATION_DENIAL: new row violates row-level security policy for table \"authorization_invalidation_outbox\""
+}

@@ -1,0 +1,21 @@
+{
+  "scope": "Required deployment check using actual worker credentials",
+  "committed": false,
+  "results": [
+    {
+      "plane": "studio",
+      "stage": "passed",
+      "rolledBack": true
+    },
+    {
+      "plane": "mesh",
+      "stage": "passed",
+      "rolledBack": true
+    },
+    {
+      "plane": "neon",
+      "stage": "passed",
+      "rolledBack": true
+    }
+  ]
+}

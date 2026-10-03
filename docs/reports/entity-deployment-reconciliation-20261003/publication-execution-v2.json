@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-03T05:27:40.856Z",
+  "httpStatus": 200,
+  "result": {
+    "status": "dispatched",
+    "planHash": "9b75b32b0586f9f36a3306ea033ca69d18f9a4ef00201e2a5ec051db72da887c",
+    "releases": [
+      {
+        "id": "cf8b7486-a683-4870-b82d-5abb65b49c08",
+        "releaseNo": 4
+      }
+    ]
+  }
+}

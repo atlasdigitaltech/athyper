@@ -61,12 +61,19 @@ async function qualifyRelationshipGraph(
     ?.layoutConfig?.recordPresentation as
     { entityRelationships?: unknown } | undefined;
   const relations = parseEntityRelationships(raw?.entityRelationships ?? []);
+  const prospective = [
+    ...peers.filter(peer => peer.entityCode !== graph.entity.entityCode),
+    relationshipDescriptor(graph),
+  ];
+  const replacedCodes = new Set(prospective.map(peer => peer.entityCode));
   const published = (
     await sql<{
+      entity_code: string;
       artifact: unknown;
       release_id: string;
       release_no: number;
-    }>`SELECT member.value AS artifact, applied.source_release_id::text release_id,applied.source_release_no::int release_no
+    }>`SELECT payload.coordinates->>'entityCode' AS entity_code,
+      member.value AS artifact, applied.source_release_id::text release_id,applied.source_release_no::int release_no
     FROM runtime_meta.release_activation_head head
     JOIN runtime_meta.applied_release applied ON applied.id=head.applied_release_id AND applied.status='active'
     JOIN runtime_meta.applied_release_payload payload ON payload.applied_release_id=applied.id
@@ -76,7 +83,12 @@ async function qualifyRelationshipGraph(
       AND member.value->>'entityCode'=payload.coordinates->>'entityCode'`.execute(
       tx,
     )
-  ).rows.map((row) =>
+  ).rows
+  // A successor may replace a retired descriptor format. Its prospective graph
+  // is already compiled by the publication gate; parsing the replaced artifact
+  // first would prevent that replacement. Unchanged dependencies remain strict.
+  .filter(row => !replacedCodes.has(row.entity_code))
+  .map((row) =>
     parseCompiledRuntimeContract(
       parseCompiledEntityArtifact(
         (row.artifact as { content: unknown }).content,
@@ -84,8 +96,7 @@ async function qualifyRelationshipGraph(
       { releaseId: row.release_id, releaseNo: row.release_no },
     ),
   );
-  const peerCodes = new Set(peers.map(peer => peer.entityCode));
-  const active = [...published.filter(descriptor => !peerCodes.has(descriptor.entityCode)), ...peers];
+  const active = [...published, ...prospective];
   const candidate: EntityRelationshipContract = {
     entityCode: graph.entity.entityCode,
     plane: profile.storagePlane!,

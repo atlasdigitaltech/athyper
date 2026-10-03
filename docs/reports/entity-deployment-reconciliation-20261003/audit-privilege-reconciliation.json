@@ -1,0 +1,48 @@
+{
+  "completedAt": "2026-10-03T05:15:54.079113+00:00",
+  "receipts": [
+    {
+      "plane": "studio",
+      "role": "athyper_definer_audit",
+      "function": "shared.uuidv7()",
+      "executeGranted": true,
+      "auditId": "01a1002e-c73b-7a83-946e-d78a82b62d05"
+    },
+    {
+      "plane": "neon",
+      "role": "athyper_definer_audit",
+      "function": "shared.uuidv7()",
+      "executeGranted": true,
+      "auditId": "01a1002e-c777-71ca-a1ad-f05dc7478bbb"
+    },
+    {
+      "plane": "mesh",
+      "role": "athyper_definer_audit",
+      "function": "shared.uuidv7()",
+      "executeGranted": true,
+      "auditId": "01a1002e-c7b5-7b09-8484-fd86e9ce497d"
+    },
+    {
+      "plane": "studio",
+      "role": "athyper_definer_event",
+      "function": "shared.uuidv7()",
+      "executeGranted": true,
+      "auditId": "01a10030-b2e6-7e7b-90ba-82a2465856af"
+    },
+    {
+      "plane": "neon",
+      "role": "athyper_definer_event",
+      "function": "shared.uuidv7()",
+      "executeGranted": true,
+      "auditId": "01a10030-b31e-73b2-99d0-ed5d94246d10"
+    },
+    {
+      "plane": "mesh",
+      "role": "athyper_definer_event",
+      "function": "shared.uuidv7()",
+      "executeGranted": true,
+      "auditId": "01a10030-b357-7701-bf7a-78be61d6798f"
+    }
+  ],
+  "ddlModelChanged": false
+}

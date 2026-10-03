@@ -1,0 +1,10 @@
+{
+  "requestId": "d4e15ca6-77b9-4561-a1f5-c3bc6c83c18d",
+  "expectedRevision": 2,
+  "expectedContractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+  "changeSetId": "82c2050c-898b-4f97-b46c-bb14f3a63662",
+  "actorId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+  "action": "approve",
+  "revision": 3,
+  "status": "approved"
+}

@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-03T05:17:28.024039+00:00",
+  "receipts": [
+    {
+      "plane": "studio",
+      "policy": "athyper_definer_event_p_8",
+      "auditId": "01a10032-21df-7bb6-b612-8d9ce03de20e"
+    },
+    {
+      "plane": "neon",
+      "policy": "athyper_definer_event_p_8",
+      "auditId": "01a10032-2218-7065-95e8-b35dc28d9fd1"
+    },
+    {
+      "plane": "mesh",
+      "policy": "athyper_definer_event_p_8",
+      "auditId": "01a10032-2251-747c-9eda-bb3b3bedfe21"
+    }
+  ],
+  "policy": {
+    "relation": "event.authorization_invalidation_outbox",
+    "command": "ALL",
+    "reason": "Preserve administrative global catalog invalidation through the definer without admitting global rows for tenant application sessions.",
+    "using": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, 'athyperadmin'::name, 'MEMBER'::text))",
+    "check": "(scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, 'athyperadmin'::name, 'MEMBER'::text))"
+  }
+}

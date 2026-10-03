@@ -290,6 +290,43 @@ it("masks protected values and denies querying masked fields", async () => {
 // Synthetic entities deliberately have no relationship to their permission names.
 // Published bindings, rather than a domain allowlist, must select exact permissions.
 it.each(["studio", "neon", "mesh"] as const)(
+  "admits valid omitted operation permissions without losing tenant or operation boundaries on %s",
+  async (plane) => {
+    const f = fixture(plane);
+    const omitPermission = <T extends { permissionCode?: string }>(value: T) => {
+      const { permissionCode: _permission, ...rest } = value;
+      return rest;
+    };
+    const descriptor = {
+      ...f.descriptor,
+      operations: Object.fromEntries(Object.entries(f.descriptor.operations).map(
+        ([key, operation]) => [key, omitPermission(operation)],
+      )),
+      authorization: {
+        ...f.descriptor.authorization!,
+        operations: f.descriptor.authorization!.operations.map(omitPermission),
+      },
+    };
+    f.replace(descriptor);
+    const context = { ...f.context, permissions: {
+      ...f.context.permissions,
+      tenantId: f.context.tenantId,
+      principalId: f.context.principalId,
+      planeKey: plane,
+      allowed: [],
+    } };
+    f.refreshContext.mockResolvedValue(context);
+    expect((await f.queries.list({ context, entityCode: descriptor.entityCode })).data).toHaveLength(1);
+    expect((await f.queries.get({ context, entityCode: descriptor.entityCode, recordId: id })).data).toMatchObject({ name: "Malaysia" });
+    expect(f.authorize).not.toHaveBeenCalled();
+    await expect(f.queries.list({ context: { ...context, tenantId: "another-tenant" }, entityCode: descriptor.entityCode })).rejects.toThrow();
+    const { list: _list, ...operations } = descriptor.operations;
+    f.replace({ ...descriptor, operations });
+    await expect(f.queries.list({ context, entityCode: descriptor.entityCode })).rejects.toThrow();
+  },
+);
+
+it.each(["studio", "neon", "mesh"] as const)(
   "uses metadata permissions for previously unknown entities on %s",
   async (plane) => {
     const f = fixture(plane);

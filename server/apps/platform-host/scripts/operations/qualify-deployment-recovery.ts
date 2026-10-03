@@ -23,7 +23,7 @@ try{
   await sql`SET TRANSACTION READ ONLY`.execute(tx);
   await sql`SELECT set_config('app.current_tenant_id',${config.tenantId},true),set_config('app.current_principal_id',${config.publisher.principalId},true)`.execute(tx);
   const original=await assertDeploymentRecoverySource(tx,policy,config.tenantId);
-  report.checks.push("eight_exact_signed_artifact_pins_and_current_compiler");
+  report.checks.push(`${policy.deliveries.length}_exact_signed_artifact_pins_and_current_compiler`);
   for(const releaseId of new Set(policy.deliveries.map(d=>d.releaseId))){
    const value=(await sql<{value:{policy:unknown;sources:{changeSetId:string;graph:MetaEntityGraph}[]}}>`SELECT publication.fn_human_execution_context(${releaseId}::uuid) value`.execute(tx)).rows[0]!.value;
    if(sha256(value.policy)!==sha256(original))throw Error("Original policy changed");
@@ -33,7 +33,7 @@ try{
     for(const pin of member.targets){const target=compileSystemEntityTarget(graph,pin.plane);if(target.artifact.contractHash!==pin.contractHash||target.artifact.descriptorHash!==pin.descriptorHash)throw Error("Target recompilation drift");}
    }
   }
-  report.checks.push("six_original_execution_contexts_and_human_review_receipts","all_source_and_target_hashes_unchanged_under_recovery_build");
+  report.checks.push(`${original.plan.members.length}_original_execution_contexts_and_human_review_receipts`,"all_source_and_target_hashes_unchanged_under_recovery_build");
   return original;
  });
  for(const plane of ["studio","neon","mesh"] as const)await databases[plane].transaction().execute(async tx=>{

@@ -12,6 +12,7 @@ import { readControlPlaneConfiguration } from "../config/control-plane.js";
 import { createControlPlaneIdentityResolver } from "../composition/control-plane/identity.js";
 import { registerControlPlane } from "../composition/control-plane/control-plane.js";
 import { launchControlApi } from "../kernel/launch.js";
+import { captureOperationalError } from "../diagnostics/telemetry/error-collector.js";
 
 // Deliberately does not import main.ts, combined configuration, or bootstrap.
 // No workers, scheduler, tenant routes, or customer-plane adapters are loaded.
@@ -67,6 +68,12 @@ export async function startControlApi() {
     const drain = new HttpDrainController();
     const app = createHttpApplication({ environment: "local", exposeErrorDetails: false, jsonLimit: "64kb",
       drainController: drain, requestDeadlineMs: 15000, openApi: false,
+      onUnexpectedError(error, request) {
+        captureOperationalError(error, {
+          "http.method": request.method,
+          "http.path": request.path,
+        });
+      },
       rateLimit: { windowMs: 60000, maxRequests: 60, scope: "source" },
       configure(application) { registerControlPlane(application, { database, audit, authenticator, authority: config.authority,
         environment: "local", instance: "dev", domainSuffix: "dev.athyper.test",

@@ -1,0 +1,24 @@
+{
+  "receipts": [
+    {
+      "requestId": "dd50e499-100d-45ea-b60a-b1848f9b18b4",
+      "expectedRevision": 1,
+      "expectedContractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+      "changeSetId": "82c2050c-898b-4f97-b46c-bb14f3a63662",
+      "actorId": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "action": "adopt",
+      "revision": 1,
+      "status": "draft"
+    },
+    {
+      "requestId": "c8edb62a-6277-4ce9-9ffa-a4fa64efc079",
+      "expectedRevision": 1,
+      "expectedContractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+      "changeSetId": "82c2050c-898b-4f97-b46c-bb14f3a63662",
+      "actorId": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "action": "submit",
+      "revision": 2,
+      "status": "in_review"
+    }
+  ]
+}

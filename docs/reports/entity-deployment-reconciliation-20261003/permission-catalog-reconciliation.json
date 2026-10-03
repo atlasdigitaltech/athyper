@@ -1,0 +1,56 @@
+{
+  "completedAt": "2026-10-03T05:20:20.219599+00:00",
+  "plane": "neon",
+  "rows": [
+    {
+      "kind": "auditReason",
+      "id": "01a10034-c2d1-73b7-88d0-c44fba7f29d6",
+      "code": "configuration_correction",
+      "requiresComment": true,
+      "auditId": "01a10034-c2de-735d-9b48-e10aa7bc2ffd"
+    },
+    {
+      "id": "c419be77-2067-5472-a4f6-b966f75d9f3d",
+      "canonicalCode": "neon.workforce.address.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published",
+      "auditId": "01a10034-c2e6-7a6a-8d04-e6cdcf6f77d4"
+    },
+    {
+      "id": "e77ae60a-25f2-57ad-8f6b-91dc8a3d29cd",
+      "canonicalCode": "neon.workforce.employee.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published",
+      "auditId": "01a10034-c2ea-797c-8bc8-1bb2017a33ed"
+    },
+    {
+      "id": "d87ae277-ca75-5040-a567-7479c3dde2f3",
+      "canonicalCode": "neon.workforce.external_worker.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published",
+      "auditId": "01a10034-c2ed-734e-aaa2-62e9c51be99c"
+    },
+    {
+      "id": "7d7e0817-5628-5489-a6ae-5d60eddfa661",
+      "canonicalCode": "neon.workforce.person_address_use.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published",
+      "auditId": "01a10034-c2f1-7360-aedc-ff417315f56e"
+    },
+    {
+      "id": "01abd0ed-bd7c-5e79-af7f-ac6ed940a3e4",
+      "canonicalCode": "neon.workforce.person.read",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "status": "published",
+      "auditId": "01a10034-c2f4-77ce-961d-bf7398fc7782"
+    }
+  ],
+  "lifecycle": "suspend/change/republish in one transaction",
+  "ddlModelChanged": false,
+  "grantsChanged": false
+}

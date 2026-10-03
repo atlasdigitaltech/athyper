@@ -45,3 +45,10 @@ it("bounds execution time and binds idempotency to both approved policy and old 
   expect(command).not.toBe(deploymentRecoveryCommand("a".repeat(64),pin.deploymentId));
   expect(command).not.toBe(deploymentRecoveryCommand(policy.originalPolicy.hash,id(99)));
 });
+
+it("recovers the approved concrete instance without widening environment or target",()=>{
+  const f=fixture();f.source.deliveries[0]!.instance="dev";f.source.deliveries[0]!.status="failed";
+  expect(()=>validateDeploymentRecoverySource(f.policy,f.source)).not.toThrow();
+  f.source.deliveries[0]!.environment="production";
+  expect(()=>validateDeploymentRecoverySource(f.policy,f.source)).toThrow("DELIVERY_NOT_RECOVERABLE");
+});

@@ -1,0 +1,114 @@
+{
+  "schema": "athyper.dev-human-reviewed-publication/1",
+  "environment": "local",
+  "instance": "dev",
+  "authorityTenantId": "11111111-1111-4111-8111-111111111111",
+  "policyId": "dev.entity-framework-reconciliation.20261003",
+  "revision": 1,
+  "authorPrincipalId": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+  "publisherPrincipalId": "c0febdd1-491c-46b8-8113-160be767b88d",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "124d55986a5158b5086732e243c55b154b230787cf0c3f4a9859c0c257b429a9"
+  },
+  "plan": {
+    "schema": "athyper.human-reviewed-publication-plan/1",
+    "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+    "members": [
+      {
+        "changeSetId": "82c2050c-898b-4f97-b46c-bb14f3a63662",
+        "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+        "revision": 3,
+        "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+        "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730",
+        "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+        "authorId": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+        "reviewerId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "targets": [
+          {
+            "plane": "studio",
+            "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+            "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730"
+          },
+          {
+            "plane": "neon",
+            "contractHash": "bc26e37b4d75d0448d7dc25efb04fca580aa5f7b6949df4b46993fa99c7b45b4",
+            "descriptorHash": "43b5a1d097b429fc326d435388f982f8e6dff6d1cb295c4a8e006fa6609b7c41"
+          },
+          {
+            "plane": "mesh",
+            "contractHash": "bff1b650be0fc4144347e6d942c52060304a92f126a57ecf1d097ee579386d23",
+            "descriptorHash": "1c6177b7ae5c65c38f8e06982f268dcf72f55e58192158c924fcdccb57c5b3cc"
+          }
+        ]
+      }
+    ]
+  },
+  "predecessors": [
+    {
+      "schema": "athyper.dev-entity-successor-policy/1",
+      "environment": "local",
+      "instance": "dev",
+      "authorityTenantId": "11111111-1111-4111-8111-111111111111",
+      "policyId": "dev.entity-framework-reconciliation.20261003.principal_profile",
+      "revision": 1,
+      "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+      "changeSetId": "82c2050c-898b-4f97-b46c-bb14f3a63662",
+      "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+      "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730",
+      "authorPrincipalId": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+      "publisherPrincipalId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "predecessor": {
+        "authoringReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+        "authoringReleaseNo": 3,
+        "authoringReleaseHash": "6f46a51937da3334ba7053a893a913690a2cf291c4934fabf271128e3554d0cf",
+        "publicationReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+        "publicationReleaseNo": 3,
+        "publicationReleaseHash": "6f46a51937da3334ba7053a893a913690a2cf291c4934fabf271128e3554d0cf",
+        "revisionId": "01a0fe8e-56c8-76a9-a3aa-712c3594dd95",
+        "contractHash": "9f9d2959706376dc1bdff21e5eb1ba943fd9ca393dee1839b11599cd16d38d0b"
+      },
+      "compiler": {
+        "name": "athyper.compiled-entity-artifact",
+        "version": "1.1.0",
+        "buildHash": "124d55986a5158b5086732e243c55b154b230787cf0c3f4a9859c0c257b429a9"
+      },
+      "targets": [
+        {
+          "plane": "studio",
+          "environment": "local",
+          "instance": "dev",
+          "publicationKey": "metadata.entity.principal_profile",
+          "appliedReleaseId": "01a0ff0d-5a80-7fc0-ac39-8d52b71abbc5",
+          "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+          "sourceReleaseNo": 3,
+          "artifactHash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+          "headVersion": 3
+        },
+        {
+          "plane": "neon",
+          "environment": "local",
+          "instance": "dev",
+          "publicationKey": "metadata.entity.principal_profile",
+          "appliedReleaseId": "01a0ff0d-210e-7b9e-b17c-00945e8255f7",
+          "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+          "sourceReleaseNo": 3,
+          "artifactHash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+          "headVersion": 3
+        },
+        {
+          "plane": "mesh",
+          "environment": "local",
+          "instance": "dev",
+          "publicationKey": "metadata.entity.principal_profile",
+          "appliedReleaseId": "01a0ff0d-4e4d-7393-b867-4df2aa00ac9d",
+          "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+          "sourceReleaseNo": 3,
+          "artifactHash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+          "headVersion": 3
+        }
+      ]
+    }
+  ]
+}

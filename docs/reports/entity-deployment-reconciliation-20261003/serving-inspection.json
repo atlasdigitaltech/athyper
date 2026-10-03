@@ -1,0 +1,28 @@
+{
+  "schema": "athyper.entity-serving-qualification-inspection/1",
+  "inspectedAt": "2026-10-03T05:10:26.144Z",
+  "deploymentId": "athyper-dev-source-api-1",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "124d55986a5158b5086732e243c55b154b230787cf0c3f4a9859c0c257b429a9"
+  },
+  "descriptors": [],
+  "failures": [
+    {
+      "plane": "studio",
+      "code": "ENTITY_INVENTORY_UNAVAILABLE",
+      "reason": "Invalid record owner access"
+    },
+    {
+      "plane": "neon",
+      "code": "ENTITY_INVENTORY_UNAVAILABLE",
+      "reason": "Invalid record owner access"
+    },
+    {
+      "plane": "mesh",
+      "code": "ENTITY_INVENTORY_UNAVAILABLE",
+      "reason": "Invalid record owner access"
+    }
+  ]
+}

@@ -181,7 +181,8 @@ BEGIN
     "schemas": [
       "control",
       "event",
-      "runtime_meta"
+      "runtime_meta",
+      "shared"
     ],
     "tables": [
       {
@@ -243,12 +244,14 @@ BEGIN
         "relation": "runtime_meta.authorization_epoch",
         "privileges": [
           "INSERT",
-          "SELECT"
+          "SELECT",
+          "UPDATE"
         ]
       }
     ],
     "functions": [
-      "event.fn_authorization_bump_epoch(text, uuid, text)"
+      "event.fn_authorization_bump_epoch(text, uuid, text)",
+      "shared.uuidv7()"
     ]
   },
   {
@@ -486,7 +489,8 @@ BEGIN
       "public.digest(text, text)",
       "shared.current_tenant_id()",
       "shared.current_tenant_id_soft()",
-      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)"
+      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)",
+      "shared.uuidv7()"
     ],
     "policies": [
       {
@@ -2578,7 +2582,8 @@ BEGIN
       "public.digest(text, text)",
       "shared.current_tenant_id()",
       "shared.current_tenant_id_soft()",
-      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)"
+      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)",
+      "shared.uuidv7()"
     ],
     "policies": [
       {
@@ -2632,6 +2637,13 @@ BEGIN
         "command": "SELECT",
         "reason": "Preserves the existing entity_owner_admin_read policy only when the original session is a member of athyperapp.",
         "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND shared.fn_entity_owner_admin_access(''master''::text, ''principal''::text, tenant_id, false))"
+      },
+      {
+        "relation": "event.authorization_invalidation_outbox",
+        "command": "ALL",
+        "reason": "Preserve administrative global catalog invalidation through the definer without admitting global rows for tenant application sessions.",
+        "using": "(scope_kind = ''global'' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text))",
+        "check": "(scope_kind = ''global'' AND tenant_id IS NULL AND plane_code IS NULL AND pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text))"
       }
     ]
   },
@@ -4476,7 +4488,8 @@ BEGIN
       "publication.fn_transition_release(uuid, publication.release_status_d, uuid, uuid, jsonb)",
       "shared.current_tenant_id()",
       "shared.current_tenant_id_soft()",
-      "snapshot.fn_compute_entity_release_artifact_hash(uuid, uuid, uuid, text, text, text, jsonb)"
+      "snapshot.fn_compute_entity_release_artifact_hash(uuid, uuid, uuid, text, text, text, jsonb)",
+      "shared.uuidv7()"
     ],
     "policies": [
       {
@@ -4661,7 +4674,8 @@ BEGIN
       "runtime_meta.fn_stage_applied_release_payload(uuid, jsonb)",
       "runtime_meta.fn_stage_entity_projection(uuid, jsonb)",
       "runtime_meta.fn_stage_release(text, uuid, bigint, uuid, text, jsonb)",
-      "shared.current_tenant_id_soft()"
+      "shared.current_tenant_id_soft()",
+      "shared.uuidv7()"
     ],
     "policies": [
       {

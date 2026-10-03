@@ -1,0 +1,23 @@
+{
+  "schema": "athyper.entity-relationship-preflight/1",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "97640338aff19416fd1654fa1d317eb004e5b0fdf790863685ab97a6aad7c042"
+  },
+  "planes": [
+    {
+      "plane": "studio",
+      "passed": true
+    },
+    {
+      "plane": "neon",
+      "passed": true
+    },
+    {
+      "plane": "mesh",
+      "passed": true
+    }
+  ],
+  "readOnly": true
+}

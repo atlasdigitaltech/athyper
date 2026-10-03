@@ -4,7 +4,11 @@ import { expect, it } from "vitest";
 import { compileTableEntityProduct, parseTableEntityProduct } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { qualifyCoordinatedProductRelationships, qualifyPublishedRelationships } from "./relationship-qualification.js";
 
-function fixture(options: { unique?: boolean; foreignKey?: boolean } = {}) {
+function fixture(options: {
+  unique?: boolean;
+  foreignKey?: boolean;
+  published?: readonly { entity_code: string; artifact: unknown; release_id: string; release_no: number }[];
+} = {}) {
   const graphs = ["principal", "principal_profile", "principal_notification_preference", "principal_ui_profile"].map(code => {
     const product = parseTableEntityProduct(JSON.parse(readFileSync(new URL(
       `../../../../../../../metadata/products/shared/entities/${code}/definition.json`, import.meta.url), "utf8")));
@@ -16,7 +20,7 @@ function fixture(options: { unique?: boolean; foreignKey?: boolean } = {}) {
   });
   const database = new Kysely<Record<string, never>>({ dialect: new PostgresDialect({ pool: {
     end: async () => {}, connect: async () => ({ release() {}, query: async (statement: string) => {
-      if (statement.includes("release_activation_head")) return { rows: [] };
+      if (statement.includes("release_activation_head")) return { rows: options.published ?? [] };
       if (statement.includes("pg_index")) return { rows: options.unique === false ? [] : [{ columns: ["tenant_id", "principal_id"] }] };
       if (statement.includes("pg_constraint")) return { rows: options.foreignKey === false ? [] : [{ mapping: [
         { source: "tenant_id", target: "tenant_id" }, { source: "id", target: "principal_id" },
@@ -33,6 +37,19 @@ it("qualifies the complete prospective group without weakening the single-releas
     await expect(qualifyPublishedRelationships(f.graphs[0]!, f.database as never)).rejects.toThrow("ACTIVE_DEPENDENCY_REQUIRED");
     await expect(qualifyCoordinatedProductRelationships(f.graphs, f.database as never)).resolves.toBeUndefined();
     await expect(qualifyPublishedRelationships(f.graphs[0]!, f.database as never)).rejects.toThrow("ACTIVE_DEPENDENCY_REQUIRED");
+  } finally { await f.database.destroy(); }
+});
+it("qualifies a prospective replacement without parsing the retired predecessor format", async () => {
+  const f = fixture({ published: [{ entity_code: "principal_profile", artifact: { content: { schema: "retired-format" } }, release_id: "previous", release_no: 1 }] });
+  try {
+    await expect(qualifyCoordinatedProductRelationships(f.graphs, f.database as never)).resolves.toBeUndefined();
+    await expect(qualifyPublishedRelationships(f.graphs[1]!, f.database as never)).resolves.toBeUndefined();
+  } finally { await f.database.destroy(); }
+});
+it("still rejects invalid metadata for an unchanged published dependency", async () => {
+  const f = fixture({ published: [{ entity_code: "unchanged_dependency", artifact: { content: { schema: "retired-format" } }, release_id: "previous", release_no: 1 }] });
+  try {
+    await expect(qualifyCoordinatedProductRelationships(f.graphs, f.database as never)).rejects.toThrow();
   } finally { await f.database.destroy(); }
 });
 it.each(["unique", "foreignKey"] as const)("retains the actual storage %s requirement", async gate => {

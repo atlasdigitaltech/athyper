@@ -1,0 +1,44 @@
+{
+  "at": "2026-10-03T05:17:59.906066+00:00",
+  "receipts": [
+    {
+      "plane": "studio",
+      "role": "athyper_bypass_event",
+      "privilege": "UPDATE",
+      "relation": "runtime_meta.authorization_epoch",
+      "auditId": "01a10032-5ed0-702f-b808-58433d2b296e"
+    },
+    {
+      "plane": "neon",
+      "role": "athyper_bypass_event",
+      "privilege": "UPDATE",
+      "relation": "runtime_meta.authorization_epoch",
+      "auditId": "01a10032-5f09-7530-bd1c-b2fea22eed58"
+    },
+    {
+      "plane": "mesh",
+      "role": "athyper_bypass_event",
+      "privilege": "UPDATE",
+      "relation": "runtime_meta.authorization_epoch",
+      "auditId": "01a10032-5f41-7095-b1e9-6a0c690eb2ab"
+    },
+    {
+      "plane": "studio",
+      "role": "athyper_bypass_event",
+      "function": "shared.uuidv7()",
+      "auditId": "01a10032-9e69-7500-9931-3c6dc43a5d1f"
+    },
+    {
+      "plane": "neon",
+      "role": "athyper_bypass_event",
+      "function": "shared.uuidv7()",
+      "auditId": "01a10032-9ea2-7355-a2d5-6d59be9a5e7e"
+    },
+    {
+      "plane": "mesh",
+      "role": "athyper_bypass_event",
+      "function": "shared.uuidv7()",
+      "auditId": "01a10032-9eda-7380-ab36-c5aed0b4aa8d"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+ENTITY FRAMEWORK DEPLOYMENT RECONCILIATION — IN PROGRESS
+
+Source correction 141869574 already implemented generic omitted-permission behavior. This turn adds a generic successor relationship-qualification ordering fix and control API operational-error logging. Host build passed. Owner authorized required publication/deployment checks: 6 relationship regression checks, 14 Entity authorization checks, and relationship preflight against all three DEV planes passed. Native contract validation passed with zero declared cases; it is not behavioral coverage.
+
+The Principal Profile successor is saved in the existing shared authoring repository. Platform Admin adoption/proposal and independent Platform Owner approval are recorded. All other metadata semantics and source approvals are preserved. Persisted draft and exact target compiler outputs are retained beside candidate.json; offline candidate files are earlier preparation evidence, not final publication artifacts.
+
+Five exact Neon Entity read permissions now have low risk and requires_mfa=false. IDs, role/group grants and scope definitions are preserved. Changes used suspend/change/republish in one transaction and existing audit/invalidation triggers. A reusable configuration_correction reason was registered under the authority tenant, requiring a comment. Each permission change has before/after audit evidence. Other IAM/MFA requirements were unchanged.
+
+Missing database dependencies for audit UUID allocation, invalidation UUID allocation and epoch UPSERT were restored to existing bounded roles. The global invalidation RLS policy admits administrative sessions only; a rolled-back application-role check confirmed global invalidation remains denied. Canonical ownership contract/generated privilege SQL reflect these corrections; no table model, foreign key, business data, applied migration or new migration changed.
+
+The first execution attempt stopped before publication because relationship qualification parsed the obsolete predecessor before its approved replacement. The shared fix passed checks. Owner approved the exact replacement policy and atomic retirement of the old policy. The native publisher dispatched source release cf8b7486-a683-4870-b82d-5abb65b49c08, number 4, and three target artifacts are signed.
+
+Worker database reconciliation: aligned the original approved-source reader with the existing dedicated product-publication function owner; ordinary worker authority reads now return three targets and another tenant returns zero. Restored exact UUID-generator EXECUTE dependencies for publication and runtime-meta function owners. Audited transactions retained in worker-privilege-reconciliation.json. The first three deployment attempts failed before staging; rollback-only native staging now passes on Studio, Neon and Mesh.
+
+The existing recovery path admitted only wildcard attempts. Shared recovery now also admits the original policy's concrete instance and environment, selects original attempts without absorbing recovery attempts, and retains exact artifact/source pins, tenant boundaries, compiler binding, independent review and acknowledgement checks. Twenty focused recovery checks and host build passed. Actual recovery preflight passed for one source and three targets. No new migration or bespoke script was created.
+
+Admin recovery proposal 2c4419af-4511-422a-913d-c4770dca2f44 is recorded, hash d036d19fed5d37a4924c3f7a65aaff7127770991ca3bbd194d4cf38345ce333d.
+
+Remaining: independent Owner approval of deployment-recovery.json; execute recovery and verify all three activation heads; remove exactly pinned retired routines/triggers after metadata replacement; verify serving readiness. Eleven retired function instances and eight triggers still exist. Private rollback definitions, ownership and ACLs are backed up and hashed. Business tables/columns/FKs/data and historical signatures are preserved. Do not drop with CASCADE, run canonical manifests wholesale, or edit signed artifacts.
+
+DEV serves this checkout directly. Installed Principal Profile artifacts still carry the retired sourceAuthority binding until recovery activates. Implementation and signing are complete; live activation and runtime acceptance are not claimed. Existing unrelated workflow-maintenance permission errors remain outside this task.

@@ -390,6 +390,7 @@ ALTER FUNCTION publication.fn_transition_system_entity_change_set(uuid, bigint, 
 ALTER FUNCTION publication.fn_create_system_entity_release(uuid, uuid, bigint, jsonb, text[], uuid) OWNER TO athyper_definer_product_publication;
 ALTER FUNCTION publication.fn_store_system_entity_artifact(uuid, text, jsonb, jsonb) OWNER TO athyper_definer_product_publication;
 ALTER FUNCTION publication.fn_link_system_entity_release(uuid) OWNER TO athyper_definer_product_publication;
+ALTER FUNCTION publication.fn_compiled_entity_compilation_source(uuid) OWNER TO athyper_definer_product_publication;
 ALTER FUNCTION publication.fn_compiled_entity_compilation_source_v2(uuid) OWNER TO athyper_definer_product_publication;
 ALTER FUNCTION publication.fn_entity_successor_saved_graph(uuid, uuid) OWNER TO athyper_definer_product_publication;
 ALTER FUNCTION publication.fn_entity_successor_enrollment_source(jsonb) OWNER TO athyper_definer_product_publication;

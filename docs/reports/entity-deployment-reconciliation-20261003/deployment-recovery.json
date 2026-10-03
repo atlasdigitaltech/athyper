@@ -1,0 +1,49 @@
+{
+  "schema": "athyper.dev-coordinated-deployment-recovery/1",
+  "policyId": "dev.coordinated-recovery.ac759a18-720e-4fd4-89da-4ce3283b955d",
+  "revision": 1,
+  "environment": "local",
+  "instance": "dev",
+  "authorityTenantId": "11111111-1111-4111-8111-111111111111",
+  "authorPrincipalId": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+  "publisherPrincipalId": "c0febdd1-491c-46b8-8113-160be767b88d",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+  },
+  "expiresAt": "2026-10-06T05:42:21.686Z",
+  "originalPolicy": {
+    "id": "ac759a18-720e-4fd4-89da-4ce3283b955d",
+    "hash": "3b4bcfd74e1cf553ede1d117aae6af5d3afd19ac10b226ba2066fd9ade35f297",
+    "version": 1,
+    "compilerHash": "97640338aff19416fd1654fa1d317eb004e5b0fdf790863685ab97a6aad7c042",
+    "coordinationHash": "9b75b32b0586f9f36a3306ea033ca69d18f9a4ef00201e2a5ec051db72da887c"
+  },
+  "deliveries": [
+    {
+      "deploymentId": "01a10045-33f7-7030-a4bb-a5ce53f8098e",
+      "artifactId": "4b92dc83-f96a-455a-8b13-d803c9d0a06d",
+      "artifactHash": "349f26d42a16e6375cb62da28b35907e6601ef8e6935a66355e7bc8280a16075",
+      "releaseId": "cf8b7486-a683-4870-b82d-5abb65b49c08",
+      "plane": "mesh",
+      "attempt": 1
+    },
+    {
+      "deploymentId": "01a10045-33f7-7754-b8ee-725114c42984",
+      "artifactId": "ffa48254-dfd5-461f-b232-158bdb4d1e4b",
+      "artifactHash": "5b82e67dab5c6d11e739cdd0cbc9f2da4ede6aca821a338ca17a548825a22b04",
+      "releaseId": "cf8b7486-a683-4870-b82d-5abb65b49c08",
+      "plane": "studio",
+      "attempt": 1
+    },
+    {
+      "deploymentId": "01a10045-3550-72ff-b439-5b4ea99079fb",
+      "artifactId": "c66ac0ca-4323-4531-8756-d5f77a7686be",
+      "artifactHash": "83ad7618cfebe093c5b1a985d4d71028b72e30aae3c18d8bff13f6574c6a415b",
+      "releaseId": "cf8b7486-a683-4870-b82d-5abb65b49c08",
+      "plane": "neon",
+      "attempt": 1
+    }
+  ]
+}

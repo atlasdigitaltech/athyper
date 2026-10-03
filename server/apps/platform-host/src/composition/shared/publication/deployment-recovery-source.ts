@@ -14,6 +14,7 @@ export interface DeploymentRecoverySource {
 export function validateDeploymentRecoverySource(policy: DeploymentRecoveryPolicy, source: DeploymentRecoverySource) {
   const original = parseHumanReviewedExecutionPolicy(source.policy);
   requireRecovery(source.version === policy.originalPolicy.version && original.authorityTenantId === policy.authorityTenantId
+    && original.environment === policy.environment && original.instance === policy.instance
     && original.authorPrincipalId === policy.authorPrincipalId && original.publisherPrincipalId === policy.publisherPrincipalId
     && original.compiler.buildHash === policy.originalPolicy.compilerHash && sha256(original.plan) === policy.originalPolicy.coordinationHash,
   "ORIGINAL_CHANGED");
@@ -26,7 +27,7 @@ export function validateDeploymentRecoverySource(policy: DeploymentRecoveryPolic
     const d = matches[0]!;
     for (const key of ["artifactId", "artifactHash", "releaseId", "plane", "attempt"] as const)
       requireRecovery(d[key] === pin[key], "DELIVERY_CHANGED");
-    requireRecovery(d.environment === "local" && d.instance === "*" && d.artifactStatus === "signed" && d.sourceStatus === "published"
+    requireRecovery(d.environment === policy.environment && (d.instance === "*" || d.instance === original.instance) && d.artifactStatus === "signed" && d.sourceStatus === "published"
       && ["dispatched", "failed"].includes(d.status) && !d.acknowledged, "DELIVERY_NOT_RECOVERABLE");
     const member = original.plan.members.find(m => m.changeSetId === d.changeSetId && m.entityId === d.entityId);
     const key = `${d.changeSetId}:${d.plane}`;

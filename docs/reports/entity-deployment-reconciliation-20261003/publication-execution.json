@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-03T05:21:14.812Z",
+  "httpStatus": 500,
+  "result": {
+    "type": "urn:athyper:problem:internal-error",
+    "title": "Internal Server Error",
+    "status": 500,
+    "detail": "An unexpected error occurred",
+    "instance": "/api/studio/publication-policies/454002c1-716b-429c-bc60-ddc1781b7272/execute",
+    "code": "INTERNAL_ERROR",
+    "requestId": "67bf59f7-d6d4-4660-a003-29afe1b1a2cb"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "athyper.deployment-recovery-preflight/1",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+  },
+  "checks": [
+    "3_exact_signed_artifact_pins_and_current_compiler",
+    "1_original_execution_contexts_and_human_review_receipts",
+    "all_source_and_target_hashes_unchanged_under_recovery_build",
+    "studio:publisher_identity_epoch_and_predecessor_heads",
+    "neon:publisher_identity_epoch_and_predecessor_heads",
+    "mesh:publisher_identity_epoch_and_predecessor_heads"
+  ],
+  "passed": true,
+  "deliveryCount": 3,
+  "sourceCount": 1
+}

@@ -1,0 +1,13 @@
+{
+  "id": "ac759a18-720e-4fd4-89da-4ce3283b955d",
+  "version": 1,
+  "hash": "3b4bcfd74e1cf553ede1d117aae6af5d3afd19ac10b226ba2066fd9ade35f297",
+  "status": "active",
+  "replaced": [
+    {
+      "id": "454002c1-716b-429c-bc60-ddc1781b7272",
+      "hash": "534fab9051ab7af79373dffc6234fa143b0b43e7495619f2c1823b7bb7937a98"
+    }
+  ],
+  "replayed": false
+}

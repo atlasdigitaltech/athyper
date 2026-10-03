@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-03T05:42:20.560516+00:00",
+  "auditId": "01a10048-e887-7214-a5f8-17ad6c30abba",
+  "functions": [
+    {
+      "function": "fn_coordinated_deployment_recovery_source",
+      "backup": "/home/chandravel_natarajan/.athyper/instances/dev/workspace/entity-reconciliation-20261003/fn_coordinated_deployment_recovery_source-before.sql",
+      "beforeSha256": "c84ff5519692aa7ab7826876f1f4c9176c637e5018fb9288d29ea5b8ec61ef35",
+      "installedSourceSha256": "87547383f1a698213519d7bd5909c9462dc3955669a9a62f7f0781a7e1958445"
+    },
+    {
+      "function": "fn_transition_deployment",
+      "backup": "/home/chandravel_natarajan/.athyper/instances/dev/workspace/entity-reconciliation-20261003/fn_transition_deployment-before.sql",
+      "beforeSha256": "9c2c221611ef946b642ba456796f890a5a2913e5e1b8a0f4d4f6aca2bf335798",
+      "installedSourceSha256": "688b5fb41d89d7a78dbce5ba498023552d21da36d653c4b9b2e3540c7af6539f"
+    }
+  ]
+}

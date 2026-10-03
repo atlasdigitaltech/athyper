@@ -249,6 +249,12 @@ BEGIN
     "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
   },
   {
+    "signature": "publication.fn_compiled_entity_compilation_source(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
     "signature": "publication.fn_compiled_entity_compilation_source_v2(uuid)",
     "owner": "athyper_definer_product_publication",
     "rowSecurityOff": false,

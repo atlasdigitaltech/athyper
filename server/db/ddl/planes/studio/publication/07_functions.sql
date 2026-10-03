@@ -183,7 +183,7 @@ BEGIN
       OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(retry_source->'deliveries') old
         WHERE old->>'deploymentId'=retry_delivery->>'deploymentId' AND old->>'artifactId'=v_row.artifact_id::text
           AND old->>'artifactHash'=retry_delivery->>'artifactHash' AND old->>'artifactStatus'='signed'
-          AND old->>'status'='failed' AND old->>'instance'='*' AND (old->>'acknowledged')::boolean=false)
+          AND old->>'status'='failed' AND old->>'instance' IN ('*',retry_policy->>'instance') AND (old->>'acknowledged')::boolean=false)
       OR NOT EXISTS(SELECT 1 FROM publication.deployment_event ev WHERE ev.deployment_id=v_row.id AND ev.to_status='dispatched'
         AND ev.evidence->>'recoveryPolicyId'=retry_definition.id::text
         AND ev.evidence->>'recoveryPolicyHash'=retry_definition.definition_hash

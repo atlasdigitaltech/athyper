@@ -1,0 +1,1568 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/1.0",
+  "compiler": {
+    "name": "@athyper/meta-entity-compiler",
+    "version": "1.1.0"
+  },
+  "contractHash": "bc26e37b4d75d0448d7dc25efb04fca580aa5f7b6949df4b46993fa99c7b45b4",
+  "descriptorHash": "43b5a1d097b429fc326d435388f982f8e6dff6d1cb295c4a8e006fa6609b7c41",
+  "descriptor": {
+    "authorization": {
+      "directory": {
+        "operation": "list",
+        "population": "tenant"
+      },
+      "entityCode": "principal_profile",
+      "fieldPolicies": [
+        {
+          "fields": [
+            "id"
+          ],
+          "key": "id",
+          "queryUses": [],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": []
+        },
+        {
+          "fields": [
+            "tenant_id"
+          ],
+          "key": "tenant_id",
+          "queryUses": [],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": []
+        },
+        {
+          "fields": [
+            "principal_id"
+          ],
+          "key": "principal_id",
+          "queryUses": [],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": []
+        },
+        {
+          "fields": [
+            "given_name"
+          ],
+          "key": "given_name",
+          "queryUses": [
+            "search",
+            "filter",
+            "sort",
+            "group"
+          ],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": [
+            "create",
+            "patch"
+          ]
+        },
+        {
+          "fields": [
+            "family_name"
+          ],
+          "key": "family_name",
+          "queryUses": [
+            "search",
+            "filter",
+            "sort",
+            "group"
+          ],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": [
+            "create",
+            "patch"
+          ]
+        },
+        {
+          "fields": [
+            "preferred_name"
+          ],
+          "key": "preferred_name",
+          "queryUses": [
+            "search",
+            "filter",
+            "sort",
+            "group"
+          ],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": [
+            "create",
+            "patch"
+          ]
+        },
+        {
+          "fields": [
+            "display_name"
+          ],
+          "key": "display_name",
+          "queryUses": [
+            "search",
+            "filter",
+            "sort",
+            "group"
+          ],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": [
+            "create",
+            "patch"
+          ]
+        },
+        {
+          "fields": [
+            "avatar_url"
+          ],
+          "key": "avatar_url",
+          "queryUses": [],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": [
+            "create",
+            "patch"
+          ]
+        },
+        {
+          "fields": [
+            "record_version"
+          ],
+          "key": "record_version",
+          "queryUses": [],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": []
+        },
+        {
+          "fields": [
+            "created_at"
+          ],
+          "key": "created_at",
+          "queryUses": [
+            "search",
+            "filter",
+            "sort",
+            "group"
+          ],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": []
+        },
+        {
+          "fields": [
+            "updated_at"
+          ],
+          "key": "updated_at",
+          "queryUses": [
+            "search",
+            "filter",
+            "sort",
+            "group"
+          ],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": []
+        },
+        {
+          "fields": [
+            "created_by"
+          ],
+          "key": "created_by",
+          "queryUses": [],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": []
+        },
+        {
+          "fields": [
+            "updated_by"
+          ],
+          "key": "updated_by",
+          "queryUses": [],
+          "readOperation": "read",
+          "representation": "plain",
+          "writeOperations": []
+        }
+      ],
+      "operations": [
+        {
+          "effect": "read",
+          "key": "list",
+          "permissionCode": "common.identity.principal_profile.read",
+          "requiresParentRead": false,
+          "requiresPreflight": false,
+          "scope": "tenant.record.v1",
+          "target": "collection"
+        },
+        {
+          "effect": "read",
+          "key": "read",
+          "permissionCode": "common.identity.principal_profile.read",
+          "requiresParentRead": false,
+          "requiresPreflight": false,
+          "scope": "tenant.record.v1",
+          "target": "existing"
+        },
+        {
+          "effect": "write",
+          "key": "create",
+          "permissionCode": "common.identity.principal_profile.edit",
+          "requiresParentRead": false,
+          "requiresPreflight": false,
+          "scope": "tenant.record.v1",
+          "target": "proposed"
+        },
+        {
+          "effect": "write",
+          "key": "patch",
+          "permissionCode": "common.identity.principal_profile.edit",
+          "requiresParentRead": false,
+          "requiresPreflight": false,
+          "scope": "tenant.record.v1",
+          "target": "existing"
+        }
+      ],
+      "ownership": "tenant.record.v1",
+      "planeKey": "neon",
+      "recordReadOperation": "read",
+      "relationships": [],
+      "schemaVersion": 1,
+      "surfaces": []
+    },
+    "authorizationRuntime": {
+      "bindings": [
+        {
+          "handler": "entity.record.create.v1",
+          "operation": "create",
+          "resolver": "tenant.record.v1"
+        },
+        {
+          "handler": "entity.record.list.v1",
+          "operation": "list",
+          "resolver": "tenant.record.v1"
+        },
+        {
+          "handler": "entity.record.patch.v1",
+          "operation": "patch",
+          "resolver": "tenant.record.v1"
+        },
+        {
+          "handler": "entity.record.read.v1",
+          "operation": "read",
+          "resolver": "tenant.record.v1"
+        }
+      ],
+      "runtimeVersion": "entity-authorization.v1",
+      "schemaVersion": 1
+    },
+    "changeCaseBindings": [],
+    "classProfiles": [],
+    "entity": {
+      "entityClass": "configuration",
+      "entityCode": "principal_profile",
+      "ownershipModel": "system"
+    },
+    "fieldPolicyBindings": [],
+    "fieldReferenceBindings": [],
+    "fields": [
+      {
+        "cardinality": "one",
+        "dataClassification": "internal",
+        "dataType": "datetime",
+        "fieldKey": "created_at",
+        "id": "2bfe469a-4ff2-4ff4-8130-a57819f66273",
+        "status": "active",
+        "storagePath": "created_at",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "valueOrigin": "stored",
+        "writeMode": "read_only"
+      },
+      {
+        "cardinality": "one",
+        "dataClassification": "internal",
+        "dataType": "integer",
+        "fieldKey": "record_version",
+        "id": "35a0577f-bcc4-417c-92c5-0e8c440c9a8a",
+        "status": "active",
+        "storagePath": "record_version",
+        "typeConfig": {
+          "kind": "integer"
+        },
+        "valueOrigin": "stored",
+        "writeMode": "read_only"
+      },
+      {
+        "cardinality": "one",
+        "dataClassification": "internal",
+        "dataType": "uuid",
+        "fieldKey": "created_by",
+        "id": "1acdd8c9-ae0b-4a87-8ff9-25340de4098f",
+        "status": "active",
+        "storagePath": "created_by",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "valueOrigin": "stored",
+        "writeMode": "read_only"
+      },
+      {
+        "cardinality": "one",
+        "dataClassification": "internal",
+        "dataType": "uuid",
+        "fieldKey": "id",
+        "id": "b324716b-155e-4a8f-a784-14d3158d3008",
+        "status": "active",
+        "storagePath": "id",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "valueOrigin": "stored",
+        "writeMode": "read_only"
+      },
+      {
+        "cardinality": "one",
+        "dataClassification": "internal",
+        "dataType": "uuid",
+        "fieldKey": "principal_id",
+        "id": "3735b7c3-1d3b-4281-a5d2-a78521de9ec7",
+        "status": "active",
+        "storagePath": "principal_id",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "valueOrigin": "stored",
+        "writeMode": "read_only"
+      },
+      {
+        "cardinality": "one",
+        "dataClassification": "internal",
+        "dataType": "uuid",
+        "fieldKey": "tenant_id",
+        "id": "069e6ac7-478a-4475-bb7f-34c9e20de632",
+        "status": "active",
+        "storagePath": "tenant_id",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "valueOrigin": "stored",
+        "writeMode": "read_only"
+      },
+      {
+        "cardinality": "zero_or_one",
+        "dataClassification": "internal",
+        "dataType": "datetime",
+        "fieldKey": "updated_at",
+        "id": "3c15edac-b124-4021-96fc-00c4bb34017c",
+        "status": "active",
+        "storagePath": "updated_at",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "valueOrigin": "stored",
+        "writeMode": "read_only"
+      },
+      {
+        "cardinality": "zero_or_one",
+        "dataClassification": "internal",
+        "dataType": "uuid",
+        "fieldKey": "updated_by",
+        "id": "96ef63c3-9891-469a-95bc-30ab1ecfd8ab",
+        "status": "active",
+        "storagePath": "updated_by",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "valueOrigin": "stored",
+        "writeMode": "read_only"
+      },
+      {
+        "cardinality": "zero_or_one",
+        "dataClassification": "pii",
+        "dataType": "string",
+        "fieldKey": "avatar_url",
+        "id": "7b39427b-fdbb-4183-93ef-a8d0d3e62be3",
+        "status": "active",
+        "storagePath": "avatar_url",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 2048,
+          "min_length": 1
+        },
+        "valueOrigin": "stored",
+        "writeMode": "mutable"
+      },
+      {
+        "cardinality": "zero_or_one",
+        "dataClassification": "pii",
+        "dataType": "string",
+        "fieldKey": "display_name",
+        "id": "23ac10cc-2219-4b46-9061-2263c9fb21ef",
+        "status": "active",
+        "storagePath": "display_name",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 256,
+          "min_length": 1
+        },
+        "valueOrigin": "stored",
+        "writeMode": "mutable"
+      },
+      {
+        "cardinality": "zero_or_one",
+        "dataClassification": "pii",
+        "dataType": "string",
+        "fieldKey": "family_name",
+        "id": "2f9ea215-82e8-4bf5-881f-4824b2990aaf",
+        "status": "active",
+        "storagePath": "family_name",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 128,
+          "min_length": 1
+        },
+        "valueOrigin": "stored",
+        "writeMode": "mutable"
+      },
+      {
+        "cardinality": "zero_or_one",
+        "dataClassification": "pii",
+        "dataType": "string",
+        "fieldKey": "given_name",
+        "id": "e017cf83-35f9-4e5b-a492-1085d7284929",
+        "status": "active",
+        "storagePath": "given_name",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 128,
+          "min_length": 1
+        },
+        "valueOrigin": "stored",
+        "writeMode": "mutable"
+      },
+      {
+        "cardinality": "zero_or_one",
+        "dataClassification": "pii",
+        "dataType": "string",
+        "fieldKey": "preferred_name",
+        "id": "3fd37870-553f-46cd-bf8d-9159caf45deb",
+        "status": "active",
+        "storagePath": "preferred_name",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 128,
+          "min_length": 1
+        },
+        "valueOrigin": "stored",
+        "writeMode": "mutable"
+      }
+    ],
+    "flowSteps": [],
+    "flows": [],
+    "formPresentation": {
+      "create": {
+        "help": {
+          "avatar_url": "URL of your profile photo. Uploads are available only through an authorized file capability.",
+          "display_name": "Name shown in your profile. Login and security settings are managed separately."
+        },
+        "sections": [
+          {
+            "fields": [
+              "given_name",
+              "family_name",
+              "preferred_name",
+              "display_name"
+            ],
+            "key": "names",
+            "label": "Names"
+          },
+          {
+            "fields": [
+              "avatar_url"
+            ],
+            "key": "photo",
+            "label": "Photo"
+          }
+        ],
+        "submitLabel": "Set up profile"
+      },
+      "edit": {
+        "help": {
+          "avatar_url": "URL of your profile photo. Uploads are available only through an authorized file capability.",
+          "display_name": "Name shown in your profile. Login and security settings are managed separately."
+        },
+        "sections": [
+          {
+            "fields": [
+              "given_name",
+              "family_name",
+              "preferred_name",
+              "display_name"
+            ],
+            "key": "names",
+            "label": "Names"
+          },
+          {
+            "fields": [
+              "avatar_url"
+            ],
+            "key": "photo",
+            "label": "Photo"
+          }
+        ],
+        "submitLabel": "Save profile"
+      },
+      "meaningfulFields": [
+        "given_name",
+        "family_name",
+        "preferred_name",
+        "display_name",
+        "avatar_url"
+      ],
+      "schemaVersion": 1
+    },
+    "keyFields": [
+      {
+        "entityFieldId": "069e6ac7-478a-4475-bb7f-34c9e20de632",
+        "entityKeyId": "08e4e74b-1e5e-4f95-ae92-faf247396bb4",
+        "id": "cdba7600-2c3c-4995-9ca0-028b41be29a9",
+        "position": 1
+      },
+      {
+        "entityFieldId": "3735b7c3-1d3b-4281-a5d2-a78521de9ec7",
+        "entityKeyId": "08e4e74b-1e5e-4f95-ae92-faf247396bb4",
+        "id": "6f65d00a-5113-4e8a-8410-23aea2db5d1d",
+        "position": 2
+      },
+      {
+        "entityFieldId": "b324716b-155e-4a8f-a784-14d3158d3008",
+        "entityKeyId": "8062e73b-b8dc-416d-ad44-d9657f4fef82",
+        "id": "bcbe06b3-79cb-4da5-b70c-81086ce8ad3e",
+        "position": 1
+      }
+    ],
+    "keys": [
+      {
+        "id": "08e4e74b-1e5e-4f95-ae92-faf247396bb4",
+        "keyKey": "natural",
+        "keyKind": "natural",
+        "nullSemantics": "not_allowed",
+        "status": "active",
+        "uniquenessScope": "tenant"
+      },
+      {
+        "id": "8062e73b-b8dc-416d-ad44-d9657f4fef82",
+        "keyKey": "primary",
+        "keyKind": "primary",
+        "nullSemantics": "not_allowed",
+        "status": "active",
+        "uniquenessScope": "global"
+      }
+    ],
+    "lifecycleBindings": [],
+    "lifecycleOperationBindings": [],
+    "listPresentation": {
+      "defaultState": {
+        "columns": [
+          "given_name",
+          "family_name",
+          "preferred_name",
+          "display_name",
+          "avatar_url"
+        ],
+        "density": "comfortable",
+        "mode": "table",
+        "sort": [
+          {
+            "direction": "asc",
+            "field": "display_name"
+          }
+        ]
+      },
+      "experience": {
+        "actions": [],
+        "header": {
+          "title": {
+            "defaultLocale": "en",
+            "values": {
+              "en": "Profile"
+            }
+          }
+        },
+        "routes": [],
+        "schemaVersion": 1
+      },
+      "identityField": "id",
+      "limits": {
+        "allowedPageSizes": [
+          10,
+          25,
+          50,
+          100
+        ],
+        "countMode": "exact",
+        "defaultPageSize": 25,
+        "maxSortLevels": 3
+      },
+      "schemaVersion": 1,
+      "search": {
+        "minimumQueryLength": 1,
+        "profileKey": "default"
+      },
+      "supportedModes": [
+        "table",
+        "compact"
+      ],
+      "title": "Profile"
+    },
+    "materializationBindings": [],
+    "materializationFieldMappings": [],
+    "numberingBindings": [],
+    "operationContextRequirements": [],
+    "operationPermissions": [
+      {
+        "entityOperationId": "4926d8e2-abfb-4ba5-8b05-3c792bbf525c",
+        "id": "968634e8-d6d0-42ed-b81d-d8295e092f62",
+        "permissionCode": "common.identity.principal_profile.edit",
+        "permissionKind": "capability",
+        "status": "active",
+        "targetPlane": "neon"
+      },
+      {
+        "entityOperationId": "bd20d32b-292e-4703-8dc0-cc1207287b83",
+        "id": "bd22aa3b-893d-49b6-8633-d44e9398183c",
+        "permissionCode": "common.identity.principal_profile.read",
+        "permissionKind": "capability",
+        "status": "active",
+        "targetPlane": "neon"
+      },
+      {
+        "entityOperationId": "c40b6e96-6b87-45d4-83cb-ddf4a0323bec",
+        "id": "03da477d-8bc2-4738-96d8-e5aa3968367b",
+        "permissionCode": "common.identity.principal_profile.read",
+        "permissionKind": "capability",
+        "status": "active",
+        "targetPlane": "neon"
+      },
+      {
+        "entityOperationId": "efd6f79a-2420-4db5-b22e-2935739eef96",
+        "id": "46d4c275-5ba9-439f-a7f5-6902f0f58ed8",
+        "permissionCode": "common.identity.principal_profile.edit",
+        "permissionKind": "capability",
+        "status": "active",
+        "targetPlane": "neon"
+      }
+    ],
+    "operationRules": [],
+    "operationScopeBindings": [
+      {
+        "bindingKey": "create_tenant",
+        "coordinateSource": "tenant_context",
+        "decisionMode": "entity_resource",
+        "entityOperationId": "efd6f79a-2420-4db5-b22e-2935739eef96",
+        "id": "8673d9e9-705d-4bd2-ae07-2d30c110377b",
+        "missingValueBehavior": "deny",
+        "scopeKind": "tenant",
+        "status": "active",
+        "targetPlane": "neon"
+      },
+      {
+        "bindingKey": "list_tenant",
+        "coordinateSource": "tenant_context",
+        "decisionMode": "collection",
+        "entityOperationId": "c40b6e96-6b87-45d4-83cb-ddf4a0323bec",
+        "id": "255e5b32-8e40-4f0b-ba0c-c8baa33e0113",
+        "missingValueBehavior": "deny",
+        "scopeKind": "tenant",
+        "status": "active",
+        "targetPlane": "neon"
+      },
+      {
+        "bindingKey": "patch_tenant",
+        "coordinateSource": "tenant_context",
+        "decisionMode": "entity_resource",
+        "entityOperationId": "4926d8e2-abfb-4ba5-8b05-3c792bbf525c",
+        "id": "cf277a91-0be2-453f-ac34-e001849fe7fc",
+        "missingValueBehavior": "deny",
+        "scopeKind": "tenant",
+        "status": "active",
+        "targetPlane": "neon"
+      },
+      {
+        "bindingKey": "read_tenant",
+        "coordinateSource": "tenant_context",
+        "decisionMode": "entity_resource",
+        "entityOperationId": "bd20d32b-292e-4703-8dc0-cc1207287b83",
+        "id": "8f288c6c-66fd-49f2-abdc-d1b8c6d38d8f",
+        "missingValueBehavior": "deny",
+        "scopeKind": "tenant",
+        "status": "active",
+        "targetPlane": "neon"
+      }
+    ],
+    "operations": [
+      {
+        "auditEventCode": "principal_profile.create",
+        "executionMode": "synchronous",
+        "handlerKey": "entity.record.create.v1",
+        "id": "efd6f79a-2420-4db5-b22e-2935739eef96",
+        "idempotencyMode": "required",
+        "label": "Add",
+        "operationKey": "create",
+        "operationKind": "create",
+        "requiresMfa": false,
+        "status": "active"
+      },
+      {
+        "auditEventCode": "principal_profile.list",
+        "executionMode": "synchronous",
+        "id": "c40b6e96-6b87-45d4-83cb-ddf4a0323bec",
+        "idempotencyMode": "none",
+        "label": "Profile",
+        "operationKey": "list",
+        "operationKind": "read",
+        "requiresMfa": false,
+        "status": "active"
+      },
+      {
+        "auditEventCode": "principal_profile.patch",
+        "executionMode": "synchronous",
+        "handlerKey": "entity.record.patch.v1",
+        "id": "4926d8e2-abfb-4ba5-8b05-3c792bbf525c",
+        "idempotencyMode": "required",
+        "label": "Save",
+        "operationKey": "patch",
+        "operationKind": "update",
+        "requiresMfa": false,
+        "status": "active"
+      },
+      {
+        "auditEventCode": "principal_profile.read",
+        "executionMode": "synchronous",
+        "id": "bd20d32b-292e-4703-8dc0-cc1207287b83",
+        "idempotencyMode": "none",
+        "label": "View record",
+        "operationKey": "read",
+        "operationKind": "read",
+        "requiresMfa": false,
+        "status": "active"
+      }
+    ],
+    "ownerAccess": {
+      "administerPermission": "common.identity.principal.administer",
+      "createdByField": "created_by",
+      "ownerField": "principal_id",
+      "schemaVersion": 1,
+      "updatedByField": "updated_by"
+    },
+    "policyBindings": [],
+    "recordPresentation": {
+      "actions": [],
+      "badges": [],
+      "contextFields": [],
+      "schemaVersion": 1,
+      "sections": [
+        {
+          "fields": [
+            "given_name",
+            "family_name",
+            "preferred_name",
+            "display_name",
+            "avatar_url"
+          ],
+          "key": "overview",
+          "label": "Overview",
+          "placement": "direct"
+        }
+      ],
+      "subtitleFields": [],
+      "titleField": "display_name"
+    },
+    "relationFields": [],
+    "relationTargets": [],
+    "relations": [],
+    "runtimeProfiles": [
+      {
+        "apiExposure": "api",
+        "backingKind": "table",
+        "concurrencyMode": "optimistic",
+        "createMode": "form_only",
+        "id": "d2a1f1dc-93d1-47ac-8211-aba891cdc00a",
+        "profileKey": "default",
+        "readMode": "generic",
+        "recordVersionFieldKey": "record_version",
+        "storageObject": "principal_profile",
+        "storagePlane": "neon",
+        "storageSchema": "master",
+        "tenantFieldKey": "tenant_id",
+        "writeMode": "generic"
+      }
+    ],
+    "searchFields": [
+      {
+        "entityFieldId": "23ac10cc-2219-4b46-9061-2263c9fb21ef",
+        "entitySearchProfileId": "baf6ccfb-81d7-44ab-b284-54cd76f0a5d3",
+        "id": "bc94eae7-29ce-4a5f-85ad-fbdce61168fd",
+        "matchMode": "contains",
+        "position": 4,
+        "weight": 1
+      },
+      {
+        "entityFieldId": "2f9ea215-82e8-4bf5-881f-4824b2990aaf",
+        "entitySearchProfileId": "baf6ccfb-81d7-44ab-b284-54cd76f0a5d3",
+        "id": "3b6808b3-06e0-4808-821a-77f84a0df251",
+        "matchMode": "contains",
+        "position": 2,
+        "weight": 1
+      },
+      {
+        "entityFieldId": "3fd37870-553f-46cd-bf8d-9159caf45deb",
+        "entitySearchProfileId": "baf6ccfb-81d7-44ab-b284-54cd76f0a5d3",
+        "id": "35cb4e05-8711-4bcb-9faa-42d62b1ce8cc",
+        "matchMode": "contains",
+        "position": 3,
+        "weight": 1
+      },
+      {
+        "entityFieldId": "e017cf83-35f9-4e5b-a492-1085d7284929",
+        "entitySearchProfileId": "baf6ccfb-81d7-44ab-b284-54cd76f0a5d3",
+        "id": "a6f56750-dee5-46c7-b771-35541831050e",
+        "matchMode": "contains",
+        "position": 1,
+        "weight": 1
+      }
+    ],
+    "searchProfiles": [
+      {
+        "id": "baf6ccfb-81d7-44ab-b284-54cd76f0a5d3",
+        "isDefault": true,
+        "minimumQueryLength": 1,
+        "normalizationMode": "casefold",
+        "queryOperator": "and",
+        "searchKey": "default",
+        "searchKind": "keyword",
+        "status": "active"
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "bindingKey": "detail_avatar_url",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "7b39427b-fdbb-4183-93ef-a8d0d3e62be3",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "cf6f3445-ccb2-4ede-93d7-ec2fd337208f",
+        "labelOverride": "Avatar",
+        "position": 7,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_created_at",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "2bfe469a-4ff2-4ff4-8130-a57819f66273",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "bb4268bb-c1f1-4861-9924-024dba7c312b",
+        "labelOverride": "Created",
+        "position": 9,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_display_name",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "23ac10cc-2219-4b46-9061-2263c9fb21ef",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "d17f7b40-51e1-4baa-9a70-ecb49ed52507",
+        "labelOverride": "Display name",
+        "position": 6,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_family_name",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "2f9ea215-82e8-4bf5-881f-4824b2990aaf",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "b2e9863e-2959-4e3f-9567-025c6d684fa4",
+        "labelOverride": "Family name",
+        "position": 4,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_given_name",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "e017cf83-35f9-4e5b-a492-1085d7284929",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "f943b406-0ca4-437c-8e88-9e558ae16aa7",
+        "labelOverride": "Given name",
+        "position": 3,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_id",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "b324716b-155e-4a8f-a784-14d3158d3008",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "af320e30-9def-4f09-a8d0-b53ff5497ee7",
+        "labelOverride": "Record ID",
+        "position": 0,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_preferred_name",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "3fd37870-553f-46cd-bf8d-9159caf45deb",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "9220bc3c-3db0-47e0-88e6-58f19d15e113",
+        "labelOverride": "Preferred name",
+        "position": 5,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_principal_id",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "3735b7c3-1d3b-4281-a5d2-a78521de9ec7",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "6e026c45-0559-4119-83af-b638f9322778",
+        "labelOverride": "Principal",
+        "position": 2,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_record_version",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "35a0577f-bcc4-417c-92c5-0e8c440c9a8a",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "22029170-92bc-438f-8d00-9fa74a5fb132",
+        "labelOverride": "Record version",
+        "position": 8,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_tenant_id",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "069e6ac7-478a-4475-bb7f-34c9e20de632",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "d2e8425c-e1a4-4380-b282-cb183c5f0072",
+        "labelOverride": "Tenant",
+        "position": 1,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "detail_updated_at",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "3c15edac-b124-4021-96fc-00c4bb34017c",
+        "entitySurfaceId": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "id": "044cea71-688f-41a2-88c0-9743514b719b",
+        "labelOverride": "Updated",
+        "position": 10,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_avatar_url",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "7b39427b-fdbb-4183-93ef-a8d0d3e62be3",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "521afd67-0663-4035-be42-b064ee9d2d0e",
+        "labelOverride": "Avatar",
+        "position": 7,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_created_at",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "2bfe469a-4ff2-4ff4-8130-a57819f66273",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "eb8eeb46-a447-4ed2-9a47-533ded69daf7",
+        "labelOverride": "Created",
+        "position": 9,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_display_name",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "23ac10cc-2219-4b46-9061-2263c9fb21ef",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "47f902bb-2f27-4ce9-a8a5-45b79a3e89c0",
+        "labelOverride": "Display name",
+        "position": 6,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_family_name",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "2f9ea215-82e8-4bf5-881f-4824b2990aaf",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "4c0e0629-07f8-4174-8bde-8d762c271db3",
+        "labelOverride": "Family name",
+        "position": 4,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_given_name",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "e017cf83-35f9-4e5b-a492-1085d7284929",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "8318e8f9-ed5f-4486-9580-74e218a97c9b",
+        "labelOverride": "Given name",
+        "position": 3,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_id",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "b324716b-155e-4a8f-a784-14d3158d3008",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "3de84f3f-f6c8-43dc-8c56-1a2c416b59eb",
+        "labelOverride": "Record ID",
+        "position": 0,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_preferred_name",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "3fd37870-553f-46cd-bf8d-9159caf45deb",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "346d998e-db7c-4c52-987a-eeade8eed7c2",
+        "labelOverride": "Preferred name",
+        "position": 5,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_principal_id",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "3735b7c3-1d3b-4281-a5d2-a78521de9ec7",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "2f05f43c-cfa0-45b1-aa74-d7067833ca4b",
+        "labelOverride": "Principal",
+        "position": 2,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_record_version",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "35a0577f-bcc4-417c-92c5-0e8c440c9a8a",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "d23818c7-14e7-49cb-954d-4ff6538111a0",
+        "labelOverride": "Record version",
+        "position": 8,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_tenant_id",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "069e6ac7-478a-4475-bb7f-34c9e20de632",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "7310b080-d59a-40d6-9321-b9c4e98fd598",
+        "labelOverride": "Tenant",
+        "position": 1,
+        "showRequiredIndicator": true,
+        "status": "active"
+      },
+      {
+        "bindingKey": "list_updated_at",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "3c15edac-b124-4021-96fc-00c4bb34017c",
+        "entitySurfaceId": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "id": "5fe64ccf-fdbe-4ca4-bba8-0a53a506151a",
+        "labelOverride": "Updated",
+        "position": 10,
+        "showRequiredIndicator": true,
+        "status": "active"
+      }
+    ],
+    "surfaceOperations": [],
+    "surfaceSections": [],
+    "surfaces": [
+      {
+        "id": "aa0264ca-d39a-45e4-8e5d-4c3ba6bc06ff",
+        "isDefault": true,
+        "layoutConfig": {
+          "authorization": {
+            "directory": {
+              "operation": "list",
+              "population": "tenant"
+            },
+            "entityCode": "principal_profile",
+            "fieldPolicies": [
+              {
+                "fields": [
+                  "id"
+                ],
+                "key": "id",
+                "queryUses": [],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              },
+              {
+                "fields": [
+                  "tenant_id"
+                ],
+                "key": "tenant_id",
+                "queryUses": [],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              },
+              {
+                "fields": [
+                  "principal_id"
+                ],
+                "key": "principal_id",
+                "queryUses": [],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              },
+              {
+                "fields": [
+                  "given_name"
+                ],
+                "key": "given_name",
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ]
+              },
+              {
+                "fields": [
+                  "family_name"
+                ],
+                "key": "family_name",
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ]
+              },
+              {
+                "fields": [
+                  "preferred_name"
+                ],
+                "key": "preferred_name",
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ]
+              },
+              {
+                "fields": [
+                  "display_name"
+                ],
+                "key": "display_name",
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ]
+              },
+              {
+                "fields": [
+                  "avatar_url"
+                ],
+                "key": "avatar_url",
+                "queryUses": [],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": [
+                  "create",
+                  "patch"
+                ]
+              },
+              {
+                "fields": [
+                  "record_version"
+                ],
+                "key": "record_version",
+                "queryUses": [],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              },
+              {
+                "fields": [
+                  "created_at"
+                ],
+                "key": "created_at",
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              },
+              {
+                "fields": [
+                  "updated_at"
+                ],
+                "key": "updated_at",
+                "queryUses": [
+                  "search",
+                  "filter",
+                  "sort",
+                  "group"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              },
+              {
+                "fields": [
+                  "created_by"
+                ],
+                "key": "created_by",
+                "queryUses": [],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              },
+              {
+                "fields": [
+                  "updated_by"
+                ],
+                "key": "updated_by",
+                "queryUses": [],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              }
+            ],
+            "operations": [
+              {
+                "effect": "read",
+                "key": "list",
+                "permissionCode": "common.identity.principal_profile.read",
+                "requiresParentRead": false,
+                "requiresPreflight": false,
+                "scope": "tenant.record.v1",
+                "target": "collection"
+              },
+              {
+                "effect": "read",
+                "key": "read",
+                "permissionCode": "common.identity.principal_profile.read",
+                "requiresParentRead": false,
+                "requiresPreflight": false,
+                "scope": "tenant.record.v1",
+                "target": "existing"
+              },
+              {
+                "effect": "write",
+                "key": "create",
+                "permissionCode": "common.identity.principal_profile.edit",
+                "requiresParentRead": false,
+                "requiresPreflight": false,
+                "scope": "tenant.record.v1",
+                "target": "proposed"
+              },
+              {
+                "effect": "write",
+                "key": "patch",
+                "permissionCode": "common.identity.principal_profile.edit",
+                "requiresParentRead": false,
+                "requiresPreflight": false,
+                "scope": "tenant.record.v1",
+                "target": "existing"
+              }
+            ],
+            "ownership": "tenant.record.v1",
+            "planeKey": "neon",
+            "recordReadOperation": "read",
+            "relationships": [],
+            "schemaVersion": 1,
+            "surfaces": []
+          },
+          "authorizationRuntime": {
+            "bindings": [
+              {
+                "handler": "entity.record.list.v1",
+                "operation": "list",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "handler": "entity.record.read.v1",
+                "operation": "read",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "handler": "entity.record.create.v1",
+                "operation": "create",
+                "resolver": "tenant.record.v1"
+              },
+              {
+                "handler": "entity.record.patch.v1",
+                "operation": "patch",
+                "resolver": "tenant.record.v1"
+              }
+            ],
+            "runtimeVersion": "entity-authorization.v1",
+            "schemaVersion": 1
+          },
+          "defaultState": {
+            "density": "comfortable",
+            "mode": "table",
+            "sort": [
+              {
+                "direction": "asc",
+                "field": "display_name"
+              }
+            ]
+          },
+          "identityField": "id",
+          "limits": {
+            "allowedPageSizes": [
+              10,
+              25,
+              50,
+              100
+            ],
+            "countMode": "exact",
+            "defaultPageSize": 25,
+            "maxSortLevels": 3
+          },
+          "ownerAccess": {
+            "administerPermission": "common.identity.principal.administer",
+            "createdByField": "created_by",
+            "ownerField": "principal_id",
+            "schemaVersion": 1,
+            "updatedByField": "updated_by"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "tableEntityProduct": {
+            "moduleCode": "ent",
+            "productHash": "42a49a12b0e4dcc097036b8c5ca737b0225d2e8e877402434ada7be7ed38397a",
+            "schema": "athyper.table-entity-source/1",
+            "targetPlanes": [
+              "studio",
+              "neon",
+              "mesh"
+            ]
+          }
+        },
+        "layoutKind": "flow",
+        "status": "active",
+        "surfaceKey": "list",
+        "surfaceKind": "list",
+        "title": "Profile"
+      },
+      {
+        "id": "c589d00d-2bc3-4441-b00a-86d880458863",
+        "isDefault": false,
+        "layoutConfig": {
+          "formPresentation": {
+            "create": {
+              "help": {
+                "avatar_url": "URL of your profile photo. Uploads are available only through an authorized file capability.",
+                "display_name": "Name shown in your profile. Login and security settings are managed separately."
+              },
+              "sections": [
+                {
+                  "fields": [
+                    "given_name",
+                    "family_name",
+                    "preferred_name",
+                    "display_name"
+                  ],
+                  "key": "names",
+                  "label": "Names"
+                },
+                {
+                  "fields": [
+                    "avatar_url"
+                  ],
+                  "key": "photo",
+                  "label": "Photo"
+                }
+              ],
+              "submitLabel": "Set up profile"
+            },
+            "edit": {
+              "help": {
+                "avatar_url": "URL of your profile photo. Uploads are available only through an authorized file capability.",
+                "display_name": "Name shown in your profile. Login and security settings are managed separately."
+              },
+              "sections": [
+                {
+                  "fields": [
+                    "given_name",
+                    "family_name",
+                    "preferred_name",
+                    "display_name"
+                  ],
+                  "key": "names",
+                  "label": "Names"
+                },
+                {
+                  "fields": [
+                    "avatar_url"
+                  ],
+                  "key": "photo",
+                  "label": "Photo"
+                }
+              ],
+              "submitLabel": "Save profile"
+            },
+            "meaningfulFields": [
+              "given_name",
+              "family_name",
+              "preferred_name",
+              "display_name",
+              "avatar_url"
+            ],
+            "schemaVersion": 1
+          },
+          "recordPresentation": {
+            "actions": [],
+            "schemaVersion": 1,
+            "sections": [
+              {
+                "fields": [
+                  "given_name",
+                  "family_name",
+                  "preferred_name",
+                  "display_name",
+                  "avatar_url"
+                ],
+                "key": "overview",
+                "label": "Overview"
+              }
+            ],
+            "titleField": "display_name"
+          }
+        },
+        "layoutKind": "flow",
+        "status": "active",
+        "surfaceKey": "detail",
+        "surfaceKind": "detail",
+        "title": "Profile"
+      }
+    ]
+  }
+}

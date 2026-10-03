@@ -1,0 +1,39 @@
+{
+  "changeSet": {
+    "id": "82c2050c-898b-4f97-b46c-bb14f3a63662",
+    "tenantId": null,
+    "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+    "entityCode": "principal_profile",
+    "branchCode": "publication.successor.entity-framework-cleanup-20261003",
+    "status": "approved",
+    "revision": 3,
+    "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+    "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+    "reviewedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+    "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693"
+  },
+  "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+  "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730",
+  "targets": [
+    {
+      "plane": "studio",
+      "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+      "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730"
+    },
+    {
+      "plane": "neon",
+      "contractHash": "bc26e37b4d75d0448d7dc25efb04fca580aa5f7b6949df4b46993fa99c7b45b4",
+      "descriptorHash": "43b5a1d097b429fc326d435388f982f8e6dff6d1cb295c4a8e006fa6609b7c41"
+    },
+    {
+      "plane": "mesh",
+      "contractHash": "bff1b650be0fc4144347e6d942c52060304a92f126a57ecf1d097ee579386d23",
+      "descriptorHash": "1c6177b7ae5c65c38f8e06982f268dcf72f55e58192158c924fcdccb57c5b3cc"
+    }
+  ],
+  "tests": {
+    "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+    "passed": true,
+    "results": []
+  }
+}

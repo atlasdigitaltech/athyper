@@ -45,7 +45,11 @@ BEGIN
  WHERE r.tenant_id=tenant AND r.metadata->>'executionPolicyId'=d.id::text
    AND r.metadata->>'executionPolicyHash'=p_hash AND r.metadata->'humanExecutionPolicy'=policy
    AND r.status IN ('approved','published') AND r.created_by::text=policy->>'publisherPrincipalId'
-   AND er.tenant_id IS NULL AND cs.tenant_id IS NULL AND dep.target_instance='*';
+   AND er.tenant_id IS NULL AND cs.tenant_id IS NULL AND dep.target_environment=policy->>'environment'
+   AND dep.target_instance IN ('*',policy->>'instance')
+   AND NOT EXISTS (SELECT 1 FROM publication.deployment earlier
+     WHERE earlier.artifact_id=dep.artifact_id AND earlier.target_environment=dep.target_environment
+       AND earlier.target_instance IN ('*',policy->>'instance') AND earlier.attempt_no<dep.attempt_no);
  RETURN jsonb_build_object('policy',policy,'version',d.version_no,'deliveries',COALESCE(result,'[]'::jsonb));
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_coordinated_deployment_recovery_source(uuid,text) FROM PUBLIC;

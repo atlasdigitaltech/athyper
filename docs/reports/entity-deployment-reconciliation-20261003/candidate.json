@@ -1,0 +1,664 @@
+{
+  "schema": "athyper.entity-deployment-reconciliation/1",
+  "capturedAt": "2026-10-03T05:06:30.075076+00:00",
+  "sourceCommit": "1418695744df6950463f930c40072cbe930d524f",
+  "databaseMode": "read_only_inventory_then_transactional_shared_authoring_draft",
+  "source": {
+    "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+    "entityCode": "principal_profile",
+    "sourceTenantId": null,
+    "authoringReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+    "authoringReleaseNo": 3,
+    "authoringReleaseHash": "6f46a51937da3334ba7053a893a913690a2cf291c4934fabf271128e3554d0cf",
+    "revisionId": "01a0fe8e-56c8-76a9-a3aa-712c3594dd95",
+    "contractHash": "9f9d2959706376dc1bdff21e5eb1ba943fd9ca393dee1839b11599cd16d38d0b",
+    "publicationReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+    "publicationReleaseNo": 3,
+    "publicationReleaseHash": "6f46a51937da3334ba7053a893a913690a2cf291c4934fabf271128e3554d0cf",
+    "publicationKey": "metadata.entity.principal_profile",
+    "authorityTenantId": "11111111-1111-4111-8111-111111111111"
+  },
+  "metadataChanges": [
+    {
+      "op": "remove",
+      "path": "/surfaces/1/layoutConfig/ownerAccess/sourceAuthority",
+      "previousValue": "identity.profile-source.v1"
+    }
+  ],
+  "planes": {
+    "neon": {
+      "heads": [
+        {
+          "publicationKey": "metadata.entity.address",
+          "appliedReleaseId": "01a0ff0d-20db-7e7b-885f-30fa6cefe6a5",
+          "artifactHash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2",
+          "headVersion": 1,
+          "sourceReleaseId": "e872c81c-1212-49ef-b7dd-ccf23c897fb7",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.entity.employee",
+          "appliedReleaseId": "01a0ff0d-20ef-7c5c-ba22-2ff7c01195b4",
+          "artifactHash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a",
+          "headVersion": 1,
+          "sourceReleaseId": "121f93fc-2e4e-4415-8d4d-9fd1674b3657",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.entity.external_worker",
+          "appliedReleaseId": "01a0ff0d-20f6-7c59-afdd-01f4d45aea89",
+          "artifactHash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20",
+          "headVersion": 1,
+          "sourceReleaseId": "51f63a89-114d-43b2-a041-b28dbe609f97",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.entity.person",
+          "appliedReleaseId": "01a0ff0d-20ff-731a-b387-86ad12f354df",
+          "artifactHash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8",
+          "headVersion": 1,
+          "sourceReleaseId": "782c57d9-6ac7-42ac-a82f-81895d80cd19",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.entity.person_address_use",
+          "appliedReleaseId": "01a0ff0d-2106-70b9-8861-8864f1dc2267",
+          "artifactHash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c",
+          "headVersion": 1,
+          "sourceReleaseId": "f36219ac-8038-4195-b6c5-4de688240617",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.entity.principal",
+          "appliedReleaseId": "01a0f9d5-3066-7654-9217-203e45fbd659",
+          "artifactHash": "51663dccba084a726975f58b5d8478b046df0af6a862df13d615dc618b7cbbe7",
+          "headVersion": 4,
+          "sourceReleaseId": "f1442628-f9c2-404f-bba3-89b52a385066",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.entity.principal_profile",
+          "appliedReleaseId": "01a0ff0d-210e-7b9e-b17c-00945e8255f7",
+          "artifactHash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+          "headVersion": 3,
+          "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+          "status": "active",
+          "retiredSourceBinding": true,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.reference.country",
+          "appliedReleaseId": "01a0f5f7-cf16-79dd-b78b-0ddc49a4821f",
+          "artifactHash": "8069d1fe6960a898dc2d66f55a1c584726d5383d72a4c2960690aa7c5655a9fd",
+          "headVersion": 13,
+          "sourceReleaseId": "5b1f71bd-cbbc-4d99-83e7-399c91d54fcf",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        }
+      ],
+      "installedRetiredFunctions": [
+        {
+          "schema": "master",
+          "name": "entity_link_person_v1",
+          "arguments": "request_tenant uuid, request_owner uuid, request_person uuid, expected_source_revision text",
+          "securityDefiner": true,
+          "definitionSha256": "5c17dbbdf017d7b185809634e427ffdf43ed12e6b6f910fcc65f6312e37bdb2a"
+        },
+        {
+          "schema": "master",
+          "name": "entity_person_link_target_v1",
+          "arguments": "request_tenant uuid, request_owner uuid",
+          "securityDefiner": true,
+          "definitionSha256": "ae8896e862e903862d0f0fa82e14bb90d2c909472c50899d372cfaadc1fd2a84"
+        },
+        {
+          "schema": "master",
+          "name": "entity_profile_source_v1",
+          "arguments": "request_tenant uuid, request_owner uuid",
+          "securityDefiner": true,
+          "definitionSha256": "a5751efb1199ee58f266697af2b3683f725541a63448584e04a74c6e04e70a23"
+        },
+        {
+          "schema": "master",
+          "name": "trg_principal_profile_source_guard",
+          "arguments": "",
+          "securityDefiner": true,
+          "definitionSha256": "0fa3d019c500905c312421a1701f922f76eeb92da5cb9cf81099223bb794b58a"
+        },
+        {
+          "schema": "master",
+          "name": "trg_profile_source_fence",
+          "arguments": "",
+          "securityDefiner": true,
+          "definitionSha256": "868b2e7e83503ca1467d48c76685ae13f82bdbce2da9dc38aeaa61e7bae32f0e"
+        }
+      ],
+      "installedRetiredTriggers": [
+        {
+          "schema": "master",
+          "table": "employee",
+          "trigger": "trg_profile_source_fence",
+          "function": "trg_profile_source_fence"
+        },
+        {
+          "schema": "master",
+          "table": "principal_identity_binding",
+          "trigger": "trg_profile_source_fence",
+          "function": "trg_profile_source_fence"
+        },
+        {
+          "schema": "master",
+          "table": "principal_person_link",
+          "trigger": "trg_profile_source_fence",
+          "function": "trg_profile_source_fence"
+        },
+        {
+          "schema": "master",
+          "table": "principal_profile",
+          "trigger": "trg_principal_profile_source_guard",
+          "function": "trg_principal_profile_source_guard"
+        }
+      ],
+      "privateBackup": {
+        "path": "/home/chandravel_natarajan/.athyper/instances/dev/workspace/entity-reconciliation-20261003/neon-before.json",
+        "sha256": "e60ca54ffade4f3a20d66630b93428076c749350eb2dbb3a5a6f4e8ad2c369d6"
+      }
+    },
+    "mesh": {
+      "heads": [
+        {
+          "publicationKey": "metadata.entity.principal",
+          "appliedReleaseId": "01a0f9d5-31cb-7995-9027-fbd7ccc03cbb",
+          "artifactHash": "b8ff9a6223983cb4eb56b36aacaf47d3262154622f35dc6b23a4409cca656408",
+          "headVersion": 4,
+          "sourceReleaseId": "f1442628-f9c2-404f-bba3-89b52a385066",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.entity.principal_profile",
+          "appliedReleaseId": "01a0ff0d-4e4d-7393-b867-4df2aa00ac9d",
+          "artifactHash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+          "headVersion": 3,
+          "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+          "status": "active",
+          "retiredSourceBinding": true,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.reference.country",
+          "appliedReleaseId": "01a0f5f7-ceca-7c65-ade1-2dd4e1d6e575",
+          "artifactHash": "d703e1d7adbd95b631f22111b578bb42795434aa8d844b5d31c31354e6a99e86",
+          "headVersion": 13,
+          "sourceReleaseId": "5b1f71bd-cbbc-4d99-83e7-399c91d54fcf",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        }
+      ],
+      "installedRetiredFunctions": [
+        {
+          "schema": "master",
+          "name": "entity_projected_profile_source_v1",
+          "arguments": "request_tenant uuid, request_owner uuid",
+          "securityDefiner": true,
+          "definitionSha256": "75e888d90a8c8e881d0e7dbe511380ebeceea68fe7a52e523595d8493f8fa42e"
+        },
+        {
+          "schema": "master",
+          "name": "trg_projected_profile_source_fence",
+          "arguments": "",
+          "securityDefiner": true,
+          "definitionSha256": "4ec019a49674d9b7b74ce60343fe0f37d0dc70737d025d1d17bb59ec62f34e69"
+        },
+        {
+          "schema": "master",
+          "name": "trg_projected_profile_source_guard",
+          "arguments": "",
+          "securityDefiner": true,
+          "definitionSha256": "378d5851e7dff5b5945455330ed32376fea2cd65ff85e1e8e996468734fdac0f"
+        }
+      ],
+      "installedRetiredTriggers": [
+        {
+          "schema": "master",
+          "table": "principal_identity_binding",
+          "trigger": "trg_projected_profile_source_fence",
+          "function": "trg_projected_profile_source_fence"
+        },
+        {
+          "schema": "master",
+          "table": "principal_profile",
+          "trigger": "trg_projected_profile_source_guard",
+          "function": "trg_projected_profile_source_guard"
+        }
+      ],
+      "privateBackup": {
+        "path": "/home/chandravel_natarajan/.athyper/instances/dev/workspace/entity-reconciliation-20261003/mesh-before.json",
+        "sha256": "1a35d357d0e31845566bf9c06f2e2f82c027ef94e19e0c02f4f25a83d0c565dd"
+      }
+    },
+    "studio": {
+      "heads": [
+        {
+          "publicationKey": "metadata.entity.principal",
+          "appliedReleaseId": "01a0f9d5-3241-73d1-8cc2-bce2efc0fbe5",
+          "artifactHash": "ac62865949173eb23615cbb4111921f8359cbc29149e83fc59e3cb352a8d9afe",
+          "headVersion": 4,
+          "sourceReleaseId": "f1442628-f9c2-404f-bba3-89b52a385066",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.entity.principal_profile",
+          "appliedReleaseId": "01a0ff0d-5a80-7fc0-ac39-8d52b71abbc5",
+          "artifactHash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+          "headVersion": 3,
+          "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+          "status": "active",
+          "retiredSourceBinding": true,
+          "retiredLinkAction": false
+        },
+        {
+          "publicationKey": "metadata.reference.country",
+          "appliedReleaseId": "01a0f5f7-d0b4-7005-8e7d-e83aa0daff31",
+          "artifactHash": "540c202a911d5db7eded04c450910a1088ed94bf36740abd7976db06faf69ce9",
+          "headVersion": 13,
+          "sourceReleaseId": "5b1f71bd-cbbc-4d99-83e7-399c91d54fcf",
+          "status": "active",
+          "retiredSourceBinding": false,
+          "retiredLinkAction": false
+        }
+      ],
+      "installedRetiredFunctions": [
+        {
+          "schema": "master",
+          "name": "entity_projected_profile_source_v1",
+          "arguments": "request_tenant uuid, request_owner uuid",
+          "securityDefiner": true,
+          "definitionSha256": "75e888d90a8c8e881d0e7dbe511380ebeceea68fe7a52e523595d8493f8fa42e"
+        },
+        {
+          "schema": "master",
+          "name": "trg_projected_profile_source_fence",
+          "arguments": "",
+          "securityDefiner": true,
+          "definitionSha256": "4ec019a49674d9b7b74ce60343fe0f37d0dc70737d025d1d17bb59ec62f34e69"
+        },
+        {
+          "schema": "master",
+          "name": "trg_projected_profile_source_guard",
+          "arguments": "",
+          "securityDefiner": true,
+          "definitionSha256": "378d5851e7dff5b5945455330ed32376fea2cd65ff85e1e8e996468734fdac0f"
+        }
+      ],
+      "installedRetiredTriggers": [
+        {
+          "schema": "master",
+          "table": "principal_identity_binding",
+          "trigger": "trg_projected_profile_source_fence",
+          "function": "trg_projected_profile_source_fence"
+        },
+        {
+          "schema": "master",
+          "table": "principal_profile",
+          "trigger": "trg_projected_profile_source_guard",
+          "function": "trg_projected_profile_source_guard"
+        }
+      ],
+      "privateBackup": {
+        "path": "/home/chandravel_natarajan/.athyper/instances/dev/workspace/entity-reconciliation-20261003/studio-before.json",
+        "sha256": "1a35d357d0e31845566bf9c06f2e2f82c027ef94e19e0c02f4f25a83d0c565dd"
+      }
+    }
+  },
+  "permissionCatalogReconciliation": [
+    {
+      "id": "c419be77-2067-5472-a4f6-b966f75d9f3d",
+      "canonicalCode": "neon.workforce.address.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    },
+    {
+      "id": "e77ae60a-25f2-57ad-8f6b-91dc8a3d29cd",
+      "canonicalCode": "neon.workforce.employee.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    },
+    {
+      "id": "d87ae277-ca75-5040-a567-7479c3dde2f3",
+      "canonicalCode": "neon.workforce.external_worker.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    },
+    {
+      "id": "7d7e0817-5628-5489-a6ae-5d60eddfa661",
+      "canonicalCode": "neon.workforce.person_address_use.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    },
+    {
+      "id": "01abd0ed-bd7c-5e79-af7f-ac6ed940a3e4",
+      "canonicalCode": "neon.workforce.person.read",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "status": "published",
+      "updatedAt": null,
+      "desiredRiskTier": "low",
+      "desiredRequiresMfa": false
+    }
+  ],
+  "liveMutationsPerformed": true,
+  "testsExecuted": true,
+  "candidateStatus": "three_signed_targets_recovery_owner_review_pending",
+  "requiredGates": [
+    "Independent Platform Owner approval of exact recovery proposal 2c4419af-4511-422a-913d-c4770dca2f44, hash d036d19fed5d37a4924c3f7a65aaff7127770991ca3bbd194d4cf38345ce333d; Admin proposal is recorded",
+    "Execute approved recovery through shared worker workflow and verify three target activation heads",
+    "Remove exactly pinned retired routines/triggers after metadata replacement, preserving business model and data; verify serving readiness"
+  ],
+  "preservation": [
+    "Business tables, columns, foreign keys and data",
+    "Declared operation and field permissions",
+    "Owner and tenant scopes",
+    "Immutable applied migrations and publication history"
+  ],
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "97640338aff19416fd1654fa1d317eb004e5b0fdf790863685ab97a6aad7c042"
+  },
+  "compiledCandidate": {
+    "contractHash": "fd210368e7581ae35eb2a6fb2ee4b14547014a35e1d4407e8b2edb5bf14e0ee5",
+    "descriptorHash": "ecc0ae8b6d4d41af0e96a6348fb8d56b472f0eb9fcea3bbc2691a34bda25eb3b",
+    "targets": [
+      {
+        "plane": "neon",
+        "contractHash": "7f0a53da94a802cf117a29b259562a5f15ca473760303975c4a32a7d447248ce",
+        "descriptorHash": "95b9779835464745e74597d0239c6160b18fc42b76ec8c1041a126e20a865c56"
+      },
+      {
+        "plane": "mesh",
+        "contractHash": "99acbec7ab780c26adc22a929d95113689252410696cedf74ee4463378e271cf",
+        "descriptorHash": "297ceda5e4c6123a4f4c56053542dd7781bccda8a6a895788e982b78195e671a"
+      },
+      {
+        "plane": "studio",
+        "contractHash": "fd210368e7581ae35eb2a6fb2ee4b14547014a35e1d4407e8b2edb5bf14e0ee5",
+        "descriptorHash": "ecc0ae8b6d4d41af0e96a6348fb8d56b472f0eb9fcea3bbc2691a34bda25eb3b"
+      }
+    ]
+  },
+  "candidateGraphHash": "fd210368e7581ae35eb2a6fb2ee4b14547014a35e1d4407e8b2edb5bf14e0ee5",
+  "compilationCompleted": true,
+  "summary": {
+    "metadataSourceChanges": 1,
+    "metadataTargetPublications": 3,
+    "permissionCatalogRows": 5,
+    "installedRetiredFunctionInstances": 11,
+    "installedRetiredTriggerInstances": 8
+  },
+  "deploymentObservation": {
+    "mode": "DEV source bind mount with tsx/Next development reload",
+    "apiContainer": "athyper-dev-source-api-1",
+    "apiDockerHealth": "unhealthy",
+    "note": "Source-mounted API reloads changes. Source release 4 dispatched and all three artifacts signed. Initial target attempts failed before staging; UUID dependency corrected and rollback-only staging passed. No target activation yet. Control API restarted for diagnostic logging."
+  },
+  "filesSha256": {
+    "admin-proposal.json": "30f2c4a7575dcd7a673f5149e1c70dfdb5d80aae555b43e366fdaa245a144344",
+    "audit-privilege-reconciliation.json": "714915aaf39c7504e0396a3c50073c57380c2955b6cb0a67647862715f76eefe",
+    "candidate-graph.json": "dbf625bc2b06d1bfbfb1e7ceb682defefe04f2d4170ae2a3cddae17e44c05efd",
+    "candidate-mesh.json": "ecad63f84cc4de5c28225a08ff985ceeb62aae1d4113835866bdfb9e351bf18d",
+    "candidate-neon.json": "cfc7b24431a45bd60192195afdc94e11eac4cc5abba85d72373a6a26181e7acd",
+    "candidate-studio.json": "5974d6bf7a4621f39e6e904810e1378c2d5c4f3bbaaed9b3ea2875c0f36a53e7",
+    "epoch-privilege-reconciliation.json": "a5b333f5cf2b68aa2880460f3918648ea62925fb66eca42ae56ee0e8926ed25f",
+    "execution-policy-activation.json": "bc17cae6b5a76216763443dfecbc3b1b9b937965eec7aa37ea4026ef7f592f48",
+    "execution-policy-proposal.json": "75235820134173fd21e40e9a18e29fe8de6b9d0c48c732927cfe43dcfa45532c",
+    "execution-policy-v2-proposal.json": "203c8a825b987be66ed31e6ecabc2056ecf3b3aa0ac3abe95014139b1549f585",
+    "execution-policy-v2.json": "29c8fe74e3287cf9560eb9bd3e628d9f48df72348bed67d88afc242727c0c271",
+    "execution-policy.json": "dd572679068381951b02b8a5cd72877dbccfa68347ec9db64d7415b0c7004c9d",
+    "human-approval.json": "1d3dc9a34b6871d8373008c950a68a1ea374b08fe8b3a3ab250e08d8fc45a383",
+    "invalidation-boundary-check.json": "5eec0e82219c09d38ca960b421b29dce4cbaefac3df484217bd0d350dec81054",
+    "invalidation-policy-reconciliation.json": "c7f04e14416d2e2184db304eb07b225e3e52b6f0e02718e84a72bb0091074e08",
+    "owner-approval.json": "03661d59e8cd9493e21898db57bdd7ccc3e510ecf942f28ee348f4409c098373",
+    "permission-catalog-reconciliation.json": "dc26e4711103e0bdbe6968e83e125c274d72f934897c77d825396dbd88e96dc1",
+    "persisted-draft-graph.json": "bdcea225cfea4f3e8b00a899f799f29dd2a1f93e48d068ee7dd3b5d6a6fd5754",
+    "persisted-draft-mesh.json": "52ad593af113ac6b2bd9ff7077cad98a8b34345111ac13357dd614c687e36406",
+    "persisted-draft-neon.json": "343d61f269fccca9502c56befb0f3ce4a373848ab01388fe3202e2a9f4114707",
+    "persisted-draft-studio.json": "8a2c23eaf69873f0520ee9b053bacdd53f765a364b9eb8175e4ce3c6a534ec0b",
+    "publication-execution.json": "ca94ffa681b494a756cb174585a4432cf6af48807ebc65d966925d1fb318c391",
+    "relationship-preflight.json": "057765185f791be719495f93e727722d89c3c1902abebfc255191cbd7f7af89b",
+    "required-contract-validation.json": "89dd208d859162c61acc8cafbb62fad76d9d9c51d5c979e95a9138b89a21f8a4",
+    "review-state.json": "b51d7d03550dc914a96daf059ad41995be681a35c090de12464162daf0b5fa85",
+    "serving-inspection.json": "6937905708510f3fc5d67f1d7e24a1e3e7afb378414e62db3bd35ba317d39517",
+    "source-graph.json": "dda4d400d1b31cc971aa17555868bb66fc8c760e0af49a393516bea59366be48"
+  },
+  "persistedDraft": {
+    "changeSet": {
+      "id": "82c2050c-898b-4f97-b46c-bb14f3a63662",
+      "tenantId": null,
+      "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+      "entityCode": "principal_profile",
+      "branchCode": "publication.successor.entity-framework-cleanup-20261003",
+      "status": "draft",
+      "revision": 1,
+      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d"
+    },
+    "maintenanceActorId": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+    "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+    "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730",
+    "targets": [
+      {
+        "plane": "neon",
+        "contractHash": "bc26e37b4d75d0448d7dc25efb04fca580aa5f7b6949df4b46993fa99c7b45b4",
+        "descriptorHash": "43b5a1d097b429fc326d435388f982f8e6dff6d1cb295c4a8e006fa6609b7c41"
+      },
+      {
+        "plane": "mesh",
+        "contractHash": "bff1b650be0fc4144347e6d942c52060304a92f126a57ecf1d097ee579386d23",
+        "descriptorHash": "1c6177b7ae5c65c38f8e06982f268dcf72f55e58192158c924fcdccb57c5b3cc"
+      },
+      {
+        "plane": "studio",
+        "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+        "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730"
+      }
+    ]
+  },
+  "mutations": [
+    "Created successor draft using shared createDraft/replaceGraph; subsequently adopted, independently approved, and published through shared workflow",
+    "Granted only shared.uuidv7() EXECUTE to the audit writer on three planes, with transactional audit receipts",
+    "Recorded authenticated Platform Admin adoption and submission through the existing control API",
+    "Restarted only the control API after adding its existing operational-error logger hook",
+    "Completed five exact Neon permission catalog corrections through suspend/change/republish; permission IDs, role grants and tenant scopes retained",
+    "Registered configuration_correction audit reason under the authority tenant; all five catalog changes carry reason codes, comments and before/after audit evidence",
+    "Recorded independent Owner source approval and original execution-policy approval; proposed replacement policy for the corrected compiler",
+    "Restored UUID/epoch dependencies and administrative global invalidation policy with scoped audited grants; tenant application global invalidation remains denied",
+    "Owner approved atomic policy replacement: ac759a18-720e-4fd4-89da-4ce3283b955d active; 454002c1-716b-429c-bc60-ddc1781b7272 retired",
+    "Published release cf8b7486-a683-4870-b82d-5abb65b49c08 number 4, compiled and signed three target artifacts",
+    "Aligned approved-source function ownership and restored UUID allocation for publication/runtime-meta function owners with audit receipts",
+    "Installed shared recovery support for the original policy instance while retaining wildcard compatibility, earliest original attempts, artifact pins, independent approval and scope checks"
+  ],
+  "currentReviewState": {
+    "changeSet": {
+      "id": "82c2050c-898b-4f97-b46c-bb14f3a63662",
+      "tenantId": null,
+      "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+      "entityCode": "principal_profile",
+      "branchCode": "publication.successor.entity-framework-cleanup-20261003",
+      "status": "approved",
+      "revision": 3,
+      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "reviewedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693"
+    },
+    "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+    "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730",
+    "targets": [
+      {
+        "plane": "studio",
+        "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+        "descriptorHash": "cd1c60bfecd57be13d9676fd6ab9d2fb8e6edc2ac0f3cbde3921a8eac0f1d730"
+      },
+      {
+        "plane": "neon",
+        "contractHash": "bc26e37b4d75d0448d7dc25efb04fca580aa5f7b6949df4b46993fa99c7b45b4",
+        "descriptorHash": "43b5a1d097b429fc326d435388f982f8e6dff6d1cb295c4a8e006fa6609b7c41"
+      },
+      {
+        "plane": "mesh",
+        "contractHash": "bff1b650be0fc4144347e6d942c52060304a92f126a57ecf1d097ee579386d23",
+        "descriptorHash": "1c6177b7ae5c65c38f8e06982f268dcf72f55e58192158c924fcdccb57c5b3cc"
+      }
+    ],
+    "tests": {
+      "contractHash": "efd1b8e89342a2e140cb6226d77f7ebbef42e0c3f2bfb57bdcdde83369211e32",
+      "passed": true,
+      "results": []
+    }
+  },
+  "testingAuthorization": "Owner explicitly allowed required publication/deployment checks; unrelated suites remain excluded.",
+  "requiredChecks": {
+    "nativeContractValidation": {
+      "passed": true,
+      "declaredCases": 0,
+      "note": "The persisted graph contains no contract test cases; this is not behavioral coverage."
+    },
+    "servingInspection": "Failed on all three planes: installed record owner access contains the retired sourceAuthority binding.",
+    "relationshipPreflight": {
+      "passed": true,
+      "planes": [
+        "studio",
+        "neon",
+        "mesh"
+      ]
+    },
+    "relationshipRegressionChecks": {
+      "passed": 6
+    },
+    "entityAuthorizationChecks": {
+      "passed": 14,
+      "includesUndefinedPermission": true,
+      "planes": [
+        "studio",
+        "neon",
+        "mesh"
+      ]
+    },
+    "hostBuild": {
+      "passed": true
+    },
+    "invalidationApplicationBoundary": {
+      "globalInvalidationDenied": true,
+      "transactionRolledBack": true
+    },
+    "recoveryBoundaryChecks": {
+      "passed": 20
+    },
+    "recoveryPreflight": {
+      "passed": true,
+      "targets": 3,
+      "sources": 1
+    },
+    "nativeStage": {
+      "passed": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "rolledBack": true
+    }
+  },
+  "initialCompiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "124d55986a5158b5086732e243c55b154b230787cf0c3f4a9859c0c257b429a9"
+  },
+  "executionPolicyProposal": {
+    "id": "ac759a18-720e-4fd4-89da-4ce3283b955d",
+    "version": 1,
+    "hash": "3b4bcfd74e1cf553ede1d117aae6af5d3afd19ac10b226ba2066fd9ade35f297",
+    "status": "pending_approval"
+  },
+  "supersededExecutionPolicy": {
+    "id": "454002c1-716b-429c-bc60-ddc1781b7272",
+    "version": 1,
+    "hash": "534fab9051ab7af79373dffc6234fa143b0b43e7495619f2c1823b7bb7937a98",
+    "status": "active"
+  },
+  "catalogReconciled": true,
+  "activeExecutionPolicy": {
+    "id": "ac759a18-720e-4fd4-89da-4ce3283b955d",
+    "version": 1,
+    "hash": "3b4bcfd74e1cf553ede1d117aae6af5d3afd19ac10b226ba2066fd9ade35f297",
+    "status": "active",
+    "replaced": [
+      {
+        "id": "454002c1-716b-429c-bc60-ddc1781b7272",
+        "hash": "534fab9051ab7af79373dffc6234fa143b0b43e7495619f2c1823b7bb7937a98"
+      }
+    ],
+    "replayed": false
+  },
+  "publicationExecution": {
+    "at": "2026-10-03T05:27:40.856Z",
+    "httpStatus": 200,
+    "result": {
+      "status": "dispatched",
+      "planHash": "9b75b32b0586f9f36a3306ea033ca69d18f9a4ef00201e2a5ec051db72da887c",
+      "releases": [
+        {
+          "id": "cf8b7486-a683-4870-b82d-5abb65b49c08",
+          "releaseNo": 4
+        }
+      ]
+    }
+  },
+  "recoveryCandidate": "deployment-recovery.json",
+  "recoveryCompiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "1063fb71856fc4c69a98d9efee739a7eee181b258b6aa40bcb003e952a315cd3"
+  },
+  "updatedAt": "2026-10-03T05:44:29.971800+00:00",
+  "recoveryProposal": {
+    "at": "2026-10-03T05:45:28.907Z",
+    "httpStatus": 200,
+    "id": "2c4419af-4511-422a-913d-c4770dca2f44",
+    "version": 1,
+    "hash": "d036d19fed5d37a4924c3f7a65aaff7127770991ca3bbd194d4cf38345ce333d",
+    "status": "pending_approval"
+  }
+}
