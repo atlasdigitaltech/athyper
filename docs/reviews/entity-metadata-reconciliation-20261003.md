@@ -1,0 +1,136 @@
+# Entity metadata reconciliation: reference trace and correction plan
+
+Date: 3 October 2026. Status: source trace and reconciliation proposal recorded; property edits, format consolidation, contract changes and builds are not complete. This is review evidence, not a release or publication approval.
+
+The relocation is complete, but Country is not a safe whole-file template. Its native definition and split core serve different consumers, and its native compiler supplies a business permission outside the definition. Principal Profile's current detail source omits navigation and therefore relies on a renderer fallback prohibited by the repository rules. Preserve their useful integration patterns while correcting these gaps explicitly.
+
+Evidence: [49-entity summary](entity-metadata-integration-matrix-20261003.md), [exact declarations and JSON pointers](entity-metadata-integration-matrix-20261003.json), and [seven-format field comparisons and property dispositions](entity-metadata-format-comparison-20261003.json). These are frozen, derived review inventories, never discovery inputs or alternate definitions. Source hashes identify the inspected bytes. The exact-declaration inventory distinguishes direct authoring permissions from supporting profile declarations; it does not claim to be an effective compiled authorization matrix.
+
+## Reference integration and affected shared components
+
+| Stage | Existing integration and evidence | Reconciliation implication |
+| --- | --- | --- |
+| Source discovery | `tooling/scripts/metadata/source-workspace.mjs` reads manifest roots and indexes `entity.json` declarations. Country declares native definition, split core, placement, localization, capabilities and activity separately. | Keep one descriptor-owned home. Multiple artifacts are not duplicate entity declarations. File placement conveys no runtime privilege. |
+| Country authoring | `metadata/entities/common/reference/country/definition.json` uses `athyper.shared-reference-product/1`, declares Studio/Neon/Mesh, explicit storage, readable code/name, columns, search, sections and scroll navigation. | This is the canonical editable source for Country's existing native experience, not a replacement for split dependencies. Its 22 fields must survive. |
+| Native compilation | `server/packages/planes/studio/meta-entity-authoring/src/authoring/product.ts` parses the closed shared-reference format and calls `graph-builder.ts` and `compileGraph`. `table-product.ts` separately parses and targets native table graphs. | Do not convert table graphs to Country's read-only builder. `graph-builder.ts` currently supplies list/read, scope, list defaults and `COMMON_REFERENCE_VIEW_PERMISSION` (`common.platform.reference.view`). Moving that permission to explicit source properties requires a deliberate parser/contract change, not an unsupported JSON key. |
+| Capability preparation | `server/db/scripts/provisioning/prepare-reference-runtime.ts` loads Country capabilities, resolves locked profiles and prepares activity. `authoring/capability-profile-files.ts` verifies source-lock identity/hash. The candidate explicitly requires signed split capability artifacts. | Keep capabilities, activity, localization and profile locks. A native definition alone does not preserve the capability release. Preserve action-specific permissions and admission bindings. |
+| Release preparation and publication | `server/db/scripts/operations/publication/prepare-coordinated-candidate.ts` compiles supported native definitions. `server/packages/services/publication/src/publication-orchestrator.ts` governs staged/verified/activated projections; authenticated release review and host `shared/publication/entity-authorization-activation.ts` supply review/backend admission controls. | No preparation or publication command was executed. Source compilation, a Git commit, or service-account receipts do not satisfy human authorship/independent approval. Inspect successor target/hash evidence separately. |
+| Metadata resolution | `server/apps/platform-host/src/composition/shared/entity-runtime/metadata.ts` installs the pinned split reader and native descriptor repository. `metadata-format-reader.ts` selects supported formats; admitted `runtime_contract` membership controls split runtime selection. | Current disk format does not prove deployed format. Invalid compiled evidence must not fall back to permissive native data. Preserve release, tenant and plane pinning. |
+| Providers and handlers | `shared/entity-runtime/services.ts` composes the shared read runtime, parent collection resolver and activity provider. `read-registrations.ts` registers supported generic operations from validated profiles using `tenant.record.v1`; domain implementations stay in their services and host composition. | Select registered capability contracts through published bindings. No new entity branches or parallel providers. Verify each governed BP handler before any future activation. |
+| Authorization | Host `composition/register-services.ts` installs `createPublishedTenantRecordAuthorizer`; implementation is `server/packages/services/records/src/published-tenant-authorizer.ts`, with `entity-authorization.ts` for operation/field enforcement. It refreshes context, checks descriptor/profile evidence and supports owner access. | Preserve exact operation codes, owner restrictions, tenant scope and explicit denies. Missing metadata differs from an absent permission in valid metadata. Do not copy Principal's owner model to other entities. |
+| Record scope | `services.ts` wires `createParentCollectionScopeResolver`, pinned authorized parent reads and published parent admission; `shared/entity-runtime/record-scope-sql.ts` delegates to server-owned plane scope compilers. | Embedded scope is a server constraint derived from a published relationship and authorized parent. A client filter or hidden navigation item does not enforce it. |
+| Routing | `shared/entity-runtime/route-admission.ts` resolves active/applied release evidence and exact list/read permissions. UI `packages/platform/entity/runtime/form-detail/src/routes/entity-read-route.tsx` resolves the generic route into `EntityReadSurface`. | A route is not a permission grant. No entity-specific route or navigation allowlist is needed. |
+| List/detail | `packages/platform/entity/runtime/list-view/src/index.tsx` uses declared identity; `form-detail/src/detail-workspace.tsx` uses shared record navigation and section navigation. `record-360-panel.tsx` implements continuous section behavior and explicit scrolling. | Correct metadata/validation first. Retain existing components and BP behavior. Do not add another detail implementation. |
+
+The source trace identifies integration points; it does not verify a running Country or Principal user flow. Publication and runtime verification remain pending under the no-probe constraint.
+
+## Principal and Principal Profile
+
+Principal's native graph declares `ownershipModel: system`; that is distinct from Studio release ownership. Its runtime authorization uses `tenant.record.v1`, list/read permission `common.identity.principal.read`, tenant-context scope with unresolved values denied, and owner access on `id` with `common.identity.principal.administer`.
+
+Principal explicitly relates `id` to `principal_id`, and `tenant_id` to `tenant_id`, for Principal Profile, notification preferences and UI profile. Its navigation declares Overview/Profile/Notifications/UI Profile in scroll mode. Preserve the exact relationship, cardinality, tenant and server parent-admission semantics.
+
+Principal Profile declares list/read/create/patch. Its exact read permission is `common.identity.principal_profile.read`; create/patch use `common.identity.principal_profile.edit`. Owner access uses `principal_id` and the existing `common.identity.principal.administer` binding; optimistic concurrency uses `record_version`. Its readable title is `display_name`. None of these establish a general permission or ownership template for workforce/BP.
+
+Its `recordPresentation` currently has sections but no `navigation`. `detail-workspace.tsx` synthesizes a single Overview tab and chooses scroll/switch based on the presence of an `overview` section. This contradicts the required explicit authoring contract. Proposed correction: declare intended navigation in every affected successor definition, validate it before publication, then remove the shared synthesis. Do not infer that every section-only entity wants one Overview tab. Preserve existing Navigation Tabs and Section Tabs/menu components.
+
+Principal Profile's list surface also includes UUID bindings marked `defaultVisible: false` (including Record ID). That does not establish compliance for saved views or field selection. Inventory and remove UUID presentation eligibility through shared metadata validation while retaining technical identities for APIs, relationships and routing. The current native `descriptor-parser.ts` list check validates field existence but does not, in that check, reject UUID identity/default columns. Audit the other descriptor and saved-view admission paths before claiming end-to-end enforcement.
+
+## Placement decisions
+
+The matrix covers all 49 source homes, definition ownership, declared target planes, storage/runtime bindings, navigation and exact source authorization declarations. Fourteen entities have placement files. The 35 absent files comprise three explicit Principal relationship targets and 32 entities with other supporting references.
+
+The three relationship targets have evidence for embedded exposure, not proof of exclusively embedded-only intent. The remaining 32 require owning-domain decisions about standalone navigation versus supporting/lookup/relationship roles. This gate is unresolved; no placement is invented and no source is removed because a placement is absent. Source folders, graph ownership, storage planes, release targets and catalog placement remain separate dimensions.
+
+## Canonical formats and retained properties
+
+The supported native definitions remain canonical for their existing native authoring paths. Split artifacts remain canonical for the split contracts that consume them. This is an explicit retained dual-format state, not completed consolidation. Neither filename nor an `artifactHash` establishes that a split artifact is safely regenerable or historical.
+
+Active consumer families are native preparation through `prepare-coordinated-candidate.ts` and the reference-product loader, split release tooling (`tooling/scripts/metadata/compile-release-candidate.mts`, `prepare-compiled-review.mts`), source dependency validation, and the pinned split/runtime-contract readers. Runtime readers consume admitted releases rather than these disk files directly. Actual publication selection is unverified. Do not retire either family based on source counts.
+
+| Entity | Native / split fields | Findings and classification | Canonical decision |
+| --- | ---: | --- | --- |
+| Country | 22 / 2 | Split is code/name lookup projection; native contains phone/address/audit fields, explicit list/detail/search/navigation. Complementary projection, not an identical definition. Shared scalar types are not proof of equal permissions/query behavior. | Establish native `definition.json` as editable native baseline; retain split `core.json` reference picker, bindings, defaults and dependencies. |
+| Currency | 9 / 2 | Native retains numeric3, minor units, symbol, status/audit and technical id; split retains code/name lookup contract. | Same bounded native baseline; retain split lookup source. |
+| Language | 9 / 2 | Native retains ISO code, native name, direction, status/audit/id beyond split code/name. | Retain native language properties and split projection separately. |
+| Locale | 10 / 4 | `country_code`/`language_code` versus `countryCode`/`languageCode`; naming/binding differences as well as extra native properties. | Preserve both public field identities until binding-aware contract reconciliation proves a supported conversion. No blind rename. |
+| State Region | 9 / 4 | `country_code` versus `countryCode`; native hierarchy/category/status/audit properties exceed split projection. | Preserve native hierarchy and split picker/bindings. |
+| Timezone | 9 / 3 | `canonical_code` versus `canonicalCode`; native offset/alias/status/audit/id exceed split projection. | Preserve public aliases and canonical-zone semantics at existing contracts. |
+| Address | 13 / 19 | Native-only formatted_address/status/tenant_id; split-only building_name/dependent_locality/floor/house_number/po_box/region/street_name/unit/validation_status. Read permission conflict and complementary governed write operation. | Native table definition remains canonical for existing native reads; split operation/core/section sources remain required. Whole-entity consolidation is blocked. |
+
+For each entity, the JSON comparison records every field's full native and split property objects, shared declared types, unmatched fields, and every top-level artifact/native definition property's retained location. Different representations are intentionally classified as requiring property review; no type/name match is promoted to semantic identity. The following disposition applies to all seven:
+
+| Property family | Native contract | Split/supporting contract | Required treatment |
+| --- | --- | --- | --- |
+| Fields and storage | Shared-reference field definitions or table graph fields/runtime profiles | `core.fields`, physical bindings, id/tenant fields, read projections and defaults | Retain all properties, distinguish API aliases from storage columns; resolve identity/projection conflicts before conversion. |
+| Relationships | Graph/record presentation relationships and reference bindings | Core relations/reference pickers/dependencies | Complementary until parent scope, target identities and labels are mapped. Do not drop a relationship because only one format declares it. |
+| Operations | Country family generates list/read; Address explicitly declares list/read | Address read/request_change plus governed defaults | Preserve operation-by-operation semantics below; generated graph/output is not a second editable authority. |
+| Permissions/policies | Table graph explicit bindings; shared-reference compiler constant | Operation, section, field, collaboration and profile policies | Preserve exact codes, conditions and denies. Country's compiler-supplied constant requires a separate supported authoring-contract change. Address read permissions conflict. |
+| Runtime | Native runtime bindings/profiles | Storage projections, handler/resolver/service keys and readiness facts | Require compatible registered providers; source declarations are not proof of implementation. |
+| Query | Native search/list defaults | Split query capabilities, index references, safety limits | Empty split query arrays do not mean native search can be deleted or enabled for the split reader. Preserve each contract's advertised capabilities. |
+| Presentation | Columns, readable identity, sections, navigation and table surface bindings | Address `presentation.section.json`; reference pickers and UI facets | Complementary; validate UUID eligibility and explicit navigation in both contracts. |
+| Localization | Native localized labels and localization files | Core label keys/default text and profile messages | Retain keys, translations and public identities; do not collapse distinct keys without caller evidence. |
+| Capabilities | Country-family capability/activity members, where declared | Locked profiles and split capability release members; Address governed defaults | Retain supported profile syntax, action permissions and release identities. No inferred grants or capability inheritance. |
+
+Historical reports, captured commands, approved evidence and hashes remain historical. No active artifact in these seven directories is classified as disposable historical material on appearance alone. No archive/deletion is proposed until its consumers and retained properties are demonstrably resolved. A new universal parser/composer/schema language is deferred to the separate contract phase.
+
+## Address: operation reconciliation
+
+| Operation / source | Exact permission | Execution and scope | Decision |
+| --- | --- | --- | --- |
+| Native list | `neon.workforce.address.read` | Generic native table list; tenant-context collection scope, missing scope denied | Retain existing native read behavior pending explicit cross-domain authorization reconciliation. |
+| Native read | `neon.workforce.address.read` | Generic native table read; tenant-context entity-resource scope, missing scope denied | Do not silently replace with the split code. |
+| Split read | `neon.address.read` (proposed, catalog verification required) | `neon.address.read.v1`; `neon.business-context.v1`; persisted record or validated create input; deny unresolved | Conflicting read contract. Publication/catalog/handler evidence is required; neither code is assumed authoritative merely from filename. |
+| Split request_change | `neon.relationship.entity_case.create` (catalog verification required) | `neon.bp.governed-request.create.v1`; persisted owner and target; idempotency required; draft entity `business_partner_request`; owner-change isolation | Preserve. Target comes from operation context, client target entity is forbidden, mismatch must be rejected. Keep governed-child defaults/profile dependency. |
+| Direct create/patch/delete | Not declared by the native Address operation set; split generic writes disabled | No direct-write replacement is justified | Do not add generic CRUD to approximate the governed request. |
+
+The native Address source and split operation source are competing/complementary inputs. A supported representation retaining both read contracts and governed requests has not been demonstrated; consolidation remains open.
+
+## Permission and presentation correction contract
+
+The next change set must carry an explicit before/after property ledger, using matrix JSON pointers and exact existing values. The intended default is no permission change. Any intentional change needs its semantic effect recorded; do not hide it in a format conversion.
+
+| Layer | Required explicit properties and enforcement |
+| --- | --- |
+| Entity/operation | Supported operation and exact optional permission, published policy/capability binding, registered execution, scope, concurrency and idempotency. An absent permission in valid metadata adds no entity grant requirement; missing/invalid/unpublished metadata or broken references fail closed. |
+| Tab/navigation group | Explicit key/label/order/section membership and mode. If a separate tab permission is needed, first prove a supported published authorization surface binding maps to it. Current native `EntityDetailNavigationV1` is closed and has no permission member; adding `permissionCode` ad hoc is invalid. A new tab permission contract belongs to the separate contract phase. |
+| Section | Explicit behavior/provider/order and existing view permission where supported. Preserve `discoverableWhenDenied` and authorized projection. Hiding a section never substitutes for server authorization of its fields/actions/collections. |
+| Field | Preserve exact read/write policies, masking/representation, operation association and permitted query uses. Technical UUIDs stay internal; readable reference labels must be declared. Validate default/saved columns, cards, record labels, search hints and embedded lists. No first-field or Record ID fallback. |
+| Comments | Retain each action's exact permission, parent admission, revision/concurrency and own-record behavior. No entity-read permission substitution for comment create/edit/archive. |
+| Attachments | Retain each action's exact permission, parent admission, scan/processing requirements, size/type limits, authorized download and association semantics. No generic entity permission substitution. |
+| Activity/collaboration profiles | Resolve declared code/version/hash through supported contracts, preserving resource permissions and data projection. No caller-selected owner/tenant or inferred policy. |
+
+For Country, preserve `common.platform.reference.view` in the proposed successor's explicit source permission property when that contract exists, then remove the compiler's business-code assumption through shared contracts. Do not merely delete the constant: that would change access. Existing compiler/profile assertions also reference this constant and need coordinated review. No permission parser or enforcement changes are made in this evidence commit.
+
+For UUIDs, extend shared authoring/descriptor and saved-view validation to reject invalid presentation with a source/entity/surface/field error. Keep technical IDs in storage and relationship/API contracts. Do not claim that a UI filter or `defaultVisible: false` meets the requirement. For search/filter/sort/pagination/actions, only publish features supported by the actual query/provider contract and indexed projection. Preserve count/sort limits and parent scope.
+
+## Business Partner: preserve enriched scrolling
+
+`business_partner/presentation.detail.json` explicitly declares a 360 provider with continuously displayed sections, qualifications and roles groups with continuous section display, and requests/business-transactions/activity section providers. Preserve these provider keys, section membership, order, context-control/filter synchronization, and the existing authorized actions. Do not flatten BP into Country's section layout or read-only operations.
+
+`record-360-panel.tsx` separates changing navigation mode from explicit section scrolling/focus and tracks visible sections. The shared native detail workspace also distinguishes mode selection from section scrolling. Retain that interaction model using the existing components. No browser behavior was executed in this review.
+
+Keep the exact per-section permissions recorded in the matrix: identity, contact, address, masked identifier/bank, classification, qualification, restriction, certificate, credit, workforce, requests, activity and network bindings are distinct. Comments and attachments retain `neon.collaboration.comment.*` and `neon.collaboration.attachment.*` action bindings from the existing artifacts; those expressions describe the recorded families, not permission wildcards to implement. Preserve actual full codes from the matrix. The four existing BP request-flow `mfaAtDecision: true` declarations remain untouched.
+
+BP and workforce read models keep explicit storage/read-object projections. BP uses `master.business_partner_identity_current` with declared source objects; source folder movement does not move those tables or authorize direct writes. Governed requests keep payload/version binding, transaction/audit order, independent review, idempotency and domain handlers.
+
+## Missing DDL disposition
+
+The absent historical `server/db/ddl/planes/neon/master/18_business_partner_business_profile.sql` is not evidence that Business Partner lacks DDL. Git history (`20ccfd81e^`) shows this file added organization-profile columns and guards to `master.business_partner`. Current `03_tables.sql` still declares BP; `33_partner_organization_identity.sql` declares organization identity, corresponding profile attributes and the current identity projection. This is evidence of changed storage organization, not permission to delete the entity or copy the historical SQL back.
+
+Keep the existing captured storage-catalog hash/evidence intact. Prepare a separately identified successor storage mapping if catalog reconciliation is subsequently in scope; do not retarget an approved historical hash. The previously observed offline validator failure on that historical pathname is still unresolved, not waived by this report.
+
+The owner's permission to remove genuinely absent DDL-backed material applies only after checking current tables/views, read-model dependencies, domain contracts and source consumers. A missing filename alone is insufficient. No entity or migration is removed in this change set. There is no database inspection or claim about deployed storage.
+
+## Reviewable implementation sequence
+
+1. Keep relocation evidence fixed. Use this inventory to decide unresolved navigation roles and format/property conflicts. Record decisions with source pointers; do not infer them from folders.
+2. In a separate contract change, support explicitly authored shared-reference permissions, mandatory navigation where applicable, and shared UUID presentation validation. Prove supported mappings for authorization surfaces and profile semantics. Defer any new parser/composer or tab-permission semantics beyond existing contracts to that phase.
+3. Correct the six common/reference entities using their supported native representation; retain split reference projections and localization/capabilities. Establish Country before applying the bounded conventions to the other five.
+4. Correct IAM properties while preserving self/admin access, tenant relationships and optimistic concurrency. Decide explicit child navigation; do not copy placements or broaden access.
+5. Resolve Address's competing read permissions and preserve request_change before any consolidation; then address the other location sources. Keep native/split formats until a supported consumer path preserves all behavior.
+6. Correct BP/reference/workforce in owning-domain groups, preserving explicit projections, governed operations, locked scopes, all collaboration permissions and BP scrolling. Each group's property/permission diff is independently reviewable.
+7. Retire a source only after its property disposition and consumers are resolved. Generate successor artifacts/evidence from canonical sources; never hand-maintain a second generated index/definition or transfer historical approval.
+8. Run only approved offline input checks and subsequently reviewed builds. Tests, runtime probes, database operations, publication, deployment, grants and MFA changes remain excluded. Publication and actual user-flow verification remain separate unfinished gates.
+
+This update changes review documents only. It supplies the trace, source matrix, comparisons and proposed corrections; it does not claim the missing-placement gate, effective permission reconciliation, format consolidation, property corrections or shared contract implementation are complete. No tests, builds, runtime probes or database/publication actions were run.

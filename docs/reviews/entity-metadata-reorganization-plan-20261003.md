@@ -1,6 +1,6 @@
 # Entity metadata reorganization review plan
 
-Date: 3 October 2026. Status: checkpoint verified; flat-layout repairs, recursive discovery and domain relocation implemented for review; format/property corrections and builds pending review.
+Date: 3 October 2026. Status: checkpoint verified; flat-layout repairs, recursive discovery and domain relocation implemented for review; reference trace and reconciliation proposal recorded; format/property corrections and builds pending review.
 
 This plan preserves existing entity definitions, completes their interrupted relocation, organizes sources by owning domain, and separates format consolidation from property corrections. Country and Principal supply applicable framework conventions; Principal Profile also supplies the reference record-navigation experience.
 
@@ -159,6 +159,20 @@ This plan preserves existing entity definitions, completes their interrupted rel
    Expose search, filtering, sorting, pagination, and controls only when metadata and APIs support them. Preserve locked server-side parent scope for embedded lists, explicit projections for read models, and all necessary BP/workforce operations and workflows. Generalize missing capabilities through shared contracts rather than entity-specific runtime branches.
 
    Product defaults remain platform-owned Studio releases with independent Platform Owner review. Tenant extensions remain tenant-isolated with independent Tenant Owner review. File moves and commits do not establish publication approval.
+
+   **Reference trace and reconciliation proposal — 3 October 2026 (items 7–9)**
+
+   The [reference trace and correction plan](entity-metadata-reconciliation-20261003.md) identifies the existing Country compilation/publication/resolution/provider/authorization/route/UI integration, Principal ownership and parent scope, Principal Profile navigation gaps, and BP continuous-section behavior before any property or framework edits. The [49-entity summary matrix](entity-metadata-integration-matrix-20261003.md) and [exact source declarations](entity-metadata-integration-matrix-20261003.json) separate physical home, graph/release ownership, declared planes, storage/runtime, placement and authorization. Supporting-profile permissions are separately identified; effective compiled/publication authorization remains unverified.
+
+   The [seven-format comparison](entity-metadata-format-comparison-20261003.json) preserves every inspected field property and records the retained location of every artifact/native definition property. Country's native definition is the proposed editable baseline for its existing native experience; its split lookup core remains required. Address retains native reads and split governed `request_change`; its native `neon.workforce.address.read` and split `neon.address.read` bindings are an unresolved conflict. No source has been archived, deleted or converted. Consolidation is not complete.
+
+   Concrete shared corrections are identified, not silently implemented: the shared-reference builder currently supplies `common.platform.reference.view` outside the definition; the native detail renderer synthesizes Overview navigation when missing; Principal Profile lacks explicit navigation and includes hidden UUID list bindings. Explicit permission authoring and unsupported tab/section semantics require the separate contract phase. Supported metadata properties must be corrected with before/after permission evidence and shared validation, preserving server scope and collaboration controls.
+
+   Fourteen entities have placement files. Three of the 35 without placement have explicit Principal relationship exposure; 32 have other supporting references. Exclusive embedded-only intent is not established by source absence. Those navigation-role decisions remain open; no Principal placement was copied.
+
+   Missing-DDL investigation found that historical `18_business_partner_business_profile.sql` altered BP organization attributes, while current DDL retains BP and defines organization identity/projection in `33_partner_organization_identity.sql`. A missing historical filename does not justify removing the entity. The captured storage-catalog evidence/hash and its previously observed validator failure remain unchanged. Genuinely obsolete sources may be removed only after storage, domain and dependency accounting; applied migrations and historical evidence remain protected.
+
+   This evidence change affects review documents only. No metadata, permissions, MFA, runtime code or DDL changed. No tests, builds, runtime probes, database actions, publication, deployment or grants ran. Offline evidence checks passed for 49 unique entities, 202 entity files, 215 entity/profile hashes, 2,467 source JSON pointers and all seven complete field comparisons; `git diff --check` passed. These source inventory/JSON-pointer/hash checks and documentation whitespace validation are the only new validation. Property correction, effective authorization reconciliation, missing-placement decisions and format consolidation remain pending; the trace must not be reported as their completion. Unrelated concurrent shell/UI changes remain outside this evidence commit.
 
 10. **Security and evidence review gates**
 

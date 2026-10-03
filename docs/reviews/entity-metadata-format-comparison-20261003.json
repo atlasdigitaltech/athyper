@@ -1,0 +1,4024 @@
+{
+  "schema": "review-evidence-only/1",
+  "date": "2026-10-03",
+  "comparisons": [
+    {
+      "entityCode": "country",
+      "nativeSchema": "athyper.shared-reference-product/1",
+      "splitSchema": "athyper.compiled-entity-artifact/2.0-draft",
+      "nativeFieldCount": 22,
+      "splitFieldCount": 2,
+      "fieldComparison": [
+        {
+          "key": "address_format",
+          "native": {
+            "key": "address_format",
+            "label": {
+              "labelKey": "entity.country.fields.address_format",
+              "defaultText": "Address format"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "calling_code",
+          "native": {
+            "key": "calling_code",
+            "label": {
+              "labelKey": "entity.country.fields.calling_code",
+              "defaultText": "Calling code"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "code",
+          "native": {
+            "key": "code",
+            "label": {
+              "labelKey": "entity.country.fields.code",
+              "defaultText": "ISO alpha-2"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "code",
+            "binding": {
+              "sourceObject": "shared.country",
+              "column": "code"
+            },
+            "dataType": "string",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.country.core.fields.code.label",
+              "defaultText": "Code"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "character(2)"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "code3",
+          "native": {
+            "key": "code3",
+            "label": {
+              "labelKey": "entity.country.fields.code3",
+              "defaultText": "ISO alpha-3"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "created_at",
+          "native": {
+            "key": "created_at",
+            "label": {
+              "labelKey": "entity.country.fields.created_at",
+              "defaultText": "Created"
+            },
+            "type": "datetime",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "has_postal_codes",
+          "native": {
+            "key": "has_postal_codes",
+            "label": {
+              "labelKey": "entity.country.fields.has_postal_codes",
+              "defaultText": "Uses postal codes"
+            },
+            "type": "boolean",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "id",
+          "native": {
+            "key": "id",
+            "label": {
+              "labelKey": "entity.country.fields.id",
+              "defaultText": "Record ID"
+            },
+            "type": "uuid",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "name",
+          "native": {
+            "key": "name",
+            "label": {
+              "labelKey": "entity.country.fields.name",
+              "defaultText": "Name"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "name",
+            "binding": {
+              "sourceObject": "shared.country",
+              "column": "name"
+            },
+            "dataType": "string",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.country.core.fields.name.label",
+              "defaultText": "Name"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "numeric3",
+          "native": {
+            "key": "numeric3",
+            "label": {
+              "labelKey": "entity.country.fields.numeric3",
+              "defaultText": "ISO numeric code"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "official_name",
+          "native": {
+            "key": "official_name",
+            "label": {
+              "labelKey": "entity.country.fields.official_name",
+              "defaultText": "Official name"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "phone_example",
+          "native": {
+            "key": "phone_example",
+            "label": {
+              "labelKey": "entity.country.fields.phone_example",
+              "defaultText": "Phone example"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "phone_national_pattern",
+          "native": {
+            "key": "phone_national_pattern",
+            "label": {
+              "labelKey": "entity.country.fields.phone_national_pattern",
+              "defaultText": "National number pattern"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "phone_trunk_prefix",
+          "native": {
+            "key": "phone_trunk_prefix",
+            "label": {
+              "labelKey": "entity.country.fields.phone_trunk_prefix",
+              "defaultText": "National trunk prefix"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "postal_code_example",
+          "native": {
+            "key": "postal_code_example",
+            "label": {
+              "labelKey": "entity.country.fields.postal_code_example",
+              "defaultText": "Postal code example"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "postal_code_label",
+          "native": {
+            "key": "postal_code_label",
+            "label": {
+              "labelKey": "entity.country.fields.postal_code_label",
+              "defaultText": "Postal code label"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "postal_code_pattern",
+          "native": {
+            "key": "postal_code_pattern",
+            "label": {
+              "labelKey": "entity.country.fields.postal_code_pattern",
+              "defaultText": "Postal code pattern"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "postal_position",
+          "native": {
+            "key": "postal_position",
+            "label": {
+              "labelKey": "entity.country.fields.postal_position",
+              "defaultText": "Postal position"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "region",
+          "native": {
+            "key": "region",
+            "label": {
+              "labelKey": "entity.country.fields.region",
+              "defaultText": "Region"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "region_label",
+          "native": {
+            "key": "region_label",
+            "label": {
+              "labelKey": "entity.country.fields.region_label",
+              "defaultText": "Region label"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "status",
+          "native": {
+            "key": "status",
+            "label": {
+              "labelKey": "entity.country.fields.status",
+              "defaultText": "Status"
+            },
+            "type": "enum",
+            "required": true,
+            "domainCode": "shared.ref_status_d",
+            "choices": [
+              {
+                "value": "active",
+                "label": {
+                  "labelKey": "reference.status.active",
+                  "defaultText": "Active"
+                },
+                "tone": "success"
+              },
+              {
+                "value": "deprecated",
+                "label": {
+                  "labelKey": "reference.status.deprecated",
+                  "defaultText": "Deprecated"
+                },
+                "tone": "warning"
+              }
+            ],
+            "semanticRole": "status"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "subregion",
+          "native": {
+            "key": "subregion",
+            "label": {
+              "labelKey": "entity.country.fields.subregion",
+              "defaultText": "Subregion"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "updated_at",
+          "native": {
+            "key": "updated_at",
+            "label": {
+              "labelKey": "entity.country.fields.updated_at",
+              "defaultText": "Updated"
+            },
+            "type": "datetime"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        }
+      ],
+      "nativeOnly": [
+        "address_format",
+        "calling_code",
+        "code3",
+        "created_at",
+        "has_postal_codes",
+        "id",
+        "numeric3",
+        "official_name",
+        "phone_example",
+        "phone_national_pattern",
+        "phone_trunk_prefix",
+        "postal_code_example",
+        "postal_code_label",
+        "postal_code_pattern",
+        "postal_position",
+        "region",
+        "region_label",
+        "status",
+        "subregion",
+        "updated_at"
+      ],
+      "splitOnly": [],
+      "canonicalDecision": "native definition.json for existing native runtime authoring; split core retained for existing split dependencies; no full consolidation established",
+      "propertyDisposition": [
+        {
+          "source": "metadata/entities/common/reference/country/activity.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/activity.json",
+          "pointer": "/profile",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/capabilities.json",
+          "pointer": "",
+          "destination": "retain complete ordered capability array at same source"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/schemaVersion",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/contractStatus",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/artifactType",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/artifactKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/plane",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/storage",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/fields",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/businessContext",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/referencePicker",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/dependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/validationAuthority",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/projectionPolicy",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/serverDependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/defaultsProfile",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/defaultsProfileRef",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/artifactHash",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/core.json",
+          "pointer": "/query",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/moduleCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/planes",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/runtimeBindings",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/entityCode",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/iconKey",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/title",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/storageObject",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/codeField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/titleField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/fields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/columns",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/searchFields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/navigation",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/sections",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/entityLabel",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/definition.json",
+          "pointer": "/definition/ai",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/entity.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/entity.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/entity.json",
+          "pointer": "/definition",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/entity.json",
+          "pointer": "/artifacts",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/entity.json",
+          "pointer": "/placement",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/entity.json",
+          "pointer": "/localization",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/entity.json",
+          "pointer": "/capabilities",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/entity.json",
+          "pointer": "/activity",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/localization.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/localization.json",
+          "pointer": "/defaultLocale",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/localization.json",
+          "pointer": "/requiredLocales",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/localization.json",
+          "pointer": "/values",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/placement.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/placement.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/country/placement.json",
+          "pointer": "/placements",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        }
+      ],
+      "status": "unresolved competing/complementary sources; no deletion or conversion authorized by this evidence"
+    },
+    {
+      "entityCode": "currency",
+      "nativeSchema": "athyper.shared-reference-product/1",
+      "splitSchema": "athyper.compiled-entity-artifact/2.0-draft",
+      "nativeFieldCount": 9,
+      "splitFieldCount": 2,
+      "fieldComparison": [
+        {
+          "key": "code",
+          "native": {
+            "key": "code",
+            "label": {
+              "labelKey": "entity.currency.fields.code",
+              "defaultText": "Code"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "code",
+            "binding": {
+              "sourceObject": "shared.currency",
+              "column": "code"
+            },
+            "dataType": "string",
+            "storageType": "character(3)",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.currency.core.fields.code.label",
+              "defaultText": "Code"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "created_at",
+          "native": {
+            "key": "created_at",
+            "label": {
+              "labelKey": "entity.currency.fields.created_at",
+              "defaultText": "Created"
+            },
+            "type": "datetime",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "id",
+          "native": {
+            "key": "id",
+            "label": {
+              "labelKey": "entity.currency.fields.id",
+              "defaultText": "Record ID"
+            },
+            "type": "uuid",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "minor_units",
+          "native": {
+            "key": "minor_units",
+            "label": {
+              "labelKey": "entity.currency.fields.minor_units",
+              "defaultText": "Minor units"
+            },
+            "type": "integer"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "name",
+          "native": {
+            "key": "name",
+            "label": {
+              "labelKey": "entity.currency.fields.name",
+              "defaultText": "Name"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "name",
+            "binding": {
+              "sourceObject": "shared.currency",
+              "column": "name"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.currency.core.fields.name.label",
+              "defaultText": "Name"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "numeric3",
+          "native": {
+            "key": "numeric3",
+            "label": {
+              "labelKey": "entity.currency.fields.numeric3",
+              "defaultText": "ISO numeric code"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "status",
+          "native": {
+            "key": "status",
+            "label": {
+              "labelKey": "entity.currency.fields.status",
+              "defaultText": "Status"
+            },
+            "type": "enum",
+            "required": true,
+            "domainCode": "shared.ref_status_d",
+            "choices": [
+              {
+                "value": "active",
+                "label": {
+                  "labelKey": "reference.status.active",
+                  "defaultText": "Active"
+                },
+                "tone": "success"
+              },
+              {
+                "value": "deprecated",
+                "label": {
+                  "labelKey": "reference.status.deprecated",
+                  "defaultText": "Deprecated"
+                },
+                "tone": "warning"
+              }
+            ],
+            "semanticRole": "status"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "symbol",
+          "native": {
+            "key": "symbol",
+            "label": {
+              "labelKey": "entity.currency.fields.symbol",
+              "defaultText": "Symbol"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "updated_at",
+          "native": {
+            "key": "updated_at",
+            "label": {
+              "labelKey": "entity.currency.fields.updated_at",
+              "defaultText": "Updated"
+            },
+            "type": "datetime"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        }
+      ],
+      "nativeOnly": [
+        "created_at",
+        "id",
+        "minor_units",
+        "numeric3",
+        "status",
+        "symbol",
+        "updated_at"
+      ],
+      "splitOnly": [],
+      "canonicalDecision": "native definition.json for existing native runtime authoring; split core retained for existing split dependencies; no full consolidation established",
+      "propertyDisposition": [
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/schemaVersion",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/contractStatus",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/artifactType",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/artifactKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/plane",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/storage",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/fields",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/businessContext",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/referencePicker",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/dependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/validationAuthority",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/projectionPolicy",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/defaultsProfile",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/defaultsProfileRef",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/query",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/core.json",
+          "pointer": "/artifactHash",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/moduleCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/planes",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/runtimeBindings",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/entityCode",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/title",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/entityLabel",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/storageObject",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/codeField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/titleField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/fields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/columns",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/searchFields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/sections",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/definition.json",
+          "pointer": "/definition/ai",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/entity.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/entity.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/entity.json",
+          "pointer": "/definition",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/entity.json",
+          "pointer": "/artifacts",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/entity.json",
+          "pointer": "/placement",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/placement.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/placement.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/currency/placement.json",
+          "pointer": "/placements",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        }
+      ],
+      "status": "unresolved competing/complementary sources; no deletion or conversion authorized by this evidence"
+    },
+    {
+      "entityCode": "language",
+      "nativeSchema": "athyper.shared-reference-product/1",
+      "splitSchema": "athyper.compiled-entity-artifact/2.0-draft",
+      "nativeFieldCount": 9,
+      "splitFieldCount": 2,
+      "fieldComparison": [
+        {
+          "key": "code",
+          "native": {
+            "key": "code",
+            "label": {
+              "labelKey": "entity.language.fields.code",
+              "defaultText": "Code"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "code",
+            "binding": {
+              "sourceObject": "shared.language",
+              "column": "code"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.language.core.fields.code.label",
+              "defaultText": "Code"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "created_at",
+          "native": {
+            "key": "created_at",
+            "label": {
+              "labelKey": "entity.language.fields.created_at",
+              "defaultText": "Created"
+            },
+            "type": "datetime",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "direction",
+          "native": {
+            "key": "direction",
+            "label": {
+              "labelKey": "entity.language.fields.direction",
+              "defaultText": "Text direction"
+            },
+            "type": "enum",
+            "required": true,
+            "domainCode": "shared.text_direction",
+            "choices": [
+              {
+                "value": "ltr",
+                "label": {
+                  "labelKey": "reference.direction.ltr",
+                  "defaultText": "Left to right"
+                }
+              },
+              {
+                "value": "rtl",
+                "label": {
+                  "labelKey": "reference.direction.rtl",
+                  "defaultText": "Right to left"
+                }
+              }
+            ]
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "id",
+          "native": {
+            "key": "id",
+            "label": {
+              "labelKey": "entity.language.fields.id",
+              "defaultText": "Record ID"
+            },
+            "type": "uuid",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "iso639_2",
+          "native": {
+            "key": "iso639_2",
+            "label": {
+              "labelKey": "entity.language.fields.iso639_2",
+              "defaultText": "ISO 639-2"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "name",
+          "native": {
+            "key": "name",
+            "label": {
+              "labelKey": "entity.language.fields.name",
+              "defaultText": "Name"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "name",
+            "binding": {
+              "sourceObject": "shared.language",
+              "column": "name"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.language.core.fields.name.label",
+              "defaultText": "Name"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "native_name",
+          "native": {
+            "key": "native_name",
+            "label": {
+              "labelKey": "entity.language.fields.native_name",
+              "defaultText": "Native name"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "status",
+          "native": {
+            "key": "status",
+            "label": {
+              "labelKey": "entity.language.fields.status",
+              "defaultText": "Status"
+            },
+            "type": "enum",
+            "required": true,
+            "domainCode": "shared.ref_status_d",
+            "choices": [
+              {
+                "value": "active",
+                "label": {
+                  "labelKey": "reference.status.active",
+                  "defaultText": "Active"
+                },
+                "tone": "success"
+              },
+              {
+                "value": "deprecated",
+                "label": {
+                  "labelKey": "reference.status.deprecated",
+                  "defaultText": "Deprecated"
+                },
+                "tone": "warning"
+              }
+            ],
+            "semanticRole": "status"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "updated_at",
+          "native": {
+            "key": "updated_at",
+            "label": {
+              "labelKey": "entity.language.fields.updated_at",
+              "defaultText": "Updated"
+            },
+            "type": "datetime"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        }
+      ],
+      "nativeOnly": [
+        "created_at",
+        "direction",
+        "id",
+        "iso639_2",
+        "native_name",
+        "status",
+        "updated_at"
+      ],
+      "splitOnly": [],
+      "canonicalDecision": "native definition.json for existing native runtime authoring; split core retained for existing split dependencies; no full consolidation established",
+      "propertyDisposition": [
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/schemaVersion",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/contractStatus",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/artifactType",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/artifactKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/plane",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/storage",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/fields",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/businessContext",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/referencePicker",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/dependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/validationAuthority",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/projectionPolicy",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/defaultsProfile",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/defaultsProfileRef",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/query",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/core.json",
+          "pointer": "/artifactHash",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/moduleCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/planes",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/runtimeBindings",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/entityCode",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/title",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/entityLabel",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/storageObject",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/codeField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/titleField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/fields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/columns",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/searchFields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/sections",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/definition.json",
+          "pointer": "/definition/ai",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/entity.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/entity.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/entity.json",
+          "pointer": "/definition",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/entity.json",
+          "pointer": "/artifacts",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/entity.json",
+          "pointer": "/placement",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/placement.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/placement.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/language/placement.json",
+          "pointer": "/placements",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        }
+      ],
+      "status": "unresolved competing/complementary sources; no deletion or conversion authorized by this evidence"
+    },
+    {
+      "entityCode": "locale",
+      "nativeSchema": "athyper.shared-reference-product/1",
+      "splitSchema": "athyper.compiled-entity-artifact/2.0-draft",
+      "nativeFieldCount": 10,
+      "splitFieldCount": 4,
+      "fieldComparison": [
+        {
+          "key": "code",
+          "native": {
+            "key": "code",
+            "label": {
+              "labelKey": "entity.locale.fields.code",
+              "defaultText": "Code"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "code",
+            "binding": {
+              "sourceObject": "shared.locale",
+              "column": "code"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.locale.core.fields.code.label",
+              "defaultText": "Code"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "countryCode",
+          "native": null,
+          "split": {
+            "key": "countryCode",
+            "binding": {
+              "sourceObject": "shared.locale",
+              "column": "country_code"
+            },
+            "dataType": "string",
+            "storageType": "character(2)",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.locale.core.fields.countryCode.label",
+              "defaultText": "Country"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "country_code",
+          "native": {
+            "key": "country_code",
+            "label": {
+              "labelKey": "entity.locale.fields.country_code",
+              "defaultText": "Country code"
+            },
+            "type": "string",
+            "keyReference": {
+              "targetEntity": "country",
+              "labelField": "name",
+              "fields": [
+                {
+                  "source": "country_code",
+                  "target": "code"
+                }
+              ]
+            }
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "created_at",
+          "native": {
+            "key": "created_at",
+            "label": {
+              "labelKey": "entity.locale.fields.created_at",
+              "defaultText": "Created"
+            },
+            "type": "datetime",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "direction",
+          "native": {
+            "key": "direction",
+            "label": {
+              "labelKey": "entity.locale.fields.direction",
+              "defaultText": "Text direction"
+            },
+            "type": "enum",
+            "required": true,
+            "domainCode": "shared.text_direction",
+            "choices": [
+              {
+                "value": "ltr",
+                "label": {
+                  "labelKey": "reference.direction.ltr",
+                  "defaultText": "Left to right"
+                }
+              },
+              {
+                "value": "rtl",
+                "label": {
+                  "labelKey": "reference.direction.rtl",
+                  "defaultText": "Right to left"
+                }
+              }
+            ]
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "id",
+          "native": {
+            "key": "id",
+            "label": {
+              "labelKey": "entity.locale.fields.id",
+              "defaultText": "Record ID"
+            },
+            "type": "uuid",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "languageCode",
+          "native": null,
+          "split": {
+            "key": "languageCode",
+            "binding": {
+              "sourceObject": "shared.locale",
+              "column": "language_code"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.locale.core.fields.languageCode.label",
+              "defaultText": "Language"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "language_code",
+          "native": {
+            "key": "language_code",
+            "label": {
+              "labelKey": "entity.locale.fields.language_code",
+              "defaultText": "Language code"
+            },
+            "type": "string",
+            "required": true,
+            "keyReference": {
+              "targetEntity": "language",
+              "labelField": "name",
+              "fields": [
+                {
+                  "source": "language_code",
+                  "target": "code"
+                }
+              ]
+            }
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "name",
+          "native": {
+            "key": "name",
+            "label": {
+              "labelKey": "entity.locale.fields.name",
+              "defaultText": "Name"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "name",
+            "binding": {
+              "sourceObject": "shared.locale",
+              "column": "name"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.locale.core.fields.name.label",
+              "defaultText": "Name"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "script",
+          "native": {
+            "key": "script",
+            "label": {
+              "labelKey": "entity.locale.fields.script",
+              "defaultText": "Script"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "status",
+          "native": {
+            "key": "status",
+            "label": {
+              "labelKey": "entity.locale.fields.status",
+              "defaultText": "Status"
+            },
+            "type": "enum",
+            "required": true,
+            "domainCode": "shared.ref_status_d",
+            "choices": [
+              {
+                "value": "active",
+                "label": {
+                  "labelKey": "reference.status.active",
+                  "defaultText": "Active"
+                },
+                "tone": "success"
+              },
+              {
+                "value": "deprecated",
+                "label": {
+                  "labelKey": "reference.status.deprecated",
+                  "defaultText": "Deprecated"
+                },
+                "tone": "warning"
+              }
+            ],
+            "semanticRole": "status"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "updated_at",
+          "native": {
+            "key": "updated_at",
+            "label": {
+              "labelKey": "entity.locale.fields.updated_at",
+              "defaultText": "Updated"
+            },
+            "type": "datetime"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        }
+      ],
+      "nativeOnly": [
+        "country_code",
+        "created_at",
+        "direction",
+        "id",
+        "language_code",
+        "script",
+        "status",
+        "updated_at"
+      ],
+      "splitOnly": [
+        "countryCode",
+        "languageCode"
+      ],
+      "canonicalDecision": "native definition.json for existing native runtime authoring; split core retained for existing split dependencies; no full consolidation established",
+      "propertyDisposition": [
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/schemaVersion",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/contractStatus",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/artifactType",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/artifactKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/plane",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/storage",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/fields",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/businessContext",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/referencePicker",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/dependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/validationAuthority",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/projectionPolicy",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/defaultsProfile",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/defaultsProfileRef",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/query",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/core.json",
+          "pointer": "/artifactHash",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/moduleCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/planes",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/runtimeBindings",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/entityCode",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/title",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/entityLabel",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/storageObject",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/codeField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/titleField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/fields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/columns",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/searchFields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/sections",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/definition.json",
+          "pointer": "/definition/ai",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/entity.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/entity.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/entity.json",
+          "pointer": "/definition",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/entity.json",
+          "pointer": "/artifacts",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/entity.json",
+          "pointer": "/placement",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/placement.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/placement.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/locale/placement.json",
+          "pointer": "/placements",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        }
+      ],
+      "status": "unresolved competing/complementary sources; no deletion or conversion authorized by this evidence"
+    },
+    {
+      "entityCode": "state_region",
+      "nativeSchema": "athyper.shared-reference-product/1",
+      "splitSchema": "athyper.compiled-entity-artifact/2.0-draft",
+      "nativeFieldCount": 9,
+      "splitFieldCount": 4,
+      "fieldComparison": [
+        {
+          "key": "category",
+          "native": {
+            "key": "category",
+            "label": {
+              "labelKey": "entity.state_region.fields.category",
+              "defaultText": "Category"
+            },
+            "type": "string"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "code",
+          "native": {
+            "key": "code",
+            "label": {
+              "labelKey": "entity.state_region.fields.code",
+              "defaultText": "Code"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "code",
+            "binding": {
+              "sourceObject": "shared.state_region",
+              "column": "code"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.stateRegion.core.fields.code.label",
+              "defaultText": "Subdivision code"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "countryCode",
+          "native": null,
+          "split": {
+            "key": "countryCode",
+            "binding": {
+              "sourceObject": "shared.state_region",
+              "column": "country_code"
+            },
+            "dataType": "string",
+            "storageType": "character(2)",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.stateRegion.core.fields.countryCode.label",
+              "defaultText": "Country"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "country_code",
+          "native": {
+            "key": "country_code",
+            "label": {
+              "labelKey": "entity.state_region.fields.country_code",
+              "defaultText": "Country code"
+            },
+            "type": "string",
+            "required": true,
+            "keyReference": {
+              "targetEntity": "country",
+              "labelField": "name",
+              "fields": [
+                {
+                  "source": "country_code",
+                  "target": "code"
+                }
+              ]
+            }
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "created_at",
+          "native": {
+            "key": "created_at",
+            "label": {
+              "labelKey": "entity.state_region.fields.created_at",
+              "defaultText": "Created"
+            },
+            "type": "datetime",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "id",
+          "native": {
+            "key": "id",
+            "label": {
+              "labelKey": "entity.state_region.fields.id",
+              "defaultText": "Record ID"
+            },
+            "type": "uuid",
+            "required": true
+          },
+          "split": {
+            "key": "id",
+            "binding": {
+              "sourceObject": "shared.state_region",
+              "column": "id"
+            },
+            "dataType": "uuid",
+            "storageType": "uuid",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.stateRegion.core.fields.id.label",
+              "defaultText": "Id"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "name",
+          "native": {
+            "key": "name",
+            "label": {
+              "labelKey": "entity.state_region.fields.name",
+              "defaultText": "Name"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "name",
+            "binding": {
+              "sourceObject": "shared.state_region",
+              "column": "name"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.stateRegion.core.fields.name.label",
+              "defaultText": "Name"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "parent_code",
+          "native": {
+            "key": "parent_code",
+            "label": {
+              "labelKey": "entity.state_region.fields.parent_code",
+              "defaultText": "Parent subdivision code"
+            },
+            "type": "string",
+            "keyReference": {
+              "targetEntity": "state_region",
+              "labelField": "name",
+              "fields": [
+                {
+                  "source": "country_code",
+                  "target": "country_code"
+                },
+                {
+                  "source": "parent_code",
+                  "target": "code"
+                }
+              ]
+            }
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "status",
+          "native": {
+            "key": "status",
+            "label": {
+              "labelKey": "entity.state_region.fields.status",
+              "defaultText": "Status"
+            },
+            "type": "enum",
+            "required": true,
+            "domainCode": "shared.ref_status_d",
+            "choices": [
+              {
+                "value": "active",
+                "label": {
+                  "labelKey": "reference.status.active",
+                  "defaultText": "Active"
+                },
+                "tone": "success"
+              },
+              {
+                "value": "deprecated",
+                "label": {
+                  "labelKey": "reference.status.deprecated",
+                  "defaultText": "Deprecated"
+                },
+                "tone": "warning"
+              }
+            ],
+            "semanticRole": "status"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "updated_at",
+          "native": {
+            "key": "updated_at",
+            "label": {
+              "labelKey": "entity.state_region.fields.updated_at",
+              "defaultText": "Updated"
+            },
+            "type": "datetime"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        }
+      ],
+      "nativeOnly": [
+        "category",
+        "country_code",
+        "created_at",
+        "parent_code",
+        "status",
+        "updated_at"
+      ],
+      "splitOnly": [
+        "countryCode"
+      ],
+      "canonicalDecision": "native definition.json for existing native runtime authoring; split core retained for existing split dependencies; no full consolidation established",
+      "propertyDisposition": [
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/schemaVersion",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/contractStatus",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/artifactType",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/artifactKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/plane",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/storage",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/fields",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/businessContext",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/referencePicker",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/dependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/validationAuthority",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/projectionPolicy",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/defaultsProfile",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/defaultsProfileRef",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/query",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/core.json",
+          "pointer": "/artifactHash",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/moduleCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/planes",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/runtimeBindings",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/entityCode",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/title",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/entityLabel",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/storageObject",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/codeField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/titleField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/codeKeyFields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/fields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/columns",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/searchFields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/sections",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/definition.json",
+          "pointer": "/definition/ai",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/entity.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/entity.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/entity.json",
+          "pointer": "/definition",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/entity.json",
+          "pointer": "/artifacts",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/entity.json",
+          "pointer": "/placement",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/placement.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/placement.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/state_region/placement.json",
+          "pointer": "/placements",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        }
+      ],
+      "status": "unresolved competing/complementary sources; no deletion or conversion authorized by this evidence"
+    },
+    {
+      "entityCode": "timezone",
+      "nativeSchema": "athyper.shared-reference-product/1",
+      "splitSchema": "athyper.compiled-entity-artifact/2.0-draft",
+      "nativeFieldCount": 9,
+      "splitFieldCount": 3,
+      "fieldComparison": [
+        {
+          "key": "canonicalCode",
+          "native": null,
+          "split": {
+            "key": "canonicalCode",
+            "binding": {
+              "sourceObject": "shared.timezone",
+              "column": "canonical_code"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.timezone.core.fields.canonicalCode.label",
+              "defaultText": "Canonical time zone"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "canonical_code",
+          "native": {
+            "key": "canonical_code",
+            "label": {
+              "labelKey": "entity.timezone.fields.canonical_code",
+              "defaultText": "Canonical timezone code"
+            },
+            "type": "string",
+            "keyReference": {
+              "targetEntity": "timezone",
+              "labelField": "code",
+              "fields": [
+                {
+                  "source": "canonical_code",
+                  "target": "code"
+                }
+              ]
+            }
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "code",
+          "native": {
+            "key": "code",
+            "label": {
+              "labelKey": "entity.timezone.fields.code",
+              "defaultText": "Code"
+            },
+            "type": "string",
+            "required": true
+          },
+          "split": {
+            "key": "code",
+            "binding": {
+              "sourceObject": "shared.timezone",
+              "column": "code"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.timezone.core.fields.code.label",
+              "defaultText": "IANA time zone"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "created_at",
+          "native": {
+            "key": "created_at",
+            "label": {
+              "labelKey": "entity.timezone.fields.created_at",
+              "defaultText": "Created"
+            },
+            "type": "datetime",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "id",
+          "native": {
+            "key": "id",
+            "label": {
+              "labelKey": "entity.timezone.fields.id",
+              "defaultText": "Record ID"
+            },
+            "type": "uuid",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "is_alias",
+          "native": {
+            "key": "is_alias",
+            "label": {
+              "labelKey": "entity.timezone.fields.is_alias",
+              "defaultText": "Alias"
+            },
+            "type": "boolean",
+            "required": true
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "name",
+          "native": {
+            "key": "name",
+            "label": {
+              "labelKey": "entity.timezone.fields.name",
+              "defaultText": "Name"
+            },
+            "type": "string"
+          },
+          "split": {
+            "key": "name",
+            "binding": {
+              "sourceObject": "shared.timezone",
+              "column": "name"
+            },
+            "dataType": "string",
+            "storageType": "text",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.timezone.core.fields.name.label",
+              "defaultText": "Display name"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "status",
+          "native": {
+            "key": "status",
+            "label": {
+              "labelKey": "entity.timezone.fields.status",
+              "defaultText": "Status"
+            },
+            "type": "enum",
+            "required": true,
+            "domainCode": "shared.ref_status_d",
+            "choices": [
+              {
+                "value": "active",
+                "label": {
+                  "labelKey": "reference.status.active",
+                  "defaultText": "Active"
+                },
+                "tone": "success"
+              },
+              {
+                "value": "deprecated",
+                "label": {
+                  "labelKey": "reference.status.deprecated",
+                  "defaultText": "Deprecated"
+                },
+                "tone": "warning"
+              }
+            ],
+            "semanticRole": "status"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "updated_at",
+          "native": {
+            "key": "updated_at",
+            "label": {
+              "labelKey": "entity.timezone.fields.updated_at",
+              "defaultText": "Updated"
+            },
+            "type": "datetime"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "utc_offset_minutes",
+          "native": {
+            "key": "utc_offset_minutes",
+            "label": {
+              "labelKey": "entity.timezone.fields.utc_offset_minutes",
+              "defaultText": "Standard UTC offset (minutes)"
+            },
+            "type": "integer"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        }
+      ],
+      "nativeOnly": [
+        "canonical_code",
+        "created_at",
+        "id",
+        "is_alias",
+        "status",
+        "updated_at",
+        "utc_offset_minutes"
+      ],
+      "splitOnly": [
+        "canonicalCode"
+      ],
+      "canonicalDecision": "native definition.json for existing native runtime authoring; split core retained for existing split dependencies; no full consolidation established",
+      "propertyDisposition": [
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/schemaVersion",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/contractStatus",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/artifactType",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/artifactKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/plane",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/storage",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/fields",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/businessContext",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/referencePicker",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/dependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/validationAuthority",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/projectionPolicy",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/defaultsProfile",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/defaultsProfileRef",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/query",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/core.json",
+          "pointer": "/artifactHash",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/moduleCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/planes",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/runtimeBindings",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/entityCode",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/title",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/entityLabel",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/storageObject",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/codeField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/titleField",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/fields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/columns",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/searchFields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/sections",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/definition.json",
+          "pointer": "/definition/ai",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/entity.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/entity.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/entity.json",
+          "pointer": "/definition",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/entity.json",
+          "pointer": "/artifacts",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/entity.json",
+          "pointer": "/placement",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/placement.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/placement.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/common/reference/timezone/placement.json",
+          "pointer": "/placements",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        }
+      ],
+      "status": "unresolved competing/complementary sources; no deletion or conversion authorized by this evidence"
+    },
+    {
+      "entityCode": "address",
+      "nativeSchema": "athyper.table-entity-product/1",
+      "splitSchema": "athyper.compiled-entity-artifact/2.0-draft",
+      "nativeFieldCount": 13,
+      "splitFieldCount": 19,
+      "fieldComparison": [
+        {
+          "key": "address_kind",
+          "native": {
+            "id": "9d1c55bd-4f3f-55ed-9719-b96ba95821de",
+            "fieldKey": "address_kind",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string"
+            },
+            "cardinality": "one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "address_kind",
+            "dataClassification": "internal",
+            "status": "active"
+          },
+          "split": {
+            "key": "address_kind",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "address_kind"
+            },
+            "dataType": "string",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.address.core.fields.address_kind.label",
+              "defaultText": "Address kind"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "building_name",
+          "native": null,
+          "split": {
+            "key": "building_name",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "building_name"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.building_name.label",
+              "defaultText": "Building name"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "city",
+          "native": {
+            "id": "35887e58-3e23-55b5-be0d-66c59a8465f7",
+            "fieldKey": "city",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string"
+            },
+            "cardinality": "zero_or_one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "city",
+            "dataClassification": "pii",
+            "status": "active"
+          },
+          "split": {
+            "key": "city",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "city"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.city.label",
+              "defaultText": "City"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "country_code",
+          "native": {
+            "id": "e17525cb-68c0-55f6-b4a5-840596ff329a",
+            "fieldKey": "country_code",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string",
+              "keyReference": {
+                "targetEntity": "country",
+                "labelField": "name",
+                "fields": [
+                  {
+                    "source": "country_code",
+                    "target": "code"
+                  }
+                ]
+              }
+            },
+            "cardinality": "one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "country_code",
+            "dataClassification": "pii",
+            "status": "active"
+          },
+          "split": {
+            "key": "country_code",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "country_code"
+            },
+            "dataType": "string",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.address.core.fields.country_code.label",
+              "defaultText": "Country Code"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "referenceConfig": {
+              "targetEntityCode": "country",
+              "valueField": "code"
+            },
+            "storageType": "character(2)"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "dependent_locality",
+          "native": null,
+          "split": {
+            "key": "dependent_locality",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "dependent_locality"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.dependent_locality.label",
+              "defaultText": "Dependent locality"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "floor",
+          "native": null,
+          "split": {
+            "key": "floor",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "floor"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.floor.label",
+              "defaultText": "Floor"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "formatted_address",
+          "native": {
+            "id": "1e5b8685-9e69-57b3-8f11-1ef4d4c426ae",
+            "fieldKey": "formatted_address",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string"
+            },
+            "cardinality": "zero_or_one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "formatted_address",
+            "dataClassification": "pii",
+            "status": "active"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "house_number",
+          "native": null,
+          "split": {
+            "key": "house_number",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "house_number"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.house_number.label",
+              "defaultText": "House number"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "id",
+          "native": {
+            "id": "cd7372fa-0e60-5fd5-97bd-6954898c285c",
+            "fieldKey": "id",
+            "dataType": "uuid",
+            "typeConfig": {
+              "kind": "uuid"
+            },
+            "cardinality": "one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "id",
+            "dataClassification": "internal",
+            "status": "active"
+          },
+          "split": {
+            "key": "id",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "id"
+            },
+            "dataType": "uuid",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.address.core.fields.id.label",
+              "defaultText": "Id"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "uuid",
+            "uiFacets": {
+              "visibility": "hidden",
+              "editability": "readonly"
+            },
+            "writePolicy": "system_managed"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "line1",
+          "native": {
+            "id": "edc65263-a3c1-52d6-a2f9-1e4fad1860ce",
+            "fieldKey": "line1",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string"
+            },
+            "cardinality": "zero_or_one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "line1",
+            "dataClassification": "pii",
+            "status": "active"
+          },
+          "split": {
+            "key": "line1",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "line1"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.line1.label",
+              "defaultText": "Line1"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "line2",
+          "native": {
+            "id": "b3e37228-1ae2-59eb-a856-6117939494b1",
+            "fieldKey": "line2",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string"
+            },
+            "cardinality": "zero_or_one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "line2",
+            "dataClassification": "pii",
+            "status": "active"
+          },
+          "split": {
+            "key": "line2",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "line2"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.line2.label",
+              "defaultText": "Line2"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "line3",
+          "native": {
+            "id": "51f3b009-15f8-5744-bb53-afd6c6c6646c",
+            "fieldKey": "line3",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string"
+            },
+            "cardinality": "zero_or_one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "line3",
+            "dataClassification": "pii",
+            "status": "active"
+          },
+          "split": {
+            "key": "line3",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "line3"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.line3.label",
+              "defaultText": "Line 3"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "po_box",
+          "native": null,
+          "split": {
+            "key": "po_box",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "po_box"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.po_box.label",
+              "defaultText": "PO box"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "postal_code",
+          "native": {
+            "id": "15e03a33-2f94-5892-a7f1-e75b5374d293",
+            "fieldKey": "postal_code",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string"
+            },
+            "cardinality": "zero_or_one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "postal_code",
+            "dataClassification": "pii",
+            "status": "active"
+          },
+          "split": {
+            "key": "postal_code",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "postal_code"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.postal_code.label",
+              "defaultText": "Postal Code"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "region",
+          "native": null,
+          "split": {
+            "key": "region",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "region"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.region.label",
+              "defaultText": "Region"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "state_region_code",
+          "native": {
+            "id": "41eee574-1ae8-557c-ab8d-ad74859ccf96",
+            "fieldKey": "state_region_code",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string",
+              "keyReference": {
+                "targetEntity": "state_region",
+                "labelField": "name",
+                "fields": [
+                  {
+                    "source": "country_code",
+                    "target": "country_code"
+                  },
+                  {
+                    "source": "state_region_code",
+                    "target": "code"
+                  }
+                ]
+              }
+            },
+            "cardinality": "zero_or_one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "state_region_code",
+            "dataClassification": "pii",
+            "status": "active"
+          },
+          "split": {
+            "key": "state_region_code",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "state_region_code"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.state_region_code.label",
+              "defaultText": "Subdivision code"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text",
+            "referenceConfig": {
+              "targetEntityCode": "state_region",
+              "valueField": "code"
+            }
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "status",
+          "native": {
+            "id": "679bd15c-febb-5b92-9732-3563f3fcb726",
+            "fieldKey": "status",
+            "dataType": "enum",
+            "typeConfig": {
+              "kind": "enum",
+              "domain_code": "master.address.status"
+            },
+            "cardinality": "one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "status",
+            "dataClassification": "internal",
+            "status": "active"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "street_name",
+          "native": null,
+          "split": {
+            "key": "street_name",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "street_name"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.street_name.label",
+              "defaultText": "Street name"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "tenant_id",
+          "native": {
+            "id": "4efbfa89-d557-557a-9f56-7db26fd70810",
+            "fieldKey": "tenant_id",
+            "dataType": "uuid",
+            "typeConfig": {
+              "kind": "uuid"
+            },
+            "cardinality": "one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "tenant_id",
+            "dataClassification": "internal",
+            "status": "active"
+          },
+          "split": null,
+          "classification": "complementary_native_only",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "timezone_code",
+          "native": {
+            "id": "6ad96eff-413e-59dd-9ae8-eacdecf738df",
+            "fieldKey": "timezone_code",
+            "dataType": "string",
+            "typeConfig": {
+              "kind": "string",
+              "keyReference": {
+                "targetEntity": "timezone",
+                "labelField": "code",
+                "fields": [
+                  {
+                    "source": "timezone_code",
+                    "target": "code"
+                  }
+                ]
+              }
+            },
+            "cardinality": "zero_or_one",
+            "valueOrigin": "stored",
+            "writeMode": "read_only",
+            "storagePath": "timezone_code",
+            "dataClassification": "pii",
+            "status": "active"
+          },
+          "split": {
+            "key": "timezone_code",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "timezone_code"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.timezone_code.label",
+              "defaultText": "Time zone"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text",
+            "referenceConfig": {
+              "targetEntityCode": "timezone",
+              "valueField": "code"
+            }
+          },
+          "classification": "different_representations_require_property_review",
+          "sameDeclaredType": true
+        },
+        {
+          "key": "unit",
+          "native": null,
+          "split": {
+            "key": "unit",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "unit"
+            },
+            "dataType": "string",
+            "nullable": true,
+            "label": {
+              "labelKey": "entity.address.core.fields.unit.label",
+              "defaultText": "Unit"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        },
+        {
+          "key": "validation_status",
+          "native": null,
+          "split": {
+            "key": "validation_status",
+            "binding": {
+              "sourceObject": "master.address",
+              "column": "validation_status"
+            },
+            "dataType": "string",
+            "nullable": false,
+            "label": {
+              "labelKey": "entity.address.core.fields.validation_status.label",
+              "defaultText": "Validation Status"
+            },
+            "valueOrigin": "stored",
+            "readPolicy": "authorized_projection",
+            "storageType": "text",
+            "uiFacets": {
+              "visibility": "visible",
+              "editability": "readonly"
+            },
+            "writePolicy": "system_managed"
+          },
+          "classification": "complementary_split_only_or_alias",
+          "sameDeclaredType": null
+        }
+      ],
+      "nativeOnly": [
+        "formatted_address",
+        "status",
+        "tenant_id"
+      ],
+      "splitOnly": [
+        "building_name",
+        "dependent_locality",
+        "floor",
+        "house_number",
+        "po_box",
+        "region",
+        "street_name",
+        "unit",
+        "validation_status"
+      ],
+      "canonicalDecision": "native definition.json for existing native runtime authoring; split core retained for existing split dependencies; no full consolidation established",
+      "propertyDisposition": [
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/schemaVersion",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/contractStatus",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/artifactType",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/artifactKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/plane",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/storage",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/fields",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/businessContext",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/relations",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/capabilities",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/querySafetyLimits",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/readinessFacts",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/dependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/validationAuthority",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/projectionPolicy",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/serverDependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/defaultsProfile",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/defaultsProfileRef",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/query",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/core.json",
+          "pointer": "/artifactHash",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/moduleCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/planes",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/contractSchema",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/entity",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/runtimeProfiles",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/operations",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/operationPermissions",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/operationScopeBindings",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/searchProfiles",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/fields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/keys",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/keyFields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/searchFields",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/surfaces",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/surfaceFieldBindings",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/definition.json",
+          "pointer": "/definition/fieldReferenceBindings",
+          "destination": "retain at same source/pointer pending contract reconciliation"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/entity.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/entity.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/entity.json",
+          "pointer": "/definition",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/entity.json",
+          "pointer": "/artifacts",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/entity.json",
+          "pointer": "/placement",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/schemaVersion",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/contractStatus",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/artifactType",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/artifactKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/plane",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/operations",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/policyBindings",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/dependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/artifactHash",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/operationDefaultsProfile",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/operation.json",
+          "pointer": "/operationDefaultsProfileRef",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/placement.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/placement.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/placement.json",
+          "pointer": "/name",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/placement.json",
+          "pointer": "/placements",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/schema",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/schemaVersion",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/contractStatus",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/artifactType",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/artifactKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/entityCode",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/plane",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/sectionKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/rendererKey",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/coreRef",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/ownerBinding",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/accessAuthority",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/fieldBindings",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/resourceStates",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/dependencies",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        },
+        {
+          "source": "metadata/entities/mdg/location/address/presentation.section.json",
+          "pointer": "/artifactHash",
+          "destination": "retain at same source/pointer; do not rewrite artifact hashes or source identities"
+        }
+      ],
+      "status": "unresolved competing/complementary sources; no deletion or conversion authorized by this evidence"
+    }
+  ]
+}
