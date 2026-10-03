@@ -1,7 +1,6 @@
 "use client";
 
 import { getBrowserQueryClient } from "@athyper/platform-query";
-import { readBrowserCsrfToken } from "./browser-csrf";
 import { ActionButton, ActionLink, PresentationCard } from "@athyper/platform-ui";
 import * as React from "react";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
@@ -69,29 +68,11 @@ export function ErrorSurface({ model, reset, applicationName = "Athyper", onComp
 }
 
 function actions(model: AppErrorModel, reset?: () => void, onCompare?: () => void, retryLabel = "Try again"): ReactNode {
-  if (model.action === "verify-identity") return <IdentityVerificationButton />;
   if (model.action === "none" || model.action === "correct-fields") return null;
   if (model.action === "login") return <ActionLink variant="primary" href={safeLoginLocation("/")}>Sign in</ActionLink>;
   if (model.action === "select-context") return <ActionLink variant="primary" href="/select-context">Choose context</ActionLink>;
   if (model.action === "complete-action") return <ActionLink variant="primary" href="/auth/required-action">Continue identity check</ActionLink>;
   return <><ActionButton variant="primary" onClick={() => reset?.()} disabled={!reset}>{model.action === "reload-compare" ? "Reload latest" : retryLabel}</ActionButton>{model.action === "reload-compare" && onCompare ? <ActionButton variant="secondary" onClick={onCompare}>Compare changes</ActionButton> : null}</>;
-}
-
-/** Uses the existing CSRF-protected interactive step-up flow. Never retries
- * the denied operation until IAM has completed verification. */
-export function IdentityVerificationButton() {
-  const [failed, setFailed] = React.useState(false);
-  function verify() {
-    const csrf = readBrowserCsrfToken();
-    if (!csrf) { setFailed(true); return; }
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = `/api/auth/step-up/start?returnTo=${encodeURIComponent(safeLocalReturnTo(window.location.pathname + window.location.search))}`;
-    const input = document.createElement("input");
-    input.type = "hidden"; input.name = "csrfToken"; input.value = csrf;
-    form.append(input); document.body.append(form); form.submit();
-  }
-  return <><ActionButton variant="primary" onClick={verify}>Verify identity</ActionButton>{failed ? <p role="alert">Verification could not start. Refresh this page and try again.</p> : null}</>;
 }
 
 function IdentityActionList({ actions }: { readonly actions: readonly string[] }) { return actions.length ? <div className="a-error-surface__notice"><p><strong>Required actions</strong></p><ul>{actions.map((action) => <li key={action}>{humanize(action)}</li>)}</ul></div> : null; }

@@ -333,8 +333,6 @@ export interface EntityListRowV1 {
 }
 
 export interface EntityListResultV1 {
-  /** Server-evaluated for an authorized, locked owner scope. No source data or coordinates. */
-  readonly sourceAuthority?: { readonly state: 'local' | 'linked' | 'unavailable'; readonly reference?: { readonly entityCode: string; readonly recordId: string } };
   readonly schemaVersion: 1;
   readonly descriptorHash: string;
   readonly scopeFingerprint: string;

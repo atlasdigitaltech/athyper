@@ -16,7 +16,6 @@ import {
   parseTableEntityProduct,
   compileTableEntityProduct,
   compileSharedReferenceProduct,
-  amendSuccessorSourceAuthority,
 } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { loadReferenceProduct } from "../../provisioning/prepare-reference-runtime.js";
 
@@ -236,26 +235,6 @@ try {
               !!original && sha256(original) === sha256(graph);
             item.latestSaveMatches =
               !!latest && sha256(latest) === sha256(graph);
-            const owner = (graph.surfaces ?? [])
-              .map((s: any) => s.layoutConfig?.ownerAccess)
-              .find(Boolean) as any;
-            if (
-              original &&
-              row.branch_code.startsWith("publication.successor.") &&
-              owner?.sourceAuthority
-            ) {
-              item.sourceAuthorityAmendment = {
-                key: owner.sourceAuthority,
-                onlyChangeSinceInitialDraft:
-                  sha256(
-                    amendSuccessorSourceAuthority(
-                      original,
-                      owner.sourceAuthority,
-                    ),
-                  ) === sha256(graph),
-                initialDraftHash: sha256(original),
-              };
-            }
             item.markers = markers;
             item.repositoryProductHashMatches =
               !!product &&

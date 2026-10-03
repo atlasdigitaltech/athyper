@@ -10,8 +10,6 @@ export const entityEnglishMessages = Object.freeze({
   "entity.related.unavailable": "This section could not be loaded.",
   "entity.related.loading": "Loading…",
   "entity.related.empty": "No record has been added.",
-  "entity.related.sourceManaged": "These details are managed by another authoritative source. Local editing is unavailable.",
-  "entity.related.sourceUnavailable": "The authoritative source could not be verified. Local editing is unavailable. Try again when the source is available.",
   "entity.related.add": "Add",
   "entity.related.edit": "Edit",
   "entity.related.cancel": "Cancel",

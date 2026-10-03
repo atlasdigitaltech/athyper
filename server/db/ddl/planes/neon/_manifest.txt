@@ -269,9 +269,9 @@ planes/neon/document/31_partner_registration_approvers.sql
 
 planes/neon/master/26_entity_owner_access.sql
 common/authz/20_common_identity_permissions.sql
+planes/neon/authz/19_workforce_entity_read.sql
 common/authz/21_entity_default_access.sql
 planes/neon/master/36_principal_person_link.sql
-planes/neon/master/37_principal_person_link_target.sql
 
 common/shared/98_security_definer_privileges.sql
 common/shared/99_security_definer_hardening.sql

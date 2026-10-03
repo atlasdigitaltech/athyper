@@ -2,7 +2,7 @@ import type {
   Authorizer,
   VerifiedRequestContext,
 } from "@athyper/server-contract-auth";
-import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
+import { parseRecordOwnerAccess, type EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
 import { sql } from "kysely";
 import type { RecordTransaction } from "./kysely-record-repository.js";
 import { RecordServiceError } from "./errors.js";
@@ -89,6 +89,8 @@ export async function prepareRecordOwnerAccess<Transaction>(
       );
     return {};
   }
+  // Reject unsupported ownership metadata before any read or mutation.
+  parseRecordOwnerAccess(input.descriptor.ownerAccess);
   if (!adapter)
     throw new RecordServiceError(
       503,

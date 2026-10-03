@@ -1,6 +1,5 @@
 import { parseTableEntityProduct } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { amendSuccessorTablePresentation } from "@athyper/server-plane-studio-meta-entity-authoring";
-import { amendSuccessorSourceAuthority } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { amendSuccessorChoices } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { amendSuccessorAi } from "@athyper/server-plane-studio-meta-entity-authoring";
 import { execFileSync } from "node:child_process";
@@ -26,9 +25,8 @@ import { createCapabilityProfileFileResolver } from "@athyper/server-plane-studi
 
 async function main() {
   const args = process.argv.slice(2);
-  const sourceAuthority = args
-    .find((a) => a.startsWith("--source-authority="))
-    ?.slice(19);
+  if (args.some(argument => argument.startsWith("--source-authority")))
+    throw Error("SOURCE_AUTHORITY_AMENDMENT_RETIRED");
   const tablePresentationPath = args
     .find((a) => a.startsWith("--table-presentation-product="))
     ?.slice(29);
@@ -420,28 +418,6 @@ async function main() {
           tests = runContractTests(amended);
         if (validation.issues.length || !tests.passed)
           throw Error("TABLE_PRESENTATION_GRAPH_INVALID");
-        if (sha256(amended) !== sha256(graph)) {
-          const changeSet = await repository.replaceGraph({
-            changeSetId: result.changeSet.id,
-            expectedRevision: result.changeSet.revision,
-            actorId: actor.id,
-            graph: amended,
-          });
-          result = {
-            ...result,
-            changeSet,
-            artifact: compileGraph(await repository.loadGraph(changeSet.id)),
-          };
-        }
-      }
-      if (sourceAuthority !== undefined) {
-        const repository = new KyselyMetaEntityAuthoringRepository(tx);
-        const graph = await repository.loadGraph(result.changeSet.id);
-        const amended = amendSuccessorSourceAuthority(graph, sourceAuthority);
-        const validation = validateGraph(amended),
-          tests = runContractTests(amended);
-        if (validation.issues.length || !tests.passed)
-          throw Error("SOURCE_AUTHORITY_GRAPH_INVALID");
         if (sha256(amended) !== sha256(graph)) {
           const changeSet = await repository.replaceGraph({
             changeSetId: result.changeSet.id,

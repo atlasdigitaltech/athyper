@@ -539,12 +539,9 @@ function parseDataOperation(value: unknown, name: string) {
 
 export function parseEntityListResult(value: unknown): EntityListResultV1 {
   const record = object(value, "entity list result");
-  const sourceAuthority = record.sourceAuthority === undefined ? undefined : object(record.sourceAuthority, 'source authority');
-  if (sourceAuthority && (typeof sourceAuthority.state !== 'string' || !['local','linked','unavailable'].includes(sourceAuthority.state) || Object.keys(sourceAuthority).some(key => !['state','reference'].includes(key))))
-    throw new TypeError('Invalid source authority state');
-  const sourceReference = sourceAuthority?.reference === undefined ? undefined : object(sourceAuthority.reference, 'source authority reference');
-  if (sourceReference && (sourceAuthority?.state !== 'linked' || Object.keys(sourceReference).sort().join() !== 'entityCode,recordId' || typeof sourceReference.entityCode !== 'string' || !/^[a-z][a-z0-9_]{1,62}$/.test(sourceReference.entityCode) || typeof sourceReference.recordId !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(sourceReference.recordId)))
-    throw new TypeError('Invalid source authority reference');
+  // Retired source overlays cannot be interpreted as an ordinary empty list.
+  if (record.sourceAuthority !== undefined)
+    throw new TypeError("Unsupported entity list source authority");
   if (record.schemaVersion !== 1)
     throw new TypeError("entity list result schemaVersion must be 1");
   const paginationRecord = object(record.pagination, "pagination");
@@ -633,7 +630,6 @@ export function parseEntityListResult(value: unknown): EntityListResultV1 {
   return Object.freeze({
     schemaVersion: 1,
     descriptorHash: digest(record.descriptorHash, "descriptorHash"),
-    ...(sourceAuthority ? { sourceAuthority: Object.freeze({ state: sourceAuthority.state as 'local' | 'linked' | 'unavailable', ...(sourceReference ? { reference: Object.freeze({ entityCode: sourceReference.entityCode as string, recordId: sourceReference.recordId as string }) } : {}) }) } : {}),
     scopeFingerprint: digest(record.scopeFingerprint, "scopeFingerprint"),
     queryHash: digest(record.queryHash, "queryHash"),
     rows,

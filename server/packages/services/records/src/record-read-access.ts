@@ -33,8 +33,6 @@ export async function authorizeRecordListRead(
     },
   });
   if (effective.allowed) return effective;
-  if (effective.reason === "mfa_required")
-    throw new RecordServiceError(403, "STEP_UP_REQUIRED", "Verify your identity with MFA to view this resource");
   // Published directory contracts own row scope; coarse permission admission
   // still enforces denials, entitlements, and policy gates. Never retry a deny.
   if (!profile && descriptor.directoryScope && effective.reason === "scope_not_contained") {

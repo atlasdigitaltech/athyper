@@ -232,7 +232,6 @@ common/document/14_collaboration_participant_directory.sql
 planes/mesh/master/26_entity_owner_access.sql
 common/authz/20_common_identity_permissions.sql
 common/authz/21_entity_default_access.sql
-common/master/23_projected_profile_source.sql
 
 common/shared/98_security_definer_privileges.sql
 common/shared/99_security_definer_hardening.sql

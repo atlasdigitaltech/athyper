@@ -1,4 +1,3 @@
-import { assertLocalRecordSource, type RecordSourceAuthorityResolver } from "./record-source-authority.js";
 import { prepareRecordOwnerAccess, type RecordOwnerAccessAdapter } from "./record-owner-access.js";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
@@ -27,7 +26,6 @@ export interface RecordExecutionOptions<Transaction> {
   readonly commandExecutions: CommandExecutionStore<Transaction, RecordMutationResult>;
   readonly repository: RecordRepository<Transaction>;
   readonly transactions: RecordTransactionCoordinator<Transaction>;
-  readonly sourceAuthorities?: ReadonlyMap<string, RecordSourceAuthorityResolver<Transaction>>;
   readonly aggregateExecutor?: RecordAggregateExecutor<Transaction>;
 }
 
@@ -77,20 +75,6 @@ export async function executeRecordCommand<Transaction>(
     actionCode: command.actionCode, changes: command.changes, planHash: command.planHash, requestHash: command.requestHash, transition: command.transition,
   });
   if (descriptor) await prepareRecordOwnerAccess(options.ownerAccess,{context:command.context,descriptor,operation:action,ownerPrincipalId:command.ownerPrincipalId},transaction);
-  if (descriptor?.ownerAccess?.sourceAuthority) {
-    if (action !== "create" && action !== "patch") throw new Error("ENTITY_SOURCE_OPERATION_UNSUPPORTED");
-    let subject = command.ownerPrincipalId ?? command.context.principalId;
-    if (action === "patch") {
-      if (!command.recordId) throw new Error("ENTITY_SOURCE_RECORD_REQUIRED");
-      const current = await options.repository.get(descriptor, command.context.tenantId, command.recordId, [descriptor.ownerAccess.ownerField], transaction);
-      if (!current) return { kind: "NotFound", entityCode: command.entityCode, recordId: command.recordId };
-      const owner = current[descriptor.ownerAccess.ownerField];
-      if (typeof owner !== "string" || !owner) throw new Error("ENTITY_SOURCE_OWNER_UNAVAILABLE");
-      subject = owner;
-      await prepareRecordOwnerAccess(options.ownerAccess, { context: command.context, descriptor, operation: action, ownerPrincipalId: subject }, transaction);
-    }
-    await assertLocalRecordSource(options.sourceAuthorities?.get(descriptor.ownerAccess.sourceAuthority), { context: command.context, ownerPrincipalId: subject }, transaction);
-  }
   const begun = await options.commandExecutions.begin({
     tenantId: command.context.tenantId,
     commandCode,

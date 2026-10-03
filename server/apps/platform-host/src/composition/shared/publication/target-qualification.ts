@@ -53,8 +53,6 @@ export async function qualifyReferencePublicationTarget(
   target: Target,
   dependencies: {
     mutationPolicies?: ReadonlySet<string>;
-    sourceAuthorities?: ReadonlySet<string>;
-    sourceAuthorityQualifiers?: ReadonlyMap<string,(plane:Target["targetPlane"],database:Database)=>Promise<boolean>>;
     databases: Readonly<Partial<Record<Target["targetPlane"], Database>>>;
     runtime: { qualify(profile: unknown, bindings: unknown): void };
     qualifyCapabilities: ReferenceFirstPublicationPorts["qualify"];
@@ -79,13 +77,10 @@ export async function qualifyReferencePublicationTarget(
   const sourceAuthority = (
     artifact.descriptor.ownerAccess as { sourceAuthority?: string } | undefined
   )?.sourceAuthority;
-  if (sourceAuthority && (!dependencies.sourceAuthorities?.has(sourceAuthority)
-      || !dependencies.sourceAuthorityQualifiers?.has(sourceAuthority)))
-    throw Error("PUBLICATION_SOURCE_AUTHORITY_UNAVAILABLE");
+  if (sourceAuthority !== undefined)
+    throw Error("PUBLICATION_SOURCE_AUTHORITY_UNSUPPORTED");
   const db = dependencies.databases[targetPlane];
   if (!db) throw Error("PUBLICATION_TARGET_DATABASE_UNAVAILABLE");
-  if (sourceAuthority && !await dependencies.sourceAuthorityQualifiers!.get(sourceAuthority)!(targetPlane,db))
-    throw Error("PUBLICATION_SOURCE_AUTHORITY_UNAVAILABLE");
   const profiles = graph.runtimeProfiles ?? [];
   if (profiles.length !== 1)
     throw Error("PUBLICATION_STORAGE_PROFILE_AMBIGUOUS");

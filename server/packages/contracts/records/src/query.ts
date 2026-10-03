@@ -64,7 +64,6 @@ export interface GetRecordQuery {
 }
 
 export interface RecordListResult {
-  readonly sourceAuthority?: { readonly state: 'local' | 'linked' | 'unavailable'; readonly reference?: { readonly entityCode: string; readonly recordId: string } };
   readonly data: readonly Readonly<Record<string, unknown>>[];
   readonly groups?: readonly Readonly<{ readonly value: unknown; readonly count: number }>[];
   readonly pagination: {

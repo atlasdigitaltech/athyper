@@ -87,7 +87,7 @@ const command = {
 function fixture(
   metadata: MetadataReader = { getEntityDescriptor: async () => descriptor },
   authorizer?: Authorizer,
-  extras: Pick<Parameters<typeof createRecordMutationService<unknown>>[0], "ownerAccess" | "referenceChoices" | "sourceAuthorities"> = {},
+  extras: Pick<Parameters<typeof createRecordMutationService<unknown>>[0], "ownerAccess" | "referenceChoices"> = {},
 ) {
   const persistence = createInMemoryRecordPersistence();
   const audit = vi.fn(async () => undefined);
@@ -266,22 +266,6 @@ it("rejects unresolvable reference writes and fails closed without the authorize
   await expect(fixture(metadata,undefined,{referenceChoices:resolver}).mutations.create({...command,input:{locale:"secret"}})).rejects.toThrow("Choose an available reference");
   expect(resolver).toHaveBeenCalledWith(context,"sample",{field:"locale",value:"secret"});
   expect((await fixture(metadata).mutations.create({...command,input:{locale:null}})).kind).toBe("Committed");
-});
-
-it("rechecks linked-source authority before replaying a previously committed local edit", async () => {
-  let linked = false;
-  const owned: EntityRuntimeDescriptor = { ...descriptor, ownerAccess: { schemaVersion: 1, ownerField: "principal_id", administerPermission: "identity.admin", createdByField: "created_by", updatedByField: "updated_by", sourceAuthority: "identity.profile-source.v1" }, fields: [...descriptor.fields, { key: "principal_id", storagePath: "principal_id", type: "uuid", required: false, writableOn: [] }] };
-  const f = fixture({ getEntityDescriptor: async () => owned }, undefined, {
-    ownerAccess: { prepare: async ({ operation, ownerPrincipalId }) => operation === "create" ? { principal_id: ownerPrincipalId ?? context.principalId } : {} },
-    sourceAuthorities: new Map([["identity.profile-source.v1", async ({ context: actor, ownerPrincipalId }) => ({ state: linked ? "linked" as const : "local" as const, tenantId: actor.tenantId, principalId: ownerPrincipalId, revision: "link-1" })]]),
-  });
-  const created = await f.mutations.create({ ...command, input: { amount: 1 } });
-  expect(created.kind).toBe("Committed"); if (created.kind !== "Committed") return;
-  const patch = { ...command, idempotencyKey: "source-edit-command-001", recordId: created.recordId, expectedVersion: 1, input: { amount: 2 } };
-  expect((await f.mutations.patch(patch)).kind).toBe("Committed");
-  linked = true;
-  await expect(f.mutations.patch(patch)).rejects.toThrow("authoritative source");
-  await expect(f.mutations.create({ ...command, input: { amount: 1 } })).rejects.toThrow("authoritative source");
 });
 
 it("rejects empty lazy setup before persistence but admits an explicit zero override", async () => {

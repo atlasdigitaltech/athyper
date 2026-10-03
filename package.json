@@ -57,8 +57,6 @@
     "qualify:entity-activation-dev": "node tooling/scripts/verification/qualify-entity-activation-dev.mjs",
     "qualify:entity-audit-upgrade": "node tooling/scripts/verification/qualify-entity-audit-upgrade.mjs",
     "qualify:entity-upgrade-compatibility": "node tooling/scripts/verification/qualify-entity-upgrade-compatibility.mjs",
-    "qualify:principal-link-target-upgrade": "node tooling/scripts/verification/qualify-principal-link-target-upgrade.mjs",
-    "qualify:principal-source-foundation": "tsx tooling/scripts/verification/qualify-principal-source-foundation.mts",
     "qualify:principal-dev": "node tooling/scripts/verification/qualify-principal-dev.mjs",
     "qualify:entity-foundation": "node tooling/scripts/verification/qualify-entity-foundation.mjs",
     "qualify:foundation-publication": "node tooling/scripts/verification/qualify-foundation-publication.mjs",

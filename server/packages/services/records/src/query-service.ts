@@ -31,7 +31,6 @@ import type {
   RecordTransactionCoordinator,
 } from "@athyper/server-contract-records";
 import { RecordServiceError } from "./errors.js";
-import { assertLocalRecordSource, type RecordSourceAuthorityResolver } from './record-source-authority.js';
 import { recordFieldFilterOperators } from "./list-query-policy.js";
 import {
   authorizeRecordListRead,
@@ -40,7 +39,6 @@ import {
 } from "./record-read-access.js";
 
 export interface RecordQueryServiceOptions<Transaction = unknown> {
-  readonly sourceAuthorities?: ReadonlyMap<string, RecordSourceAuthorityResolver<Transaction>>;
   readonly ownerAccess?: RecordOwnerAccessAdapter<Transaction>;
   readonly metadata: MetadataReader;
   readonly authorizer: Authorizer;
@@ -250,34 +248,6 @@ export function createRecordListExecutor<Transaction = unknown>(
             { context: query.context, descriptor, operation: "list" },
             transaction,
           );
-          let sourceAuthority: RecordListResult['sourceAuthority'];
-          if (descriptor.ownerAccess?.sourceAuthority) {
-            const policy = descriptor.ownerAccess;
-            const owners = collectionScope.constraints.flatMap(constraint => constraint.kind === 'entity.parent.v1'
-              ? constraint.predicates.filter(predicate => predicate.field === policy.ownerField).map(predicate => predicate.value) : []);
-            const owner = owners.length === 1 ? owners[0] : ownerValues[policy.ownerField];
-            if (typeof owner !== 'string' || !owner || owners.length > 1)
-              throw new RecordServiceError(409, 'ENTITY_SOURCE_SCOPE_REQUIRED', 'Select an authorized owner before loading this section.');
-            await prepareRecordOwnerAccess(options.ownerAccess, { context: query.context, descriptor, operation: 'list', ownerPrincipalId: owner }, transaction);
-            const resolver = options.sourceAuthorities?.get(policy.sourceAuthority!);
-            const evidence = resolver ? await resolver({ context: query.context, ownerPrincipalId: owner }, transaction) : undefined;
-            const state = evidence && evidence.tenantId === query.context.tenantId && evidence.principalId === owner && evidence.revision?.trim()
-              && ['local','linked','unavailable'].includes(evidence.state) ? evidence.state : 'unavailable';
-            sourceAuthority = { state };
-            const source = evidence?.source;
-            // Ownership is not disclosure authority. Only the unchanged verified
-            // context may read this target; cross-plane access needs independent
-            // authentication and is never synthesized from a source coordinate.
-            if (state === 'linked' && source?.plane === query.context.planeKey && source.tenantId === query.context.tenantId && source.entityCode !== descriptor.entityCode) {
-              try {
-                const target = await createRecordQueryService(options).get({ context: query.context, entityCode: source.entityCode, recordId: source.recordId });
-                if (target.data) sourceAuthority = { state, reference: { entityCode: source.entityCode, recordId: source.recordId } };
-              } catch (error) {
-                if (!(error instanceof RecordServiceError) || ![403,404,409,503].includes(error.statusCode)) throw error;
-              }
-            }
-            if (state !== 'local') return { data: [], sourceAuthority, pagination: { pageSize: 0, hasMore: false, countMode: 'none' as const } };
-          }
           const input = {
             descriptor: {
               ...scopeRecordOwnerRead(descriptor, ownerValues),
@@ -352,7 +322,7 @@ export function createRecordListExecutor<Transaction = unknown>(
                   },
             });
           const result = await options.repository.list(input, transaction);
-          return { ...result, ...(sourceAuthority ? { sourceAuthority } : {}) };
+          return result;
         },
       );
       if (enforced && !aggregateAuthorizationCovered) {
@@ -499,15 +469,6 @@ export function createRecordQueryService<Transaction = unknown>(
             projection,
             transaction,
           );
-          if (record && descriptor.ownerAccess?.sourceAuthority) {
-            const ownerField = descriptor.ownerAccess.ownerField;
-            const evidence = typeof record[ownerField] === 'string' ? record : await options.repository.get(
-              scopeRecordOwnerRead(descriptor, ownerValues), query.context.tenantId, query.recordId, [ownerField], transaction,
-            );
-            const owner = evidence?.[ownerField];
-            if (typeof owner !== 'string' || !owner) throw new RecordServiceError(503, 'ENTITY_SOURCE_OWNER_UNAVAILABLE', 'The authoritative source is unavailable.');
-            await assertLocalRecordSource(options.sourceAuthorities?.get(descriptor.ownerAccess.sourceAuthority), { context: query.context, ownerPrincipalId: owner }, transaction);
-          }
           return record;
         },
       );

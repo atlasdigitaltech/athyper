@@ -109,7 +109,7 @@ function RelatedSingleRecord({
   const loaded = useAsyncResource<{
     descriptor: EntityDetailDescriptorV1;
     record: EntityRecordV1;
-  } | { sourceAuthority: 'linked' | 'unavailable'; canonical?: { descriptor: EntityDetailDescriptorV1; record: EntityRecordV1 } } | null>(
+  } | null>(
     key,
     async (signal) => {
       // Even an explicitly opened row must still belong to the locked parent scope.
@@ -123,11 +123,6 @@ function RelatedSingleRecord({
           countMode: "none",
         },
       });
-      if (list.sourceAuthority && list.sourceAuthority.state !== 'local') {
-        const reference = list.sourceAuthority.reference;
-        const canonical = reference ? await requestDetail(client, JSON.stringify([identity.scope, 'canonical', scope, reference]), reference.entityCode, reference.recordId, signal) : undefined;
-        return { sourceAuthority: list.sourceAuthority.state, ...(canonical ? { canonical } : {}) };
-      }
       if (list.rows.length > 1 || list.pagination.hasNext)
         throw Error("Related entity cardinality mismatch");
       const row = list.rows[0];
@@ -156,12 +151,6 @@ function RelatedSingleRecord({
     );
   if (value === undefined)
     return <p role="status">{intl.message("entity.related.loading")}</p>;
-  if (value && 'sourceAuthority' in value)
-    return <div role="status">
-      <p>{intl.message(value.sourceAuthority === 'linked' ? 'entity.related.sourceManaged' : 'entity.related.sourceUnavailable')}</p>
-      {value.canonical ? <EntityRecordFields descriptor={value.canonical.descriptor} record={value.canonical.record} fieldKeys={value.canonical.descriptor.presentation?.sections.flatMap(section => section.fields) ?? value.canonical.descriptor.fields.map(field => field.key)} /> : null}
-      {value.sourceAuthority === 'unavailable' ? <Button onClick={() => setRetry(retry + 1)}>{intl.message('entity.retry')}</Button> : null}
-    </div>;
   const leave = () => { const state = contextDepartureState(); if (!state.busy && (!state.dirty || window.confirm(intl.message("form.discardChanges")))) setEditing(false); };
   const title = value ? recordTitle(value.descriptor, value.record) : undefined;
   if (editing)

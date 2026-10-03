@@ -12,5 +12,4 @@
 20260930_atlas_authenticated_session.sql
 20261001_principal_family_editing.sql
 20261001_publication_rollback_retry.sql
-20261002_projected_profile_source_authority.sql
 20261003_mesh_publication_worker_identity.sql

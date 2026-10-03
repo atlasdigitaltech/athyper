@@ -16,7 +16,4 @@
 20260930_atlas_authenticated_session.sql
 20261001_principal_family_editing.sql
 20261001_publication_rollback_retry.sql
-20261001_principal_person_source_authority.sql
-20261002_principal_person_link_target.sql
 
-20261003_workforce_entity_read_permissions.sql

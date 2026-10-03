@@ -1,7 +1,7 @@
 -- Workforce Entity onboarding catalog. Definitions only; no role grants,
 -- membership, table privileges, publication state or enforcement changes.
 -- Exact tenant scope matches the independently approved platform Entity sources.
--- Confidential tenant-wide workforce reads require MFA and are not delegable.
+-- Standard Entity reads use exact metadata permissions without an MFA default.
 -- UUIDv5: namespace UUIDv5(DNS, athyper.authorization.catalog.v2), name = code.
 DO $$
 DECLARE
@@ -23,8 +23,8 @@ BEGIN
   LOOP
     INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,
       requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by)
-    VALUES(permission.id,permission.code,'capability',v_module_id,'high',
-      true,false,false,false,false,
+    VALUES(permission.id,permission.code,'capability',v_module_id,'low',
+      false,false,false,false,false,
       '{"namespace":"neon","capability":"tenant_workforce_entity_read","_seed":{"pack":"neon.workforce-entity-read","version":"1.0.0"}}'::jsonb,
       'published','00000000-0000-0000-0000-000000000000')
     ON CONFLICT(canonical_code) DO NOTHING;
@@ -33,8 +33,8 @@ BEGIN
     ON CONFLICT(permission_id,scope_kind,propagation_mode) DO NOTHING;
     IF NOT EXISTS (SELECT 1 FROM authz.permission p
       WHERE p.id=permission.id AND p.canonical_code=permission.code AND p.module_id=v_module_id
-        AND p.permission_kind='capability' AND p.status='published' AND p.risk_tier='high'
-        AND p.requires_mfa AND NOT p.requires_sod AND NOT p.is_shareable
+        AND p.permission_kind='capability' AND p.status='published' AND p.risk_tier='low'
+        AND NOT p.requires_mfa AND NOT p.requires_sod AND NOT p.is_shareable
         AND NOT p.is_delegable AND NOT p.is_overridable)
       OR (SELECT count(*) FROM authz.permission_scope_kind s WHERE s.permission_id=permission.id AND s.status='active')<>1
       OR NOT EXISTS (SELECT 1 FROM authz.permission_scope_kind s WHERE s.permission_id=permission.id

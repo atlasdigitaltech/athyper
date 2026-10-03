@@ -4,7 +4,7 @@ import { createPermissionAuthorizer } from '@athyper/server-platform-iam';
 
 /** Installed registered-action policy. Company scope still needs current IAM
  * evidence and an operation binding; publication and handler registration are
- * qualifications, never grants. No general Principal administration is admitted. */
+ * qualifications, never grants. Owner administration remains a separate check. */
 export function createPublishedActionAuthorizer(metadata: MetadataReader, handlers: ReadonlySet<string>) {
   return createPermissionAuthorizer({ policyGate: { async evaluate({context,permissionCode,resource,requirement}) {
     const denied={allowed:false,reason:'entity_action_policy_unavailable'};

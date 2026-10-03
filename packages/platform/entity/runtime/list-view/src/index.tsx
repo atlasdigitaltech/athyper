@@ -15,7 +15,7 @@ import {
   useEntityTaskHeader,
 } from "@athyper/platform-shell";
 import { useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
-import { ErrorSurface, IdentityVerificationButton } from "@athyper/platform-shell-app-foundation";
+import { ErrorSurface } from "@athyper/platform-shell-app-foundation";
 import { classifyAppError } from "@athyper/platform-shell-app-foundation/error-taxonomy";
 import { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
 import { RequiredContextStatus } from "./required-context-status";
@@ -5093,7 +5093,6 @@ function ErrorState({
           {localizedEntityError(error, intl, model.description)}
         </p>
       </div>
-      {model.action === "verify-identity" ? <IdentityVerificationButton /> : null}
       {model.canRetry ? (
         <Button size="small" variant="secondary" onClick={retry}>
           {intl.message("entity.retry")}

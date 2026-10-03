@@ -28,7 +28,6 @@ import {
   type EntityServices,
 } from "./shared/entity-runtime/services.js";
 import { createPublishedTenantRecordAuthorizer } from "@athyper/server-service-records";
-import { createKyselyProfileSourceReader, createVerifiedProfileSourceResolver, createPrincipalPersonLinkAction, qualifyInstalledProfileSource } from "@athyper/server-service-workforce";
 import {
   createEntityExperienceHttpRegistrar,
   createEntityHttpRegistrars,
@@ -851,7 +850,12 @@ export function registerServices(
   });
   const authorizer = createPublishedTenantRecordAuthorizer({
     ownerAccess: true,
-    actionAuthority: createPublishedActionAuthorizer({getEntityDescriptor:(context,entityCode)=>metadata.getEntityDescriptor(context,entityCode)},new Set(['identity.principal.link_person.v1'])),
+    actionAuthority: createPublishedActionAuthorizer(
+      { getEntityDescriptor: (context, entityCode) => metadata.getEntityDescriptor(context, entityCode) },
+      new Set((dependencies.activityAdapters ?? []).flatMap(
+        registration => [...(registration.domainHandlers?.keys() ?? [])],
+      )),
+    ),
     ownerAuthority: createPublishedOwnerAdministrationAuthorizer({
       getEntityDescriptor: (context, entityCode) =>
         metadata.getEntityDescriptor(context, entityCode),
@@ -2221,7 +2225,6 @@ export function registerServices(
     string,
     import("@athyper/server-service-records").TransactionalRecordActionHandler<RecordTransaction>
   >();
-  activityDomainHandlers.set("identity.principal.link_person.v1",createPrincipalPersonLinkAction(authorizer));
   for (const registration of activityRegistrations.values())
     for (const [key, handler] of registration.domainHandlers ?? []) {
       if (activityDomainHandlers.has(key))
@@ -2844,8 +2847,6 @@ export function registerServices(
     {
       databases: metadataDatabases,
       mutationPolicies: new Set(["platform.notifications.preferences.v1", "platform.experience.ui_profile.v1"]),
-      sourceAuthorities: new Set(["identity.profile-source.v1"]),
-      sourceAuthorityQualifiers: new Map([["identity.profile-source.v1",qualifyInstalledProfileSource]]),
       runtime: {
         qualify(profile, bindings) {
           const runtime = localGraphRuntimeQualifiers.get(container);
@@ -3932,7 +3933,6 @@ export function registerServices(
     const commandExecutions =
       dependencies.commandExecutions ?? createKyselyCommandExecutionStore();
     const common = {
-      sourceAuthorities: new Map([["identity.profile-source.v1",createVerifiedProfileSourceResolver(createKyselyProfileSourceReader())]]),
       ownerAccess: createRecordOwnerAccessAdapter(authorizer),
       metadata,
       authorizer,

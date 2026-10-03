@@ -271,7 +271,6 @@ common/document/14_collaboration_participant_directory.sql
 planes/studio/master/26_entity_owner_access.sql
 common/authz/20_common_identity_permissions.sql
 common/authz/21_entity_default_access.sql
-common/master/23_projected_profile_source.sql
 
 planes/studio/metadata/22_product_human_review.sql
 planes/studio/publication/19_human_reviewed_publication.sql

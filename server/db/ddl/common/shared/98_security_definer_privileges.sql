@@ -260,44 +260,6 @@ BEGIN
     ],
     "tables": [
       {
-        "relation": "master.employee",
-        "privileges": [
-          "SELECT",
-          "UPDATE"
-        ]
-      },
-      {
-        "relation": "master.employment",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "master.person",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "master.principal",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "master.principal_identity_binding",
-        "privileges": [
-          "SELECT"
-        ]
-      },
-      {
-        "relation": "master.principal_person_link",
-        "privileges": [
-          "INSERT",
-          "SELECT"
-        ]
-      },
-      {
         "relation": "master.reference_choice_recent",
         "privileges": [
           "DELETE",
@@ -307,8 +269,6 @@ BEGIN
     ],
     "functions": [
       "master.current_principal_id_soft()",
-      "master.entity_profile_source_v1(uuid, uuid)",
-      "master.entity_projected_profile_source_v1(uuid, uuid)",
       "shared.current_tenant_id_soft()"
     ]
   },

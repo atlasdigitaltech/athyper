@@ -65,28 +65,22 @@ not represented as a passing or failing evaluation. Run
 network-isolated canonical/upgrade rehearsal of rollback survival, RLS, tenant
 foreign keys, append-only enforcement, and bounded content-free evidence.
 
-Principal-family prerequisite registration includes the Studio UUID key-reference
-validator extension, Neon Principal–Person source authority, and Studio/Mesh
-projected Profile source authority. Their existing SQL bytes and checksum-ledger
-identities are preserved. Inventory/manifests identify their intended planes;
-layout verification does not substitute for supported-baseline upgrade rehearsals
-or deployment receipts.
+The Principal–Person linkage and projected Profile source feature was retired
+from the repository on 2026-10-03. Its three installed migration files retain
+their exact bytes and checksum identities as `legacy-upgrade` history. They are
+excluded from future forward-upgrade manifests; their dedicated installers and
+qualification commands have been removed. The retained link table's business
+model is unchanged, but fresh canonical installations no longer install the
+custom linking functions or profile-source triggers.
 
-The Neon Principal target reader `20261002_principal_person_link_target.sql` is
-registered without changing its installed checksum. Run
-`pnpm qualify:principal-link-target-upgrade` for a populated bounded dependency
-fixture through the actual forward runner, including retry-ledger preservation,
-gate substitution denial, other-plane isolation and checksum-drift rejection.
-The fixture does not replace full domain-authorization acceptance.
+The former Workforce Entity-read permission migration is also retained as
+`legacy-upgrade` history. Fresh canonical DDL defines the five exact read
+permissions with low risk and no MFA default. Replaying the old migration would
+restore the rejected defaults and is not a supported cleanup path.
 
-Run `pnpm qualify:principal-source-foundation` for fresh canonical installation on
-all three disposable planes, or add `--upgrade` to build the canonical schema
-without the Principal source additions and apply their exact forward upgrades.
-The latter baseline is identified by its captured manifests and DDL contents;
-it does not qualify every archived historical baseline. Both commands refuse a
-deployed database target and preserve source and qualification evidence outside
-the repository. Fresh-install manifests include Neon source/target authority and
-Studio/Mesh projected source authority after their existing prerequisites.
+This source cleanup does not uninstall already deployed functions, triggers,
+permissions, or published metadata. Existing installations need separate governed
+reconciliation. No cleanup migration or live SQL was executed for this change.
 
 ## D7 compatibility assessment
 

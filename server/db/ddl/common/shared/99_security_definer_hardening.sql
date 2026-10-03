@@ -165,30 +165,6 @@ BEGIN
     "reason": "Bounded worker discovery of notification tenant work."
   },
   {
-    "signature": "master.entity_link_person_v1(uuid, uuid, uuid, text)",
-    "owner": "athyper_bypass_master",
-    "rowSecurityOff": true,
-    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
-  },
-  {
-    "signature": "master.entity_person_link_target_v1(uuid, uuid)",
-    "owner": "athyper_bypass_master",
-    "rowSecurityOff": true,
-    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
-  },
-  {
-    "signature": "master.entity_profile_source_v1(uuid, uuid)",
-    "owner": "athyper_bypass_master",
-    "rowSecurityOff": true,
-    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
-  },
-  {
-    "signature": "master.entity_projected_profile_source_v1(uuid, uuid)",
-    "owner": "athyper_bypass_master",
-    "rowSecurityOff": true,
-    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
-  },
-  {
     "signature": "master.fn_refresh_mv_cpa()",
     "owner": "$ddlOwner",
     "rowSecurityOff": false,
@@ -202,30 +178,6 @@ BEGIN
   },
   {
     "signature": "master.purge_expired_reference_choices(integer)",
-    "owner": "athyper_bypass_master",
-    "rowSecurityOff": true,
-    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
-  },
-  {
-    "signature": "master.trg_principal_profile_source_guard()",
-    "owner": "athyper_bypass_master",
-    "rowSecurityOff": true,
-    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
-  },
-  {
-    "signature": "master.trg_profile_source_fence()",
-    "owner": "athyper_bypass_master",
-    "rowSecurityOff": true,
-    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
-  },
-  {
-    "signature": "master.trg_projected_profile_source_fence()",
-    "owner": "athyper_bypass_master",
-    "rowSecurityOff": true,
-    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
-  },
-  {
-    "signature": "master.trg_projected_profile_source_guard()",
     "owner": "athyper_bypass_master",
     "rowSecurityOff": true,
     "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
@@ -528,10 +480,6 @@ BEGIN
   "master.command_materialize_business_partner_role_case(uuid, uuid, bigint, text, uuid, uuid)",
   "master.command_materialize_internal_business_partner_case(uuid, uuid, bigint, text, uuid, uuid)",
   "master.command_materialize_mesh_profile_change_case(uuid, uuid, bigint, text, uuid, uuid)",
-  "master.entity_link_person_v1(uuid, uuid, uuid, text)",
-  "master.entity_person_link_target_v1(uuid, uuid)",
-  "master.entity_profile_source_v1(uuid, uuid)",
-  "master.entity_projected_profile_source_v1(uuid, uuid)",
   "master.fn_materialize_business_partner_case_relationships()",
   "master.fn_pin_business_partner_child_activation(uuid, uuid, jsonb, boolean)",
   "master.fn_refresh_mv_cpa()",
@@ -545,10 +493,6 @@ BEGIN
   "master.trg_emit_operating_assignment_invalidation()",
   "master.trg_guard_partner_organization_identity()",
   "master.trg_initialize_partner_organization_identity()",
-  "master.trg_principal_profile_source_guard()",
-  "master.trg_profile_source_fence()",
-  "master.trg_projected_profile_source_fence()",
-  "master.trg_projected_profile_source_guard()",
   "master.trg_record_organization_amendment()",
   "master.trg_sync_organization_scope_target()",
   "mesh.catalog_is_visible(uuid)",

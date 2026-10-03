@@ -1728,14 +1728,10 @@
       "originalPath": "migrations/20261001_principal_person_source_authority.sql",
       "path": "migrations/20261001_principal_person_source_authority.sql",
       "sha256": "0be06079370482c8af7f1e12917680998cfea46d695dffcb843a0b466705ebe8",
-      "planes": [
-        "neon"
-      ],
-      "disposition": "forward-upgrade",
-      "callers": [
-        "server/db/scripts/verification/qualify-profile-source-dev.mjs"
-      ],
-      "reason": "Register the existing Neon Principal-to-Person source authority, tenant containment and Profile source fences required by Entity owner operations; preserve installed SQL bytes.",
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Retained immutable installed history after the 2026-10-03 Entity linkage cleanup; excluded from future upgrade manifests. Do not replay to reinstall retired linkage functions or the rejected Entity-read MFA defaults. Existing deployments require separately governed reconciliation.",
       "canonicalPaths": [
         "ddl/planes/neon/master/36_principal_person_link.sql"
       ]
@@ -1744,34 +1740,21 @@
       "originalPath": "migrations/20261002_projected_profile_source_authority.sql",
       "path": "migrations/20261002_projected_profile_source_authority.sql",
       "sha256": "3d4570e4f2d4eb9efe4ac6fce17288f9d6997643659c9dc953d95a22dc8779f9",
-      "planes": [
-        "studio",
-        "mesh"
-      ],
-      "disposition": "forward-upgrade",
-      "callers": [
-        "server/db/scripts/operations/entity-onboarding/apply-dev-projected-profile-source.mjs"
-      ],
-      "reason": "Register existing Studio/Mesh projected Profile source ownership and write fences; manifest classification is not upgrade qualification.",
-      "canonicalPaths": [
-        "ddl/common/master/23_projected_profile_source.sql"
-      ]
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Retained immutable installed history after the 2026-10-03 Entity linkage cleanup; excluded from future upgrade manifests. Do not replay to reinstall retired linkage functions or the rejected Entity-read MFA defaults. Existing deployments require separately governed reconciliation.",
+      "canonicalPaths": []
     },
     {
       "originalPath": "migrations/20261002_principal_person_link_target.sql",
       "path": "migrations/20261002_principal_person_link_target.sql",
       "sha256": "987b280731392a01b17b7c0abc1d9e389329e2aa6aa8ed04e508984a2e5e8a26",
-      "planes": [
-        "neon"
-      ],
-      "disposition": "forward-upgrade",
-      "callers": [
-        "server/db/scripts/operations/entity-onboarding/apply-dev-principal-link-target.mjs"
-      ],
-      "reason": "Register the existing bounded Principal target reader for the Workforce Entity link action; preserve installed SQL bytes and receipt identity. Layout classification does not establish supported-baseline qualification.",
-      "canonicalPaths": [
-        "ddl/planes/neon/master/37_principal_person_link_target.sql"
-      ]
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Retained immutable installed history after the 2026-10-03 Entity linkage cleanup; excluded from future upgrade manifests. Do not replay to reinstall retired linkage functions or the rejected Entity-read MFA defaults. Existing deployments require separately governed reconciliation.",
+      "canonicalPaths": []
     },
     {
       "originalPath": "migrations/20261002_entity_publication_role_prerequisite.sql",
@@ -1804,14 +1787,10 @@
       "originalPath": "migrations/20261003_workforce_entity_read_permissions.sql",
       "path": "migrations/20261003_workforce_entity_read_permissions.sql",
       "sha256": "098a0bc28b84dc502ea8934b141c83e4d2bfa465b653363958622f6c1892b2ff",
-      "planes": [
-        "neon"
-      ],
-      "disposition": "forward-upgrade",
-      "callers": [
-        "server/db/scripts/operations/entity-onboarding/apply-dev-workforce-read-permissions.mjs"
-      ],
-      "reason": "Register the five catalog-only tenant-scope prerequisites referenced by approved Workforce Entity sources. No role grants or publication/approval receipts are created.",
+      "planes": [],
+      "disposition": "legacy-upgrade",
+      "callers": [],
+      "reason": "Retained immutable installed history after the 2026-10-03 Entity linkage cleanup; excluded from future upgrade manifests. Do not replay to reinstall retired linkage functions or the rejected Entity-read MFA defaults. Existing deployments require separately governed reconciliation.",
       "canonicalPaths": [
         "ddl/planes/neon/authz/19_workforce_entity_read.sql"
       ]

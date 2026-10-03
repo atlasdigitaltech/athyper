@@ -47,7 +47,6 @@ export { EntityFirstPublicationWorkflow } from "./publication/publication-workfl
 
 export { createPublishedLearningFixtureProvider } from "./published-learning-fixtures.js";
 export { amendSuccessorTablePresentation } from "./publication/amend-successor-table-presentation.js";
-export { amendSuccessorSourceAuthority } from "./publication/amend-successor-source-authority.js";
 export { amendSuccessorChoices } from "./publication/amend-successor-choices.js";
 export { amendSuccessorAi } from "./publication/amend-successor-ai.js";
 export { amendSuccessorCapabilities } from "./publication/amend-successor-capabilities.js";

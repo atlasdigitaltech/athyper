@@ -769,7 +769,6 @@ export function createEntityListService(options: {
           countMode: query.countMode ?? "none",
         }),
         rows: Object.freeze(rows),
-        ...(result.sourceAuthority ? { sourceAuthority: result.sourceAuthority } : {}),
         pagination: Object.freeze({
           pageSize: result.pagination.pageSize,
           hasNext: result.pagination.hasMore,

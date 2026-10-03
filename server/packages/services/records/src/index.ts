@@ -73,4 +73,3 @@ export { createRecordOwnerAccessAdapter, scopeRecordOwnerRead } from "./record-o
 
 export * from "./record-mutation-policy.js";
 
-export * from "./record-source-authority.js";

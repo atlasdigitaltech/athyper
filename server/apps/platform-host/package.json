@@ -110,7 +110,6 @@
     "@athyper/server-service-numbering": "workspace:*",
     "@athyper/server-service-publication": "workspace:*",
     "@athyper/server-service-records": "workspace:*",
-    "@athyper/server-service-workforce": "workspace:*",
     "@sentry/node": "^10.22.0",
     "cross-env": "^7.0.3",
     "dotenv": "^17.4.2",
