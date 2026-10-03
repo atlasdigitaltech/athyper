@@ -304,7 +304,7 @@ page frame: shell breadcrumb, `PageHeader` (icon, title, description, counts) an
 workspace module tabs as the navigation bar (Home, modules, More; pin and to-do badges).
 
 - **Entity placement is metadata.** Each entity's `placement.json`
-  (`metadata/entities/<code>/`) names its plane, workspace, module and
+  (`metadata/entities/<domain>/<group>/<code>/`) names its plane, workspace, module and
   route slug. `pnpm catalog:generate` validates placements against the catalog and fills
   each module's entities; `catalog:check` keeps the generated catalog current.
 - **Access is the server's.** Cards list only what `GET /api/entity-runtime/directory`

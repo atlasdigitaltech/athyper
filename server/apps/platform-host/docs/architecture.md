@@ -31,7 +31,7 @@ new runtime paths without executing the entrypoints.
 
 ## Country reference flow
 
-1. `metadata/entities/country/definition.json` defines Country;
+1. `metadata/entities/common/reference/country/definition.json` defines Country;
    its adjacent capabilities describe the published operation bindings.
 2. Shared publication composition installs compiled runtime publication and
    qualification. `shared/entity-runtime/metadata.ts` reads admitted releases

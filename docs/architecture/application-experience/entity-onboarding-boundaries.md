@@ -54,7 +54,7 @@ packages/platform/entity/runtime/form-detail/src/
     upload-context.tsx          Single shared disclosure context
   attachment-workspace.tsx      Stable compatibility exports
 
-metadata/entities/country/
+metadata/entities/common/reference/country/
   definition.json               Country fields, labels, sections and bindings
   capabilities.json             Country collaboration declarations
 

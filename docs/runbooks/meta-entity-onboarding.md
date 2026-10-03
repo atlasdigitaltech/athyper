@@ -25,8 +25,8 @@ Use these sources in this order:
   and [28 September follow-up](../reports/entity-onboarding-followup-20260928.md)
   retain Country release 8's passed manual acceptance. They also describe later
   source-only changes that need normal qualification before another publication.
-- [Country product](../../metadata/entities/country/definition.json)
-  and [capabilities](../../metadata/entities/country/capabilities.json)
+- [Country product](../../metadata/entities/common/reference/country/definition.json)
+  and [capabilities](../../metadata/entities/common/reference/country/capabilities.json)
   describe the working-tree candidate, not necessarily the exact active release.
 - [Country runbook](country-entity-app.md) contains historical 26 September gates;
   its early “not activated” statements are not the latest acceptance status.

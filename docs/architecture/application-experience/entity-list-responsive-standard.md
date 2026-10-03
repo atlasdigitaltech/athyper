@@ -3,7 +3,7 @@
 Status (2026-09-30): **P0 verified in the running Neon app. P1–P3 implemented and verified in
 browser fixtures with the real runtime and Neon CSS; not yet verified in the running app.**
 Owner surface: `packages/platform/entity/runtime/list-view` (shared Entity Framework).
-Reference entity: Country (`metadata/entities/country/definition.json`).
+Reference entity: Country (`metadata/entities/common/reference/country/definition.json`).
 
 This document extends [System Design §7.1](system-design.md#71-layout-decision-ownership):
 *"Responsive adaptation changes geometry, not task semantics."* Every entity

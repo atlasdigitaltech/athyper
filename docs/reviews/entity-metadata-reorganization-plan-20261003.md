@@ -1,6 +1,6 @@
 # Entity metadata reorganization review plan
 
-Date: 3 October 2026. Status: prerequisite checkpoint verified; flat-layout consumer repairs implemented for review; remaining reorganization pending review.
+Date: 3 October 2026. Status: checkpoint verified; flat-layout repairs, recursive discovery and domain relocation implemented for review; format/property corrections and builds pending review.
 
 This plan preserves existing entity definitions, completes their interrupted relocation, organizes sources by owning domain, and separates format consolidation from property corrections. Country and Principal supply applicable framework conventions; Principal Profile also supplies the reference record-navigation experience.
 
@@ -91,6 +91,14 @@ This plan preserves existing entity definitions, completes their interrupted rel
 
    Resolve logical artifact/profile references through existing supported contracts. Reject unresolved required references, invalid paths, and unsupported descriptors with actionable errors. Exclude review/history/generated outputs from active discovery. Preserve existing artifact identities and supported logical syntax. Generated indexes must never become additional hand-maintained definitions.
 
+   **Discovery completion evidence — 3 October 2026 (item 5)**
+
+   Commit `de38c68cd` introduces `tooling/scripts/metadata/source-workspace.mjs`, its TypeScript declaration contract and a Python bridge. The index is recomputed from `entity.json` descriptors beneath the manifest entity root. Only those descriptors declare entities; repeated owner codes in Core, Operation, Presentation and other artifacts do not compete with declarations. Source loading rejects unsupported descriptor schemas/properties, missing declared members, escaping paths, active symlinks, competing declarations, duplicate artifact identities and ambiguous or unresolved logical JSON refs. Review/history, generated/codegen/build outputs, dependencies and hidden directories are excluded. Commit `8cf5f5e71` also rejects reserved excluded source codes and ambiguous rooted inputs. Commit `341a0c3b7` resolves capability profile `{code, version}` selections through existing source locks, verifying file hashes and identities; native profile/binding semantics remain validated by the existing publication contracts.
+
+   The catalog, coordinated candidate preparer, reference importer/loader, compiled authoring loaders, Python validator/permission source reader and affected existing fixture readers use this resolver. Repository-rooted logical input syntax remains supported at tooling I/O boundaries (`metadata/entities/<entityCode>/<member>`), including native definition paths and split artifact refs. Profile keys keep their existing supported resolvers; logical profile JSON refs retain their `platform/...` identities. No entity-code dispatch table, compatibility source copy, symlink or authoritative generated index was added. These changes affect offline authoring/tooling discovery; published runtime authorization, routing and provider contracts are unchanged.
+
+   Static inventory on the flat tree found 49 declarations and 215 entity/profile JSON documents. The layout/baseline and catalog-output checks passed before nesting. Existing fixtures were adapted but no tests ran. The pure relocation followed in a separate commit; descriptor content and existing supported format semantics were not changed.
+
 6. **Move sources by domain ownership**
 
    Use `metadata/entities/` as the single entity root. Proposed destinations are below; confirm ownership against domain contracts before moving disputed entries. Folder placement does not assign storage schemas, module codes, publication targets, or navigation exposure.
@@ -109,6 +117,26 @@ This plan preserves existing entity definitions, completes their interrupted rel
    Supporting roots remain `profiles/`, `schemas/`, `contracts/`, `access/`, `review/`, `overlays/`, and `history/`. Create directories only where real material exists. Preserve `presentation.section.*.json` and `flow.*.json` filenames. Supply a complete source-to-destination map with byte hashes.
 
    Exit gate: all 49 entities have one source home, with no semantic changes in the relocation change set.
+
+   **Domain relocation completion evidence — 3 October 2026 (item 6)**
+
+   Pure relocation commit: `eb74c396b`. Git reported exactly **202 renames at 100% similarity, zero inserted lines and zero deleted lines**, covering all 49 entities in the six homes above (6/4/4/3/22/10). Every original descriptor, artifact, definition, placement and localization file retains its filename and bytes. Supporting roots remain in place; only populated domain/group directories were created.
+
+   The [complete relocation inventory](entity-metadata-domain-relocation-20261003.json) records all 49 old/new source directories, all 202 old/new file paths and SHA-256 hashes, the discovery starting revision, the relocation commit and ownership evidence. It is audit evidence and is never consumed as an alternative source index. Discovery remains the authority for the physical homes.
+
+   Ownership was checked against reference-data and IAM contracts, master-data address/contact service ports and models, the shared-reference directory contract, the BP draft contract, and existing person/external-worker and personal-address-use DDL. `person_address_use` remains related to Person and Address; placing its source with location metadata changes neither its workforce placement nor its permissions. The workforce projection retains its BP relationships and handlers. Source-home grouping does not assign schemas, publication planes, module codes or navigation; all such metadata remains byte-identical.
+
+   Offline evidence:
+
+   - Derived source inventory before/after nesting: **49 declarations; 215 identical logical-reference/SHA-256 pairs** (202 entity files plus 13 profiles). All 202 entity documents also resolve through the existing rooted logical source-input syntax.
+   - `pnpm metadata:check-layout --baseline`: passed after relocation — 175 historical relocation destinations resolve through the derived index, 202 entity JSON files and 13 profile JSON files; checkpoint JSON bytes and required logical refs preserved.
+   - `node tooling/scripts/catalog/generate-platform-catalog.mjs --check`: passed before and after relocation; generated catalog/navigation text is unchanged. Studio count 32 and the separately reported SQL count 33 were not reconciled.
+   - `python3 tooling/scripts/metadata/validate.py`: source discovery succeeds, then the same pre-existing captured-DDL evidence gap stops wider validation: absent `server/db/ddl/planes/neon/master/18_business_partner_business_profile.sql`. No catalog, SQL or historical evidence was modified to bypass it.
+   - TypeScript `createSourceFile`, `node --check` and Python `ast.parse` checked changed source syntax without executing the programs or tests. `git diff --check` passed. These results are neither package typecheck/build results nor runtime verification.
+
+   Historical checkpoint inventories, release envelopes, review catalogs, approval/signature evidence, schema contents, applied migrations and the retained `New_Entity` compatibility command remain unchanged. Existing physical-path captures now identify old source locations; the new map supplies relocation evidence without transferring historical approval. No successor release was created. Current source guides and onboarding links point to the new physical homes, while tooling continues to accept supported logical inputs.
+
+   Exit gate satisfied for relocation: all 49 entities have one descriptor-owned source home and the relocation commit contains no semantic edits. Business fields, relationships, operations, workflows, exact permission/policy bindings and all MFA settings are unchanged. The 35 absent placement files and seven dual-format directories remain for their separately reviewed steps. No tests, compilation/builds, runtime probes, database actions, publication, deployment, grants or MFA changes ran. Format reconciliation, property corrections, broader build validation and user-flow verification remain pending. Unrelated concurrent shell/UI and shell-test work is preserved outside these commits.
 
 7. **Trace reference integration before correcting properties**
 

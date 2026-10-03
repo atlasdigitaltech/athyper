@@ -34,7 +34,7 @@ The canonical route no longer imports the broad BP `src/index.tsx`. The older `3
 - [Host composition](</home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/register-services.ts>) — runtime/service registration and remaining collaboration/operation wiring.
 - BP record providers — header, sections and summaries.
 - Display choices — catalog lookup labels.
-- `metadata/entities/business_partner/` and related entity metadata — fields, layouts, lookup and protection declarations.
+- `metadata/entities/mdg/bp/business_partner/` and related entity metadata — fields, layouts, lookup and protection declarations.
 - `server/db/` — schema, constraints and row-level security.
 - Package manifests control the narrow `/record` exports; these configuration files are not counted as source dependencies.
 

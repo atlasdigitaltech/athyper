@@ -104,7 +104,7 @@ export function generateDefaultSurfaces(catalog) {
   return { schema: "athyper-experience-surface-bundle/1", catalogSourceHash: catalog.sourceHash, surfaces };
 }
 
-/** Entity placements are authored in metadata/entities/<code>/placement.json.
+/** Entity placements are read from recursively discovered source descriptors.
  * The flat source directory does not assign workspace or module ownership. */
 export async function readEntityPlacements(base = resolve(root, "metadata")) {
   const workspace = discoverWorkspace(base);

@@ -4,11 +4,11 @@ This repository contains platform-owned MetaEntity **authoring inputs**. A file
 move does not validate, approve, sign, publish or activate a definition. Studio
 remains the authority for governed release state and independent review.
 
-## Flat layout and ownership
+## Domain layout and ownership
 
 | Directory | Responsibility |
 | --- | --- |
-| `entities/<entity>/` | Existing entity definitions, split artifacts, workflows, presentation and placement inputs |
+| `entities/<domain>/<group>/<entity>/` | Existing entity definitions, split artifacts, workflows, presentation and placement inputs |
 | `profiles/platform/` | Reusable field and operation defaults, retaining their logical `platform/...` identities |
 | `profiles/activity/`, `profiles/collaboration/` | Supporting capability profiles |
 | `access/` | Supporting access sources; relocation does not execute or grant access |
@@ -18,13 +18,14 @@ remains the authority for governed release state and independent review.
 | `schemas/entity-artifacts-v2/` | Draft artifact schemas, distinct from native graph contracts |
 | `overlays/` | Explicitly governed scoped variations, never environment copies |
 
-`manifest.json` declares the physical roots. Entity sources remain flat at
-`entities/<entity>/` for this checkpoint. Folder placement does not assign domain
+`manifest.json` declares the physical roots. Entity descriptors are discovered
+recursively beneath the entity root. Folder placement does not assign domain
 ownership, storage schemas, module codes, publication targets or navigation.
-Domain nesting and format/property corrections remain separate review steps.
+Format/property corrections remain separate review steps.
 
-Artifact references such as `business_partner/core.json` resolve relative to the
-entity root. Profile references such as `platform/core-field-defaults.v1.json`
+Logical artifact references such as `business_partner/core.json` resolve through
+the derived `entityCode` index, independently of physical domain directories.
+Profile references such as `platform/core-field-defaults.v1.json`
 resolve relative to the profile root while retaining their existing release-local
 identity. No compatibility copies or symlinks are needed. Review/history and
 schema files are not discovered as active entity definitions.
@@ -34,6 +35,36 @@ accounts for all 175 relocated metadata files with original SHA-256 hashes.
 `history/relocation-map-20260921.json` remains historical evidence; its captured
 paths are not the active workspace layout. This workspace does not declare a
 single `releaseEntry`; release preparation uses explicitly selected inputs.
+
+The shared offline resolver is `tooling/scripts/metadata/source-workspace.mjs`.
+Only `entity.json` with schema `athyper.entity-source/1` declares an entity.
+Competing declarations fail with both source paths; artifacts may repeat their
+owner's `entityCode`. Unknown descriptor schemas/properties, invalid or escaping
+paths, unresolved members, duplicate artifact identities and ambiguous logical
+refs fail with configuration errors. Capability profile `{code, version}`
+selections resolve through existing source locks with byte-hash and identity
+checks; native profile parsing still owns binding semantics. Review, history, generated/build output,
+dependency and hidden directories are excluded from discovery.
+
+Existing repository-rooted logical inputs such as
+`metadata/entities/country/definition.json` are resolved by `resolveSourcePath`
+at tooling I/O boundaries. Use the actual physical paths for shell filesystem
+commands. No compatibility directories, copies or symlinks are created. The
+Python tooling bridge calls this same offline resolver. The derived index is
+never saved as a hand-maintained source definition.
+
+| Source home | Entities |
+| --- | ---: |
+| `entities/common/reference/` | 6 |
+| `entities/platform/iam/` | 4 |
+| `entities/ppl/workforce/` | 4 |
+| `entities/mdg/location/` | 3 |
+| `entities/mdg/bp/` | 22 |
+| `entities/mdg/reference/` | 10 |
+
+The [domain relocation inventory](../docs/reviews/entity-metadata-domain-relocation-20261003.json)
+records all 49 source/destination homes and the SHA-256 of each of the 202 moved
+files. It is audit evidence, never a runtime source index.
 
 ## Development rules
 

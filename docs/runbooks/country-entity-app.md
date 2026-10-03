@@ -58,7 +58,7 @@ the native list/detail descriptor alone does not enable collaboration.
 
 ## Implemented source setup
 
-`metadata/entities/country/definition.json` and `capabilities.json`
+`metadata/entities/common/reference/country/definition.json` and `capabilities.json`
 hold the entity-specific declarations. The generic product parser and
 `buildSharedReferenceGraph` authoring factory replace the old executable
 `country-graph.ts` definition. They are independent of the MDG `country/core`
