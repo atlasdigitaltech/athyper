@@ -361,9 +361,9 @@ ALTER TABLE mesh.business_partner_delivery_acknowledgement FORCE ROW LEVEL SECUR
 CREATE POLICY source_read ON mesh.business_partner_delivery_acknowledgement FOR SELECT
   USING (source_tenant_id=shared.current_tenant_id_soft());
 CREATE POLICY worker_write ON mesh.business_partner_delivery_acknowledgement
-  FOR INSERT TO athyper_jobs_service WITH CHECK (true);
+  FOR INSERT TO athyper_jobs_service WITH CHECK (source_tenant_id=shared.current_tenant_id_soft());
 CREATE POLICY worker_read ON mesh.business_partner_delivery_acknowledgement
-  FOR SELECT TO athyper_jobs_service USING (true);
+  FOR SELECT TO athyper_jobs_service USING (source_tenant_id=shared.current_tenant_id_soft());
 CREATE POLICY owner_access ON mesh.business_partner_delivery_acknowledgement
   TO CURRENT_USER USING (true) WITH CHECK (true);
 

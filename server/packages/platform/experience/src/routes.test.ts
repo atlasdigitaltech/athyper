@@ -15,6 +15,7 @@ describe("experience route contract", () => {
     expect(routeContracts(application)).toContainEqual(expect.objectContaining({ method:"get",path:"/api/platform/localization/policies/:planeKey",operationId:"platformLocalePolicy",authenticated:true }));
     expect(routeContracts(application)).toContainEqual(expect.objectContaining({ method:"put",path:"/api/platform/localization/policies/:planeKey",operationId:"updatePlatformLocalePolicy",permission:"studio.platform.catalog.manage" }));
     expect(routeContracts(application)).toContainEqual(expect.objectContaining({ method:"patch",path:"/api/platform/profile/locale",operationId:"updatePrincipalLocale",authenticated:true }));
+    expect(routeContracts(application)).toContainEqual(expect.objectContaining({ method:"patch",path:"/api/platform/profile/appearance",operationId:"updatePrincipalAppearance",authenticated:true }));
     expect(routeContracts(application)).toContainEqual(expect.objectContaining({method:"post",path:"/api/studio/experience-surfaces/drafts",operationId:"saveExperienceSurfaceDraft",permission:"studio.platform.catalog.manage"}));
     expect(routeContracts(application)).toContainEqual(expect.objectContaining({method:"post",path:"/api/studio/experience-surfaces/:releaseId/publish",operationId:"publishExperienceSurface",permission:"studio.platform.catalog.manage"}));
     expect(routeContracts(application)).toContainEqual(expect.objectContaining({method:"get",path:"/api/platform/experience/surfaces/:surfaceKey",operationId:"getExperienceSurface"}));
@@ -37,6 +38,9 @@ describe("localization HTTP errors with response enforcement", () => {
     ["PATCH","/api/platform/profile/locale","updatePrincipalLocale",403],
     ["PATCH","/api/platform/profile/locale","updatePrincipalLocale",409],
     ["PATCH","/api/platform/profile/locale","updatePrincipalLocale",503],
+    ["PATCH","/api/platform/profile/appearance","updatePrincipalAppearance",400],
+    ["PATCH","/api/platform/profile/appearance","updatePrincipalAppearance",403],
+    ["PATCH","/api/platform/profile/appearance","updatePrincipalAppearance",503],
   ] as const)("preserves %s %s error status %s %i", async (method,path,operation,status) => {
     const application=express();application.use(express.json());enforceContractResponses(application);
     const code=status===503?"EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE":"EXPERIENCE_TEST_DENIED";
@@ -47,7 +51,7 @@ describe("localization HTTP errors with response enforcement", () => {
     try {
       await new Promise<void>(resolve=>server.once("listening",resolve));
       const catalogs=["en","ar","ms","zh-Hans","hi","ta","fr","de"].map(localeCode=>({localeCode,status:"qualified",coveragePct:100,linguisticReviewPassed:true,layoutReviewPassed:true,automatedTestsPassed:true}));
-      const body=method==="PUT"?{catalogs,enabledLocales:["en"],defaultLocale:"en",fallbackLocale:"en"}:{localeCode:"en"};
+      const body=method==="PUT"?{catalogs,enabledLocales:["en"],defaultLocale:"en",fallbackLocale:"en"}:path.endsWith("/appearance")?{densityCode:"compact"}:{localeCode:"en"};
       const response=await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}${path}`,{method,...(method!=="GET"?{headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:{})});
       expect(response.status).toBe(status);
       expect(response.headers.get("content-type")).toContain("application/problem+json");

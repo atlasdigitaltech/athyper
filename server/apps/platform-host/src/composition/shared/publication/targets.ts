@@ -18,6 +18,7 @@ export interface PublicationTargetOptions {
   readonly activationGuard?: ConstructorParameters<
     typeof TenantPublicationOrchestrator
   >[3];
+  readonly coordinatedWorkload?: ConstructorParameters<typeof TenantPublicationOrchestrator>[4];
 }
 
 /** Only selected apply targets receive projection, verification and orchestration bindings. */
@@ -45,6 +46,7 @@ export function createPublicationTargets(options: PublicationTargetOptions) {
       database,
       loader,
       options.activationGuard,
+      options.coordinatedWorkload,
     );
   }
   return { projections, orchestrators, loaders };

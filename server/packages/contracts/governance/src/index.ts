@@ -2,7 +2,8 @@ export type GovernanceChannel = "email" | "sms" | "whatsapp" | "push";
 export * from "./cycle-config.js";
 export * from "./cycle-execution.js";
 export * from "./compliance.js";
-export type GovernanceSubjectType = "principal" | "person" | "contact_person" | "business_partner";
+export const governanceSubjectTypes = ["principal", "person", "contact_person", "business_partner"] as const;
+export type GovernanceSubjectType = typeof governanceSubjectTypes[number];
 
 export const governanceErrorCodes = [
   "GOVERNANCE_INVALID_COMMAND",

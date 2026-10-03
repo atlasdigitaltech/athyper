@@ -193,6 +193,7 @@ export function createPublicationAuthorityHandlers(
   resolveApplyExecution?: (
     execution: JobExecutionCoordinate,
     plane: PublicationPlane,
+    deploymentId: string,
   ) => Promise<JobExecutionCoordinate>,
   options: { readonly dispatchEnabled?: boolean } = {},
 ): Readonly<Record<string, JobHandler>> {
@@ -232,7 +233,7 @@ export function createPublicationAuthorityHandlers(
       const payload = await work.dispatch(deploymentId);
       const execution =
         job.execution && resolveApplyExecution
-          ? await resolveApplyExecution(job.execution, payload.targetPlane)
+          ? await resolveApplyExecution(job.execution, payload.targetPlane, payload.deploymentId)
           : job.execution;
       await enqueueApply(jobs, payload, execution);
       return payload;
@@ -248,7 +249,7 @@ export function createPublicationAuthorityHandlers(
       const recovered = await work.recoverStalled();
       for (const payload of recovered) {
         const execution = resolveApplyExecution
-          ? await resolveApplyExecution(job.execution, payload.targetPlane)
+          ? await resolveApplyExecution(job.execution, payload.targetPlane, payload.deploymentId)
           : job.execution;
         await enqueueApply(jobs, payload, execution);
       }
@@ -384,14 +385,17 @@ export async function enqueueApply(
   jobs: JobPublisher,
   payload: PublicationCoordinatePayload,
   execution?: JobExecutionCoordinate,
+  reconciliationHash?: string,
 ): Promise<string> {
   coordinate(payload);
+  if (reconciliationHash !== undefined && !/^[a-f0-9]{64}$/.test(reconciliationHash))
+    throw Error("PUBLICATION_RECONCILIATION_KEY_INVALID");
   return jobs.enqueue(
     PUBLICATION_APPLY_QUEUE,
     APPLY_PUBLICATION_RELEASE_JOB,
     payload,
     {
-      ...deterministic(payload.deploymentId, `apply:${payload.targetPlane}`),
+      ...deterministic(payload.deploymentId, `apply:${payload.targetPlane}${reconciliationHash ? `:reconciliation:${reconciliationHash}` : ""}`),
       maxAttempts: 5,
       backoff: { kind: "exponential", delayMs: 2_000, jitter: 0.25 },
       execution: {

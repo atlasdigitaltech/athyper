@@ -27,6 +27,7 @@ import {
 import {
   FilterIcon,
   MoreVerticalIcon,
+  PlusIcon,
 } from "../../../packages/platform/foundation/icons/src/index";
 import { createEntityReferenceMessages } from "../../../packages/platform/foundation/i18n/src/entity-reference-messages";
 import { entityEnglishMessages } from "../../../packages/platform/foundation/i18n/src/entity-messages";
@@ -40,6 +41,7 @@ import {
   entityListOperation,
 } from "../../../packages/platform/foundation/api-client/src/entity-list";
 import { EntityRecordHeader } from "../../../packages/platform/entity/runtime/form-detail/src/record-header";
+import { RelatedSection } from "../../../packages/platform/entity/runtime/form-detail/src/related-entity-section";
 import { EntityDataSurface } from "../../../packages/platform/entity/runtime/form-detail/src/data-surface";
 import { DataValidationProvider } from "../../../packages/platform/entity/runtime/form-detail/src/data-validation";
 import {
@@ -49,7 +51,11 @@ import {
 import { AtlasWorkspace } from "../../../packages/platform/shell/shell/src/atlas-workspace";
 import { PlatformHome, ShellHomeIdentityProvider } from "../../../packages/platform/shell/shell/src/home";
 import { AccessProvider } from "../../../packages/platform/shell/shell-runtime/src/index";
-import { ApiClientProvider, PermissionProvider } from "../../../packages/platform/shell/app-foundation/src/index";
+import { ApiClientProvider, ApplicationNavigationProvider, PermissionProvider, SessionIdentityProvider } from "../../../packages/platform/shell/app-foundation/src/index";
+import { ModuleLanding, WorkspaceLanding } from "../../../packages/platform/shell/dashboard/src/workspace-page";
+import { WorkspaceModuleTabs } from "../../../packages/platform/shell/dashboard/src/workspace-navigation";
+import { quickAccessStorageKey } from "../../../packages/platform/shell/shell/src/quick-access";
+import { PLATFORM_CATALOG_ROUTES } from "../../../packages/contracts/platform/navigation/src/generated-catalog";
 import { AtlasAnswerProvider } from "../../../packages/platform/ai/agent-ui/src";
 import { ShellPersonalizationScopeProvider } from "../../../packages/platform/shell/shell/src/personalization-scope";
 import { ShellActivityCenter } from "../../../packages/platform/shell/shell/src/activity-center";
@@ -663,6 +669,42 @@ function Home() {
   );
 }
 
+/** Workspace and module homes: real catalog routes (with metadata placements),
+ * the directory API stubbed in activity-data.ts, recent records seeded in storage. */
+const workspaceRoute = PLATFORM_CATALOG_ROUTES.neon.find((workspace) => workspace.code === "mdg")!;
+function seedRecent() {
+  const now = "2026-09-30T08:00:00Z";
+  try {
+    localStorage.setItem(quickAccessStorageKey("Neon", "tenant", "user"), JSON.stringify({ favourites: [], recent: [
+      { id: "/app/entity/country/AF", href: "/app/entity/country/01a0d433-806b-7874-862d-49a9b955f6a1", label: "Afghanistan", kind: "record", visitedAt: now },
+      { id: "/app/entity/currency/MYR", href: "/app/entity/currency/02b0d433-806b-7874-862d-49a9b955f6a2", label: "Malaysian Ringgit", kind: "record", visitedAt: now },
+      { id: "/app/entity/business_partner/x", href: "/app/entity/business_partner/03c0d433-806b-7874-862d-49a9b955f6a3", label: "Northwind Industrial", kind: "record", visitedAt: now },
+    ] }));
+  } catch { /* Storage may be unavailable. */ }
+}
+function WorkspaceSurface({ module }: { readonly module?: string }) {
+  seedRecent();
+  const [pinned, setPinned] = useState<readonly string[]>(["org"]);
+  const ordered = ["org", ...workspaceRoute.modules.map((item) => item.code).filter((code) => code !== "org")];
+  const active = module ? workspaceRoute.modules.find((item) => item.code === module) : undefined;
+  const tabs = <WorkspaceModuleTabs workspace={workspaceRoute} workspaceName="Master Data Governance" orderedModuleCodes={ordered} pinnedModuleCodes={pinned} activeModuleCode={active?.code} badges={{ bp: "3" }} onTogglePinned={(code) => setPinned((value) => value.includes(code) ? value.filter((item) => item !== code) : [...value, code])}/>;
+  return (
+    <Localized>
+      <ApiClientProvider client={activityClient}>
+        <SessionIdentityProvider identity={{ state: "authenticated", scope: { plane: "neon", tenantId: "tenant", principalId: "user", authEpoch: 1 } as never }}>
+          <ApplicationNavigationProvider navigation={{ push() {}, replace() {}, refresh() {} } as never}>
+            {active ? (
+              <ModuleLanding displayName="Neon" workspace={workspaceRoute} module={active} description="Maintain organizations, hierarchies, classifications, and shared reference data." navigation={tabs}/>
+            ) : (
+              <WorkspaceLanding displayName="Neon" workspace={workspaceRoute} workspaceName="Master Data Governance" description="Create, validate, approve, and maintain trusted enterprise master data." moduleDescriptions={{ bp: "Create and govern supplier, customer, and partner master data.", org: "Maintain organizations, hierarchies, classifications, and shared reference data.", loc: "Govern addresses, locations, and geographic reference data.", finmd: "Govern accounts, cost objects, payment terms, and financial reference data." }} orderedModuleCodes={ordered} pinnedModuleCodes={pinned} badges={{ bp: "3" }} onTogglePinned={(code) => setPinned((value) => value.includes(code) ? value.filter((item) => item !== code) : [...value, code])} navigation={tabs}/>
+            )}
+          </ApplicationNavigationProvider>
+        </SessionIdentityProvider>
+      </ApiClientProvider>
+    </Localized>
+  );
+}
+
 // Notifications and Inbox run the real activity data source against the
 // stubbed activity API (tests/foundation-browser/fixtures/activity-data.ts).
 const activityClient = createHttpClient({ csrfToken: () => "fixture" });
@@ -701,17 +743,38 @@ function ActivitySurface({ view }: { readonly view: "panel" | "notifications" | 
   );
 }
 
+/** A child list inside a record section: one card, the section owns title, count and action. */
+function SectionList() {
+  const [summary, setSummary] = useState<{ total?: number; constrained: boolean }>();
+  return (
+    <EntityPageLayout collectionHeader={<h1>Business Partners</h1>}>
+      <Card className="a-record-detail-content">
+        <h2>Countries</h2>
+        <RelatedSection
+          {...(summary?.total !== undefined ? { count: summary.total } : {})}
+          actions={<Button size="small"><PlusIcon size={16} aria-hidden="true" />Add country</Button>}
+        >
+          <EntityListRuntime client={listClient as never} entityCode="country" contentOnly section={{ onSummary: setSummary }} />
+        </RelatedSection>
+      </Card>
+    </EntityPageLayout>
+  );
+}
+
 const surfaces: Record<string, () => React.ReactElement> = {
   kit: () => <Kit />,
   list: () => (
     <EntityListRuntime client={listClient as never} entityCode="country" />
   ),
   record: () => <Record />,
+  "section-list": () => <SectionList />,
   atlas: () => <Atlas />,
   home: () => <Home />,
   "activity-panel": () => <Activity view="panel" />,
   "activity-page": () => <Activity view="notifications" />,
   "activity-inbox": () => <Activity view="inbox" />,
+  workspace: () => <WorkspaceSurface />,
+  "workspace-module": () => <WorkspaceSurface module="org" />,
   // Notification preferences need the API client and the delivery permissions.
   "notification-preferences": () => (
     <ApiClientProvider client={activityClient}>

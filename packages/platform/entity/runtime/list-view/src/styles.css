@@ -1,5 +1,6 @@
 .a-entity-list{display:grid;gap:var(--a-space-3);min-width:0}
-.a-entity-list__header{position:relative;padding-block-end:var(--a-space-3)}
+/* Header band: the same 20px below the header as workspace, module and record pages. */
+.a-entity-list__header{position:relative;padding-block-end:var(--a-space-5)}
 .a-entity-list__header::after{position:absolute;inset-inline:calc(-1 * clamp(var(--a-space-6),3vw,var(--a-space-10)));inset-block-end:0;height:var(--a-border-width);background:var(--a-border);content:""}
 .a-entity-list__pagination>div,.a-entity-list__toolbar-actions{display:flex;gap:var(--a-space-2)}
 .a-entity-list__chrome{position:sticky;z-index:4;inset-block-start:var(--shell-content-top,var(--shell-topbar,0));display:grid;gap:var(--a-space-2);padding-block:var(--a-space-1) var(--a-space-2);background:var(--a-background)}
@@ -59,7 +60,7 @@
    Row and header heights are exact; content never sets the height. */
 .a-entity-list__table tbody tr{height:var(--a-density-row-height)}
 .a-entity-list__table thead tr{height:var(--a-density-header-height)}
-.a-entity-list__table th{position:sticky;z-index:2;inset-block-start:0;background:var(--a-muted);color:var(--a-muted-foreground);font-size:var(--a-density-data-font-size);font-weight:var(--a-font-weight-strong)}
+.a-entity-list__table th{position:sticky;z-index:2;inset-block-start:0;background:var(--a-muted);color:var(--a-muted-foreground);font-size:var(--a-density-label-font-size);font-weight:var(--a-font-weight-regular)}
 .a-entity-list__table th button{display:inline-flex;align-items:center;gap:.25rem;border:0;padding:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;cursor:pointer}
 .a-entity-list__table th button:hover{color:var(--a-foreground)}
 .a-entity-list__sort-header:focus-visible{border-radius:var(--a-radius-sm);outline:var(--a-focus-width) solid var(--a-focus);outline-offset:.2rem}
@@ -648,3 +649,11 @@ button.a-entity-pulse__favourite-star{cursor:pointer}.a-entity-pulse__favourite-
 .a-entity-list__table th .a-entity-list__column-filter{height:min(1.75rem,calc(var(--a-density-header-height) - .375rem))}
 /* Icon cells never show a text ellipsis when a density button fills the cell. */
 .a-entity-list__table td.a-entity-list__bookmark-cell,.a-entity-list__table td.a-entity-list__selection-cell{text-overflow:clip}
+/* A list inside a record section has no panel of its own: one card. The toolbar keeps the
+   section's padding; the table and footer run to the card's edges so header and row rules
+   meet its border. */
+.a-entity-list__panel[data-presentation=section]{margin-inline:calc(-1 * var(--a-space-4));margin-block-end:calc(-1 * var(--a-space-4));border:0;border-radius:0;background:transparent;box-shadow:none}
+.a-entity-list__panel[data-presentation=section]>.a-entity-list__chrome{padding-inline:var(--a-space-4);border-radius:0;background:transparent}
+.a-entity-list__panel[data-presentation=section] .a-management-toolbar.a-entity-list__query-row{background:transparent}
+.a-entity-list__panel[data-presentation=section]>.a-entity-list__table-wrap,.a-entity-list__panel[data-presentation=section]>.a-entity-list__state{border-radius:0 0 var(--a-radius-lg) var(--a-radius-lg)}
+.a-entity-list__panel[data-presentation=section]>.a-entity-list__pagination{padding-inline:var(--a-space-4)}

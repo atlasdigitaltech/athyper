@@ -97,6 +97,15 @@ async function main(): Promise<void> {
     if (!(await exists(relativePath))) failures.push(`offline IAM asset missing: ${relativePath}`);
   }
 
+  // Report every missing asset before reading sources; an ENOENT from the
+  // first retired test must not hide the remaining coverage gaps.
+  if (failures.length > 0) {
+    console.error("IAM testing foundation verification FAILED:\n");
+    for (const failure of failures) console.error(`  - ${failure}`);
+    process.exitCode = 1;
+    return;
+  }
+
   const [boundary, assurance, stepUp, providers, sessions, neonFlow, meshFlow] = await Promise.all(
     REQUIRED_TESTS.map(([, relativePath]) => source(relativePath)),
   );

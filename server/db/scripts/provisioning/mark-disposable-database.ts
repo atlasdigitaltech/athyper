@@ -3,6 +3,7 @@
 import pg from "pg";
 import {
   ensureResetGuardTable,
+  authorizationProvisionLockKey,
   readSchemaFingerprintSha256,
 } from "./safe-provision.js";
 
@@ -54,7 +55,7 @@ try {
   await client.query("BEGIN");
   await client.query(
     "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
-    [`athyper:wave6:reset-guard:${plane}`],
+    [authorizationProvisionLockKey(plane)],
   );
   const identity = await client.query<{
     database_name: string;
@@ -123,7 +124,7 @@ try {
     marked: true,
   }, null, 2)}\n`);
 } catch (error) {
-  await client.query("ROLLBACK");
+  await client.query("ROLLBACK").catch(() => undefined);
   throw error;
 } finally {
   await client.end();

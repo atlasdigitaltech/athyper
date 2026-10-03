@@ -128,10 +128,13 @@ export function parseSharedReferenceProduct(
       "localizedTitle",
       "entityLabel",
       "codeKeyFields",
+      "iconKey",
     ],
   );
   if (!isCanonicalEntityCode(row.entityCode))
     throw Error("REFERENCE_PRODUCT_ENTITY_CODE_INVALID");
+  if (row.iconKey !== undefined && (typeof row.iconKey !== "string" || !/^[a-z][a-z0-9-]{0,62}$/.test(row.iconKey)))
+    throw Error("REFERENCE_PRODUCT_ICON_INVALID");
   const runtimeBindings =
     row.runtimeBindings === undefined
       ? undefined
@@ -227,12 +230,15 @@ export function parseSharedReferenceProduct(
     const section = object(
       value,
       ["key", "label", "fields"],
-      ["localizedLabel"],
+      ["localizedLabel", "iconKey"],
     );
+    if (section.iconKey !== undefined && (typeof section.iconKey !== "string" || !/^[a-z][a-z0-9-]{0,62}$/.test(section.iconKey)))
+      throw Error("REFERENCE_PRODUCT_SECTION_ICON_INVALID");
     return {
       key: text(section.key, true),
       ...label(section.label, section.localizedLabel, localize),
       fields: keys(section.fields),
+      ...(typeof section.iconKey === "string" ? { iconKey: section.iconKey } : {}),
     };
   });
   if (new Set(sections.map((s) => s.key)).size !== sections.length)
@@ -255,6 +261,7 @@ export function parseSharedReferenceProduct(
       ? {}
       : { ai: structuredClone(row.ai) as SharedReferenceDefinition["ai"] }),
     entityCode: text(row.entityCode, true),
+    ...(typeof row.iconKey === "string" ? { iconKey: row.iconKey } : {}),
     title: title.label,
     ...(title.localizedLabel ? { localizedTitle: title.localizedLabel } : {}),
     ...(row.entityLabel === undefined

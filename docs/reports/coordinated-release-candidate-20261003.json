@@ -1,0 +1,687 @@
+{
+  "schema": "athyper.coordinated-entity-release-candidate/1",
+  "candidateId": "entity-framework-dev-20261003-01",
+  "status": "prepared_for_human_authoring_and_review",
+  "environment": "DEV",
+  "capturedAt": "2026-10-02T16:49:03.518Z",
+  "scope": "Reconciliation of the 14 existing Studio drafts; no claim to include every unpublished repository change.",
+  "summary": {
+    "draftCount": 14,
+    "selectedEntities": [
+      "address",
+      "employee",
+      "external_worker",
+      "person",
+      "person_address_use",
+      "principal_profile"
+    ],
+    "excludedDraftCount": 8,
+    "targetCounts": {
+      "neon": 6,
+      "mesh": 1,
+      "studio": 1
+    },
+    "tenantCandidates": 0
+  },
+  "selected": [
+    {
+      "entityCode": "address",
+      "entityId": "d4b8c0c4-b22c-434e-a015-dc32634054a2",
+      "changeSetId": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+      "expectedRevision": 1,
+      "sourceTenantId": null,
+      "approvalRoute": {
+        "author": "Platform Admin",
+        "reviewer": "Platform Owner",
+        "independent": true
+      },
+      "disposition": "include_first_publication",
+      "recordedCreator": "seed.three-plane-provisioner",
+      "creatorPrincipalType": "service_account",
+      "humanAuthorshipVerified": false,
+      "graphHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5",
+      "nativeContractHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5",
+      "descriptorHash": "bba105f2f438f741ec8a09120aba0e5e9d8d90efa09224ac3364ce36c753c404",
+      "productHash": "0cc83a956d155cba45fc3a7f2b242632e7d5ca6bd3f91fa0f3215f282d7a5de1",
+      "currentRepositoryProductHash": "0cc83a956d155cba45fc3a7f2b242632e7d5ca6bd3f91fa0f3215f282d7a5de1",
+      "predecessor": null,
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5",
+          "descriptorHash": "bba105f2f438f741ec8a09120aba0e5e9d8d90efa09224ac3364ce36c753c404",
+          "compiled": true
+        }
+      ],
+      "dependencies": ["country", "state_region", "timezone"],
+      "sourceAuthorityAmendment": null,
+      "reviewGraph": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/candidate-2/address/draft-ae88cd34-5d07-4885-862b-cc9bd6627d2c.json",
+      "reviewEndpoint": "/api/meta-entity-authoring/change-sets/ae88cd34-5d07-4885-862b-cc9bd6627d2c/graph"
+    },
+    {
+      "entityCode": "employee",
+      "entityId": "a176a2ad-befa-4462-be60-beeb379b34ae",
+      "changeSetId": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+      "expectedRevision": 1,
+      "sourceTenantId": null,
+      "approvalRoute": {
+        "author": "Platform Admin",
+        "reviewer": "Platform Owner",
+        "independent": true
+      },
+      "disposition": "include_first_publication",
+      "recordedCreator": "seed.three-plane-provisioner",
+      "creatorPrincipalType": "service_account",
+      "humanAuthorshipVerified": false,
+      "graphHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee",
+      "nativeContractHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee",
+      "descriptorHash": "d631d6edb53ef371ed7f23488ec6ef69bc0f0480f4c52225b70ad0da6c20d29a",
+      "productHash": "bfcc42edf578e9f51cfd11763b08718fa3993ad46272cc46587625b97b679f73",
+      "currentRepositoryProductHash": "bfcc42edf578e9f51cfd11763b08718fa3993ad46272cc46587625b97b679f73",
+      "predecessor": null,
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee",
+          "descriptorHash": "d631d6edb53ef371ed7f23488ec6ef69bc0f0480f4c52225b70ad0da6c20d29a",
+          "compiled": true
+        }
+      ],
+      "dependencies": ["person", "principal"],
+      "sourceAuthorityAmendment": null,
+      "reviewGraph": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/candidate-2/employee/draft-3f0d61d0-45eb-4e12-9add-20a8511f456c.json",
+      "reviewEndpoint": "/api/meta-entity-authoring/change-sets/3f0d61d0-45eb-4e12-9add-20a8511f456c/graph"
+    },
+    {
+      "entityCode": "external_worker",
+      "entityId": "d939e784-791c-44d8-83af-581fc4b92262",
+      "changeSetId": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+      "expectedRevision": 1,
+      "sourceTenantId": null,
+      "approvalRoute": {
+        "author": "Platform Admin",
+        "reviewer": "Platform Owner",
+        "independent": true
+      },
+      "disposition": "include_first_publication",
+      "recordedCreator": "seed.three-plane-provisioner",
+      "creatorPrincipalType": "service_account",
+      "humanAuthorshipVerified": false,
+      "graphHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82",
+      "nativeContractHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82",
+      "descriptorHash": "b19b512795ca534f3db5beed153c3e92c55a6abad97cfe6532058a539859edb4",
+      "productHash": "a51aa65df1edab34cc8731e9491c64ffd8f99b8470748d6b8b14e795220d00c6",
+      "currentRepositoryProductHash": "a51aa65df1edab34cc8731e9491c64ffd8f99b8470748d6b8b14e795220d00c6",
+      "predecessor": null,
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82",
+          "descriptorHash": "b19b512795ca534f3db5beed153c3e92c55a6abad97cfe6532058a539859edb4",
+          "compiled": true
+        }
+      ],
+      "dependencies": ["person"],
+      "sourceAuthorityAmendment": null,
+      "reviewGraph": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/candidate-2/external_worker/draft-5b863f1d-ae3d-4b0e-884d-40acc0f9fd33.json",
+      "reviewEndpoint": "/api/meta-entity-authoring/change-sets/5b863f1d-ae3d-4b0e-884d-40acc0f9fd33/graph"
+    },
+    {
+      "entityCode": "person",
+      "entityId": "5c828d92-8a60-4872-b95a-f9820d9a2439",
+      "changeSetId": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+      "expectedRevision": 1,
+      "sourceTenantId": null,
+      "approvalRoute": {
+        "author": "Platform Admin",
+        "reviewer": "Platform Owner",
+        "independent": true
+      },
+      "disposition": "include_first_publication",
+      "recordedCreator": "seed.three-plane-provisioner",
+      "creatorPrincipalType": "service_account",
+      "humanAuthorshipVerified": false,
+      "graphHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4",
+      "nativeContractHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4",
+      "descriptorHash": "007f62874028f9c4affd6d29af1f558374d5140e0228aa090abac75d661c8e70",
+      "productHash": "222279e6267e792c60154ab562847227b18c6109704e1e379e1aab1b8aefde17",
+      "currentRepositoryProductHash": "222279e6267e792c60154ab562847227b18c6109704e1e379e1aab1b8aefde17",
+      "predecessor": null,
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4",
+          "descriptorHash": "007f62874028f9c4affd6d29af1f558374d5140e0228aa090abac75d661c8e70",
+          "compiled": true
+        }
+      ],
+      "dependencies": [
+        "country",
+        "employee",
+        "external_worker",
+        "person_address_use"
+      ],
+      "sourceAuthorityAmendment": null,
+      "reviewGraph": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/candidate-2/person/draft-7b8bbfab-24ee-4c72-98d2-2ab9a30fd982.json",
+      "reviewEndpoint": "/api/meta-entity-authoring/change-sets/7b8bbfab-24ee-4c72-98d2-2ab9a30fd982/graph"
+    },
+    {
+      "entityCode": "person_address_use",
+      "entityId": "1392d9ac-e5c8-402e-a8d1-e443d2f224eb",
+      "changeSetId": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+      "expectedRevision": 1,
+      "sourceTenantId": null,
+      "approvalRoute": {
+        "author": "Platform Admin",
+        "reviewer": "Platform Owner",
+        "independent": true
+      },
+      "disposition": "include_first_publication",
+      "recordedCreator": "seed.three-plane-provisioner",
+      "creatorPrincipalType": "service_account",
+      "humanAuthorshipVerified": false,
+      "graphHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211",
+      "nativeContractHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211",
+      "descriptorHash": "9d9bec21c8c8cabc1210a5e5989e4a2d3e7c1063e2b220444d90f61f9b7b4c1e",
+      "productHash": "2048f14318c14c66b486567d4ed116dab02f6e400d6e1bd3e0d9fc1c33ce6d30",
+      "currentRepositoryProductHash": "2048f14318c14c66b486567d4ed116dab02f6e400d6e1bd3e0d9fc1c33ce6d30",
+      "predecessor": null,
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211",
+          "descriptorHash": "9d9bec21c8c8cabc1210a5e5989e4a2d3e7c1063e2b220444d90f61f9b7b4c1e",
+          "compiled": true
+        }
+      ],
+      "dependencies": ["address", "person"],
+      "sourceAuthorityAmendment": null,
+      "reviewGraph": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/candidate-2/person_address_use/draft-4bbfa46d-918d-4265-ba21-4cf740237ba1.json",
+      "reviewEndpoint": "/api/meta-entity-authoring/change-sets/4bbfa46d-918d-4265-ba21-4cf740237ba1/graph"
+    },
+    {
+      "entityCode": "principal_profile",
+      "entityId": "58fa1227-7f15-4f3a-9604-c8b143f00518",
+      "changeSetId": "7e7dbd68-84a0-42ac-b886-2481ff683bd4",
+      "expectedRevision": 2,
+      "sourceTenantId": null,
+      "approvalRoute": {
+        "author": "Platform Admin",
+        "reviewer": "Platform Owner",
+        "independent": true
+      },
+      "disposition": "include_pinned_successor",
+      "recordedCreator": "seed.three-plane-provisioner",
+      "creatorPrincipalType": "service_account",
+      "humanAuthorshipVerified": false,
+      "graphHash": "4e6ca752a7db5b4098df2784ff795e029501acd787c4122b6036bcd1edbe7ef2",
+      "nativeContractHash": "4e6ca752a7db5b4098df2784ff795e029501acd787c4122b6036bcd1edbe7ef2",
+      "descriptorHash": "8bdb683a76ef64a62fae0e1dd2a51ba270a96957fc4e6b758cc0c76ab3a9a2af",
+      "productHash": "42a49a12b0e4dcc097036b8c5ca737b0225d2e8e877402434ada7be7ed38397a",
+      "currentRepositoryProductHash": "a4ff0786fab7a56389bfa482cceeffdb6cf91ee517a92ccaed186f306145f55f",
+      "predecessor": {
+        "id": "36193db0-63d2-4677-a047-a9bd1c4dff6c",
+        "release_no": "2",
+        "release_hash": "c793aaa9008817d101c32996971ec43237f62574c2dc561e228cc80e37a95e18",
+        "contract_hash": "0ac1cbd35d07086d708758864380e02f939b019cd35f4b12a7ef0edb2be0abb3",
+        "revision_id": "01a0f749-0510-7a34-8d14-5aab4c5ca593",
+        "change_set_id": "fe4dde82-cd41-40d7-b178-e7a20f549454",
+        "target_planes": ["studio", "neon", "mesh"],
+        "published_at": "2026-10-01T11:45:53.396Z",
+        "published_by": "c0febdd1-491c-46b8-8113-160be767b88d",
+        "published_by_code": "dev.metadata.publisher",
+        "snapshot_contract_hash": "0ac1cbd35d07086d708758864380e02f939b019cd35f4b12a7ef0edb2be0abb3",
+        "snapshot_integrity_verified": true,
+        "publication_release_id": "36193db0-63d2-4677-a047-a9bd1c4dff6c",
+        "release_key": "metadata.entity.principal_profile",
+        "nativeContractHash": "28e4555eea82b346d99ebb3cfc47aa908c63dd8c1a7ed186b2301ce6a3dee976",
+        "contractIntegrityVerified": true
+      },
+      "targets": [
+        {
+          "plane": "studio",
+          "contractHash": "4e6ca752a7db5b4098df2784ff795e029501acd787c4122b6036bcd1edbe7ef2",
+          "descriptorHash": "8bdb683a76ef64a62fae0e1dd2a51ba270a96957fc4e6b758cc0c76ab3a9a2af",
+          "compiled": true
+        },
+        {
+          "plane": "neon",
+          "contractHash": "346ba0a09c46764b8b5042859d3824b966fce6c6f22cfa44d4026d814591d008",
+          "descriptorHash": "fec6ce3e9226622fc194447d63249ffd24009db15914da49f3a05ff3ab237844",
+          "compiled": true
+        },
+        {
+          "plane": "mesh",
+          "contractHash": "e315bc819d500f4298e83444982883a8f8261b5be165a9bc067b07e5bbd2d6ac",
+          "descriptorHash": "8f1941347041b29d581971d794d4fc546cf47c4722d6bd1068fb8915e463c23a",
+          "compiled": true
+        }
+      ],
+      "dependencies": [],
+      "sourceAuthorityAmendment": {
+        "key": "identity.profile-source.v1",
+        "onlyChangeSinceInitialDraft": true,
+        "initialDraftHash": "fd210368e7581ae35eb2a6fb2ee4b14547014a35e1d4407e8b2edb5bf14e0ee5"
+      },
+      "reviewGraph": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/candidate-2/principal_profile/draft-7e7dbd68-84a0-42ac-b886-2481ff683bd4.json",
+      "reviewEndpoint": "/api/meta-entity-authoring/change-sets/7e7dbd68-84a0-42ac-b886-2481ff683bd4/graph"
+    }
+  ],
+  "excluded": [
+    {
+      "entityCode": "address",
+      "changeSetId": "398373e4-348b-4681-8c9e-441dda15be21",
+      "disposition": "exclude_preserve_draft",
+      "reason": "Does not match current repository product and is not a qualified pinned successor.",
+      "preservedInStudio": true
+    },
+    {
+      "entityCode": "country",
+      "changeSetId": "28e155d7-9f18-48fd-9f4d-847ff80f7e87",
+      "disposition": "exclude_preserve_draft",
+      "reason": "Predates current published release; do not republish an older baseline.",
+      "preservedInStudio": true
+    },
+    {
+      "entityCode": "locale",
+      "changeSetId": "65e734b2-d2dc-4e0e-8174-a1843e658e4e",
+      "disposition": "exclude_preserve_draft",
+      "reason": "Predates current published release; do not republish an older baseline.",
+      "preservedInStudio": true
+    },
+    {
+      "entityCode": "principal_disclosure_probe",
+      "changeSetId": "0e87c590-67b4-4e85-a4cf-78552193ffc9",
+      "disposition": "exclude_preserve_draft",
+      "reason": "Predates current published release; do not republish an older baseline.",
+      "preservedInStudio": true
+    },
+    {
+      "entityCode": "principal_ui_profile",
+      "changeSetId": "98d018fb-7e71-4a61-848e-28063f0e98ac",
+      "disposition": "exclude_preserve_draft",
+      "reason": "Predates current published release; do not republish an older baseline.",
+      "preservedInStudio": true
+    },
+    {
+      "entityCode": "principal_ui_profile",
+      "changeSetId": "6619304e-ae6f-4465-a550-4a01cc7e9093",
+      "disposition": "exclude_preserve_draft",
+      "reason": "Predates current published release; do not republish an older baseline.",
+      "preservedInStudio": true
+    },
+    {
+      "entityCode": "state_region",
+      "changeSetId": "9672c64b-b40f-43ce-8a2f-e0fbebd1154e",
+      "disposition": "exclude_preserve_draft",
+      "reason": "Predates current published release; do not republish an older baseline.",
+      "preservedInStudio": true
+    },
+    {
+      "entityCode": "timezone",
+      "changeSetId": "a2f6d076-8d6f-46c3-947a-235349314de7",
+      "disposition": "exclude_preserve_draft",
+      "reason": "Predates current published release; do not republish an older baseline.",
+      "preservedInStudio": true
+    }
+  ],
+  "coordination": {
+    "atomicAcrossEntitiesOrPlanes": false,
+    "individualSourceReleaseIdentitiesRequired": true,
+    "sequence": [
+      "Refresh source/draft/target pins and complete human authoring/review.",
+      "Qualify and stage each approved entity through the shared publication framework.",
+      "Coordinate Neon person/address/employee/external-worker/person-address-use activation; Person has reverse relationships to the dependent entities, so test after the complete group is active.",
+      "Deliver Principal Profile to Studio, Neon and Mesh with separate receipts.",
+      "Verify signed activation and authenticated list/detail/embedded flows on every declared target."
+    ],
+    "dependencyCycle": [
+      "person -> employee -> person",
+      "person -> external_worker -> person",
+      "person -> person_address_use -> person"
+    ],
+    "dependencyCycleHandling": "Do not assume a topological or atomic activation. Target qualification must establish whether staging the complete group is supported; otherwise the group remains blocked."
+  },
+  "approvalWorkflow": {
+    "routeBase": "/api/meta-entity-authoring/change-sets/:id",
+    "actions": [
+      "GET /graph",
+      "POST /validate",
+      "POST /test",
+      "POST /submit",
+      "POST /approve"
+    ],
+    "concurrency": "Fetch the current revision before each mutation and supply If-Match; do not reuse the inventory revision after submit or approval.",
+    "actorRule": "Platform Admin authors/adopts and submits; independent Platform Owner approves. Existing seed creator records must never be relabeled as human authorship.",
+    "evidenceRequired": [
+      "Authenticated human authoring/proposal bound to the final graph revision/hash",
+      "Independent authenticated review bound to the same immutable candidate",
+      "Separate approval and ownership for any future tenant extension"
+    ],
+    "legacyServiceAccountAutoApprovalAllowed": false,
+    "approvalCreated": false
+  },
+  "validation": {
+    "frameworkTestsPassed": 39,
+    "testFiles": [
+      "server/packages/planes/studio/meta-entity-authoring/src/publication/amend-successor-source-authority.test.ts",
+      "server/packages/planes/studio/meta-entity-authoring/src/__tests__/table-product.test.ts",
+      "server/packages/planes/studio/meta-entity-authoring/src/__tests__/product.test.ts",
+      "server/packages/planes/studio/meta-entity-authoring/src/publication-ownership.test.ts",
+      "server/apps/platform-host/src/composition/shared/publication/source-authority-qualification.test.ts",
+      "server/apps/platform-host/src/composition/shared/entity-runtime/published-tenant-authorizer.test.ts"
+    ],
+    "all14DraftGraphsCompiled": true,
+    "all14DraftTargetCompilations": 30,
+    "embeddedContractTestCases": 0,
+    "selectedTargetCompilations": 8,
+    "selectedStorageColumnsPresent": true,
+    "selectedStorageRlsEnabledAndForced": true,
+    "existingBaselineSnapshotsVerified": 7,
+    "liveUserFlowVerified": false,
+    "deployedResolverQualified": false,
+    "installedMigrationOrDeployment": false,
+    "retainedArtifactHashesVerified": 85,
+    "manifestHashVerified": true
+  },
+  "targetEvidence": {
+    "studio": {
+      "candidateStorage": [
+        {
+          "entityCode": "principal_profile",
+          "schema": "master",
+          "object": "principal_profile",
+          "missingColumns": [],
+          "rls": [
+            {
+              "relrowsecurity": true,
+              "relforcerowsecurity": true
+            }
+          ],
+          "dependencies": [],
+          "qualifiedRuntime": false
+        }
+      ],
+      "predecessorHeads": [
+        {
+          "publication_key": "metadata.entity.principal_profile",
+          "applied_release_id": "01a0f749-0dc0-765f-91e0-d2d4b1f2e426",
+          "source_release_no": "2",
+          "artifact_hash": "f01066f4443c829aa860c616c7c415ba06e1f5c81c7e56c73e0c173eab547325",
+          "activated_at": "2026-10-01T11:45:55.197Z",
+          "row_version": "2"
+        }
+      ]
+    },
+    "neon": {
+      "candidateStorage": [
+        {
+          "entityCode": "address",
+          "schema": "master",
+          "object": "address",
+          "missingColumns": [],
+          "rls": [
+            {
+              "relrowsecurity": true,
+              "relforcerowsecurity": true
+            }
+          ],
+          "dependencies": [
+            {
+              "entity": "country",
+              "coordinatedCandidate": false,
+              "activeHead": {
+                "publication_key": "metadata.reference.country",
+                "applied_release_id": "01a0f5f7-cf16-79dd-b78b-0ddc49a4821f",
+                "source_release_no": "13",
+                "artifact_hash": "8069d1fe6960a898dc2d66f55a1c584726d5383d72a4c2960690aa7c5655a9fd",
+                "activated_at": "2026-10-01T05:37:33.506Z",
+                "row_version": "13"
+              }
+            },
+            {
+              "entity": "state_region",
+              "coordinatedCandidate": false,
+              "activeHead": {
+                "publication_key": "metadata.reference.state_region",
+                "applied_release_id": "01a0f5f8-8a7e-749b-9af5-204d174173e8",
+                "source_release_no": "1",
+                "artifact_hash": "13ec2f30049776f8a4c6ded37d2864cefd67b98edaedc81eae2d85b0b48ac21e",
+                "activated_at": "2026-10-01T05:38:21.448Z",
+                "row_version": "1"
+              }
+            },
+            {
+              "entity": "timezone",
+              "coordinatedCandidate": false,
+              "activeHead": {
+                "publication_key": "metadata.reference.timezone",
+                "applied_release_id": "01a0f5f8-998f-75f6-8e42-c6357a28ec17",
+                "source_release_no": "1",
+                "artifact_hash": "6ac0ff0b53c029e6834bf9406c3e138c5a3416e25b887ddfbfca7b51d580dd36",
+                "activated_at": "2026-10-01T05:38:25.307Z",
+                "row_version": "1"
+              }
+            }
+          ],
+          "qualifiedRuntime": false
+        },
+        {
+          "entityCode": "employee",
+          "schema": "master",
+          "object": "employee",
+          "missingColumns": [],
+          "rls": [
+            {
+              "relrowsecurity": true,
+              "relforcerowsecurity": true
+            }
+          ],
+          "dependencies": [
+            {
+              "entity": "person",
+              "coordinatedCandidate": true,
+              "activeHead": null
+            },
+            {
+              "entity": "principal",
+              "coordinatedCandidate": false,
+              "activeHead": {
+                "publication_key": "metadata.entity.principal",
+                "applied_release_id": "01a0f9d5-3066-7654-9217-203e45fbd659",
+                "source_release_no": "4",
+                "artifact_hash": "51663dccba084a726975f58b5d8478b046df0af6a862df13d615dc618b7cbbe7",
+                "activated_at": "2026-10-01T23:38:13.590Z",
+                "row_version": "4"
+              }
+            }
+          ],
+          "qualifiedRuntime": false
+        },
+        {
+          "entityCode": "external_worker",
+          "schema": "master",
+          "object": "external_worker",
+          "missingColumns": [],
+          "rls": [
+            {
+              "relrowsecurity": true,
+              "relforcerowsecurity": true
+            }
+          ],
+          "dependencies": [
+            {
+              "entity": "person",
+              "coordinatedCandidate": true,
+              "activeHead": null
+            }
+          ],
+          "qualifiedRuntime": false
+        },
+        {
+          "entityCode": "person",
+          "schema": "master",
+          "object": "person",
+          "missingColumns": [],
+          "rls": [
+            {
+              "relrowsecurity": true,
+              "relforcerowsecurity": true
+            }
+          ],
+          "dependencies": [
+            {
+              "entity": "country",
+              "coordinatedCandidate": false,
+              "activeHead": {
+                "publication_key": "metadata.reference.country",
+                "applied_release_id": "01a0f5f7-cf16-79dd-b78b-0ddc49a4821f",
+                "source_release_no": "13",
+                "artifact_hash": "8069d1fe6960a898dc2d66f55a1c584726d5383d72a4c2960690aa7c5655a9fd",
+                "activated_at": "2026-10-01T05:37:33.506Z",
+                "row_version": "13"
+              }
+            },
+            {
+              "entity": "employee",
+              "coordinatedCandidate": true,
+              "activeHead": null
+            },
+            {
+              "entity": "external_worker",
+              "coordinatedCandidate": true,
+              "activeHead": null
+            },
+            {
+              "entity": "person_address_use",
+              "coordinatedCandidate": true,
+              "activeHead": null
+            }
+          ],
+          "qualifiedRuntime": false
+        },
+        {
+          "entityCode": "person_address_use",
+          "schema": "master",
+          "object": "person_address_use",
+          "missingColumns": [],
+          "rls": [
+            {
+              "relrowsecurity": true,
+              "relforcerowsecurity": true
+            }
+          ],
+          "dependencies": [
+            {
+              "entity": "address",
+              "coordinatedCandidate": true,
+              "activeHead": null
+            },
+            {
+              "entity": "person",
+              "coordinatedCandidate": true,
+              "activeHead": null
+            }
+          ],
+          "qualifiedRuntime": false
+        },
+        {
+          "entityCode": "principal_profile",
+          "schema": "master",
+          "object": "principal_profile",
+          "missingColumns": [],
+          "rls": [
+            {
+              "relrowsecurity": true,
+              "relforcerowsecurity": true
+            }
+          ],
+          "dependencies": [],
+          "qualifiedRuntime": false
+        }
+      ],
+      "predecessorHeads": [
+        {
+          "publication_key": "metadata.entity.principal_profile",
+          "applied_release_id": "01a0f749-0d47-71c4-b301-64f599f1f574",
+          "source_release_no": "2",
+          "artifact_hash": "6cc90e7b5f40d59f8eeb6b69c640c60e9158c38fca6bda94ec49fa1eab0fbc81",
+          "activated_at": "2026-10-01T11:45:55.094Z",
+          "row_version": "2"
+        }
+      ]
+    },
+    "mesh": {
+      "candidateStorage": [
+        {
+          "entityCode": "principal_profile",
+          "schema": "master",
+          "object": "principal_profile",
+          "missingColumns": [],
+          "rls": [
+            {
+              "relrowsecurity": true,
+              "relforcerowsecurity": true
+            }
+          ],
+          "dependencies": [],
+          "qualifiedRuntime": false
+        }
+      ],
+      "predecessorHeads": [
+        {
+          "publication_key": "metadata.entity.principal_profile",
+          "applied_release_id": "01a0f749-0cb7-7149-81db-8d0fdad0f5d4",
+          "source_release_no": "2",
+          "artifact_hash": "b4ad111037c2c794a59bd9304742157131f2cc449606965dc76b3f40fbacc909",
+          "activated_at": "2026-10-01T11:45:54.936Z",
+          "row_version": "2"
+        }
+      ]
+    }
+  },
+  "requiredGates": [
+    "Platform Admin must author/adopt and propose each exact candidate; seed authorship is not human authorship.",
+    "Independent Platform Owner review/approval must bind the final change-set revision and hashes.",
+    "Tenant-owned extensions require separate Tenant Admin/Tenant Owner evidence; none are combined with product baselines.",
+    "Recheck draft revisions, repository product hashes, source releases and per-plane activation heads before any write.",
+    "Qualify storage, IAM permission coverage, source-authority resolvers and runtime providers through normal publication controls.",
+    "Validate real authorized/unauthorized and cross-tenant list/detail/embedded flows after deployment.",
+    "No automatic approval or publication through legacy development service-account workflows."
+  ],
+  "excludedWork": [
+    "Tenant learning inbox/delivery/ancestry implementation and migration",
+    "Security-definer drift reconciliation and operational ownership upgrade",
+    "Ingress/enforcement qualification",
+    "Replacement successors for stale drafts require separate baseline-preserving preparation; repository products are comparison artifacts only."
+  ],
+  "evidence": {
+    "directory": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/candidate-2",
+    "inventory": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/candidate-2/inventory.json",
+    "manifestHash": "cf5e0251f45339efcf53cb15a413bb7225952b7225b716f9428a2b19f4a08bc9",
+    "inventoryFileSha256": "9ac60aa33a961ed69365dcd51376a35ba934cbb477dcf7a5d867f5db80a3e2fc",
+    "preparationScript": "server/db/scripts/operations/publication/prepare-coordinated-candidate.ts",
+    "preparationScriptSha256": "72ba36a151bec9aa1f81f45d201f93519a7352b1576b6f8d2a1bb53cd5a56e32"
+  },
+  "databaseWritesPerformed": false,
+  "draftsArchivedOrDeleted": false,
+  "releaseCreated": false,
+  "publicationPerformed": false,
+  "controlReviewAccess": {
+    "status": "installed_dev_pending_authenticated_acceptance",
+    "readinessReport": "docs/reports/coordinated-release-control-path-readiness-20261003.json",
+    "baseUrl": "https://api.dev.athyper.test/api/platform-control/meta-entity-authoring",
+    "requiredHeaders": [
+      "Authorization: Bearer <fresh verified platform-control token>",
+      "x-plane: studio"
+    ],
+    "actions": [
+      "GET change-sets/:id/graph",
+      "POST change-sets/:id/adopt",
+      "POST change-sets/:id/submit",
+      "POST change-sets/:id/approve"
+    ],
+    "commandFields": ["requestId", "expectedRevision", "expectedContractHash"],
+    "approvalCreated": false
+  }
+}

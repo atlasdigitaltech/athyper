@@ -1,0 +1,89 @@
+{
+  "schema": "athyper.dev-coordinated-deployment-recovery/1",
+  "policyId": "dev.coordinated-recovery.7886bdc7-6a64-4145-9e71-d610ca9a3a91",
+  "revision": 1,
+  "environment": "local",
+  "instance": "dev",
+  "authorityTenantId": "11111111-1111-4111-8111-111111111111",
+  "authorPrincipalId": "cc0812fb-0873-456c-8236-9d31fb539ea5",
+  "publisherPrincipalId": "c0febdd1-491c-46b8-8113-160be767b88d",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "0b0cc0c465d589bd305b0f367c644d635290b7c45385c970e53cc48aab1e350b"
+  },
+  "expiresAt": "2026-10-05T22:43:07.280Z",
+  "originalPolicy": {
+    "id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91",
+    "hash": "f83745496f6130b300dcb1da6514d4f6079a5c2af720594908b576e9a92da76f",
+    "version": 1,
+    "compilerHash": "d3cb4f384c7b311aa3ce3daf61367927e4cd6a177aee021284efccf94e03e5ca",
+    "coordinationHash": "946bce7318a02fb0d3941506805ed486a20c01577d23a68c5d2d542d98a88a02"
+  },
+  "deliveries": [
+    {
+      "deploymentId": "01a0fe8e-5608-7f31-bc4d-1288d632d71a",
+      "artifactId": "ca7fa146-19e5-44d0-9345-f6114f5a13d0",
+      "artifactHash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2",
+      "releaseId": "e872c81c-1212-49ef-b7dd-ccf23c897fb7",
+      "plane": "neon",
+      "attempt": 1
+    },
+    {
+      "deploymentId": "01a0fe8e-5895-75f8-8f3f-2dee40df92da",
+      "artifactId": "7c61ebea-46fe-4819-9dbe-ca1d6d391fbe",
+      "artifactHash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a",
+      "releaseId": "121f93fc-2e4e-4415-8d4d-9fd1674b3657",
+      "plane": "neon",
+      "attempt": 1
+    },
+    {
+      "deploymentId": "01a0fe8e-5c92-7858-8a0a-f166b48078c0",
+      "artifactId": "4aadb543-3e5e-437b-ad31-0581e8732590",
+      "artifactHash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20",
+      "releaseId": "51f63a89-114d-43b2-a041-b28dbe609f97",
+      "plane": "neon",
+      "attempt": 1
+    },
+    {
+      "deploymentId": "01a0fe8e-61fa-7cbb-a4b6-9d3058e3e5fb",
+      "artifactId": "d3025489-6fde-4d8a-ba95-28c9128d2688",
+      "artifactHash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8",
+      "releaseId": "782c57d9-6ac7-42ac-a82f-81895d80cd19",
+      "plane": "neon",
+      "attempt": 1
+    },
+    {
+      "deploymentId": "01a0fe8e-6498-79d4-9d77-5b51ed87747f",
+      "artifactId": "eaa99b9c-86fa-4796-99ae-c6363322ef5d",
+      "artifactHash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c",
+      "releaseId": "f36219ac-8038-4195-b6c5-4de688240617",
+      "plane": "neon",
+      "attempt": 1
+    },
+    {
+      "deploymentId": "01a0fe8e-6ba3-7b70-a311-48ca6b624434",
+      "artifactId": "9174be1b-7258-42ca-a47a-adcfd7f63650",
+      "artifactHash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+      "releaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "plane": "mesh",
+      "attempt": 1
+    },
+    {
+      "deploymentId": "01a0fe8e-6dc0-737f-9207-49db73fd985c",
+      "artifactId": "99e45828-46f2-4bfb-ac0e-19c44cc4e370",
+      "artifactHash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+      "releaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "plane": "studio",
+      "attempt": 1
+    },
+    {
+      "deploymentId": "01a0fe8e-6e39-7b26-a3e4-f11317cc2ca5",
+      "artifactId": "5a8d2725-12e5-4fb4-b480-aea8a1753cce",
+      "artifactHash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+      "releaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "plane": "neon",
+      "attempt": 1
+    }
+  ]
+}

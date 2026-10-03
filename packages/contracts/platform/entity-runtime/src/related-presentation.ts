@@ -1,3 +1,4 @@
+import type { EntityRelationshipV1 } from "./entity-relationship";
 /** Versioned, data-only presentations for registered related-record projections. */
 export type DetailRenderer =
   "text" | "date" | "datetime" | "boolean" | "country" | "lookup" | "badge";
@@ -38,6 +39,8 @@ export interface RelatedPresentationV1 {
   readonly schemaVersion: 1;
   readonly key: string;
   readonly sectionKey: string;
+  /** Resolves an approved descriptor relationship; defaults to sectionKey on older payloads. */
+  readonly relationshipKey?: string;
   readonly source:
     "contact-person.v1" | "address-link.v1" | "external-reference.v1";
   readonly titleField: string;
@@ -68,14 +71,12 @@ export interface RelatedPresentationV1 {
   }[];
 }
 
-// These are projection contracts, not configurable queries. Providers bind owner/tenant
-// relations on the server. The field catalogue is checked against their DTOs in tests.
+// These are DTO field catalogues, not owner bindings or configurable queries.
+// Published Entity relationships bind owners; providers enforce tenant scope on the server.
 export const RELATED_RECORD_MODELS = {
   "external-reference.v1": {
     sectionKey: "identity",
     entityCode: "external_reference",
-    ownerEntityCode: "business_partner",
-    relationship: "business_partner.external_reference",
     fields: {
       sourceSystemCode: "string",
       externalEntityCode: "string",
@@ -86,8 +87,6 @@ export const RELATED_RECORD_MODELS = {
   "contact-person.v1": {
     sectionKey: "contacts",
     entityCode: "contact_person",
-    ownerEntityCode: "business_partner",
-    relationship: "business_partner.contact_person",
     fields: {
       displayName: "string",
       businessTitle: "string",
@@ -108,8 +107,6 @@ export const RELATED_RECORD_MODELS = {
   "address-link.v1": {
     sectionKey: "addresses",
     entityCode: "address",
-    ownerEntityCode: "business_partner",
-    relationship: "business_partner.address_link",
     fields: {
       formattedAddress: "string",
       purpose: "string",
@@ -194,6 +191,7 @@ export function parseRelatedPresentations(
       "schemaVersion",
       "key",
       "sectionKey",
+      "relationshipKey",
       "source",
       "titleField",
       "titleLabel",
@@ -506,6 +504,7 @@ export function parseRelatedPresentations(
       schemaVersion: 1 as const,
       key: key(raw.key),
       sectionKey,
+      ...(raw.relationshipKey === undefined ? {} : { relationshipKey: key(raw.relationshipKey) }),
       source,
       titleField,
       ...(raw.titleLabel === undefined
@@ -539,17 +538,21 @@ export function parseRelatedPresentations(
 }
 
 /**
- * Related adapters are registered for an owner entity; metadata cannot invent joins.
- * The owner is declared by each entry in RELATED_RECORD_MODELS, so onboarding another
- * owner means registering its models, not editing this check.
+ * DTO presentations can only use relationships declared by the approved owner
+ * descriptor. Publication qualifies the target fields, plane and tenant mapping;
+ * runtime independently authorizes the parent and locks its record scope.
  */
 export function validateRelatedPresentationOwner(
   profiles: readonly RelatedPresentationV1[],
   entityCode: string,
+  relationships: readonly EntityRelationshipV1[] = [],
 ) {
   for (const profile of profiles)
-    if (RELATED_RECORD_MODELS[profile.source].ownerEntityCode !== entityCode)
+    if (!relationships.some(relationship =>
+      relationship.key === (profile.relationshipKey ?? profile.sectionKey) &&
+      relationship.targetEntity === RELATED_RECORD_MODELS[profile.source].entityCode &&
+      relationship.cardinality === "many" && relationship.readOperation === "list"))
       throw new TypeError(
-        `No related record providers registered for ${entityCode}`,
+        `No published related record relationship registered for ${entityCode}`,
       );
 }

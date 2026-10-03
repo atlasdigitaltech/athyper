@@ -27,7 +27,7 @@ it("pins browser-safe entity contract validation used by the compiler", async ()
 });
 it.each([
   ["compiler-build", ["node:crypto", "node:fs", "node:path", "node:url", "node:module"]],
-  ["enrollment-contract", ["@athyper/server-contract-publication", "@athyper/server-plane-studio-meta-entity-authoring"]],
+  ["enrollment-contract", ["./human-publication-policy.js", "@athyper/server-contract-publication", "@athyper/server-plane-studio-meta-entity-authoring"]],
   ["successor-targets", ["kysely", "@athyper/server-contract-publication"]],
 ] as const)("enforces the %s dependency boundary", (name, imports) => {
   const text = readFileSync(new URL(`../${name}.ts`, import.meta.url), "utf8");

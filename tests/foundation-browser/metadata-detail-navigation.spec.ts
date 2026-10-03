@@ -138,7 +138,7 @@ test("navigation typography is identical for tabs, collaboration and selected/un
   });
   const expected=await font(tab);
   const tokens=await tab.evaluate(node => {
-    const probe=document.createElement("span");probe.style.fontSize="var(--a-font-size-sm)";probe.style.fontWeight="var(--a-font-weight-regular)";node.appendChild(probe);
+    const probe=document.createElement("span");probe.style.fontSize="var(--a-font-size-body)";probe.style.fontWeight="var(--a-font-weight-regular)";node.appendChild(probe);
     const css=getComputedStyle(probe),result={size:css.fontSize,weight:css.fontWeight};probe.remove();return result;
   });
   expect(expected.size).toBe(tokens.size); expect(expected.weight).toBe(tokens.weight);
@@ -146,6 +146,60 @@ test("navigation typography is identical for tabs, collaboration and selected/un
   await page.getByRole("menuitem",{name:"Phone",exact:true}).click();
   await page.locator('summary[aria-label="Overview sections"]').click();
   expect(await font(page.getByRole("menuitem",{name:"Phone",exact:true}))).toEqual(expected);
+});
+test("record tabs follow the page navigation bar: icon gap, shared height, chevron joined to its tab", async ({page}, testInfo) => {
+  await mount(page, undefined, "", {...country, collaboration:["comments","attachments"]});
+  const tab = page.getByRole("tab", {name:"Overview", exact:true});
+  const geometry = await tab.evaluate(node => {
+    const icon = node.querySelector("svg")!.getBoundingClientRect(), label = node.querySelector("span")!.getBoundingClientRect();
+    const probe = document.createElement("div"); probe.style.height = "calc(var(--a-control-height) + var(--a-space-2))"; document.body.appendChild(probe);
+    const bar = probe.getBoundingClientRect().height; probe.remove();
+    const summary = document.querySelector<HTMLElement>('summary[aria-label="Overview sections"]')!;
+    const tabBox = node.getBoundingClientRect(), summaryBox = summary.getBoundingClientRect();
+    return {
+      gap: Math.round(label.left - icon.right), iconSize: Math.round(icon.width),
+      iconCentre: Math.round(icon.top + icon.height / 2), labelCentre: Math.round(label.top + label.height / 2),
+      height: Math.round(tabBox.height), bar: Math.round(bar),
+      joinGap: Math.round(summaryBox.left - tabBox.right),
+      tabRule: getComputedStyle(node).borderBottomColor, summaryRule: getComputedStyle(summary).borderBottomColor,
+    };
+  });
+  expect(geometry.gap).toBe(8);
+  expect(geometry.iconSize).toBe(18);
+  expect(Math.abs(geometry.iconCentre - geometry.labelCentre)).toBeLessThanOrEqual(1);
+  expect(geometry.height).toBe(geometry.bar);
+  // The section chevron sits flush against the current tab and shares its underline.
+  await expect(page.locator(".a-metadata-detail__navigation")).toHaveAttribute("data-section-menu", "joined");
+  expect(Math.abs(geometry.joinGap)).toBeLessThanOrEqual(1);
+  expect(geometry.summaryRule).toBe(geometry.tabRule);
+  await page.locator(".a-metadata-detail__navigation").screenshot({ path: testInfo.outputPath("record-navigation-bar.png") });
+});
+test("record values, labels and section headings use the density text roles", async ({page}) => {
+  await mount(page, undefined, "", country);
+  const check = await page.evaluate(() => {
+    const probe = (size: string, height: string) => { const element = document.createElement("span"); element.style.fontSize = size; element.style.lineHeight = height; document.querySelector(".a-record-detail-content")!.appendChild(element); const css = getComputedStyle(element), result = `${css.fontSize}/${css.lineHeight}`; element.remove(); return result; };
+    const font = (selector: string) => { const css = getComputedStyle(document.querySelector(selector)!); return `${css.fontSize}/${css.lineHeight}`; };
+    return {
+      value: [font(".a-record-detail-fields dd"), probe("var(--a-density-data-font-size)", "var(--a-density-data-line-height)")],
+      label: [font(".a-record-detail-fields dt"), probe("var(--a-density-label-font-size)", "var(--a-density-label-line-height)")],
+      section: [font(".a-record-detail-content > h2"), probe("var(--a-density-section-font-size)", "var(--a-density-section-line-height)")],
+    };
+  });
+  for (const [actual, expected] of Object.values(check)) expect(actual).toBe(expected);
+});
+test("on phones the record section menu opens as the shared bottom sheet", async ({page}) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await mount(page, undefined, "", {...country, collaboration:["comments","attachments"]});
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.locator('summary[aria-label="Overview sections"]').click();
+  const menu = page.getByRole("menu", { name: "Overview sections" });
+  await expect(menu).toBeVisible();
+  const box = (await menu.boundingBox())!;
+  expect(await menu.evaluate((node) => getComputedStyle(node).position)).toBe("fixed");
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  expect(Math.round(800 - (box.y + box.height))).toBeLessThanOrEqual(16);
+  for (const item of await menu.getByRole("menuitem").all()) expect(Math.round((await item.boundingBox())!.height)).toBeGreaterThanOrEqual(44);
 });
 for (const theme of ["light", "dark"]) test(`short sections land below shell and navigation; token-based menu (${theme})`, async ({page}) => {
   await page.setViewportSize({width: 1440, height: 900});
@@ -206,6 +260,14 @@ test("navigation tab section menu supports keyboard, scrolling, dismissal and cr
   await trigger.click();
   await expect(page.getByRole("menuitem", {name: "Identity", exact: true})).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+test("in tab mode a tab switch keeps the record header in view", async ({page}) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await mount(page,"switch");
+  await page.evaluate(() => window.scrollTo(0, 400));
+  await page.getByRole("tab", { name: "History", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(0);
+  await expect(page.getByRole("heading", { level: 1, name: "Example" })).toBeInViewport();
 });
 test("a section selection writes history once and restores through Back and Forward", async ({page}) => {
   await mount(page,"switch");
@@ -346,4 +408,15 @@ test("a declared Overview section receives shared navigation and a singular head
   await expect(page.getByRole("tab",{name:"Overview",exact:true})).toBeVisible();
   await expect(page.locator('summary[aria-label="Overview sections"]')).toHaveCount(0);
   await expect(page.getByRole("navigation",{name:"Record sections"})).toHaveCount(0);
+});
+test("record header to navigation bar uses the same gap as workspace and module pages", async ({page}) => {
+  await mount(page, undefined, "", country);
+  const gap = await page.evaluate(() => {
+    const header = document.querySelector(".athyper-page-header")!.getBoundingClientRect();
+    const nav = document.querySelector(".a-metadata-detail__navigation")!.getBoundingClientRect();
+    const probe = document.createElement("div"); probe.style.height = "var(--a-space-5)"; document.body.appendChild(probe);
+    const token = probe.getBoundingClientRect().height; probe.remove();
+    return { gap: Math.round(nav.top - header.bottom), token: Math.round(token) };
+  });
+  expect(gap.gap).toBe(gap.token);
 });

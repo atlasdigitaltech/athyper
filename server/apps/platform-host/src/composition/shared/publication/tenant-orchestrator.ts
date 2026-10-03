@@ -7,6 +7,8 @@ import {
   classifyPublicationFailure,
 } from "@athyper/server-service-publication";
 import { sql, type Kysely } from "kysely";
+import { deployHumanPublicationGroup } from "./human-publication-activation.js";
+import type { PublicationWorkloadConfiguration } from "./workload-configuration.js";
 type Database = Record<string, never>;
 type ActivationGuard = NonNullable<ConstructorParameters<typeof PublicationOrchestrator>[3]>;
 
@@ -19,6 +21,7 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
     private readonly activationGuard?: (
       ...args: [...Parameters<ActivationGuard>, Kysely<Database>]
     ) => ReturnType<ActivationGuard>,
+    private readonly coordinatedWorkload?: PublicationWorkloadConfiguration,
   ) {
     super(
       new KyselyPublicationAuthorityRepository(authorityDatabase),
@@ -41,6 +44,9 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
           await stamp(authority);
           const apply = async (local: Kysely<Database>) => {
             await stamp(local);
+            const coordinated = await deployHumanPublicationGroup({ deploymentId, authority, local,
+              loader: this.artifactLoader, workload: this.coordinatedWorkload, activationGuard: this.activationGuard });
+            if (coordinated) return coordinated;
             return new PublicationOrchestrator(
               new KyselyPublicationAuthorityRepository(authority),
               new KyselyLocalProjectionRepository(local),
@@ -62,35 +68,47 @@ export class TenantPublicationOrchestrator extends PublicationOrchestrator {
       if (failure.category === "permanent") {
         // The apply transaction has rolled back. Persist failure evidence in a
         // separate tenant-scoped transaction so the DLQ can see it.
-        await this.authorityDatabase
-          .transaction()
-          .execute(async (authority) => {
-            await stamp(authority);
-            await sql`SELECT d.id FROM publication.deployment d
-            JOIN publication.artifact a ON a.id=d.artifact_id
-            JOIN publication.release r ON r.id=a.publication_release_id
-            WHERE d.id=${deploymentId}::uuid AND r.tenant_id=${context.tenantId!}::uuid
-            FOR UPDATE OF d`.execute(authority);
-            const repository = new KyselyPublicationAuthorityRepository(
-              authority,
-            );
-            const deployment = await repository.getDeployment(deploymentId);
-            if (
-              deployment &&
-              [
-                "pending",
-                "dispatched",
-                "received",
-                "staged",
-                "verified",
-              ].includes(deployment.deploymentStatus)
-            )
-              await repository.transitionDeployment({
-                deploymentId,
-                status: "failed",
-                evidence: { ...failure.evidence() },
-              });
+        try {
+          await this.authorityDatabase
+            .transaction()
+            .execute(async (authority) => {
+              await stamp(authority);
+              const visible = await sql`SELECT d.id FROM publication.deployment d
+              JOIN publication.artifact a ON a.id=d.artifact_id
+              JOIN publication.release r ON r.id=a.publication_release_id
+              WHERE d.id=${deploymentId}::uuid AND r.tenant_id=${context.tenantId!}::uuid`.execute(authority);
+              if (!visible.rows.length) return;
+              // fn_transition_deployment locks and validates the row atomically.
+              // A direct FOR UPDATE requires table UPDATE rights that this role
+              // deliberately does not have. A concurrent activation wins safely:
+              // the function rejects activated -> failed rather than overwriting it.
+              const repository = new KyselyPublicationAuthorityRepository(
+                authority,
+              );
+              const deployment = await repository.getDeployment(deploymentId);
+              if (
+                deployment &&
+                [
+                  "pending",
+                  "dispatched",
+                  "received",
+                  "staged",
+                  "verified",
+                ].includes(deployment.deploymentStatus)
+              )
+                await repository.transitionDeployment({
+                  deploymentId,
+                  status: "failed",
+                  evidence: { ...failure.evidence() },
+                });
+            });
+        } catch (recordingError) {
+          // Keep the apply rejection as the job/DLQ failure. A second failure in
+          // persistence must not replace its category, code or retry semantics.
+          Object.assign(failure, {
+            failureRecordingEvidence: classifyPublicationFailure(recordingError, "stage").evidence(),
           });
+        }
       }
       throw failure;
     }

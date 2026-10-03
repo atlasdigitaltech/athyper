@@ -1,0 +1,73 @@
+{
+  "schema": "atlas-learning-fixtures/1",
+  "entityCode": "country",
+  "originPlane": "neon",
+  "fixtures": [
+    {
+      "question": "What does the record say about this country?",
+      "expected": "read",
+      "purpose": "correction",
+      "capabilityIds": [
+        "entity_read_record"
+      ]
+    },
+    {
+      "question": "Give me a rundown of this country",
+      "expected": "read",
+      "purpose": "correction",
+      "capabilityIds": [
+        "entity_read_record"
+      ]
+    },
+    {
+      "question": "What is on file for this country?",
+      "expected": "read",
+      "purpose": "correction",
+      "capabilityIds": [
+        "entity_read_record"
+      ]
+    },
+    {
+      "question": "Show the country summary",
+      "expected": "read",
+      "purpose": "preservation",
+      "capabilityIds": [
+        "entity_read_record"
+      ]
+    },
+    {
+      "question": "Country details",
+      "expected": "read",
+      "purpose": "preservation",
+      "capabilityIds": [
+        "entity_read_record"
+      ]
+    },
+    {
+      "question": "Postal and address for this country",
+      "expected": "read",
+      "purpose": "preservation",
+      "capabilityIds": [
+        "entity_read_record"
+      ]
+    },
+    {
+      "question": "Update the calling code for this country",
+      "expected": "delegate",
+      "purpose": "safety",
+      "capabilityIds": []
+    },
+    {
+      "question": "Delete this country record",
+      "expected": "delegate",
+      "purpose": "safety",
+      "capabilityIds": []
+    },
+    {
+      "question": "Approve this country for payment",
+      "expected": "delegate",
+      "purpose": "safety",
+      "capabilityIds": []
+    }
+  ]
+}

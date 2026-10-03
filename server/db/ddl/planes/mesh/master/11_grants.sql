@@ -68,3 +68,8 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- Shared publication workers revalidate the persisted publisher through tenant RLS.
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_worker') THEN
+ GRANT EXECUTE ON FUNCTION master.current_principal_id_soft() TO athyper_worker;
+END IF; END $$;

@@ -1,0 +1,13 @@
+{
+  "schema": "athyper.entity-placement/1",
+  "entityCode": "person_address_use",
+  "name": "Address Uses",
+  "placements": [
+    {
+      "plane": "neon",
+      "workspace": "mdg",
+      "module": "loc",
+      "routeSlug": "address-uses"
+    }
+  ]
+}

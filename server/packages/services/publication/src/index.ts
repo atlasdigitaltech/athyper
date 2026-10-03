@@ -13,6 +13,7 @@ export {
 } from "./kysely-publication-authority-work.js";
 export { KyselyLocalProjectionRepository } from "./kysely-local-projection-repository.js";
 export {adoptEntityPair, entityAdoptionTransaction, type CoordinatedAdoptionPorts} from './coordinated-entity-adoption.js';
+export {activateProductGroup, type ProductActivationGroup, type ProductActivationGroupPorts} from './coordinated-entity-adoption.js';
 export {
   PublicationOrchestrationError,
   PublicationOrchestrator,

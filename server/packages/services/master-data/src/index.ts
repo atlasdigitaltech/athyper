@@ -1,6 +1,5 @@
 /**
- * Entry point reserved for future Master Data domain services.
- * Generic metadata/runtime behavior belongs in the entity packages.
- * Deleted Business Partner services are intentionally not re-exported or stubbed.
+ * Master Data owns domain registrations; shared runtime behavior stays in the
+ * Entity Framework. No entity-specific route/provider stack is introduced here.
  */
-export {};
+export { businessPartnerCollaborationBinding } from "./business-partner/collaboration-coordinates.js";

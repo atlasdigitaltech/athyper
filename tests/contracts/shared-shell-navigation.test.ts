@@ -295,6 +295,31 @@ test("workspace dashboards are accessible without exposing modules in the sideba
   );
 });
 
+test("entity pages follow their catalog placement through an entitled module", () => {
+  const route = (id: string, moduleCode: string, href: string, label: string, entities: { code: string; name: string }[]) => ({
+    id, moduleCode, href: href as `/${string}`, label, iconKey: "info", requiredPermissions: [], requiredFeatures: [], navigation: "primary" as const, entities,
+    presentation: { workspaceCode: "mdg", workspaceName: "Master Data Governance", workspaceHref: "/mdg" as const, moduleName: label },
+  });
+  const navigation = deriveShellNavigation(
+    definePlaneRoutes([
+      route("mdg.org", "org", "/mdg/organization-reference", "Organization & Reference Data", [{ code: "country", name: "Countries" }]),
+      route("mdg.loc", "loc", "/mdg/location-address", "Location & Address Governance", [{ code: "address", name: "Addresses" }]),
+    ]),
+    { permissions: [], features: {}, workspaces: [{ code: "mdg", name: "Master Data Governance", sortOrder: 1, modules: [{ code: "org", name: "Organization & Reference Data", sortOrder: 1, primary: true }] }] },
+  );
+  const crumbs = (path: string) => deriveBreadcrumbs(navigation, path).map((item) => [item.label, item.href]);
+  assert.deepEqual(crumbs("/app/entity/country"), [
+    ["Master Data Governance", "/mdg"],
+    ["Organization & Reference Data", "/mdg/organization-reference"],
+    ["Countries", "/app/entity/country"],
+  ]);
+  assert.deepEqual(crumbs("/app/entity/country/manage").length, 3);
+  const record = "01a0d433-806b-7874-862d-49a9b955f6a1";
+  assert.deepEqual(crumbs(`/app/entity/country/${record}`).at(-1), [record, `/app/entity/country/${record}`]);
+  // Addresses sit in a module this caller is not entitled to: no placement breadcrumb.
+  assert.deepEqual(crumbs("/app/entity/address"), []);
+});
+
 test("rejects unsafe, duplicate, and traversing route declarations", () => {
   assert.throws(() =>
     definePlaneRoutes([

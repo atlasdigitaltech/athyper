@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { JobEnvelope, JobPublisher } from "@athyper/server-contract-jobs";
 import {
+  enqueueApply,
   COMPILE_PUBLICATION_ARTIFACT_JOB,
   DISPATCH_PUBLICATION_JOB,
   PUBLICATION_APPLY_QUEUE,
@@ -248,4 +249,19 @@ it("compile-only workers sign without enqueueing dispatch and defer queued dispa
   expect(dispatch).not.toHaveBeenCalled();
   expect(resolve).not.toHaveBeenCalled();
   expect(enqueue).not.toHaveBeenCalled();
+});
+
+it("gives reviewed compiler reconciliation a stable fresh queue key without changing deployment or publisher", async () => {
+  const enqueue=vi.fn(async()=>"job"),jobs={enqueue} as unknown as JobPublisher;
+  const payload={deploymentId:"00000000-0000-4000-8000-000000000001",targetPlane:"neon" as const};
+  const execution={scope:"tenant" as const,tenantId:"tenant",principalId:"publisher",planeKey:"neon" as const};
+  await enqueueApply(jobs,payload,execution);
+  await enqueueApply(jobs,payload,execution,"a".repeat(64));
+  await enqueueApply(jobs,payload,execution,"a".repeat(64));
+  const calls=enqueue.mock.calls as unknown as [string,string,unknown,{enqueueKey:string;execution:unknown}][];
+  expect(calls[0]![3].enqueueKey).not.toBe(calls[1]![3].enqueueKey);
+  expect(calls[1]![3].enqueueKey).toBe(calls[2]![3].enqueueKey);
+  expect(calls[1]![2]).toEqual(payload);expect(calls[1]![3].execution).toEqual(execution);
+  await expect(enqueueApply(jobs,payload,execution,"unreviewed-key")).rejects.toThrow("PUBLICATION_RECONCILIATION_KEY_INVALID");
+  expect(enqueue).toHaveBeenCalledTimes(3);
 });

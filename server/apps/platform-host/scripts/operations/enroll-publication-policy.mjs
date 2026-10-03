@@ -12,9 +12,9 @@ export async function main(args = process.argv.slice(2)) {
     return [match[1], match[2]];
   });
   const options = Object.fromEntries(entries);
-  if (entries.length !== Object.keys(options).length || !["propose", "activate"].includes(options.phase)
+  if (entries.length !== Object.keys(options).length || !["propose", "activate", "replace"].includes(options.phase)
     || options.confirm !== "DEV-PUBLICATION-POLICY-ENROLLMENT")
-    throw Error("Specify --phase=propose|activate and --confirm=DEV-PUBLICATION-POLICY-ENROLLMENT");
+    throw Error("Specify --phase=propose|activate|replace and --confirm=DEV-PUBLICATION-POLICY-ENROLLMENT");
   const base = new URL(options["base-url"]);
   if (base.protocol !== "https:" || !["api.dev.athyper.test", "studio.dev.athyper.test"].includes(base.hostname)
     || base.port || base.username || base.password || base.pathname !== "/" || base.search || base.hash)
@@ -28,10 +28,17 @@ export async function main(args = process.argv.slice(2)) {
   if (statSync(documentPath).size > 32768) throw Error("Enrollment document is too large");
   const document = JSON.parse(readFileSync(documentPath, "utf8"));
   let path = "/api/studio/publication-policies", body = document;
-  if (options.phase === "activate") {
+  if (options.phase === "activate" || options.phase === "replace") {
     if (!/^[a-f0-9-]{36}$/.test(document.id) || !/^[a-f0-9]{64}$/.test(document.hash)) throw Error("A persisted policy pin is required");
-    path += `/${document.id}/activate`;
+    path += `/${document.id}/${options.phase}`;
     body = { expectedHash: document.hash };
+    if (options.phase === "replace") {
+      const pins = document.predecessors;
+      if (!Array.isArray(pins) || !pins.length || pins.length > 32 || new Set(pins.map(p => p?.id)).size !== pins.length
+        || pins.some(p => !p || Object.keys(p).sort().join() !== "hash,id" || !/^[a-f0-9-]{36}$/.test(p.id)
+          || !/^[a-f0-9]{64}$/.test(p.hash) || p.id === document.id)) throw Error("Exact predecessor pins are required");
+      body.predecessors = pins;
+    }
   }
   const response = await fetch(new URL(path, base), {
     method: "POST", redirect: "error", signal: AbortSignal.timeout(30000),
@@ -43,7 +50,7 @@ export async function main(args = process.argv.slice(2)) {
     || !Number.isSafeInteger(pin.version) || pin.version < 1
     || pin.status !== (options.phase === "propose" ? "pending_approval" : "active")) throw Error("Unexpected enrollment response");
   // Receipt coordinates only; never output tokens or the submitted policy.
-  process.stdout.write(JSON.stringify({ id: pin.id, version: pin.version, hash: pin.hash, status: pin.status }) + "\n");
+  process.stdout.write(JSON.stringify({ id: pin.id, version: pin.version, hash: pin.hash, status: pin.status, ...(options.phase === "replace" ? { replaced: pin.replaced, replayed: pin.replayed } : {}) }) + "\n");
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
   main().catch(error => { console.error(error instanceof Error ? error.message : "Enrollment failed"); process.exitCode = 1; });

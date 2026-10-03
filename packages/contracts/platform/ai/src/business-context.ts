@@ -11,6 +11,7 @@ export interface AtlasParentScopeV1 {
   readonly parentEntityCode: string;
   readonly parentRecordId: string;
   readonly relationshipKey: string;
+  readonly parentDescriptorHash?: string;
 }
 interface Common {
   readonly schemaVersion: 1;
@@ -95,6 +96,7 @@ const common = {
     parentEntityCode: { ...text, maxLength: 63, pattern: "^[a-z][a-z0-9_]{1,62}$" },
     parentRecordId: uuid,
     relationshipKey: { ...text, maxLength: 63, pattern: "^[a-z][a-z0-9_]{1,62}$" },
+    parentDescriptorHash: { type: "string", pattern: "^[a-f0-9]{64}$", minLength: 64, maxLength: 64 },
   }, ["parentEntityCode", "parentRecordId", "relationshipKey"]),
   workContext: object({
     operatingOrganizationId: uuid,

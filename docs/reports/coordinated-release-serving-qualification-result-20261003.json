@@ -1,0 +1,200 @@
+{
+  "schema": "athyper.coordinated-serving-qualification-result/1",
+  "verifiedAt": "2026-10-02T20:36:08.519621+00:00",
+  "status": "blocked_by_target_authorization_catalog",
+  "servingDeploymentIdentity": {
+    "value": "athyper-dev-source-api-1",
+    "verifiedFrom": "effective DEV API process environment and host configuration",
+    "configured": true
+  },
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "725086ee63e96f17acb4266e7cd496042dd8e17199b7eb798a403234b5be546a"
+  },
+  "compilerMatchesActivePolicy": true,
+  "activeExecutionPolicy": {
+    "schema": "athyper.coordinated-policy-activation/1",
+    "activatedAt": "2026-10-02T19:55:46.804Z",
+    "actor": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+    "proposedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+    "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+    "version": 1,
+    "hash": "b924f8a65d0e55fdc8052458b6f7f289903a284c0d859f266e0e84c4682fe5ae",
+    "status": "active"
+  },
+  "selectedSources": 6,
+  "targetPublications": 8,
+  "selectedTargetsDeclareAiRequirements": false,
+  "selectedTargetsDeclareCollaborationCapabilities": false,
+  "aiQualificationReceiptRequiredForSelectedTargets": false,
+  "qualificationBasis": "Exact persisted human-approved graphs were recompiled and all source and target pins matched. Existing publisher ran with the independently enrolled policy and both workload credentials; target qualification rejected absent published permission/scope definitions before signing.",
+  "coordinatedRelationshipChecks": [
+    {
+      "plane": "neon",
+      "entities": [
+        "address",
+        "employee",
+        "external_worker",
+        "person",
+        "person_address_use",
+        "principal_profile"
+      ],
+      "result": "passed"
+    },
+    {
+      "plane": "studio",
+      "entities": [
+        "principal_profile"
+      ],
+      "result": "passed"
+    },
+    {
+      "plane": "mesh",
+      "entities": [
+        "principal_profile"
+      ],
+      "result": "passed"
+    }
+  ],
+  "missingCatalogPrerequisites": [
+    {
+      "plane": "neon",
+      "permissionCode": "neon.workforce.address.read",
+      "permissionKind": "capability",
+      "requiredScopes": [
+        "tenant"
+      ],
+      "installedScopes": [],
+      "passed": false,
+      "sourceChangeSetId": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+      "sourceContractHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5",
+      "sourceDescriptorHash": "bba105f2f438f741ec8a09120aba0e5e9d8d90efa09224ac3364ce36c753c404"
+    },
+    {
+      "plane": "neon",
+      "permissionCode": "neon.workforce.employee.read",
+      "permissionKind": "capability",
+      "requiredScopes": [
+        "tenant"
+      ],
+      "installedScopes": [],
+      "passed": false,
+      "sourceChangeSetId": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+      "sourceContractHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee",
+      "sourceDescriptorHash": "d631d6edb53ef371ed7f23488ec6ef69bc0f0480f4c52225b70ad0da6c20d29a"
+    },
+    {
+      "plane": "neon",
+      "permissionCode": "neon.workforce.external_worker.read",
+      "permissionKind": "capability",
+      "requiredScopes": [
+        "tenant"
+      ],
+      "installedScopes": [],
+      "passed": false,
+      "sourceChangeSetId": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+      "sourceContractHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82",
+      "sourceDescriptorHash": "b19b512795ca534f3db5beed153c3e92c55a6abad97cfe6532058a539859edb4"
+    },
+    {
+      "plane": "neon",
+      "permissionCode": "neon.workforce.person.read",
+      "permissionKind": "capability",
+      "requiredScopes": [
+        "tenant"
+      ],
+      "installedScopes": [],
+      "passed": false,
+      "sourceChangeSetId": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+      "sourceContractHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4",
+      "sourceDescriptorHash": "007f62874028f9c4affd6d29af1f558374d5140e0228aa090abac75d661c8e70"
+    },
+    {
+      "plane": "neon",
+      "permissionCode": "neon.workforce.person_address_use.read",
+      "permissionKind": "capability",
+      "requiredScopes": [
+        "tenant"
+      ],
+      "installedScopes": [],
+      "passed": false,
+      "sourceChangeSetId": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+      "sourceContractHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211",
+      "sourceDescriptorHash": "9d9bec21c8c8cabc1210a5e5989e4a2d3e7c1063e2b220444d90f61f9b7b4c1e"
+    }
+  ],
+  "publicationAttempt": {
+    "requestId": "1b5c7cbd-063e-4ab8-be35-e021fc7ac1c4",
+    "httpStatus": 500,
+    "internalFailure": "PUBLICATION_PERMISSION_SCOPE_UNAVAILABLE",
+    "source": "authenticated local DEV publisher route and correlated operational log"
+  },
+  "sourceStatesAfterAttempt": [
+    {
+      "entityCode": "address",
+      "changeSetId": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+      "state": "approved",
+      "nativeReleaseCount": 0
+    },
+    {
+      "entityCode": "employee",
+      "changeSetId": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+      "state": "approved",
+      "nativeReleaseCount": 0
+    },
+    {
+      "entityCode": "external_worker",
+      "changeSetId": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+      "state": "approved",
+      "nativeReleaseCount": 0
+    },
+    {
+      "entityCode": "person",
+      "changeSetId": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+      "state": "approved",
+      "nativeReleaseCount": 0
+    },
+    {
+      "entityCode": "person_address_use",
+      "changeSetId": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+      "state": "approved",
+      "nativeReleaseCount": 0
+    },
+    {
+      "entityCode": "principal_profile",
+      "changeSetId": "7e7dbd68-84a0-42ac-b886-2481ff683bd4",
+      "state": "approved",
+      "nativeReleaseCount": 0
+    }
+  ],
+  "publicationCompleted": false,
+  "deploymentCompleted": false,
+  "existingNeonInventoryFailure": [
+    {
+      "plane": "neon",
+      "code": "ENTITY_INVENTORY_UNAVAILABLE",
+      "reason": "No published related record relationship registered for business_partner"
+    }
+  ],
+  "validation": {
+    "platformHostTypecheck": "passed",
+    "focusedReadinessAndCapabilityTests": 36
+  },
+  "correctionsToPriorReport": [
+    "Docker Config.Env missed the serving identity exported by start-runtime.sh. The effective API identity was already configured.",
+    "The eight selected targets declare neither AI manifest bindings nor collaboration capabilities, so AI support receipts and serving-target documents are not requirements for this selected set.",
+    "The current active Neon inventory fails descriptor parsing on an existing business_partner publication; it is not proof of a missing serving identity.",
+    "22 parsed Studio/Mesh descriptors have overall readiness true, but their optional AI capabilities without receipts remain unavailable. This is not a claim that those capabilities are qualified."
+  ],
+  "nextRequiredWork": [
+    "Publish the five exact missing workforce permission catalog definitions and tenant scope bindings through the governed platform catalog process, preserving independent review and separate tenant grant decisions.",
+    "Reconcile the existing Neon business_partner published related-record relationship through the shared Entity authoring/publication workflow.",
+    "Reexecute the unchanged enrolled coordinated policy, verify all eight active target heads, then validate authorized tenant list/detail flows."
+  ],
+  "evidence": [
+    "coordinated-release-target-permission-qualification-20261003.json",
+    "coordinated-release-serving-qualification-20261003.json",
+    "coordinated-release-execution-local-attempt-20261003.json"
+  ]
+}

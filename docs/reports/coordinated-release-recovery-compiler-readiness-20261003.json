@@ -1,0 +1,59 @@
+{
+  "schema": "athyper.recovery-compiler-reconciliation-readiness/1",
+  "observedAt": "2026-10-02T23:35:44.455152+00:00",
+  "implementation": "complete",
+  "candidate": "docs/reports/coordinated-release-recovery-compiler-policy-20261003.json",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "03f977e6984ec9083dbac9a902f9ef18e376d18687d0308e3e3547582987ea86"
+  },
+  "recoveryPolicy": {
+    "id": "0f16bcd4-1a3a-40b9-9431-974b1687f3fa",
+    "hash": "34436e277df236506d94a0af47385efc486efe8e76a7299504c9498e80d23067",
+    "version": 1,
+    "compilerHash": "0b0cc0c465d589bd305b0f367c644d635290b7c45385c970e53cc48aab1e350b"
+  },
+  "preserved": [
+    "Original source human reviews",
+    "Original execution policy",
+    "Original recovery policy and exact command identities",
+    "Eight signed artifact hashes and signatures",
+    "Historical failed deployment events"
+  ],
+  "changes": [
+    "Separately enrolled compiler authorization pins the entire active recovery-policy definition; it cannot author sources or create different deployment commands.",
+    "Execution and activation require both active policies, exact compiler, current publisher, source reviews and existing source/target pins.",
+    "Existing execution endpoint resumes only reviewed pre-receipt permission failures through the audited SQL transition.",
+    "Compiler-specific deterministic queue keys avoid reusing failed jobs while preserving deployment and execution identity.",
+    "Mesh worker granted execution only on its existing principal-context helper."
+  ],
+  "verification": {
+    "hostTestsPassed": 63,
+    "publicationTestsPassed": 38,
+    "typechecks": [
+      "host passed",
+      "publication passed"
+    ],
+    "migrationLayout": "120 classified, 112 retained",
+    "rollbackRehearsal": "docs/reports/coordinated-release-recovery-compiler-rehearsal-20261003.json",
+    "planes": {
+      "neon": 6,
+      "mesh": 1,
+      "studio": 1
+    },
+    "qualificationHumanContexts": "Synthetic and rolled back; not approval evidence"
+  },
+  "liveState": {
+    "compilerPoliciesEnrolled": 1,
+    "recoveryAttempts": 8,
+    "activatedTargets": 8,
+    "pendingSelectedTargets": 0,
+    "recoveryAttemptStatus": "activated_and_acknowledged",
+    "failedRecoveryAttempts": 0,
+    "successfulWorkerJobs": 8,
+    "compilerApprovalRecorded": true
+  },
+  "nextGate": "Selected release deployment complete; fresh browser acceptance is separate.",
+  "liveActivationReport": "docs/reports/coordinated-release-live-activation-20261003.json"
+}

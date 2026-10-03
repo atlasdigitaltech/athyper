@@ -29,6 +29,8 @@ export interface EntityPageNavigationTabPlan {
   readonly provider: "overview" | "section";
   readonly sectionDisplay: "continuous" | "selected";
   readonly sectionKeys: readonly string[];
+  /** Semantic icon key from the published surface; the browser falls back when absent. */
+  readonly iconKey?: string;
 }
 export interface EntityPageSummaryViewPlan {
   readonly cards: readonly EntityPageSummaryCardPlan[];
@@ -53,6 +55,7 @@ export interface EntityPageSectionPlan {
   /** Localization is projected from the admitted surface; renderer code owns translation. */
   readonly label?: Readonly<{ readonly labelKey: string; readonly defaultText: string }>;
   readonly loadPolicy: "initial" | "visible" | "active";
+  readonly iconKey?: string;
 }
 
 /**
@@ -93,6 +96,7 @@ export function planEntityPage(input: {
       presentationRef: safeReference(value.presentationRef),
       ...(localized(value.label) ? { label: localized(value.label) } : {}),
       loadPolicy: value.sectionKey === input.activeSectionKey ? "active" : value.sectionKey === "overview" ? "initial" : "visible",
+      ...iconKey(value.iconKey),
     })];
   });
   if (new Set(sections.map((section) => section.key)).size !== sections.length)
@@ -141,7 +145,7 @@ function navigationPlan(value: unknown, sections: readonly EntityPageSectionPlan
     const sectionKeys = requested.flatMap((key) => typeof key === "string" && sections.some((section) => section.key === key) ? [key] : []);
     if (!sectionKeys.length) return [];
     if (new Set(sectionKeys).size !== sectionKeys.length) throw new TypeError(`ENTITY_PAGE_PLAN_NAVIGATION_DUPLICATE_SECTION:${index}`);
-    return [Object.freeze({ key: safeNavigationKey(requiredString(value.key, "ENTITY_PAGE_PLAN_NAVIGATION_KEY_INVALID")), label, provider, sectionDisplay: entitySectionDisplay(value.sectionDisplay, provider), sectionKeys: Object.freeze(sectionKeys) })];
+    return [Object.freeze({ key: safeNavigationKey(requiredString(value.key, "ENTITY_PAGE_PLAN_NAVIGATION_KEY_INVALID")), label, provider, sectionDisplay: entitySectionDisplay(value.sectionDisplay, provider), sectionKeys: Object.freeze(sectionKeys), ...iconKey(value.iconKey) })];
   });
   // Permission filtering may legitimately remove every destination. That is
   // an empty admitted plan, not malformed published navigation.
@@ -187,4 +191,9 @@ function safeReference(value: string): string { if (!/^[A-Za-z][A-Za-z0-9_./-]{0
 function localized(value: unknown): Readonly<{ readonly labelKey: string; readonly defaultText: string }> | undefined {
   if (!record(value) || typeof value.labelKey !== "string" || !/^[a-z][a-z0-9_.-]{0,126}$/.test(value.labelKey) || typeof value.defaultText !== "string" || !value.defaultText.trim()) return undefined;
   return Object.freeze({ labelKey: value.labelKey, defaultText: value.defaultText });
+}
+
+/** A published semantic icon key, or nothing (the browser applies its fallback). */
+function iconKey(value: unknown): { readonly iconKey?: string } {
+  return typeof value === "string" && /^[a-z][a-z0-9-]{0,62}$/.test(value) ? { iconKey: value } : {};
 }

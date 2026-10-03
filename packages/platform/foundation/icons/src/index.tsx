@@ -33,6 +33,7 @@ import {
   CoinsIcon,
   DatabaseCheckIcon,
   DatabaseIcon,
+  GlobeIcon,
   FactoryIcon,
   FileSignatureIcon,
   GanttIcon,
@@ -57,6 +58,7 @@ import {
   WrenchIcon,
 } from "./catalog-icons";
 import { Building2Icon, SettingsIcon } from "./list-controls";
+import { FileTextIcon as SemanticFileTextIcon, HistoryIcon as SemanticHistoryIcon, PanelsTopLeftIcon as SemanticLayoutIcon } from "./shell-icons";
 
 export type SemanticIconKey = (typeof SEMANTIC_ICON_KEYS)[number];
 export const SEMANTIC_ICON_KEYS = [
@@ -84,14 +86,18 @@ export const SEMANTIC_ICON_KEYS = [
   "database-currency",
   "factory",
   "factory-handshake",
+  "file-text",
   "file-signature",
   "gantt",
+  "globe",
   "handshake",
   "headset",
+  "history",
   "home",
   "id-card",
   "info",
   "landmark",
+  "layout",
   "map-pin",
   "menu",
   "message",
@@ -168,6 +174,8 @@ export function resolveIcon(
       return DatabaseIcon;
     case "database-check":
       return DatabaseCheckIcon;
+    case "globe":
+      return GlobeIcon;
     case "factory":
       return FactoryIcon;
     case "factory-handshake":
@@ -230,6 +238,12 @@ export function resolveIcon(
       return WarehouseIcon;
     case "warning":
       return WarningIcon;
+    case "file-text":
+      return SemanticFileTextIcon;
+    case "history":
+      return SemanticHistoryIcon;
+    case "layout":
+      return SemanticLayoutIcon;
     default:
       if (
         typeof window !== "undefined" &&
@@ -248,6 +262,43 @@ export const SEMANTIC_ICONS: Readonly<
     SEMANTIC_ICON_KEYS.map((key) => [key, resolveIcon(key)]),
   ) as Record<SemanticIconKey, ComponentType<IconProps>>,
 );
+
+const SEMANTIC_ICON_KEY_SET: ReadonlySet<string> = new Set(SEMANTIC_ICON_KEYS);
+/** True when `value` names a registered semantic icon. */
+export function isSemanticIconKey(value: unknown): value is SemanticIconKey {
+  return typeof value === "string" && SEMANTIC_ICON_KEY_SET.has(value);
+}
+
+/** What an icon stands for, when metadata names none. */
+export type IconRole =
+  | "workspace"
+  | "module"
+  | "entity"
+  | "record-tab"
+  | "record-section"
+  | "comments"
+  | "attachments"
+  | "activity";
+/** One fallback per role, used only when metadata names no registered icon. */
+export const ICON_ROLE_FALLBACKS: Readonly<Record<IconRole, SemanticIconKey>> = Object.freeze({
+  workspace: "boxes",
+  module: "package",
+  entity: "database",
+  "record-tab": "layout",
+  "record-section": "clipboard-check",
+  comments: "message",
+  attachments: "file-text",
+  activity: "history",
+});
+/**
+ * Metadata first: the first candidate key that names a registered icon wins
+ * (for example the section's own key, then its tab's, then the entity's).
+ * Without one, the role's fallback is used.
+ */
+export function resolveMetadataIcon(role: IconRole, ...candidates: readonly (string | undefined | null)[]): ComponentType<IconProps> {
+  const key = candidates.find(isSemanticIconKey);
+  return resolveIcon(key ?? ICON_ROLE_FALLBACKS[role]);
+}
 
 export type NotificationChannelIconKey =
   "in_app" | "email" | "sms" | "phone" | "push" | "whatsapp";

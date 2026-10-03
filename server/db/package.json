@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:security-boundary": "tsx --test src/security/*.test.ts src/provisioning/*.test.ts src/tooling/*.test.ts",
+    "typecheck:security": "tsc -p tsconfig.security.json --noEmit",
+    "db:generate:security-definer-contract": "tsx scripts/checks/security/generate-security-definer-contract.ts",
+    "db:verify:security-definer-contract": "tsx scripts/checks/security/generate-security-definer-contract.ts --check",
+    "db:verify:plane-boundary": "tsx scripts/checks/security/plane-boundary.ts",
     "test:integration:binding-recovery": "node --test ../../tooling/scripts/verification/isolated-release20/binding-recovery-probe.test.mjs",
     "test:integration:publication-recovery": "node --test scripts/tests/integration/publication-recovery-discovery.test.mjs",
     "db:verify:migration-layout": "node scripts/checks/ddl/migration-layout.mjs",

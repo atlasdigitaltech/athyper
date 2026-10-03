@@ -11,6 +11,7 @@ export function BriefcaseIcon(props: IconProps) { return <IconFrame {...props}><
 export function FactoryIcon(props: IconProps) { return <IconFrame {...props}><path d="M3 21V9l6 3V8l6 3V4h4v17M3 21h18M7 17h2M12 17h2M17 17h2"/></IconFrame>; }
 export function PackageIcon(props: IconProps) { return <IconFrame {...props}><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 8 9 5 9-5v9l-9 5-9-5V8ZM12 13v9"/></IconFrame>; }
 export function OrganizationIcon(props: IconProps) { return <IconFrame {...props}><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="17" width="6" height="4" rx="1"/><rect x="15" y="17" width="6" height="4" rx="1"/><path d="M12 8v5M6 17v-2h12v2"/></IconFrame>; }
+export function GlobeIcon(props: IconProps) { return <IconFrame {...props}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></IconFrame>; }
 export function MapPinIcon(props: IconProps) { return <IconFrame {...props}><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></IconFrame>; }
 export function BookOpenIcon(props: IconProps) { return <IconFrame {...props}><path d="M3 5a7 7 0 0 1 9 2v14a7 7 0 0 0-9-2V5ZM21 5a7 7 0 0 0-9 2v14a7 7 0 0 1 9-2V5Z"/></IconFrame>; }
 export function ReceiptOutIcon(props: IconProps) { return <IconFrame {...props}><path d="M5 3h11a2 2 0 0 1 2 2v16l-3-2-3 2-3-2-3 2V4"/><path d="M9 8h5M9 12h3M14 14l4 4m0-4v4h-4"/></IconFrame>; }

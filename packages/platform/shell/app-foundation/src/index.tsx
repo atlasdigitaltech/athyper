@@ -10,11 +10,11 @@ export * from "./error-taxonomy";
 export { FeatureGate, PermissionGate, RouteGuard, classifyServerDenial, runGuardedMutation, useAccessSnapshot, useHasAnyPermission, useHasPermission, useIsFeatureEnabled } from "@athyper/platform-shell-runtime";
 
 import { principalQueryScope, type PrincipalQueryScope, type SanitizedSession, type SessionNextAction } from "@athyper/contract-platform-auth-session";
-import { createHttpClient, ApiTransportError, type ExperienceBootstrap, type ExperienceFeature, type ExperienceProfile, type ExperienceWorkspace, type HttpClient } from "@athyper/platform-api-client";
+import { createHttpClient, ApiTransportError, updatePrincipalAppearanceOperation, type ExperienceBootstrap, type ExperienceFeature, type ExperienceProfile, type ExperienceWorkspace, type HttpClient } from "@athyper/platform-api-client";
 import { getBrowserQueryClient, PlatformQueryProvider, PrincipalQueryLifecycle, type DehydratedState, type QueryClient } from "@athyper/platform-query";
 import { AccessProvider, createAccessSnapshot, type AccessDiagnostic } from "@athyper/platform-shell-runtime";
 import { validateSurfaceOpen, type SurfaceFrame, type SurfaceKind } from "@athyper/platform-surface-kit";
-import { DEFAULT_THEME_FAMILY, DENSITY_STORAGE_KEY, isThemeFamily, THEME_FAMILY_STORAGE_KEY, THEME_STORAGE_KEY, type ColorMode, type ThemeFamily } from "@athyper/platform-theme/tokens";
+import { DEFAULT_THEME_FAMILY, DENSITY_STORAGE_KEY, isThemeFamily, THEME_FAMILIES, THEME_FAMILY_STORAGE_KEY, THEME_STORAGE_KEY, type ColorMode, type ThemeFamily } from "@athyper/platform-theme/tokens";
 import { ToastProvider, useToasts } from "./toasts";
 export { useToasts } from "./toasts";
 import * as React from "react";
@@ -115,7 +115,7 @@ export function AppFoundationProviders(props: AppFoundationProvidersProps) {
   const bootstrap = invalidated ? { ...props.bootstrap, workspaces: [], permissions: [], features: {} } : props.bootstrap;
   const access = useMemo(() => createAccessSnapshot({ sessionState: props.session.state, contextAvailable: bootstrap.state === "ready" && Boolean(props.session.tenantId), entitledModules: bootstrap.workspaces.flatMap((workspace) => workspace.modules.map((module) => module.code)), permissions: bootstrap.permissions, features: bootstrap.features, onDiagnostic: props.onAccessDiagnostic ?? developmentAccessDiagnostic }), [props.session.state, props.session.tenantId, bootstrap, props.onAccessDiagnostic]);
   const markInvalidated = useCallback(() => setInvalidatedScope(boundaryKey), [boundaryKey]);
-  return <AppearanceProvider profile={props.bootstrap.profile}>
+  return <AppearanceProvider profile={props.bootstrap.profile} client={props.apiClient}>
     <SessionProvider session={props.session} lifecycle={lifecycle}>
       <ExperienceBootstrapProvider key={`${boundaryKey}:${invalidated}`} bootstrap={bootstrap}>
         <ApiClientProvider client={props.apiClient}>
@@ -139,9 +139,17 @@ export function AppFoundationProviders(props: AppFoundationProvidersProps) {
   </AppearanceProvider>;
 }
 
-function AppearanceProvider({ profile, children }: { readonly profile: ExperienceProfile; readonly children: ReactNode }) {
-  const [preference, setPreferenceState] = useState<AppearancePreference>(() => (typeof window === "undefined" ? {} : readAppearancePreference()));
-  const [themeFamily, setThemeFamilyState] = useState<ThemeFamily>(() => (typeof window === "undefined" ? DEFAULT_THEME_FAMILY : readThemeFamilyPreference()));
+/** The principal's saved profile is the source of truth on every device; the browser
+ * copy only paints the first frame. A change applies at once and is saved to the profile. */
+function AppearanceProvider({ profile, client, children }: { readonly profile: ExperienceProfile; readonly client: HttpClient; readonly children: ReactNode }) {
+  const [preference, setPreferenceState] = useState<AppearancePreference>({});
+  const savedFamily = (THEME_FAMILIES as readonly string[]).includes(profile.themeFamily ?? "") ? (profile.themeFamily as ThemeFamily) : undefined;
+  const [themeFamily, setThemeFamilyState] = useState<ThemeFamily>(() => savedFamily ?? (typeof window === "undefined" ? DEFAULT_THEME_FAMILY : readThemeFamilyPreference()));
+  // Keep the first-paint copy in step with the profile.
+  useEffect(() => {
+    writeAppearancePreference({ appearanceMode: profile.appearanceMode, densityCode: profile.densityCode });
+    if (savedFamily) { writeThemeFamilyPreference(savedFamily); setThemeFamilyState(savedFamily); }
+  }, [profile.appearanceMode, profile.densityCode, savedFamily]);
   const effectiveProfile = useMemo(() => Object.freeze({ ...profile, ...preference }), [profile, preference]);
   useLayoutEffect(() => {
     const root = document.documentElement;
@@ -166,11 +174,14 @@ function AppearanceProvider({ profile, children }: { readonly profile: Experienc
   const setPreference = useCallback((patch: AppearancePreference) => {
     writeAppearancePreference(patch);
     setPreferenceState((current) => Object.freeze({ ...current, ...patch }));
-  }, []);
+    // A failed save keeps the choice on this device; the next change retries.
+    void client.request(updatePrincipalAppearanceOperation, { body: patch }).catch(() => undefined);
+  }, [client]);
   const setThemeFamily = useCallback((family: ThemeFamily) => {
     writeThemeFamilyPreference(family);
     setThemeFamilyState(family);
-  }, []);
+    void client.request(updatePrincipalAppearanceOperation, { body: { themeFamily: family } }).catch(() => undefined);
+  }, [client]);
   const handle = useMemo(() => Object.freeze({ profile: effectiveProfile, setPreference, themeFamily, setThemeFamily }), [effectiveProfile, setPreference, themeFamily, setThemeFamily]);
   return <AppearanceContext.Provider value={handle}>{children}</AppearanceContext.Provider>;
 }
@@ -192,6 +203,8 @@ function SessionProvider({ session, lifecycle, children }: { readonly session: S
   return <SessionIdentityContext.Provider value={identity}><SessionExpiryContext.Provider value={expiry}><SessionExpiryUpdateContext.Provider value={setTouchedExpiry}><SessionActionsContext.Provider value={actions}>{children}</SessionActionsContext.Provider></SessionExpiryUpdateContext.Provider></SessionExpiryContext.Provider></SessionIdentityContext.Provider>;
 }
 function ExperienceBootstrapProvider({ bootstrap, children }: { readonly bootstrap: ExperienceBootstrap; readonly children: ReactNode }) { const revision = useMemo(() => Object.freeze({ state: bootstrap.state, revision: bootstrap.revision }), [bootstrap.state, bootstrap.revision]); return <ExperienceRevisionContext.Provider value={revision}><ExperienceNavigationContext.Provider value={bootstrap.workspaces}>{children}</ExperienceNavigationContext.Provider></ExperienceRevisionContext.Provider>; }
+/** Supplies the session identity (state and principal scope); for previews and fixtures. */
+export function SessionIdentityProvider({ identity, children }: { readonly identity: Readonly<{ state: SanitizedSession["state"]; scope?: PrincipalQueryScope }>; readonly children: ReactNode }) { return <SessionIdentityContext.Provider value={identity}>{children}</SessionIdentityContext.Provider>; }
 /** Supplies the API client; AppFoundationProviders uses it, and previews or fixtures can too. */
 export function ApiClientProvider({ client, children }: { readonly client: HttpClient; readonly children: ReactNode }) { return <ApiClientContext.Provider value={client}>{children}</ApiClientContext.Provider>; }
 /** Supplies effective permissions; AppFoundationProviders uses it, and previews or fixtures can too. */

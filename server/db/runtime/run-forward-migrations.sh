@@ -19,7 +19,8 @@ command -v sha256sum >/dev/null 2>&1 || fail "sha256sum is unavailable"
 
 # Container PID namespaces commonly reuse PID 1. Time plus PID is not unique
 # across simultaneous deployment containers claiming the same migration ledger.
-RUNNER_ID=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+runner_bytes=$(od -An -N16 -tx1 /dev/urandom) || fail 'cannot read migration runner entropy'
+RUNNER_ID=$(printf '%s' "$runner_bytes" | tr -d ' \n')
 [ "${#RUNNER_ID}" -eq 32 ] || fail "cannot generate a migration runner identity"
 
 export PGPASSWORD
@@ -38,6 +39,9 @@ for plane in studio neon mesh; do
   manifest="$MIGRATION_ROOT/manifests/$plane.txt"
   [ -r "$manifest" ] || fail "manifest is unavailable: $manifest"
 
+  # Verify the server's identity before any migration can set its own plane GUC.
+  actual_database=$(run_sql "$database" --tuples-only --no-align -c 'SELECT current_database()')
+  [ "$actual_database" = "$database" ] || fail "plane database identity mismatch: $database"
   run_sql "$database" <<'SQL'
 CREATE TABLE IF NOT EXISTS public.athyper_schema_migration_v1 (
   migration_name text PRIMARY KEY,
@@ -59,7 +63,8 @@ SQL
     esac
     file="$MIGRATION_ROOT/$name"
     [ -f "$file" ] || fail "migration is absent: $file"
-    checksum=$(sha256sum "$file" | cut -d ' ' -f 1)
+    checksum=$(sha256sum "$file") || fail "cannot checksum $file"
+    checksum=${checksum%% *}
 
     # Preserve the bytes/checksums of already-applied unwrapped migrations.
     # psql supplies their transaction; ordinary migrations keep their own wrapper.
@@ -104,7 +109,8 @@ SQL
         case "$validator" in equivalence/*) ;; *) fail "unsafe equivalence validator" ;; esac
         case "$validator$sentinel" in *..*|*[!A-Za-z0-9_./-]*) fail "unsafe equivalence path" ;; esac
         [ -r "$MIGRATION_ROOT/$validator" ] || fail "equivalence validator unavailable"
-        [ "$(sha256sum "$MIGRATION_ROOT/$validator" | cut -d ' ' -f 1)" = "$validator_sha" ] \
+        actual_validator_sha=$(sha256sum "$MIGRATION_ROOT/$validator") || fail "cannot checksum equivalence validator"
+        [ "${actual_validator_sha%% *}" = "$validator_sha" ] \
           || fail "$database/$name equivalence validator checksum differs"
         provisioned=$(run_sql "$database" --tuples-only --no-align --set "sentinel=$sentinel" <<'SQL'
 SELECT to_regclass('public.schema_provisions') IS NOT NULL AS ledger_present \gset
@@ -144,12 +150,24 @@ SQL
       continue
     fi
 
-    if run_sql "$database" "$@" --file "$file"; then
-      run_sql "$database" --set "migration=$name" --set "runner=$RUNNER_ID" <<'SQL'
+    apply_migration() {
+      if [ "$#" -gt 0 ]; then
+        run_sql "$database" "$@" --set "migration=$name" --set "runner=$RUNNER_ID" --file "$file" --file - <<'SQL'
+UPDATE public.athyper_schema_migration_v1
+   SET status='applied', completed_at=clock_timestamp(), failure_message=NULL
+ WHERE migration_name=:'migration' AND runner_id=:'runner' AND status='applying'
+ RETURNING migration_name AS applied_migration \gset
+SQL
+      else
+        run_sql "$database" --file "$file" || return
+        run_sql "$database" --set "migration=$name" --set "runner=$RUNNER_ID" <<'SQL'
 UPDATE public.athyper_schema_migration_v1
    SET status = 'applied', completed_at = clock_timestamp(), failure_message = NULL
  WHERE migration_name = :'migration' AND runner_id = :'runner' AND status = 'applying';
 SQL
+      fi
+    }
+    if apply_migration "$@"; then
       printf '%s\n' "forward migration: applied $database/$name"
     else
       run_sql "$database" --set "migration=$name" --set "runner=$RUNNER_ID" <<'SQL' || true

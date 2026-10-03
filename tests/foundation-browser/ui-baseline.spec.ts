@@ -194,6 +194,21 @@ const SURFACES: readonly Surface[] = [
       expect(page.getByText("Approve supplier onboarding").first()).toBeVisible(),
   },
   {
+    // Workspace home: the entity-list page frame with module cards.
+    name: "workspace",
+    bundle: "surfaces",
+    path: "/mdg?surface=workspace",
+    hostStyle: pagePadding,
+    ready: (page) => expect(page.getByRole("link", { name: "Countries" }).first()).toBeVisible(),
+  },
+  {
+    name: "workspace-module",
+    bundle: "surfaces",
+    path: "/mdg/organization-reference?surface=workspace-module",
+    hostStyle: pagePadding,
+    ready: (page) => expect(page.getByRole("heading", { name: "Countries" })).toBeVisible(),
+  },
+  {
     // Notification preferences in the shared side panel, opened from Notifications.
     name: "notification-preferences",
     bundle: "surfaces",
@@ -358,6 +373,257 @@ test.describe("activity filters and settings", () => {
     await mount(page, SURFACES.find((item) => item.name === "activity-panel")!, { name: "settings", width: 1440 });
     await expect(page.getByText(/Browser alerts/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Mark all read" })).toBeVisible();
+  });
+});
+
+test.describe("child list inside a record section", () => {
+  test("one card: title, count and action on row 1, a compact toolbar on row 2, table to the edges", async ({ page }) => {
+    await mount(page, { name: "section-list", bundle: "surfaces", path: "/?surface=section-list", hostStyle: pagePadding, ready: (p) => expect(p.getByRole("link", { name: "Afghanistan" })).toBeVisible() }, { name: "section-list", width: 1440 });
+    const card = page.locator(".a-record-detail-content");
+    const panel = card.locator(".a-entity-list__panel");
+    // No box inside the box.
+    expect(await panel.evaluate((node) => getComputedStyle(node).borderTopStyle)).toBe("none");
+    // Row 1: heading, count, action share one line; the action sits at the end edge.
+    const box = async (locator: import("@playwright/test").Locator) => (await locator.boundingBox())!;
+    const heading = await box(card.getByRole("heading", { level: 2, name: "Countries" }));
+    const count = card.locator(".a-related-section__count");
+    await expect(count).toHaveText("12");
+    const add = await box(card.getByRole("button", { name: "Add country" }));
+    const centre = (b: { y: number; height: number }) => b.y + b.height / 2;
+    expect(Math.abs(centre(await box(count)) - centre(heading))).toBeLessThanOrEqual(3);
+    expect(Math.abs(centre(add) - centre(heading))).toBeLessThanOrEqual(3);
+    // Row 2 below row 1; the table meets the card's edges.
+    const toolbar = await box(panel.locator(".a-entity-list__query-row"));
+    expect(toolbar.y).toBeGreaterThan(heading.y + heading.height);
+    const cardBox = await box(card), table = await box(panel.locator(".a-entity-list__table-wrap"));
+    expect(Math.abs(table.x - cardBox.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(table.x + table.width - (cardBox.x + cardBox.width))).toBeLessThanOrEqual(2);
+    // One page: the summary stays, rows-per-page and Previous / Next do not.
+    await expect(panel.locator(".a-entity-list__pagination")).toContainText("1–12");
+    await expect(panel.locator(".a-entity-list__page-controls")).toHaveCount(0);
+    await expect(panel.locator(".a-entity-list__view-trigger")).toBeVisible();
+  });
+
+  test("a child list has the full-page list's toolbar and table type in every density", async ({ page }) => {
+    const read = () => page.evaluate(() => {
+      const panel = document.querySelector(".a-entity-list__panel")!;
+      const controls = [...panel.querySelectorAll<HTMLElement>(".a-entity-list__query-row :is(button,input)")]
+        .filter((node) => node.getClientRects().length && !node.closest("[role=menu]"))
+        .map((node) => `${(node.getAttribute("aria-label") ?? node.textContent ?? node.getAttribute("placeholder") ?? "").trim().replace(/\s+/g, " ")}@${Math.round(node.getBoundingClientRect().height)}`);
+      const font = (selector: string) => { const node = panel.querySelector(selector)!; const css = getComputedStyle(node); return `${css.fontSize}/${css.fontWeight}`; };
+      return { controls, cell: font("tbody td:nth-child(3)"), header: font("thead th:nth-child(3)") };
+    });
+    for (const density of ["compact", "comfortable", "spacious"] as const) {
+      await mount(page, SURFACES.find((item) => item.name === "list")!, { name: `toolbar-page-${density}`, width: 1440, density });
+      const full = await read();
+      await mount(page, { name: "section-list", bundle: "surfaces", path: "/?surface=section-list", hostStyle: pagePadding, ready: (p) => expect(p.getByRole("link", { name: "Afghanistan" })).toBeVisible() }, { name: `toolbar-section-${density}`, width: 1440, density });
+      const section = await read();
+      // Same functions, same order, same heights; same table text.
+      expect(section).toEqual(full);
+      expect(section.controls.some((control) => control.startsWith("Select view"))).toBe(true);
+      expect(section.controls.some((control) => control.startsWith("Filters"))).toBe(true);
+    }
+  });
+});
+
+test.describe("density type roles", () => {
+  test("values, labels and sections scale together with density; chrome does not", async ({ page }) => {
+    const font = (selector: string) => page.locator(selector).first().evaluate((node) => { const css = getComputedStyle(node); return `${css.fontSize}/${css.lineHeight}/${css.fontWeight}`; });
+    const results: Record<string, Record<string, string>> = {};
+    for (const density of ["compact", "comfortable", "spacious"] as const) {
+      await mount(page, SURFACES.find((item) => item.name === "list")!, { name: `type-list-${density}`, width: 1440, density });
+      const cell = await font(".a-entity-list__table tbody td"), column = await font(".a-entity-list__table thead th");
+      await mount(page, SURFACES.find((item) => item.name === "record")!, { name: `type-record-${density}`, width: 1440, density });
+      const input = await font(".a-data-surface__field input[type=text], .a-data-surface__field input:not([type])"), label = await font(".a-data-surface__field > label");
+      // Every text control in the form shares that size (inputs, textareas, selects).
+      expect(new Set(await page.locator(".a-data-surface__field :is(input:not([type=checkbox],[type=radio]), textarea)").evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).fontSize))).size).toBe(1);
+      await mount(page, SURFACES.find((item) => item.name === "workspace")!, { name: `type-chrome-${density}`, width: 1440, density });
+      const title = await font("h1"), tab = await font(".athyper-experience__module-tabs--primary > a[aria-current=page]");
+      // A value reads the same in a list cell and an edit control; a label the same as a column header.
+      // Same size; a cell's height is the density row rhythm, so only the size is shared.
+      expect(input.split("/")[0]).toEqual(cell.split("/")[0]);
+      const [labelSize, , labelWeight] = label.split("/"), [columnSize, , columnWeight] = column.split("/");
+      expect([labelSize, labelWeight]).toEqual([columnSize, columnWeight]);
+      results[density] = { cell, label, title, tab };
+    }
+    const size = (value: string) => parseFloat(value);
+    expect(size(results.compact!.cell!)).toBeLessThan(size(results.comfortable!.cell!));
+    expect(size(results.comfortable!.cell!)).toBeLessThan(size(results.spacious!.cell!));
+    expect(size(results.compact!.label!)).toBeLessThan(size(results.spacious!.label!));
+    // Chrome is fixed: page title and navigation bar type never change with density.
+    expect(new Set(Object.values(results).map((item) => item.title)).size).toBe(1);
+    expect(new Set(Object.values(results).map((item) => item.tab)).size).toBe(1);
+  });
+});
+
+test.describe("workspace and module homes", () => {
+  test("workspace home: page frame, module cards with authorized entities, recent records and actions", async ({ page }) => {
+    await mount(page, SURFACES.find((item) => item.name === "workspace")!, { name: "workspace", width: 1440 });
+    await expect(page.getByRole("heading", { level: 1, name: "Master Data Governance" })).toBeVisible();
+    await expect(page.locator(".athyper-workspace-landing__counts")).toHaveText("6 modules · 9 entities");
+    const org = page.getByRole("article", { name: "Organization & Reference Data" });
+    await expect(org.locator(".athyper-module-card__entities li")).toHaveCount(4);
+    await expect(org.getByRole("link", { name: /Countries/ })).toHaveAttribute("href", "/app/entity/country");
+    await expect(org.getByRole("link", { name: "1 more entity" })).toHaveAttribute("href", "/mdg/organization-reference");
+    await expect(org.getByRole("link", { name: "Afghanistan" })).toBeVisible();
+    await expect(org.getByRole("link", { name: /New Country/ })).toHaveAttribute("href", "/app/entity/country/new");
+    // Only entities the server authorizes appear: Address Uses is placed here but not listable.
+    const location = page.getByRole("article", { name: "Location & Address Governance" });
+    await expect(location.getByText("Address Uses")).toHaveCount(0);
+    await expect(location.locator(".athyper-module-card__entities li")).toHaveCount(2);
+    // Modules without authorized entities say so plainly; no placeholder links.
+    await expect(page.getByRole("article", { name: "Data Quality & Stewardship" }).getByText("No entities are available to you in this module yet.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "ToDo" })).toHaveCount(0);
+    await expect(page.getByRole("article", { name: "Business Partners" }).getByRole("link", { name: "3 to do" })).toHaveAttribute("href", "/inbox?workspace=mdg&module=business-partner");
+    const pin = page.getByRole("button", { name: "Pin Business Partners first" });
+    await pin.click();
+    await expect(page.getByRole("button", { name: "Unpin Business Partners" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("module home: one card per authorized entity; the card opens the list, create stays", async ({ page }) => {
+    await mount(page, SURFACES.find((item) => item.name === "workspace-module")!, { name: "module", width: 1440 });
+    await expect(page.getByRole("heading", { level: 1, name: "Organization & Reference Data" })).toBeVisible();
+    await expect(page.locator(".athyper-module-card--entity")).toHaveCount(5);
+    const countries = page.getByRole("article", { name: "Countries" });
+    await expect(countries.getByRole("link", { name: "Countries", exact: true })).toHaveAttribute("href", "/app/entity/country");
+    await expect(countries.getByRole("link", { name: "Afghanistan" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^(Open list|Open module)$/ })).toHaveCount(0);
+    // Exact authorized counts only; an entity the server did not count shows none (never "0").
+    await expect(countries.locator(".athyper-module-card__count")).toHaveText("247 records");
+    await expect(page.getByRole("article", { name: "Currencies" }).locator(".athyper-module-card__count")).toHaveText("1 record");
+    await expect(page.getByRole("article", { name: "Languages" }).locator(".athyper-module-card__count")).toHaveCount(0);
+    await expect(page.locator("nav[aria-label='Master Data Governance modules'] > a[aria-current=page]")).toContainText("Organization & Reference Data");
+  });
+
+  test("workspace, module and activity navigation bars share the record bar's type and height", async ({ page }) => {
+    const read = (selector: string) => page.evaluate((target) => {
+      const element = document.querySelector(target)!; const style = getComputedStyle(element);
+      return { size: style.fontSize, weight: style.fontWeight, height: Math.round(element.getBoundingClientRect().height) };
+    }, selector);
+    const results: Record<string, unknown>[] = [];
+    for (const density of ["compact", "comfortable", "spacious"] as const) {
+      await mount(page, SURFACES.find((item) => item.name === "workspace")!, { name: `nav-${density}`, width: 1440, density });
+      const workspace = await read(".athyper-experience__module-tabs--primary > a[aria-current=page]");
+      const other = await read(".athyper-experience__module-tabs--primary > a:not([aria-current])");
+      await mount(page, SURFACES.find((item) => item.name === "activity-page")!, { name: `nav-act-${density}`, width: 1440, density });
+      const activity = await read(".a-management-navigation[data-appearance=flat] > a[aria-current=page]");
+      expect(workspace).toEqual(other);
+      expect(activity).toEqual(workspace);
+      results.push(workspace);
+    }
+    // Body-size labels at regular weight; height follows density.
+    expect(results[1]).toMatchObject({ size: "15px", weight: "500" });
+    expect((results[0] as { height: number }).height).toBeLessThan((results[2] as { height: number }).height);
+  });
+
+  test("cards are one link: anywhere on a card opens it; rows, chips, pins and create work on their own", async ({ page }) => {
+    await mount(page, SURFACES.find((item) => item.name === "workspace")!, { name: "card-link", width: 1440 });
+    const card = page.getByRole("article", { name: "Data Quality & Stewardship" });
+    // Empty modules are compact: no footer, no dashed box.
+    await expect(card).toHaveAttribute("data-empty", "true");
+    await expect(card.locator("footer")).toBeHidden();
+    const org = page.getByRole("article", { name: "Organization & Reference Data" });
+    // The title is the only card link; its focus outlines the whole card.
+    await org.getByRole("link", { name: "Organization & Reference Data" }).focus();
+    expect(await org.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe("solid");
+    // Inner controls sit above the card link.
+    const hit = async (locator: import("@playwright/test").Locator) => { const box = (await locator.boundingBox())!; return page.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.closest("a,button")?.textContent?.trim(), [box.x + box.width / 2, box.y + box.height / 2]); };
+    expect(await hit(org.getByRole("link", { name: /Countries/ }))).toContain("Countries");
+    expect(await hit(org.getByRole("link", { name: "Afghanistan" }))).toBe("Afghanistan");
+    expect(await hit(org.getByRole("link", { name: /New Country/ }))).toContain("New Country");
+    // Empty card space resolves to the card's own link.
+    const description = org.locator(".athyper-module-card__identity p");
+    expect(await hit(description)).toBe("Organization & Reference Data");
+  });
+
+  test("labels give up only the width the row lacks, longest first, before any module folds", async ({ page }) => {
+    const bar = page.locator("nav.athyper-experience__module-tabs--primary");
+    const truncated = (name: string) => bar.getByRole("link", { name }).locator("span").evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+    const slack = () => bar.evaluate((node) => { const last = [...node.children].filter((child) => child.getClientRects().length).at(-1)!; return Math.round(node.getBoundingClientRect().right - last.getBoundingClientRect().right); });
+    // Wide enough for every full name: nothing is cut.
+    await mount(page, SURFACES.find((item) => item.name === "workspace")!, { name: "tabs-wide", width: 1920 });
+    await expect(bar.locator(".athyper-experience__module-more")).toHaveCount(0);
+    expect(await truncated("Organization & Reference Data")).toBe(false);
+    // Slightly short: every module stays, short labels stay whole, long ones are cut just enough.
+    await mount(page, SURFACES.find((item) => item.name === "workspace")!, { name: "tabs-fit", width: 1440 });
+    await expect(bar.locator(".athyper-experience__module-more")).toHaveCount(0);
+    await expect(bar.locator("> a")).toHaveCount(7);
+    expect(await truncated("Business Partners")).toBe(false);
+    expect(await truncated("Organization & Reference Data")).toBe(true);
+    await expect(bar.getByRole("link", { name: "Organization & Reference Data" })).toHaveAttribute("title", "Organization & Reference Data");
+    expect(await slack()).toBeLessThan(24);
+    // Too narrow even at the floor: modules fold into More.
+    await mount(page, SURFACES.find((item) => item.name === "workspace")!, { name: "tabs-fold", width: 768 });
+    await expect(bar.locator(".athyper-experience__module-more")).toHaveCount(1);
+  });
+
+  for (const width of [360, 390]) test(`phones switch modules from one sheet and nothing clips at ${width}px`, async ({ page }) => {
+    await mount(page, SURFACES.find((item) => item.name === "workspace-module")!, { name: `phone-switch-${width}`, width });
+    const bar = page.locator("nav.athyper-experience__module-tabs--primary");
+    // No tabs and no More: one switcher naming the current module.
+    await expect(bar.locator("> a").first()).toBeHidden();
+    await expect(bar.locator(".athyper-experience__module-more")).toBeHidden();
+    const switcher = bar.locator(".athyper-experience__module-switcher > summary");
+    await expect(switcher).toHaveAccessibleName("Switch module, current: Organization & Reference Data");
+    await switcher.click();
+    const sheet = bar.locator(".athyper-experience__module-switcher > section");
+    await expect(sheet.getByRole("link", { name: "Home" })).toBeVisible();
+    await expect(sheet.locator("li > a[aria-current=page]")).toContainText("Organization & Reference Data");
+    // Home plus every module, each a 44px row, in a bottom sheet inside the viewport.
+    expect(await sheet.locator("ul[aria-label='All modules'] li").count()).toBe(6);
+    const box = (await sheet.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    expect(Math.round(900 - (box.y + box.height))).toBeLessThanOrEqual(16);
+    for (const row of await sheet.locator("li > a").all()) expect(Math.round((await row.boundingBox())!.height)).toBeGreaterThanOrEqual(44);
+    // Entities are compact rows: the whole row opens the list.
+    await page.keyboard.press("Escape");
+    const countries = page.getByRole("article", { name: "Countries" });
+    await expect(countries.getByRole("link", { name: "Open list" })).toHaveCount(0);
+    // Recent records and the create action stay reachable on the row.
+    await expect(countries.getByRole("link", { name: "Afghanistan" })).toBeVisible();
+    await expect(countries.getByRole("link", { name: /New Country/ })).toBeVisible();
+    // A plain entity is a single compact row.
+    expect(Math.round((await page.getByRole("article", { name: "Languages" }).boundingBox())!.height)).toBeLessThan(72);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test("on phones an icon-led header action becomes an icon button in the title row", async ({ page }) => {
+    await mount(page, SURFACES.find((item) => item.name === "activity-page")!, { name: "phone-header-action", width: 390 });
+    const action = page.getByRole("button", { name: "Notification preferences" });
+    const box = (await action.boundingBox())!, title = (await page.locator(".athyper-page-header__heading").boundingBox())!;
+    expect(Math.round(box.width)).toBe(44);
+    expect(box.y).toBeLessThan(title.y + title.height);
+    expect(box.x).toBeGreaterThan(title.x);
+  });
+
+  test("a short More is a plain list; search, count and Recent appear only in a long one", async ({ page }) => {
+    await mount(page, SURFACES.find((item) => item.name === "workspace")!, { name: "more-short", width: 768 });
+    const more = page.locator(".athyper-experience__module-more");
+    const count = Number(await more.locator("summary > b").textContent());
+    expect(count).toBeGreaterThan(0);
+    expect(count).toBeLessThan(6);
+    await more.locator("summary").click();
+    await expect(more.getByRole("searchbox")).toHaveCount(0);
+    await expect(more.locator("section > p, section > h3")).toHaveCount(0);
+    await expect(more.locator("section li")).toHaveCount(count);
+    // Opening a short More focuses its first module instead of a missing search field.
+    await expect(more.locator("section li > a").first()).toBeFocused();
+  });
+
+  test("Notifications | Inbox tabs carry their icons at the bar's size", async ({ page }) => {
+    await mount(page, SURFACES.find((item) => item.name === "activity-page")!, { name: "activity-icons", width: 1440 });
+    for (const name of ["Notifications", "Inbox"]) {
+      const icon = page.locator("nav.a-management-navigation[data-appearance=flat] > a", { hasText: name }).locator("svg").first();
+      await expect(icon).toBeVisible();
+      expect(Math.round((await icon.boundingBox())!.width)).toBe(18);
+    }
+  });
+
+  test("workspace home reads in Arabic", async ({ page }) => {
+    await mount(page, { ...SURFACES.find((item) => item.name === "workspace")!, path: "/mdg?surface=workspace&locale=ar" }, { name: "workspace-ar", width: 1440 });
+    await expect(page.getByRole("heading", { level: 2, name: "وحداتك" })).toBeVisible();
+    await expect(page.getByRole("article").first().getByRole("heading", { level: 3 }).getByRole("link")).toBeVisible();
   });
 });
 
@@ -794,4 +1060,23 @@ test.describe("shell chrome", () => {
     expect(result.wordmark).toContain("invert(1)");
   });
 
+});
+test("page headers and navigation bars match whether or not a page has header actions", async ({ page }) => {
+  const read = () => page.evaluate(() => {
+    const box = (selector: string) => { const r = document.querySelector(selector)!.getBoundingClientRect(); return [Math.round(r.y), Math.round(r.height)]; };
+    const current = document.querySelector("a[aria-current=page]")!, style = getComputedStyle(current);
+    return {
+      header: box(".athyper-page-header"), icon: box(".athyper-page-header__icon"), title: box(".athyper-page-header__heading"),
+      description: box(".athyper-page-header__description"),
+      underline: style.borderBottomWidth, shadow: style.boxShadow, tabHeight: Math.round(current.getBoundingClientRect().height),
+    };
+  });
+  for (const density of ["compact", "comfortable", "spacious"] as const) {
+    await mount(page, SURFACES.find((item) => item.name === "workspace")!, { name: `hdr-ws-${density}`, width: 1440, density });
+    const workspace = await read();
+    // Notifications has a header action (Notification preferences); it must not move the title or grow the header.
+    await mount(page, SURFACES.find((item) => item.name === "activity-page")!, { name: `hdr-act-${density}`, width: 1440, density });
+    expect(await read()).toEqual(workspace);
+    expect(workspace).toMatchObject({ underline: "2px", shadow: "none" });
+  }
 });

@@ -1,0 +1,234 @@
+{
+  "schema": "athyper.coordinated-runtime-integration-verification/1",
+  "verifiedAt": "2026-10-02T19:59:03.523900+00:00",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "725086ee63e96f17acb4266e7cd496042dd8e17199b7eb798a403234b5be546a"
+  },
+  "executionPolicy": {
+    "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+    "version": 1,
+    "hash": "b924f8a65d0e55fdc8052458b6f7f289903a284c0d859f266e0e84c4682fe5ae",
+    "activeAsPublisher": true,
+    "proposedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+    "activatedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693"
+  },
+  "sources": [
+    {
+      "status": "approved",
+      "revision": 3,
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "changeSetId": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "publicationCount": 0
+    },
+    {
+      "status": "approved",
+      "revision": 3,
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "changeSetId": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "publicationCount": 0
+    },
+    {
+      "status": "approved",
+      "revision": 3,
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "changeSetId": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "publicationCount": 0
+    },
+    {
+      "status": "approved",
+      "revision": 3,
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "changeSetId": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "publicationCount": 0
+    },
+    {
+      "status": "approved",
+      "revision": 4,
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "changeSetId": "7e7dbd68-84a0-42ac-b886-2481ff683bd4",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "publicationCount": 0
+    },
+    {
+      "status": "approved",
+      "revision": 3,
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "changeSetId": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "publicationCount": 0
+    }
+  ],
+  "containers": [
+    {
+      "container": "athyper-dev-control-control-api-1",
+      "status": "running",
+      "health": "healthy",
+      "startedAt": "2026-10-02T19:51:31.30572422Z",
+      "servingDeploymentIdentityConfigured": false
+    },
+    {
+      "container": "athyper-dev-source-api-1",
+      "status": "running",
+      "health": "unhealthy",
+      "startedAt": "2026-10-02T19:51:31.810611794Z",
+      "servingDeploymentIdentityConfigured": false
+    },
+    {
+      "container": "athyper-dev-source-worker-1",
+      "status": "running",
+      "health": "healthy",
+      "startedAt": "2026-10-02T19:51:32.340762841Z",
+      "servingDeploymentIdentityConfigured": false
+    }
+  ],
+  "apiHealth": {
+    "status": "unhealthy",
+    "checks": {
+      "publication.object-storage": {
+        "status": "healthy"
+      },
+      "publication.trust-keys": {
+        "status": "healthy"
+      },
+      "trustiam.studio-authority": {
+        "status": "healthy"
+      },
+      "mesh.exchange": {
+        "status": "healthy"
+      },
+      "entity.deployment-support": {
+        "status": "unhealthy",
+        "message": "Entity deployment support or active inventory is unavailable"
+      },
+      "experience.studio": {
+        "status": "healthy"
+      },
+      "experience.neon": {
+        "status": "healthy"
+      },
+      "experience.mesh": {
+        "status": "healthy"
+      },
+      "publication.database": {
+        "status": "healthy"
+      },
+      "finance.neon-foundation": {
+        "status": "healthy"
+      },
+      "finance.neon.f2": {
+        "status": "healthy",
+        "message": "Finance F2 is disabled"
+      },
+      "finance.neon.f3": {
+        "status": "healthy",
+        "message": "Finance F3 is disabled"
+      },
+      "finance.neon.f4": {
+        "status": "healthy",
+        "message": "Finance F4 is disabled"
+      },
+      "finance.neon.f5": {
+        "status": "healthy",
+        "message": "Finance F5 is disabled"
+      },
+      "finance.neon.f6": {
+        "status": "healthy",
+        "message": "Finance F6 is disabled"
+      },
+      "control.studio.parameters": {
+        "status": "healthy"
+      },
+      "control.neon.parameters": {
+        "status": "healthy"
+      },
+      "control.mesh.parameters": {
+        "status": "healthy"
+      },
+      "control.studio.cycle-config": {
+        "status": "healthy"
+      },
+      "control.neon.cycle-config": {
+        "status": "healthy"
+      },
+      "control.mesh.cycle-config": {
+        "status": "healthy"
+      },
+      "control.studio.administration": {
+        "status": "healthy"
+      },
+      "control.neon.administration": {
+        "status": "healthy"
+      },
+      "control.mesh.administration": {
+        "status": "healthy"
+      },
+      "governance.studio": {
+        "status": "healthy"
+      },
+      "governance.neon": {
+        "status": "healthy"
+      },
+      "governance.mesh": {
+        "status": "healthy"
+      },
+      "governance.studio.compliance-ddl": {
+        "status": "healthy"
+      },
+      "governance.studio.object-storage": {
+        "status": "healthy"
+      },
+      "governance.studio.retention": {
+        "status": "healthy",
+        "message": "Governance compliance routes are disabled"
+      },
+      "governance.neon.compliance-ddl": {
+        "status": "healthy"
+      },
+      "governance.neon.object-storage": {
+        "status": "healthy"
+      },
+      "governance.neon.retention": {
+        "status": "healthy",
+        "message": "Governance compliance routes are disabled"
+      },
+      "governance.mesh.compliance-ddl": {
+        "status": "healthy"
+      },
+      "governance.mesh.object-storage": {
+        "status": "healthy"
+      },
+      "governance.mesh.retention": {
+        "status": "healthy",
+        "message": "Governance compliance routes are disabled"
+      },
+      "integration.http": {
+        "status": "healthy",
+        "openCircuits": 0,
+        "dependencyCount": 0
+      },
+      "atlas.tool-invocation-ledger": {
+        "status": "healthy"
+      },
+      "atlas.conversation-persistence": {
+        "status": "healthy"
+      }
+    }
+  },
+  "livePublicationExecuted": false,
+  "liveDeploymentVerified": false,
+  "blockers": [
+    "ENTITY_SERVING_DEPLOYMENT_ID is not configured for the DEV serving API.",
+    "The serving qualification authority and real owner probes are not composed in the DEV host; required retained capability and activation-target evidence remains outstanding."
+  ],
+  "notes": [
+    "Independent source review and execution policy enrollment are distinct and both are now recorded.",
+    "No support receipt or successful human/runtime evaluation has been fabricated.",
+    "Each target activation is transactional; there is no cross-plane transaction."
+  ]
+}

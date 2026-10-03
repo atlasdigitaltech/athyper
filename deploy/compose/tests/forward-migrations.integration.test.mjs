@@ -211,6 +211,22 @@ test(
         "BEGIN; SELECT 1; COMMIT;\n",
       );
       assert.match(run().stderr, /checksum differs from the migration ledger/);
+      // A failed success-receipt write must roll back the runner-owned SQL too.
+      const receiptMigration = "receipt_failure.sql";
+      const receiptSql = "CREATE TABLE public.receipt_atomic_probe(id integer);\n";
+      const receiptHash = createHash("sha256").update(receiptSql).digest("hex");
+      writeFileSync(join(root, "migrations", receiptMigration), receiptSql);
+      writeFileSync(transactionManifest, readFileSync(transactionManifest, "utf8") + `${receiptHash}  ${receiptMigration}\n`);
+      for (const plane of planes) writeFileSync(join(root, `migrations/manifests/${plane}.txt`), plane === "studio" ? `${receiptMigration}\n` : "");
+      sql("studio", `CREATE FUNCTION public.reject_receipt_probe() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN IF NEW.migration_name='receipt_failure.sql' AND NEW.status='applied' THEN RAISE EXCEPTION 'receipt write rejected'; END IF; RETURN NEW; END $$;
+        CREATE TRIGGER reject_receipt_probe BEFORE UPDATE ON public.athyper_schema_migration_v1 FOR EACH ROW EXECUTE FUNCTION public.reject_receipt_probe();`);
+      const receiptFailure = run();
+      assert.notEqual(receiptFailure.status, 0);
+      assert.match(receiptFailure.stderr, /receipt write rejected/);
+      assert.equal(sql("studio", "SELECT to_regclass('public.receipt_atomic_probe') IS NULL"), "t");
+      assert.equal(sql("studio", "SELECT status FROM public.athyper_schema_migration_v1 WHERE migration_name='receipt_failure.sql'"), "failed");
+
     } finally {
       command("rm", "-fv", name);
       rmSync(root, { recursive: true, force: true });

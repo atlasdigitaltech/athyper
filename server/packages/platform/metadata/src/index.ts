@@ -14,4 +14,5 @@ export * from "./local-graph-preview.js";
 export { createPublishedEntityCatalogue } from "./runtime-descriptor-repository.js";
 
 export * from "./entity-deployment-support.js";
+export * from "./entity-support-qualification.js";
 export * from "./entity-readiness-inventory.js";

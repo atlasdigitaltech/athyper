@@ -62,7 +62,9 @@ test("builds a schema-valid inventory from the current plane manifests", async (
   assert.ok(artifact.rows.length > 600);
   assert.equal(new Set(artifact.rows.map((row) => row.sourceKey)).size, artifact.rows.length);
   assert.equal(artifact.summary.tableDeclarations, artifact.rows.length);
-  assert.equal(artifact.summary.classifiedAndOwned + artifact.summary.reviewRequired, artifact.rows.length);
+  assert.equal(artifact.summary.ownershipAssigned, artifact.rows.length);
+  assert.equal(artifact.summary.byRolloutStatus.unverified, artifact.rows.length);
+  assert.equal(artifact.summary.testEvidenceRecorded, 0);
   assert.equal(artifact.summary.coveragePercent, 100);
   assert.equal(artifact.summary.reviewRequired, 0);
   assert.equal(validateCoverageArtifact(artifact), artifact);
@@ -79,7 +81,9 @@ test("fixture expands common DDL to independent plane rows sorted by plane, sche
   ]);
   assert.deepEqual(artifact.summary.byPlane, { mesh: 2, neon: 2, studio: 2 });
   assert.deepEqual(artifact.summary.byOwner, { none: 6 });
-  assert.equal(artifact.summary.coveragePercent, 100);
+  assert.equal(artifact.summary.coveragePercent, 0);
+  assert.equal(artifact.summary.ownershipAssigned, 0);
+  assert.equal(artifact.summary.implementationEvidenceRecorded, 0);
   assert.ok(artifact.rows.filter((row) => row.tableKey === "shared.quoted_table").every((row) => row.physicalAuthority === "common_plane_local"));
 });
 
@@ -101,6 +105,28 @@ test("fixture rejects an unclassified ownership baseline", async () => {
   const ownership = fixtureOwnership();
   delete ownership.defaults.classification;
   await assert.rejects(() => buildFixture(fixtureRoot, ownership), /classification must be one of/);
+});
+
+test("ownership rules cannot manufacture default or schema-wide completion", async () => {
+  const defaults = fixtureOwnership();
+  defaults.defaults.rolloutStatus = "code_complete";
+  await assert.rejects(() => buildFixture(fixtureRoot, defaults), /defaults.rolloutStatus must be unverified/);
+  const schema = fixtureOwnership();
+  schema.rules[0].set.rolloutStatus = "code_complete";
+  await assert.rejects(() => buildFixture(fixtureRoot, schema), /explicit physical sourceKey override/);
+  const table = fixtureOwnership();
+  table.overrides["shared.quoted_table"] = { rolloutStatus: "database_qualified" };
+  await assert.rejects(() => buildFixture(fixtureRoot, table), /explicit physical sourceKey/);
+});
+
+test("recorded implementation paths do not imply tests or rollout promotion", async () => {
+  const ownership = fixtureOwnership();
+  ownership.rules[0].set.repository = ["generic-provider.ts"];
+  ownership.rules[0].set.entryPoints = ["registered-handler.ts"];
+  const artifact = await buildFixture(fixtureRoot, ownership);
+  assert.equal(artifact.summary.implementationEvidenceRecorded, 3);
+  assert.equal(artifact.summary.testEvidenceRecorded, 0);
+  assert.equal(artifact.summary.byRolloutStatus.unverified, 6);
 });
 
 test("verification rejects stale generated output", async () => {
@@ -135,7 +161,7 @@ function fixtureOwnership() {
       repository: [], entryPoints: [], auditEvent: [], outboxEvent: [], replayEvidence: [],
       immutabilityEvidence: [], reversalEvidence: [], concurrencyEvidence: [], rebuildEvidence: [],
       reconciliationEvidence: [], mutationComposition: "not_applicable", unitTests: [], postgresTests: [],
-      featureGate: null, rolloutStatus: "code_complete", reviewStatus: "reviewed",
+      featureGate: null, rolloutStatus: "unverified", reviewStatus: "reviewed",
     },
     rules: [{ match: { schema: "shared" }, set: { classification: "catalog_seed_managed" } }],
     overrides: {},

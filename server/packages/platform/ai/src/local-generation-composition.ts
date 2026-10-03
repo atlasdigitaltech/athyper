@@ -18,6 +18,7 @@ import { createAtlasConversationServices } from "./conversation-composition.js";
 import { hasPermission, assertAtlasContext } from "./context.js";
 import { KyselyAtlasRunRepository } from "./kysely-run-repository.js";
 import { KyselyAtlasTenantQuotaManager } from "./quota.js";
+import { createAtlasGatedPlaneAdmission } from "./tool-feature-gates.js";
 export interface AtlasLocalConfiguration {
   readonly schema: "atlas-local-inference/1";
   readonly endpoint: "http://atlas-inference:11434";
@@ -121,37 +122,43 @@ export function createAtlasLocalGenerationServices(options: {
     inputPricePerMtokUsd: 0,
     outputPricePerMtokUsd: 0,
   };
-  const admission: AtlasPlaneAdmissionResolver = {
-    async resolve(context) {
-      assertAtlasContext(context);
-      const allowed =
-        hasPermission(context, `${context.planeKey}.ai.agent.use`) &&
-        (!options.authorizeAdmission ||
-          (await options.authorizeAdmission(context)));
-      return {
-        schema: "atlas-plane-admission/1",
-        planeKey: context.planeKey,
-        chatAllowed: allowed,
-        persistenceAllowed: allowed,
-        readToolsAllowed:
-          allowed &&
-          Boolean(options.tools?.readEnabled && options.tools.available()),
-        mutationToolsAllowed:
-          allowed &&
-          context.planeKey === "neon" &&
-          Boolean(
-            options.tools?.readEnabled &&
-            options.tools.mutationsEnabled &&
-            options.tools.available("mutation"),
-          ),
-        invoiceExtractionAllowed: false,
-        allowedPublicModelIds: allowed ? [c.model.publicId] : [],
-        allowedDataClasses: allowed ? binding.allowedDataClasses : [],
-        policyRevision: revision,
-        ...(!allowed ? { reasonCode: "permission_denied" } : {}),
-      };
+  const admission: AtlasPlaneAdmissionResolver = createAtlasGatedPlaneAdmission(
+    {
+      async resolve(context) {
+        assertAtlasContext(context);
+        const allowed =
+          hasPermission(context, `${context.planeKey}.ai.agent.use`) &&
+          (!options.authorizeAdmission ||
+            (await options.authorizeAdmission(context)));
+        return {
+          schema: "atlas-plane-admission/1",
+          planeKey: context.planeKey,
+          chatAllowed: allowed,
+          persistenceAllowed: allowed,
+          readToolsAllowed:
+            allowed &&
+            Boolean(options.tools?.readEnabled && options.tools.available()),
+          mutationToolsAllowed:
+            allowed &&
+            context.planeKey === "neon" &&
+            Boolean(
+              options.tools?.readEnabled &&
+              options.tools.mutationsEnabled &&
+              options.tools.available("mutation"),
+            ),
+          invoiceExtractionAllowed: false,
+          allowedPublicModelIds: allowed ? [c.model.publicId] : [],
+          allowedDataClasses: allowed ? binding.allowedDataClasses : [],
+          policyRevision: revision,
+          ...(!allowed ? { reasonCode: "permission_denied" } : {}),
+        };
+      },
     },
-  };
+    {
+      toolsEnabled: Boolean(options.tools?.readEnabled),
+      mutationsEnabled: Boolean(options.tools?.mutationsEnabled),
+    },
+  );
   const runs = new KyselyAtlasRunRepository(options.transactions);
   const quotas = new KyselyAtlasTenantQuotaManager({
     transactions: options.transactions,

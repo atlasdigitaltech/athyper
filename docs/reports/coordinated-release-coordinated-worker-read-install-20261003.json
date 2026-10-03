@@ -1,0 +1,19 @@
+{
+  "schema": "athyper.coordinated-worker-read-install/1",
+  "environment": "dev",
+  "migration": "20261003_coordinated_worker_source_read.sql",
+  "sha256": "08605e15613a8b321d977528c336341faaffd96f3385ee000bafb2535a66b64c",
+  "applied": true,
+  "workerReadChecks": [
+    "six_exact_releases_visible",
+    "other_actor_hidden",
+    "other_tenant_hidden",
+    "signature_column_denied",
+    "writes_denied"
+  ],
+  "rollbackAndReplayPassed": true,
+  "reused": false,
+  "policyStateUnchanged": true,
+  "passed": true,
+  "completedAt": "2026-10-02T21:44:06.583Z"
+}

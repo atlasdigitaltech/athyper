@@ -165,13 +165,18 @@ export function assertPlaneFileBoundary(
   }
 }
 
+/** One database-local namespace serializes authorization provisioning and guarded resets. */
+export function authorizationProvisionLockKey(plane: ProvisionPlane): string {
+  return `athyper:authorization:provision:${plane}`;
+}
+
 export async function acquireProvisionLock(
   client: QueryClient,
   plane: ProvisionPlane,
 ): Promise<void> {
   await client.query(
     "SELECT pg_advisory_lock(hashtextextended($1, 0))",
-    [`athyper:wave6:provision:${plane}`],
+    [authorizationProvisionLockKey(plane)],
   );
 }
 
@@ -342,6 +347,11 @@ export async function readSchemaFingerprintSha256(
     .digest("hex");
 }
 
+/** A failed owning transaction may have rolled back the cached ledger DDL. */
+export function forgetSeedLedger(client: QueryClient): void {
+  initializedLedgerClients.delete(client);
+}
+
 export async function ensureSeedLedger(
   client: QueryClient,
 ): Promise<void> {
@@ -446,8 +456,9 @@ export async function registerSeedPack(
   const row = existing.rows[0];
   if (row) {
     if (
-      row.source_path !== receipt.sourcePath
-      || row.content_sha256 !== receipt.contentSha256
+      // Historical receipts may contain a checkout-specific absolute path.
+      // Immutable identity is the pack coordinate plus its exact content/source hashes.
+      row.content_sha256 !== receipt.contentSha256
       || row.manifest_sha256 !== receipt.manifestSha256
     ) {
       throw new Error(

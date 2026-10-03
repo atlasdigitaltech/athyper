@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { parseEntityRuntimeDescriptor } from "./descriptor-parser.js";
+import { parseEntityRecordPresentation, validateRelatedPresentationOwner } from "@athyper/contract-platform-entity-runtime";
 
 const field = (list: Record<string, unknown>) => ({
   key: "code",
@@ -82,4 +83,71 @@ it("does not trust readiness embedded in a published artifact", () => {
     },
   });
   expect(descriptor).not.toHaveProperty("capabilityReadiness");
+});
+
+it("keeps declared platform-row read visibility only with an owning tenant column", () => {
+  const value = row({});
+  const withVisibility = (storage: Record<string, unknown>) =>
+    parseEntityRuntimeDescriptor({ ...value, compiled_json: { ...value.compiled_json, storage } });
+  expect(withVisibility({ ...value.compiled_json.storage, tenantVisibility: "tenant_or_platform" }).storage.tenantVisibility).toBe("tenant_or_platform");
+  expect(withVisibility(value.compiled_json.storage).storage.tenantVisibility).toBeUndefined();
+  expect(() => withVisibility({ ...value.compiled_json.storage, tenantVisibility: "everyone" })).toThrow("storage.tenantVisibility is invalid");
+  const { tenantField: _tenant, ...unowned } = value.compiled_json.storage;
+  expect(() => withVisibility({ ...unowned, tenantVisibility: "tenant_or_platform" })).toThrow("requires storage.tenantField");
+});
+
+function legacyRelated() {
+  const base = row({});
+  return {
+    ...base,
+    compiled_json: {
+      ...base.compiled_json,
+      recordPresentation: {
+        schemaVersion: 1, titleField: "code", actions: [],
+        sections: [{ key: "contacts", label: "Contacts", fields: [] }],
+        related: [{ schemaVersion: 1, key: "contact", sectionKey: "contacts",
+          source: "contact-person.v1", titleField: "displayName", emptyLabel: "No contacts",
+          viewAllLabel: "View contacts", scopeLabel: "Record", groups: [] }],
+      },
+    },
+  };
+}
+
+it("omits non-executable legacy DTO hints without modifying published bytes or inventing relationships", () => {
+  const source = legacyRelated(), before = structuredClone(source);
+  const descriptor = parseEntityRuntimeDescriptor(source);
+  expect(descriptor.recordPresentation?.related).toBeUndefined();
+  expect(descriptor.recordPresentation?.entityRelationships).toBeUndefined();
+  expect(descriptor.compiledHash).toBe(source.compiled_hash);
+  expect(descriptor.operations.read?.permissionCode).toBe("country.read");
+  expect(source).toEqual(before);
+  // The authoring validator remains strict: this cannot be a new relationship
+  // declaration or a grant to read the target merely because runtime can decode it.
+  const presentation = parseEntityRecordPresentation(source.compiled_json.recordPresentation);
+  expect(() => validateRelatedPresentationOwner(presentation.related!, "country", presentation.entityRelationships))
+    .toThrow("No published related record relationship");
+});
+
+it("still rejects explicit missing or contradictory relationship declarations", () => {
+  const source = legacyRelated();
+  const p = source.compiled_json.recordPresentation;
+  for (const presentation of [
+    { ...p, related: p.related.map(profile => ({ ...profile, relationshipKey: "contacts" })) },
+    { ...p, entityRelationships: [] },
+    { ...p, sections: p.sections.map(section => ({ ...section, relationshipKey: "contacts" })) },
+  ]) {
+    expect(() => parseEntityRuntimeDescriptor({ ...source, compiled_json: {
+      ...source.compiled_json, recordPresentation: presentation,
+    } })).toThrow();
+  }
+});
+
+it("does not hide malformed legacy display metadata", () => {
+  const source = legacyRelated();
+  expect(() => parseEntityRuntimeDescriptor({ ...source, compiled_json: {
+    ...source.compiled_json, recordPresentation: {
+      ...source.compiled_json.recordPresentation,
+      related: [{ ...source.compiled_json.recordPresentation.related[0], source: "arbitrary-sql-owner" }],
+    },
+  } })).toThrow();
 });

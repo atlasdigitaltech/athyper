@@ -222,6 +222,15 @@ export interface ExperiencePlaneRepository {
     localeCode: string,
     expectedPolicyRevision: string,
   ): Promise<void>;
+  /** The principal's own appearance preferences; only the given fields change. */
+  updatePrincipalAppearance?(
+    context: VerifiedRequestContext,
+    patch: Readonly<{
+      appearanceMode?: "system" | "light" | "dark" | "high_contrast";
+      densityCode?: "comfortable" | "compact" | "spacious";
+      themeFamily?: string;
+    }>,
+  ): Promise<void>;
   saveSurfaceDraft?(
     context: VerifiedRequestContext,
     input: Readonly<{

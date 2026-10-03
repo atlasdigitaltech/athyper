@@ -18,7 +18,38 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "code": "rel",
           "routeSlug": "reference-data",
           "name": "Reference & Shared Data",
-          "entities": []
+          "entities": [
+            {
+              "code": "country",
+              "routeSlug": "countries",
+              "name": "Countries"
+            },
+            {
+              "code": "currency",
+              "routeSlug": "currencies",
+              "name": "Currencies"
+            },
+            {
+              "code": "language",
+              "routeSlug": "languages",
+              "name": "Languages"
+            },
+            {
+              "code": "locale",
+              "routeSlug": "locales",
+              "name": "Locales"
+            },
+            {
+              "code": "state_region",
+              "routeSlug": "states-regions",
+              "name": "States and regions"
+            },
+            {
+              "code": "timezone",
+              "routeSlug": "time-zones",
+              "name": "Timezones"
+            }
+          ]
         }
       ]
     },
@@ -74,7 +105,13 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "code": "iam",
           "routeSlug": "identity-access",
           "name": "Identity & Access Management",
-          "entities": []
+          "entities": [
+            {
+              "code": "principal",
+              "routeSlug": "principals",
+              "name": "Principals"
+            }
+          ]
         },
         {
           "code": "onb",
@@ -292,7 +329,13 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "routeSlug": "identity-access",
           "name": "Identity & Access Management",
           "iconKey": "shield-check",
-          "entities": []
+          "entities": [
+            {
+              "code": "principal",
+              "routeSlug": "principals",
+              "name": "Principals"
+            }
+          ]
         },
         {
           "code": "aud",
@@ -377,7 +420,19 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "routeSlug": "business-partner",
           "name": "Business Partners",
           "iconKey": "contact",
-          "entities": []
+          "entities": [
+            {
+              "code": "business_partner_request",
+              "routeSlug": "requests",
+              "name": "Business Partner Requests"
+            },
+            {
+              "code": "business_partner",
+              "routeSlug": "business-partners",
+              "name": "Business Partners"
+            }
+          ],
+          "defaultEntityCode": "business_partner"
         },
         {
           "code": "item",
@@ -398,14 +453,57 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "routeSlug": "organization-reference",
           "name": "Organization & Reference Data",
           "iconKey": "organization",
-          "entities": []
+          "entities": [
+            {
+              "code": "country",
+              "routeSlug": "countries",
+              "name": "Countries"
+            },
+            {
+              "code": "currency",
+              "routeSlug": "currencies",
+              "name": "Currencies"
+            },
+            {
+              "code": "language",
+              "routeSlug": "languages",
+              "name": "Languages"
+            },
+            {
+              "code": "locale",
+              "routeSlug": "locales",
+              "name": "Locales"
+            },
+            {
+              "code": "timezone",
+              "routeSlug": "time-zones",
+              "name": "Timezones"
+            }
+          ],
+          "defaultEntityCode": "currency"
         },
         {
           "code": "loc",
           "routeSlug": "location-address",
           "name": "Location & Address Governance",
           "iconKey": "map-pin",
-          "entities": []
+          "entities": [
+            {
+              "code": "person_address_use",
+              "routeSlug": "address-uses",
+              "name": "Address Uses"
+            },
+            {
+              "code": "address",
+              "routeSlug": "addresses",
+              "name": "Addresses"
+            },
+            {
+              "code": "state_region",
+              "routeSlug": "states-regions",
+              "name": "States and regions"
+            }
+          ]
         },
         {
           "code": "dqs",
@@ -584,7 +682,18 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "routeSlug": "workforce",
           "name": "Core Human Resources",
           "iconKey": "id-card",
-          "entities": []
+          "entities": [
+            {
+              "code": "employee",
+              "routeSlug": "employees",
+              "name": "Employees"
+            },
+            {
+              "code": "person",
+              "routeSlug": "people",
+              "name": "People"
+            }
+          ]
         },
         {
           "code": "tna",
@@ -612,7 +721,13 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "routeSlug": "external-workforce",
           "name": "External Workforce",
           "iconKey": "user-briefcase",
-          "entities": []
+          "entities": [
+            {
+              "code": "external_worker",
+              "routeSlug": "external-workers",
+              "name": "External Workers"
+            }
+          ]
         }
       ]
     },
@@ -713,7 +828,13 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "code": "iam",
           "routeSlug": "identity-access",
           "name": "Identity & Access Management",
-          "entities": []
+          "entities": [
+            {
+              "code": "principal",
+              "routeSlug": "principals",
+              "name": "Principals"
+            }
+          ]
         },
         {
           "code": "aud",
@@ -773,7 +894,38 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
           "code": "rel",
           "routeSlug": "reference-data",
           "name": "Reference & Shared Data",
-          "entities": []
+          "entities": [
+            {
+              "code": "country",
+              "routeSlug": "countries",
+              "name": "Countries"
+            },
+            {
+              "code": "currency",
+              "routeSlug": "currencies",
+              "name": "Currencies"
+            },
+            {
+              "code": "language",
+              "routeSlug": "languages",
+              "name": "Languages"
+            },
+            {
+              "code": "locale",
+              "routeSlug": "locales",
+              "name": "Locales"
+            },
+            {
+              "code": "state_region",
+              "routeSlug": "states-regions",
+              "name": "States and regions"
+            },
+            {
+              "code": "timezone",
+              "routeSlug": "time-zones",
+              "name": "Timezones"
+            }
+          ]
         }
       ]
     },

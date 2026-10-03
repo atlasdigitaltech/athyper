@@ -22,7 +22,7 @@ CREATE OR REPLACE FUNCTION onboarding.fn_create_case_with_target(
     p_activation_criticality onboarding.activation_criticality_d DEFAULT 'independent'
 )
 RETURNS TABLE(case_id uuid, target_id uuid, revision_no integer)
-LANGUAGE plpgsql
+LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, onboarding, master, shared, authz, control
 AS $$
 DECLARE
@@ -32,6 +32,11 @@ DECLARE
     v_target_id uuid;
     v_request_by uuid := COALESCE(p_requesting_principal_id, v_actor);
 BEGIN
+    IF nullif(current_setting('app.current_onboarding_access_token', true), '') IS NOT NULL
+       OR v_actor IS DISTINCT FROM master.current_principal_id_soft() THEN
+        RAISE EXCEPTION 'Authenticated principal context is required for onboarding writes'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
     IF v_tenant_id IS NULL OR v_actor IS NULL THEN
         RAISE EXCEPTION 'Current tenant/principal context is required'
             USING ERRCODE = 'insufficient_privilege';
@@ -112,6 +117,7 @@ BEGIN
         status,
         decision_status,
         created_by,
+        updated_at,
         updated_by
     )
     VALUES (
@@ -132,6 +138,7 @@ BEGIN
         'draft',
         'pending',
         v_actor,
+        now(),
         v_actor
     )
     RETURNING id INTO case_id;
@@ -149,6 +156,7 @@ BEGIN
         criticality,
         status,
         created_by,
+        updated_at,
         updated_by
     )
     VALUES (
@@ -164,6 +172,7 @@ BEGIN
         p_activation_criticality,
         'draft',
         v_actor,
+        now(),
         v_actor
     )
     RETURNING id INTO target_id;
@@ -192,7 +201,7 @@ BEGIN
             'target_tenant_id', p_target_tenant_id
         )
     )
-    RETURNING revision_no INTO revision_no;
+    RETURNING onboarding.onboarding_case_revision.revision_no INTO revision_no;
 
     RETURN NEXT;
 END;
@@ -205,7 +214,7 @@ CREATE OR REPLACE FUNCTION onboarding.fn_advance_case_status(
     p_actor_id uuid DEFAULT NULL
 )
 RETURNS onboarding.case_status_d
-LANGUAGE plpgsql
+LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, onboarding, master, shared
 AS $$
 DECLARE
@@ -215,6 +224,11 @@ DECLARE
     v_revision integer;
     v_prev_status onboarding.case_status_d;
 BEGIN
+    IF nullif(current_setting('app.current_onboarding_access_token', true), '') IS NOT NULL
+       OR v_actor IS DISTINCT FROM master.current_principal_id_soft() THEN
+        RAISE EXCEPTION 'Authenticated principal context is required for onboarding writes'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
     IF v_tenant_id IS NULL OR v_actor IS NULL THEN
         RAISE EXCEPTION 'Current tenant/principal context is required'
             USING ERRCODE = 'insufficient_privilege';
@@ -319,6 +333,8 @@ AS $$
         SELECT 1
           FROM onboarding.onboarding_case_guest_access ga
          WHERE ga.tenant_id = $1
+           AND ga.tenant_id::text = nullif(current_setting('app.current_onboarding_guest_tenant_id', true), '')
+           AND ga.onboarding_case_id::text = nullif(current_setting('app.current_onboarding_guest_case_id', true), '')
            AND ga.onboarding_case_id = $2
            AND ga.revoked_at IS NULL
            AND ga.expires_at > now()
@@ -336,8 +352,10 @@ LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = pg_catalog, onboarding, shared
 AS $$
     SELECT
-        (p_tenant_id = shared.current_tenant_id_soft())
-        OR onboarding.fn_guest_case_has_access(p_tenant_id, p_onboarding_case_id);
+        CASE WHEN nullif(current_setting('app.current_onboarding_access_token', true), '') IS NOT NULL
+             THEN onboarding.fn_guest_case_has_access(p_tenant_id, p_onboarding_case_id)
+             ELSE p_tenant_id = shared.current_tenant_id_soft()
+        END;
 $$;
 
 COMMENT ON FUNCTION onboarding.fn_access_token_raw() IS
@@ -366,13 +384,18 @@ BEGIN
             USING ERRCODE = 'check_violation';
     END IF;
 
-    PERFORM set_config('app.current_tenant_id', p_tenant_id::text, true);
     PERFORM set_config('app.current_onboarding_access_token', v_token, true);
+    PERFORM set_config('app.current_onboarding_guest_tenant_id', p_tenant_id::text, true);
+    PERFORM set_config('app.current_onboarding_guest_case_id', p_onboarding_case_id::text, true);
 
-    IF NOT onboarding.fn_can_read_onboarding_case(p_tenant_id, p_onboarding_case_id) THEN
+    IF NOT onboarding.fn_guest_case_has_access(p_tenant_id, p_onboarding_case_id) THEN
         RAISE EXCEPTION 'Onboarding guest token is not valid for the requested case'
             USING ERRCODE = 'insufficient_privilege';
     END IF;
+
+    -- A guest capability must never inherit ordinary tenant or principal authority.
+    PERFORM set_config('app.current_tenant_id', '', true);
+    PERFORM set_config('app.current_principal_id', '', true);
 END;
 $$;
 
@@ -381,7 +404,11 @@ RETURNS void
 LANGUAGE sql
 AS $$
     SELECT
-        set_config('app.current_onboarding_access_token', '', true);
+        set_config('app.current_onboarding_access_token', '', true),
+        set_config('app.current_onboarding_guest_tenant_id', '', true),
+        set_config('app.current_onboarding_guest_case_id', '', true),
+        set_config('app.current_tenant_id', '', true),
+        set_config('app.current_principal_id', '', true);
 $$;
 
 COMMENT ON FUNCTION onboarding.fn_bind_onboarding_guest_context(uuid, uuid, text) IS

@@ -578,9 +578,24 @@
     [role="tab"]
   ) {
   font-family: var(--a-font-sans);
-  font-size: var(--a-font-size-sm);
+  font-size: var(--a-font-size-body);
   font-weight: var(--a-font-weight-regular);
   line-height: var(--a-line-height-snug);
+}
+/* Page navigation bar pattern (shared with workspace, module and activity bars):
+   each tab and section carries its metadata icon at 18px beside the label. */
+.a-entity-record__tabs button,
+.a-entity-record__group > summary,
+.a-entity-record__group > [role="menu"] > button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--a-space-2);
+}
+.a-entity-record .a-entity-record__tab-icon,
+.a-metadata-detail .a-entity-record__tab-icon {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  flex: none;
 }
 
 /* Hidden navigation settings cannot create overflow for long translations. */

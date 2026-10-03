@@ -1,0 +1,90 @@
+{
+  "schema": "athyper.workforce-read-catalog-upgrade/1",
+  "environment": "dev",
+  "plane": "neon",
+  "migration": "20261003_workforce_entity_read_permissions.sql",
+  "sha256": "098a0bc28b84dc502ea8934b141c83e4d2bfa465b653363958622f6c1892b2ff",
+  "applied": true,
+  "checks": [
+    "actual_postgres_idempotency",
+    "no_role_membership_or_record_grant_changes",
+    "conflicting_scope_rejected",
+    "rollback_restored_catalog"
+  ],
+  "reused": false,
+  "catalog": [
+    {
+      "id": "c419be77-2067-5472-a4f6-b966f75d9f3d",
+      "canonical_code": "neon.workforce.address.read",
+      "permission_kind": "capability",
+      "risk_tier": "high",
+      "requires_mfa": true,
+      "is_shareable": false,
+      "is_delegable": false,
+      "is_overridable": false,
+      "status": "published",
+      "scope_kind": "tenant",
+      "propagation_mode": "exact",
+      "scope_status": "active"
+    },
+    {
+      "id": "e77ae60a-25f2-57ad-8f6b-91dc8a3d29cd",
+      "canonical_code": "neon.workforce.employee.read",
+      "permission_kind": "capability",
+      "risk_tier": "high",
+      "requires_mfa": true,
+      "is_shareable": false,
+      "is_delegable": false,
+      "is_overridable": false,
+      "status": "published",
+      "scope_kind": "tenant",
+      "propagation_mode": "exact",
+      "scope_status": "active"
+    },
+    {
+      "id": "d87ae277-ca75-5040-a567-7479c3dde2f3",
+      "canonical_code": "neon.workforce.external_worker.read",
+      "permission_kind": "capability",
+      "risk_tier": "high",
+      "requires_mfa": true,
+      "is_shareable": false,
+      "is_delegable": false,
+      "is_overridable": false,
+      "status": "published",
+      "scope_kind": "tenant",
+      "propagation_mode": "exact",
+      "scope_status": "active"
+    },
+    {
+      "id": "7d7e0817-5628-5489-a6ae-5d60eddfa661",
+      "canonical_code": "neon.workforce.person_address_use.read",
+      "permission_kind": "capability",
+      "risk_tier": "high",
+      "requires_mfa": true,
+      "is_shareable": false,
+      "is_delegable": false,
+      "is_overridable": false,
+      "status": "published",
+      "scope_kind": "tenant",
+      "propagation_mode": "exact",
+      "scope_status": "active"
+    },
+    {
+      "id": "01abd0ed-bd7c-5e79-af7f-ac6ed940a3e4",
+      "canonical_code": "neon.workforce.person.read",
+      "permission_kind": "capability",
+      "risk_tier": "high",
+      "requires_mfa": true,
+      "is_shareable": false,
+      "is_delegable": false,
+      "is_overridable": false,
+      "status": "published",
+      "scope_kind": "tenant",
+      "propagation_mode": "exact",
+      "scope_status": "active"
+    }
+  ],
+  "grantStateUnchanged": true,
+  "passed": true,
+  "completedAt": "2026-10-02T20:44:30.383Z"
+}

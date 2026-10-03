@@ -1,0 +1,181 @@
+{
+  "schema": "athyper.coordinated-release-activation-verification/1",
+  "verifiedAt": "2026-10-02T21:52:53.765090+00:00",
+  "policyReplacementComplete": true,
+  "nativeSourceReleasesCreated": 6,
+  "signedArtifactsDispatched": 8,
+  "targetActivationsVerified": 0,
+  "targets": [
+    {
+      "plane": "neon",
+      "entity": "address",
+      "expectedReleaseId": "e872c81c-1212-49ef-b7dd-ccf23c897fb7",
+      "observedHead": null,
+      "activated": false
+    },
+    {
+      "plane": "neon",
+      "entity": "employee",
+      "expectedReleaseId": "121f93fc-2e4e-4415-8d4d-9fd1674b3657",
+      "observedHead": null,
+      "activated": false
+    },
+    {
+      "plane": "neon",
+      "entity": "external_worker",
+      "expectedReleaseId": "51f63a89-114d-43b2-a041-b28dbe609f97",
+      "observedHead": null,
+      "activated": false
+    },
+    {
+      "plane": "neon",
+      "entity": "person",
+      "expectedReleaseId": "782c57d9-6ac7-42ac-a82f-81895d80cd19",
+      "observedHead": null,
+      "activated": false
+    },
+    {
+      "plane": "neon",
+      "entity": "person_address_use",
+      "expectedReleaseId": "f36219ac-8038-4195-b6c5-4de688240617",
+      "observedHead": null,
+      "activated": false
+    },
+    {
+      "plane": "neon",
+      "entity": "principal_profile",
+      "expectedReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "observedHead": {
+        "status": "active",
+        "artifactHash": "6cc90e7b5f40d59f8eeb6b69c640c60e9158c38fca6bda94ec49fa1eab0fbc81",
+        "publicationKey": "metadata.entity.principal_profile",
+        "sourceReleaseId": "36193db0-63d2-4677-a047-a9bd1c4dff6c"
+      },
+      "activated": false
+    },
+    {
+      "plane": "mesh",
+      "entity": "principal_profile",
+      "expectedReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "observedHead": {
+        "status": "active",
+        "artifactHash": "b4ad111037c2c794a59bd9304742157131f2cc449606965dc76b3f40fbacc909",
+        "publicationKey": "metadata.entity.principal_profile",
+        "sourceReleaseId": "36193db0-63d2-4677-a047-a9bd1c4dff6c"
+      },
+      "activated": false
+    },
+    {
+      "plane": "studio",
+      "entity": "principal_profile",
+      "expectedReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "observedHead": {
+        "status": "active",
+        "artifactHash": "f01066f4443c829aa860c616c7c415ba06e1f5c81c7e56c73e0c173eab547325",
+        "publicationKey": "metadata.entity.principal_profile",
+        "sourceReleaseId": "36193db0-63d2-4677-a047-a9bd1c4dff6c"
+      },
+      "activated": false
+    }
+  ],
+  "deliveries": [
+    {
+      "plane": "neon",
+      "status": "dispatched",
+      "releaseId": "e872c81c-1212-49ef-b7dd-ccf23c897fb7",
+      "failureCode": null,
+      "deploymentId": "01a0fe8e-5608-7f31-bc4d-1288d632d71a"
+    },
+    {
+      "plane": "neon",
+      "status": "dispatched",
+      "releaseId": "121f93fc-2e4e-4415-8d4d-9fd1674b3657",
+      "failureCode": null,
+      "deploymentId": "01a0fe8e-5895-75f8-8f3f-2dee40df92da"
+    },
+    {
+      "plane": "neon",
+      "status": "dispatched",
+      "releaseId": "51f63a89-114d-43b2-a041-b28dbe609f97",
+      "failureCode": null,
+      "deploymentId": "01a0fe8e-5c92-7858-8a0a-f166b48078c0"
+    },
+    {
+      "plane": "neon",
+      "status": "dispatched",
+      "releaseId": "782c57d9-6ac7-42ac-a82f-81895d80cd19",
+      "failureCode": null,
+      "deploymentId": "01a0fe8e-61fa-7cbb-a4b6-9d3058e3e5fb"
+    },
+    {
+      "plane": "neon",
+      "status": "dispatched",
+      "releaseId": "f36219ac-8038-4195-b6c5-4de688240617",
+      "failureCode": null,
+      "deploymentId": "01a0fe8e-6498-79d4-9d77-5b51ed87747f"
+    },
+    {
+      "plane": "mesh",
+      "status": "dispatched",
+      "releaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "failureCode": null,
+      "deploymentId": "01a0fe8e-6ba3-7b70-a311-48ca6b624434"
+    },
+    {
+      "plane": "studio",
+      "status": "dispatched",
+      "releaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "failureCode": null,
+      "deploymentId": "01a0fe8e-6dc0-737f-9207-49db73fd985c"
+    },
+    {
+      "plane": "neon",
+      "status": "dispatched",
+      "releaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "failureCode": null,
+      "deploymentId": "01a0fe8e-6e39-7b26-a3e4-f11317cc2ca5"
+    }
+  ],
+  "diagnostic": {
+    "schema": "athyper.coordinated-apply-diagnostic/1",
+    "observed": [
+      {
+        "code": "HUMAN_PUBLICATION_TARGET_DENIED",
+        "message": "HUMAN_PUBLICATION_TARGET_DENIED"
+      },
+      {
+        "code": "42501",
+        "message": "permission denied for table deployment"
+      }
+    ],
+    "errors": [
+      {
+        "name": "error",
+        "code": "42501",
+        "message": "permission denied for table deployment"
+      }
+    ]
+  },
+  "remainingFix": "Shared dispatch must derive exact target instance dev from the enrolled coordinated policy instead of defaulting to *. Apply jobs must resolve the enrolled publisher identity rather than the legacy seed provisioner. Failure recording must use its bounded authority privileges so it preserves the original rejection. Existing signed artifacts and approval pins must not be rewritten.",
+  "deploymentCoordinates": {
+    "observedEnvironment": "local",
+    "observedInstance": "*",
+    "requiredEnvironment": "local",
+    "requiredInstance": "dev"
+  },
+  "blockers": [
+    {
+      "confirmed": "HUMAN_PUBLICATION_TARGET_DENIED",
+      "cause": "All eight deployments have local/* coordinates; coordinated activation requires local/dev."
+    },
+    {
+      "confirmed": "42501",
+      "cause": "The failure recorder lacks permission for its deployment-row lock, masking the original target rejection."
+    },
+    {
+      "observedConfiguration": "PUBLICATION_APPLIER_PRINCIPAL_CODE=seed.three-plane-provisioner",
+      "expectedEnrolledPublisher": "dev.metadata.publisher",
+      "note": "A further identity mismatch is expected once target admission succeeds; the current attempt rejects the target first."
+    }
+  ]
+}

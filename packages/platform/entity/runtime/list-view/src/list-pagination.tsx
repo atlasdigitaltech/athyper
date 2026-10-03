@@ -18,7 +18,10 @@ export function EntityListPagination({
   onPrevious,
   onNext,
   onPageSize,
+  hideSinglePageControls = false,
 }: {
+  /** Section lists: rows-per-page and Previous / Next only when there is more than one page. */
+  readonly hideSinglePageControls?: boolean;
   readonly descriptor: EntityListDescriptorV1;
   readonly state: ListLocationStateV1;
   readonly page: EntityListResultV1;
@@ -44,7 +47,7 @@ export function EntityListPagination({
   return (
     <nav className="a-entity-list__pagination" aria-label={intl.message("list.pagination")}>
       <span aria-live="polite" title={page.pagination.countMode === "cached" ? intl.message("list.cachedCount") : undefined}>{summary}</span>
-      <div className="a-entity-list__page-controls">
+      {hideSinglePageControls && !page.pagination.hasNext && !cursorHistory.length && !state.cursor && !state.pageIndex ? null : <div className="a-entity-list__page-controls">
         <Label>
           <span>{intl.message("list.rowsPerPage")}</span>
           <ChoiceSelect
@@ -58,7 +61,7 @@ export function EntityListPagination({
           {recoverFirst ? <Button size="small" variant="secondary" disabled={loading} onClick={onFirst}>{intl.message("list.firstPage")}</Button> : <Button size="small" variant="secondary" disabled={!cursorHistory.length || loading} onClick={onPrevious}>{intl.message("list.previousPage")}</Button>}
           <Button size="small" variant="secondary" disabled={!page.pagination.hasNext || !page.pagination.nextCursor || loading} onClick={onNext}>{intl.message("list.nextPage")}</Button>
         </div>
-      </div>
+      </div>}
     </nav>
   );
 }

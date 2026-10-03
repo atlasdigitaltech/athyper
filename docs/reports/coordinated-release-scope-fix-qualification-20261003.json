@@ -1,0 +1,100 @@
+{
+  "schema": "athyper.coordinated-product-scope-qualification/1",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "068f05647e66589b53755776120c673026fdf0de9224efd5b6bf154a87bcd965"
+  },
+  "approvedCompiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "0b0cc0c465d589bd305b0f367c644d635290b7c45385c970e53cc48aab1e350b"
+  },
+  "scope": "Read-only signed artifact and group admission; execution authority and live activation remain separate gates.",
+  "planes": [
+    {
+      "plane": "studio",
+      "admitted": 1,
+      "artifacts": [
+        {
+          "deploymentId": "01a0fed5-6c3b-7607-9e9c-b4ac82db05f2",
+          "artifactHash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+          "tenantIdOmitted": true,
+          "signatureVerified": true
+        }
+      ]
+    },
+    {
+      "plane": "neon",
+      "admitted": 6,
+      "artifacts": [
+        {
+          "deploymentId": "01a0fed5-6a18-748f-ac85-fdc8c10615f0",
+          "artifactHash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2",
+          "tenantIdOmitted": true,
+          "signatureVerified": true
+        },
+        {
+          "deploymentId": "01a0fed5-6b82-77a1-a31a-a9c3a920bc99",
+          "artifactHash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c",
+          "tenantIdOmitted": true,
+          "signatureVerified": true
+        },
+        {
+          "deploymentId": "01a0fed5-6c95-7870-9e41-0f017cc35ed2",
+          "artifactHash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+          "tenantIdOmitted": true,
+          "signatureVerified": true
+        },
+        {
+          "deploymentId": "01a0fed5-6aca-7152-9f7a-fefd52741cbd",
+          "artifactHash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20",
+          "tenantIdOmitted": true,
+          "signatureVerified": true
+        },
+        {
+          "deploymentId": "01a0fed5-6a72-7000-862f-bb15119c0d18",
+          "artifactHash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a",
+          "tenantIdOmitted": true,
+          "signatureVerified": true
+        },
+        {
+          "deploymentId": "01a0fed5-6b28-7f5b-a5d6-ca6b2cea2e46",
+          "artifactHash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8",
+          "tenantIdOmitted": true,
+          "signatureVerified": true
+        }
+      ]
+    },
+    {
+      "plane": "mesh",
+      "admitted": 1,
+      "artifacts": [
+        {
+          "deploymentId": "01a0fed5-6bde-72ab-8bc0-4a3b4373b7c9",
+          "artifactHash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+          "tenantIdOmitted": true,
+          "signatureVerified": true
+        }
+      ]
+    }
+  ],
+  "activatedTargets": 0,
+  "passed": true,
+  "completedAt": "2026-10-02T23:13:22.570Z",
+  "implementation": {
+    "file": "server/packages/services/publication/src/coordinated-entity-adoption.ts",
+    "change": "Use compiledPublicationTenant to decode global signed scope instead of comparing the optional tenantId field to null. No changes to signed artifacts or scope-decoder rules."
+  },
+  "verification": {
+    "testsPassed": 31,
+    "testFiles": 3,
+    "publicationTypecheck": "passed",
+    "actualSignedArtifactsAdmitted": 8,
+    "liveActivationPerformed": false
+  },
+  "nextGate": {
+    "reason": "Compiler fingerprint differs from the active recovery policy. Existing approvals remain recorded for the previous fingerprint.",
+    "required": "Reconcile the exact recovery policy and existing command pins through shared lifecycle, with recorded Admin proposal and independent Owner review before live execution."
+  }
+}

@@ -100,7 +100,7 @@ it("rejects lost catalog permissions and member tampering even with a fresh payl
   Object.assign(changed.manifest, { payloadSha256: canonical.sha256(canonical.canonicalBytes(changed.envelope.payload)) });
   await expect(qualifyRuntimePublication(changed, f.dependencies, canonical, "sign")).rejects.toThrow();
 });
-it("worker uses scoped sources, signs real bytes, stores immutably and dispatches only after requalification", async () => {
+it.each([undefined, "dev"])("worker signs immutably and dispatches with configured instance %s", async targetInstance => {
   const f = fixture();
   let saved: { id: string; unsigned_document: unknown; unsigned_hash: string } | undefined;
   const query = vi.fn(async (text: string, values: unknown[] = []) => {
@@ -111,7 +111,7 @@ it("worker uses scoped sources, signs real bytes, stores immutably and dispatche
       revision_id: id(2), published_by: id(3), entity_code: f.source.entityCode, contract_json: {}, compiled_json: f.source.native, plane_key: "neon", created_at: f.source.generatedAt, target_planes: ["neon"] }] };
     if (text.startsWith("INSERT INTO publication.artifact_compilation")) { saved = { id: String(values[0]), unsigned_document: JSON.parse(String(values[3])), unsigned_hash: String(values[4]) }; return { rows: [] }; }
     if (text.startsWith("SELECT id,unsigned_hash")) return { rows: [saved] };
-    if (text.startsWith("SELECT c.*")) return { rows: [{ ...saved, publication_release_id: id(1), release_key: f.source.publicationKey, release_no: 1, created_by: id(3), tenant_id: id(4), plane_code: "neon", artifact_kind: "compiled_entity_runtime" }] };
+    if (text.startsWith("SELECT c.*")) return { rows: [{ ...saved, publication_release_id: id(1), release_key: f.source.publicationKey, release_no: 1, created_by: id(3), tenant_id: id(4), release_metadata: targetInstance ? { humanExecutionPolicy: { environment: "local", instance: "dev" } } : {}, plane_code: "neon", artifact_kind: "compiled_entity_runtime" }] };
     if (text.includes("a.artifact_kind='compiled_entity_runtime'")) return { rows: [{ ...saved, publication_release_id: id(1), plane_code: "neon" }] };
     return { rows: [] };
   });
@@ -121,11 +121,20 @@ it("worker uses scoped sources, signs real bytes, stores immutably and dispatche
   const authority = { createArtifact: vi.fn(async () => ({ id: id(8), status: "compiled" })), transitionArtifact: vi.fn(async () => {}),
     createDeployment: vi.fn(async () => ({ deploymentId: id(9) })), getDeployment: vi.fn(async () => ({ deploymentStatus: "pending", targetPlane: "neon" })), transitionDeployment: vi.fn(async () => {}) };
   const signer = { sign: vi.fn(async (input: { bytes: Uint8Array }) => ({ signature: sign(null, input.bytes, keys.privateKey).toString("base64") })) };
-  const options = { database: db, authority, store: { putImmutable }, signer, canonicalizer: canonical, bucket: "test-artifacts", signingKeyId: "test-key", targetEnvironment: "local", targetPlanes: ["neon"], compiledRuntimePublication: f.dependencies } as unknown as KyselyPublicationAuthorityWorkOptions;
+  const options = { database: db, authority, store: { putImmutable }, signer, canonicalizer: canonical, bucket: "test-artifacts", signingKeyId: "test-key", targetEnvironment: "local", targetInstance, targetPlanes: ["neon"], compiledRuntimePublication: f.dependencies } as unknown as KyselyPublicationAuthorityWorkOptions;
   try {
     const worker = new KyselyPublicationAuthorityWork(options);
     const compiled = await worker.compile(id(1));
     const signed = await worker.sign(compiled.compilationIds[0]!);
+    expect(authority.createDeployment).toHaveBeenCalledWith(expect.objectContaining({ targetInstance: targetInstance ?? "*", targetEnvironment: "local" }));
+    if (targetInstance) {
+      for (const incorrect of [undefined, "*", "qa"]) {
+        await expect(new KyselyPublicationAuthorityWork({ ...options, targetInstance: incorrect }).sign(compiled.compilationIds[0]!)).rejects.toThrow("PUBLICATION_DEPLOYMENT_TARGET_MISMATCH");
+      }
+      await expect(new KyselyPublicationAuthorityWork({ ...options, targetEnvironment: "production" }).sign(compiled.compilationIds[0]!)).rejects.toThrow("PUBLICATION_DEPLOYMENT_TARGET_MISMATCH");
+      expect(authority.createDeployment).toHaveBeenCalledOnce();
+      expect(putImmutable).toHaveBeenCalledOnce();
+    }
     const stored = JSON.parse(Buffer.from(putImmutable.mock.calls[0]![0].bytes).toString());
     const { signature, ...unsigned } = stored;
     expect(verify(null, canonical.canonicalBytes(unsigned), keys.publicKey, Buffer.from(signature, "base64"))).toBe(true);
@@ -148,4 +157,16 @@ it("keeps compilation dependencies explicit and excludes product-specific implem
     node.forEachChild(visit);
   }
   visit(ast); expect(content).not.toMatch(/business_partner|country|currency|process\.env/);
+});
+
+it("binds coordinated activation to the same manifest digest at compile, sign and dispatch", async () => {
+  const f = fixture(); Object.assign(f.source, { coordinationHash: "e".repeat(64) });
+  const document = await compileRuntimePublication(f.source, f.dependencies, canonical, "test-key");
+  expect(document.manifest.evidence?.coordinationHash).toBe("e".repeat(64));
+  for (const phase of ["sign", "dispatch"] as const) {
+    await qualifyRuntimePublication(document, f.dependencies, canonical, phase);
+    expect(f.qualify).toHaveBeenLastCalledWith(expect.objectContaining({ phase, coordinationHash: "e".repeat(64) }));
+  }
+  Object.assign(document.manifest.evidence!, { coordinationHash: "invalid" });
+  await expect(qualifyRuntimePublication(document, f.dependencies, canonical, "sign")).rejects.toThrow();
 });

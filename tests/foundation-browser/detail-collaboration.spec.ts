@@ -210,8 +210,12 @@ for (const width of [1920, 1024, 390]) test(`full-view Comments and Files share 
   expect(Math.abs(bounds!.width-mountBounds!.width)).toBeLessThan(1);
   await expect(panel.locator('.a-collaboration-panel__header')).toHaveCount(0);
   await expect(panel.locator('[data-panel-action=close]')).toBeVisible();
+  await expect(panel.locator('.a-collaboration-comments')).toBeVisible();
   const contentBounds=await panel.locator('.a-collaboration-comments').boundingBox();
-  expect(Math.abs(contentBounds!.x-bounds!.x)).toBeLessThan(1);
+  // The shared body owns the responsive gutter for both tools and their docks.
+  const gutter=width <= 768 ? 12 : 16;
+  expect(Math.abs(contentBounds!.x-bounds!.x-gutter)).toBeLessThan(1);
+  expect(Math.abs(contentBounds!.width-(bounds!.width-2*gutter))).toBeLessThan(1);
   const aligned=async (selector:string) => {
     const box=await panel.locator(selector).boundingBox();
     expect(box).not.toBeNull();
@@ -222,7 +226,7 @@ for (const width of [1920, 1024, 390]) test(`full-view Comments and Files share 
   await aligned('.a-comment-filters');
   await panel.locator("[data-action-dock-trigger]:visible").click();
   await aligned('.a-comment-composer-card');
-  const controlsRight=async()=>{const box=await panel.locator('.a-panel-header__actions').boundingBox();return box!.x+box!.width;};
+  const controlsRight=async()=>{const box=await panel.locator('.a-record-panel-toolbar-actions').boundingBox();return box!.x+box!.width;};
   const commentsRight=await controlsRight();
   await opener.getByRole('button',{name:'Open Files',exact:true}).click();
   await expect(panel.locator('.a-attachment-workspace')).toBeVisible();

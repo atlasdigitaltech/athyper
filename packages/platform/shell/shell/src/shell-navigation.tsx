@@ -4,7 +4,7 @@ import {
   HomeIcon,
   StarIcon,
   HistoryIcon,
-  resolveIcon,
+  resolveMetadataIcon,
 } from "@athyper/platform-icons";
 import type { DerivedShellNavigation } from "./core";
 import type { ShellQuickAccessTab } from "./quick-access";
@@ -59,7 +59,7 @@ export function NavigationPanel({
           </a>
         </li>
         {navigation.workspaces.map((workspace) => {
-          const Icon = resolveIcon(workspace.iconKey);
+          const Icon = resolveMetadataIcon("workspace", workspace.iconKey);
           return (
             <li key={workspace.code}>
               <a

@@ -1,0 +1,20 @@
+{
+  "schema": "athyper.coordinated-apply-diagnostic/1",
+  "observed": [
+    {
+      "code": "HUMAN_PUBLICATION_TARGET_DENIED",
+      "message": "HUMAN_PUBLICATION_TARGET_DENIED"
+    },
+    {
+      "code": "42501",
+      "message": "permission denied for table deployment"
+    }
+  ],
+  "errors": [
+    {
+      "name": "error",
+      "code": "42501",
+      "message": "permission denied for table deployment"
+    }
+  ]
+}

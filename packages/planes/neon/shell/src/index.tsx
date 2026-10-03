@@ -286,6 +286,7 @@ export function NeonShell({
                 ? bootstrap.identity.secondaryLabel
                 : undefined
             }
+            profileHref="/app/entity/principal/me"
             transactionContext={neonTransactionContext(work, labels)}
             experienceState={bootstrap.state}
             workContextControl={

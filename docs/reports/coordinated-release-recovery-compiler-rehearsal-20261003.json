@@ -1,0 +1,20 @@
+{
+  "schema": "athyper.recovery-compiler-rehearsal/1",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "03f977e6984ec9083dbac9a902f9ef18e376d18687d0308e3e3547582987ea86"
+  },
+  "checks": [
+    "synthetic_maker_checker_policy_and_audit_inside_rollback",
+    "worker_revalidated_both_policy_pins_and_preserved_commands",
+    "studio:group_activated_and_acknowledged_inside_rollback",
+    "neon:group_activated_and_acknowledged_inside_rollback",
+    "mesh:group_activated_and_acknowledged_inside_rollback",
+    "all_policy_audit_retry_head_and_ack_changes_rolled_back"
+  ],
+  "actualHumanApprovalRecorded": false,
+  "committedActivations": 0,
+  "passed": true,
+  "completedAt": "2026-10-02T23:34:52.496Z"
+}

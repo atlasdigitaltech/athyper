@@ -1,0 +1,20 @@
+{
+  "schema": "athyper.coordinated-policy-replacement-activation/1",
+  "activatedAt": "2026-10-02T21:38:33.399Z",
+  "actor": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+  "id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91",
+  "version": 1,
+  "hash": "f83745496f6130b300dcb1da6514d4f6079a5c2af720594908b576e9a92da76f",
+  "status": "active",
+  "replaced": [
+    {
+      "id": "06ce6433-5128-48ed-8228-5533b9386bf5",
+      "hash": "c57a426b7a1764020969df89db5df91f46a5c4574e1cf04477fb2c936aad2e44"
+    },
+    {
+      "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+      "hash": "b924f8a65d0e55fdc8052458b6f7f289903a284c0d859f266e0e84c4682fe5ae"
+    }
+  ],
+  "replayed": false
+}

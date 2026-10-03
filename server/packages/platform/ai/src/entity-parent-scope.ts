@@ -30,7 +30,8 @@ export async function resolveAtlasParentScope(
   const relation = parent?.recordPresentation?.entityRelationships?.find(item =>
     item.key === page.parentScope!.relationshipKey && item.targetEntity === page.entityCode);
   if (!parent || parent.entityCode !== page.parentScope.parentEntityCode ||
-      parent.planeKey !== context.planeKey || !parent.compiledHash || !relation)
+      parent.planeKey !== context.planeKey || !parent.compiledHash || !relation ||
+      (page.parentScope.parentDescriptorHash !== undefined && page.parentScope.parentDescriptorHash !== parent.compiledHash))
     throw new AtlasServiceError("BUSINESS_CONTEXT_UNAVAILABLE", "The requested parent scope is unavailable.");
   return Object.freeze({ ...page.workContext, ...page.parentScope, parentDescriptorHash: parent.compiledHash });
 }

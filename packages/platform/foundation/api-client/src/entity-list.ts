@@ -6,6 +6,8 @@ import type { Operation, RequestOptions } from "./index";
 
 type EntityListParams = Readonly<Record<string, string | number>>;
 
+/** The caller's own record of an owner-scoped entity (`/app/entity/{code}/me`). */
+export const entityOwnRecordOperation: Operation<{ readonly recordId: string }> = Object.freeze({method:"GET",path:(params:EntityListParams)=>`/api/entity-runtime/${entityCode(params)}/own-record`,parse:(value:unknown)=>{const id=(value as {recordId?:unknown})?.recordId;if(typeof id!=="string"||!id||id.length>128||!/^[A-Za-z0-9_-]+$/.test(id))throw new TypeError("Invalid own record");return Object.freeze({recordId:id});},requestClass:"interactive",idempotency:"forbidden",response:"json"});
 export const entityApplicationDescriptorOperation: Operation<EntityApplicationDescriptorV1> = Object.freeze({method:"GET",path:(params:EntityListParams)=>`/api/entity-runtime/${entityCode(params)}/application-descriptor`,parse:parseEntityApplicationDescriptor,requestClass:"interactive",idempotency:"forbidden",response:"json"});
 export const entityListDescriptorOperation: Operation<EntityListDescriptorV1> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/entity-runtime/${entityCode(params)}/list-descriptor`, parse: (value: unknown) => {
   const descriptor = parseEntityListDescriptor(value);
@@ -45,6 +47,22 @@ export const commitRecordImportOperation: Operation<{ readonly sessionId: string
 export interface RecordTransferProgressV1 { readonly stage:string;readonly completed:number;readonly total?:number;readonly percent?:number;readonly updatedAt:string; }
 export interface RecordTransferReceiptV1 { readonly schemaVersion:1;readonly rowCount:number;readonly outcomeCounts?:Readonly<Record<string,number>>;readonly completedAt:string;readonly descriptorHash?:string;readonly checksum?:string; }
 export interface RecordTransferItemV1 { readonly id:string;readonly kind:"import"|"export";readonly entityCode:string;readonly operation?:RecordImportMode;readonly status:string;readonly rowCount:number;readonly errorCount:number;readonly createdAt:string;readonly completedAt?:string;readonly downloadable:boolean;readonly progress?:RecordTransferProgressV1;readonly receipt?:RecordTransferReceiptV1;readonly errorCode?:string; }
+/** One entity the caller may open, from GET /api/entity-runtime/directory. */
+export interface EntityDirectoryItemV1 { readonly entityCode:string; readonly title:string; readonly description?:string; /** Records the caller may see; absent when not counted exactly. */ readonly count?:number; readonly iconKey?:string; readonly actions:readonly { readonly key:string; readonly label:string; readonly href:string }[]; }
+/** Ask with `query: { entity: [...codes] }` (at most fifty); entities the caller may not list are left out. */
+export const entityDirectoryOperation:Operation<readonly EntityDirectoryItemV1[]>=Object.freeze({method:"GET",path:"/api/entity-runtime/directory",parse:parseDirectory,requestClass:"interactive",idempotency:"forbidden",response:"json"});
+function parseDirectory(value:unknown):readonly EntityDirectoryItemV1[]{
+  const items=value&&typeof value==="object"&&Array.isArray((value as {items?:unknown}).items)?(value as {items:unknown[]}).items:undefined;
+  if(!items)throw new TypeError("Entity directory items required");
+  const text=(candidate:unknown,optional=false)=>{if(optional&&candidate===undefined)return undefined;if(typeof candidate!=="string"||!candidate.trim()||candidate.length>512)throw new TypeError("Invalid entity directory text");return candidate;};
+  return Object.freeze(items.map(raw=>{
+    const item=raw as Record<string,unknown>;
+    if(!/^[a-z][a-z0-9_]{0,126}$/.test(String(item.entityCode))||!Array.isArray(item.actions))throw new TypeError("Invalid entity directory item");
+    const description=text(item.description,true),iconKey=text(item.iconKey,true),count=typeof item.count==="number"&&Number.isSafeInteger(item.count)&&item.count>=0?item.count:undefined;
+    return Object.freeze({entityCode:String(item.entityCode),title:text(item.title)!,...(description?{description}:{}),...(iconKey?{iconKey}:{}),...(count===undefined?{}:{count}),
+      actions:Object.freeze(item.actions.map(rawAction=>{const action=rawAction as Record<string,unknown>,href=text(action.href)!;if(!href.startsWith("/")||href.startsWith("//"))throw new TypeError("Entity directory actions must be application paths");return Object.freeze({key:text(action.key)!,label:text(action.label)!,href});}))});
+  }));
+}
 export const recordTransfersOperation:Operation<readonly RecordTransferItemV1[]>=Object.freeze({method:"GET",path:"/api/records/transfers",parse:parseTransfers,requestClass:"interactive",idempotency:"forbidden",response:"json"});
 export const cancelRecordImportOperation:Operation<{readonly sessionId:string;readonly status:string}>=Object.freeze({method:"POST",path:(params:EntityListParams)=>`/api/records/imports/${uuidParam(params,"sessionId")}/cancel`,parse:(value:unknown)=>{const item=parseObject(value);return Object.freeze({sessionId:requiredText(item,"sessionId"),status:requiredText(item,"status")});},requestClass:"background",idempotency:"forbidden",response:"json"});
 export const cancelRecordExportOperation:Operation<{readonly exportRequestId:string;readonly status:string}>=Object.freeze({method:"POST",path:(params:EntityListParams)=>`/api/records/exports/${uuidParam(params,"exportRequestId")}/cancel`,parse:(value:unknown)=>{const item=parseObject(value);return Object.freeze({exportRequestId:requiredText(item,"exportRequestId"),status:requiredText(item,"status")});},requestClass:"background",idempotency:"forbidden",response:"json"});
@@ -74,6 +92,7 @@ export function entityListQuery(state: Pick<ListLocationStateV1, "standardViewKe
 export function entityListScopeQuery(scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
   return Object.freeze({
     ...(scope?.parentEntityCode ? {parentEntityCode: scope.parentEntityCode, parentRecordId: scope.parentRecordId, relationshipKey: scope.relationshipKey} : {}),
+    ...(scope?.parentDescriptorHash ? { parentDescriptorHash: scope.parentDescriptorHash } : {}),
     ...(scope?.companyCodeIds?.length ? { companyCodeIds: [...new Set(scope.companyCodeIds)].sort().join(",") } : {}),
     ...(scope?.operatingOrganizationIds?.length ? { operatingOrganizationIds: [...new Set(scope.operatingOrganizationIds)].sort().join(",") } : {}),
     ...(scope?.partnerRole ? {partnerRole:scope.partnerRole} : {}),

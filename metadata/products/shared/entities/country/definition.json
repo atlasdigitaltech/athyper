@@ -16,6 +16,7 @@
       }
     ],
     "entityCode": "country",
+    "iconKey": "globe",
     "title": {
       "labelKey": "entity.country.title",
       "defaultText": "Countries"

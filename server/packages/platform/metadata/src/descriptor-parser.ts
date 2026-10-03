@@ -183,10 +183,24 @@ export function parseEntityRuntimeDescriptor(
   )
     throw Error("Record predicate requires a stored field");
   const formPresentation = value["formPresentation"] === undefined ? undefined : parseEntityFormPresentation(value["formPresentation"], fields.map(field => field.key));
-  const recordPresentation =
+  const parsedRecordPresentation =
     value["recordPresentation"] === undefined
       ? undefined
       : parseEntityRecordPresentation(value["recordPresentation"]);
+  // Older published descriptors carry DTO display hints, with neither an
+  // explicit relationship key nor a relationship declaration. The current
+  // authorized presentation projection already omits these legacy hints.
+  // Omit them here too, before executable relationship validation: never infer
+  // a join or resurrect their retired rendering path. Explicit bindings remain
+  // strict, and the authoring compiler still rejects unbound new declarations.
+  const recordPresentation: ReturnType<typeof parseEntityRecordPresentation> | undefined =
+    parsedRecordPresentation?.entityRelationships === undefined &&
+    parsedRecordPresentation?.related?.every(profile => profile.relationshipKey === undefined)
+      ? (() => {
+          const { related: _legacyHints, ...presentation } = parsedRecordPresentation;
+          return presentation;
+        })()
+      : parsedRecordPresentation;
   const authorization =
     value["authorization"] === undefined
       ? undefined
@@ -217,6 +231,7 @@ export function parseEntityRuntimeDescriptor(
     validateRelatedPresentationOwner(
       recordPresentation.related,
       row.entity_code,
+      recordPresentation.entityRelationships,
     );
   const collectionRelationship =
     value["collectionRelationship"] === undefined
@@ -285,6 +300,9 @@ export function parseEntityRuntimeDescriptor(
             ),
           }
         : {}),
+      ...(storage["tenantVisibility"] === undefined
+        ? {}
+        : { tenantVisibility: tenantVisibility(storage) }),
       ...(storage["versionField"]
         ? {
             versionField: identifier(
@@ -1308,6 +1326,17 @@ function identifier(value: unknown, name: string): string {
   if (!/^[a-z_][a-z0-9_]{0,62}$/.test(result))
     throw new Error(`${name} must be a SQL identifier`);
   return result;
+}
+/** Platform-row visibility is meaningless without an owning tenant column. */
+function tenantVisibility(
+  storage: Record<string, unknown>,
+): "tenant" | "tenant_or_platform" {
+  const value = storage["tenantVisibility"];
+  if (value !== "tenant" && value !== "tenant_or_platform")
+    throw new Error("storage.tenantVisibility is invalid");
+  if (!storage["tenantField"])
+    throw new Error("storage.tenantVisibility requires storage.tenantField");
+  return value;
 }
 function code(value: unknown, name: string): string {
   const result = string(value, name);

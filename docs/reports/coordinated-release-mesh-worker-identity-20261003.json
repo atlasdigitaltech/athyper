@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.mesh-worker-identity-install/1",
+  "migration": "20261003_mesh_publication_worker_identity.sql",
+  "sha256": "464ffc5a35acfdf40ada0acbc2094eadfc9bc91d09a65f794261c0cb9dde4fca",
+  "rollbackProbePassed": true,
+  "applied": true
+}

@@ -9,6 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "test:related-ownership": "tsx --test src/related-presentation.test.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json && esbuild src/index.ts --bundle --format=esm --platform=neutral --outfile=dist/index.js"
   },

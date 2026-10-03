@@ -705,7 +705,8 @@
                 "localizedLabel": {
                   "labelKey": "entity.principal.sections.overview",
                   "defaultText": "Overview"
-                }
+                },
+                "iconKey": "layout"
               },
               {
                 "key": "profile",
@@ -715,7 +716,8 @@
                 "localizedLabel": {
                   "labelKey": "entity.principal.sections.profile",
                   "defaultText": "Profile"
-                }
+                },
+                "iconKey": "user"
               },
               {
                 "key": "notifications",
@@ -725,13 +727,15 @@
                 "localizedLabel": {
                   "labelKey": "entity.principal.sections.notifications",
                   "defaultText": "Notifications"
-                }
+                },
+                "iconKey": "bell"
               },
               {
                 "key": "ui_profile",
                 "label": "UI Profile",
                 "fields": [],
-                "relationshipKey": "ui_profile"
+                "relationshipKey": "ui_profile",
+                "iconKey": "settings"
               }
             ],
             "actions": [],
@@ -753,9 +757,22 @@
                 },
                 "readOperation": "list",
                 "emptyState": {
-                  "message": "Profile has not been set up.",
-                  "setupLabel": "Set up profile",
-                  "editLabel": "Edit profile",
+                  "title": {
+                    "labelKey": "entity.principal.related.profile.empty.title",
+                    "defaultText": "Set up your profile"
+                  },
+                  "message": {
+                    "labelKey": "entity.principal.related.profile.empty.message",
+                    "defaultText": "Add the names shown across the platform."
+                  },
+                  "setupLabel": {
+                    "labelKey": "entity.principal.related.profile.empty.setup",
+                    "defaultText": "Set up profile"
+                  },
+                  "editLabel": {
+                    "labelKey": "entity.principal.related.profile.empty.edit",
+                    "defaultText": "Edit profile"
+                  },
                   "creation": "on_save"
                 }
               },
@@ -791,9 +808,22 @@
                 },
                 "readOperation": "list",
                 "emptyState": {
-                  "message": "Using organization defaults. Customize only the settings you want to override.",
-                  "setupLabel": "Customize preferences",
-                  "editLabel": "Edit preferences",
+                  "title": {
+                    "labelKey": "entity.principal.related.ui_profile.empty.title",
+                    "defaultText": "Using your organization's defaults"
+                  },
+                  "message": {
+                    "labelKey": "entity.principal.related.ui_profile.empty.message",
+                    "defaultText": "Customize only the settings you want to override."
+                  },
+                  "setupLabel": {
+                    "labelKey": "entity.principal.related.ui_profile.empty.setup",
+                    "defaultText": "Customize preferences"
+                  },
+                  "editLabel": {
+                    "labelKey": "entity.principal.related.ui_profile.empty.edit",
+                    "defaultText": "Edit preferences"
+                  },
                   "creation": "on_save"
                 }
               }

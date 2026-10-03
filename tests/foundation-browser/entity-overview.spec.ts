@@ -26,6 +26,7 @@ function App(){const[refreshed,setRefreshed]=useState(false);return <main><h1>Bu
   format: "iife",
   platform: "browser",
   jsx: "automatic",
+  loader: { ".css": "empty" },
   define: { "process.env.NODE_ENV": '"test"' },
   tsconfig: resolve("tooling/config/tsconfig-react.json"),
   logLevel: "silent",

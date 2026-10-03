@@ -1,0 +1,51 @@
+const fs=require('fs'),cp=require('child_process'),crypto=require('crypto');
+const ts=require(process.cwd()+'/node_modules/typescript');
+const list=fs.readFileSync('/tmp/athyper-hardcode-files.txt','utf8').trim().split('\n').filter(x=>!x.startsWith('.tmp/')&&!/(^|\/)\.next[^/]*\//.test(x)).sort();
+const entities=new Set(), permissions=new Set();
+function walkJson(x){if(!x||typeof x!=='object')return;for(const [k,v] of Object.entries(x)){if(typeof v==='string'){if(/^(entityCode|targetEntityCode|sourceEntityCode|entity_code)$/.test(k)&&/^[a-z][a-z0-9_.]*$/.test(v))entities.add(v);if(/permission/i.test(k)&&/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(v))permissions.add(v)}else walkJson(v)}}
+const meta=cp.execFileSync('rg',['--files','--hidden','--no-ignore','metadata','-g','*.json'],{encoding:'utf8'}).trim().split('\n');
+for(const f of meta)try{walkJson(JSON.parse(fs.readFileSync(f,'utf8')))}catch{}
+const sqlFiles=cp.execFileSync('rg',['--files','--hidden','--no-ignore','server/db/ddl','-g','*.sql'],{encoding:'utf8'}).trim().split('\n').filter(f=>f.includes('/authz/'));
+for(const f of sqlFiles){const s=fs.readFileSync(f,'utf8');for(const m of s.matchAll(/'([a-z][a-z0-9_]*(?:\.[a-z0-9_]+){2,})'/g))if(/\.(read|write|view|edit|manage|create|update|delete|list|execute|approve|publish|propose|activate|retire|review|administer|export|import|reveal|submit|cancel|assign|simulate|operate|download|upload|configure|replay|link|unlink|access|use|discover|search|inspect|refresh|reset|resolve|release|complete|verify|invoke|record|capture|run|set|patch|read_all)$/.test(m[1]))permissions.add(m[1]);}
+const parsed=list.map(file=>{const s=fs.readFileSync(file,'utf8');return {file,s,sf:ts.createSourceFile(file,s,ts.ScriptTarget.Latest,true,file.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS)}});
+// Discover literal entity identifiers even if no product definition exists.
+for(const {sf,file} of parsed){if(/(^tests\/|\/__tests__\/|\.(test|spec)\.[^.]+$|\/fixtures\/|^tooling\/|\/scripts\/)/.test(file))continue;function visit(n){if(ts.isPropertyAssignment(n)&&/^(entityCode|targetEntityCode|sourceEntityCode|entity_code)$/.test(n.name.getText(sf).replace(/['"]/g,''))&&ts.isStringLiteralLike(n.initializer)&&/^[a-z][a-z0-9_.]*$/.test(n.initializer.text))entities.add(n.initializer.text);if(ts.isBinaryExpression(n)&&/^(?:[a-zA-Z_$][\w$]*\.)*(?:entityCode|entity_code)$/.test(n.left.getText(sf))&&ts.isStringLiteralLike(n.right)&&/^[a-z][a-z0-9_.]*$/.test(n.right.text))entities.add(n.right.text);ts.forEachChild(n,visit)}visit(sf)}
+// Freeze permission vocabulary before counting; avoid traversal-order dependence.
+for(const {sf} of parsed){function visit(n){if(ts.isStringLiteralLike(n)){let a=n;for(let i=0;i<5&&a;i++,a=a.parent){if(ts.isVariableDeclaration(a)&&/permission/i.test(a.name.getText(sf))&&/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(n.text))permissions.add(n.text);}}ts.forEachChild(n,visit)}visit(sf)}
+function scope(f){if(/(^tests\/|\/__tests__\/|\.(test|spec|test-helper|fixtures)\.[^.]+$|\/fixtures\/|\/test-utils[/.]|\/testing\/)/.test(f))return 'test_fixture';if(/(^tooling\/|\/scripts\/|^deploy\/|\/(vitest|playwright)\.config\.)/.test(f))return 'tooling_operations';if(/\.d\.ts$|\/generated[/.\-]/.test(f))return 'declaration_generated';return 'application_source'}
+const rows=[],files=[];
+for(const {file,s,sf} of parsed){
+ const found=new Map(),lines=s.split('\n');
+ function add(n,category,reason,value){let pos=n.getStart(sf),line=sf.getLineAndCharacterOfPosition(pos).line+1,key=[line,category,reason,value].join('|');found.set(key,{file,line,category,reason,value:String(value).slice(0,220),scope:scope(file),excerpt:lines[line-1].trim().slice(0,450)})}
+ function visit(n){
+  let value=ts.isStringLiteralLike(n)?n.text:ts.isTemplateExpression(n)?n.getText(sf):undefined;
+  if(value!==undefined&&!ts.isImportDeclaration(n.parent)&&!ts.isExportDeclaration(n.parent)){
+   const parent=n.parent.getText(sf).slice(0,1200), low=parent.toLowerCase();
+   let ancestor=n;for(let depth=0;depth<5&&ancestor;depth++,ancestor=ancestor.parent){if(ts.isVariableDeclaration(ancestor)&&/permission/i.test(ancestor.name.getText(sf))&&/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(value))permissions.add(value);}
+
+   if(permissions.has(value)||(!(ts.isPropertyAssignment(n.parent)&&n.parent.name===n)&&(/permission/.test(low)&&/\.(read|write|view|edit|manage|create|update|delete|execute|approve|publish|review|activate|retire|export|import|reveal|submit|cancel|assign|simulate|operate|download|upload|configure|replay|link|unlink|access|use|discover|search|inspect|refresh|reset|resolve|release|complete|verify|invoke|run|patch|author|read_all)$/.test(value)&&/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(value)&&!value.includes('.v1')&&!value.startsWith('athyper.'))))
+    add(n,'permission','literal_permission_candidate',value);
+   if(ts.isTemplateExpression(n)&&ts.isPropertyAssignment(n.parent)&&/permission/i.test(n.parent.name.getText(sf)) || ts.isTemplateExpression(n)&&value.length<200&&!/\s/.test(value)&&/permission|authoriz/.test(low)&&/\.(read|write|view|edit)\x60$/.test(value))add(n,'permission','constructed_permission_candidate',value);
+   if(entities.has(value)) add(n,'entity',ts.isBinaryExpression(n.parent)&&/entity/i.test(parent)?'entity_comparison':ts.isPropertyAssignment(n.parent)&&/entity/i.test(n.parent.name.getText(sf))?'entity_property_literal':ts.isArrayLiteralExpression(n.parent)?'entity_array_literal':'entity_literal_reference',value);
+   if([...value.matchAll(/(?:\/app\/entity\/|metadata\.entity\.)([a-z][a-z0-9_]+)/g)].some(m=>entities.has(m[1])))add(n,'entity','embedded_entity_route_or_publication',value);
+   if(/mfa|step[-_ ]?up|verify[-_ ]identity|verification_required|identity verification/i.test(value))add(n,'mfa','mfa_literal_or_route',value);
+   if(/^(baseline|elevated)$/.test(value)&&/assurance|acr|identity/i.test(parent))add(n,'mfa','assurance_literal',value);
+  }
+  if(ts.isPropertyAssignment(n)&&/(requires_?mfa|mfaAtDecision)/i.test(n.name.getText(sf))&&[ts.SyntaxKind.TrueKeyword,ts.SyntaxKind.FalseKeyword].includes(n.initializer.kind))add(n,'mfa','mfa_boolean_configuration',n.getText(sf));
+  if(ts.isIdentifier(n)&&/mfa|stepup|requiresMfa|assurance/i.test(n.text)&&!ts.isImportSpecifier(n.parent))add(n,'mfa','mfa_identifier_reference',n.text);
+  // Definitions which insist on a permission despite the new optional-property rule.
+  if(ts.isIfStatement(n)&&/!\s*(permissionCode|permission)\b/.test(n.expression.getText(sf))&&/throw|Forbidden|return/.test(n.thenStatement.getText(sf)))add(n,'permission','missing_permission_guard_review',n.expression.getText(sf));
+  if(ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.AmpersandAmpersandToken&&/^(permission|permissionCode)$/.test(n.left.getText(sf)))add(n,'permission','permission_presence_gate_review',n.getText(sf).slice(0,180));
+  if(ts.isCallExpression(n)&&/^string$/.test(n.expression.getText(sf))&&n.arguments[0]&&/\[.permissionCode.\]/.test(n.arguments[0].getText(sf)))add(n,'permission','required_permission_parser_review',n.getText(sf));
+  ts.forEachChild(n,visit)
+ } visit(sf);
+ const hits=[...found.values()];rows.push(...hits);
+ files.push({file,extension:file.endsWith('.tsx')?'tsx':'ts',scope:scope(file),sha256:crypto.createHash('sha256').update(s).digest('hex'),permission:hits.some(x=>x.category==='permission'),entity:hits.some(x=>x.category==='entity'),mfa:hits.some(x=>x.category==='mfa'),occurrences:hits.length});
+}
+const categories=['permission','entity','mfa'];
+const summary={filesScanned:files.length,byExtension:Object.fromEntries(['ts','tsx'].map(e=>[e,files.filter(f=>f.extension===e).length])),anyCandidate:files.filter(f=>f.occurrences).length,categoryFiles:Object.fromEntries(categories.map(c=>[c,files.filter(f=>f[c]).length])),byScope:{}};
+for(const s of [...new Set(files.map(f=>f.scope))])summary.byScope[s]={scanned:files.filter(f=>f.scope===s).length,anyCandidate:files.filter(f=>f.scope===s&&f.occurrences).length,...Object.fromEntries(categories.map(c=>[c,files.filter(f=>f.scope===s&&f[c]).length]))};
+const out={generatedAt:new Date().toISOString(),root:process.cwd(),summary,knownEntities:[...entities].sort(),knownPermissions:[...permissions].sort(),files,findings:rows};
+fs.writeFileSync('/tmp/athyper-hardcode-audit.json',JSON.stringify(out,null,2));
+console.log(JSON.stringify(summary,null,2));
+console.log('TOP APPLICATION FILES');console.log(files.filter(f=>f.scope==='application_source').sort((a,b)=>b.occurrences-a.occurrences).slice(0,35).map(f=>f.occurrences+' '+f.file).join('\n'));

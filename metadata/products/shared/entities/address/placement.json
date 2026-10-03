@@ -1,0 +1,13 @@
+{
+  "schema": "athyper.entity-placement/1",
+  "entityCode": "address",
+  "name": "Addresses",
+  "placements": [
+    {
+      "plane": "neon",
+      "workspace": "mdg",
+      "module": "loc",
+      "routeSlug": "addresses"
+    }
+  ]
+}

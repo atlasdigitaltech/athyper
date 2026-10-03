@@ -1,0 +1,83 @@
+{
+  "schema": "athyper.publication-policy-replacement-implementation/1",
+  "observedAt": "2026-10-02T21:34:03.443953+00:00",
+  "environment": "dev",
+  "implementation": "installed",
+  "endpoint": "POST /api/studio/publication-policies/:id/replace",
+  "request": {
+    "expectedHash": "exact replacement policy hash",
+    "predecessors": "complete sorted list of {id,hash} active overlapping policies"
+  },
+  "controls": [
+    "existing Platform Authority MFA/IAM authorization using publication_policy.activate",
+    "independent maker/checker; exact source human receipts and build pin",
+    "identical plan, workloads and predecessor target pins",
+    "same reference-publication/entity locks as workload execution; source authority locks",
+    "no existing source release or unlisted active overlap",
+    "serializable transaction; exact policy locks; immutable retirement receipt; audit in same transaction",
+    "idempotent replay; immutable policy content and retired history",
+    "ordinary human-reviewed activation rejects active overlap"
+  ],
+  "validation": {
+    "serviceAndControlTests": 41,
+    "postgresIntegrationTests": 1,
+    "gatewayTests": 3,
+    "platformHostTypecheck": "passed",
+    "migrationLayout": "passed",
+    "postgresCases": [
+      "exact replacement of both overlapping policies",
+      "held execution lock rejected",
+      "stale policy and compiler hashes rejected",
+      "incomplete overlaps rejected",
+      "maker/non-platform/non-MFA/no-IAM calls rejected",
+      "audit write failure rolls back activation, retirement and receipt",
+      "retirement without receipt rejected",
+      "retired content mutation/reactivation/receipt deletion rejected",
+      "idempotent replay",
+      "entire qualification transaction rolled back"
+    ],
+    "routeUnauthenticatedStatus": 401
+  },
+  "migration": {
+    "schema": "athyper.publication-policy-replacement-install/1",
+    "environment": "dev",
+    "migration": "20261003_publication_policy_replacement.sql",
+    "sha256": "d50fb020335acf22d2297226f5bb39612270e107f72f789e079dd0ab77dbde1a",
+    "applied": true,
+    "rollbackAndReplayPassed": true,
+    "reused": false,
+    "policyStateUnchanged": true,
+    "passed": true,
+    "completedAt": "2026-10-02T21:31:16.175Z"
+  },
+  "candidate": {
+    "schema": "athyper.coordinated-policy-replacement-candidate/1",
+    "policyDocument": "coordinated-release-execution-policy-replacement-20261003.json",
+    "compiler": {
+      "name": "athyper.compiled-entity-artifact",
+      "version": "1.1.0",
+      "buildHash": "d3cb4f384c7b311aa3ce3daf61367927e4cd6a177aee021284efccf94e03e5ca"
+    },
+    "predecessors": [
+      {
+        "id": "06ce6433-5128-48ed-8228-5533b9386bf5",
+        "hash": "c57a426b7a1764020969df89db5df91f46a5c4574e1cf04477fb2c936aad2e44"
+      },
+      {
+        "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+        "hash": "b924f8a65d0e55fdc8052458b6f7f289903a284c0d859f266e0e84c4682fe5ae"
+      }
+    ],
+    "sourcePlanUnchanged": true,
+    "sources": 6,
+    "targets": 8,
+    "proposed": false,
+    "approved": false,
+    "replacementPerformed": false,
+    "publicationPerformed": false,
+    "routeUnauthenticatedStatus": 401
+  },
+  "publicationPerformed": false,
+  "targetActivationVerified": false,
+  "remaining": "Fresh actual Admin proposal of the build-pinned policy and independent Owner replace approval, then workload execution and all eight target activation checks."
+}

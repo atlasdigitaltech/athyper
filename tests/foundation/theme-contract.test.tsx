@@ -58,13 +58,13 @@ describe("foundation theme contract", () => {
   it("has complete compact, comfortable and spacious density modes with accessible touch targets", () => {
     assert.deepEqual(DENSITY_MODES, ["compact", "comfortable", "spacious"]);
     for (const density of DENSITY_MODES) {
-      assert.deepEqual(Object.keys(DENSITY_TOKENS[density]).sort(), ["cellPaddingBlock", "cellPaddingInline", "controlHeight", "controlHeightSmall", "dataFontSize", "headerHeight", "iconButton", "pageGap", "panelGutter", "rowHeight", "sectionGap", "space", "stackGap", "touchTarget"]);
+      assert.deepEqual(Object.keys(DENSITY_TOKENS[density]).sort(), ["cellPaddingBlock", "cellPaddingInline", "controlHeight", "controlHeightSmall", "dataFontSize", "dataLineHeight", "headerHeight", "iconButton", "labelFontSize", "labelLineHeight", "pageGap", "panelGutter", "rowHeight", "sectionFontSize", "sectionGap", "sectionLineHeight", "space", "stackGap", "touchTarget"]);
       assert.ok(parseFloat(DENSITY_TOKENS[density].touchTarget) >= 2.75);
       // WCAG 2.2 target size (minimum) 24px for pointer targets.
       assert.ok(parseFloat(DENSITY_TOKENS[density].iconButton) >= 1.5);
     }
     // Rows, controls and spacing grow monotonically from compact to spacious.
-    for (const key of ["rowHeight", "headerHeight", "controlHeight", "controlHeightSmall", "iconButton", "dataFontSize", "stackGap", "sectionGap"] as const)
+    for (const key of ["rowHeight", "headerHeight", "controlHeight", "controlHeightSmall", "iconButton", "dataFontSize", "dataLineHeight", "labelFontSize", "labelLineHeight", "sectionFontSize", "sectionLineHeight", "stackGap", "sectionGap"] as const)
       assert.ok(parseFloat(DENSITY_TOKENS.compact[key]) < parseFloat(DENSITY_TOKENS.comfortable[key]) && parseFloat(DENSITY_TOKENS.comfortable[key]) < parseFloat(DENSITY_TOKENS.spacious[key]), key);
   });
 

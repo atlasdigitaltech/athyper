@@ -442,7 +442,7 @@
         "title": "Notification preferences",
         "isDefault": true,
         "layoutConfig": {
-          "identityField": "id",
+          "identityField": "event_code",
           "defaultState": {
             "sort": [
               {
@@ -858,7 +858,43 @@
         "position": 3,
         "labelOverride": "Event",
         "displayConfig": {
-          "defaultVisible": true
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "collaboration.comment.created",
+                "label": "Comment added"
+              },
+              {
+                "value": "collaboration.comment.mentioned",
+                "label": "Mentioned in a comment"
+              },
+              {
+                "value": "collaboration.comment.edited",
+                "label": "Comment edited"
+              },
+              {
+                "value": "collaboration.comment.deleted",
+                "label": "Comment deleted"
+              },
+              {
+                "value": "attachments.finalized",
+                "label": "File added"
+              },
+              {
+                "value": "attachments.archived",
+                "label": "File archived"
+              },
+              {
+                "value": "attachments.categorized",
+                "label": "File categorized"
+              },
+              {
+                "value": "attachments.folder_move",
+                "label": "File moved to a folder"
+              }
+            ]
+          }
         },
         "id": "717a8aa8-c43a-5271-a02b-3dee2e665c79"
       },
@@ -1031,7 +1067,43 @@
         "position": 3,
         "labelOverride": "Event",
         "displayConfig": {
-          "defaultVisible": true
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "collaboration.comment.created",
+                "label": "Comment added"
+              },
+              {
+                "value": "collaboration.comment.mentioned",
+                "label": "Mentioned in a comment"
+              },
+              {
+                "value": "collaboration.comment.edited",
+                "label": "Comment edited"
+              },
+              {
+                "value": "collaboration.comment.deleted",
+                "label": "Comment deleted"
+              },
+              {
+                "value": "attachments.finalized",
+                "label": "File added"
+              },
+              {
+                "value": "attachments.archived",
+                "label": "File archived"
+              },
+              {
+                "value": "attachments.categorized",
+                "label": "File categorized"
+              },
+              {
+                "value": "attachments.folder_move",
+                "label": "File moved to a folder"
+              }
+            ]
+          }
         },
         "id": "1a51e8b0-4d9a-5061-835b-e995e868d216"
       },

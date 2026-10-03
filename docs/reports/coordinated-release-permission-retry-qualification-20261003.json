@@ -1,0 +1,46 @@
+{
+  "schema": "athyper.reviewed-permission-retry-qualification/1",
+  "policy": {
+    "id": "0f16bcd4-1a3a-40b9-9431-974b1687f3fa",
+    "version": 1,
+    "hash": "34436e277df236506d94a0af47385efc486efe8e76a7299504c9498e80d23067",
+    "status": "pending_approval"
+  },
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "0b0cc0c465d589bd305b0f367c644d635290b7c45385c970e53cc48aab1e350b"
+  },
+  "checks": [
+    "actual_worker_policy_compiler_identity_iam_and_audited_retry"
+  ],
+  "resumed": false,
+  "artifactChecks": [
+    {
+      "plane": "studio",
+      "publicationKey": "metadata.entity.principal_profile",
+      "sourceReleaseNo": 3,
+      "envelopeReleaseNo": 3,
+      "kind": "compiled_entity_runtime",
+      "entityCode": "principal_profile",
+      "hashMatches": true,
+      "releaseMatches": true,
+      "verification": {
+        "signatureVerified": true,
+        "manifestValid": true,
+        "runtimeCompatible": true,
+        "targetPlane": "studio",
+        "payloadHash": "bd8eaec10d5fa9643230892e7e88e1dcc42c05ccef4b9e208a5dd86ded026b55",
+        "payloadSchemaVersion": "2.0",
+        "signatureAlgorithm": "Ed25519",
+        "signingKeyId": "athyper-dev-publication-ed25519-20260905"
+      }
+    }
+  ],
+  "passed": false,
+  "error": {
+    "message": "PRODUCT_GROUP_ARTIFACT_MISMATCH",
+    "stack": "Error: PRODUCT_GROUP_ARTIFACT_MISMATCH\n    at requireAdoption (/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/coordinated-entity-adoption.ts:22:18)\n    at activateProductGroup (/home/chandravel_natarajan/src/athyper/server/packages/services/publication/src/coordinated-entity-adoption.ts:141:5)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async deployHumanPublicationGroup (/home/chandravel_natarajan/src/athyper/server/apps/platform-host/src/composition/shared/publication/human-publication-activation.ts:97:3)\n    at async work (/home/chandravel_natarajan/src/athyper/server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts:59:18)\n    at async <anonymous> (/home/chandravel_natarajan/src/athyper/server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts:63:24)\n    at async file:///home/chandravel_natarajan/src/athyper/node_modules/.pnpm/kysely@0.28.17/node_modules/kysely/dist/esm/kysely.js:572:32\n    at async DefaultConnectionProvider.provideConnection (file:///home/chandravel_natarajan/src/athyper/node_modules/.pnpm/kysely@0.28.17/node_modules/kysely/dist/esm/driver/default-connection-provider.js:10:20)\n    at async <anonymous> (/home/chandravel_natarajan/src/athyper/server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts:50:6)\n    at async <anonymous> (/home/chandravel_natarajan/src/athyper/server/apps/platform-host/scripts/operations/qualify-reviewed-permission-retry.ts:49:2)"
+  },
+  "completedAt": "2026-10-02T23:07:40.310Z"
+}

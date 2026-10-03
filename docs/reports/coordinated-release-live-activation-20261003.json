@@ -1,0 +1,437 @@
+{
+  "schema": "athyper.coordinated-release-live-activation/1",
+  "observedAt": "2026-10-02T23:59:05.258509+00:00",
+  "environment": "dev",
+  "status": "verified",
+  "publishedSources": 6,
+  "activatedTargets": 8,
+  "pendingSelectedTargets": 0,
+  "planes": {
+    "neon": 6,
+    "mesh": 1,
+    "studio": 1
+  },
+  "recoveryPolicy": {
+    "id": "0f16bcd4-1a3a-40b9-9431-974b1687f3fa",
+    "version": 1,
+    "hash": "34436e277df236506d94a0af47385efc486efe8e76a7299504c9498e80d23067"
+  },
+  "compilerAuthorization": {
+    "id": "3fb88024-bc55-491a-b9a3-a569f80b9e8a",
+    "version": 1,
+    "hash": "ad2aad6886eeff63ba9384bbba7ebc0122b2ef1f9cb43459e2ab8faa5ad9ffa3",
+    "status": "active"
+  },
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "03f977e6984ec9083dbac9a902f9ef18e376d18687d0308e3e3547582987ea86"
+  },
+  "verification": [
+    "All eight authority deployments activated at instance dev",
+    "All eight acknowledgements match approved signed hashes and exact local release IDs",
+    "Each plane active release head matches its acknowledgement and approved source release",
+    "Standard runtime_meta.fn_active_release resolves the approved hashes under athyper_runtime",
+    "Original publisher identity retained across all deployments",
+    "All eight latest worker jobs succeeded with the approved publisher identity"
+  ],
+  "deliveries": [
+    {
+      "deploymentId": "01a0fed5-6a18-748f-ac85-fdc8c10615f0",
+      "commandId": "724ee646-3b0d-42b4-8686-b83aec840a55",
+      "plane": "neon",
+      "instance": "dev",
+      "status": "activated",
+      "artifactHash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2",
+      "sourceReleaseId": "e872c81c-1212-49ef-b7dd-ccf23c897fb7",
+      "publicationKey": "metadata.entity.address",
+      "attempt": 2,
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "acknowledgement": {
+        "id": "01a0ff0d-2572-7878-a0ae-a152175ab6c6",
+        "artifactHash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2",
+        "localAppliedReleaseId": "01a0ff0d-20db-7e7b-885f-30fa6cefe6a5",
+        "instance": "dev",
+        "acknowledgedAt": "2026-10-02T23:57:26.770336+00:00"
+      }
+    },
+    {
+      "deploymentId": "01a0fed5-6a72-7000-862f-bb15119c0d18",
+      "commandId": "169972a1-c301-4082-8a27-5e57a2fd7277",
+      "plane": "neon",
+      "instance": "dev",
+      "status": "activated",
+      "artifactHash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a",
+      "sourceReleaseId": "121f93fc-2e4e-4415-8d4d-9fd1674b3657",
+      "publicationKey": "metadata.entity.employee",
+      "attempt": 2,
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "acknowledgement": {
+        "id": "01a0ff0d-2577-7d2d-ac09-b4df85e546a2",
+        "artifactHash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a",
+        "localAppliedReleaseId": "01a0ff0d-20ef-7c5c-ba22-2ff7c01195b4",
+        "instance": "dev",
+        "acknowledgedAt": "2026-10-02T23:57:26.774853+00:00"
+      }
+    },
+    {
+      "deploymentId": "01a0fed5-6aca-7152-9f7a-fefd52741cbd",
+      "commandId": "29e1a060-bf59-4664-835b-c8ab86b19638",
+      "plane": "neon",
+      "instance": "dev",
+      "status": "activated",
+      "artifactHash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20",
+      "sourceReleaseId": "51f63a89-114d-43b2-a041-b28dbe609f97",
+      "publicationKey": "metadata.entity.external_worker",
+      "attempt": 2,
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "acknowledgement": {
+        "id": "01a0ff0d-257b-7bda-92ca-4ca21b857a23",
+        "artifactHash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20",
+        "localAppliedReleaseId": "01a0ff0d-20f6-7c59-afdd-01f4d45aea89",
+        "instance": "dev",
+        "acknowledgedAt": "2026-10-02T23:57:26.778947+00:00"
+      }
+    },
+    {
+      "deploymentId": "01a0fed5-6b28-7f5b-a5d6-ca6b2cea2e46",
+      "commandId": "ac67c73a-cd7f-4dc9-823b-d66f45bfd8ac",
+      "plane": "neon",
+      "instance": "dev",
+      "status": "activated",
+      "artifactHash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8",
+      "sourceReleaseId": "782c57d9-6ac7-42ac-a82f-81895d80cd19",
+      "publicationKey": "metadata.entity.person",
+      "attempt": 2,
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "acknowledgement": {
+        "id": "01a0ff0d-257f-7534-bcef-68b9c2edd61a",
+        "artifactHash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8",
+        "localAppliedReleaseId": "01a0ff0d-20ff-731a-b387-86ad12f354df",
+        "instance": "dev",
+        "acknowledgedAt": "2026-10-02T23:57:26.782906+00:00"
+      }
+    },
+    {
+      "deploymentId": "01a0fed5-6b82-77a1-a31a-a9c3a920bc99",
+      "commandId": "26a6f062-d3e7-4c8e-8efb-7b0cbbb727e8",
+      "plane": "neon",
+      "instance": "dev",
+      "status": "activated",
+      "artifactHash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c",
+      "sourceReleaseId": "f36219ac-8038-4195-b6c5-4de688240617",
+      "publicationKey": "metadata.entity.person_address_use",
+      "attempt": 2,
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "acknowledgement": {
+        "id": "01a0ff0d-2583-7421-845a-e404a27e9d83",
+        "artifactHash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c",
+        "localAppliedReleaseId": "01a0ff0d-2106-70b9-8861-8864f1dc2267",
+        "instance": "dev",
+        "acknowledgedAt": "2026-10-02T23:57:26.7866+00:00"
+      }
+    },
+    {
+      "deploymentId": "01a0fed5-6bde-72ab-8bc0-4a3b4373b7c9",
+      "commandId": "b78131e1-4e73-40ab-82ea-79729f32be52",
+      "plane": "mesh",
+      "instance": "dev",
+      "status": "activated",
+      "artifactHash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+      "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "publicationKey": "metadata.entity.principal_profile",
+      "attempt": 2,
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "acknowledgement": {
+        "id": "01a0ff0d-4f8f-7669-bdf7-afb414e7ef11",
+        "artifactHash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+        "localAppliedReleaseId": "01a0ff0d-4e4d-7393-b867-4df2aa00ac9d",
+        "instance": "dev",
+        "acknowledgedAt": "2026-10-02T23:57:37.550661+00:00"
+      }
+    },
+    {
+      "deploymentId": "01a0fed5-6c3b-7607-9e9c-b4ac82db05f2",
+      "commandId": "fdbb6f66-8612-4f88-8209-d06ea31a01c9",
+      "plane": "studio",
+      "instance": "dev",
+      "status": "activated",
+      "artifactHash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+      "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "publicationKey": "metadata.entity.principal_profile",
+      "attempt": 2,
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "acknowledgement": {
+        "id": "01a0ff0d-5bb5-7fbd-b35e-c038611d6e27",
+        "artifactHash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+        "localAppliedReleaseId": "01a0ff0d-5a80-7fc0-ac39-8d52b71abbc5",
+        "instance": "dev",
+        "acknowledgedAt": "2026-10-02T23:57:40.661171+00:00"
+      }
+    },
+    {
+      "deploymentId": "01a0fed5-6c95-7870-9e41-0f017cc35ed2",
+      "commandId": "7052c24a-735f-400b-86d5-ecd78fbab644",
+      "plane": "neon",
+      "instance": "dev",
+      "status": "activated",
+      "artifactHash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+      "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "publicationKey": "metadata.entity.principal_profile",
+      "attempt": 2,
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "acknowledgement": {
+        "id": "01a0ff0d-2586-7667-96b6-5b6b1ba04281",
+        "artifactHash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+        "localAppliedReleaseId": "01a0ff0d-210e-7b9e-b17c-00945e8255f7",
+        "instance": "dev",
+        "acknowledgedAt": "2026-10-02T23:57:26.790282+00:00"
+      }
+    }
+  ],
+  "runtimeHeads": [
+    {
+      "plane": "studio",
+      "publicationKey": "metadata.entity.principal_profile",
+      "deploymentId": "01a0fed5-6c3b-7607-9e9c-b4ac82db05f2",
+      "localAppliedReleaseId": "01a0ff0d-5a80-7fc0-ac39-8d52b71abbc5",
+      "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "releaseNo": 3,
+      "artifactHash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+      "appliedHash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+      "status": "active",
+      "activatedAt": "2026-10-02T23:57:40.648812+00:00",
+      "runtimeResolverHash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53"
+    },
+    {
+      "plane": "neon",
+      "publicationKey": "metadata.entity.address",
+      "deploymentId": "01a0fed5-6a18-748f-ac85-fdc8c10615f0",
+      "localAppliedReleaseId": "01a0ff0d-20db-7e7b-885f-30fa6cefe6a5",
+      "sourceReleaseId": "e872c81c-1212-49ef-b7dd-ccf23c897fb7",
+      "releaseNo": 1,
+      "artifactHash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2",
+      "appliedHash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2",
+      "status": "active",
+      "activatedAt": "2026-10-02T23:57:26.714614+00:00",
+      "runtimeResolverHash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2"
+    },
+    {
+      "plane": "neon",
+      "publicationKey": "metadata.entity.employee",
+      "deploymentId": "01a0fed5-6a72-7000-862f-bb15119c0d18",
+      "localAppliedReleaseId": "01a0ff0d-20ef-7c5c-ba22-2ff7c01195b4",
+      "sourceReleaseId": "121f93fc-2e4e-4415-8d4d-9fd1674b3657",
+      "releaseNo": 1,
+      "artifactHash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a",
+      "appliedHash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a",
+      "status": "active",
+      "activatedAt": "2026-10-02T23:57:26.725398+00:00",
+      "runtimeResolverHash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a"
+    },
+    {
+      "plane": "neon",
+      "publicationKey": "metadata.entity.external_worker",
+      "deploymentId": "01a0fed5-6aca-7152-9f7a-fefd52741cbd",
+      "localAppliedReleaseId": "01a0ff0d-20f6-7c59-afdd-01f4d45aea89",
+      "sourceReleaseId": "51f63a89-114d-43b2-a041-b28dbe609f97",
+      "releaseNo": 1,
+      "artifactHash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20",
+      "appliedHash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20",
+      "status": "active",
+      "activatedAt": "2026-10-02T23:57:26.732485+00:00",
+      "runtimeResolverHash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20"
+    },
+    {
+      "plane": "neon",
+      "publicationKey": "metadata.entity.person",
+      "deploymentId": "01a0fed5-6b28-7f5b-a5d6-ca6b2cea2e46",
+      "localAppliedReleaseId": "01a0ff0d-20ff-731a-b387-86ad12f354df",
+      "sourceReleaseId": "782c57d9-6ac7-42ac-a82f-81895d80cd19",
+      "releaseNo": 1,
+      "artifactHash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8",
+      "appliedHash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8",
+      "status": "active",
+      "activatedAt": "2026-10-02T23:57:26.73761+00:00",
+      "runtimeResolverHash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8"
+    },
+    {
+      "plane": "neon",
+      "publicationKey": "metadata.entity.person_address_use",
+      "deploymentId": "01a0fed5-6b82-77a1-a31a-a9c3a920bc99",
+      "localAppliedReleaseId": "01a0ff0d-2106-70b9-8861-8864f1dc2267",
+      "sourceReleaseId": "f36219ac-8038-4195-b6c5-4de688240617",
+      "releaseNo": 1,
+      "artifactHash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c",
+      "appliedHash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c",
+      "status": "active",
+      "activatedAt": "2026-10-02T23:57:26.743343+00:00",
+      "runtimeResolverHash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c"
+    },
+    {
+      "plane": "neon",
+      "publicationKey": "metadata.entity.principal_profile",
+      "deploymentId": "01a0fed5-6c95-7870-9e41-0f017cc35ed2",
+      "localAppliedReleaseId": "01a0ff0d-210e-7b9e-b17c-00945e8255f7",
+      "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "releaseNo": 3,
+      "artifactHash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+      "appliedHash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+      "status": "active",
+      "activatedAt": "2026-10-02T23:57:26.756261+00:00",
+      "runtimeResolverHash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9"
+    },
+    {
+      "plane": "mesh",
+      "publicationKey": "metadata.entity.principal_profile",
+      "deploymentId": "01a0fed5-6bde-72ab-8bc0-4a3b4373b7c9",
+      "localAppliedReleaseId": "01a0ff0d-4e4d-7393-b867-4df2aa00ac9d",
+      "sourceReleaseId": "016845ee-21de-42d8-979e-e8060827cd22",
+      "releaseNo": 3,
+      "artifactHash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+      "appliedHash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+      "status": "active",
+      "activatedAt": "2026-10-02T23:57:37.530715+00:00",
+      "runtimeResolverHash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d"
+    }
+  ],
+  "workerJobs": [
+    {
+      "plane": "studio",
+      "deploymentId": "01a0fed5-6c3b-7607-9e9c-b4ac82db05f2",
+      "status": "succeeded",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T23:57:40.665128+00:00",
+      "errorCode": null
+    },
+    {
+      "plane": "studio",
+      "deploymentId": "01a0fed5-6c3b-7607-9e9c-b4ac82db05f2",
+      "status": "dead_letter",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T22:56:35.810507+00:00",
+      "errorCode": "42501"
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6c95-7870-9e41-0f017cc35ed2",
+      "status": "succeeded",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T23:57:39.672431+00:00",
+      "errorCode": null
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6b82-77a1-a31a-a9c3a920bc99",
+      "status": "succeeded",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T23:57:36.573382+00:00",
+      "errorCode": null
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6b28-7f5b-a5d6-ca6b2cea2e46",
+      "status": "succeeded",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T23:57:34.369718+00:00",
+      "errorCode": null
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6aca-7152-9f7a-fefd52741cbd",
+      "status": "succeeded",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T23:57:31.949299+00:00",
+      "errorCode": null
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6a72-7000-862f-bb15119c0d18",
+      "status": "succeeded",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T23:57:29.742142+00:00",
+      "errorCode": null
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6a18-748f-ac85-fdc8c10615f0",
+      "status": "succeeded",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T23:57:26.79635+00:00",
+      "errorCode": null
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6c95-7870-9e41-0f017cc35ed2",
+      "status": "dead_letter",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T22:56:35.910943+00:00",
+      "errorCode": "42501"
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6b82-77a1-a31a-a9c3a920bc99",
+      "status": "dead_letter",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T22:56:35.80587+00:00",
+      "errorCode": "42501"
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6b28-7f5b-a5d6-ca6b2cea2e46",
+      "status": "dead_letter",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T22:56:35.792789+00:00",
+      "errorCode": "42501"
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6aca-7152-9f7a-fefd52741cbd",
+      "status": "dead_letter",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T22:56:35.78731+00:00",
+      "errorCode": "42501"
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6a72-7000-862f-bb15119c0d18",
+      "status": "dead_letter",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T22:56:35.783055+00:00",
+      "errorCode": "42501"
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a0fed5-6a18-748f-ac85-fdc8c10615f0",
+      "status": "dead_letter",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T22:56:35.779661+00:00",
+      "errorCode": "42501"
+    },
+    {
+      "plane": "mesh",
+      "deploymentId": "01a0fed5-6bde-72ab-8bc0-4a3b4373b7c9",
+      "status": "succeeded",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T23:57:37.556339+00:00",
+      "errorCode": null
+    },
+    {
+      "plane": "mesh",
+      "deploymentId": "01a0fed5-6bde-72ab-8bc0-4a3b4373b7c9",
+      "status": "dead_letter",
+      "publisherId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "completedAt": "2026-10-02T22:56:35.798582+00:00",
+      "errorCode": "42501"
+    }
+  ],
+  "preserved": [
+    "Original source approvals and signed artifact bytes",
+    "Original recovery command IDs and attempt numbers",
+    "Prior failure events",
+    "Eight excluded drafts"
+  ],
+  "limits": [
+    "No fresh browser acceptance or tenant business-operation exercise performed in this final deployment verification."
+  ]
+}

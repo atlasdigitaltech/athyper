@@ -31,7 +31,11 @@ export async function prepareSystemReferenceRelease(
   const surfaces = input.artifact.descriptor.surfaces;
   if (!Array.isArray(surfaces) || !surfaces.some(s => s?.layoutConfig?.systemReferenceProduct !== undefined || s?.layoutConfig?.tableEntityProduct !== undefined)) return false;
   if (!db.isTransaction) throw Error("SYSTEM_REFERENCE_RELEASE_TRANSACTION_REQUIRED");
-  const rows = (await sql<Source>`SELECT s.contract_json,r.revision_id,r.entity_id,e.entity_code,r.change_set_id,r.release_no,
+  const humanSourceAvailable = (await sql<{ available: boolean }>`SELECT
+    to_regprocedure('publication.fn_human_publication_preparation_source(uuid)') IS NOT NULL available`.execute(db)).rows[0]?.available;
+  const humanSource = humanSourceAvailable ? (await sql<{ source: Source | null }>`SELECT
+    publication.fn_human_publication_preparation_source(${input.releaseId}::uuid) source`.execute(db)).rows[0]?.source : null;
+  const rows = humanSource ? [humanSource] : (await sql<Source>`SELECT s.contract_json,r.revision_id,r.entity_id,e.entity_code,r.change_set_id,r.release_no,
       r.release_hash,r.contract_hash,r.target_planes,r.contract_signature,r.signature_algorithm,r.signing_key_id,r.published_by,
       c.approved_by,p.tenant_id authority_tenant_id
     FROM metadata.entity_release r
@@ -64,6 +68,10 @@ export async function prepareSystemReferenceRelease(
     ? (await sql<{ policy: unknown }>`SELECT publication.fn_system_entity_successor_policy(${input.releaseId}::uuid) policy`.execute(db)).rows[0]?.policy
     : undefined;
   if (Number(source.release_no) > 1 && !successorPolicy) throw Error("ENTITY_SUCCESSOR_POLICY_REQUIRED");
+  const executionMetadataAvailable = (await sql<{ available: boolean }>`SELECT
+    to_regprocedure('publication.fn_system_entity_execution_metadata(uuid)') IS NOT NULL available`.execute(db)).rows[0]?.available;
+  const humanExecution = executionMetadataAvailable ? (await sql<{ metadata: Record<string, unknown> }>`SELECT publication.fn_system_entity_execution_metadata(
+    ${input.releaseId}::uuid) metadata`.execute(db)).rows[0]?.metadata ?? {} : {};
   await sql`SELECT pg_advisory_xact_lock(hashtextextended(${key},0))`.execute(db);
   const conflict = (await sql`SELECT p.id FROM publication.release p
     JOIN publication.entity_release_link l ON l.publication_release_id=p.id
@@ -82,7 +90,7 @@ export async function prepareSystemReferenceRelease(
   await sql`INSERT INTO publication.release(id,tenant_id,release_key,release_no,release_kind,status,compatibility_level,release_hash,manifest_hash,created_by,metadata)
     VALUES(${input.releaseId}::uuid,${source.authority_tenant_id}::uuid,${key},${source.release_no},'publish','preparing','backward_compatible',${source.release_hash},${source.release_hash},${source.published_by}::uuid,
       ${JSON.stringify({ schema: table ? "athyper.table-entity-publication/1" : "athyper.system-reference-publication/1", artifactKind: "compiled_entity_runtime", sourceTenantId: null, sourceContractHash: compiled.contractHash, sourceDescriptorHash: compiled.descriptorHash, productHash: marker.productHash,
-        ...(successorPolicy ? { successorPolicy } : {}) })}::jsonb)`.execute(db);
+        ...(successorPolicy ? { successorPolicy } : {}), ...humanExecution })}::jsonb)`.execute(db);
   await sql`SELECT publication.fn_link_system_entity_release(${input.releaseId}::uuid)`.execute(db);
   await sql`SELECT publication.fn_transition_release(${input.releaseId}::uuid,'approved',${source.approved_by}::uuid,NULL::uuid,
     ${JSON.stringify({ review: "meta-entity-change-set", changeSetId: source.change_set_id, sourceTenantId: null })}::jsonb)`.execute(db);

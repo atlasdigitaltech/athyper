@@ -35,7 +35,7 @@ export interface DevelopmentPublicationWorkloadDependencies {
   readonly jobs?: JobPublisher;
   readonly database: Database;
   /** Scoped authoring service with the global-source preparation adapter. */
-  readonly service: Service;
+  readonly service: Service & Partial<Pick<import("@athyper/server-plane-studio-meta-entity-authoring").MetaEntityAuthoringService, "redispatch">>;
   readonly audit: AuditRecorder<Database>;
   /** A reviewed policy authority, separate from artifact signature verification. */
   readonly policyAuthority: { assertAuthorized(policyHash: string, policy: EnrollablePublicationPolicy): Promise<void> };

@@ -1,0 +1,33 @@
+{
+  "verifiedAt": "2026-10-03T00:47:02.647255+00:00",
+  "removed": [
+    "server/packages/services/workforce/src/identity/workforce-read-policy.ts",
+    "server/apps/platform-host/src/composition/shared/entity-runtime/workforce-read-policy.test.ts"
+  ],
+  "removedSymbols": [
+    "workforceReadPermission",
+    "createWorkforceReadPolicy",
+    "workforceReadAuthority"
+  ],
+  "authorizationPath": "createPublishedTenantRecordAuthorizer -> observeAuthority(baseAuthorizer); operation permission resolved from the active published descriptor",
+  "tests": {
+    "passed": 35,
+    "typechecks": [
+      "platform-host",
+      "workforce"
+    ],
+    "newCoverage": "Unknown synthetic entity with unrelated exact metadata permission on all three planes; permission mismatch denied; existing hard-policy denial preserved"
+  },
+  "liveReadback": {
+    "endpoint": "/api/relay/entity-runtime/external_worker/list-descriptor?includeViews=true",
+    "status": 403,
+    "code": "FORBIDDEN",
+    "requestId": "03dad7c9-aa03-4b75-a23e-6dce828927ac",
+    "sourceApi": "healthy"
+  },
+  "remaining": [
+    "Live workforce read admission still needs a supported governed policy evaluator; no substitute allow was introduced.",
+    "The broader hardcoding audit findings and end-to-end optional-permission semantics remain separate outstanding work."
+  ],
+  "unchanged": "No MFA implementation, grants, source publications or database policies changed by this removal. Previous historical reports retained."
+}

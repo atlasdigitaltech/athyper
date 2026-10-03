@@ -17,6 +17,65 @@ fixes or improvements to the shared Entity Framework. Nothing else.**
 - Implement read-only entities and record-scoped embedded lists through that
   same framework. Enforce locked record scope and authorization on the server.
 
+## No hardcoded entities
+
+- Do not hardcode entity names, entity allowlists, or entity-specific branches
+  in runtime, UI, authorization, policy selection, routing, or host composition.
+  Do not move such hardcoding into a domain package as a workaround.
+- Keep entity-specific configuration in entity definitions and governed,
+  published metadata. Resolve behavior through the shared Entity Framework and
+  its registered capability/provider contracts. Onboarding an entity using
+  existing capabilities must not require adding its name to application code.
+- Resolve exact permission codes and policy bindings from published metadata.
+  Do not construct permission codes from entity names, infer authorization from
+  naming conventions, or introduce entity-specific authorization exceptions.
+- Register reusable domain implementations by capability contract; select them
+  through validated published bindings rather than hardcoded entity dispatch.
+  Domain ownership does not authorize a parallel authorization path.
+- Missing or unsupported metadata, required policy bindings, or capabilities
+  must fail closed, except that an undefined permission in valid Meta Entity
+  properties means access for everyone as specified below. Fix the shared
+  framework or the governed metadata while preserving
+  tenant scope, explicit denies, MFA, audit, publication and independent-review
+  controls. Never replace missing evidence with an inferred allow.
+- Before implementing an entity fix, verify that the same implementation works
+  for every eligible entity through metadata. A successful request for a named
+  entity does not establish framework correctness.
+
+## Permissions are defined in Meta Entity properties
+
+- Define entity permissions in Meta Entity properties and resolve them through
+  the shared Entity Framework from governed, published metadata. Do not define
+  additional entity permission requirements in application code.
+- If no permission is defined in the applicable Meta Entity property, everyone
+  has access to that entity operation or surface without an entity permission
+  grant. Do not invent a default permission, derive one from an entity name, or
+  deny access solely because that permission property is absent.
+- If a permission is defined, enforce that exact published permission through
+  the existing shared authorization framework.
+- An undefined permission in valid metadata is distinct from unavailable,
+  invalid or unpublished metadata, or a broken reference to a defined permission.
+  Do not treat those failures as an undefined permission and allow access.
+- This rule governs entity permission checks. Existing authentication, tenant
+  isolation, record scope, explicit denies and other independent platform
+  controls remain applicable. MFA changes still require explicit owner approval.
+
+## Studio publication ownership
+
+- Product defaults are platform-owned Studio authoring releases. Platform Admin
+  authors/proposes them and Platform Owner independently reviews/approves them.
+  Publish them through the shared framework to their declared Neon, Mesh and
+  Studio targets; do not require duplicate tenant-owned source releases.
+- Tenant Admin authors/proposes tenant knowledge and supported extensions, and
+  Tenant Owner independently reviews/approves them. Their publication is isolated
+  to that tenant and its permitted target planes.
+- Resolve published product defaults and approved tenant extensions with explicit
+  source release identities and hashes. Tenant extensions must not mutate the
+  product baseline, cross tenant boundaries, or weaken platform controls.
+- This ownership standard applies to every Studio publication, including entity
+  metadata, knowledge, fixtures and learning candidates. Service-account seed or
+  deployment receipts do not attest human authorship, review or evaluation.
+
 ## Domain ownership
 
 Place business-specific rules and handlers in the owning domain service package.
@@ -41,6 +100,37 @@ implementation.
 - Complexity, deadlines, or a missing framework feature do not authorize an
   exception. A different architecture requires an explicit instruction from
   the project owner; otherwise stay within Entity onboarding/framework work.
+
+## MFA changes require explicit owner approval
+
+**SPECIAL OWNER INSTRUCTION: Do not introduce MFA for future entities as part
+of Entity onboarding, permission setup, or access-error fixes. Viewing an entity
+list or detail page must not acquire an MFA requirement from an agent's security
+assumptions.**
+
+- Do not add entity MFA requirements through permission catalog defaults,
+  seeds, SQL migrations, generated metadata, risk-tier assignments, domain
+  handlers, or UI prompts. In particular, do not set `requires_mfa = true` or
+  elevate a permission's risk tier merely because an entity contains workforce,
+  person, address, or other business data.
+- Do not add verification buttons, step-up redirects, or session-elevation flows
+  as a workaround for an Entity authorization failure. Trace the exact published
+  Meta Entity permission and policy bindings first.
+- Any future exception requires the project owner's explicit approval of the
+  specific MFA requirement and its governed Meta Entity configuration before
+  implementation. Approval to onboard, publish, deploy, grant permissions, or
+  fix an entity does not constitute MFA approval.
+
+- Do not write or change MFA-related code for any page or action without the
+  project owner's explicit prior approval for that MFA change. This includes
+  MFA requirements, enforcement, step-up flows, verification prompts, buttons,
+  redirects, session-assurance handling and MFA-specific error behavior.
+- A request to fix access, permissions, authorization or a page error is not
+  approval to implement MFA changes. Diagnose and explain the issue and proposed
+  MFA change first, then wait for explicit approval before implementation.
+- Do not introduce unnecessary MFA requirements or flows. Preserve existing
+  security controls while awaiting approval; this restriction does not authorize
+  disabling, weakening or bypassing existing MFA enforcement.
 
 ## Working expectations
 

@@ -101,7 +101,7 @@ test("guards the destructive reset and reapplies the deny-all pack", async () =>
     "utf8",
   );
   assert.match(reset, /assertDestructiveResetAllowed/);
-  assert.match(reset, /pg_advisory_xact_lock/);
+  assert.match(reset, /withAuthorizationProvisionTransaction/);
   assert.match(reset, /TRUNCATE TABLE[\s\S]*authz\.permission/);
   assert.doesNotMatch(reset, /CASCADE/);
   assert.match(reset, /applyAuthorizationSeedPack/);

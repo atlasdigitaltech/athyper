@@ -214,6 +214,10 @@ export function compileListExperience(
       ...(surface.description
         ? { description: text(surface.description) }
         : {}),
+      // The entity's own icon, so list, directory and record headers agree.
+      ...(typeof surface.layoutConfig?.["iconKey"] === "string"
+        ? { iconKey: surface.layoutConfig["iconKey"] }
+        : {}),
     },
     routes,
     actions: actions.filter(

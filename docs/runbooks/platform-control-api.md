@@ -1,5 +1,57 @@
 # Platform-control API
 
+## Native product draft review — 2026-10-03
+
+The isolated control API now composes the shared Entity authoring package for
+human review of existing system-owned product drafts. It uses the same native
+graphs, compiler and change-set lifecycle as Country. Tenant authoring stays on
+its existing routes. This is not publication-policy enrollment, signing or
+deployment.
+
+After a fresh browser password + OTP verification using the helper below, use
+the platform-control bearer and `x-plane: studio` at:
+
+`https://api.dev.athyper.test/api/platform-control/meta-entity-authoring/change-sets/:id`
+
+| Method and suffix | Required permission | Effect |
+| --- | --- | --- |
+| `GET /graph` | `studio.metadata.contract.view` | Inspect the current native graph, revision, hashes, test results and compiled target hashes. |
+| `POST /adopt` | `studio.metadata.contract.edit` | Record human adoption of this exact existing draft without rewriting its original creator. |
+| `POST /submit` | `studio.metadata.contract.submit` | Require the submitting actor's adoption of this revision/hash and enter native `in_review`. |
+| `POST /approve` | `studio.metadata.contract.review` | Require a matching human submission and an independent reviewer; enter native `approved`. |
+
+Every POST accepts exactly `requestId` (a new UUID), `expectedRevision` and
+`expectedContractHash`. Obtain the latter two from GET. Reuse a request ID only
+to retry the identical command as the same actor. Adoption does not increment
+the revision; submit and approve do. Read the graph again before the independent
+review. A changed predecessor, revision, hash or actor requires reconciliation.
+Do not treat an empty embedded test suite as executed acceptance/evaluation.
+
+Authentication, canonical IAM grants, denies, scope, MFA, active human principal
+and auth epoch checks remain mandatory. Tenant-owned sources and cross-realm
+requests are rejected. There is no break-glass, graph replacement, release
+creation or activation route on this surface. Exact adoption/submission/review
+receipts, native transitions and audit writes share one transaction. Receipt
+history is append-only for the control role. Existing seed provenance survives.
+
+The additive Studio migration is
+`20261003_product_human_review.sql`. Fresh control-role provisioning also installs
+the same canonical policies. The control role gains bounded global-metadata
+reads and status-only updates backed by matching receipts; it gains no native
+graph writes or release-insert permission. No new SECURITY DEFINER is added.
+
+DEV installation and unauthenticated HTTPS route admission were verified.
+The real-role PostgreSQL adoption/submission/review qualification was rollback
+only with synthetic request contexts. Fresh authenticated human UI/API acceptance
+and actual review of the six-entity candidate remain outstanding; no human
+receipt, approval or publication was committed by that test.
+
+Qualification:
+
+```sh
+PRODUCT_REVIEW_POSTGRES=1 pnpm --filter @athyper/server-platform-host exec vitest run src/composition/control-plane/product-review.postgres.test.ts
+```
+
 ## Post-cutover browser acceptance completed (2026-09-27)
 
 Both actors completed fresh authorization-code/PKCE browser logins after the

@@ -1,0 +1,17 @@
+{
+  "schema": "athyper.coordinated-publication-execution/1",
+  "startedAt": "2026-10-02T21:07:15.364Z",
+  "finishedAt": "2026-10-02T21:07:15.613Z",
+  "policyId": "06ce6433-5128-48ed-8228-5533b9386bf5",
+  "policyHash": "c57a426b7a1764020969df89db5df91f46a5c4574e1cf04477fb2c936aad2e44",
+  "httpStatus": 500,
+  "result": {
+    "type": "urn:athyper:problem:internal-error",
+    "title": "Internal Server Error",
+    "status": 500,
+    "detail": "An unexpected error occurred",
+    "instance": "/api/studio/publication-policies/06ce6433-5128-48ed-8228-5533b9386bf5/execute",
+    "code": "INTERNAL_ERROR",
+    "requestId": "57a1230d-2aa7-4f4d-bfde-899916e29612"
+  }
+}

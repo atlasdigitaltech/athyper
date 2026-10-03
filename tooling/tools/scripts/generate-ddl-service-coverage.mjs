@@ -7,7 +7,7 @@ export const SCHEMA_VERSION = "1.0.0";
 export const PLANES = Object.freeze(["studio", "neon", "mesh"]);
 export const PHYSICAL_AUTHORITIES = Object.freeze(["common_plane_local", ...PLANES]);
 export const CLASSIFICATIONS = Object.freeze(["runtime_mutable", "append_only", "projection", "evidence", "catalog_seed_managed", "read_only"]);
-export const ROLLOUT_STATUSES = Object.freeze(["code_complete", "database_qualified", "shadow", "controlled_mutation", "ga"]);
+export const ROLLOUT_STATUSES = Object.freeze(["unverified", "code_complete", "database_qualified", "shadow", "controlled_mutation", "ga"]);
 export const REVIEW_STATUSES = Object.freeze(["provisional", "reviewed"]);
 export const MUTATION_COMPOSITIONS = Object.freeze(["not_applicable", "direct", "composed"]);
 export const EVIDENCE_FIELDS = Object.freeze([
@@ -50,6 +50,7 @@ export async function buildCoverageArtifact(options = {}) {
   const root = options.root ?? repositoryRoot;
   const ddlDirectory = options.ddlRoot ?? resolve(root, "server/db/ddl");
   const ownership = options.ownership ?? await loadOwnership(options.ownershipPath ?? resolve(root, "tooling/config/ddl-service-ownership.yaml"));
+  validateOwnership(ownership);
   const manifests = options.manifests ?? await loadPlaneManifests(ddlDirectory);
   const ddlFiles = (await walk(ddlDirectory)).filter((path) => path.endsWith(".sql")).sort();
   const rows = [];
@@ -226,12 +227,18 @@ function validateOwnership(ownership) {
   if (!isObject(ownership.defaults)) errors.push("defaults must be an object");
   if (!Array.isArray(ownership.rules)) errors.push("rules must be an array");
   if (!isObject(ownership.overrides)) errors.push("overrides must be an object");
+  if (ownership.defaults?.rolloutStatus !== "unverified") errors.push("defaults.rolloutStatus must be unverified; promotion requires a row-specific decision");
   for (const [index, rule] of (ownership.rules ?? []).entries()) {
     if (!isObject(rule) || !isObject(rule.match) || !isObject(rule.set)) errors.push(`rules[${index}] must contain match and set objects`);
     else {
+      if (rule.set.rolloutStatus && rule.set.rolloutStatus !== "unverified") errors.push(`rules[${index}] cannot promote rolloutStatus; use an explicit physical sourceKey override`);
       for (const key of Object.keys(rule.match)) if (!["scope", "schema", "table", "tablePattern", "ddlPathPattern", "physicalAuthority"].includes(key)) errors.push(`rules[${index}].match.${key} is unsupported`);
       for (const patternKey of ["tablePattern", "ddlPathPattern"]) if (rule.match[patternKey]) try { new RegExp(rule.match[patternKey]); } catch { errors.push(`rules[${index}].match.${patternKey} is not a valid regular expression`); }
     }
+  }
+  for (const [key, override] of Object.entries(ownership.overrides ?? {})) {
+    if (override.rolloutStatus && override.rolloutStatus !== "unverified" && !/^(studio|neon|mesh):[^:]+:server\/db\/ddl\//.test(key))
+      errors.push(`overrides.${key} promotion must identify an explicit physical sourceKey`);
   }
   if (errors.length) throw new Error(`DDL service ownership validation failed:\n- ${errors.join("\n- ")}`);
 }
@@ -273,11 +280,15 @@ function normalizeRow(row) {
 }
 
 function summarize(rows) {
-  const classifiedAndOwned = rows.filter((row) => row.reviewStatus === "reviewed").length;
+  const classifiedAndOwned = rows.filter((row) => row.reviewStatus === "reviewed" && row.serviceOwner !== "none").length;
   return {
     tableDeclarations: rows.length,
     classifiedAndOwned,
     coveragePercent: rows.length === 0 ? 100 : Number(((classifiedAndOwned / rows.length) * 100).toFixed(2)),
+    ownershipAssigned: rows.filter((row) => row.serviceOwner !== "none").length,
+    implementationEvidenceRecorded: rows.filter((row) => row.repository.length > 0 && row.entryPoints.length > 0).length,
+    testEvidenceRecorded: rows.filter((row) => row.unitTests.length > 0 || row.postgresTests.length > 0).length,
+    evidenceCounts: Object.fromEntries(EVIDENCE_FIELDS.map((field) => [field, rows.filter((row) => row[field].length > 0).length])),
     byPlane: countValues(rows.map((row) => row.plane)),
     byAuthority: countValues(rows.map((row) => row.physicalAuthority)),
     byClassification: countValues(rows.map((row) => row.classification)),

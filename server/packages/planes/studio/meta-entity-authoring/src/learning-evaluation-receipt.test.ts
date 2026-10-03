@@ -37,4 +37,25 @@ describe("learning evaluation receipt", () => {
       { evaluation: { ...input.evaluation, scoringVersion: undefined } }, { evaluatedAt: "invalid" }])
       expect(() => createLearningEvaluationReceipt({ ...input, ...patch })).toThrow();
   });
+  it("accepts the assigned author/proposer and approver/evaluator pairs", () => {
+    const paired = {
+      ...input,
+      proposal: { ...input.proposal, submittedBy: "catl.admin" },
+      reviewerId: "catl.owner",
+      controlledFixtureSet: {
+        id: "benchmark/paired", contentHash: sha256(input.evaluation.fixtures),
+        authorId: "catl.admin", approvedBy: "catl.owner", lockedAt: "2026-09-30T00:00:00.000Z",
+      },
+    };
+    const receipt = createLearningEvaluationReceipt(paired);
+    expect(receipt.fixtureGovernance).toBe("independently-controlled");
+    expect(() => assertLearningEvaluationReceipt({ ...paired, receipt })).not.toThrow();
+    for (const patch of [
+      { reviewerId: "catl.admin" },
+      { controlledFixtureSet: { ...paired.controlledFixtureSet, authorId: "catl.owner" } },
+      { controlledFixtureSet: { ...paired.controlledFixtureSet, approvedBy: "catl.admin" } },
+      { controlledFixtureSet: { ...paired.controlledFixtureSet, contentHash: "changed" } },
+      { controlledFixtureSet: { ...paired.controlledFixtureSet, lockedAt: "2027-01-01T00:00:00.000Z" } },
+    ]) expect(() => createLearningEvaluationReceipt({ ...paired, ...patch })).toThrow();
+  });
 });

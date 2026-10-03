@@ -11,6 +11,8 @@ export interface ExperienceProfile {
   readonly weekendDays: readonly number[];
   readonly appearanceMode: "system" | "light" | "dark" | "high_contrast";
   readonly densityCode: "comfortable" | "compact" | "spacious";
+  /** The principal's design system choice, when saved (a theme family id). */
+  readonly themeFamily?: string;
 }
 
 export interface ExperienceLocalization {
@@ -174,6 +176,7 @@ export const experienceBootstrapSchema = {
         dateFormat: { type: "string" }, numberFormat: { type: "string" }, weekStart: { type: "integer", minimum: 0, maximum: 6 },
         weekendDays: { type: "array", uniqueItems: true, items: { type: "integer", minimum: 0, maximum: 6 } },
         appearanceMode: { enum: ["system", "light", "dark", "high_contrast"] }, densityCode: { enum: ["comfortable", "compact", "spacious"] },
+        themeFamily: { type: "string", pattern: "^[a-z][a-z0-9-]{0,62}$" },
       },
     },
     localization: {

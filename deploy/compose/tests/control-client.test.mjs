@@ -28,7 +28,7 @@ test('DEV gateway uses a narrow human surface and does not route workload execut
   const source = readFileSync(new URL('../instance/config/traefik/dev.yaml', import.meta.url),'utf8');
   const section = source.split('    platform-control:')[1].split('    iam:')[0].split('\n').filter(line => !line.trim().startsWith('#')).join('\n');
   assert.ok(section.includes('Path(`/api/platform-control/session`)'));
-  assert.ok(section.includes('/[^/]+/activate$'));
+  assert.ok(section.includes('/[^/]+/(activate|replace)$'));
   assert.ok(!section.includes('PathPrefix'));
   assert.ok(!section.includes('/execute'));
 });

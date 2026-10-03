@@ -1,0 +1,373 @@
+{
+  "schema": "athyper.approved-publication-preflight/1",
+  "observedAt": "2026-10-02T20:28:58.489Z",
+  "candidateId": "entity-framework-dev-20261003-01",
+  "databaseReadOnly": true,
+  "publicationPerformed": false,
+  "deploymentPerformed": false,
+  "scope": "Exact persisted source/target hashes, human receipts, enrollment inventory, declared AI/collaboration requirements and relationship gates; not full runtime qualification.",
+  "installedAuthority": {
+    "requires_service_accounts": true,
+    "pins_service_author": true,
+    "pins_service_reviewer": true
+  },
+  "entries": [
+    {
+      "entityCode": "address",
+      "changeSetId": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+      "contractHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5",
+      "descriptorHash": "bba105f2f438f741ec8a09120aba0e5e9d8d90efa09224ac3364ce36c753c404",
+      "state": {
+        "status": "approved",
+        "revision": 3,
+        "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+        "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "created_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+        "release_count": 0
+      },
+      "persistedHumanReceipts": [
+        {
+          "action": "adopt",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "submit",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "approve",
+          "actor_id": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+          "expected_revision": 2
+        }
+      ],
+      "enrollments": [
+        {
+          "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+          "status": "active",
+          "version_no": 1
+        }
+      ],
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5",
+          "descriptorHash": "bba105f2f438f741ec8a09120aba0e5e9d8d90efa09224ac3364ce36c753c404",
+          "dependencies": [
+            "country",
+            "state_region",
+            "timezone"
+          ],
+          "relationshipGate": "passed",
+          "aiManifestBindings": null,
+          "declaredCapabilities": []
+        }
+      ]
+    },
+    {
+      "entityCode": "employee",
+      "changeSetId": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+      "contractHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee",
+      "descriptorHash": "d631d6edb53ef371ed7f23488ec6ef69bc0f0480f4c52225b70ad0da6c20d29a",
+      "state": {
+        "status": "approved",
+        "revision": 3,
+        "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+        "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "created_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+        "release_count": 0
+      },
+      "persistedHumanReceipts": [
+        {
+          "action": "adopt",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "submit",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "approve",
+          "actor_id": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+          "expected_revision": 2
+        }
+      ],
+      "enrollments": [
+        {
+          "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+          "status": "active",
+          "version_no": 1
+        }
+      ],
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee",
+          "descriptorHash": "d631d6edb53ef371ed7f23488ec6ef69bc0f0480f4c52225b70ad0da6c20d29a",
+          "dependencies": [
+            "person",
+            "principal"
+          ],
+          "relationshipGate": "PUBLICATION_KEY_REFERENCE_TARGET_REQUIRED",
+          "aiManifestBindings": null,
+          "declaredCapabilities": []
+        }
+      ]
+    },
+    {
+      "entityCode": "external_worker",
+      "changeSetId": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+      "contractHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82",
+      "descriptorHash": "b19b512795ca534f3db5beed153c3e92c55a6abad97cfe6532058a539859edb4",
+      "state": {
+        "status": "approved",
+        "revision": 3,
+        "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+        "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "created_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+        "release_count": 0
+      },
+      "persistedHumanReceipts": [
+        {
+          "action": "adopt",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "submit",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "approve",
+          "actor_id": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+          "expected_revision": 2
+        }
+      ],
+      "enrollments": [
+        {
+          "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+          "status": "active",
+          "version_no": 1
+        }
+      ],
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82",
+          "descriptorHash": "b19b512795ca534f3db5beed153c3e92c55a6abad97cfe6532058a539859edb4",
+          "dependencies": [
+            "person"
+          ],
+          "relationshipGate": "PUBLICATION_KEY_REFERENCE_TARGET_REQUIRED",
+          "aiManifestBindings": null,
+          "declaredCapabilities": []
+        }
+      ]
+    },
+    {
+      "entityCode": "person",
+      "changeSetId": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+      "contractHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4",
+      "descriptorHash": "007f62874028f9c4affd6d29af1f558374d5140e0228aa090abac75d661c8e70",
+      "state": {
+        "status": "approved",
+        "revision": 3,
+        "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+        "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "created_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+        "release_count": 0
+      },
+      "persistedHumanReceipts": [
+        {
+          "action": "adopt",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "submit",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "approve",
+          "actor_id": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+          "expected_revision": 2
+        }
+      ],
+      "enrollments": [
+        {
+          "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+          "status": "active",
+          "version_no": 1
+        }
+      ],
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4",
+          "descriptorHash": "007f62874028f9c4affd6d29af1f558374d5140e0228aa090abac75d661c8e70",
+          "dependencies": [
+            "country",
+            "employee",
+            "external_worker",
+            "person_address_use"
+          ],
+          "relationshipGate": "PUBLICATION_RELATIONSHIP_ACTIVE_DEPENDENCY_REQUIRED",
+          "aiManifestBindings": null,
+          "declaredCapabilities": []
+        }
+      ]
+    },
+    {
+      "entityCode": "person_address_use",
+      "changeSetId": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+      "contractHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211",
+      "descriptorHash": "9d9bec21c8c8cabc1210a5e5989e4a2d3e7c1063e2b220444d90f61f9b7b4c1e",
+      "state": {
+        "status": "approved",
+        "revision": 3,
+        "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+        "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "created_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+        "release_count": 0
+      },
+      "persistedHumanReceipts": [
+        {
+          "action": "adopt",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "submit",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 1
+        },
+        {
+          "action": "approve",
+          "actor_id": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+          "expected_revision": 2
+        }
+      ],
+      "enrollments": [
+        {
+          "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+          "status": "active",
+          "version_no": 1
+        }
+      ],
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211",
+          "descriptorHash": "9d9bec21c8c8cabc1210a5e5989e4a2d3e7c1063e2b220444d90f61f9b7b4c1e",
+          "dependencies": [
+            "address",
+            "person"
+          ],
+          "relationshipGate": "PUBLICATION_KEY_REFERENCE_TARGET_REQUIRED",
+          "aiManifestBindings": null,
+          "declaredCapabilities": []
+        }
+      ]
+    },
+    {
+      "entityCode": "principal_profile",
+      "changeSetId": "7e7dbd68-84a0-42ac-b886-2481ff683bd4",
+      "contractHash": "4e6ca752a7db5b4098df2784ff795e029501acd787c4122b6036bcd1edbe7ef2",
+      "descriptorHash": "8bdb683a76ef64a62fae0e1dd2a51ba270a96957fc4e6b758cc0c76ab3a9a2af",
+      "state": {
+        "status": "approved",
+        "revision": 4,
+        "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+        "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "created_by": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+        "release_count": 0
+      },
+      "persistedHumanReceipts": [
+        {
+          "action": "adopt",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 2
+        },
+        {
+          "action": "submit",
+          "actor_id": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "expected_revision": 2
+        },
+        {
+          "action": "approve",
+          "actor_id": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+          "expected_revision": 3
+        }
+      ],
+      "enrollments": [
+        {
+          "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+          "status": "active",
+          "version_no": 1
+        }
+      ],
+      "targets": [
+        {
+          "plane": "studio",
+          "contractHash": "4e6ca752a7db5b4098df2784ff795e029501acd787c4122b6036bcd1edbe7ef2",
+          "descriptorHash": "8bdb683a76ef64a62fae0e1dd2a51ba270a96957fc4e6b758cc0c76ab3a9a2af",
+          "dependencies": [],
+          "relationshipGate": "passed",
+          "aiManifestBindings": null,
+          "declaredCapabilities": []
+        },
+        {
+          "plane": "neon",
+          "contractHash": "346ba0a09c46764b8b5042859d3824b966fce6c6f22cfa44d4026d814591d008",
+          "descriptorHash": "fec6ce3e9226622fc194447d63249ffd24009db15914da49f3a05ff3ab237844",
+          "dependencies": [],
+          "relationshipGate": "passed",
+          "aiManifestBindings": null,
+          "declaredCapabilities": []
+        },
+        {
+          "plane": "mesh",
+          "contractHash": "e315bc819d500f4298e83444982883a8f8261b5be165a9bc067b07e5bbd2d6ac",
+          "descriptorHash": "8f1941347041b29d581971d794d4fc546cf47c4722d6bd1068fb8915e463c23a",
+          "dependencies": [],
+          "relationshipGate": "passed",
+          "aiManifestBindings": null,
+          "declaredCapabilities": []
+        }
+      ]
+    }
+  ],
+  "coordinatedRelationshipGates": [
+    {
+      "plane": "neon",
+      "entities": [
+        "address",
+        "employee",
+        "external_worker",
+        "person",
+        "person_address_use",
+        "principal_profile"
+      ],
+      "result": "passed"
+    },
+    {
+      "plane": "studio",
+      "entities": [
+        "principal_profile"
+      ],
+      "result": "passed"
+    },
+    {
+      "plane": "mesh",
+      "entities": [
+        "principal_profile"
+      ],
+      "result": "passed"
+    }
+  ]
+}

@@ -123,6 +123,10 @@ export interface BreakGlassEvidence {
 
 /** Immutable source release coordinates; publication is not consumer activation. */
 export interface MetaEntityInspectionRelease {
+  /** Published product defaults have no source tenant. This is distinct from
+   * the authority tenant that owns delivery jobs and platform administration. */
+  readonly sourceScope?: "product" | "tenant";
+  readonly sourceTenantId?: string | null;
   readonly id: string;
   readonly entityCode: string;
   readonly changeSetId: string;

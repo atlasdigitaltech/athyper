@@ -87,8 +87,10 @@ export function createLearningEvaluationReceipt(
       !controlled.authorId ||
       !controlled.approvedBy ||
       controlled.authorId === controlled.approvedBy ||
-      [proposal.submittedBy, input.reviewerId].includes(controlled.authorId) ||
-      [proposal.submittedBy, input.reviewerId].includes(controlled.approvedBy))
+      // The fixture author may propose the candidate, and the independent
+      // fixture approver may evaluate it. Maker/checker crossover is forbidden.
+      controlled.authorId === input.reviewerId ||
+      controlled.approvedBy === proposal.submittedBy)
   )
     throw new AuthoringPolicyError(
       "LEARNING_FIXTURE_PROVENANCE_INVALID",

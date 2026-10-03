@@ -435,7 +435,7 @@
   --a-brand: #e0e0e0;
   --a-brand-foreground: #121212;
   --a-brand-hover: color-mix(in srgb, var(--a-brand) 42%, white);
-  --a-brand-soft: color-mix(in srgb, var(--a-brand) 52%, black);
+  --a-brand-soft: #262626;
   --a-story-start: color-mix(in srgb, var(--a-brand) 24%, black);
   --a-story-end: color-mix(in srgb, var(--a-brand) 64%, black);
   --a-story-foreground: var(--a-brand-foreground);

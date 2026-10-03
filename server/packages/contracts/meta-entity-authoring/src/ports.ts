@@ -42,6 +42,9 @@ export interface MetaEntityAuthoringRepository {
     actorId: string;
     /** Explicit immutable ancestry, checked against this entity/tenant before insertion. */
     baseRelease?: { readonly releaseId: string; readonly releaseHash: string };
+    /** Server-only pinned product ancestry for a tenant knowledge change set.
+     * Public tenant registration JSON cannot select this authority. */
+    productBase?: { readonly releaseId: string; readonly releaseHash: string };
     registration?: {
       schemaVersion: 1;
       moduleCode: string;

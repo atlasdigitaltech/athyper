@@ -112,7 +112,9 @@ export function useEntitySectionScroll({
     if (!target) return;
     scrollingTo.current = activeSection;
     const align = () => {
-      if (firstSectionAtPageTop && activeSection === initialSection)
+      // One section at a time (tab mode): a tab switch is like opening a page, so the
+      // record header stays in view instead of scrolling the lone section to the top.
+      if (!enabled || (firstSectionAtPageTop && activeSection === initialSection))
         window.scrollTo({ top: 0, behavior: "instant" });
       else target.scrollIntoView({ block: "start", behavior: "instant" });
     };

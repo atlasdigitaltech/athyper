@@ -26,6 +26,7 @@ export interface CompiledRuntimeSource {
   readonly native: Readonly<Record<string, unknown>>;
   readonly contract: Readonly<Record<string, unknown>>;
   readonly expectedPredecessor?: EntitySuccessorTargetPin;
+  readonly coordinationHash?: string;
 }
 export interface CompiledRuntimePublication {
   /** Trusted lowering of an immutable approved source. Never HTTP authoring input. */
@@ -43,6 +44,7 @@ export interface CompiledRuntimePublication {
     sourceContractHash: string;
     sourceDescriptorHash: string;
     expectedPredecessor?: EntitySuccessorTargetPin;
+    coordinationHash?: string;
   }): Promise<{ receiptSha256: string }>;
 }
 export type UnsignedPublication = Omit<PublicationArtifactDocumentV1, "signature">;
@@ -70,7 +72,8 @@ export async function compileRuntimePublication(source: CompiledRuntimeSource, d
       payloadSha256: canonical.sha256(canonical.canonicalBytes(payload)), compiler: { name: "athyper.compiled-entity-artifact", version: "1.1.0" },
       contractSchemaVersion: "2.0.0", descriptorSchemaVersion: "2.0.0", signatureAlgorithm: "Ed25519", signingKeyId, createdAt: pinned.generatedAt,
       evidence: { sourceRevisionId: pinned.revisionId, sourceEntityId: pinned.sourceEntityId, sourceReleaseHash: pinned.sourceReleaseHash, sourceContractHash: pinned.sourceContractHash, sourceDescriptorHash: pinned.sourceDescriptorHash,
-        ...(predecessor ? { expectedPredecessor: JSON.stringify(predecessor) } : {}) } },
+        ...(predecessor ? { expectedPredecessor: JSON.stringify(predecessor) } : {}),
+        ...(pinned.coordinationHash ? { coordinationHash: pinned.coordinationHash } : {}) } },
   };
   const receiptSha256 = await qualifyRuntimePublication(document, dependencies, canonical, "compile");
   return { ...document, manifest: { ...document.manifest, evidence: { ...document.manifest.evidence, qualificationReceiptSha256: receiptSha256 } } };
@@ -110,12 +113,15 @@ export async function qualifyRuntimePublication(document: UnsignedPublication, d
   const expectedPredecessor = successorPin(e.releaseNo, e.targetPlane, e.publicationKey,
     rawPredecessor === undefined ? undefined : JSON.parse(rawPredecessor));
   const revision = evidence?.sourceRevisionId, contract = evidence?.sourceContractHash, descriptor = evidence?.sourceDescriptorHash;
+  const coordinationHash = evidence?.coordinationHash;
+  if (coordinationHash !== undefined && (typeof coordinationHash !== "string" || !/^[a-f0-9]{64}$/.test(coordinationHash)))
+    throw Error("COMPILED_PUBLICATION_COORDINATION_INVALID");
   if (typeof revision !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(revision)
     || typeof contract !== "string" || !/^(sha256:)?[a-f0-9]{64}$/.test(contract)
     || typeof descriptor !== "string" || !/^(sha256:)?[a-f0-9]{64}$/.test(descriptor)) throw Error("COMPILED_PUBLICATION_SOURCE_PIN_REQUIRED");
   const receipt = await dependencies.qualify({ phase, releaseId: e.releaseId, publicationKey: e.publicationKey, plane: e.targetPlane,
     projection: e.payload, sourceRevisionId: revision, sourceContractHash: contract, sourceDescriptorHash: descriptor,
-    ...(expectedPredecessor ? { expectedPredecessor } : {}) });
+    ...(expectedPredecessor ? { expectedPredecessor } : {}), ...(coordinationHash ? { coordinationHash } : {}) });
   if (!/^(sha256:)?[a-f0-9]{64}$/.test(receipt.receiptSha256)) throw Error("COMPILED_PUBLICATION_RECEIPT_REQUIRED");
   if (phase !== "compile" && evidence?.qualificationReceiptSha256 !== receipt.receiptSha256) throw Error("COMPILED_PUBLICATION_QUALIFICATION_CHANGED");
   return receipt.receiptSha256;

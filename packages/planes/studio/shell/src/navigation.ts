@@ -6,6 +6,7 @@ const catalogRoutes = PLATFORM_CATALOG_ROUTES.studio.flatMap(
     workspace.modules.map((module) => ({
       id: `studio.${workspace.code}.${module.code}`,
       moduleCode: module.code,
+    entities: module.entities.map(({ code, name }) => ({ code, name })),
       href: `/${workspace.routeSlug}/${module.routeSlug}` as `/${string}`,
       label: module.name,
       iconKey: "info",

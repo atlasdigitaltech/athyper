@@ -1,0 +1,38 @@
+{
+  "schema": "athyper.coordinated-publication-execution/1",
+  "startedAt": "2026-10-02T21:38:51.758Z",
+  "finishedAt": "2026-10-02T21:38:56.808Z",
+  "policyId": "7886bdc7-6a64-4145-9e71-d610ca9a3a91",
+  "policyHash": "f83745496f6130b300dcb1da6514d4f6079a5c2af720594908b576e9a92da76f",
+  "httpStatus": 200,
+  "result": {
+    "status": "dispatched",
+    "planHash": "946bce7318a02fb0d3941506805ed486a20c01577d23a68c5d2d542d98a88a02",
+    "releases": [
+      {
+        "id": "e872c81c-1212-49ef-b7dd-ccf23c897fb7",
+        "releaseNo": 1
+      },
+      {
+        "id": "121f93fc-2e4e-4415-8d4d-9fd1674b3657",
+        "releaseNo": 1
+      },
+      {
+        "id": "51f63a89-114d-43b2-a041-b28dbe609f97",
+        "releaseNo": 1
+      },
+      {
+        "id": "782c57d9-6ac7-42ac-a82f-81895d80cd19",
+        "releaseNo": 1
+      },
+      {
+        "id": "f36219ac-8038-4195-b6c5-4de688240617",
+        "releaseNo": 1
+      },
+      {
+        "id": "016845ee-21de-42d8-979e-e8060827cd22",
+        "releaseNo": 3
+      }
+    ]
+  }
+}

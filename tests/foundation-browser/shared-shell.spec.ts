@@ -6,7 +6,7 @@ const css = `${readFileSync("packages/platform/foundation/theme/src/styles.css",
 const outputs = buildSync({ entryPoints: ["tooling/scripts/verification/shell-browser-entry.tsx"], bundle: true, outfile: "fixture.js", write: false, format: "iife", platform: "browser", jsx: "automatic", nodePaths: ["apps/neon/node_modules"] }).outputFiles;
 const bundle = outputs.find((file) => file.path.endsWith(".js"))!.text;
 const bundledCss = outputs.find((file) => file.path.endsWith(".css"))?.text ?? "";
-async function mount(page: import("@playwright/test").Page, width = 900, empty = false, path = "/", query = "", direction: "ltr" | "rtl" = "ltr") { const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message)); await page.setViewportSize({ width, height: 700 }); await page.route("https://shell.test/**", (route) => route.request().url().endsWith("/api/auth/session/context") ? route.fallback() : route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="${direction === "rtl" ? "ar" : "en"}" dir="${direction}"><head><style>${bundledCss}\n${css}</style></head><body><div id="root"></div></body></html>` })); await page.goto(`https://shell.test${path}${empty ? "?empty" : query}`); await page.evaluate(bundle); if (empty) await expect(page.getByRole("heading", { name: "No applications available" })).toBeVisible(); else if (path === "/forbidden") await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible(); else await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible(); expect(errors).toEqual([]); }
+async function mount(page: import("@playwright/test").Page, width = 900, empty = false, path = "/", query = "", direction: "ltr" | "rtl" = "ltr") { const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message)); await page.setViewportSize({ width, height: 700 }); await page.route("https://shell.test/**", (route) => route.request().url().endsWith("/api/auth/session/context") ? route.fallback() : route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="${direction === "rtl" ? "ar" : "en"}" dir="${direction}"><head><style>${bundledCss}\n${css}</style></head><body><div id="root"></div></body></html>` })); await page.goto(`https://shell.test${path}${empty ? "?empty" : query}`); await page.evaluate(bundle); if (empty) await expect(page.getByRole("heading", { name: "No applications available" })).toBeVisible(); else if (path === "/forbidden") await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible(); else if (path.startsWith("/app/")) await expect(page.locator(".athyper-shell__breadcrumbs li").first()).toBeAttached(); else await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible(); expect(errors).toEqual([]); }
 
 test("desktop shell exposes landmarks, sidebar profile, context, and logout", async ({ page }) => { await mount(page); await expect(page.getByRole("complementary", { name: "Application navigation" })).toBeVisible(); await expect(page.getByRole("navigation", { name: "Home and workspaces" })).toBeVisible(); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAttribute("href", "/home"); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAccessibleName("Athyper Test home"); await expect(page.locator(".athyper-shell__mobile-brand")).toBeHidden(); await expect(page.getByRole("main")).toBeVisible(); await expect(page.getByRole("contentinfo")).toContainText("Atlas Digital Technology Solutions"); await page.keyboard.press("Tab"); await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused(); await expect(page.locator("[data-slot]" )).toHaveCount(6); await expect(page.locator(".athyper-shell__business-context")).toContainText("Tenant Alpha"); await expect(page.locator(".athyper-shell__topbar")).not.toContainText("User One"); await page.getByRole("group").filter({ has: page.getByText("User One", { exact: true }) }).locator("summary").click(); await expect(page.getByText("user.one@example.test", { exact: true })).toBeVisible(); await expect(page.getByText("Organization", { exact: true })).toBeVisible(); await expect(page.getByText("Working company", { exact: true })).toBeVisible(); await expect(page.getByRole("link", { name: "Sign out" })).toBeVisible(); const results = await new AxeBuilder({ page }).analyze(); expect(results.violations.filter((item) => item.impact === "critical")).toEqual([]); });
 test("persistent desktop brand stays fixed while only the navigation rail collapses", async ({ page }) => {
@@ -24,6 +24,17 @@ test("persistent desktop brand stays fixed while only the navigation rail collap
   expect(after.brand).toEqual(before.brand);
   expect(Math.round(before.rail?.width ?? 0)).toBe(280);
   expect(Math.round(after.rail?.width ?? 0)).toBe(56);
+});
+test("phone breadcrumb is one back link to the parent; wider screens keep the full trail", async ({ page }) => {
+  await mount(page, 390, false, "/app/entity/country/af");
+  const crumbs = page.locator(".athyper-shell__breadcrumbs");
+  const visible = () => crumbs.locator("li").evaluateAll((items) => items.filter((item) => getComputedStyle(item).display !== "none").map((item) => item.textContent));
+  expect(await visible()).toEqual(["Countries"]);
+  await expect(crumbs.getByRole("link", { name: "Countries" })).toHaveAttribute("href", "/app/entity/country");
+  // One line, nothing overlapping or spilling past the viewport.
+  expect(await crumbs.evaluate((node) => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  await mount(page, 1280, false, "/app/entity/country/af");
+  expect((await visible()).length).toBe(4);
 });
 test("phone header keeps navigation available with branding inside the drawer", async ({ page }) => {
   await mount(page, 390, false, "/", "?desktopBrand");
@@ -321,7 +332,10 @@ test("Utilities opens with language and about sections and returns focus on clos
   await utilities.click();
   const panel = page.getByRole("dialog", { name: "Utilities" });
   await expect(panel).toBeVisible();
-  await expect(panel.getByRole("heading", { name: "Language & region" })).toBeVisible();
+  // Language sits with the other personal preferences; each enabled language is a choice.
+  const language = panel.getByRole("group", { name: "Language" });
+  await expect(language.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+  await expect(language.getByRole("button", { name: "العربية" })).toHaveAttribute("lang", "ar");
   await expect(panel.getByRole("heading", { name: "Application information" })).toBeVisible();
   await expect(panel).toContainText("Athyper Test");
   await expect(panel).toContainText("Fixture workspace");
@@ -407,4 +421,29 @@ test("activity access failures explain access and transient failures can retry",
       expect(await page.evaluate(()=>(window as any).activityRetries)).toBe(1);
     }
   }
+});
+
+test("one enabled language shows read-only instead of disappearing", async ({ page }) => {
+  await mount(page, 1280);
+  await page.getByRole("button", { name: "Utilities", exact: true }).click();
+  const panel = page.getByRole("dialog", { name: "Utilities" });
+  await expect(panel.getByText("The only language enabled for your organisation")).toBeVisible();
+  await expect(panel.getByRole("group", { name: "Language" })).toHaveCount(0);
+});
+
+test("account menu: initials, login id and My profile; no empty rows or dead controls", async ({ page }) => {
+  await mount(page, 1280, false, "/", "?noEmail");
+  await page.locator(".athyper-shell__profile > summary").click();
+  const panel = page.locator(".athyper-shell__profile-panel");
+  await expect(panel.locator("header .athyper-shell__avatar")).toHaveText("UO");
+  await expect(panel.locator("header em")).toHaveText("user.one");
+  // My profile opens the caller's own principal record (profile, notifications, UI profile).
+  await expect(panel.getByRole("link", { name: "My profile" })).toHaveAttribute("href", "/app/entity/principal/me");
+  // A missing email has no row: no "Not provided", no link to a page with nothing to edit.
+  await expect(panel.locator(".athyper-shell__identity-details")).toHaveCount(0);
+  await expect(panel.getByRole("link", { name: /email/i })).toHaveCount(0);
+  await expect(panel).not.toContainText("Not provided");
+  await expect(panel).not.toContainText("—");
+  // Language lives in Utilities only.
+  await expect(panel.getByText("Language")).toHaveCount(0);
 });

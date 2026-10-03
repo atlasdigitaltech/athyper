@@ -16,6 +16,11 @@ export const entityEnglishMessages = Object.freeze({
   "entity.related.edit": "Edit",
   "entity.related.cancel": "Cancel",
   "entity.related.back": "Back to list",
+  "entity.related.backTo": "Back to {section}",
+  "entity.related.save": "Save",
+  "entity.related.saved": "Saved",
+  "entity.related.new": "New",
+  "entity.related.editing": "Edit",
 
   "validation.required": "{field} is required.",
   "validation.maxLength": "{field} must be {max} characters or fewer.",

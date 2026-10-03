@@ -129,11 +129,13 @@ export function ActivityCenterPage({
       }
       navigation={
         <ManagementNavigation
+          appearance="flat"
           label={text("type")}
           currentKey={kind}
           items={(["notifications", "inbox"] as const).map((key) => ({
             key,
             label: text(key === "notifications" ? "title.notifications" : "title.inbox"),
+            icon: key === "notifications" ? <BellIcon aria-hidden="true" /> : <InboxIcon aria-hidden="true" />,
             href:
               key === "inbox"
                 ? (data.inboxHref ?? "/inbox")

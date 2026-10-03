@@ -6,6 +6,7 @@ import { definePlaneRoutes } from "@athyper/platform-shell/core";
 export const neonRoutes = definePlaneRoutes(PLATFORM_CATALOG_ROUTES.neon.flatMap((workspace, workspaceIndex) => workspace.modules.map((module) => ({
   id: `neon.${workspace.code}.${module.code}`,
   moduleCode: module.code,
+  entities: module.entities.map(({ code, name }) => ({ code, name })),
   href: `/${workspace.routeSlug}/${module.routeSlug}` as `/${string}`,
   label: module.name,
   iconKey: module.iconKey ?? "info",

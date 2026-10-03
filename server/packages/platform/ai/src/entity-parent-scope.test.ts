@@ -44,6 +44,8 @@ it("preserves a parent scope in tenant-directory admission and selected/visible 
   const resolved = await resolver.resolve(f.context, { ...f.page, selectedIds: [id], analysisTarget: "selection" });
   expect(resolved.scopeCoordinate).toEqual(f.scopeCoordinate);
   expect(list).toHaveBeenCalledTimes(3);
+  await expect(resolver.resolve(f.context, { ...f.page, parentScope: { ...f.parentScope, parentDescriptorHash: "c".repeat(64) } })).rejects.toMatchObject({ code: "BUSINESS_CONTEXT_UNAVAILABLE" });
+  expect(list).toHaveBeenCalledTimes(3);
   const record = await resolver.resolve(f.context, { schemaVersion: 1, kind: "record", entityCode: f.child.entityCode, recordId: id, dirty: false, generationId: id, locale: "en", parentScope: f.parentScope });
   expect(record.scopeCoordinate).toEqual(f.scopeCoordinate);
   await expect(resolver.resolve(f.context, { ...f.page, parentScope: { ...f.parentScope, relationshipKey: "unregistered" } })).rejects.toMatchObject({ code: "BUSINESS_CONTEXT_UNAVAILABLE" });

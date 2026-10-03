@@ -219,6 +219,27 @@ function findRawTrackingLeading(content: string, file: string): RuleMatch[] {
   return matches;
 }
 
+/**
+ * Work-content text roles: a list cell or header, a record field label or value, and
+ * a form label take their size only from the density roles (--a-density-data-*,
+ * --a-density-label-*), so one value has one size in list, record and edit views.
+ * Any rule targeting those elements that sets another font-size is a finding.
+ */
+const WORK_CONTENT_SELECTOR =
+  /\.a-record-detail-fields\s+d[td]\b|\.a-form-field\s*>\s*\.a-label\b|\.a-data-surface__field\s*>\s*label\b|\.a-entity-list__table\s+t[hd]\b/;
+const CSS_RULE = /([^{}]+)\{([^{}]*)\}/g;
+function findWorkContentTextRole(content: string, file: string): RuleMatch[] {
+  if (!file.endsWith(".css")) return [];
+  const matches: RuleMatch[] = [];
+  for (const rule of content.matchAll(CSS_RULE)) {
+    if (!WORK_CONTENT_SELECTOR.test(rule[1]!)) continue;
+    const size = /(?<![\w-])font-size\s*:\s*([^;}]+)/i.exec(rule[2]!);
+    if (size && !/^var\(--a-density-(?:data|label|section)-font-size\)$/.test(size[1]!.trim()))
+      matches.push({ index: (rule.index ?? 0) + rule[1]!.length + 1 + size.index, match: size[0] });
+  }
+  return matches;
+}
+
 const RULES: Rule[] = [
   {
     name: "raw-hex-color",
@@ -258,6 +279,13 @@ const RULES: Rule[] = [
     description:
       "Use --a-line-height-* / --a-tracking-* tokens instead of raw line-height / letter-spacing values in CSS.",
     find: findRawTrackingLeading,
+  },
+  {
+    name: "work-content-text-role",
+    severity: "error",
+    description:
+      "List cells and headers, record field labels and values, and form labels take font-size only from --a-density-data/label/section-font-size.",
+    find: findWorkContentTextRole,
   },
   {
     name: "stock-tailwind-typography",

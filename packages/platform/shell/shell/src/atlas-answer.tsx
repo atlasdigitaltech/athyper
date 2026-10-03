@@ -438,17 +438,15 @@ export function atlasStarterQuestions(
   context?: AtlasBusinessContextV1,
 ): readonly string[] {
   if (!context) return ["What can you help me with in this workspace?"];
-  if (context.kind === "manage" && context.entityCode !== "business_partner")
-    return ["What can you help me with for these records?"];
   if (context.kind === "manage")
     return context.analysisTarget === "selection" && context.selectedIds.length
       ? [
-          "Compare my selected business partners.",
-          "Which selected partners need attention?",
+          "Compare my selected records using available evidence.",
+          "What information is available about my selected records?",
         ]
       : [
-          "Which partners in these filtered results need attention?",
-          "Summarize these filtered partners and show the coverage.",
+          "What information is available about these filtered records?",
+          "Summarize these filtered records and show the coverage.",
         ];
   if (context.asOf)
     return [
@@ -466,9 +464,7 @@ export function atlasStarterQuestions(
       "What information is available about this record?",
     ];
   return [
-    context.entityCode === "business_partner"
-      ? "Summarize this business partner."
-      : "Show this record summary",
+    "Show this record summary",
     `Explain the saved information in ${context.section ?? "this record"}.`,
   ];
 }

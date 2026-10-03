@@ -34,7 +34,7 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
   return {
     async list(input, transaction) {
       const executor = transaction ?? databaseFor(input.descriptor);
-      const conditions = baseConditions(input.descriptor, input.tenantId);
+      const conditions = baseConditions(input.descriptor, input.tenantId, "read");
       if (input.recordIds !== undefined && !input.recordIds.length) conditions.push(sql`FALSE`);
       if (input.recordIds?.length) conditions.push(sql`${sql.ref(input.descriptor.storage.idField)} IN (${sql.join(input.recordIds.map((id) => sql`${id}::uuid`))})`);
       for (const constraint of input.collectionScope) conditions.push(compileRecordCollectionScopeCondition(input.descriptor, input.tenantId, constraint, scopeCompilers));
@@ -68,7 +68,7 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
     },
     async get(descriptor, tenantId, recordId, projectionKeys, transaction) {
       const executor = transaction ?? databaseFor(descriptor);
-      const result = await sql<Record<string, unknown>>`SELECT ${projection(descriptor, projectionKeys)} FROM ${table(descriptor)} WHERE ${sql.join([...baseConditions(descriptor, tenantId), sql`${sql.ref(descriptor.storage.idField)} = ${recordId}`], sql` AND `)} LIMIT 1`.execute(executor);
+      const result = await sql<Record<string, unknown>>`SELECT ${projection(descriptor, projectionKeys)} FROM ${table(descriptor)} WHERE ${sql.join([...baseConditions(descriptor, tenantId, "read"), sql`${sql.ref(descriptor.storage.idField)} = ${recordId}`], sql` AND `)} LIMIT 1`.execute(executor);
       return result.rows[0] ?? null;
     },
     async create(descriptor, tenantId, input, transaction) {
@@ -106,7 +106,9 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
 
 function table(descriptor: EntityRuntimeDescriptor) { return sql.table(`${descriptor.storage.schema}.${descriptor.storage.object}`); }
 function projection(descriptor: EntityRuntimeDescriptor, keys: readonly string[]): RawBuilder<unknown> { const selected = keys.map((key) => { const field = descriptor.fields.find((item) => item.key === key); if (!field) throw new Error(`Unknown projection field: ${key}`); return sql`${sql.ref(field.storagePath)} AS ${sql.ref(key)}`; }); const outputKeys = new Set(keys); for (const key of [descriptor.storage.idField, descriptor.storage.versionField, descriptor.storage.statusField].filter((item): item is string => Boolean(item))) if (!outputKeys.has(key)) selected.push(sql.ref(key)); return sql.join(selected); }
-function baseConditions(descriptor: EntityRuntimeDescriptor, tenantId: string): RawBuilder<unknown>[] { const conditions: RawBuilder<unknown>[] = (descriptor.recordPredicates??[]).map(predicate=>filterCondition(descriptor,predicate)); if (descriptor.storage.tenantField) conditions.push(sql`${sql.ref(descriptor.storage.tenantField)} = ${tenantId}::uuid`); if (descriptor.storage.softDeleteField) conditions.push(sql`${sql.ref(descriptor.storage.softDeleteField)} IS NULL`); return conditions.length ? conditions : [sql`TRUE`]; }
+/** `read` may admit platform-owned rows when the descriptor opts in; `write`
+ * (patch/delete/conflict probes) is always tenant-exact. */
+function baseConditions(descriptor: EntityRuntimeDescriptor, tenantId: string, access: "read" | "write" = "write"): RawBuilder<unknown>[] { const conditions: RawBuilder<unknown>[] = (descriptor.recordPredicates??[]).map(predicate=>filterCondition(descriptor,predicate)); if (descriptor.storage.tenantField) conditions.push(access === "read" && descriptor.storage.tenantVisibility === "tenant_or_platform" ? sql`(${sql.ref(descriptor.storage.tenantField)} IS NULL OR ${sql.ref(descriptor.storage.tenantField)} = ${tenantId}::uuid)` : sql`${sql.ref(descriptor.storage.tenantField)} = ${tenantId}::uuid`); if (descriptor.storage.softDeleteField) conditions.push(sql`${sql.ref(descriptor.storage.softDeleteField)} IS NULL`); return conditions.length ? conditions : [sql`TRUE`]; }
 /** @internal Exported for SQL contract verification; callers must use resolver-issued constraints. */
 export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeDescriptor, tenantId: string, constraint: RecordRepositoryListInput["collectionScope"][number], compilers?: ReadonlyMap<string, RecordCollectionScopeSqlCompiler>): RawBuilder<unknown> {
   const registered = compilers?.get(constraint.kind);

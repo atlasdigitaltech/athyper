@@ -10,9 +10,9 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | --- | ---: |
 | Matched identities | 66 |
 | Legacy-only identities | 802 |
-| Current-only identities | 352 |
+| Current-only identities | 355 |
 | Legacy occurrences | 898 |
-| Current occurrences | 418 |
+| Current occurrences | 421 |
 
 | Status | Method | Normalized path | Legacy sources | Current sources |
 | --- | --- | --- | ---: | ---: |
@@ -195,6 +195,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | GET | `/api/entity-runtime/:param/form-descriptor` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/list` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/list-descriptor` | 0 | 1 |
+| current-only | GET | `/api/entity-runtime/:param/own-record` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/records/:param` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/records/:param/bootstrap` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/records/:param/collaboration/:param` | 0 | 1 |
@@ -203,6 +204,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | GET | `/api/entity-runtime/:param/records/:param/summary` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/reference-history` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/references/:param` | 0 | 1 |
+| current-only | GET | `/api/entity-runtime/directory` | 0 | 1 |
 | legacy-only | GET | `/api/entity/pii-inventory` | 1 | 0 |
 | legacy-only | GET | `/api/finance/account-analysis` | 1 | 0 |
 | legacy-only | GET | `/api/finance/accounting-profiles` | 1 | 0 |
@@ -678,6 +680,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | PATCH | `/api/platform/control/commerce/features/:param` | 1 | 0 |
 | legacy-only | PATCH | `/api/platform/control/commerce/plans/:param` | 1 | 0 |
 | current-only | PATCH | `/api/platform/preferences/saved-views/:param/actions/:param` | 0 | 1 |
+| current-only | PATCH | `/api/platform/profile/appearance` | 0 | 1 |
 | current-only | PATCH | `/api/platform/profile/locale` | 0 | 1 |
 | matched | PATCH | `/api/platform/saved-views/:param/:param` | 1 | 1 |
 | matched | PATCH | `/api/platform/saved-views/:param/:param/default` | 1 | 1 |

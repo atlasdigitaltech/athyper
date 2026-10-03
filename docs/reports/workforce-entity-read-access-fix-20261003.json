@@ -1,0 +1,75 @@
+{
+  "environment": "dev",
+  "verifiedAt": "2026-10-03T00:18:12.062309+00:00",
+  "originalRequestId": "68fab182-1978-48b6-b66e-38a1b459f45a",
+  "actor": "catl.admin",
+  "tenant": "cirrusatlantic",
+  "assurance": "elevated",
+  "rootCause": "Published workforce read permissions require a high-risk policy evaluator; the standard authority had no evaluator for these operations.",
+  "fix": "Owning workforce domain policy registered through shared Entity Framework composition; current published descriptor/profile pins, tenant scope, read operations and existing IAM controls required.",
+  "liveChecks": [
+    {
+      "entity": "employee",
+      "operation": "list-descriptor?includeViews=true",
+      "status": 200
+    },
+    {
+      "entity": "employee",
+      "operation": "list",
+      "status": 200
+    },
+    {
+      "entity": "person",
+      "operation": "list-descriptor?includeViews=true",
+      "status": 200
+    },
+    {
+      "entity": "person",
+      "operation": "list",
+      "status": 200
+    },
+    {
+      "entity": "external_worker",
+      "operation": "list-descriptor?includeViews=true",
+      "status": 200
+    },
+    {
+      "entity": "external_worker",
+      "operation": "list",
+      "status": 200
+    },
+    {
+      "entity": "address",
+      "operation": "list-descriptor?includeViews=true",
+      "status": 200
+    },
+    {
+      "entity": "address",
+      "operation": "list",
+      "status": 200
+    },
+    {
+      "entity": "person_address_use",
+      "operation": "list-descriptor?includeViews=true",
+      "status": 200
+    },
+    {
+      "entity": "person_address_use",
+      "operation": "list",
+      "status": 200
+    }
+  ],
+  "browser": {
+    "url": "https://neon.dev.athyper.test/app/entity/employee/manage",
+    "descriptorStatus": 200,
+    "listStatus": 200
+  },
+  "employeeRows": 0,
+  "liveDetailVerified": false,
+  "regressionTests": 25,
+  "typechecks": [
+    "workforce",
+    "platform-host"
+  ],
+  "publication": "No source revisions or active publication artifacts changed. Runtime source fingerprint changes with this fix; future compiler-pinned execution requires its normal approval reconciliation."
+}

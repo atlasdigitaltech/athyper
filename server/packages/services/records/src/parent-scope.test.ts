@@ -71,3 +71,14 @@ it("fails closed for incomplete/unregistered scope, owner failure, revocation an
   const failing = createParentCollectionScopeResolver({ metadata: { getEntityDescriptor: async () => f.parent }, readParent: async () => { throw Error("owner unavailable"); } });
   await expect(failing.resolve({ context: f.context, descriptor: f.child, operationCode: "read", coordinate: f.scope })).rejects.toThrow("owner unavailable");
 });
+it("names the parent scope by its published title, never by its id when the title is readable", async () => {
+  const f = fixture();
+  Object.assign(f.parent, { recordPresentation: { ...(f.parent as { recordPresentation: object }).recordPresentation, titleField: "name" } });
+  const resolved = await f.collectionScopes.resolve({ context: f.context, descriptor: f.child, operationCode: "read", coordinate: f.scope } as never);
+  expect(resolved.status).toBe("ready");
+  expect(resolved.labels.find((label) => label.key === "parent")?.value).toBe("Self");
+  // Without a published title field the id still identifies the scope.
+  Object.assign(f.parent, { recordPresentation: { ...(f.parent as { recordPresentation: object }).recordPresentation, titleField: undefined } });
+  const fallback = await f.collectionScopes.resolve({ context: f.context, descriptor: f.child, operationCode: "read", coordinate: f.scope } as never);
+  expect(fallback.labels.find((label) => label.key === "parent")?.value).toBe(f.scope.parentRecordId);
+});

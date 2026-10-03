@@ -7,6 +7,7 @@ import {
   PostgresQueryCompiler,
 } from "kysely";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import { createCollaborationEntityCoordinates } from "../entity-coordinate.js";
 import {
   createKyselyCollaborationRepository,
   type CollaborationTransaction,
@@ -72,7 +73,7 @@ async function run(
   });
   try {
     await work(
-      createKyselyCollaborationRepository(),
+      createKyselyCollaborationRepository(createCollaborationEntityCoordinates([{canonical:"business_partner",aliases:["master.business_partner"]}])),
       db as unknown as CollaborationTransaction,
     );
     return queries;

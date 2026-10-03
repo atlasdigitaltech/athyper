@@ -1,0 +1,80 @@
+{
+  "schema": "athyper.entity-publication-prerequisite-repair/1",
+  "observedAt": "2026-10-02T20:56:14.331012+00:00",
+  "environment": "dev",
+  "requestedBlockersResolved": true,
+  "permissionCatalog": {
+    "report": "workforce-read-permission-catalog-20261003.json",
+    "installedCount": 5,
+    "scope": "tenant",
+    "propagation": "exact",
+    "grantStateUnchanged": true,
+    "migration": "20261003_workforce_entity_read_permissions.sql",
+    "sha256": "098a0bc28b84dc502ea8934b141c83e4d2bfa465b653363958622f6c1892b2ff"
+  },
+  "businessPartner": {
+    "fix": "Shared runtime decoding omits structurally valid legacy DTO display hints only when both explicit relationship keys and relationship declarations are absent. Explicit bindings and new authoring validation remain strict.",
+    "signedArtifactsModified": false,
+    "servingReport": "coordinated-release-serving-qualification-20261003.json",
+    "parsedDescriptors": 35,
+    "readinessFailures": [],
+    "optionalCapabilityExecutionQualified": false
+  },
+  "validation": {
+    "metadataTests": {
+      "passed": 157,
+      "skipped": 2
+    },
+    "metadataTypecheck": "passed",
+    "platformHostTypecheck": "passed",
+    "migrationLayout": "passed",
+    "selectedTargetPermissionFailures": 0,
+    "coordinatedRelationshipGates": [
+      {
+        "plane": "neon",
+        "entities": [
+          "address",
+          "employee",
+          "external_worker",
+          "person",
+          "person_address_use",
+          "principal_profile"
+        ],
+        "result": "passed"
+      },
+      {
+        "plane": "studio",
+        "entities": [
+          "principal_profile"
+        ],
+        "result": "passed"
+      },
+      {
+        "plane": "mesh",
+        "entities": [
+          "principal_profile"
+        ],
+        "result": "passed"
+      }
+    ]
+  },
+  "publication": {
+    "performed": false,
+    "sources": 6,
+    "targets": 8,
+    "sourcePlanUnchanged": true,
+    "oldCompiler": {
+      "name": "athyper.compiled-entity-artifact",
+      "version": "1.1.0",
+      "buildHash": "725086ee63e96f17acb4266e7cd496042dd8e17199b7eb798a403234b5be546a"
+    },
+    "newCompiler": {
+      "name": "athyper.compiled-entity-artifact",
+      "version": "1.1.0",
+      "buildHash": "a9e1d1a4052865560a850e6ce53b6a6f732126369b4d4e7d49eae70f4e267f02"
+    },
+    "candidate": "coordinated-release-execution-policy-runtime-fix-20261003.json",
+    "policyEnrolled": false,
+    "remainingGate": "Actual Platform Admin proposal and independent Platform Owner activation of the updated build-pinned execution policy, followed by publication and target activation verification."
+  }
+}

@@ -27,6 +27,7 @@ export interface EntityRuntimeNavigationTabPlan {
   readonly provider: "overview" | "section";
   readonly sectionDisplay: "continuous" | "selected";
   readonly sectionKeys: readonly string[];
+  readonly iconKey?: string;
 }
 export interface EntityRuntimeSummaryViewPlan {
   readonly cards: readonly EntityRuntimeSummaryCardPlan[];
@@ -50,6 +51,7 @@ export interface EntityRuntimeSectionPlan {
   readonly presentationRef: string;
   readonly label?: Readonly<{ readonly labelKey: string; readonly defaultText: string }>;
   readonly loadPolicy: "initial" | "visible" | "active";
+  readonly iconKey?: string;
 }
 
 export interface EntityRuntimeResourceContext {
@@ -211,6 +213,7 @@ function parseBootstrap(value: unknown): EntityRuntimeBootstrapResource {
       presentationRef: text(item.presentationRef, "entity runtime section presentation reference"),
       ...(localized(item.label) ? { label: localized(item.label) } : {}),
       loadPolicy,
+      ...iconKeyOf(item.iconKey),
     });
   });
   const initialSectionKeys = array(plan.initialSectionKeys, "entity runtime page plan.initialSectionKeys").map((item) => key(item, "entity runtime initial section key"));
@@ -256,7 +259,7 @@ function parseNavigation(value: unknown, sections: readonly EntityRuntimeSection
     if (!provider || !label) invalid("entity runtime navigation tab");
     const sectionKeys = array(item.sectionKeys, "entity runtime navigation tab sections").map((keyValue) => key(keyValue, "entity runtime navigation section key"));
     if (!sectionKeys.length || sectionKeys.some((sectionKey) => !sections.some((section) => section.key === sectionKey))) invalid("entity runtime navigation tab sections");
-    return Object.freeze({ key: navigationKey(item.key, "entity runtime navigation tab key"), label, provider, sectionDisplay: entitySectionDisplay(item.sectionDisplay, provider), sectionKeys: Object.freeze(sectionKeys) });
+    return Object.freeze({ key: navigationKey(item.key, "entity runtime navigation tab key"), label, provider, sectionDisplay: entitySectionDisplay(item.sectionDisplay, provider), sectionKeys: Object.freeze(sectionKeys), ...iconKeyOf(item.iconKey) });
   });
   if (!tabs.length || new Set(tabs.map((tab) => tab.key)).size !== tabs.length || tabs.filter((tab) => tab.provider === "overview").length > 1) invalid("entity runtime navigation");
   return Object.freeze({ tabs: Object.freeze(tabs) });
@@ -367,3 +370,7 @@ function localized(value: unknown): Readonly<{ readonly labelKey: string; readon
   return Object.freeze({ labelKey: item.labelKey, defaultText: item.defaultText });
 }
 function invalid(name: string): never { throw new TypeError(`${name} is invalid`); }
+
+function iconKeyOf(value: unknown): { readonly iconKey?: string } {
+  return typeof value === "string" && /^[a-z][a-z0-9-]{0,62}$/.test(value) ? { iconKey: value } : {};
+}

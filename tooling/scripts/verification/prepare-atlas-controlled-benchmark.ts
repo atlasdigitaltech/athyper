@@ -110,7 +110,7 @@ const handoff = {
     {
       item: "T07",
       action:
-        "Use distinct eligible proposer and evaluation reviewer; bind candidate, source, fixtures and evaluator to the activated artifact and current release readback",
+        "catl.admin proposes the candidate; catl.owner evaluates it and may also approve the fixtures; retain maker/checker separation and bind candidate, source, fixtures and evaluator to the activated artifact and current release readback",
     },
     {
       item: "T08",

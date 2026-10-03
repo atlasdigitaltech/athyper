@@ -1,0 +1,99 @@
+{
+  "schema": "athyper.coordinated-deployment-recovery-implementation/1",
+  "observedAt": "2026-10-02T22:46:21.356842+00:00",
+  "implementation": "complete",
+  "candidate": "docs/reports/coordinated-release-deployment-recovery-policy-20261003.json",
+  "compiler": {
+    "name": "athyper.compiled-entity-artifact",
+    "version": "1.1.0",
+    "buildHash": "0b0cc0c465d589bd305b0f367c644d635290b7c45385c970e53cc48aab1e350b"
+  },
+  "originalPolicy": {
+    "id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91",
+    "hash": "f83745496f6130b300dcb1da6514d4f6079a5c2af720594908b576e9a92da76f",
+    "version": 1,
+    "compilerHash": "d3cb4f384c7b311aa3ce3daf61367927e4cd6a177aee021284efccf94e03e5ca",
+    "coordinationHash": "946bce7318a02fb0d3941506805ed486a20c01577d23a68c5d2d542d98a88a02"
+  },
+  "changes": [
+    "Separate signed-deployment recovery policy enrolled through existing Platform Admin proposal and independent Platform Owner activation",
+    "Exact original-policy, artifact, release, target, expiry and compiler pins; no original-policy retirement or signature changes",
+    "Shared authority lock serializes proposal/activation/execution and target activation",
+    "Audited transaction creates idempotent local/dev deployment attempts and marks obsolete wildcard attempts failed",
+    "Authenticated workload execution and source-aware publisher resolution; no legacy seed substitution",
+    "Activation accepts a changed execution compiler only through the exact independently active recovery policy and exact attempt commands; all signed artifact, current source review, readiness, relationship and predecessor checks remain",
+    "Existing SECURITY DEFINER transition and least-privilege roles retained"
+  ],
+  "installed": {
+    "databaseMigration": "20261003_coordinated_deployment_recovery.sql",
+    "databaseMigrationSha256": "e047b550deb88974629f5765d80d2d648d4ed4d543b0fc825701b3130ee3b1ea",
+    "searchPathMigration": "20261003_deployment_recovery_search_path.sql",
+    "searchPathMigrationSha256": "54fe4493ce6ca249a3fb58e2e6fccb937efef593a67f41520e33f971aa541492",
+    "publisherReconciliation": {
+      "newPlane": "mesh",
+      "unchangedPlanes": [
+        "studio",
+        "neon"
+      ],
+      "principalId": "c0febdd1-491c-46b8-8113-160be767b88d",
+      "authEpoch": 0,
+      "roleOrPermissionGrantsAdded": false,
+      "idempotentReplayPassed": true
+    },
+    "runtimeHostsRestarted": [
+      "athyper-dev-source-api-1",
+      "athyper-dev-source-worker-1",
+      "athyper-dev-control-control-api-1"
+    ]
+  },
+  "verification": {
+    "targetedHostTests": 65,
+    "publicationTests": 45,
+    "restrictedRolePostgresTests": 1,
+    "typechecks": [
+      "@athyper/server-platform-host",
+      "@athyper/server-service-publication"
+    ],
+    "livePreflight": "docs/reports/coordinated-release-deployment-recovery-preflight-20261003.json",
+    "postgresRegressionCoverage": [
+      "maker_checker",
+      "stale_compiler",
+      "stale_policy_hash",
+      "duplicate_active_recovery",
+      "concurrent_authority_lock",
+      "audit_failure_rollback",
+      "eight_exact_new_attempts",
+      "idempotent_replay",
+      "wrong_publisher_identity",
+      "rollback_of_all_test_enrollments_and_attempts"
+    ],
+    "broaderSecuritySuite": {
+      "lastResult": "12 passed, 1 failed",
+      "unrelatedFailure": "Isolated onboarding-boundary.sql fixture uses an invalid master.canonical_party_kind_d value; no publication assertion failed. This fixture and security generator also changed independently in the shared workspace during verification.",
+      "runtimeImpact": "No changes from this isolated test were installed in DEV."
+    }
+  },
+  "liveState": {
+    "publishedSources": 6,
+    "signedArtifacts": 8,
+    "activatedTargets": 8,
+    "wildcardDeployments": {
+      "neon": 6,
+      "mesh": 1,
+      "studio": 1
+    },
+    "recoveryPoliciesEnrolled": 1,
+    "newRecoveryAttemptsCreated": 8,
+    "recoveryAttemptStatus": "activated_and_acknowledged",
+    "pendingSelectedTargets": 0,
+    "compilerPoliciesEnrolled": 1,
+    "failedRecoveryAttempts": 0,
+    "successfulWorkerJobs": 8,
+    "compilerApprovalRecorded": true
+  },
+  "nextGate": "Selected release deployment complete; fresh browser acceptance is separate.",
+  "permissionFixReport": "docs/reports/coordinated-release-worker-permission-fix-20261003.json",
+  "scopeFixReport": "docs/reports/coordinated-release-scope-fix-qualification-20261003.json",
+  "compilerReconciliationReport": "docs/reports/coordinated-release-recovery-compiler-readiness-20261003.json",
+  "liveActivationReport": "docs/reports/coordinated-release-live-activation-20261003.json"
+}

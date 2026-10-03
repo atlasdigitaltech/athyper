@@ -10,7 +10,7 @@
 
 CREATE OR REPLACE FUNCTION shared.current_tenant_id() RETURNS uuid
     LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path = shared, pg_catalog
+    SET search_path = pg_catalog, shared, pg_temp
 AS $$
 DECLARE
     v text := current_setting('app.current_tenant_id', true);

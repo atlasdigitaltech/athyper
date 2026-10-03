@@ -1,0 +1,25 @@
+{
+  "schema": "athyper.entity-placement/1",
+  "entityCode": "principal",
+  "name": "Principals",
+  "placements": [
+    {
+      "plane": "studio",
+      "workspace": "trustiam",
+      "module": "iam",
+      "routeSlug": "principals"
+    },
+    {
+      "plane": "neon",
+      "workspace": "core",
+      "module": "iam",
+      "routeSlug": "principals"
+    },
+    {
+      "plane": "mesh",
+      "workspace": "core",
+      "module": "iam",
+      "routeSlug": "principals"
+    }
+  ]
+}

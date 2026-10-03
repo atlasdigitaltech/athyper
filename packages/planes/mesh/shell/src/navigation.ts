@@ -5,6 +5,7 @@ const catalogRoutes = PLATFORM_CATALOG_ROUTES.mesh.flatMap((workspace, workspace
   workspace.modules.map((module) => ({
     id: `mesh.${workspace.code}.${module.code}`,
     moduleCode: module.code,
+    entities: module.entities.map(({ code, name }) => ({ code, name })),
     href: `/${workspace.routeSlug}/${module.routeSlug}` as `/${string}`,
     label: module.name,
     iconKey: "info",

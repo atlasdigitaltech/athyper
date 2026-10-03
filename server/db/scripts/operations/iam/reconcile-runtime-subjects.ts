@@ -114,6 +114,7 @@ process.stdout.write(`${JSON.stringify({
 async function adminToken(baseUrl: string, targetRealm: string, username: string, password: string): Promise<string> {
   const response = await fetch(`${baseUrl}/realms/${encodeURIComponent(targetRealm)}/protocol/openid-connect/token`, {
     method: "POST",
+    signal: AbortSignal.timeout(30_000),
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ client_id: "admin-cli", grant_type: "password", username, password }),
   });
@@ -126,6 +127,7 @@ async function allUsers(baseUrl: string, targetRealm: string, token: string): Pr
   const output: Array<Record<string, unknown>> = [];
   for (let first = 0; ; first += 500) {
     const response = await fetch(`${baseUrl}/admin/realms/${encodeURIComponent(targetRealm)}/users?first=${first}&max=500`, {
+      signal: AbortSignal.timeout(30_000),
       headers: { authorization: `Bearer ${token}` },
     });
     if (!response.ok) throw new Error(`Keycloak user inventory failed: ${response.status}`);

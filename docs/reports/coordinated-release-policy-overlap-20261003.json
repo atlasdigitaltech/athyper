@@ -1,0 +1,67 @@
+{
+  "schema": "athyper.coordinated-publication-policy-overlap/1",
+  "ownerApprovalRecorded": true,
+  "newPolicyId": "06ce6433-5128-48ed-8228-5533b9386bf5",
+  "previousPolicyId": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+  "executionError": "SYSTEM_PUBLICATION_ENROLLMENT_REQUIRED",
+  "cause": "New policy activation left the previous policy active; the source authority requires exactly one active matching enrollment.",
+  "sources": [
+    {
+      "entity": "address",
+      "status": "approved",
+      "releaseCount": 0,
+      "activePolicies": [
+        "ac05ec86-daa6-4e57-8473-51c14046a31c",
+        "06ce6433-5128-48ed-8228-5533b9386bf5"
+      ]
+    },
+    {
+      "entity": "employee",
+      "status": "approved",
+      "releaseCount": 0,
+      "activePolicies": [
+        "ac05ec86-daa6-4e57-8473-51c14046a31c",
+        "06ce6433-5128-48ed-8228-5533b9386bf5"
+      ]
+    },
+    {
+      "entity": "external_worker",
+      "status": "approved",
+      "releaseCount": 0,
+      "activePolicies": [
+        "ac05ec86-daa6-4e57-8473-51c14046a31c",
+        "06ce6433-5128-48ed-8228-5533b9386bf5"
+      ]
+    },
+    {
+      "entity": "person",
+      "status": "approved",
+      "releaseCount": 0,
+      "activePolicies": [
+        "ac05ec86-daa6-4e57-8473-51c14046a31c",
+        "06ce6433-5128-48ed-8228-5533b9386bf5"
+      ]
+    },
+    {
+      "entity": "person_address_use",
+      "status": "approved",
+      "releaseCount": 0,
+      "activePolicies": [
+        "ac05ec86-daa6-4e57-8473-51c14046a31c",
+        "06ce6433-5128-48ed-8228-5533b9386bf5"
+      ]
+    },
+    {
+      "entity": "principal_profile",
+      "status": "approved",
+      "releaseCount": 0,
+      "activePolicies": [
+        "ac05ec86-daa6-4e57-8473-51c14046a31c",
+        "06ce6433-5128-48ed-8228-5533b9386bf5"
+      ]
+    }
+  ],
+  "selectedPublicationPerformed": false,
+  "policyLifecycleFinding": "The shared enrollment API currently exposes propose and activate only; no retirement or replacement operation is implemented.",
+  "requiredFix": "A governed policy replacement/retirement path retaining the actual human approval, exact policy hashes and audit history. Do not bypass the uniqueness guard or directly edit policy state."
+}

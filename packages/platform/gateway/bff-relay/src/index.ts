@@ -645,6 +645,14 @@ export const PRINCIPAL_LOCALE_UPDATE_OPERATION: RelayOperation = Object.freeze({
   requiresTenant: true,
   maxBodyBytes: 1024,
 });
+export const PRINCIPAL_APPEARANCE_UPDATE_OPERATION: RelayOperation = Object.freeze({
+  id: "platform.profile.appearance.update",
+  method: "PATCH",
+  path: "/api/platform/profile/appearance",
+  requestClass: "json",
+  requiresTenant: true,
+  maxBodyBytes: 1024,
+});
 export const LOCALE_POLICY_READ_OPERATION: RelayOperation = Object.freeze({
   id: "platform.localization.policy.read",
   method: "GET",
@@ -1138,6 +1146,14 @@ export const REFERENCE_HISTORY_RELAY_OPERATIONS: readonly RelayOperation[] =
       maxBodyBytes: 4096,
     },
   ]);
+/** The requested entities the caller may open (workspace and module pages). */
+export const ENTITY_DIRECTORY_OPERATION: RelayOperation = Object.freeze({
+  id: "entity-runtime.directory",
+  method: "GET",
+  path: "/api/entity-runtime/directory",
+  requestClass: "json",
+  requiresTenant: true,
+});
 export const ENTITY_LIST_DESCRIPTOR_OPERATION: RelayOperation = Object.freeze({
   id: "entity-list.descriptor",
   method: "GET",
@@ -1175,6 +1191,13 @@ export const ENTITY_DETAIL_DESCRIPTOR_OPERATION: RelayOperation = Object.freeze(
     requiresTenant: true,
   },
 );
+export const ENTITY_OWN_RECORD_OPERATION: RelayOperation = Object.freeze({
+  id: "entity-record.own",
+  method: "GET",
+  path: "/api/entity-runtime/:entityCode/own-record",
+  requestClass: "json",
+  requiresTenant: true,
+});
 export const ENTITY_DETAIL_READ_OPERATION: RelayOperation = Object.freeze({
   id: "entity-detail.read",
   method: "GET",
@@ -1316,6 +1339,7 @@ export const ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     ENTITY_FORM_DESCRIPTOR_OPERATION,
     ENTITY_DETAIL_DESCRIPTOR_OPERATION,
+    ENTITY_OWN_RECORD_OPERATION,
     ENTITY_RECORD_CREATE_OPERATION,
     ENTITY_RECORD_READ_OPERATION,
     ENTITY_DETAIL_READ_OPERATION,
@@ -3587,11 +3611,13 @@ export const COMMON_PLANE_RELAY_OPERATIONS: readonly RelayOperation[] =
     IAM_ME_OPERATION,
     EXPERIENCE_BOOTSTRAP_OPERATION,
     PRINCIPAL_LOCALE_UPDATE_OPERATION,
+    PRINCIPAL_APPEARANCE_UPDATE_OPERATION,
     ...EXPERIENCE_SURFACE_RUNTIME_RELAY_OPERATIONS,
     ...ATLAS_ANSWER_RELAY_OPERATIONS,
     ...ENTITY_VIEWS_RELAY_OPERATIONS,
     ENTITY_APPLICATION_DESCRIPTOR_OPERATION,
     ...REFERENCE_HISTORY_RELAY_OPERATIONS,
+    ENTITY_DIRECTORY_OPERATION,
     ENTITY_LIST_DESCRIPTOR_OPERATION,
     ENTITY_LIST_QUERY_OPERATION,
     ENTITY_REFERENCE_CHOICES_OPERATION,

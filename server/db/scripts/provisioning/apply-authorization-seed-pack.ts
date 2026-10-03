@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { resolve, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
 
@@ -10,10 +10,14 @@ import {
   registerSeedPack,
   seedReceipt,
   type ProvisionPlane,
+  type QueryClient,
+  authorizationProvisionLockKey,
 } from "./safe-provision.js";
+import { withAuthorizationProvisionTransaction } from "../../src/provisioning/authorization-transaction.js";
 import { applyPlaneCatalog, applyPlaneSeed } from "./authorization-pack-applicator.js";
 import {
   legalEntityResources,
+  canonicalJson,
   loadProvisionInputs,
   networkAccountResources,
   planeAssignments,
@@ -27,6 +31,8 @@ export interface ApplyAuthorizationOptions {
   readonly databaseUrl?: string;
   readonly dryRun?: boolean;
   readonly catalogOnly?: boolean;
+  /** Caller owns BEGIN/COMMIT/ROLLBACK and connection lifetime when supplied. */
+  readonly transactionClient?: QueryClient;
 }
 
 export async function applyAuthorizationSeedPack(options: ApplyAuthorizationOptions): Promise<unknown> {
@@ -49,38 +55,42 @@ export async function applyAuthorizationSeedPack(options: ApplyAuthorizationOpti
     authorityGroups: pack.authority.groups.filter((group) => group.plane === options.plane).length,
     mode: options.dryRun ? "plan" : options.catalogOnly ? "catalog-only" : "apply",
   };
+  const packSource = await readFile(inputs.authorizationPackPaths[options.plane], "utf8");
+  if (canonicalJson(JSON.parse(packSource)) !== canonicalJson(pack))
+    throw new Error("Authorization seed pack changed during validation");
+  const receipt = seedReceipt({
+    plane: options.plane,
+    packKey: options.catalogOnly
+      ? `authorization-catalog-v2/${options.plane}`
+      : `authorization-clean-slate-v1/${options.plane}/three-tenant`,
+    sourcePath: relativePath(inputs.authorizationPackPaths[options.plane]),
+    source: `-- seed-pack-version: ${inputs.manifest.manifestVersion}\n${packSource}`,
+    manifestSha256: inputs.manifestSha256,
+  });
+
   if (options.dryRun) return plan;
 
-  const databaseUrl = options.databaseUrl ?? resolveDatabaseUrl(inputs.manifest.planes[options.plane].databaseUrlEnvironment);
-  const client = new Client({ connectionString: databaseUrl });
-  await client.connect();
-  try {
-    await client.query("BEGIN");
+  const databaseUrl = options.transactionClient ? undefined : options.databaseUrl ?? resolveDatabaseUrl(inputs.manifest.planes[options.plane].databaseUrlEnvironment);
+  const ownedClient = options.transactionClient ? undefined : new Client({ connectionString: databaseUrl });
+  const client = options.transactionClient ?? ownedClient!;
+  if (ownedClient) await ownedClient.connect();
+  const apply = async () => {
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
-      `athyper:three-plane:v1:${options.plane}`,
+      authorizationProvisionLockKey(options.plane),
     ]);
     const result = options.catalogOnly
       ? await applyPlaneCatalog(client, inputs, options.plane)
       : await applyPlaneSeed(client, inputs, options.plane);
-    const packSource = await readFile(inputs.authorizationPackPaths[options.plane], "utf8");
-    const receipt = seedReceipt({
-      plane: options.plane,
-      packKey: options.catalogOnly
-        ? `authorization-catalog-v2/${options.plane}`
-        : `authorization-clean-slate-v1/${options.plane}/three-tenant`,
-      sourcePath: relativePath(inputs.authorizationPackPaths[options.plane]),
-      source: `-- seed-pack-version: ${inputs.manifest.manifestVersion}\n${packSource}`,
-      manifestSha256: inputs.manifestSha256,
-    });
     await registerSeedPack(client, receipt);
     await recordSeedExecution(client, receipt, "upgrade");
-    await client.query("COMMIT");
     return { ...plan, mode: options.catalogOnly ? "catalog-applied" : "applied", result, receipt };
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
+  };
+  try {
+    return ownedClient
+      ? await withAuthorizationProvisionTransaction(ownedClient, options.plane, apply)
+      : await apply();
   } finally {
-    await client.end();
+    if (ownedClient) await ownedClient.end();
   }
 }
 
@@ -98,7 +108,10 @@ function resolveDatabaseUrl(primary: string): string {
 }
 
 function relativePath(path: string): string {
-  return path.replace(`${resolve(".")}\\`, "").replace(/\\/g, "/");
+  const dbRoot = resolve(import.meta.dirname, "../..");
+  const sourcePath = relative(dbRoot, path).replace(/\\/g, "/");
+  if (sourcePath.startsWith("../") || sourcePath === "..") throw new Error("Authorization seed source must be inside server/db");
+  return sourcePath;
 }
 
 function option(args: readonly string[], name: string): string | undefined {

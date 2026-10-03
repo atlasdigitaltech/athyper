@@ -384,6 +384,30 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       ]);
       return this.bootstrap(context);
     },
+    /** Saves the principal's own theme, density and design system to their profile. */
+    async updatePrincipalAppearance(
+      context: VerifiedRequestContext,
+      patch: Readonly<Record<string, unknown>>,
+    ): Promise<ExperienceBootstrap> {
+      assertSnapshotBoundToContext(context);
+      const repository = options.repositories.require(context.planeKey);
+      assertIdentityAdmission(context, await repository.readIdentity(context, now()));
+      const appearanceMode = patch.appearanceMode === undefined ? undefined : appearance(patch.appearanceMode),
+        densityCode = patch.densityCode === undefined ? undefined : density(patch.densityCode),
+        themeFamily = patch.themeFamily === undefined ? undefined : themeFamilyCode(patch.themeFamily);
+      if ((patch.appearanceMode !== undefined && !appearanceMode) || (patch.densityCode !== undefined && !densityCode) || (patch.themeFamily !== undefined && !themeFamily)
+        || (!appearanceMode && !densityCode && !themeFamily))
+        throw new ExperienceAccessError(400, "EXPERIENCE_APPEARANCE_INVALID", "Choose a supported theme, density or design system");
+      if (!repository.updatePrincipalAppearance)
+        throw Object.assign(new Error("Appearance preference writer is unavailable"), { code: "EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" });
+      await repository.updatePrincipalAppearance(context, {
+        ...(appearanceMode ? { appearanceMode } : {}),
+        ...(densityCode ? { densityCode } : {}),
+        ...(themeFamily ? { themeFamily } : {}),
+      });
+      await options.cache?.invalidate([`${context.planeKey}:profile`, `${context.planeKey}:principal:${context.principalId}`]);
+      return this.bootstrap(context);
+    },
     async saveSurfaceDraft(
       context: VerifiedRequestContext,
       input: Readonly<{
@@ -1210,6 +1234,7 @@ async function readProfileOrDefault(
       appearanceMode:
         appearance(principal.appearanceMode) ?? PLATFORM_PROFILE.appearanceMode,
       densityCode: density(principal.densityCode) ?? defaultDensity,
+      ...(themeFamilyCode(principal.themeFamily) ? { themeFamily: themeFamilyCode(principal.themeFamily)! } : {}),
     };
     return {
       profile,
@@ -1831,6 +1856,10 @@ function days(value: unknown): readonly number[] | undefined {
     value.every((item) => integer(item, 0, 6) !== undefined)
     ? [...new Set(value as number[])]
     : undefined;
+}
+/** A saved design system id; the browser keeps only families it knows. */
+function themeFamilyCode(value: unknown): string | undefined {
+  return typeof value === "string" && /^[a-z][a-z0-9-]{0,62}$/.test(value) ? value : undefined;
 }
 function appearance(
   value: unknown,

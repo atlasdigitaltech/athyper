@@ -151,6 +151,46 @@
       "en": "Notifications",
       "ms": "Pemberitahuan",
       "ar": "الإشعارات"
+    },
+    "entity.principal.related.profile.empty.title": {
+      "en": "Set up your profile",
+      "ms": "Sediakan profil anda",
+      "ar": "إعداد ملفك الشخصي"
+    },
+    "entity.principal.related.profile.empty.message": {
+      "en": "Add the names shown across the platform.",
+      "ms": "Tambah nama yang dipaparkan di seluruh platform.",
+      "ar": "أضف الأسماء المعروضة في جميع أنحاء المنصة."
+    },
+    "entity.principal.related.profile.empty.setup": {
+      "en": "Set up profile",
+      "ms": "Sediakan profil",
+      "ar": "إعداد الملف الشخصي"
+    },
+    "entity.principal.related.profile.empty.edit": {
+      "en": "Edit profile",
+      "ms": "Edit profil",
+      "ar": "تعديل الملف الشخصي"
+    },
+    "entity.principal.related.ui_profile.empty.title": {
+      "en": "Using your organization's defaults",
+      "ms": "Menggunakan tetapan lalai organisasi anda",
+      "ar": "استخدام الإعدادات الافتراضية لمؤسستك"
+    },
+    "entity.principal.related.ui_profile.empty.message": {
+      "en": "Customize only the settings you want to override.",
+      "ms": "Sesuaikan hanya tetapan yang ingin anda ganti.",
+      "ar": "خصّص الإعدادات التي تريد تغييرها فقط."
+    },
+    "entity.principal.related.ui_profile.empty.setup": {
+      "en": "Customize preferences",
+      "ms": "Sesuaikan keutamaan",
+      "ar": "تخصيص التفضيلات"
+    },
+    "entity.principal.related.ui_profile.empty.edit": {
+      "en": "Edit preferences",
+      "ms": "Edit keutamaan",
+      "ar": "تعديل التفضيلات"
     }
   }
 }

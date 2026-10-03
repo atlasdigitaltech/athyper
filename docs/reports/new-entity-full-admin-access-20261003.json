@@ -1,0 +1,283 @@
+{
+  "verifiedAt": "2026-10-03T00:06:33.011183+00:00",
+  "environment": "dev",
+  "operation": "Existing shared Full Admin permission reconciliation",
+  "addedRolePermissionLinks": 10,
+  "addedPermissionsPerTenant": [
+    "neon.workforce.address.read",
+    "neon.workforce.employee.read",
+    "neon.workforce.external_worker.read",
+    "neon.workforce.person_address_use.read",
+    "neon.workforce.person.read"
+  ],
+  "tenants": [
+    "athyper",
+    "cirrusatlantic"
+  ],
+  "addedByPlane": {
+    "studio": 0,
+    "neon": 10,
+    "mesh": 0
+  },
+  "remainingPublishedPermissionGaps": 0,
+  "readback": [
+    {
+      "plane": "studio",
+      "grants": [
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.edit",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.edit",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        }
+      ],
+      "members": [
+        {
+          "tenant": "athyper",
+          "username": "athyper.admin",
+          "principal_group": "test.full_admin"
+        },
+        {
+          "tenant": "athyper",
+          "username": "athyper.owner",
+          "principal_group": "test.full_admin"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "username": "catl.admin",
+          "principal_group": "test.full_admin"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "username": "catl.owner",
+          "principal_group": "test.full_admin"
+        }
+      ]
+    },
+    {
+      "plane": "neon",
+      "grants": [
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.edit",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.address.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.employee.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.external_worker.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.person_address_use.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.person.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.edit",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.address.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.employee.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.external_worker.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.person_address_use.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "neon.workforce.person.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        }
+      ],
+      "members": [
+        {
+          "tenant": "athyper",
+          "username": "athyper.admin",
+          "principal_group": "test.full_admin"
+        },
+        {
+          "tenant": "athyper",
+          "username": "athyper.owner",
+          "principal_group": "test.full_admin"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "username": "catl.admin",
+          "principal_group": "test.full_admin"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "username": "catl.owner",
+          "principal_group": "test.full_admin"
+        }
+      ]
+    },
+    {
+      "plane": "mesh",
+      "grants": [
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.edit",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "athyper",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.edit",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "role": "test.full_admin",
+          "principal_group": "test.full_admin",
+          "permission": "common.identity.principal_profile.read",
+          "scope_kind": "tenant",
+          "propagation_mode": "exact"
+        }
+      ],
+      "members": [
+        {
+          "tenant": "athyper",
+          "username": "athyper.admin",
+          "principal_group": "test.full_admin"
+        },
+        {
+          "tenant": "athyper",
+          "username": "athyper.owner",
+          "principal_group": "test.full_admin"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "username": "catl.admin",
+          "principal_group": "test.full_admin"
+        },
+        {
+          "tenant": "cirrusatlantic",
+          "username": "catl.owner",
+          "principal_group": "test.full_admin"
+        }
+      ]
+    }
+  ],
+  "validationBoundary": "Database role permissions, active scoped group assignments and active human memberships verified; fresh browser acceptance not performed."
+}

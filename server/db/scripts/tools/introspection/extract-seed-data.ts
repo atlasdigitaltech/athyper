@@ -20,7 +20,7 @@
 //   tsx db/seed/extract-seed.ts --complex-only # skip simple (extract) files
 //
 // Requires:
-//   DATABASE_ADMIN_URL  direct Postgres URL (falls back to local dev default)
+//   DATABASE_ADMIN_URL  direct Postgres URL (required)
 //   pg_dump 14+         for --on-conflict-do-nothing support
 
 import { spawnSync }    from "node:child_process";
@@ -30,20 +30,19 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_DIR    = path.resolve(__dirname, "../../..");
-const BACKUP    = path.join(DB_DIR, "seed_backup");
+const BACKUP    = path.join(DB_DIR, "seed-backup");
 const OUTPUT    = path.join(DB_DIR, "seed");
 
-const CONN = process.env.DATABASE_ADMIN_URL
-  ?? "postgresql://athyperadmin:athyperadmin@localhost:5432/athyper_dev1";
+const CONN = (() => {
+  const value = process.env.DATABASE_ADMIN_URL;
+  if (!value) throw new Error("DATABASE_ADMIN_URL is required for seed extraction");
+  return value;
+})();
 
-const argv       = process.argv.slice(2);
-const DRY        = argv.includes("--dry-run");
+const argv = process.argv.slice(2);
+const DRY = argv.includes("--dry-run");
 const CMPLX_ONLY = argv.includes("--complex-only");
-const SMPL_ONLY  = argv.includes("--simple-only");
-
-if (!process.env.DATABASE_ADMIN_URL) {
-  console.error(`\n  DATABASE_ADMIN_URL not set — using local default: ${CONN}\n`);
-}
+const SMPL_ONLY = argv.includes("--simple-only");
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

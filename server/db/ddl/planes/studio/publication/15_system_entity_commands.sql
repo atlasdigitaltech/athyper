@@ -4,7 +4,7 @@
 CREATE OR REPLACE FUNCTION publication.fn_system_entity_authority(p_change_set uuid,p_phase text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
 DECLARE cs metadata.entity_change_set%ROWTYPE; d control.policy_definition%ROWTYPE;
-  config jsonb; policy jsonb; saved jsonb; actor uuid:=master.current_principal_id_soft();
+  config jsonb; policy jsonb; enrolled_policy jsonb; human_review boolean; saved jsonb; actor uuid:=master.current_principal_id_soft();
   tenant uuid:=shared.current_tenant_id_soft(); author uuid; publisher uuid; n integer; predecessor jsonb; marker jsonb;
 BEGIN
   IF actor IS NULL OR tenant IS NULL OR p_phase IS NULL OR p_phase NOT IN ('validate','submit','review','release','prepare') THEN
@@ -19,14 +19,23 @@ BEGIN
   END IF;
   SELECT count(*) INTO n FROM control.policy_definition pd JOIN control.policy_rule r ON r.policy_definition_id=pd.id
     WHERE pd.tenant_id=tenant AND pd.entity_type='metadata.publication' AND pd.status='active'
-      AND r.action_config#>>'{policy,changeSetId}'=p_change_set::text;
+      AND (r.action_config#>>'{policy,changeSetId}'=p_change_set::text OR
+        (r.action_config#>>'{policy,schema}'='athyper.dev-human-reviewed-publication/1'
+          AND r.action_config#>'{policy,plan,members}' @> jsonb_build_array(jsonb_build_object('changeSetId',p_change_set))));
   IF n<>1 THEN RAISE EXCEPTION 'SYSTEM_PUBLICATION_ENROLLMENT_REQUIRED' USING ERRCODE='42501'; END IF;
   SELECT pd.* INTO STRICT d FROM control.policy_definition pd JOIN control.policy_rule r ON r.policy_definition_id=pd.id
     WHERE pd.tenant_id=tenant AND pd.entity_type='metadata.publication' AND pd.status='active'
-      AND r.action_config#>>'{policy,changeSetId}'=p_change_set::text FOR SHARE OF pd;
+      AND (r.action_config#>>'{policy,changeSetId}'=p_change_set::text OR
+        (r.action_config#>>'{policy,schema}'='athyper.dev-human-reviewed-publication/1'
+          AND r.action_config#>'{policy,plan,members}' @> jsonb_build_array(jsonb_build_object('changeSetId',p_change_set)))) FOR SHARE OF pd;
   SELECT action_config INTO STRICT config FROM control.policy_rule WHERE policy_definition_id=d.id AND action_code='allow' FOR SHARE;
   policy:=config->'policy';
+  enrolled_policy:=policy;
+  human_review:=policy->>'schema'='athyper.dev-human-reviewed-publication/1';
+  IF human_review THEN policy:=publication.fn_human_reviewed_entity_policy(enrolled_policy,p_change_set,p_phase); END IF;
   author:=(policy->>'authorPrincipalId')::uuid; publisher:=(policy->>'publisherPrincipalId')::uuid;
+  IF human_review AND NOT control.publication_policy_enrollment_is_active(d.id,d.definition_hash,author,publisher) THEN
+    RAISE EXCEPTION 'HUMAN_PUBLICATION_EXECUTION_POLICY_REVOKED' USING ERRCODE='42501'; END IF;
   IF (config->>'schema'='athyper.machine-publication-enrollment/1' AND config->>'environment'='dev'
     AND config->>'permissionCode'='studio.metadata.contract.publish_automated' AND config->>'tenantId'=tenant::text
     AND policy->>'schema' IN ('athyper.dev-reference-onboarding/1','athyper.dev-entity-onboarding/1','athyper.dev-entity-successor-policy/1') AND policy->>'environment'='local'
@@ -40,7 +49,7 @@ BEGIN
         jsonb_build_object('===',jsonb_build_array(jsonb_build_object('var','environment'),'dev')),
         jsonb_build_object('===',jsonb_build_array(jsonb_build_object('var','tenantId'),tenant::text)),
         jsonb_build_object('===',jsonb_build_array(jsonb_build_object('var','policyHash'),
-          encode(sha256(convert_to(publication.fn_successor_canonical_json(policy),'UTF8')),'hex'))))))
+          encode(sha256(convert_to(publication.fn_successor_canonical_json(enrolled_policy),'UTF8')),'hex'))))))
     OR EXISTS(SELECT 1 FROM control.policy_definition newer WHERE newer.tenant_id=tenant
       AND newer.entity_type=d.entity_type AND newer.name=d.name AND newer.id<>d.id
       AND newer.status='active' AND newer.version_no>=d.version_no)
@@ -49,14 +58,14 @@ BEGIN
       AND status='active' AND principal_type='service_account' AND provisioning_source='internal')<>2 THEN
     RAISE EXCEPTION 'SYSTEM_PUBLICATION_ENROLLMENT_DENIED' USING ERRCODE='42501';
   END IF;
-  IF actor IS DISTINCT FROM (CASE WHEN p_phase IN ('validate','submit') THEN author ELSE publisher END)
+  IF NOT human_review AND (actor IS DISTINCT FROM (CASE WHEN p_phase IN ('validate','submit') THEN author ELSE publisher END)
     OR (cs.submitted_by IS NOT NULL AND cs.submitted_by<>author)
     OR (cs.approved_by IS NOT NULL AND cs.approved_by<>publisher)
     OR (p_phase='validate' AND cs.status NOT IN ('draft','in_review','approved'))
     OR (p_phase='submit' AND cs.status<>'draft')
     OR (p_phase='review' AND (cs.status<>'in_review' OR cs.submitted_by IS DISTINCT FROM author))
     OR (p_phase='release' AND (cs.status<>'approved' OR cs.submitted_by IS DISTINCT FROM author OR cs.approved_by IS DISTINCT FROM publisher))
-    OR (p_phase='prepare' AND (cs.status<>'published' OR cs.approved_by IS DISTINCT FROM publisher)) THEN
+    OR (p_phase='prepare' AND (cs.status<>'published' OR cs.approved_by IS DISTINCT FROM publisher))) THEN
     RAISE EXCEPTION 'SYSTEM_PUBLICATION_ACTOR_OR_STATE_DENIED' USING ERRCODE='42501';
   END IF;
   SELECT graph INTO saved FROM snapshot.entity_draft_save WHERE change_set_id=cs.id
@@ -100,7 +109,10 @@ BEGIN
   ELSIF cs.base_release_id IS NOT NULL THEN
     RAISE EXCEPTION 'SYSTEM_PUBLICATION_FIRST_RELEASE_REQUIRED' USING ERRCODE='42501';
   END IF;
-  RETURN jsonb_build_object('policy',policy,'graph',saved,'changeSet',to_jsonb(cs),'tenantId',tenant);
+  RETURN jsonb_build_object('policy',policy,'graph',saved,'changeSet',to_jsonb(cs),'tenantId',tenant)
+    || CASE WHEN human_review THEN jsonb_build_object('humanReview',true,'executionPolicy',enrolled_policy,
+      'executionPolicyId',d.id,'executionPolicyHash',d.definition_hash,
+      'coordinationHash',encode(sha256(convert_to(publication.fn_successor_canonical_json(enrolled_policy->'plan'),'UTF8')),'hex')) ELSE '{}'::jsonb END;
 END $$;
 REVOKE ALL ON FUNCTION publication.fn_system_entity_authority(uuid,text) FROM PUBLIC;
 
@@ -125,7 +137,8 @@ BEGIN
   SELECT * INTO prior FROM snapshot.entity_contract_revision WHERE change_set_id=cs.id ORDER BY revision_no DESC LIMIT 1;
   outcome:=CASE WHEN jsonb_array_length(p_report->'issues')=0 THEN 'valid' ELSE 'invalid' END;
   IF prior.id IS NOT NULL AND prior.contract_json=p_graph AND prior.validation_status::text=outcome THEN RETURN; END IF;
-  IF cs.status='approved' THEN RAISE EXCEPTION 'SYSTEM_PUBLICATION_APPROVED_VALIDATION_IMMUTABLE' USING ERRCODE='42501'; END IF;
+  IF cs.status='approved' AND NOT (COALESCE((authority->>'humanReview')::boolean,false) AND outcome='valid') THEN
+    RAISE EXCEPTION 'SYSTEM_PUBLICATION_APPROVED_VALIDATION_IMMUTABLE' USING ERRCODE='42501'; END IF;
   INSERT INTO snapshot.entity_contract_revision(tenant_id,entity_id,change_set_id,revision_no,parent_revision_id,parent_revision_hash,
     base_release_id,contract_schema_code,contract_schema_version,contract_json,contract_hash,revision_hash,payload_size_bytes,
     validation_status,validation_diagnostics,captured_by)
@@ -208,6 +221,11 @@ BEGIN
     OR p_compliance->>'sourceDescriptorHash' IS DISTINCT FROM authority#>>'{policy,descriptorHash}'
     OR p_compliance->>'targetDescriptorHash' IS DISTINCT FROM encode(sha256(convert_to(publication.fn_successor_canonical_json(p_descriptor),'UTF8')),'hex') THEN
     RAISE EXCEPTION 'SYSTEM_PUBLICATION_TARGET_SOURCE_MISMATCH' USING ERRCODE='42501'; END IF;
+  IF COALESCE((authority->>'humanReview')::boolean,false) AND NOT EXISTS(
+    SELECT 1 FROM jsonb_array_elements(authority#>'{executionPolicy,plan,members}') m,
+      jsonb_array_elements(m->'targets') t WHERE m->>'changeSetId'=r.change_set_id::text
+      AND t->>'plane'=p_plane AND t->>'descriptorHash'=p_compliance->>'targetDescriptorHash') THEN
+    RAISE EXCEPTION 'HUMAN_PUBLICATION_TARGET_PIN_CHANGED' USING ERRCODE='42501'; END IF;
   INSERT INTO snapshot.entity_release_artifact(tenant_id,source_release_id,source_revision_id,entity_id,plane_key,
     release_hash,contract_hash,compiled_json,compiled_hash,compliance_report,created_by)
   VALUES(NULL,r.id,r.revision_id,r.entity_id,p_plane,r.release_hash,r.contract_hash,p_descriptor,
@@ -229,6 +247,12 @@ BEGIN
     RAISE EXCEPTION 'ENTITY_PUBLICATION_COORDINATE_MISMATCH' USING ERRCODE='23503'; END IF;
   IF r.tenant_id IS NULL THEN
     authority:=publication.fn_system_entity_authority(r.change_set_id,'prepare');
+    IF COALESCE((authority->>'humanReview')::boolean,false) AND
+      (p.metadata->'humanExecutionPolicy' IS DISTINCT FROM authority->'executionPolicy'
+       OR p.metadata->>'executionPolicyId' IS DISTINCT FROM authority->>'executionPolicyId'
+       OR p.metadata->>'executionPolicyHash' IS DISTINCT FROM authority->>'executionPolicyHash'
+       OR p.metadata->>'coordinationHash' IS DISTINCT FROM authority->>'coordinationHash') THEN
+      RAISE EXCEPTION 'HUMAN_PUBLICATION_POLICY_LINK_DENIED' USING ERRCODE='42501'; END IF;
     IF authority#>>'{policy,schema}'='athyper.dev-entity-successor-policy/1'
       AND p.metadata->'successorPolicy' IS DISTINCT FROM ((authority->'policy')-'productHash'-'targetPlanes') THEN
       RAISE EXCEPTION 'SYSTEM_PUBLICATION_SUCCESSOR_POLICY_LINK_DENIED' USING ERRCODE='42501'; END IF;

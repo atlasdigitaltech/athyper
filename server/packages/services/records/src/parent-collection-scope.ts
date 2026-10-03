@@ -121,7 +121,9 @@ export function createParentCollectionScopeResolver(options: {
         ],
         labels: [
           ...baseline.labels,
-          { key: "parent", label: "Record scope", value: parentRecordId },
+          // Name the parent by its published title (read through the same governed
+          // reader above); the id stands in only when the title is not readable.
+          { key: "parent", label: "Record scope", value: parentTitle(parent, record.data) ?? parentRecordId },
         ],
         fingerprintMaterial: {
           ...baseline.fingerprintMaterial,
@@ -137,4 +139,12 @@ export function createParentCollectionScopeResolver(options: {
       };
     },
   };
+}
+
+function parentTitle(
+  parent: { readonly recordPresentation?: { readonly titleField?: string } },
+  data: Readonly<Record<string, unknown>>,
+): string | undefined {
+  const field = parent.recordPresentation?.titleField, value = field ? data[field] : undefined;
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, 200) : undefined;
 }

@@ -1,0 +1,21 @@
+{
+  "schema": "athyper.meta-entity-localization/1",
+  "defaultLocale": "en",
+  "requiredLocales": [
+    "en",
+    "ms",
+    "ar"
+  ],
+  "values": {
+    "entity.principal_ui_profile.label": {
+      "en": "UI profile",
+      "ms": "Profil antara muka",
+      "ar": "ملف الواجهة"
+    },
+    "entity.principal_ui_profile.title": {
+      "en": "UI profiles",
+      "ms": "Profil antara muka",
+      "ar": "ملفات الواجهة"
+    }
+  }
+}

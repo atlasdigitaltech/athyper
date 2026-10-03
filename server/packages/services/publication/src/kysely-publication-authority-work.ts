@@ -115,7 +115,9 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     if (declaredSplit.length) {
       const available = (await sql<Row>`SELECT to_regprocedure('publication.fn_compiled_entity_compilation_source_v3(uuid)') IS NOT NULL AS available`.execute(this.options.database)).rows[0]?.["available"];
       if (!available) throw permanent("COMPILED_PUBLICATION_SOURCE_ADAPTER_REQUIRED");
-      const split = await sql<Row>`SELECT * FROM publication.fn_compiled_entity_compilation_source_v3(${releaseId}::uuid)`.execute(this.options.database);
+      const split = await sql<Row>`SELECT s.*,p.metadata->>'coordinationHash' coordination_hash
+        FROM publication.fn_compiled_entity_compilation_source_v3(${releaseId}::uuid) s
+        JOIN publication.release p ON p.id=s.publication_release_id`.execute(this.options.database);
       if (!split.rows.length) throw permanent("COMPILED_PUBLICATION_APPROVED_SOURCE_REQUIRED");
       return this.compileSplitSources(releaseId, split.rows);
     }
@@ -503,6 +505,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
         sourceDescriptorHash: this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(object(row, "compiled_json"))),
         generatedAt: date(row, "created_at"), native: object(row, "compiled_json"), contract: object(row, "contract_json"),
         ...(expectedPredecessor ? { expectedPredecessor } : {}),
+        ...(typeof row["coordination_hash"] === "string" ? { coordinationHash: row["coordination_hash"] } : {}),
       }, dependencies, this.options.canonicalizer, this.options.signingKeyId);
       const unsignedHash = this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(unsigned));
       const id = stableUuid(`publication-compilation:${releaseId}:${plane}:compiled_entity_runtime`);
@@ -520,13 +523,22 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     compilationId: string,
   ): Promise<{ readonly deploymentId: string }> {
     const result =
-      await sql<Row>`SELECT c.*,r.release_key,r.release_no,r.created_by,r.tenant_id
+      await sql<Row>`SELECT c.*,r.release_key,r.release_no,r.created_by,r.tenant_id,r.metadata AS release_metadata
       FROM publication.artifact_compilation c JOIN publication.release r ON r.id=c.publication_release_id
       WHERE c.id=${compilationId}::uuid`.execute(this.options.database);
     const row = required(result.rows[0], "PUBLICATION_COMPILATION_NOT_FOUND");
     const plane = planeValue(row["plane_code"]);
     const artifactKind = artifactKindValue(row["artifact_kind"]);
     const unsigned = object(row, "unsigned_document");
+    const targetInstance = this.options.targetInstance ?? "*";
+    const metadata = row["release_metadata"] as Record<string, unknown> | undefined;
+    const policy = metadata?.["humanExecutionPolicy"] as { instance?: unknown; environment?: unknown } | null | undefined;
+    // Coordinated releases carry an approved destination. Never silently turn
+    // that destination into a broadcast, even when host configuration is absent.
+    if (metadata && Object.hasOwn(metadata, "humanExecutionPolicy")
+      && (!policy || targetInstance === "*" || policy.instance !== targetInstance
+        || policy.environment !== this.options.targetEnvironment))
+      throw permanent("PUBLICATION_DEPLOYMENT_TARGET_MISMATCH");
     const unsignedBytes = this.options.canonicalizer.canonicalBytes(unsigned);
     if (
       this.options.canonicalizer.sha256(unsignedBytes) !==
@@ -634,7 +646,6 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       signingKeyId: this.options.signingKeyId,
       signature: signed.signature,
     });
-    const targetInstance = this.options.targetInstance ?? "*";
     const commandId = stableUuid(
       `publication-deployment:${artifactId}:${this.options.targetEnvironment}:${targetInstance}:1`,
     );

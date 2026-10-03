@@ -1,0 +1,68 @@
+{
+  "schema": "athyper.coordinated-release-framework-progress/1",
+  "candidateId": "entity-framework-dev-20261003-01",
+  "status": "implementation_in_progress_not_published",
+  "selectedEntityReleases": 6,
+  "selectedTargetPublications": 8,
+  "publicationPerformed": false,
+  "deploymentPerformed": false,
+  "databaseMigrationInstalled": false,
+  "implementation": {
+    "humanReviewedWorkflow": {
+      "path": "server/packages/planes/studio/meta-entity-authoring/src/publication/human-reviewed-publication.ts",
+      "implemented": true,
+      "liveHostIntegrated": false,
+      "behavior": "Consumes the exact persisted adoption, submission and independent approval receipt chain; verifies source and target pins; requires enrolled execution authority; qualifies the complete target set before any signing; publishes under a separate workload without changing human provenance."
+    },
+    "coordinatedActivation": {
+      "path": "server/packages/services/publication/src/coordinated-entity-adoption.ts",
+      "implemented": true,
+      "liveWorkerIntegrated": false,
+      "behavior": "Extends the shared transactional adoption mechanism to signed compiled product groups. Requires signed coordination evidence and execution authority, locks heads in sorted order, stages and verifies every member, qualifies the prospective set, then activates in one target transaction. Exact replay is supported and partial activation is rejected.",
+      "atomicity": "Per target database only; no cross-database atomicity claim.",
+      "rollbackEvidence": "Unit tests with a transactional repository double; no live group activation or rollback performed."
+    },
+    "coordinatedRelationshipQualification": {
+      "path": "server/apps/platform-host/src/composition/shared/publication/relationship-qualification.ts",
+      "implemented": true,
+      "liveReadOnlyQualification": true,
+      "result": "passed for Neon, Studio and Mesh groups",
+      "evidence": "docs/reports/coordinated-release-group-qualification-20261003.json",
+      "behavior": "Qualifies the complete prospective graph set against actual target FK and unique constraints, key references, embedded lists and existing reverse dependencies. The ordinary single-release gate still requires active dependencies."
+    }
+  },
+  "validation": {
+    "focusedTestsPassed": 43,
+    "suites": [
+      {
+        "name": "human-reviewed-publication",
+        "passed": 12
+      },
+      {
+        "name": "coordinated-product-activation and existing coordinated-entity-adoption",
+        "passed": 15
+      },
+      {
+        "name": "coordinated-relationship-qualification and existing table-entity-publication",
+        "passed": 16
+      }
+    ],
+    "typechecksPassed": [
+      "meta-entity-authoring production and tests",
+      "publication service production and tests",
+      "platform-host production"
+    ],
+    "limitations": [
+      "Signature-loader behavior is mocked in activation unit tests; these tests do not constitute live cryptographic verification.",
+      "Live preflight checks persisted human receipts and exact hashes plus relationship storage compatibility. It is not full runtime qualification or deployment acceptance."
+    ]
+  },
+  "remainingRequiredWork": [
+    "Integrate the human-reviewed workflow with enrolled execution-policy admission and database release authority while retaining current workload IAM and independent policy review.",
+    "Bind signed publication manifests to the complete coordinated plan and connect the worker to group qualification and transactional activation.",
+    "Exercise actual database-role denial, release allocation, replay and rollback integration tests before installing any migration.",
+    "Record actual Platform Admin policy proposal and independent Platform Owner policy activation through authenticated control APIs.",
+    "Publish six releases, deploy eight targets, verify exact activation ancestry and live runtime behavior."
+  ],
+  "supersededBy": "docs/reports/coordinated-release-integration-completion-20261003.json"
+}

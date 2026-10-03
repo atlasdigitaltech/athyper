@@ -1,0 +1,12 @@
+{
+  "schema": "athyper.publication-policy-replacement-install/1",
+  "environment": "dev",
+  "migration": "20261003_publication_policy_replacement.sql",
+  "sha256": "d50fb020335acf22d2297226f5bb39612270e107f72f789e079dd0ab77dbde1a",
+  "applied": true,
+  "rollbackAndReplayPassed": true,
+  "reused": false,
+  "policyStateUnchanged": true,
+  "passed": true,
+  "completedAt": "2026-10-02T21:31:16.175Z"
+}

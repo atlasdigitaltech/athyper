@@ -20,7 +20,7 @@ const bundle = build({
     }};
     function App(){const [parent,setParent]=useState(first),[show,setShow]=useState(true);
       useAtlasBusinessContextPublisher({kind:'record',entityCode:'parent_record',recordId:parent,dirty:false,section:'children'});
-      return <><button onClick={()=>setParent(second)}>Change parent</button><button onClick={()=>setShow(false)}>Leave children</button>{show?<EntityListRuntime client={client} entityCode='child_record' scopeCoordinate={{parentEntityCode:'parent_record',parentRecordId:parent,relationshipKey:'children'}} contentOnly/>:null}</>;
+      return <><button onClick={()=>setParent(second)}>Change parent</button><button onClick={()=>setShow(false)}>Leave children</button>{show?<EntityListRuntime client={client} entityCode='child_record' scopeCoordinate={{parentEntityCode:'parent_record',parentRecordId:parent,relationshipKey:'children',parentDescriptorHash:'e'.repeat(64)}} contentOnly/>:null}</>;
     }
     createRoot(document.getElementById('root')).render(<AtlasBusinessContextProvider store={store}><App/></AtlasBusinessContextProvider>);
   ` }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", loader: { ".css": "empty" },
@@ -33,14 +33,14 @@ test("the standard embedded list publishes the locked parent selector and restor
   await expect(page.getByText("Saved setting", { exact: true })).toBeVisible();
   const current = () => page.evaluate(() => (window as any).atlasStore.snapshot());
   await expect.poll(current).toMatchObject({ kind: "manage", entityCode: "child_record", parentScope: {
-    parentEntityCode: "parent_record", parentRecordId: "10000000-0000-4000-8000-000000000001", relationshipKey: "children",
+    parentEntityCode: "parent_record", parentRecordId: "10000000-0000-4000-8000-000000000001", relationshipKey: "children", parentDescriptorHash: "e".repeat(64),
   } });
   expect((await current()).directory).toBeUndefined();
   const generation = (await current()).generationId;
   await page.getByRole("button", { name: "Change parent", exact: true }).click();
   await expect.poll(current).toMatchObject({ parentScope: { parentRecordId: "10000000-0000-4000-8000-000000000002" } });
   expect((await current()).generationId).not.toBe(generation);
-  expect(await page.evaluate(() => (window as any).queries.at(-1))).toMatchObject({ parentEntityCode: "parent_record", parentRecordId: "10000000-0000-4000-8000-000000000002", relationshipKey: "children" });
+  expect(await page.evaluate(() => (window as any).queries.at(-1))).toMatchObject({ parentEntityCode: "parent_record", parentRecordId: "10000000-0000-4000-8000-000000000002", relationshipKey: "children", parentDescriptorHash: "e".repeat(64) });
   await page.getByRole("button", { name: "Leave children", exact: true }).click();
   await expect.poll(current).toMatchObject({ kind: "record", entityCode: "parent_record", recordId: "10000000-0000-4000-8000-000000000002" });
 });

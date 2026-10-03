@@ -155,6 +155,24 @@ export function activityApi(
       });
       return true;
     }
+    // Entity directory: only these entities are listable; anything else requested
+    // (for example person_address_use, placed in Location & Address) is left out.
+    if (url.pathname.endsWith("/entity-runtime/directory")) {
+      const titles: Record<string, [string, string, string?]> = {
+        country: ["Countries", "ISO 3166 countries with calling codes and regions."],
+        currency: ["Currencies", "ISO 4217 currencies and minor units.", "database-currency"],
+        language: ["Languages", "ISO 639 languages used across the platform."],
+        locale: ["Locales", "Language and region formats."],
+        timezone: ["Time Zones", "IANA time zones and offsets."],
+        state_region: ["States & Regions", "First-level subdivisions of each country."],
+        address: ["Addresses", "Postal addresses shared by records."],
+        business_partner: ["Business Partners", "Suppliers, customers and partners."],
+        business_partner_request: ["Business Partner Requests", "Requests to create or change partners."],
+      };
+      const codes = url.searchParams.getAll("entity").filter((code) => code in titles);
+      await route.fulfill({ json: { items: codes.map((code) => ({ entityCode: code, title: titles[code]![0], description: titles[code]![1], ...(titles[code]![2] ? { iconKey: titles[code]![2] } : {}), ...(code === "country" ? { count: 247 } : code === "currency" ? { count: 1 } : {}), actions: code === "country" || code === "business_partner" ? [{ key: "create", label: `New ${titles[code]![0].replace(/ies$/, "y").replace(/s$/, "")}`, href: `/app/entity/${code}/new` }] : [] })) } });
+      return true;
+    }
     if (url.pathname.endsWith("/notifications/counts")) {
       await route.fulfill({ json: { unread: 5 } });
       return true;

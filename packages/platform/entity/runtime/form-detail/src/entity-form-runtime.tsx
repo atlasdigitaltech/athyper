@@ -39,7 +39,13 @@ export function EntityFormRuntime({
   onConflictReload,
   contentOnly = false,
   parentScope,
+  cancel,
+  submitLabel,
 }: {
+  /** Embedded forms: the submit label when the published one repeats the entry action. */
+  readonly submitLabel?: string;
+  /** Embedded forms: a secondary action that leaves the form, shown beside Save. */
+  readonly cancel?: Readonly<{ label: string; onCancel: () => void }>;
   readonly entityCode: string;
   readonly recordId?: string;
   readonly onConflictReload?: () => void;
@@ -49,6 +55,7 @@ export function EntityFormRuntime({
     parentEntityCode: string;
     parentRecordId: string;
     relationshipKey: string;
+    parentDescriptorHash?: string;
   };
 }) {
   const intl = useEntityI18n();
@@ -215,16 +222,19 @@ export function EntityFormRuntime({
   </>;
   const recovery = conflict && (recordId || onConflictReload) ? <Button type="button" onClick={() => { if (window.confirm(intl.message("form.reloadDiscard"))) { if (onConflictReload) onConflictReload(); else loaded.reload(); } }}>{intl.message("form.reloadRecord")}</Button> : null;
   const submitButton = (
-    <Button type="submit" loading={saving} disabled={conflict || (mode === "edit" && !dirty)}>
-      {descriptor.submit.label}
+    <Button type="submit" size={contentOnly ? "small" : "medium"} loading={saving} disabled={conflict || (mode === "edit" && !dirty)}>
+      {submitLabel ?? descriptor.submit.label}
     </Button>
   );
   if (contentOnly)
     return (
       <form onSubmit={submit}>
         {fields}
-        {submitButton}
-        {recovery}
+        <div className="a-entity-form-actions">
+          {submitButton}
+          {cancel ? <Button type="button" variant="secondary" size="small" disabled={saving} onClick={cancel.onCancel}>{cancel.label}</Button> : null}
+          {recovery}
+        </div>
         <InlineStatus>{status}</InlineStatus>
       </form>
     );
@@ -250,7 +260,7 @@ export function EntityFormRuntime({
       />
       <form onSubmit={submit}>
         <Card>{fields}</Card>
-        <div>{submitButton}{recovery}</div>
+        <div className="a-entity-form-actions">{submitButton}{recovery}</div>
         <InlineStatus>{status}</InlineStatus>
       </form>
     </PageFrame>

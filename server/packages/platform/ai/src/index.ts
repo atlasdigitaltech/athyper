@@ -16,6 +16,7 @@ export * from "./runtime-tool-coordinator.js";
 export * from "./stream.js";
 export * from "./thread-service.js";
 export * from "./tool-service.js";
+export * from "./tool-feature-gates.js";
 export * from "./entity-tool-manifest.js";
 export * from "./atlas-routes.js";
 export * from "./atlas-admin-routes.js";

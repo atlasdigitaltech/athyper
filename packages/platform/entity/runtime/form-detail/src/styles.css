@@ -361,9 +361,9 @@
 .a-file-status[data-state=active] { background:var(--a-selection-subtle); color:var(--a-primary); }
 .a-attachment-card__primary .a-tooltip__content { inset-inline-start:auto; inset-inline-end:0; transform:none; }
 .a-files-toolbar .a-tooltip__content { inset-inline-start:auto; inset-inline-end:0; transform:none; }
-.a-files-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:var(--a-space-3); padding:var(--a-space-5); min-block-size:12rem; border:var(--a-border-width) solid var(--a-border); border-radius:var(--a-radius-md); background:var(--a-surface); }
-.a-files-empty-state h3,.a-files-empty-state p { margin:0; }
-.a-files-empty-state p { color:var(--a-muted-foreground); max-inline-size:32rem; }
+.a-files-empty-state,.a-related-section__empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:var(--a-space-3); padding:var(--a-space-5); min-block-size:12rem; border:var(--a-border-width) solid var(--a-border); border-radius:var(--a-radius-md); background:var(--a-surface); }
+.a-files-empty-state h3,.a-files-empty-state p,.a-related-section__empty-state h3,.a-related-section__empty-state p { margin:0; }
+.a-files-empty-state p,.a-related-section__empty-state p { color:var(--a-muted-foreground); max-inline-size:32rem; }
 .a-files-empty-state__icon,.a-files-empty-state > .a-runtime-section-empty__icon { display:grid; place-items:center; padding:var(--a-space-3); border-radius:50%; color:var(--a-primary); background:var(--a-selection-subtle); }
 .a-file-type-icon { display:grid; place-items:center; gap:2px; }
 .a-file-type-icon > span { font-size:var(--a-font-size-xs); line-height:var(--a-line-height-none); }
@@ -1133,15 +1133,24 @@
 .a-attachment-workspace__filter { grid-column:1 / -1; display:grid; gap:var(--a-space-1); min-inline-size:0; }
 .a-attachment-workspace__filter-label { color:var(--a-muted-foreground); font-size:var(--a-font-size-xs); font-weight:var(--a-font-weight-medium); }
 
-.a-entity-reference-link { color:var(--a-primary); text-decoration:underline; text-underline-offset:0.2em; border-radius:var(--a-radius-sm); }
+/* Reference values: primary colour at rest (no underline); hover and keyboard focus add
+   the underline and a preview cue. Weight never changes and the cue is always laid out,
+   so the value and its neighbours never shift. */
+.a-entity-reference-link { display:inline-flex; align-items:center; gap:var(--a-space-1); color:var(--a-primary); text-decoration:none; text-underline-offset:0.2em; border-radius:var(--a-radius-sm); }
+.a-entity-reference-link:is(:hover,:focus-visible,[aria-expanded=true]) { text-decoration:underline; }
+.a-entity-reference-link__cue { flex:none; opacity:0; transition:opacity var(--a-motion-fast) var(--a-easing); }
+.a-entity-reference-link:is(:hover,:focus-visible,[aria-expanded=true]) .a-entity-reference-link__cue { opacity:1; }
+[dir=rtl] .a-entity-reference-link__cue { transform:scaleX(-1); }
+@media (prefers-reduced-motion: reduce) { .a-entity-reference-link__cue { transition:none; } }
 .a-entity-reference-link:focus-visible { outline:2px solid var(--a-primary); outline-offset:3px; }
 .a-entity-reference-link small { color:var(--a-muted-foreground); font-size:inherit; }
 .a-entity-reference-preview { display:flex; flex-direction:column; }
-.a-entity-reference-preview__body { padding:var(--a-space-5); overflow:auto; display:flex; flex-direction:column; gap:var(--a-space-4); }
+.a-entity-reference-preview__body { flex:1 1 auto; min-block-size:0; padding:var(--a-space-5); overflow:auto; display:flex; flex-direction:column; gap:var(--a-space-4); }
 .a-entity-reference-preview .a-record-detail-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--a-space-4); }
 .a-entity-reference-preview .a-record-detail-fields > div { min-inline-size:0; overflow-wrap:anywhere; }
-.a-entity-reference-preview__open { color:var(--a-primary); text-decoration:underline; align-self:flex-start; }
-.a-entity-reference-preview__body > .a-badge { align-self:flex-start; }
+.a-entity-reference-preview__badge { margin-inline-start:var(--a-space-2); vertical-align:middle; }
+.a-entity-reference-preview__footer { display:flex; justify-content:flex-end; }
+.a-entity-reference-preview__footer .a-button { flex:none; display:inline-flex; align-items:center; gap:var(--a-space-1); text-decoration:none; }
 
 .a-entity-form-section { min-inline-size:0; border:0; padding:0; margin:0 0 var(--a-space-5); }
 .a-entity-form-section > legend { font-weight:var(--a-font-weight-medium); margin-block-end:var(--a-space-3); }
@@ -1157,3 +1166,11 @@
 @media (max-width: 48rem) { .a-entity-address-fields { grid-template-columns:minmax(0,1fr); } }
 
 @media (max-width: 48rem) { .a-entity-form-fields { grid-template-columns: minmax(0,1fr); } }
+/* "From Catl Admin › UI Profile › Locale": one line; the record title truncates first so
+   the section and field stay readable (the full path is the row's title). */
+.a-entity-reference-preview__origin .a-panel-context__label { display:flex; align-items:baseline; gap:var(--a-space-1); min-inline-size:0; overflow:hidden; white-space:nowrap; }
+.a-entity-reference-preview__origin-lead { flex:none; color:var(--a-muted-foreground); }
+.a-entity-reference-preview__origin-part { flex:none; }
+.a-entity-reference-preview__origin-part[data-first] { flex:0 1 auto; min-inline-size:0; overflow:hidden; text-overflow:ellipsis; }
+.a-entity-reference-preview__origin-separator { flex:none; color:var(--a-muted-foreground); }
+[dir=rtl] .a-entity-reference-preview__origin-separator { display:inline-block; transform:scaleX(-1); }

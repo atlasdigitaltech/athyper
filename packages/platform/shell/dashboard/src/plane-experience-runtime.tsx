@@ -10,6 +10,7 @@ import { BrowserExperienceSurface } from "./client";
 import type { ExperienceRuntimeRegistry } from "./index";
 import { useWorkspaceModuleRelevance } from "./module-relevance";
 import { moduleBadgesFromItems, WorkspaceModuleTabs } from "./workspace-navigation";
+import { ModuleLanding, WorkspaceLanding } from "./workspace-page";
 
 export interface PlaneExperienceRuntimeConfig {
   readonly plane: "mesh" | "studio" | "neon";
@@ -29,7 +30,18 @@ function WorkspaceExperience({ config, surfaceKey, workspaceCode, workspaceName,
   const route = config.catalogRoutes.find((item) => item.code === workspaceCode), scope = useSessionIdentity().scope, relevance = useWorkspaceModuleRelevance(config.plane, `${scope?.tenantId ?? "unknown"}:${scope?.principalId ?? "unknown"}`, workspaceCode, entitledModuleCodes, activeModuleCode), activity = useActivityCenterData(), badges = useMemo(() => route ? moduleBadgesFromItems(route, activity.inbox ?? []) : {}, [route, activity.inbox]);
   if (!route) return <AccessUnavailable displayName={config.displayName}/>;
   const Accessory = config.WorkspaceAccessory;
-  return <><WorkspaceModuleTabs workspace={route} workspaceName={workspaceName} orderedModuleCodes={relevance.orderedModuleCodes} pinnedModuleCodes={relevance.pinnedModuleCodes} activeModuleCode={activeModuleCode} badges={badges} onTogglePinned={relevance.togglePinned}/>{Accessory ? <Accessory workspaceCode={workspaceCode} entitledModuleCodes={entitledModuleCodes}/> : null}<ResolvedPlaneSurface config={config} surfaceKey={surfaceKey} context={context} framedHeader visibleModuleCodes={entitledModuleCodes} orderedModuleCodes={relevance.orderedModuleCodes} pinnedModuleCodes={relevance.pinnedModuleCodes} badges={badges} badgesLoading={activity.loading === true} onTogglePinned={relevance.togglePinned}/></>;
+  const tabs = <WorkspaceModuleTabs workspace={route} workspaceName={workspaceName} orderedModuleCodes={relevance.orderedModuleCodes} pinnedModuleCodes={relevance.pinnedModuleCodes} recentModuleCodes={relevance.recentModuleCodes} activeModuleCode={activeModuleCode} badges={badges} onTogglePinned={relevance.togglePinned}/>;
+  const accessory = Accessory ? <Accessory workspaceCode={workspaceCode} entitledModuleCodes={entitledModuleCodes}/> : null;
+  // Workspace and module homes use the entity-list page frame; descriptions come
+  // from the catalog's generated surfaces.
+  const workspaceSurface = defaultExperienceSurface(`${config.plane}.${workspaceCode}.home`, config.plane);
+  const moduleDescriptions = Object.fromEntries((workspaceSurface?.blocks ?? []).flatMap((block) => block.id.startsWith("module.") && "body" in block && typeof block.body === "string" ? [[block.id.slice(7), block.body]] : []));
+  if (surfaceKey === `${config.plane}.${workspaceCode}.home`)
+    return <WorkspaceLanding displayName={config.displayName} workspace={route} workspaceName={workspaceName} description={workspaceSurface?.description} moduleDescriptions={moduleDescriptions} orderedModuleCodes={relevance.orderedModuleCodes} pinnedModuleCodes={relevance.pinnedModuleCodes} badges={badges} onTogglePinned={relevance.togglePinned} navigation={tabs} accessory={accessory}/>;
+  const activeModule = activeModuleCode ? route.modules.find((module) => module.code === activeModuleCode) : undefined;
+  if (activeModule && surfaceKey === `${config.plane}.${workspaceCode}.${activeModule.code}.home`)
+    return <ModuleLanding displayName={config.displayName} workspace={route} module={activeModule} description={moduleDescriptions[activeModule.code]} navigation={tabs}/>;
+  return <><WorkspaceModuleTabs workspace={route} workspaceName={workspaceName} orderedModuleCodes={relevance.orderedModuleCodes} pinnedModuleCodes={relevance.pinnedModuleCodes} recentModuleCodes={relevance.recentModuleCodes} activeModuleCode={activeModuleCode} badges={badges} onTogglePinned={relevance.togglePinned}/>{Accessory ? <Accessory workspaceCode={workspaceCode} entitledModuleCodes={entitledModuleCodes}/> : null}<ResolvedPlaneSurface config={config} surfaceKey={surfaceKey} context={context} framedHeader visibleModuleCodes={entitledModuleCodes} orderedModuleCodes={relevance.orderedModuleCodes} pinnedModuleCodes={relevance.pinnedModuleCodes} badges={badges} badgesLoading={activity.loading === true} onTogglePinned={relevance.togglePinned}/></>;
 }
 
 function ResolvedPlaneSurface({ config, surfaceKey, context, framedHeader = false, visibleModuleCodes, orderedModuleCodes = [], pinnedModuleCodes = [], badges = {}, badgesLoading = false, onTogglePinned }: Readonly<{ config: PlaneExperienceRuntimeConfig; surfaceKey: string; context?: Readonly<Record<string, string>>; framedHeader?: boolean; visibleModuleCodes?: readonly string[]; orderedModuleCodes?: readonly string[]; pinnedModuleCodes?: readonly string[]; badges?: Readonly<Record<string, string>>; badgesLoading?: boolean; onTogglePinned?: (moduleCode: string) => void }>) {

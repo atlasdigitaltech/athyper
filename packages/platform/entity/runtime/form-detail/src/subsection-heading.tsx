@@ -1,6 +1,6 @@
 "use client";
 import React, { type ReactNode } from "react";
-import { resolveIcon } from "@athyper/platform-icons";
+import { resolveMetadataIcon } from "@athyper/platform-icons";
 export type SubsectionHeader = {
   readonly style: "accent";
   readonly icon: string;
@@ -13,7 +13,7 @@ export function SubsectionHeading({
   header?: SubsectionHeader;
   children: ReactNode;
 }) {
-  const Icon = header ? resolveIcon(header.icon) : undefined;
+  const Icon = header ? resolveMetadataIcon("record-section", header.icon) : undefined;
   return (
     <>
       {Icon ? (

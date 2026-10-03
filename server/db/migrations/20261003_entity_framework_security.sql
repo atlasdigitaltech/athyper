@@ -1,0 +1,6771 @@
+-- Successor security correction; preserves previously installed migration bytes.
+BEGIN;
+DO $entity_security$ BEGIN
+  IF current_database()='athyper_studio' THEN
+    EXECUTE $onboarding_upgrade$-- ============================================================================
+-- onboarding/07_functions.sql
+-- Deterministic helpers for onboarding orchestration persistence.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION onboarding.fn_create_case_with_target(
+    p_case_code text,
+    p_canonical_party_id uuid,
+    p_target_plane shared.application_plane_d,
+    p_target_tenant_id uuid,
+    p_requested_plan_id uuid DEFAULT NULL,
+    p_requested_workspace_id uuid DEFAULT NULL,
+    p_requested_module_id uuid DEFAULT NULL,
+    p_requested_projection_id uuid DEFAULT NULL,
+    p_requested_scope_target_id uuid DEFAULT NULL,
+    p_request_metadata jsonb DEFAULT '{}'::jsonb,
+    p_request_payload jsonb DEFAULT '{}'::jsonb,
+    p_subject_principal_id uuid DEFAULT NULL,
+    p_requesting_principal_id uuid DEFAULT NULL,
+    p_source_onboarding_mode onboarding.entry_mode_d DEFAULT 'self_service',
+    p_priority text DEFAULT 'normal',
+    p_activation_criticality onboarding.activation_criticality_d DEFAULT 'independent'
+)
+RETURNS TABLE(case_id uuid, target_id uuid, revision_no integer)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, onboarding, master, shared, authz, control
+AS $$
+DECLARE
+    v_tenant_id uuid := shared.current_tenant_id();
+    v_actor uuid := master.current_principal_id_soft();
+    v_normalized_code text;
+    v_target_id uuid;
+    v_request_by uuid := COALESCE(p_requesting_principal_id, v_actor);
+BEGIN
+    IF nullif(current_setting('app.current_onboarding_access_token', true), '') IS NOT NULL
+       OR v_actor IS DISTINCT FROM master.current_principal_id_soft() THEN
+        RAISE EXCEPTION 'Authenticated principal context is required for onboarding writes'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    IF v_tenant_id IS NULL OR v_actor IS NULL THEN
+        RAISE EXCEPTION 'Current tenant/principal context is required'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    IF p_case_code IS NULL OR btrim(p_case_code) = '' THEN
+        RAISE EXCEPTION 'p_case_code is required'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    v_normalized_code := lower(regexp_replace(btrim(p_case_code), '[^a-zA-Z0-9_.-]', '', 'g'));
+    IF v_normalized_code !~ '^[a-z][a-z0-9_.-]{1,126}$' THEN
+        RAISE EXCEPTION 'Invalid case_code format'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF p_canonical_party_id IS NULL THEN
+        RAISE EXCEPTION 'canonical party is required'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF p_target_tenant_id IS NULL THEN
+        RAISE EXCEPTION 'target tenant is required'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF p_requested_projection_id IS NULL
+       AND p_requested_scope_target_id IS NULL
+       AND p_requested_plan_id IS NULL
+       AND p_requested_workspace_id IS NULL
+       AND p_requested_module_id IS NULL THEN
+        RAISE EXCEPTION 'At least one requested target artifact is required'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF p_subject_principal_id IS NOT NULL
+       AND NOT EXISTS (
+        SELECT 1
+          FROM master.principal p
+         WHERE p.tenant_id = v_tenant_id
+           AND p.id = p_subject_principal_id
+           AND p.status = 'active'
+    ) THEN
+        RAISE EXCEPTION 'Subject principal is not valid for this tenant'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+          FROM master.canonical_party cp
+         WHERE cp.authority_tenant_id = v_tenant_id
+           AND cp.id = p_canonical_party_id
+    ) THEN
+        RAISE EXCEPTION 'Canonical party not found for current tenant'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF p_priority NOT IN ('low', 'normal', 'high', 'urgent') THEN
+        RAISE EXCEPTION 'Invalid priority value'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    INSERT INTO onboarding.onboarding_case (
+        tenant_id,
+        case_code,
+        canonical_party_id,
+        requested_plan_id,
+        requested_workspace_id,
+        requested_module_id,
+        requested_flow_id,
+        source_onboarding_mode,
+        requested_by_principal_id,
+        subject_principal_id,
+        activation_criticality,
+        request_metadata,
+        request_payload,
+        priority,
+        status,
+        decision_status,
+        created_by,
+        updated_at,
+        updated_by
+    )
+    VALUES (
+        v_tenant_id,
+        v_normalized_code,
+        p_canonical_party_id,
+        p_requested_plan_id,
+        p_requested_workspace_id,
+        p_requested_module_id,
+        NULL,
+        p_source_onboarding_mode,
+        v_request_by,
+        p_subject_principal_id,
+        p_activation_criticality,
+        COALESCE(p_request_metadata, '{}'::jsonb),
+        COALESCE(p_request_payload, '{}'::jsonb),
+        p_priority,
+        'draft',
+        'pending',
+        v_actor,
+        now(),
+        v_actor
+    )
+    RETURNING id INTO case_id;
+
+    INSERT INTO onboarding.onboarding_case_target (
+        tenant_id,
+        onboarding_case_id,
+        target_plane,
+        target_tenant_id,
+        requested_projection_id,
+        requested_plan_id,
+        requested_workspace_id,
+        requested_module_id,
+        requested_scope_target_id,
+        criticality,
+        status,
+        created_by,
+        updated_at,
+        updated_by
+    )
+    VALUES (
+        v_tenant_id,
+        case_id,
+        p_target_plane,
+        p_target_tenant_id,
+        p_requested_projection_id,
+        p_requested_plan_id,
+        p_requested_workspace_id,
+        p_requested_module_id,
+        p_requested_scope_target_id,
+        p_activation_criticality,
+        'draft',
+        v_actor,
+        now(),
+        v_actor
+    )
+    RETURNING id INTO target_id;
+
+    INSERT INTO onboarding.onboarding_case_revision (
+        tenant_id,
+        onboarding_case_id,
+        revision_no,
+        from_status,
+        to_status,
+        changed_by,
+        change_reason,
+        change_context
+    )
+    VALUES (
+        v_tenant_id,
+        case_id,
+        1,
+        NULL,
+        'draft',
+        v_actor,
+        'Created via fn_create_case_with_target',
+        jsonb_build_object(
+            'mode', p_source_onboarding_mode,
+            'target_plane', p_target_plane,
+            'target_tenant_id', p_target_tenant_id
+        )
+    )
+    RETURNING onboarding.onboarding_case_revision.revision_no INTO revision_no;
+
+    RETURN NEXT;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION onboarding.fn_advance_case_status(
+    p_case_id uuid,
+    p_next_status onboarding.case_status_d,
+    p_change_reason text DEFAULT NULL,
+    p_actor_id uuid DEFAULT NULL
+)
+RETURNS onboarding.case_status_d
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, onboarding, master, shared
+AS $$
+DECLARE
+    v_tenant_id uuid := shared.current_tenant_id();
+    v_actor uuid := COALESCE(p_actor_id, master.current_principal_id_soft());
+    v_case onboarding.onboarding_case%ROWTYPE;
+    v_revision integer;
+    v_prev_status onboarding.case_status_d;
+BEGIN
+    IF nullif(current_setting('app.current_onboarding_access_token', true), '') IS NOT NULL
+       OR v_actor IS DISTINCT FROM master.current_principal_id_soft() THEN
+        RAISE EXCEPTION 'Authenticated principal context is required for onboarding writes'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    IF v_tenant_id IS NULL OR v_actor IS NULL THEN
+        RAISE EXCEPTION 'Current tenant/principal context is required'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    SELECT *
+      INTO v_case
+      FROM onboarding.onboarding_case
+     WHERE tenant_id = v_tenant_id
+       AND id = p_case_id
+     FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Onboarding case % does not exist in tenant %', p_case_id, v_tenant_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF p_next_status = v_case.status THEN
+        RETURN v_case.status;
+    END IF;
+
+    IF p_next_status IN ('approved', 'rejected', 'active', 'cancelled', 'offboarded')
+       AND v_case.status IN ('draft', 'cancelled', 'offboarded') THEN
+        RAISE EXCEPTION 'Invalid transition from % to %', v_case.status, p_next_status
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    v_prev_status := v_case.status;
+
+    UPDATE onboarding.onboarding_case
+       SET status = p_next_status,
+           status_changed_at = now(),
+           status_changed_by = v_actor,
+           updated_at = now(),
+           updated_by = v_actor,
+           decision_at = CASE WHEN p_next_status IN ('approved', 'rejected') THEN now() ELSE decision_at END,
+           decision_reason = CASE WHEN p_next_status IN ('approved', 'rejected')
+                                 THEN COALESCE(nullif(btrim(p_change_reason), ''), decision_reason)
+                                 ELSE decision_reason END,
+           activated_at = CASE WHEN p_next_status = 'active' THEN now() ELSE activated_at END,
+           offboarded_at = CASE WHEN p_next_status = 'offboarded' THEN now() ELSE offboarded_at END
+     WHERE tenant_id = v_tenant_id
+       AND id = p_case_id;
+
+    SELECT COALESCE(MAX(revision_no), 0) + 1
+      INTO v_revision
+      FROM onboarding.onboarding_case_revision
+     WHERE tenant_id = v_tenant_id
+       AND onboarding_case_id = p_case_id;
+
+    INSERT INTO onboarding.onboarding_case_revision (
+        tenant_id,
+        onboarding_case_id,
+        revision_no,
+        from_status,
+        to_status,
+        changed_by,
+        change_reason,
+        change_context
+    )
+    VALUES (
+        v_tenant_id,
+        p_case_id,
+        v_revision,
+        v_prev_status,
+        p_next_status,
+        v_actor,
+        nullif(btrim(p_change_reason), ''),
+        jsonb_build_object(
+            'mode', 'manual_transition'
+        )
+    );
+
+    RETURN p_next_status;
+END;
+$$;
+
+COMMENT ON FUNCTION onboarding.fn_create_case_with_target(text, uuid, shared.application_plane_d, uuid, uuid, uuid, uuid, uuid, uuid, jsonb, jsonb, uuid, uuid, onboarding.entry_mode_d, text, onboarding.activation_criticality_d) IS
+    'Creates an onboarding_case and one onboarding_case_target row atomically, then writes revision 1.';
+
+COMMENT ON FUNCTION onboarding.fn_advance_case_status(uuid, onboarding.case_status_d, text, uuid) IS
+    'Transitions onboarding case status with audit-safe revision capture.';
+
+CREATE OR REPLACE FUNCTION onboarding.fn_access_token_raw()
+RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, onboarding, shared
+AS $$
+    SELECT nullif(current_setting('app.current_onboarding_access_token', true), '');
+$$;
+
+CREATE OR REPLACE FUNCTION onboarding.fn_guest_case_has_access(
+    p_tenant_id uuid,
+    p_onboarding_case_id uuid,
+    p_required_scope text DEFAULT 'case:read'
+)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, onboarding
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+          FROM onboarding.onboarding_case_guest_access ga
+         WHERE ga.tenant_id = $1
+           AND ga.tenant_id::text = nullif(current_setting('app.current_onboarding_guest_tenant_id', true), '')
+           AND ga.onboarding_case_id::text = nullif(current_setting('app.current_onboarding_guest_case_id', true), '')
+           AND ga.onboarding_case_id = $2
+           AND ga.revoked_at IS NULL
+           AND ga.expires_at > now()
+           AND p_required_scope = ANY (ga.scopes)
+           AND ga.token_hash = encode(public.digest(coalesce(fn_access_token_raw(), ''), 'sha256'), 'hex')
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION onboarding.fn_can_read_onboarding_case(
+    p_tenant_id uuid,
+    p_onboarding_case_id uuid
+)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, onboarding, shared
+AS $$
+    SELECT
+        CASE WHEN nullif(current_setting('app.current_onboarding_access_token', true), '') IS NOT NULL
+             THEN onboarding.fn_guest_case_has_access(p_tenant_id, p_onboarding_case_id)
+             ELSE p_tenant_id = shared.current_tenant_id_soft()
+        END;
+$$;
+
+COMMENT ON FUNCTION onboarding.fn_access_token_raw() IS
+    'Reads the session onboarding access token from app.current_onboarding_access_token (app-side short-lived token).';
+
+COMMENT ON FUNCTION onboarding.fn_guest_case_has_access(uuid, uuid, text) IS
+    'Checks a hashed, expiring, tenant+case scoped guest token for one explicit capability.';
+
+COMMENT ON FUNCTION onboarding.fn_can_read_onboarding_case(uuid, uuid) IS
+    'Combines tenant-context and guest token authorization for onboarding case-scoped reads.';
+
+CREATE OR REPLACE FUNCTION onboarding.fn_bind_onboarding_guest_context(
+    p_tenant_id uuid,
+    p_onboarding_case_id uuid,
+    p_access_token text
+)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, onboarding, shared
+AS $$
+DECLARE
+    v_token text := nullif(trim(p_access_token), '');
+BEGIN
+    IF p_tenant_id IS NULL OR p_onboarding_case_id IS NULL OR v_token IS NULL THEN
+        RAISE EXCEPTION 'tenant_id, onboarding_case_id, and access token are required'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    PERFORM set_config('app.current_onboarding_access_token', v_token, true);
+    PERFORM set_config('app.current_onboarding_guest_tenant_id', p_tenant_id::text, true);
+    PERFORM set_config('app.current_onboarding_guest_case_id', p_onboarding_case_id::text, true);
+
+    IF NOT onboarding.fn_guest_case_has_access(p_tenant_id, p_onboarding_case_id) THEN
+        RAISE EXCEPTION 'Onboarding guest token is not valid for the requested case'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    -- A guest capability must never inherit ordinary tenant or principal authority.
+    PERFORM set_config('app.current_tenant_id', '', true);
+    PERFORM set_config('app.current_principal_id', '', true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION onboarding.fn_clear_onboarding_guest_context()
+RETURNS void
+LANGUAGE sql
+AS $$
+    SELECT
+        set_config('app.current_onboarding_access_token', '', true),
+        set_config('app.current_onboarding_guest_tenant_id', '', true),
+        set_config('app.current_onboarding_guest_case_id', '', true),
+        set_config('app.current_tenant_id', '', true),
+        set_config('app.current_principal_id', '', true);
+$$;
+
+COMMENT ON FUNCTION onboarding.fn_bind_onboarding_guest_context(uuid, uuid, text) IS
+    'Validates token access for a specific onboarding case and binds request-scoped GUCs for guest-safe reads.';
+COMMENT ON FUNCTION onboarding.fn_clear_onboarding_guest_context() IS
+    'Clears guest onboarding access token from the current session context.';
+
+-- ============================================================================
+-- onboarding/10_rls.sql
+-- Tenant- and role-scoped policies for onboarding saga state.
+-- ============================================================================
+
+ALTER TABLE onboarding.onboarding_case ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_target ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_target FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_step ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_step FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_step_dependency ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_step_dependency FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_check ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_check FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_resource ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_resource FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_compilation_decision ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_compilation_decision FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_revision ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_revision FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_work_item ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_work_item FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_guest_access ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding.onboarding_case_guest_access FORCE ROW LEVEL SECURITY;
+
+-- Tenant reads/writes for runtime callers with tenant-bound context.
+DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case;
+CREATE POLICY tenant_read ON onboarding.onboarding_case
+    FOR SELECT
+    USING (onboarding.fn_can_read_onboarding_case(tenant_id, id));
+
+DROP POLICY IF EXISTS case_write ON onboarding.onboarding_case;
+CREATE POLICY case_write ON onboarding.onboarding_case
+    FOR ALL
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
+
+DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_target;
+CREATE POLICY tenant_read ON onboarding.onboarding_case_target
+    FOR SELECT
+    USING (onboarding.fn_can_read_onboarding_case(tenant_id, onboarding_case_id));
+
+DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_target;
+CREATE POLICY tenant_rw ON onboarding.onboarding_case_target
+    FOR ALL
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
+
+DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_step;
+CREATE POLICY tenant_read ON onboarding.onboarding_case_step
+    FOR SELECT
+    USING (onboarding.fn_can_read_onboarding_case(tenant_id, onboarding_case_id));
+
+DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_step;
+CREATE POLICY tenant_rw ON onboarding.onboarding_case_step
+    FOR ALL
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
+
+DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_step_dependency;
+CREATE POLICY tenant_read ON onboarding.onboarding_step_dependency
+    FOR SELECT
+    USING (onboarding.fn_can_read_onboarding_case(tenant_id, onboarding_case_id));
+
+DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_step_dependency;
+CREATE POLICY tenant_rw ON onboarding.onboarding_step_dependency
+    FOR ALL
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
+
+DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_check;
+CREATE POLICY tenant_read ON onboarding.onboarding_case_check
+    FOR SELECT
+    USING (onboarding.fn_can_read_onboarding_case(tenant_id, onboarding_case_id));
+
+DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_check;
+CREATE POLICY tenant_rw ON onboarding.onboarding_case_check
+    FOR ALL
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
+
+DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_resource;
+CREATE POLICY tenant_read ON onboarding.onboarding_case_resource
+    FOR SELECT
+    USING (onboarding.fn_can_read_onboarding_case(tenant_id, onboarding_case_id));
+
+DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_resource;
+CREATE POLICY tenant_rw ON onboarding.onboarding_case_resource
+    FOR ALL
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
+
+DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_compilation_decision;
+CREATE POLICY tenant_read ON onboarding.onboarding_compilation_decision
+    FOR SELECT
+    USING (onboarding.fn_can_read_onboarding_case(tenant_id, onboarding_case_id));
+
+DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_compilation_decision;
+CREATE POLICY tenant_rw ON onboarding.onboarding_compilation_decision
+    FOR ALL
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
+
+DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_revision;
+CREATE POLICY tenant_read ON onboarding.onboarding_case_revision
+    FOR SELECT
+    USING (onboarding.fn_can_read_onboarding_case(tenant_id, onboarding_case_id));
+
+DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_revision;
+CREATE POLICY tenant_rw ON onboarding.onboarding_case_revision
+    FOR ALL
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
+
+DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_work_item;
+CREATE POLICY tenant_read ON onboarding.onboarding_case_work_item
+    FOR SELECT
+    USING (onboarding.fn_can_read_onboarding_case(tenant_id, onboarding_case_id));
+
+DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_work_item;
+CREATE POLICY tenant_rw ON onboarding.onboarding_case_work_item
+    FOR ALL
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
+
+-- Retire the former cross-tenant service policies on upgrades as well as foundations.
+DO $$
+DECLARE relation_name text;
+BEGIN
+    FOREACH relation_name IN ARRAY ARRAY[
+        'onboarding_case','onboarding_case_target','onboarding_case_step',
+        'onboarding_step_dependency','onboarding_case_check','onboarding_case_resource',
+        'onboarding_compilation_decision','onboarding_case_revision',
+        'onboarding_case_work_item','onboarding_case_guest_access'
+    ] LOOP
+        EXECUTE format('DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.%I', relation_name);
+    END LOOP;
+END $$;
+
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_case;
+        CREATE POLICY admin_access ON onboarding.onboarding_case
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_case_target;
+        CREATE POLICY admin_access ON onboarding.onboarding_case_target
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_case_step;
+        CREATE POLICY admin_access ON onboarding.onboarding_case_step
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_step_dependency;
+        CREATE POLICY admin_access ON onboarding.onboarding_step_dependency
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_case_check;
+        CREATE POLICY admin_access ON onboarding.onboarding_case_check
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_case_resource;
+        CREATE POLICY admin_access ON onboarding.onboarding_case_resource
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_compilation_decision;
+        CREATE POLICY admin_access ON onboarding.onboarding_compilation_decision
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_case_revision;
+        CREATE POLICY admin_access ON onboarding.onboarding_case_revision
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_case_work_item;
+        CREATE POLICY admin_access ON onboarding.onboarding_case_work_item
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        DROP POLICY IF EXISTS admin_access ON onboarding.onboarding_case_guest_access;
+        CREATE POLICY admin_access ON onboarding.onboarding_case_guest_access
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
+-- Seed-time bootstrapping path (DDL role execution). Keeps local setup smooth.
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_case;
+CREATE POLICY seed_write ON onboarding.onboarding_case
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_case_target;
+CREATE POLICY seed_write ON onboarding.onboarding_case_target
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_case_step;
+CREATE POLICY seed_write ON onboarding.onboarding_case_step
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_step_dependency;
+CREATE POLICY seed_write ON onboarding.onboarding_step_dependency
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_case_check;
+CREATE POLICY seed_write ON onboarding.onboarding_case_check
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_case_resource;
+CREATE POLICY seed_write ON onboarding.onboarding_case_resource
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_compilation_decision;
+CREATE POLICY seed_write ON onboarding.onboarding_compilation_decision
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_case_revision;
+CREATE POLICY seed_write ON onboarding.onboarding_case_revision
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_case_work_item;
+CREATE POLICY seed_write ON onboarding.onboarding_case_work_item
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS seed_write ON onboarding.onboarding_case_guest_access;
+CREATE POLICY seed_write ON onboarding.onboarding_case_guest_access
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+REVOKE ALL ON SCHEMA onboarding FROM PUBLIC;
+REVOKE ALL ON ALL TABLES IN SCHEMA onboarding FROM PUBLIC;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA onboarding FROM PUBLIC;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_onboarding_service') THEN
+        GRANT USAGE ON SCHEMA onboarding, shared TO athyper_onboarding_service;
+        GRANT EXECUTE ON FUNCTION shared.current_tenant_id_soft() TO athyper_onboarding_service;
+        REVOKE ALL ON ALL TABLES IN SCHEMA onboarding FROM athyper_onboarding_service;
+        REVOKE ALL ON ALL FUNCTIONS IN SCHEMA onboarding FROM athyper_onboarding_service;
+        GRANT SELECT ON onboarding.onboarding_case, onboarding.onboarding_case_target,
+            onboarding.onboarding_case_step, onboarding.onboarding_step_dependency,
+            onboarding.onboarding_case_check, onboarding.onboarding_case_resource,
+            onboarding.onboarding_compilation_decision, onboarding.onboarding_case_revision,
+            onboarding.onboarding_case_work_item TO athyper_onboarding_service;
+        GRANT EXECUTE ON FUNCTION
+            onboarding.fn_create_case_with_target(text, uuid, shared.application_plane_d, uuid, uuid, uuid, uuid, uuid, uuid, jsonb, jsonb, uuid, uuid, onboarding.entry_mode_d, text, onboarding.activation_criticality_d),
+            onboarding.fn_advance_case_status(uuid, onboarding.case_status_d, text, uuid),
+            onboarding.fn_bind_onboarding_guest_context(uuid, uuid, text),
+            onboarding.fn_clear_onboarding_guest_context(),
+            onboarding.fn_can_read_onboarding_case(uuid, uuid)
+        TO athyper_onboarding_service;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT USAGE ON SCHEMA onboarding TO athyperadmin;
+        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA onboarding TO athyperadmin;
+        GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA onboarding TO athyperadmin;
+    END IF;
+END;
+$$;
+$onboarding_upgrade$;
+  ELSIF current_database()='athyper_mesh' THEN
+    EXECUTE $mesh_upgrade$CREATE OR REPLACE FUNCTION mesh.fn_catalog_publication_snapshot(p_catalog_id uuid)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, mesh SET row_security = off AS $$
+  SELECT jsonb_build_object(
+    'catalog', to_jsonb(catalog) - ARRAY['updated_at','updated_by']::text[],
+    'items', (SELECT coalesce(jsonb_agg(to_jsonb(value) ORDER BY value.code,value.id),'[]'::jsonb)
+                FROM mesh.catalog_item value WHERE value.catalog_id=catalog.id),
+    'identifiers', (SELECT coalesce(jsonb_agg(to_jsonb(value) ORDER BY value.catalog_item_id,value.id),'[]'::jsonb)
+                      FROM mesh.catalog_item_identifier value
+                      JOIN mesh.catalog_item item ON item.id=value.catalog_item_id
+                     WHERE item.catalog_id=catalog.id),
+    'classifications', (SELECT coalesce(jsonb_agg(to_jsonb(value) ORDER BY value.catalog_item_id,value.id),'[]'::jsonb)
+                          FROM mesh.catalog_item_classification value
+                          JOIN mesh.catalog_item item ON item.id=value.catalog_item_id
+                         WHERE item.catalog_id=catalog.id),
+    'unitsOfMeasure', (SELECT coalesce(jsonb_agg(to_jsonb(value) ORDER BY value.catalog_item_id,value.id),'[]'::jsonb)
+                         FROM mesh.catalog_item_uom value
+                         JOIN mesh.catalog_item item ON item.id=value.catalog_item_id
+                        WHERE item.catalog_id=catalog.id),
+    'audiences', (SELECT coalesce(jsonb_agg(to_jsonb(value) ORDER BY value.id),'[]'::jsonb)
+                    FROM mesh.catalog_audience value WHERE value.catalog_id=catalog.id),
+    'prices', (SELECT coalesce(jsonb_agg(to_jsonb(value) ORDER BY value.catalog_item_id,value.id),'[]'::jsonb)
+                 FROM mesh.catalog_price value
+                 JOIN mesh.catalog_item item ON item.id=value.catalog_item_id
+                WHERE item.catalog_id=catalog.id),
+    'availability', (SELECT coalesce(jsonb_agg(to_jsonb(value) ORDER BY value.catalog_item_id,value.id),'[]'::jsonb)
+                       FROM mesh.catalog_availability value
+                       JOIN mesh.catalog_item item ON item.id=value.catalog_item_id
+                      WHERE item.catalog_id=catalog.id)
+  ) FROM mesh.catalog catalog WHERE catalog.id=p_catalog_id
+      AND catalog.tenant_id=shared.current_tenant_id_soft()
+$$;
+      DROP POLICY IF EXISTS worker_write ON mesh.business_partner_delivery_acknowledgement;
+      CREATE POLICY worker_write ON mesh.business_partner_delivery_acknowledgement FOR INSERT TO athyper_jobs_service
+        WITH CHECK (source_tenant_id=shared.current_tenant_id_soft());
+      DROP POLICY IF EXISTS worker_read ON mesh.business_partner_delivery_acknowledgement;
+      CREATE POLICY worker_read ON mesh.business_partner_delivery_acknowledgement FOR SELECT TO athyper_jobs_service
+        USING (source_tenant_id=shared.current_tenant_id_soft());
+    $mesh_upgrade$;
+  ELSIF current_database()<>'athyper_neon' THEN
+    RAISE EXCEPTION 'Entity Framework security upgrade requires an established plane database';
+  END IF;
+END $entity_security$;
+
+-- Generated by scripts/checks/security/generate-security-definer-contract.ts.
+-- Source: contracts/security/security-definer-ownership.v1.json.
+-- No table ownership, administrative privileges, runtime membership, or blanket grants.
+DO $definer_privileges$
+DECLARE
+    role_contract jsonb;
+    object_contract jsonb;
+    schema_name text;
+    routine_signature text;
+    role_name text;
+    policy_contract jsonb;
+    old_policy record;
+    policy_index integer;
+BEGIN
+    FOR role_contract IN SELECT value FROM jsonb_array_elements('[
+  {
+    "name": "athyper_bypass_ai",
+    "bypassRls": true,
+    "schemas": [
+      "ai",
+      "document"
+    ],
+    "tables": [
+      {
+        "relation": "ai.atlas_thread",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.conversation",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.conversation_participant",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "ai.fn_atlas_conversation_access(uuid, uuid, boolean)"
+    ]
+  },
+  {
+    "name": "athyper_bypass_audit",
+    "bypassRls": true,
+    "schemas": [
+      "audit",
+      "master"
+    ],
+    "tables": [
+      {
+        "relation": "audit.audit_log",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.audit_event_contract",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": []
+  },
+  {
+    "name": "athyper_bypass_authz",
+    "bypassRls": true,
+    "schemas": [
+      "authz"
+    ],
+    "tables": [
+      {
+        "relation": "authz.application_projection",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.projection_provider",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.projection_scope",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": []
+  },
+  {
+    "name": "athyper_bypass_control",
+    "bypassRls": true,
+    "schemas": [
+      "control"
+    ],
+    "tables": [
+      {
+        "relation": "control.connector_health_job",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.cron_schedule",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      }
+    ],
+    "functions": []
+  },
+  {
+    "name": "athyper_bypass_document",
+    "bypassRls": true,
+    "schemas": [
+      "document",
+      "governance",
+      "master"
+    ],
+    "tables": [
+      {
+        "relation": "document.entity_case",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.supplier_activation_evidence",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.work_item",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.process_attempt",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.process_document_job",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.tenant",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": []
+  },
+  {
+    "name": "athyper_bypass_event",
+    "bypassRls": true,
+    "schemas": [
+      "control",
+      "event",
+      "runtime_meta"
+    ],
+    "tables": [
+      {
+        "relation": "control.notification_routing_rule",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.authorization_invalidation_outbox",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "event.digest_staging",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.notification_delivery",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.notification_delivery_claim",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.notification_message",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.notification_outbox_state",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.outbox",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.push_subscription",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "runtime_meta.authorization_epoch",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "event.fn_authorization_bump_epoch(text, uuid, text)"
+    ]
+  },
+  {
+    "name": "athyper_bypass_master",
+    "bypassRls": true,
+    "schemas": [
+      "master",
+      "shared"
+    ],
+    "tables": [
+      {
+        "relation": "master.employee",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.employment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.person",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal_identity_binding",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal_person_link",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.reference_choice_recent",
+        "privileges": [
+          "DELETE",
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "master.current_principal_id_soft()",
+      "master.entity_profile_source_v1(uuid, uuid)",
+      "master.entity_projected_profile_source_v1(uuid, uuid)",
+      "shared.current_tenant_id_soft()"
+    ]
+  },
+  {
+    "name": "athyper_bypass_mesh",
+    "bypassRls": true,
+    "schemas": [
+      "mesh",
+      "shared"
+    ],
+    "tables": [
+      {
+        "relation": "mesh.catalog",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.catalog_audience",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.catalog_availability",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.catalog_item",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.catalog_item_classification",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.catalog_item_identifier",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.catalog_item_uom",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.catalog_price",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.network_account",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.network_account_profile_publication",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.network_relationship",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "mesh.catalog_is_visible(uuid)",
+      "mesh.catalog_item_is_visible(uuid)",
+      "mesh.current_network_account_id_soft()",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()"
+    ]
+  },
+  {
+    "name": "athyper_bypass_onboarding",
+    "bypassRls": true,
+    "schemas": [
+      "onboarding",
+      "public"
+    ],
+    "tables": [
+      {
+        "relation": "onboarding.onboarding_case_guest_access",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "onboarding.fn_access_token_raw()",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)"
+    ]
+  },
+  {
+    "name": "athyper_bypass_ops",
+    "bypassRls": true,
+    "schemas": [
+      "ops"
+    ],
+    "tables": [
+      {
+        "relation": "ops.record_export_request",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "ops.record_import_chunk",
+        "privileges": [
+          "DELETE",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "ops.record_import_session",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "ops.record_transfer_retention_policy",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": []
+  },
+  {
+    "name": "athyper_definer_ai",
+    "bypassRls": false,
+    "schemas": [
+      "ai"
+    ],
+    "tables": [],
+    "functions": [],
+    "policies": []
+  },
+  {
+    "name": "athyper_definer_audit",
+    "bypassRls": false,
+    "schemas": [
+      "audit",
+      "master",
+      "public",
+      "shared"
+    ],
+    "tables": [
+      {
+        "relation": "audit.audit_log",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "audit.authorization_decision_evidence",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "audit.hash_anchor",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "audit.security_event",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.audit_event_contract",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.audit_reason_code",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "audit.append_event(text, audit.operation_d, text, uuid, audit.outcome_d, audit.event_severity_d, text, uuid, uuid, text, jsonb, jsonb, text[], jsonb, uuid, text, timestamp with time zone)",
+      "audit.payload_is_safe(jsonb, integer)",
+      "master.current_principal_id_soft()",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)"
+    ],
+    "policies": [
+      {
+        "relation": "audit.audit_log",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_read_insert policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "audit.audit_log",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "audit.authorization_decision_evidence",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_read_insert policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "audit.hash_anchor",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_read_insert policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "audit.hash_anchor",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "audit.security_event",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_read_insert policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.audit_reason_code",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing publication_service_principal_read policy only when the original session is a member of athyper_publication_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_publication_service''::name, ''MEMBER''::text) AND ((tenant_id = shared.current_tenant_id_soft()) AND ((principal_type)::text = ''service_account''::text)))"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_owner_admin_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND shared.fn_entity_owner_admin_access(''master''::text, ''principal''::text, tenant_id, false))"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_authz",
+    "bypassRls": false,
+    "schemas": [
+      "authz",
+      "master",
+      "shared"
+    ],
+    "tables": [
+      {
+        "relation": "authz.delegation",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "authz.delegation_grant",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.deny_rule",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.group_member",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "authz.group_role",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "authz.override",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "authz.permission",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.permission_scope_kind",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.plane_membership",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "authz.principal_group",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.record_acl",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "authz.role",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.role_permission",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.scope_target",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.trusted_device",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.tenant",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "authz.fn_internal_permission_is_assignable_at_scope(uuid, uuid, uuid, authz.propagation_mode_d)",
+      "authz.fn_internal_scope_assignment_covers_target(uuid, uuid, uuid, authz.propagation_mode_d)",
+      "master.current_principal_id_soft()",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)"
+    ],
+    "policies": [
+      {
+        "relation": "authz.delegation",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.delegation",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.delegation",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "authz.delegation_grant",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.delegation_grant",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.deny_rule",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.deny_rule",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.group_member",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.group_member",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.group_member",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "authz.group_member",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "authz.group_role",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.group_role",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.group_role",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "authz.override",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.override",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.override",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "authz.permission",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.permission_scope_kind",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.plane_membership",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.plane_membership",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "authz.principal_group",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.principal_group",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.record_acl",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.record_acl",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.record_acl",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "authz.role",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.role",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.role_permission",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.role_permission",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.scope_target",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.scope_target",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.trusted_device",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.trusted_device",
+        "command": "SELECT",
+        "reason": "Preserves the existing management_device_read policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.trusted_device",
+        "command": "UPDATE",
+        "reason": "Preserves the existing management_device_revoke policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND ((tenant_id = shared.current_tenant_id_soft()) AND (revoked_at IS NOT NULL)))"
+      },
+      {
+        "relation": "authz.trusted_device",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.principal",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing publication_service_principal_read policy only when the original session is a member of athyper_publication_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_publication_service''::name, ''MEMBER''::text) AND ((tenant_id = shared.current_tenant_id_soft()) AND ((principal_type)::text = ''service_account''::text)))"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_owner_admin_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND shared.fn_entity_owner_admin_access(''master''::text, ''principal''::text, tenant_id, false))"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_control",
+    "bypassRls": false,
+    "schemas": [
+      "control",
+      "document",
+      "event",
+      "ledger",
+      "master",
+      "public",
+      "shared",
+      "snapshot"
+    ],
+    "tables": [
+      {
+        "relation": "control.business_partner_block",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.business_partner_decision_scope",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.business_partner_mutation_evidence",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.business_partner_qualification",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.company_fiscal_calendar_assignment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.customer_account_designation",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.customer_credit_review",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.customer_lifecycle_event",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.cycle_type",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.fiscal_calendar_config",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.fiscal_calendar_period_rule",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.lookup_domain",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.lookup_revision",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.lookup_tenant_revision",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.lookup_value",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.lookup_value_reference",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.module",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.owner_type",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.owner_type_purpose",
+        "privileges": [
+          "DELETE",
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.parameter_definition",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.subscription_plan",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.subscription_plan_module",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.subscription_plan_usage_limit",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.supplier_preference_designation",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.usage_metric_catalog",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.command_execution",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "event.outbox",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "ledger.book_period_status",
+        "privileges": [
+          "DELETE",
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.address_link",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.business_partner_commodity_classification",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_operating_organization_assignment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_organization_identity",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_relationship",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.commodity_category",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.company_code",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.company_code_book_assignment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.contact_link",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.customer",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.fiscal_period",
+        "privileges": [
+          "DELETE",
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.operating_organization",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.operating_organization_company_assignment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.org_unit",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.party_risk_assessment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.supplier",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.tax_jurisdiction",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.subscription_plan_entitlement",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "control.admin_lookup_domain_change_allowed(text, boolean, boolean)",
+      "control.assert_partner_decision_coverage(uuid, uuid, uuid)",
+      "control.capture_entitlement_plan(uuid)",
+      "control.fiscal_calendar_year_start(uuid, uuid, integer)",
+      "control.fn_record_business_partner_mutation(uuid, text, uuid, uuid, text, text, text, bigint, text, text, text, jsonb, uuid)",
+      "control.fn_validate_owner_type_target(text, text, text, text, boolean, text)",
+      "control.lookup_value_has_references(uuid)",
+      "control.lookup_value_is_active(text, text, uuid)",
+      "control.preview_fiscal_calendar(uuid, uuid, integer)",
+      "control.resolve_company_fiscal_calendar(uuid, uuid, integer)",
+      "control.supplier_preference_scopes_overlap(uuid, uuid, uuid)",
+      "document.fn_business_partner_payload_has_restricted_key(jsonb)",
+      "master.current_principal_id_soft()",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)",
+      "shared.uuidv7()"
+    ],
+    "policies": [
+      {
+        "relation": "control.business_partner_block",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.business_partner_block",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.business_partner_block",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.business_partner_decision_scope",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.business_partner_mutation_evidence",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.business_partner_qualification",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.business_partner_qualification",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.business_partner_qualification",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.customer_account_designation",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.customer_account_designation",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.customer_account_designation",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.customer_credit_review",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.customer_credit_review",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.customer_lifecycle_event",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.lookup_domain",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_catalog_write policy only when the original session is a member of athyper_control_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_control_writer''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_control_writer''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.lookup_domain",
+        "command": "ALL",
+        "reason": "Preserves the existing lookup_domain_admin policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.lookup_revision",
+        "command": "INSERT",
+        "reason": "Preserves the existing catalog_write policy only when the original session is a member of athyper_control_writer.",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_control_writer''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.lookup_tenant_revision",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.lookup_value",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_lookup_write policy only when the original session is a member of athyper_control_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_control_writer''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_control_writer''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))"
+      },
+      {
+        "relation": "control.lookup_value",
+        "command": "ALL",
+        "reason": "Preserves the existing lookup_value_admin policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.module",
+        "command": "ALL",
+        "reason": "Preserves the existing catalog_projection_apply policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.module",
+        "command": "ALL",
+        "reason": "Preserves the existing catalog_admin policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.owner_type",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.owner_type",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.subscription_plan_module",
+        "command": "ALL",
+        "reason": "Preserves the existing catalog_projection_apply policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.subscription_plan_module",
+        "command": "ALL",
+        "reason": "Preserves the existing catalog_admin policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.supplier_preference_designation",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.supplier_preference_designation",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.supplier_preference_designation",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.command_execution",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.command_execution",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "ALL",
+        "reason": "Preserves the existing outbox_jobs_access policy only when the original session is a member of athyper_jobs_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "ledger.book_period_status",
+        "command": "DELETE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "ledger.book_period_status",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.business_partner",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_relationship",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.commodity_category",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.company_code",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.company_code_book_assignment",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.customer",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.customer",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.fiscal_period",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.fiscal_period",
+        "command": "DELETE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.fiscal_period",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.operating_organization",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.operating_organization_company_assignment",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.org_unit",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing publication_service_principal_read policy only when the original session is a member of athyper_publication_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_publication_service''::name, ''MEMBER''::text) AND ((tenant_id = shared.current_tenant_id_soft()) AND ((principal_type)::text = ''service_account''::text)))"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_owner_admin_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND shared.fn_entity_owner_admin_access(''master''::text, ''principal''::text, tenant_id, false))"
+      },
+      {
+        "relation": "master.supplier",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.supplier",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.tax_jurisdiction",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_document",
+    "bypassRls": false,
+    "schemas": [
+      "authz",
+      "control",
+      "document",
+      "event",
+      "governance",
+      "master",
+      "public",
+      "runtime_meta",
+      "shared",
+      "snapshot"
+    ],
+    "tables": [
+      {
+        "relation": "authz.deny_rule",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.group_member",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.group_role",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.permission",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.permission_scope_kind",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.plane_membership",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.principal_group",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.role",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.role_permission",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "authz.scope_target",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.business_partner_mutation_evidence",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.attachment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.attachment_link",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.business_partner_duplicate_resolution",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.comment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.comment_revision",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.contingent_work_order",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.entity_case",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.entity_case_command_evidence",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.entity_case_materialization",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.entity_case_validation",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.process_case_contributor",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.process_task_assignment_history",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.process_task_information",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.process_task_interaction_receipt",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.statement_of_work",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.supplier_activation_evidence",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.work_item",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.worker_engagement",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.worker_operational_placement",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.workflow_request",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.workflow_stage",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.workforce_iam_projection",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.workforce_requisition",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.workforce_requisition_supplier",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.command_execution",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "event.outbox",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "governance.cycle_deviation",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.cycle_run",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "governance.cycle_subject",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.cycle_task",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "governance.cycle_task_dependency",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.process_attempt",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.process_document_job",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "governance.process_selection_evidence",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.company_code",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.employee",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.employment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.external_worker",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.operating_organization",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.operating_organization_company_assignment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.person",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_case_snapshot_lineage",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_snapshot",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_snapshot_identity",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "document.command_process_task_information(uuid, uuid, uuid, uuid, text, bigint, text, text, uuid)",
+      "document.command_worker_engagement_iam_projection(uuid, uuid, bigint, text, uuid, uuid)",
+      "document.command_worker_engagement_iam_projection(uuid, uuid, bigint, text, uuid, uuid, jsonb)",
+      "document.fn_entity_case_approvers(uuid, uuid, uuid, uuid)",
+      "document.fn_entity_case_three_way_merge(jsonb, jsonb, jsonb, text)",
+      "document.fn_validate_entity_case_payload(jsonb, jsonb)",
+      "document.normalize_supplier_workforce_policy_evidence(text, jsonb)",
+      "document.process_case_has_contributor(uuid, uuid, uuid)",
+      "document.process_case_reviewers(uuid, uuid, text)",
+      "event.fn_notification_worker_principal(uuid)",
+      "governance.evaluate_cycle_completion(uuid, uuid)",
+      "master.current_principal_id_soft()",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)",
+      "shared.uuidv7()",
+      "snapshot.fn_capture_entity(text, uuid, text, integer, text, bigint, text, snapshot.capture_kind_d, jsonb, uuid, uuid, timestamp with time zone, timestamp with time zone, snapshot.retention_class_d, text)"
+    ],
+    "policies": [
+      {
+        "relation": "authz.deny_rule",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.deny_rule",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.group_member",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.group_member",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.group_role",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.group_role",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.permission",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.permission_scope_kind",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.plane_membership",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.principal_group",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.principal_group",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.role",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.role",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.role_permission",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.role_permission",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.scope_target",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.scope_target",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "document.attachment",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "document.attachment_link",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "document.business_partner_duplicate_resolution",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.comment",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "document.comment_revision",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.comment_revision",
+        "command": "SELECT",
+        "reason": "Preserves the existing revision_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id = shared.current_tenant_id_soft()) AND (EXISTS ( SELECT 1\n   FROM document.comment c\n  WHERE ((c.tenant_id = comment_revision.tenant_id) AND (c.id = comment_revision.comment_id) AND (c.commenter_id = master.current_principal_id_soft()) AND (c.status <> ''deleted''::text))))))"
+      },
+      {
+        "relation": "document.entity_case",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.entity_case",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.entity_case_command_evidence",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.entity_case_materialization",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.entity_case_validation",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.process_case_contributor",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.process_task_assignment_history",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.process_task_information",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.process_task_information",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.process_task_interaction_receipt",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.work_item",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.work_item",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.worker_engagement",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.worker_operational_placement",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.worker_operational_placement",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.workflow_request",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.workflow_stage",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.workforce_requisition",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.workforce_requisition_supplier",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.command_execution",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.command_execution",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "ALL",
+        "reason": "Preserves the existing outbox_jobs_access policy only when the original session is a member of athyper_jobs_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "governance.cycle_run",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "governance.cycle_subject",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "governance.cycle_task",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "governance.process_document_job",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.business_partner",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.company_code",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.operating_organization",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.operating_organization_company_assignment",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing publication_service_principal_read policy only when the original session is a member of athyper_publication_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_publication_service''::name, ''MEMBER''::text) AND ((tenant_id = shared.current_tenant_id_soft()) AND ((principal_type)::text = ''service_account''::text)))"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_owner_admin_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND shared.fn_entity_owner_admin_access(''master''::text, ''principal''::text, tenant_id, false))"
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "command": "ALL",
+        "reason": "Preserves the existing runtime_entity_contract_applier policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.entity_case_snapshot_lineage",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.entity_case_snapshot_lineage",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "snapshot.entity_snapshot",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.entity_snapshot_identity",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_event",
+    "bypassRls": false,
+    "schemas": [
+      "event",
+      "master",
+      "public",
+      "shared"
+    ],
+    "tables": [
+      {
+        "relation": "event.authorization_invalidation_outbox",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "event.notification_delivery",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "event.outbox",
+        "privileges": [
+          "DELETE",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "event.fn_authorization_bump_epoch(text, uuid, text)",
+      "event.fn_authorization_emit_invalidation(text, text, uuid, text, text, character, jsonb, timestamp with time zone)",
+      "master.current_principal_id_soft()",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)"
+    ],
+    "policies": [
+      {
+        "relation": "event.authorization_invalidation_outbox",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.authorization_invalidation_outbox",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.notification_delivery",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "ALL",
+        "reason": "Preserves the existing outbox_jobs_access policy only when the original session is a member of athyper_jobs_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "DELETE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.principal",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing publication_service_principal_read policy only when the original session is a member of athyper_publication_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_publication_service''::name, ''MEMBER''::text) AND ((tenant_id = shared.current_tenant_id_soft()) AND ((principal_type)::text = ''service_account''::text)))"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_owner_admin_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND shared.fn_entity_owner_admin_access(''master''::text, ''principal''::text, tenant_id, false))"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_governance",
+    "bypassRls": false,
+    "schemas": [
+      "control",
+      "document",
+      "governance",
+      "master",
+      "shared",
+      "snapshot"
+    ],
+    "tables": [
+      {
+        "relation": "control.cycle_type",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.entity_case",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.cycle_run",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.cycle_subject",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.process_attempt",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.process_selection_evidence",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_snapshot",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "master.current_principal_id_soft()",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()"
+    ],
+    "policies": [
+      {
+        "relation": "governance.cycle_subject",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "snapshot.entity_snapshot",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_master",
+    "bypassRls": false,
+    "schemas": [
+      "audit",
+      "authz",
+      "control",
+      "document",
+      "event",
+      "governance",
+      "master",
+      "public",
+      "runtime_meta",
+      "shared",
+      "snapshot"
+    ],
+    "tables": [
+      {
+        "relation": "authz.scope_target",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.business_partner_block",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.business_partner_mutation_evidence",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.customer_lifecycle_event",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.lookup_domain",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.lookup_value",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.mesh_business_partner_profile_projection",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.owner_type",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.owner_type_purpose",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.supplier_activation_policy",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.attachment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.attachment_link",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.attachment_series",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.entity_case",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "document.entity_case_command_evidence",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.entity_case_materialization",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.mesh_profile_change_case",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "document.mesh_profile_change_resolution",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.command_execution",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "event.outbox",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.cycle_run",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.cycle_subject",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.process_attempt",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "governance.process_document_job",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.accounting_profile",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.address",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.address_link",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.audit_reason_code",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.bank_account",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.business_partner_alias",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_commodity_classification",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.business_partner_governance_relation",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_identifier",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_identity_current",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_industry_classification",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_operating_organization_assignment",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_organization_identity",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.business_partner_relationship",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.business_partner_tax_registration",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.certification",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.certification_type",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.commodity_category",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.company_code",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.company_code_customer_profile",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.company_code_supplier_profile",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.condition_type",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.contact_email",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.contact_link",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.contact_person",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.contact_person_role",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.contact_phone",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.customer",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.dimension_set",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.dimension_set_item",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.dimension_type",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.dimension_value",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.operating_organization",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.operating_organization_capability",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.operating_organization_company_assignment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.organization_amendment",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.payment_instrument",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.payment_instrument_link",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.payment_term",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "master.payment_term_clause",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.payment_term_discount_tier",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal_identity_binding",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.supplier",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.tax_jurisdiction",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.tax_type",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.tenant",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "shared.commodity_code",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "shared.country",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "shared.industry_code",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "shared.state_region",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "shared.timezone",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_case_snapshot_lineage",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_snapshot",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.mesh_business_partner_profile_received",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "control.command_business_partner_lifecycle(uuid, text, uuid, text, bigint, text, text, uuid)",
+      "control.command_create_business_partner_decision(uuid, text, uuid, text, uuid, uuid, uuid, uuid, jsonb, text, uuid)",
+      "control.lookup_value_is_active(text, text, uuid)",
+      "document.fn_validate_entity_case_payload(jsonb, jsonb)",
+      "event.fn_authorization_emit_invalidation(text, text, uuid, text, text, character, jsonb, timestamp with time zone)",
+      "master.assert_payment_term_aggregate_valid(uuid, uuid)",
+      "master.current_principal_id_soft()",
+      "master.fn_pin_business_partner_child_activation(uuid, uuid, jsonb, boolean)",
+      "master.update_business_partner_organization_identity(uuid, uuid, jsonb, uuid)",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)",
+      "shared.fn_validate_postal_code(text, text)",
+      "shared.uuidv7()",
+      "snapshot.fn_capture_entity(text, uuid, text, integer, text, bigint, text, snapshot.capture_kind_d, jsonb, uuid, uuid, timestamp with time zone, timestamp with time zone, snapshot.retention_class_d, text)"
+    ],
+    "policies": [
+      {
+        "relation": "authz.scope_target",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.scope_target",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.scope_target",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "control.business_partner_block",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.lookup_domain",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_catalog_write policy only when the original session is a member of athyper_control_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_control_writer''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_control_writer''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.lookup_domain",
+        "command": "ALL",
+        "reason": "Preserves the existing lookup_domain_admin policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "control.lookup_value",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_lookup_write policy only when the original session is a member of athyper_control_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_control_writer''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_control_writer''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))"
+      },
+      {
+        "relation": "control.lookup_value",
+        "command": "ALL",
+        "reason": "Preserves the existing lookup_value_admin policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "document.attachment",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "document.attachment_link",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "document.attachment_series",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "document.entity_case",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.entity_case_command_evidence",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "document.entity_case_materialization",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.command_execution",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.command_execution",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "ALL",
+        "reason": "Preserves the existing outbox_jobs_access policy only when the original session is a member of athyper_jobs_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.accounting_profile",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.address",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.address_link",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.address_link",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.audit_reason_code",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.audit_reason_code",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.bank_account",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.business_partner",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.business_partner",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_alias",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_commodity_classification",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_commodity_classification",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_governance_relation",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_identifier",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_industry_classification",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_operating_organization_assignment",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_organization_identity",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_organization_identity",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_relationship",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.business_partner_tax_registration",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.certification",
+        "command": "ALL",
+        "reason": "Preserves the existing certification_admin_write policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.certification",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.certification",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.certification_type",
+        "command": "ALL",
+        "reason": "Preserves the existing certification_type_admin_write policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.commodity_category",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.company_code",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.company_code_customer_profile",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.company_code_supplier_profile",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.condition_type",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.condition_type",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.contact_link",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.contact_person",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.contact_person",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.contact_person_role",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.customer",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.customer",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.dimension_set",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.dimension_set",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.dimension_set_item",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.dimension_set_item",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.dimension_type",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.dimension_value",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.operating_organization",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.operating_organization_capability",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.operating_organization_company_assignment",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.organization_amendment",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.payment_instrument",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.payment_instrument_link",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.payment_term",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.payment_term",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.payment_term_clause",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.payment_term_discount_tier",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing publication_service_principal_read policy only when the original session is a member of athyper_publication_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_publication_service''::name, ''MEMBER''::text) AND ((tenant_id = shared.current_tenant_id_soft()) AND ((principal_type)::text = ''service_account''::text)))"
+      },
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_owner_admin_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND shared.fn_entity_owner_admin_access(''master''::text, ''principal''::text, tenant_id, false))"
+      },
+      {
+        "relation": "master.principal_identity_binding",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.supplier",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.supplier",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "master.tax_jurisdiction",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "master.tax_type",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "command": "ALL",
+        "reason": "Preserves the existing runtime_entity_contract_applier policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.entity_case_snapshot_lineage",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.entity_case_snapshot_lineage",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "snapshot.entity_snapshot",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_mesh",
+    "bypassRls": false,
+    "schemas": [
+      "audit",
+      "authz",
+      "control",
+      "event",
+      "master",
+      "mesh",
+      "public",
+      "runtime_meta",
+      "shared"
+    ],
+    "tables": [
+      {
+        "relation": "authz.scope_target",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.network_document_type",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "event.outbox",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.tenant",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.bank_account",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "mesh.bank_account_disclosure",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.bank_account_link",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.bank_account_retrieval_evidence",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.bank_disclosure_purpose",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.bank_provisional_reference",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.canonical_party_correlation_case",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "mesh.catalog",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "mesh.catalog_revision",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.document_envelope",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "mesh.network_account",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "mesh.network_command_evidence",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.network_discovery_receipt",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.network_lifecycle_event",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.network_relationship",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "mesh.network_relationship_capability",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "mesh.network_relationship_identity",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "mesh.registration_exchange",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "shared.bank_branch",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "shared.bank_identifier",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "shared.v_bank_branch",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "shared.v_bank_directory",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "audit.append_event(text, audit.operation_d, text, uuid, audit.outcome_d, audit.event_severity_d, text, uuid, uuid, text, jsonb, jsonb, text[], jsonb, uuid, text, timestamp with time zone)",
+      "master.current_principal_id_soft()",
+      "mesh.catalog_is_visible(uuid)",
+      "mesh.command_catalog_lifecycle(uuid, text, bigint, text, text, uuid)",
+      "mesh.command_network_relationship_lifecycle(uuid, text, bigint, text, text, uuid)",
+      "mesh.command_request_network_relationship(uuid, uuid, uuid, uuid, text, date, date, text, text, uuid)",
+      "mesh.command_request_relationship_capability(uuid, text, date, date, jsonb, text, text, uuid)",
+      "mesh.current_network_account_id_soft()",
+      "mesh.fn_catalog_publication_snapshot(uuid)",
+      "mesh.fn_record_network_command(uuid, uuid, text, uuid, text, text, text, bigint, text, text, text, jsonb, uuid)",
+      "mesh.fn_upsert_network_scope(uuid, authz.scope_kind_d, uuid, uuid, text, text, authz.scope_status_d, uuid, text)",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "shared.uuidv7()"
+    ],
+    "policies": [
+      {
+        "relation": "authz.scope_target",
+        "command": "ALL",
+        "reason": "Preserves the existing management_write policy only when the original session is a member of athyper_authorization_writer.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_authorization_writer''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))"
+      },
+      {
+        "relation": "authz.scope_target",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "authz.scope_target",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "ALL",
+        "reason": "Preserves the existing outbox_jobs_access policy only when the original session is a member of athyper_jobs_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "mesh.bank_account",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "mesh.bank_provisional_reference",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "mesh.canonical_party_correlation_case",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "mesh.canonical_party_correlation_case",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "mesh.catalog",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "mesh.catalog_revision",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "mesh.network_account",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "command": "ALL",
+        "reason": "Preserves the existing runtime_entity_contract_applier policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_metadata",
+    "bypassRls": false,
+    "schemas": [
+      "control",
+      "master",
+      "metadata",
+      "public",
+      "publication",
+      "shared",
+      "snapshot"
+    ],
+    "tables": [
+      {
+        "relation": "control.module",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.tenant",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.entity",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.entity_change_set",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.entity_release",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.publication_recovery_archive",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.publication_recovery_revocation",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.entity_release_link",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_contract_revision",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_draft_save",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_release_artifact",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "master.current_principal_id_soft()",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "snapshot.fn_compute_entity_contract_hash(jsonb)"
+    ],
+    "policies": [
+      {
+        "relation": "metadata.publication_recovery_archive",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "metadata.entity",
+        "command": "SELECT",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))",
+        "reason": "Preserves entity_tenant_read for the authenticated app session while reading product learning ancestry."
+      },
+      {
+        "relation": "metadata.entity_change_set",
+        "command": "SELECT",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))",
+        "reason": "Preserves entity_change_set_tenant_read for the authenticated app session while reading product learning ancestry."
+      },
+      {
+        "relation": "metadata.entity_release",
+        "command": "SELECT",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))",
+        "reason": "Preserves entity_release_tenant_read for the authenticated app session while reading product learning ancestry."
+      },
+      {
+        "relation": "snapshot.entity_contract_revision",
+        "command": "SELECT",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))",
+        "reason": "Preserves entity_contract_revision_tenant_read for the authenticated app session while reading product learning ancestry."
+      },
+      {
+        "relation": "snapshot.entity_draft_save",
+        "command": "SELECT",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND (tenant_id = shared.current_tenant_id_soft()))",
+        "reason": "Preserves entity_draft_save_read for the authenticated app session while reading product learning ancestry."
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_onboarding",
+    "bypassRls": false,
+    "schemas": [
+      "onboarding",
+      "shared",
+      "master"
+    ],
+    "tables": [
+      {
+        "relation": "onboarding.onboarding_case",
+        "privileges": [
+          "SELECT",
+          "INSERT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "onboarding.onboarding_case_target",
+        "privileges": [
+          "SELECT",
+          "INSERT"
+        ]
+      },
+      {
+        "relation": "onboarding.onboarding_case_revision",
+        "privileges": [
+          "SELECT",
+          "INSERT"
+        ]
+      },
+      {
+        "relation": "master.canonical_party",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "master.current_principal_id_soft()",
+      "onboarding.fn_can_read_onboarding_case(uuid, uuid)",
+      "onboarding.fn_guest_case_has_access(uuid, uuid, text)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "shared.uuidv7()"
+    ],
+    "policies": []
+  },
+  {
+    "name": "athyper_definer_ops",
+    "bypassRls": false,
+    "schemas": [
+      "ops"
+    ],
+    "tables": [],
+    "functions": [],
+    "policies": []
+  },
+  {
+    "name": "athyper_definer_publication",
+    "bypassRls": false,
+    "schemas": [
+      "event",
+      "master",
+      "metadata",
+      "public",
+      "publication",
+      "shared",
+      "snapshot"
+    ],
+    "tables": [
+      {
+        "relation": "event.outbox",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.entity",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.entity_baseline_import",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.entity_baseline_import_revocation",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.entity_change_set",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "metadata.entity_release",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.artifact",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "publication.deployment",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "publication.deployment_acknowledgement",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.deployment_event",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.entity_authorization_successor_link",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.entity_authorization_successor_payload",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.entity_baseline_release_link",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.entity_release_link",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.entity_runtime_restoration_link",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.release",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_contract_revision",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_release_artifact",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "master.current_principal_id_soft()",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)",
+      "publication.fn_emit_outbox(uuid, text, text, text, uuid, uuid, uuid, jsonb)",
+      "publication.fn_successor_canonical_json(jsonb)",
+      "publication.fn_transition_release(uuid, publication.release_status_d, uuid, uuid, jsonb)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "snapshot.fn_compute_entity_release_artifact_hash(uuid, uuid, uuid, text, text, text, jsonb)"
+    ],
+    "policies": [
+      {
+        "relation": "event.outbox",
+        "command": "ALL",
+        "reason": "Preserves the existing outbox_jobs_access policy only when the original session is a member of athyper_jobs_service.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_jobs_service''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "event.outbox",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "metadata.entity",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "metadata.entity",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_tenant_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))"
+      },
+      {
+        "relation": "metadata.entity_change_set",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "metadata.entity_change_set",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_change_set_tenant_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))"
+      },
+      {
+        "relation": "metadata.entity_release",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "metadata.entity_release",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_release_tenant_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))"
+      },
+      {
+        "relation": "publication.entity_authorization_successor_link",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "publication.entity_baseline_release_link",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "publication.entity_runtime_restoration_link",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "publication.release",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "publication.release",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "publication.release",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "snapshot.entity_contract_revision",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.entity_contract_revision",
+        "command": "SELECT",
+        "reason": "Preserves the existing entity_contract_revision_tenant_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))"
+      },
+      {
+        "relation": "snapshot.entity_release_artifact",
+        "command": "ALL",
+        "reason": "Preserves the existing entity_release_artifact_admin policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.entity_release_artifact",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_runtime_meta",
+    "bypassRls": false,
+    "schemas": [
+      "authz",
+      "runtime_meta",
+      "shared"
+    ],
+    "tables": [
+      {
+        "relation": "runtime_meta.applied_release",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "runtime_meta.applied_release_payload",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "runtime_meta.entity_descriptor",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "runtime_meta.release_activation_event",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "runtime_meta.release_activation_head",
+        "privileges": [
+          "INSERT",
+          "SELECT",
+          "UPDATE"
+        ]
+      }
+    ],
+    "functions": [
+      "authz.fn_activate_entity_operation_projection(uuid, timestamp with time zone)",
+      "authz.fn_restore_entity_operation_projection(uuid, timestamp with time zone)",
+      "authz.fn_retire_entity_operation_projection(uuid, timestamp with time zone)",
+      "authz.fn_stage_entity_operation_projection(uuid, uuid, text, uuid, text, jsonb)",
+      "runtime_meta.fn_stage_applied_release_payload(uuid, jsonb)",
+      "runtime_meta.fn_stage_entity_projection(uuid, jsonb)",
+      "runtime_meta.fn_stage_release(text, uuid, bigint, uuid, text, jsonb)",
+      "shared.current_tenant_id_soft()"
+    ],
+    "policies": [
+      {
+        "relation": "runtime_meta.applied_release",
+        "command": "ALL",
+        "reason": "Preserves the existing applied_release_applier policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "runtime_meta.applied_release",
+        "command": "SELECT",
+        "reason": "Preserves the existing applied_release_runtime_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "runtime_meta.applied_release_payload",
+        "command": "ALL",
+        "reason": "Preserves the existing runtime_applied_release_payload_applier policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "runtime_meta.applied_release_payload",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "command": "ALL",
+        "reason": "Preserves the existing runtime_entity_contract_applier policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "runtime_meta.entity_contract",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "runtime_meta.entity_descriptor",
+        "command": "ALL",
+        "reason": "Preserves the existing runtime_entity_descriptor_applier policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "runtime_meta.entity_descriptor",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "runtime_meta.entity_descriptor",
+        "command": "UPDATE",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "runtime_meta.release_activation_event",
+        "command": "ALL",
+        "reason": "Preserves the existing release_activation_event_applier policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "runtime_meta.release_activation_head",
+        "command": "ALL",
+        "reason": "Preserves the existing release_activation_head_applier policy only when the original session is a member of athyper_projection_applier.",
+        "using": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyper_projection_applier''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "runtime_meta.release_activation_head",
+        "command": "SELECT",
+        "reason": "Preserves the existing release_activation_head_runtime_read policy only when the original session is a member of athyperapp.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperapp''::name, ''MEMBER''::text) AND true)"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_shared",
+    "bypassRls": false,
+    "schemas": [
+      "shared"
+    ],
+    "tables": [],
+    "functions": [],
+    "policies": []
+  },
+  {
+    "name": "athyper_definer_snapshot",
+    "bypassRls": false,
+    "schemas": [
+      "master",
+      "public",
+      "shared",
+      "snapshot"
+    ],
+    "tables": [
+      {
+        "relation": "snapshot.compiled_artifact",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_snapshot",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_snapshot_identity",
+        "privileges": [
+          "INSERT",
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "master.current_principal_id_soft()",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)",
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()",
+      "shared.uuidv7()",
+      "snapshot.fn_compute_compiled_artifact_hash(uuid, text, text, text, text, text, text, jsonb)",
+      "snapshot.fn_compute_entity_snapshot_hash(uuid, text, uuid, integer, integer, text, text, snapshot.capture_kind_d, jsonb, uuid, text)"
+    ],
+    "policies": [
+      {
+        "relation": "snapshot.compiled_artifact",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.compiled_artifact",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "snapshot.entity_snapshot",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.entity_snapshot",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      },
+      {
+        "relation": "snapshot.entity_snapshot_identity",
+        "command": "ALL",
+        "reason": "Preserves the existing admin_access policy only when the original session is a member of athyperadmin.",
+        "using": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)",
+        "check": "(pg_has_role(SESSION_USER, ''athyperadmin''::name, ''MEMBER''::text) AND true)"
+      },
+      {
+        "relation": "snapshot.entity_snapshot_identity",
+        "command": "INSERT",
+        "reason": "RLS-bound mutation API: restrict every affected row to the current tenant.",
+        "check": "(tenant_id = shared.current_tenant_id_soft())"
+      }
+    ]
+  },
+  {
+    "name": "athyper_definer_trustiam",
+    "bypassRls": false,
+    "schemas": [
+      "shared",
+      "trustiam"
+    ],
+    "tables": [
+      {
+        "relation": "trustiam.identity_projection",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "trustiam.identity_saga_attempt",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "shared.current_tenant_id()",
+      "shared.current_tenant_id_soft()"
+    ],
+    "policies": []
+  },
+  {
+    "name": "athyper_identity_resolver_owner",
+    "bypassRls": false,
+    "schemas": [
+      "master",
+      "shared"
+    ],
+    "tables": [
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal_identity_binding",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "master.current_principal_id_soft()",
+      "shared.current_tenant_id_soft()",
+      "shared.fn_entity_owner_admin_access(text, text, uuid, boolean)"
+    ],
+    "tenantReadPolicies": [
+      "master.principal",
+      "master.principal_identity_binding"
+    ]
+  },
+  {
+    "name": "athyper_definer_product_publication",
+    "bypassRls": false,
+    "schemas": [
+      "master",
+      "control",
+      "metadata",
+      "snapshot",
+      "publication",
+      "shared",
+      "ops",
+      "public"
+    ],
+    "tables": [
+      {
+        "relation": "master.principal",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "master.principal_identity_binding",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "control.policy_definition",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "control.policy_rule",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "metadata.entity",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "metadata.entity_change_set",
+        "privileges": [
+          "SELECT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "metadata.entity_release",
+        "privileges": [
+          "SELECT",
+          "INSERT",
+          "UPDATE"
+        ]
+      },
+      {
+        "relation": "metadata.entity_product_review_receipt",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_draft_save",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_contract_revision",
+        "privileges": [
+          "SELECT",
+          "INSERT"
+        ]
+      },
+      {
+        "relation": "snapshot.entity_release_artifact",
+        "privileges": [
+          "SELECT",
+          "INSERT"
+        ]
+      },
+      {
+        "relation": "publication.release",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.entity_release_link",
+        "privileges": [
+          "SELECT",
+          "INSERT"
+        ]
+      },
+      {
+        "relation": "publication.artifact",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.artifact_compilation",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "ops.job_execution",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.deployment",
+        "privileges": [
+          "SELECT"
+        ]
+      },
+      {
+        "relation": "publication.deployment_acknowledgement",
+        "privileges": [
+          "SELECT"
+        ]
+      }
+    ],
+    "functions": [
+      "snapshot.fn_compute_entity_contract_revision_hash(uuid, uuid, uuid, integer, text, uuid, text, text, text, text[], metadata.compatibility_level_d, metadata.contract_validation_status_d, jsonb, timestamp with time zone, uuid)",
+      "metadata.current_actor_id(uuid)",
+      "metadata.fn_compute_entity_release_hash(uuid, uuid, uuid, uuid, bigint, text, metadata.entity_release_kind_d, uuid, uuid, text, text, text, text, metadata.compatibility_level_d, text[], text, text, text, uuid, timestamp with time zone, uuid)",
+      "shared.uuidv7()",
+      "master.current_principal_id_soft()",
+      "shared.current_tenant_id_soft()",
+      "shared.current_tenant_id()",
+      "control.publication_policy_enrollment_is_active(uuid, text, uuid, uuid)",
+      "publication.fn_successor_canonical_json(jsonb)",
+      "publication.fn_compiled_entity_compilation_source(uuid)",
+      "snapshot.fn_compute_entity_contract_hash(jsonb)",
+      "snapshot.fn_compute_entity_release_artifact_hash(uuid, uuid, uuid, text, text, text, jsonb)",
+      "public.digest(bytea, text)",
+      "public.digest(text, text)"
+    ],
+    "policies": [
+      {
+        "relation": "master.principal",
+        "command": "SELECT",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "master.principal_identity_binding",
+        "command": "SELECT",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "control.policy_definition",
+        "command": "SELECT",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "control.policy_definition",
+        "command": "UPDATE",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "check": "false",
+        "reason": "Permit policy row locks; reject every policy write by the publication owner."
+      },
+      {
+        "relation": "control.policy_rule",
+        "command": "SELECT",
+        "using": "(EXISTS ( SELECT 1\n   FROM control.policy_definition d\n  WHERE ((d.id = policy_rule.policy_definition_id) AND (d.tenant_id = shared.current_tenant_id_soft()))))",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "control.policy_rule",
+        "command": "UPDATE",
+        "using": "(EXISTS ( SELECT 1\n   FROM control.policy_definition d\n  WHERE ((d.id = policy_rule.policy_definition_id) AND (d.tenant_id = shared.current_tenant_id_soft()))))",
+        "check": "false",
+        "reason": "Permit policy row locks; reject every policy write by the publication owner."
+      },
+      {
+        "relation": "metadata.entity",
+        "command": "SELECT",
+        "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+        "reason": "Preserve existing tenant compilation reads as well as global product sources, without allowing cross-tenant reads. Mutation policies remain global-only."
+      },
+      {
+        "relation": "metadata.entity",
+        "command": "UPDATE",
+        "check": "(tenant_id IS NULL)",
+        "reason": "Exact enrolled source and human review are checked in private publication commands before global source mutation.",
+        "using": "(tenant_id IS NULL)"
+      },
+      {
+        "relation": "metadata.entity_change_set",
+        "command": "SELECT",
+        "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+        "reason": "Preserve existing tenant compilation reads as well as global product sources, without allowing cross-tenant reads. Mutation policies remain global-only."
+      },
+      {
+        "relation": "metadata.entity_change_set",
+        "command": "UPDATE",
+        "check": "(tenant_id IS NULL)",
+        "reason": "Exact enrolled source and human review are checked in private publication commands before global source mutation.",
+        "using": "(tenant_id IS NULL)"
+      },
+      {
+        "relation": "metadata.entity_release",
+        "command": "SELECT",
+        "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+        "reason": "Preserve existing tenant compilation reads as well as global product sources, without allowing cross-tenant reads. Mutation policies remain global-only."
+      },
+      {
+        "relation": "metadata.entity_release",
+        "command": "INSERT",
+        "check": "(tenant_id IS NULL)",
+        "reason": "Exact enrolled source and human review are checked in private publication commands before global source mutation."
+      },
+      {
+        "relation": "metadata.entity_release",
+        "command": "UPDATE",
+        "using": "(tenant_id IS NULL)",
+        "check": "false",
+        "reason": "Permit policy row locks; reject every policy write by the publication owner."
+      },
+      {
+        "relation": "metadata.entity_product_review_receipt",
+        "command": "SELECT",
+        "using": "(authority_tenant_id = shared.current_tenant_id_soft())",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "snapshot.entity_draft_save",
+        "command": "SELECT",
+        "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+        "reason": "Preserve existing tenant compilation reads as well as global product sources, without allowing cross-tenant reads. Mutation policies remain global-only."
+      },
+      {
+        "relation": "snapshot.entity_contract_revision",
+        "command": "SELECT",
+        "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+        "reason": "Preserve existing tenant compilation reads as well as global product sources, without allowing cross-tenant reads. Mutation policies remain global-only."
+      },
+      {
+        "relation": "snapshot.entity_contract_revision",
+        "command": "INSERT",
+        "check": "(tenant_id IS NULL)",
+        "reason": "Exact enrolled source and human review are checked in private publication commands before global source mutation."
+      },
+      {
+        "relation": "snapshot.entity_release_artifact",
+        "command": "SELECT",
+        "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+        "reason": "Preserve existing tenant compilation reads as well as global product sources, without allowing cross-tenant reads. Mutation policies remain global-only."
+      },
+      {
+        "relation": "snapshot.entity_release_artifact",
+        "command": "INSERT",
+        "check": "(tenant_id IS NULL)",
+        "reason": "Exact enrolled source and human review are checked in private publication commands before global source mutation."
+      },
+      {
+        "relation": "publication.release",
+        "command": "SELECT",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "publication.entity_release_link",
+        "command": "SELECT",
+        "using": "(EXISTS ( SELECT 1\n   FROM publication.release r\n  WHERE ((r.id = entity_release_link.publication_release_id) AND (r.tenant_id = shared.current_tenant_id_soft()))))",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "publication.entity_release_link",
+        "command": "INSERT",
+        "check": "(EXISTS ( SELECT 1\n   FROM publication.release r\n  WHERE ((r.id = entity_release_link.publication_release_id) AND (r.tenant_id = shared.current_tenant_id_soft()))))",
+        "reason": "Exact enrolled source and human review are checked in private publication commands before global source mutation."
+      },
+      {
+        "relation": "publication.artifact",
+        "command": "SELECT",
+        "using": "(EXISTS ( SELECT 1\n   FROM publication.release r\n  WHERE ((r.id = artifact.publication_release_id) AND (r.tenant_id = shared.current_tenant_id_soft()))))",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "publication.artifact_compilation",
+        "command": "SELECT",
+        "using": "(EXISTS ( SELECT 1\n   FROM publication.release r\n  WHERE ((r.id = artifact_compilation.publication_release_id) AND (r.tenant_id = shared.current_tenant_id_soft()))))",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "ops.job_execution",
+        "command": "SELECT",
+        "using": "(tenant_id = shared.current_tenant_id_soft())",
+        "reason": "Bounded product publication functions read current authority or global source evidence; no caller role membership."
+      },
+      {
+        "relation": "publication.deployment",
+        "command": "SELECT",
+        "using": "(EXISTS ( SELECT 1\n   FROM (publication.artifact a\n     JOIN publication.release r ON ((r.id = a.publication_release_id)))\n  WHERE ((a.id = deployment.artifact_id) AND (r.tenant_id = shared.current_tenant_id_soft()))))",
+        "reason": "Read only current-authority signed deployment coordinates and acknowledgements for exact recovery admission."
+      },
+      {
+        "relation": "publication.deployment_acknowledgement",
+        "command": "SELECT",
+        "using": "(EXISTS ( SELECT 1\n   FROM ((publication.deployment d\n     JOIN publication.artifact a ON ((a.id = d.artifact_id)))\n     JOIN publication.release r ON ((r.id = a.publication_release_id)))\n  WHERE ((d.id = deployment_acknowledgement.deployment_id) AND (r.tenant_id = shared.current_tenant_id_soft()))))",
+        "reason": "Read only current-authority signed deployment coordinates and acknowledgements for exact recovery admission."
+      }
+    ]
+  }
+]'::jsonb) LOOP
+        role_name := role_contract->>'name';
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = role_name) THEN
+            EXECUTE format('CREATE ROLE %I NOLOGIN', role_name);
+        END IF;
+        EXECUTE format('ALTER ROLE %I NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOINHERIT %s',
+            role_name, CASE WHEN (role_contract->>'bypassRls')::boolean THEN 'BYPASSRLS' ELSE 'NOBYPASSRLS' END);
+        IF EXISTS (SELECT 1 FROM pg_auth_members WHERE member = (SELECT oid FROM pg_roles WHERE rolname = role_name)) THEN
+            RAISE EXCEPTION 'Definer owner % must not inherit or assume other roles', role_name;
+        END IF;
+        FOR schema_name IN SELECT jsonb_array_elements_text(role_contract->'schemas') LOOP
+            IF to_regnamespace(schema_name) IS NOT NULL THEN
+                EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', schema_name, role_name);
+            END IF;
+        END LOOP;
+        FOR object_contract IN SELECT value FROM jsonb_array_elements(role_contract->'tables') LOOP
+            IF to_regclass(object_contract->>'relation') IS NOT NULL THEN
+                EXECUTE format('GRANT %s ON TABLE %s TO %I',
+                    (SELECT string_agg(value, ',') FROM jsonb_array_elements_text(object_contract->'privileges')),
+                    (object_contract->>'relation')::regclass, role_name);
+            END IF;
+        END LOOP;
+        FOR routine_signature IN SELECT jsonb_array_elements_text(role_contract->'functions') LOOP
+            IF to_regprocedure(routine_signature) IS NOT NULL THEN
+                EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO %I', routine_signature::regprocedure, role_name);
+            END IF;
+        END LOOP;
+        FOR routine_signature IN SELECT jsonb_array_elements_text(COALESCE(role_contract->'tenantReadPolicies','[]'::jsonb)) LOOP
+            IF to_regclass(routine_signature) IS NOT NULL THEN
+                EXECUTE format('DROP POLICY IF EXISTS %I ON %s', role_name || '_tenant_read', routine_signature::regclass);
+                EXECUTE format('CREATE POLICY %I ON %s FOR SELECT TO %I USING (tenant_id = shared.current_tenant_id_soft())',
+                    role_name || '_tenant_read', routine_signature::regclass, role_name);
+            END IF;
+        END LOOP;
+        -- Reconcile only this contract's reserved policy namespace so a stricter
+        -- successor cannot leave an older permissive policy active alongside it.
+        FOR old_policy IN SELECT pol.polname,pol.polrelid::regclass AS relation FROM pg_policy pol
+            WHERE starts_with(pol.polname,role_name || '_p_') AND (SELECT oid FROM pg_roles WHERE rolname=role_name)=ANY(pol.polroles) LOOP
+            EXECUTE format('DROP POLICY %I ON %s',old_policy.polname,old_policy.relation);
+        END LOOP;
+        policy_index := 0;
+        FOR policy_contract IN SELECT value FROM jsonb_array_elements(COALESCE(role_contract->'policies','[]'::jsonb)) LOOP
+            IF to_regclass(policy_contract->>'relation') IS NOT NULL THEN
+                EXECUTE format('CREATE POLICY %I ON %s FOR %s TO %I%s%s',
+                    role_name || '_p_' || policy_index, (policy_contract->>'relation')::regclass,policy_contract->>'command',role_name,
+                    CASE WHEN policy_contract ? 'using' THEN ' USING (' || (policy_contract->>'using') || ')' ELSE '' END,
+                    CASE WHEN policy_contract ? 'check' THEN ' WITH CHECK (' || (policy_contract->>'check') || ')' ELSE '' END);
+            END IF;
+            policy_index := policy_index + 1;
+        END LOOP;
+    END LOOP;
+END
+$definer_privileges$;
+
+-- Generated by scripts/checks/security/generate-security-definer-contract.ts.
+-- Final hardening must run after every plane manifest entry.
+DO $hardening$
+DECLARE
+    routine record;
+    exception jsonb;
+    target_owner text;
+    identity_signature text;
+    configured_path text;
+    path_schema text;
+    trusted_path text[];
+BEGIN
+    FOR routine IN
+        SELECT p.oid, p.prokind, p.proconfig, n.nspname AS schema_name, p.proname AS routine_name,
+               pg_get_function_identity_arguments(p.oid) AS identity_arguments,
+               oidvectortypes(p.proargtypes) AS argument_types
+          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE p.prosecdef AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+           AND n.nspname NOT LIKE 'pg_%'
+    LOOP
+        identity_signature := routine.schema_name || '.' || routine.routine_name || '(' || routine.argument_types || ')';
+        SELECT value INTO exception FROM jsonb_array_elements('[
+  {
+    "signature": "ai.fn_atlas_conversation_access(uuid, uuid, boolean)",
+    "owner": "athyper_bypass_ai",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "ai.fn_is_atlas_conversation(uuid, uuid)",
+    "owner": "athyper_bypass_ai",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "ai.trg_allocate_atlas_message_sequence()",
+    "owner": "athyper_bypass_ai",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "audit.append_platform_event(text, audit.operation_d, text, uuid, uuid, audit.outcome_d, audit.event_severity_d, jsonb, uuid, text, timestamp with time zone)",
+    "owner": "athyper_bypass_audit",
+    "rowSecurityOff": false,
+    "reason": "Platform-scoped audit append, including a required platform scope identifier."
+  },
+  {
+    "signature": "audit.ensure_monthly_partitions(date, integer)",
+    "owner": "$ddlOwner",
+    "rowSecurityOff": false,
+    "reason": "DDL-only creation/attachment of audit partitions; requires parent ownership."
+  },
+  {
+    "signature": "audit.install_schema_row_triggers(text)",
+    "owner": "$ddlOwner",
+    "rowSecurityOff": false,
+    "reason": "DDL-only installation of audit row triggers on declared tenant tables."
+  },
+  {
+    "signature": "authz.fn_activate_application_projection(uuid, uuid, bigint, text, uuid)",
+    "owner": "athyper_projection_owner",
+    "rowSecurityOff": false,
+    "reason": "Existing dedicated publication/projection owner and grants remain unchanged."
+  },
+  {
+    "signature": "authz.fn_activate_entity_operation_projection(uuid, timestamp with time zone)",
+    "owner": "athyper_projection_owner",
+    "rowSecurityOff": false,
+    "reason": "Existing dedicated publication/projection owner and grants remain unchanged."
+  },
+  {
+    "signature": "authz.fn_resolve_active_application_projections(text, text[], text)",
+    "owner": "athyper_bypass_authz",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "authz.fn_restore_entity_operation_projection(uuid, timestamp with time zone)",
+    "owner": "athyper_projection_owner",
+    "rowSecurityOff": false,
+    "reason": "Existing dedicated publication/projection owner and grants remain unchanged."
+  },
+  {
+    "signature": "authz.fn_retire_entity_operation_projection(uuid, timestamp with time zone)",
+    "owner": "athyper_projection_owner",
+    "rowSecurityOff": false,
+    "reason": "Existing dedicated publication/projection owner and grants remain unchanged."
+  },
+  {
+    "signature": "authz.fn_stage_application_projection(uuid, jsonb, jsonb, jsonb, uuid)",
+    "owner": "athyper_projection_owner",
+    "rowSecurityOff": false,
+    "reason": "Existing dedicated publication/projection owner and grants remain unchanged."
+  },
+  {
+    "signature": "authz.fn_stage_entity_operation_projection(uuid, uuid, text, uuid, text, jsonb)",
+    "owner": "athyper_projection_owner",
+    "rowSecurityOff": false,
+    "reason": "Existing dedicated publication/projection owner and grants remain unchanged."
+  },
+  {
+    "signature": "control.claim_connector_health_job()",
+    "owner": "athyper_bypass_control",
+    "rowSecurityOff": false,
+    "reason": "Plane-wide connector health queue leasing."
+  },
+  {
+    "signature": "control.fn_cron_schedules_for_scheduler()",
+    "owner": "athyper_bypass_control",
+    "rowSecurityOff": false,
+    "reason": "Plane-wide scheduler discovery of enabled schedules."
+  },
+  {
+    "signature": "control.fn_mark_cron_schedule_reconciled(uuid, timestamp with time zone, timestamp with time zone)",
+    "owner": "athyper_bypass_control",
+    "rowSecurityOff": false,
+    "reason": "Plane-wide scheduler reconciliation of a discovered schedule."
+  },
+  {
+    "signature": "control.publication_policy_enrollment_is_active(uuid, text, uuid, uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "document.fn_workflow_sla_due_tenants(timestamp with time zone, integer)",
+    "owner": "athyper_bypass_document",
+    "rowSecurityOff": false,
+    "reason": "Bounded worker discovery of tenants with due workflow items."
+  },
+  {
+    "signature": "document.process_document_candidates()",
+    "owner": "athyper_bypass_document",
+    "rowSecurityOff": false,
+    "reason": "Bounded worker discovery of pending process document jobs."
+  },
+  {
+    "signature": "event.fn_authorization_bump_epoch(text, uuid, text)",
+    "owner": "athyper_bypass_event",
+    "rowSecurityOff": false,
+    "reason": "Global/tenant/plane authorization epoch application for invalidation processing."
+  },
+  {
+    "signature": "event.fn_authorization_claim_invalidations(text, integer, integer)",
+    "owner": "athyper_bypass_event",
+    "rowSecurityOff": false,
+    "reason": "Bounded plane-wide invalidation queue leasing."
+  },
+  {
+    "signature": "event.fn_authorization_complete_invalidation(uuid, text)",
+    "owner": "athyper_bypass_event",
+    "rowSecurityOff": false,
+    "reason": "Completion of a leased plane-wide invalidation item."
+  },
+  {
+    "signature": "event.fn_authorization_fail_invalidation(uuid, text, text, integer)",
+    "owner": "athyper_bypass_event",
+    "rowSecurityOff": false,
+    "reason": "Failure/retry handling of a leased plane-wide invalidation item."
+  },
+  {
+    "signature": "event.fn_notification_work_tenants(text, text, integer)",
+    "owner": "athyper_bypass_event",
+    "rowSecurityOff": false,
+    "reason": "Bounded worker discovery of notification tenant work."
+  },
+  {
+    "signature": "master.entity_link_person_v1(uuid, uuid, uuid, text)",
+    "owner": "athyper_bypass_master",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "master.entity_person_link_target_v1(uuid, uuid)",
+    "owner": "athyper_bypass_master",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "master.entity_profile_source_v1(uuid, uuid)",
+    "owner": "athyper_bypass_master",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "master.entity_projected_profile_source_v1(uuid, uuid)",
+    "owner": "athyper_bypass_master",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "master.fn_refresh_mv_cpa()",
+    "owner": "$ddlOwner",
+    "rowSecurityOff": false,
+    "reason": "Maintenance-only refresh of the owned materialized account view."
+  },
+  {
+    "signature": "master.fn_resolve_principal_identity(uuid, master.identity_provider_d, text, text)",
+    "owner": "athyper_identity_resolver_owner",
+    "rowSecurityOff": false,
+    "reason": "Verified-provider subject bootstrap before principal context exists; dedicated tenant-read policies retain RLS and exact tenant/subject predicates."
+  },
+  {
+    "signature": "master.purge_expired_reference_choices(integer)",
+    "owner": "athyper_bypass_master",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "master.trg_principal_profile_source_guard()",
+    "owner": "athyper_bypass_master",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "master.trg_profile_source_fence()",
+    "owner": "athyper_bypass_master",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "master.trg_projected_profile_source_fence()",
+    "owner": "athyper_bypass_master",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "master.trg_projected_profile_source_guard()",
+    "owner": "athyper_bypass_master",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "mesh.catalog_is_visible(uuid)",
+    "owner": "athyper_bypass_mesh",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "mesh.catalog_item_is_visible(uuid)",
+    "owner": "athyper_bypass_mesh",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "mesh.catalog_price_is_visible(uuid)",
+    "owner": "athyper_bypass_mesh",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "mesh.fn_catalog_publication_snapshot(uuid)",
+    "owner": "athyper_bypass_mesh",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "mesh.lock_profile_publication_relationship(uuid, uuid, uuid)",
+    "owner": "athyper_bypass_mesh",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "mesh.profile_publication_is_visible(uuid)",
+    "owner": "athyper_bypass_mesh",
+    "rowSecurityOff": true,
+    "reason": "Existing explicit RLS bypass; retain its source visibility or maintenance guards. This exception requires deployment review and excludes runtime owner membership."
+  },
+  {
+    "signature": "onboarding.fn_guest_case_has_access(uuid, uuid, text)",
+    "owner": "athyper_bypass_onboarding",
+    "rowSecurityOff": false,
+    "reason": "Guest token validation used by onboarding RLS policies; avoids recursive policy evaluation."
+  },
+  {
+    "signature": "ops.acknowledge_record_transfer_cleanup(text, uuid, text, uuid, text, text, timestamp with time zone)",
+    "owner": "athyper_bypass_ops",
+    "rowSecurityOff": false,
+    "reason": "Worker acknowledgement matching the discovered transfer and object key."
+  },
+  {
+    "signature": "ops.record_transfer_cleanup_candidates(text, timestamp with time zone, integer)",
+    "owner": "athyper_bypass_ops",
+    "rowSecurityOff": false,
+    "reason": "Bounded worker discovery of expired transfer artifacts across tenants."
+  },
+  {
+    "signature": "ops.record_transfer_stuck_counts(timestamp with time zone, integer)",
+    "owner": "athyper_bypass_ops",
+    "rowSecurityOff": false,
+    "reason": "Plane-wide worker health counts for stalled transfers."
+  },
+  {
+    "signature": "publication.fn_compilation_recovery_source(jsonb, boolean)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_compiled_entity_compilation_source_v2(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_compiled_entity_compilation_source_v3(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_coordinated_deployment_recovery_source(uuid, text)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Exact original-policy and signed-deployment evidence for independently reviewed coordinated recovery; read-only and tenant-scoped."
+  },
+  {
+    "signature": "publication.fn_create_system_entity_release(uuid, uuid, bigint, jsonb, text[], uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_create_system_entity_successor(uuid, uuid, bigint, uuid, jsonb, text[], uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_entity_successor_enrollment_source(jsonb)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_entity_successor_saved_graph(uuid, uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_human_execution_context(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_human_publication_preparation_source(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_human_publication_review_evidence(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_human_review_identity_status(uuid, uuid, uuid, uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_human_reviewed_entity_policy(jsonb, uuid, text)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_link_system_entity_release(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_record_system_entity_validation(uuid, bigint, jsonb, jsonb, uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_recoverable_deployment_coordinates(timestamp with time zone, uuid, integer)",
+    "owner": "athyper_publication_recovery_owner",
+    "rowSecurityOff": false,
+    "reason": "Existing dedicated publication/projection owner and grants remain unchanged."
+  },
+  {
+    "signature": "publication.fn_store_system_entity_artifact(uuid, text, jsonb, jsonb)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_system_entity_authority(uuid, text)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_system_entity_execution_metadata(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_system_entity_successor_policy(uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  },
+  {
+    "signature": "publication.fn_transition_system_entity_change_set(uuid, bigint, text, text, uuid)",
+    "owner": "athyper_definer_product_publication",
+    "rowSecurityOff": false,
+    "reason": "Dedicated non-login RLS-bound owner for exact enrolled global Entity publication and source evidence."
+  }
+]'::jsonb)
+            WHERE value->>'signature' = identity_signature;
+        IF ('row_security=off' = ANY(COALESCE(routine.proconfig, ARRAY[]::text[])))
+           IS DISTINCT FROM COALESCE((exception->>'rowSecurityOff')::boolean, false) THEN
+            RAISE EXCEPTION 'Unlisted or changed RLS bypass signature: %', identity_signature;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text('[
+  "ai.fn_atlas_conversation_access(uuid, uuid, boolean)",
+  "ai.fn_is_atlas_conversation(uuid, uuid)",
+  "ai.trg_allocate_atlas_message_sequence()",
+  "audit.append_event(text, audit.operation_d, text, uuid, audit.outcome_d, audit.event_severity_d, text, uuid, uuid, text, jsonb, jsonb, text[], jsonb, uuid, text, timestamp with time zone)",
+  "audit.append_platform_event(text, audit.operation_d, text, uuid, uuid, audit.outcome_d, audit.event_severity_d, jsonb, uuid, text, timestamp with time zone)",
+  "audit.create_hash_anchor(uuid, text, timestamp with time zone, timestamp with time zone, uuid)",
+  "audit.ensure_monthly_partitions(date, integer)",
+  "audit.install_schema_row_triggers(text)",
+  "audit.trg_capture_row_change()",
+  "audit.trg_prepare_audit_log()",
+  "audit.verify_hash_anchor(uuid)",
+  "authz.fn_activate_application_projection(uuid, uuid, bigint, text, uuid)",
+  "authz.fn_activate_entity_operation_projection(uuid, timestamp with time zone)",
+  "authz.fn_internal_permission_is_assignable_at_scope(uuid, uuid, uuid, authz.propagation_mode_d)",
+  "authz.fn_internal_scope_assignment_covers_target(uuid, uuid, uuid, authz.propagation_mode_d)",
+  "authz.fn_permission_is_assignable_at_scope(uuid, uuid, uuid)",
+  "authz.fn_reconcile_expired_authority(uuid, timestamp with time zone, uuid)",
+  "authz.fn_resolve_active_application_projections(text, text[], text)",
+  "authz.fn_restore_entity_operation_projection(uuid, timestamp with time zone)",
+  "authz.fn_retire_entity_operation_projection(uuid, timestamp with time zone)",
+  "authz.fn_revoke_principal_trusted_devices(uuid, uuid, uuid, text)",
+  "authz.fn_scope_assignment_covers_target(uuid, uuid, uuid, authz.propagation_mode_d)",
+  "authz.fn_stage_application_projection(uuid, jsonb, jsonb, jsonb, uuid)",
+  "authz.fn_stage_entity_operation_projection(uuid, uuid, text, uuid, text, jsonb)",
+  "authz.trg_validate_delegation_activation()",
+  "authz.trg_validate_group_role()",
+  "authz.trg_validate_scoped_authority()",
+  "control.admin_lookup_domain_change_allowed(text, boolean, boolean)",
+  "control.admin_lookup_value_referenced(uuid)",
+  "control.assemble_partner_decision(uuid, uuid, text, jsonb, jsonb, uuid)",
+  "control.capture_entitlement_plan(uuid)",
+  "control.claim_connector_health_job()",
+  "control.command_business_partner_capability(uuid, uuid, text, boolean, bigint, text, text, uuid)",
+  "control.command_business_partner_decision(uuid, text, uuid, text, bigint, text, text, text, jsonb, uuid)",
+  "control.command_business_partner_lifecycle(uuid, text, uuid, text, bigint, text, text, uuid)",
+  "control.command_create_business_partner_decision(uuid, text, uuid, text, uuid, uuid, uuid, uuid, jsonb, text, uuid)",
+  "control.command_customer_lifecycle(uuid, uuid, uuid, uuid, uuid, text, bigint, text, date, text, jsonb, text, uuid)",
+  "control.fn_activate_owner_type(uuid, uuid)",
+  "control.fn_add_owner_type_purpose(uuid, uuid, text, text)",
+  "control.fn_cron_schedules_for_scheduler()",
+  "control.fn_deprecate_owner_type(uuid, uuid)",
+  "control.fn_mark_cron_schedule_reconciled(uuid, timestamp with time zone, timestamp with time zone)",
+  "control.fn_record_business_partner_mutation(uuid, text, uuid, uuid, text, text, text, bigint, text, text, text, jsonb, uuid)",
+  "control.fn_register_owner_type(uuid, text, text, text, text, text, text, text, text, boolean, boolean, boolean)",
+  "control.fn_remove_owner_type_purpose(uuid, uuid, text, text)",
+  "control.fn_validate_owner_type_target(text, text, text, text, boolean, text)",
+  "control.generate_fiscal_periods(uuid, uuid, integer, uuid, uuid, boolean)",
+  "control.lock_parameter_definition(uuid)",
+  "control.lookup_value_has_references(uuid)",
+  "control.publication_policy_enrollment_is_active(uuid, text, uuid, uuid)",
+  "control.trg_capture_entitlement_plan()",
+  "control.trg_capture_lookup_extension()",
+  "control.trg_guard_lookup_domain_references()",
+  "control.trg_lock_cycle_domain_reference()",
+  "control.trg_lookup_reference_active()",
+  "control.trg_record_customer_lifecycle_mutation()",
+  "control.trg_version_entitlement_plan_components()",
+  "document.collaboration_mention_candidates(text)",
+  "document.collaboration_principal_candidates(text, uuid)",
+  "document.command_entity_case_attachment(uuid, uuid, text, uuid, text, text, uuid)",
+  "document.command_entity_case_draft(uuid, uuid, bigint, uuid, text, text, text, uuid, text, uuid, text, uuid, bigint, text, jsonb, text, uuid, uuid)",
+  "document.command_entity_case_lifecycle(uuid, uuid, text, bigint, uuid, uuid, text, text, uuid, uuid)",
+  "document.command_entity_case_validation(uuid, uuid, bigint, uuid, text, text, text, jsonb, jsonb, jsonb, jsonb, text, uuid, uuid)",
+  "document.command_internal_workforce_identity_intent(uuid, uuid, text, boolean, text, uuid, uuid)",
+  "document.command_materialize_supplier_activation_case(uuid, uuid, bigint, uuid, uuid, text, text, uuid, uuid)",
+  "document.command_process_document_job(uuid, uuid, text, uuid, jsonb, uuid)",
+  "document.command_process_task_escalate(uuid, uuid, uuid, uuid, bigint, text, text, uuid)",
+  "document.command_process_task_information(uuid, uuid, uuid, uuid, text, bigint, text, text, uuid)",
+  "document.command_publish_workforce_requisition(uuid, uuid, bigint, jsonb, text, uuid)",
+  "document.command_record_process_contribution(uuid, uuid, uuid, bigint, uuid, text, jsonb)",
+  "document.command_worker_engagement_iam_projection(uuid, uuid, bigint, text, uuid, uuid)",
+  "document.command_worker_engagement_iam_projection(uuid, uuid, bigint, text, uuid, uuid, jsonb)",
+  "document.command_worker_engagement_terminate(uuid, uuid, bigint, text, uuid, uuid, text, timestamp with time zone, jsonb)",
+  "document.command_worker_operational_placement_activate(uuid, uuid, bigint, text, uuid, uuid, date, date, uuid, uuid, uuid, uuid, uuid, uuid, uuid, uuid, numeric, boolean, jsonb, jsonb)",
+  "document.command_workforce_iam_projection(uuid, uuid, bigint, text, uuid, uuid)",
+  "document.fn_company_setup_case_approvers(uuid, uuid, uuid)",
+  "document.fn_resolve_business_partner_duplicate(uuid, uuid, uuid, text, text, jsonb, jsonb, uuid, uuid)",
+  "document.fn_workflow_sla_due_tenants(timestamp with time zone, integer)",
+  "document.fn_workforce_request_approvers(uuid, uuid, uuid, uuid)",
+  "document.process_case_has_contributor(uuid, uuid, uuid)",
+  "document.process_case_reviewers(uuid, uuid, text)",
+  "document.process_document_candidates()",
+  "document.sweep_process_information_due(uuid, uuid, integer)",
+  "document.trg_capture_comment_revision()",
+  "document.trg_process_task_information_guard()",
+  "document.trg_process_task_subject()",
+  "event.fn_authorization_bump_epoch(text, uuid, text)",
+  "event.fn_authorization_claim_invalidations(text, integer, integer)",
+  "event.fn_authorization_complete_invalidation(uuid, text)",
+  "event.fn_authorization_emit_invalidation(text, text, uuid, text, text, character, jsonb, timestamp with time zone)",
+  "event.fn_authorization_fail_invalidation(uuid, text, text, integer)",
+  "event.fn_notification_claim_deliveries(uuid, text, integer, integer)",
+  "event.fn_notification_work_tenants(text, text, integer)",
+  "event.fn_notification_worker_principal(uuid)",
+  "event.fn_outbox_purge_completed(interval, integer)",
+  "event.trg_capture_authorization_invalidation()",
+  "governance.command_link_business_partner_onboarding_subject(uuid, uuid, text, uuid, text, boolean, uuid)",
+  "governance.command_link_supplier_onboarding_work(uuid, uuid, uuid, uuid)",
+  "master.activate_payment_term(uuid, uuid, uuid)",
+  "master.command_materialize_business_partner_change_case(uuid, uuid, bigint, text, uuid, uuid)",
+  "master.command_materialize_business_partner_company_case(uuid, uuid, bigint, text, uuid, uuid)",
+  "master.command_materialize_business_partner_registration_case(uuid, uuid, bigint, text, uuid, uuid)",
+  "master.command_materialize_business_partner_role_case(uuid, uuid, bigint, text, uuid, uuid)",
+  "master.command_materialize_internal_business_partner_case(uuid, uuid, bigint, text, uuid, uuid)",
+  "master.command_materialize_mesh_profile_change_case(uuid, uuid, bigint, text, uuid, uuid)",
+  "master.entity_link_person_v1(uuid, uuid, uuid, text)",
+  "master.entity_person_link_target_v1(uuid, uuid)",
+  "master.entity_profile_source_v1(uuid, uuid)",
+  "master.entity_projected_profile_source_v1(uuid, uuid)",
+  "master.fn_materialize_business_partner_case_relationships()",
+  "master.fn_pin_business_partner_child_activation(uuid, uuid, jsonb, boolean)",
+  "master.fn_refresh_mv_cpa()",
+  "master.fn_resolve_dimension_set(jsonb, uuid)",
+  "master.fn_resolve_principal_identity(uuid, master.identity_provider_d, text, text)",
+  "master.purge_expired_reference_choices(integer)",
+  "master.retire_payment_term(uuid, uuid, uuid)",
+  "master.seed_audit_reason_catalog(uuid, uuid)",
+  "master.seed_condition_type_catalog(uuid, uuid)",
+  "master.trg_check_partner_organization_identity()",
+  "master.trg_emit_operating_assignment_invalidation()",
+  "master.trg_guard_partner_organization_identity()",
+  "master.trg_initialize_partner_organization_identity()",
+  "master.trg_principal_profile_source_guard()",
+  "master.trg_profile_source_fence()",
+  "master.trg_projected_profile_source_fence()",
+  "master.trg_projected_profile_source_guard()",
+  "master.trg_record_organization_amendment()",
+  "master.trg_sync_organization_scope_target()",
+  "mesh.catalog_is_visible(uuid)",
+  "mesh.catalog_item_is_visible(uuid)",
+  "mesh.catalog_price_is_visible(uuid)",
+  "mesh.command_accept_network_relationship(uuid, bigint, text, text, uuid)",
+  "mesh.command_catalog_lifecycle(uuid, text, bigint, text, text, uuid)",
+  "mesh.command_discover_network_relationship(uuid, uuid, uuid, uuid, date, date, text, text, uuid)",
+  "mesh.command_document_envelope_lifecycle(uuid, text, text, bigint, text, text, uuid)",
+  "mesh.command_issue_registration_exchange(uuid, uuid, uuid, text, text, text, integer, text, jsonb, text, timestamp with time zone, text, text, uuid)",
+  "mesh.command_network_account_lifecycle(uuid, text, bigint, text, text, uuid)",
+  "mesh.command_network_relationship_lifecycle(uuid, text, bigint, text, text, uuid)",
+  "mesh.command_open_canonical_party_correlation_case(uuid, uuid, text, text, uuid)",
+  "mesh.command_publish_catalog(uuid, bigint, text, text, uuid)",
+  "mesh.command_registration_exchange_lifecycle(uuid, text, bigint, text, text, uuid)",
+  "mesh.command_reject_network_relationship(uuid, bigint, text, text, uuid)",
+  "mesh.command_relationship_capability_lifecycle(uuid, text, bigint, text, text, uuid)",
+  "mesh.command_request_network_relationship(uuid, uuid, uuid, uuid, text, date, date, text, text, uuid)",
+  "mesh.command_request_relationship_capability(uuid, text, date, date, jsonb, text, text, uuid)",
+  "mesh.command_resolve_canonical_party_correlation_case(uuid, text, bigint, text, text, uuid)",
+  "mesh.command_retrieve_bank_protected_token(uuid, integer, text, text, uuid)",
+  "mesh.command_rotate_bank_protected_token(uuid, text, integer, text, text, uuid)",
+  "mesh.command_submit_document_envelope(text, uuid, uuid, mesh.document_direction_d, uuid, uuid, uuid, uuid, uuid, text, text, text, text, text, jsonb, uuid)",
+  "mesh.command_suspend_network_relationship(uuid, bigint, text, text, uuid)",
+  "mesh.command_terminate_network_relationship(uuid, bigint, text, text, uuid)",
+  "mesh.fn_catalog_publication_snapshot(uuid)",
+  "mesh.fn_record_network_command(uuid, uuid, text, uuid, text, text, text, bigint, text, text, text, jsonb, uuid)",
+  "mesh.fn_upsert_network_scope(uuid, authz.scope_kind_d, uuid, uuid, text, text, authz.scope_status_d, uuid, text)",
+  "mesh.lock_profile_publication_relationship(uuid, uuid, uuid)",
+  "mesh.profile_publication_is_visible(uuid)",
+  "mesh.read_eligible_bank_disclosure_source(uuid, uuid, uuid, uuid, text)",
+  "mesh.read_eligible_bank_disclosure_source_v2(uuid, uuid, uuid, uuid, text)",
+  "mesh.trg_record_network_lifecycle()",
+  "mesh.trg_sync_network_account_scope()",
+  "mesh.trg_sync_network_relationship_scopes()",
+  "metadata.fn_import_publication_recovery(uuid, uuid, text, text, text, jsonb, text, timestamp with time zone)",
+  "metadata.fn_product_learning_source(uuid, text, text)",
+  "metadata.fn_revoke_publication_recovery(uuid, text)",
+  "metadata.fn_succeed_publication_recovery(uuid, uuid, jsonb, text, timestamp with time zone)",
+  "metadata.trg_entity_learning_ancestry()",
+  "onboarding.fn_access_token_raw()",
+  "onboarding.fn_advance_case_status(uuid, onboarding.case_status_d, text, uuid)",
+  "onboarding.fn_bind_onboarding_guest_context(uuid, uuid, text)",
+  "onboarding.fn_can_read_onboarding_case(uuid, uuid)",
+  "onboarding.fn_create_case_with_target(text, uuid, shared.application_plane_d, uuid, uuid, uuid, uuid, uuid, uuid, jsonb, jsonb, uuid, uuid, onboarding.entry_mode_d, text, onboarding.activation_criticality_d)",
+  "onboarding.fn_guest_case_has_access(uuid, uuid, text)",
+  "ops.acknowledge_record_transfer_cleanup(text, uuid, text, uuid, text, text, timestamp with time zone)",
+  "ops.record_transfer_cleanup_candidates(text, timestamp with time zone, integer)",
+  "ops.record_transfer_stuck_counts(timestamp with time zone, integer)",
+  "publication.fn_acknowledge_activation(uuid, text, text, uuid, jsonb)",
+  "publication.fn_authorization_successor_compilation_source(uuid)",
+  "publication.fn_collection_configuration_compilation_source(uuid)",
+  "publication.fn_compilation_recovery_source(jsonb, boolean)",
+  "publication.fn_compiled_entity_compilation_source(uuid)",
+  "publication.fn_compiled_entity_compilation_source_v2(uuid)",
+  "publication.fn_compiled_entity_compilation_source_v3(uuid)",
+  "publication.fn_confirm_metadata_activation(uuid, text, uuid)",
+  "publication.fn_coordinated_deployment_recovery_source(uuid, text)",
+  "publication.fn_create_deployment(uuid, uuid, text, text, text, integer, uuid, uuid)",
+  "publication.fn_create_system_entity_release(uuid, uuid, bigint, jsonb, text[], uuid)",
+  "publication.fn_create_system_entity_successor(uuid, uuid, bigint, uuid, jsonb, text[], uuid)",
+  "publication.fn_emit_outbox(uuid, text, text, text, uuid, uuid, uuid, jsonb)",
+  "publication.fn_entity_successor_enrollment_source(jsonb)",
+  "publication.fn_entity_successor_saved_graph(uuid, uuid)",
+  "publication.fn_human_execution_context(uuid)",
+  "publication.fn_human_publication_preparation_source(uuid)",
+  "publication.fn_human_publication_review_evidence(uuid)",
+  "publication.fn_human_review_identity_status(uuid, uuid, uuid, uuid)",
+  "publication.fn_human_reviewed_entity_policy(jsonb, uuid, text)",
+  "publication.fn_initial_baseline_compilation_source(uuid)",
+  "publication.fn_link_system_entity_release(uuid)",
+  "publication.fn_prepare_authorization_successor(uuid, jsonb)",
+  "publication.fn_prepare_collection_configuration_release(uuid, jsonb)",
+  "publication.fn_prepare_document_collection_release(uuid, jsonb)",
+  "publication.fn_prepare_initial_baseline_release(uuid, uuid, jsonb)",
+  "publication.fn_prepare_runtime_restoration(uuid)",
+  "publication.fn_record_system_entity_validation(uuid, bigint, jsonb, jsonb, uuid)",
+  "publication.fn_recoverable_deployment_coordinates(timestamp with time zone, uuid, integer)",
+  "publication.fn_runtime_restoration_compilation_source(uuid)",
+  "publication.fn_store_system_entity_artifact(uuid, text, jsonb, jsonb)",
+  "publication.fn_system_entity_authority(uuid, text)",
+  "publication.fn_system_entity_execution_metadata(uuid)",
+  "publication.fn_system_entity_successor_policy(uuid)",
+  "publication.fn_transition_artifact(uuid, publication.artifact_status_d, text, text, text)",
+  "publication.fn_transition_deployment(uuid, publication.deployment_status_d, jsonb)",
+  "publication.fn_transition_release(uuid, publication.release_status_d, uuid, uuid, jsonb)",
+  "publication.fn_transition_system_entity_change_set(uuid, bigint, text, text, uuid)",
+  "runtime_meta.fn_activate_release(uuid, jsonb)",
+  "runtime_meta.fn_active_business_partner_definition(text)",
+  "runtime_meta.fn_active_entity_descriptor(text, text)",
+  "runtime_meta.fn_active_release(text)",
+  "runtime_meta.fn_rollback_release(text, uuid, jsonb)",
+  "runtime_meta.fn_stage_applied_release_payload(uuid, jsonb)",
+  "runtime_meta.fn_stage_entity_projection(uuid, jsonb)",
+  "runtime_meta.fn_stage_release(text, uuid, bigint, uuid, text, jsonb)",
+  "runtime_meta.fn_stage_release_projection(text, uuid, bigint, uuid, text, jsonb, jsonb)",
+  "runtime_meta.fn_verify_release(uuid, text, jsonb)",
+  "shared.current_tenant_id()",
+  "shared.current_tenant_id_soft()",
+  "snapshot.fn_capture_entity(text, uuid, text, integer, text, bigint, text, snapshot.capture_kind_d, jsonb, uuid, uuid, timestamp with time zone, timestamp with time zone, snapshot.retention_class_d, text)",
+  "snapshot.fn_get_entity_snapshot(uuid)",
+  "snapshot.fn_publish_compiled_artifact(uuid, text, text, text, text, jsonb, jsonb, numeric)",
+  "snapshot.fn_verify_entity_snapshot_chain(text, uuid)",
+  "snapshot.fn_verify_entity_snapshot_hash(uuid)",
+  "trustiam.lock_identity_replay_projection(uuid, uuid)"
+]'::jsonb) approved(signature) WHERE approved.signature=identity_signature) THEN
+            RAISE EXCEPTION 'Unregistered source definer signature: %; reconcile catalog drift before applying ownership changes', identity_signature;
+        END IF;
+        target_owner := COALESCE(exception->>'owner', '{
+  "ai": "athyper_definer_ai",
+  "audit": "athyper_definer_audit",
+  "authz": "athyper_definer_authz",
+  "control": "athyper_definer_control",
+  "document": "athyper_definer_document",
+  "event": "athyper_definer_event",
+  "governance": "athyper_definer_governance",
+  "master": "athyper_definer_master",
+  "mesh": "athyper_definer_mesh",
+  "metadata": "athyper_definer_metadata",
+  "onboarding": "athyper_definer_onboarding",
+  "ops": "athyper_definer_ops",
+  "publication": "athyper_definer_publication",
+  "runtime_meta": "athyper_definer_runtime_meta",
+  "shared": "athyper_definer_shared",
+  "snapshot": "athyper_definer_snapshot",
+  "trustiam": "athyper_definer_trustiam"
+}'::jsonb->>routine.schema_name);
+        IF target_owner = '$ddlOwner' THEN target_owner := current_user; END IF;
+        IF target_owner IS NULL THEN RAISE EXCEPTION 'Unregistered definer schema: %', routine.schema_name; END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = target_owner) THEN
+            RAISE EXCEPTION 'Definer owner % does not exist', target_owner;
+        END IF;
+        IF exception IS NULL AND EXISTS (
+            SELECT 1 FROM pg_roles WHERE rolname = target_owner AND (rolsuper OR rolbypassrls OR rolcanlogin OR rolcreaterole OR rolcreatedb OR rolreplication)
+        ) THEN RAISE EXCEPTION 'Ordinary definer owner % must be non-login and RLS-bound', target_owner; END IF;
+        IF routine.prokind = 'p' THEN
+            EXECUTE format('ALTER PROCEDURE %I.%I(%s) OWNER TO %I', routine.schema_name, routine.routine_name, routine.identity_arguments, target_owner);
+            EXECUTE format('REVOKE EXECUTE ON PROCEDURE %I.%I(%s) FROM PUBLIC', routine.schema_name, routine.routine_name, routine.identity_arguments);
+        ELSE
+            EXECUTE format('ALTER FUNCTION %I.%I(%s) OWNER TO %I', routine.schema_name, routine.routine_name, routine.identity_arguments, target_owner);
+            EXECUTE format('REVOKE EXECUTE ON FUNCTION %I.%I(%s) FROM PUBLIC', routine.schema_name, routine.routine_name, routine.identity_arguments);
+        END IF;
+        SELECT substring(setting FROM length('search_path=') + 1) INTO configured_path
+          FROM unnest(COALESCE(routine.proconfig, ARRAY[]::text[])) setting WHERE setting LIKE 'search_path=%';
+        IF configured_path IS NULL THEN
+            RAISE EXCEPTION 'SECURITY DEFINER % lacks an explicit search_path', identity_signature;
+        END IF;
+        trusted_path := ARRAY['pg_catalog'];
+        FOREACH path_schema IN ARRAY string_to_array(configured_path, ',') LOOP
+            path_schema := trim(both '"' FROM btrim(path_schema));
+            IF path_schema IN ('pg_catalog', 'pg_temp') THEN CONTINUE; END IF;
+            IF NOT '["ai","audit","authz","control","document","event","governance","ledger","master","mesh","metadata","onboarding","ops","publication","runtime_meta","shared","snapshot","trustiam"]'::jsonb ? path_schema THEN
+                RAISE EXCEPTION 'SECURITY DEFINER % has an untrusted search_path schema: %', identity_signature, path_schema;
+            END IF;
+            IF EXISTS (
+                SELECT 1 FROM pg_namespace n,
+                    LATERAL aclexplode(COALESCE(n.nspacl, acldefault('n', n.nspowner))) acl
+                WHERE n.nspname=path_schema AND acl.grantee=0 AND acl.privilege_type='CREATE'
+            ) OR EXISTS (
+                SELECT 1 FROM pg_roles r WHERE r.rolname IN ('athyper_runtime', 'athyper_worker')
+                  AND to_regnamespace(path_schema) IS NOT NULL
+                  AND has_schema_privilege(r.oid, to_regnamespace(path_schema), 'CREATE')
+            ) THEN
+                RAISE EXCEPTION 'SECURITY DEFINER % search_path schema % is writable by runtime or PUBLIC', identity_signature, path_schema;
+            END IF;
+            IF NOT path_schema = ANY(trusted_path) THEN trusted_path := array_append(trusted_path, path_schema); END IF;
+        END LOOP;
+        trusted_path := array_append(trusted_path, 'pg_temp');
+        EXECUTE format('ALTER %s %I.%I(%s) SET search_path = %s',
+            CASE WHEN routine.prokind='p' THEN 'PROCEDURE' ELSE 'FUNCTION' END,
+            routine.schema_name, routine.routine_name, routine.identity_arguments,
+            (SELECT string_agg(quote_ident(value), ', ') FROM unnest(trusted_path) value));
+    END LOOP;
+END
+$hardening$;
+
+COMMIT;

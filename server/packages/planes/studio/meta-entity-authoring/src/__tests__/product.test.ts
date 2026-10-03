@@ -121,6 +121,7 @@ describe("shared reference metadata products", () => {
       delete historical.definition.runtimeBindings;
       delete historical.definition.navigation;
       delete historical.definition.entityLabel;
+      delete historical.definition.iconKey;
       const fallbackLabel = (value: string | { defaultText: string }) =>
         typeof value === "string" ? value : value.defaultText;
       historical.definition.title = fallbackLabel(historical.definition.title);

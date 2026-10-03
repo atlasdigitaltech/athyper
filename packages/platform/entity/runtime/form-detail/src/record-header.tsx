@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useId, useRef, type ReactNode } from "react";
 import type { EntityRecordHeaderV1 } from "@athyper/contract-platform-entity-runtime";
-import { ChevronDownIcon, resolveIcon } from "@athyper/platform-icons";
+import { ChevronDownIcon, resolveMetadataIcon } from "@athyper/platform-icons";
 import { PageHeader, useRecordBreadcrumb } from "@athyper/platform-shell";
 import { EntityRecordAction, type EntityActionHandlers } from "./record-action";
 import { Badge, ChoiceSelect } from "@athyper/platform-ui";
@@ -55,7 +55,7 @@ export function EntityRecordHeader({
     };
   }, []);
   const id = useId(),
-    Icon = resolveIcon(header.iconKey ?? "file-text");
+    Icon = resolveMetadataIcon("entity", header.iconKey);
   const actions = header.readOnly ? [] : header.actions;
   const direct = actions
     .filter((item) => item.placement !== "overflow")

@@ -1,0 +1,166 @@
+{
+  "schema": "athyper.coordinated-release-dispatch-fix/1",
+  "observedAt": "2026-10-02T22:09:29.681697+00:00",
+  "implementation": {
+    "status": "implemented_and_tested",
+    "hostTarget": "Use the validated publication-workload instance, falling back to ATHYPER_INSTANCE for other hosts.",
+    "signingAdmission": "Require configured environment and instance to match persisted humanExecutionPolicy before signing or creating a deployment.",
+    "failurePersistence": "Tenant-filtered read followed by the existing atomic SECURITY DEFINER transition; no direct row lock or new table UPDATE grant.",
+    "errorPreservation": "Retain original apply failure category, code and retry semantics; attach sanitized secondary failureRecordingEvidence.",
+    "scope": "Shared Entity Framework publication components only; no source definitions, signed artifacts, approvals or migration bytes changed."
+  },
+  "verification": {
+    "publicationTests": 39,
+    "hostTests": 27,
+    "typechecks": [
+      "@athyper/server-service-publication",
+      "@athyper/server-platform-host"
+    ],
+    "regressions": [
+      "Approved dev target is retained",
+      "Missing, wildcard, wrong-instance and wrong-environment configurations rejected before signing",
+      "Legacy publications retain configured/default behavior",
+      "Apply transactions roll back before failure recording",
+      "Permission and concurrent-transition errors do not mask original rejection",
+      "Invisible and terminal deployments are not overwritten"
+    ],
+    "liveDatabaseRoleProbe": {
+      "role": "athyper_runtime",
+      "selectDeployment": true,
+      "updateDeployment": false,
+      "transitionToFailed": "passed",
+      "transaction": "rolled_back",
+      "originalStatusAfterRollback": "dispatched"
+    },
+    "effectiveWorkerConfiguration": {
+      "environment": "local",
+      "targetInstance": "dev",
+      "source": "validated mounted publication-workload configuration",
+      "ATHYPER_INSTANCE": "unset"
+    },
+    "compiler": {
+      "name": "athyper.compiled-entity-artifact",
+      "version": "1.1.0",
+      "buildHash": "bb1cfe9aefa9d88a7423ef7ffcf0315ca86ef85c548629e84fa9e1269a6c4334"
+    }
+  },
+  "deployment": {
+    "status": "pending_recovery",
+    "publishedSources": 6,
+    "signedTargetArtifacts": 8,
+    "activatedTargets": 0,
+    "observedDeploymentCounts": [
+      {
+        "plane": "neon",
+        "instance": "*",
+        "status": "dispatched",
+        "count": 6
+      },
+      {
+        "plane": "mesh",
+        "instance": "*",
+        "status": "dispatched",
+        "count": 1
+      },
+      {
+        "plane": "studio",
+        "instance": "*",
+        "status": "dispatched",
+        "count": 1
+      }
+    ],
+    "existingArtifacts": [
+      {
+        "release_key": "metadata.entity.address",
+        "plane_code": "neon",
+        "content_hash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2",
+        "artifact_status": "signed",
+        "deployment_id": "01a0fe8e-5608-7f31-bc4d-1288d632d71a",
+        "status": "dispatched",
+        "failure_code": null,
+        "failure_detail": null
+      },
+      {
+        "release_key": "metadata.entity.employee",
+        "plane_code": "neon",
+        "content_hash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a",
+        "artifact_status": "signed",
+        "deployment_id": "01a0fe8e-5895-75f8-8f3f-2dee40df92da",
+        "status": "dispatched",
+        "failure_code": null,
+        "failure_detail": null
+      },
+      {
+        "release_key": "metadata.entity.external_worker",
+        "plane_code": "neon",
+        "content_hash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20",
+        "artifact_status": "signed",
+        "deployment_id": "01a0fe8e-5c92-7858-8a0a-f166b48078c0",
+        "status": "dispatched",
+        "failure_code": null,
+        "failure_detail": null
+      },
+      {
+        "release_key": "metadata.entity.person",
+        "plane_code": "neon",
+        "content_hash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8",
+        "artifact_status": "signed",
+        "deployment_id": "01a0fe8e-61fa-7cbb-a4b6-9d3058e3e5fb",
+        "status": "dispatched",
+        "failure_code": null,
+        "failure_detail": null
+      },
+      {
+        "release_key": "metadata.entity.person_address_use",
+        "plane_code": "neon",
+        "content_hash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c",
+        "artifact_status": "signed",
+        "deployment_id": "01a0fe8e-6498-79d4-9d77-5b51ed87747f",
+        "status": "dispatched",
+        "failure_code": null,
+        "failure_detail": null
+      },
+      {
+        "release_key": "metadata.entity.principal_profile",
+        "plane_code": "mesh",
+        "content_hash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+        "artifact_status": "signed",
+        "deployment_id": "01a0fe8e-6ba3-7b70-a311-48ca6b624434",
+        "status": "dispatched",
+        "failure_code": null,
+        "failure_detail": null
+      },
+      {
+        "release_key": "metadata.entity.principal_profile",
+        "plane_code": "neon",
+        "content_hash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+        "artifact_status": "signed",
+        "deployment_id": "01a0fe8e-6e39-7b26-a3e4-f11317cc2ca5",
+        "status": "dispatched",
+        "failure_code": null,
+        "failure_detail": null
+      },
+      {
+        "release_key": "metadata.entity.principal_profile",
+        "plane_code": "studio",
+        "content_hash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+        "artifact_status": "signed",
+        "deployment_id": "01a0fe8e-6dc0-737f-9207-49db73fd985c",
+        "status": "dispatched",
+        "failure_code": null,
+        "failure_detail": null
+      }
+    ],
+    "remainingConstraints": [
+      "Existing immutable wildcard coordinates require new audited deployment attempts at local/dev; this code fix does not rewrite those records.",
+      "Existing approved compiler build d3cb4f384c7b311aa3ce3daf61367927e4cd6a177aee021284efccf94e03e5ca differs from the corrected implementation; current activation guard intentionally remains enforced.",
+      "Shared apply execution resolver still selects seed.three-plane-provisioner; coordinated apply must use the enrolled publisher with tenant, role, status and auth-epoch validation.",
+      "Existing compilation recovery is for unsigned failed compilation, not these already signed coordinated publications. A bounded deployment recovery path is still required; ordinary policy replacement cannot replace already published source policies."
+    ],
+    "activePolicy": {
+      "id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91",
+      "hash": "f83745496f6130b300dcb1da6514d4f6079a5c2af720594908b576e9a92da76f"
+    },
+    "humanApprovalStatus": "Existing recorded Admin/Owner approvals preserved. No new approval claimed."
+  }
+}

@@ -15,7 +15,7 @@ import {
   useEntityTaskHeader,
 } from "@athyper/platform-shell";
 import { useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
-import { ErrorSurface } from "@athyper/platform-shell-app-foundation";
+import { ErrorSurface, IdentityVerificationButton } from "@athyper/platform-shell-app-foundation";
 import { classifyAppError } from "@athyper/platform-shell-app-foundation/error-taxonomy";
 import { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
 import { RequiredContextStatus } from "./required-context-status";
@@ -105,7 +105,7 @@ import {
   type RecordBookmarkMutationV1,
 } from "@athyper/platform-api-client";
 import {
-  resolveIcon,
+  resolveMetadataIcon,
   ArrowDownIcon,
   ArrowUpDownIcon,
   ArrowUpIcon,
@@ -306,6 +306,30 @@ export interface EntityDirectoryEmbedding {
   readonly selectedRows: readonly EntityListRowV1[];
   readonly onSelectionChange: (rows: readonly EntityListRowV1[]) => void;
 }
+/** A list shown inside a record section (a child list). The section owns the heading
+ * and its action; the list reports what it shows so the section can count it. */
+export interface EntityListSectionOptions {
+  /** The section's create action, shown inside the empty state while there are no rows. */
+  readonly emptyAction?: ReactNode;
+  readonly onSummary?: (summary: Readonly<{ total?: number; constrained: boolean }>) => void;
+}
+/** The records a page stands for, when known: the server total, or the rows of a lone first page. */
+function knownTotal(page: EntityListResultV1 | undefined, state: ListLocationStateV1): number | undefined {
+  if (!page) return undefined;
+  if (typeof page.pagination.total === "number") return page.pagination.total;
+  return !page.pagination.hasNext && !state.cursor && !state.pageIndex ? page.rows.length : undefined;
+}
+function constrainedList(state: ListLocationStateV1): boolean {
+  return state.filters.length > 0 || Boolean(state.query?.trim()) || Boolean(state.savedViewId);
+}
+function SectionSummary({ section, page, state }: { readonly section?: EntityListSectionOptions | undefined; readonly page?: EntityListResultV1 | undefined; readonly state: ListLocationStateV1 }) {
+  const total = knownTotal(page, state), constrained = constrainedList(state), report = section?.onSummary;
+  useEffect(() => {
+    if (report && page) report(Object.freeze({ ...(total === undefined ? {} : { total }), constrained }));
+  }, [report, page, total, constrained]);
+  return null;
+}
+
 export interface EntityListRuntimeProps {
   readonly embedding?: EntityDirectoryEmbedding;
   readonly client: HttpClient;
@@ -329,6 +353,11 @@ export interface EntityListRuntimeProps {
   readonly activePath?: string;
   readonly onNavigate?: (href: string) => void;
   readonly onOpenRecord?: (row: EntityListRowV1) => void;
+  /** An embedded list's create action, shown first in the list toolbar. */
+  readonly toolbarAction?: ReactNode;
+  /** The list sits inside a record section: no panel of its own and paging only when
+   * there is more than one page. Its toolbar is the same as every other list's. */
+  readonly section?: EntityListSectionOptions;
   readonly initialDensity?: "compact" | "comfortable" | "spacious";
   /** Plane brand identity shown on application-tier failure surfaces (e.g. "Athyper Neon"). */
   readonly applicationName?: string;
@@ -507,7 +536,7 @@ function EntityApplicationContent({
       </>
     );
   const header = descriptor.surface.header,
-    Icon = header?.iconKey ? resolveIcon(header.iconKey) : LayoutIcon;
+    Icon = resolveMetadataIcon("entity", header?.iconKey);
   const title = descriptor.localizedLabels?.title
       ? descriptor.surface.title
       : header
@@ -624,6 +653,8 @@ function EntityCollectionRuntime({
   children,
   onNavigate,
   onOpenRecord,
+  toolbarAction,
+  section,
   activePath,
   initialDensity,
   applicationName,
@@ -1087,7 +1118,8 @@ function EntityCollectionRuntime({
           cursor: state.cursor,
           standardViewKey: state.standardViewKey,
           parentScope: scopeCoordinate?.parentEntityCode && scopeCoordinate.parentRecordId && scopeCoordinate.relationshipKey
-            ? { parentEntityCode: scopeCoordinate.parentEntityCode, parentRecordId: scopeCoordinate.parentRecordId, relationshipKey: scopeCoordinate.relationshipKey }
+            ? { parentEntityCode: scopeCoordinate.parentEntityCode, parentRecordId: scopeCoordinate.parentRecordId, relationshipKey: scopeCoordinate.relationshipKey,
+                ...(scopeCoordinate.parentDescriptorHash ? {parentDescriptorHash: scopeCoordinate.parentDescriptorHash} : {}) }
             : undefined,
           directory:
             !scopeCoordinate?.parentEntityCode && !descriptor.scope.workContext && scopeCoordinate
@@ -1210,7 +1242,7 @@ function EntityCollectionRuntime({
       </>
     );
   const header = descriptor.surface.header;
-  const HeaderIcon = header?.iconKey ? resolveIcon(header.iconKey) : LayoutIcon;
+  const HeaderIcon = resolveMetadataIcon("entity", header?.iconKey);
   const title = descriptor.localizedLabels?.title
     ? descriptor.surface.title
     : header
@@ -1480,8 +1512,10 @@ function EntityCollectionRuntime({
             />
           </>
         ) : null}
-        <div ref={panelRef} className="a-entity-list__panel">
+        <div ref={panelRef} className="a-entity-list__panel" data-presentation={section ? "section" : undefined}>
+          <SectionSummary section={section} page={page} state={pageState ?? state} />
           <ListChrome
+            toolbarAction={toolbarAction}
             widthTier={widthTier}
             embedding={embedding}
             client={client}
@@ -1555,7 +1589,7 @@ function EntityCollectionRuntime({
                 filtered={(pageState?.filters ?? state.filters).length > 0}
                 loading={loading || (!error && !resultsCurrent)}
                 emptyContent={embedding?.emptyContent}
-                emptyAction={embedding?.emptyAction}
+                emptyAction={section?.emptyAction ?? embedding?.emptyAction}
                 recordLink={embedding?.recordHref}
                 onOpenRecord={onOpenRecord}
                 singleSelection={embedding?.options.selectionMode === "single"}
@@ -1605,6 +1639,7 @@ function EntityCollectionRuntime({
           ) : null}
           {page ? (
             <EntityListPagination
+              hideSinglePageControls={Boolean(section)}
               descriptor={descriptor}
               state={pageState ?? state}
               page={page}
@@ -1702,7 +1737,9 @@ function ListChrome({
   onRefresh,
   onChange,
   widthTier,
+  toolbarAction,
 }: {
+  readonly toolbarAction?: ReactNode;
   readonly embedding?: EntityDirectoryEmbedding;
   readonly client: HttpClient;
   readonly scopeCoordinate?: EntityListScopeCoordinateV1;
@@ -2037,6 +2074,7 @@ function ListChrome({
           ) : null}
         </ViewSelector>
         <div className="a-entity-list__toolbar-actions">
+          {toolbarAction}
           {listDrawer("filters").available(descriptor) ? (
             <Button
               className="a-entity-list__toolbar-action"
@@ -5055,6 +5093,7 @@ function ErrorState({
           {localizedEntityError(error, intl, model.description)}
         </p>
       </div>
+      {model.action === "verify-identity" ? <IdentityVerificationButton /> : null}
       {model.canRetry ? (
         <Button size="small" variant="secondary" onClick={retry}>
           {intl.message("entity.retry")}

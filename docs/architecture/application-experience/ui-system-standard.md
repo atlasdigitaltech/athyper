@@ -126,6 +126,208 @@ white wordmark and a flat `--a-brand-soft` (`#262626`) so tinted surfaces stay d
 cannot judge text on a gradient, so a browser test checks rail text contrast (at least 4.5:1
 against both gradient ends) and that the rail is not lighter than the page.
 
+### 2.1.4 Page navigation bar
+
+Every navigation bar under a page header uses one pattern: record sections, entity
+application tabs, workspace and module tabs, and Notifications | Inbox. It is a flat band
+across the page with a bottom rule; labels are body text at regular weight, muted until
+current; the current item is primary with a 2px underline and no fill; the height is
+`calc(var(--a-control-height) + var(--a-space-2))`, so it follows density. Counts are the
+small one-line pill. Icons are 18px. `ManagementNavigation` takes `appearance="flat"` for
+this pattern; a browser test checks that the workspace, module and activity bars share type
+and height in every density.
+
+- **Stable order.** Workspace and module tabs (and module cards) are pinned modules, then
+  catalogue order. Recent use never reorders them; it only fills a "Recent" group at the
+  top of More. A module opened from More takes the last visible slot and the module it
+  displaces moves into More; nothing else shifts.
+- **More is a tab.** Same type, weight, colour, height and icon size as the tabs, with the
+  count pill; its list is at regular weight, marks the current module and keeps pin stars.
+  Tabs fold into More rather than clip. Module labels give up only the width the row lacks,
+  longest first: the bar measures one cap (`--module-tab-cap`, `labelCap`) applied to every
+  label longer than it, so short labels stay whole (full name as the link's title and
+  accessible name). Modules fold into More only when the cap would fall below 6rem. Search, the count and the "Recent" group appear
+  only when More holds six or more modules; a shorter More is a plain list and opening it
+  focuses the first module. (More is created only after every module failed to fit, so a
+  lone overflowed module cannot take More's place.)
+- **Phones (below 40rem): one switcher, one sheet.** The tabs and More give way to a
+  full-width module switcher naming the current item ("Switch module, current: …"); it
+  opens the phone sheet listing Home, Recent (from six modules) and every module with pins.
+  Every menu that opens from a page bar on a phone (module switcher, record sections) is
+  that same bottom sheet: full width, thumb reach, 44px rows, inside the viewport.
+- **Phone breadcrumb** is one back link to the parent ("‹ Countries"); the page title names
+  the current page. A single crumb stays as it is. Wider screens keep the full trail.
+- **Phone header action:** a header whose one action is an icon-led button shows it as a
+  44px icon button in the title row (text stays the accessible name), like list Controls.
+- **Phone entity rows:** on a module home each entity is a compact row (icon, title,
+  chevron) that opens the list; recent records and the create action stay on the row.
+- **Record tabs** follow the same rules: current tab primary with underline at regular
+  weight, 18px icons 8px from the label (Overview included), the shared height and inset.
+  The section chevron stays outside the tablist (it opens a menu), but when the grouped tab
+  ends the row it sits flush against it and shares its underline (`data-section-menu=joined`).
+- **Notifications | Inbox** carry their icons (`ManagementNavigationItem.icon`) and the
+  breadcrumb names the page, as a workspace landing does. Flat bars draw the underline with
+  the 2px border only (no inset shadow on top).
+- **Header actions do not move the header.** `PageHeader` actions span the title and
+  description rows, so a page with actions (Notifications) has the same title, description
+  and icon positions and height as one without (workspace); a browser test checks this in
+  every density.
+
+#### Icon resolution
+
+Icons come from published metadata first; code supplies only a per-role fallback, never a
+per-key choice. `resolveMetadataIcon(role, ...candidates)` (`@athyper/platform-icons`)
+returns the first candidate that is a known semantic key, else `ICON_ROLE_FALLBACKS[role]`:
+
+| Role | Metadata looked up | Fallback |
+| --- | --- | --- |
+| workspace | catalog workspace `iconKey` | `boxes` |
+| module | catalog module `iconKey` | `package` |
+| entity | entity `iconKey` (cards, list header and record header alike) | `database` |
+| record-tab | tab `iconKey`, then its first section's | `layout` |
+| record-section | section `iconKey` (presentation/page plan) | `clipboard-check` |
+| comments / attachments / activity | none yet (capability metadata has no icon) | `message` / `file-text` / `history` |
+
+Section and tab `iconKey` is authored on the product section definition, validated as
+`^[a-z][a-z0-9-]{0,62}$` (`REFERENCE_PRODUCT_SECTION_ICON_INVALID`), and passed through the
+page planner, the detail-navigation and record-presentation contracts and the browser
+runtime client. An unknown key falls through to the role fallback rather than failing.
+An entity shows one icon everywhere; it does not borrow its module's, because one entity
+can be placed in several planes under different modules. Shared reference products
+author it as `definition.iconKey` (validated, `REFERENCE_PRODUCT_ICON_INVALID`); it is
+published to the list experience header (list header and directory cards) and the record
+presentation (record header). Country publishes `globe`; entities without one show the
+`database` fallback.
+
+### 2.1.5 Density text roles
+
+Density changes work content, never page chrome. Work content has three text roles, each
+one density token pair (`DENSITY_TOKENS` / `--a-density-*`):
+
+| Role | Used for | Compact | Comfortable | Spacious |
+| --- | --- | --- | --- | --- |
+| Value (`data`) | list cells, record values, form and filter text controls | 14/20 | 15/22 | 16/24 |
+| Label (`label`) | list column headers, record field labels, form labels (muted, regular) | 13/18 | 14/20 | 15/22 |
+| Section (`section`) | record and form section headings (medium) | 15/22 | 16/24 | 17/26 |
+
+Page titles, navigation bars, tabs and buttons keep one size in every density. In the default (Comfortable) density, values equal the body size (15px), so content is never smaller than the frame around it; list cells and headers keep the density row height. A value has
+the same size in a list cell, on the record page and in its edit control; a label reads
+the same in view and edit. `policy:style-tokens` (`work-content-text-role`) rejects any
+other `font-size` on those elements; browser tests compare list, record and edit in each
+density and check chrome stays fixed.
+
+### 2.1.6 Personal preferences and the account menu
+
+- **Utilities › Appearance** holds every personal preference: Theme, Density, Design system
+  and Language, one row each with the same label column and control height. Language is a
+  segmented choice for up to three enabled languages, a select beyond that, and a read-only
+  row ("the only language enabled for your organisation") when there is one.
+- **Saved to the profile.** Theme, density and design system save to
+  `master.principal_ui_profile` (`PATCH /api/platform/profile/appearance`; the design system
+  in `metadata.themeFamily`) and come back in the bootstrap profile, so they follow the
+  person to every device. The browser copy only paints the first frame; the profile wins.
+  Language uses the existing locale endpoint and reloads the page.
+- **Account menu:** the sidebar's initials, name and login id, and **My profile**; rows
+  appear only with a value (email comes from the sign-in identity and is not editable
+  here, so a missing email has no row: no "Not provided", no dead link); a context that
+  cannot be switched has no trailing control. Language is in Utilities only.
+- **My profile** is `/app/entity/principal/me`, the caller's own principal record with its
+  Profile, Notifications and UI Profile sections (`/app/entity/principal` is the directory of
+  all principals). The shared read route asks `GET /api/entity-runtime/:entityCode/own-record`
+  and replaces the URL with the normal record route. When the owner field is the record id
+  (as for `principal`) the id is the caller's principal id, confirmed by the governed record
+  read; otherwise the authorized list execution filters by the owner field, which must be
+  published filterable (as for the ownership view). No profile page, no guessed id.
+
+### 2.1.7 Related record sections (view, edit, child records)
+
+Every related section on a record (one record such as Profile, or a child list such as
+Notifications) uses one pattern (`RelatedSection` in the form runtime):
+
+| Mode | Heading row (title · actions) | Body | End of section |
+| --- | --- | --- | --- |
+| One record, view | Profile · **Edit** (secondary) | read-only fields | — |
+| One record, empty | Profile (no action) | shared empty state: section icon, title, message, **Set up …** inside it | — |
+| Child list | Notifications · **count** · **+ Add …** (primary) | the list with no panel of its own (one card); the same toolbar as every list; table to the card edges | paging only when there is more than one page |
+| Child view | Notifications · **Edit** (secondary), plus "‹ Notifications / *record title*" | read-only fields | — |
+| Edit / create | heading, plus "‹ Notifications / Edit · *title*" | form | **Save …** · **Cancel** |
+
+- One primary action per section; section actions are small. Back is a link naming the
+  list, never a button beside Save / Cancel; in edit it leaves like Cancel (unsaved
+  changes ask first). Esc leaves the same way.
+- The first field takes focus when editing starts; a save shows "Saved" beside the actions.
+  A one-record form saves with **Save** (never the label of the button that opened it).
+- On phones the Save / Cancel row sticks to the bottom of the screen while editing.
+- In tab mode (one section at a time) a tab switch returns to the top of the page, so the
+  record header stays in view.
+- A published choice on a numeric field keeps its number type when selected.
+- **Child lists** are the shared list runtime with its `section` option (no separate list
+  component): one card (no inner panel), the section heading row carries the title, the
+  record count and the create action (labelled from the child's create form, e.g. "Add
+  preference"); row 2 is the same list toolbar as a full-page list (View, search with
+  its "/" shortcut, Filters, Controls, same sizes): a child list differs only in its frame,
+  never in its functions; the table runs to the card's edges; rows-per-page and Previous / Next
+  appear only with more than one page. An empty child list shows its empty state with
+  the create action inside it, and the heading row has no action.
+- List cells and headers take the value and label sizes; their height stays the density
+  row-height tokens.
+- **Empty one-record sections** use the shared `PanelEmptyState` anatomy (as Files): the
+  section's published `iconKey` (else the record-section fallback), the relationship's
+  `emptyState.title` as heading with `emptyState.message` as description (without a title the
+  message is the heading), and `emptyState.setupLabel` as the one action. Nothing is
+  hard-coded; child lists keep the list's own empty state, which has the same anatomy.
+- Empty-state texts (title, message, setup and edit labels) are plain text or published
+  localized text (`{labelKey, defaultText}` in the definition, translations in the entity's
+  `localization.json`, hydrated at authoring and rejected when a required locale is
+  missing); the browser renders them in the person's language.
+
+### 2.1.8 Reference values and the reference preview
+
+- **Reference values** (a field pointing at another record) are primary-coloured at rest
+  with no underline; hover and keyboard focus add the underline and a small preview cue.
+  The weight never changes and the cue is always laid out, so nothing shifts.
+- **The reference preview** uses the shared side-panel anatomy: the referenced entity's
+  icon (metadata first) in the header tile, the record's published title with its status
+  beside it, a subtitle "Entity · code", a context row that reads like the breadcrumb,
+  "From *record title* › *section* › *field*" (record pages and sections publish their
+  title and label through `ReferenceOrigin`; elsewhere "From *entity* › *field*"; one line,
+  the record title truncates first, full path as the row's title), the
+  summary fields, and a pinned footer action "Open *entity*". Esc closes it and returns
+  focus to the reference that opened it.
+- **Child-list context rows** name the parent by its published title (read through the
+  governed parent read), falling back to the id only when the title is not readable.
+
+### 2.1.3 Workspace and module homes
+
+Workspace (`/{workspace}`) and module (`/{workspace}/{module}`) homes use the entity-list
+page frame: shell breadcrumb, `PageHeader` (icon, title, description, counts) and the
+workspace module tabs as the navigation bar (Home, modules, More; pin and to-do badges).
+
+- **Entity placement is metadata.** Each entity's `placement.json`
+  (`metadata/products/<product>/entities/<code>/`) names its plane, workspace, module and
+  route slug. `pnpm catalog:generate` validates placements against the catalog and fills
+  each module's entities; `catalog:check` keeps the generated catalog current.
+- **Access is the server's.** Cards list only what `GET /api/entity-runtime/directory`
+  returns: each placed entity compiled through the authorized list descriptor; entities the
+  caller may not list, or that are not published on the plane, are left out.
+- **Module card (workspace home):** module icon, name, description, pin, to-do count (the
+  Inbox filtered to the module), up to four entity rows (icon, title, description, record
+  count) with "n more entities", recent records opened in this module (browser-local), and
+  New (only the create actions the directory authorized). A module without
+  authorized entities says so; no placeholder links.
+- **Entity card (module home):** entity icon, title, record count, description, recent
+  records and its authorized create action.
+- **The card is the link.** No Open module / Open list buttons: the title link covers the
+  whole card (one focus stop; focus outlines the card); entity rows, recent chips, pins and
+  create actions sit above it. Hover and focus lift the card 1px and show an arrow (no
+  motion under reduced motion). A module with no entities for the caller is a compact card.
+- **Record counts** come from the directory (`count`), through the same authorized list
+  query with an exact count; a denied, inexact or slow (over 1.5s) count is left out, never
+  shown as zero.
+- **Breadcrumbs** for `/app/entity/{code}` and its records follow the placement through a
+  module route the caller is entitled to: Workspace › Module › Entity › Record (the record
+  page replaces the last crumb with the record's title).
+
 ### 2.2 Side panel
 
 Every docked tool uses one frame, `WorkspaceToolPanel` (`@athyper/platform-shell/tool-panel`).

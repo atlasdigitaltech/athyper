@@ -21,6 +21,7 @@ function fixture() {
   let currentActor = id(7), revoked = false;
   const query = vi.fn(async (text: string, values: any[] = []) => {
     let rows: unknown[] = [];
+    if (text.includes("pg_try_advisory_xact_lock")) rows = [{ locked: true }];
     if (text.includes("set_config")) currentActor = values[1];
     if (text.includes("FROM master.principal")) rows = revoked ? [] : [{ id: currentActor }];
     if (text.includes("FROM metadata.entity_change_set")) rows = [{ id: id(2) }];
@@ -93,7 +94,7 @@ it("rolls back rather than accepting enrollment without audit evidence", async (
 it("keeps enrollment permissions distinct and enforces explicit import ownership", () => {
   expect(Object.values(PUBLICATION_POLICY_PERMISSIONS)).not.toContain("studio.metadata.contract.publish");
   const source = ts.createSourceFile("policy-enrollment.ts", readFileSync(new URL("../policy-enrollment.ts", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true);
-  const allowed = new Set(["node:crypto", "kysely", "@athyper/server-contract-auth", "@athyper/server-contract-audit", "@athyper/server-contract-policy", "@athyper/server-platform-policy", "@athyper/server-plane-studio-meta-entity-authoring", "./machine-policy.js", "./enrollment-contract.js", "./compiler-build.js", "../identity/platform-authority.js", "@athyper/server-contract-publication", "./compilation-recovery-source.js"]);
+  const allowed = new Set(["./deployment-recovery-compiler.js", "./deployment-recovery-source.js", "./policy-replacement.js", "./human-publication-admission.js", "node:crypto", "kysely", "@athyper/server-contract-auth", "@athyper/server-contract-audit", "@athyper/server-contract-policy", "@athyper/server-platform-policy", "@athyper/server-plane-studio-meta-entity-authoring", "./machine-policy.js", "./enrollment-contract.js", "./compiler-build.js", "../identity/platform-authority.js", "@athyper/server-contract-publication", "./compilation-recovery-source.js"]);
   for (const statement of source.statements) if (ts.isImportDeclaration(statement)) expect(allowed.has((statement.moduleSpecifier as ts.StringLiteral).text)).toBe(true);
 });
 
@@ -152,4 +153,24 @@ it.each([
     await expect(createPublicationPolicyEnrollment(f.options).propose({ ...f.context, ...override } as VerifiedRequestContext, policy)).rejects.toThrow();
     expect(f.authorize).not.toHaveBeenCalled(); expect(f.query).not.toHaveBeenCalled();
   } finally { await f.database.destroy(); }
+});
+
+it("requires independent activation and rechecks human source admission for coordinated policies", async () => {
+  const admission = await import("../human-publication-admission.js");
+  const f=fixture(), check=vi.spyOn(admission,"assertHumanReviewedEnrollmentSource").mockResolvedValue();
+  const p = { schema:"athyper.dev-human-reviewed-publication/1",environment:"local",instance:"dev",authorityTenantId:id(6),
+    policyId:"test.coordinated",revision:1,authorPrincipalId:id(3),publisherPrincipalId:id(4),
+    compiler:{name:"test",version:"1",buildHash:"a".repeat(64)},predecessors:[],
+    plan:{schema:"athyper.human-reviewed-publication-plan/1",publisherId:id(4),members:[{changeSetId:id(2),entityId:id(1),revision:3,
+      contractHash:"b".repeat(64),descriptorHash:"c".repeat(64),sourceReleaseId:null,authorId:id(7),reviewerId:id(8),
+      targets:[{plane:"neon",contractHash:"b".repeat(64),descriptorHash:"c".repeat(64)}]}]} };
+  try {
+    const service=createPublicationPolicyEnrollment(f.options), pending=await service.propose(f.context,p);
+    await expect(service.activate(f.context,pending.id,pending.hash)).rejects.toThrow("MAKER_CHECKER");
+    check.mockRejectedValueOnce(Error("HUMAN_PUBLICATION_POLICY_SOURCE_HEAD_CHANGED"));
+    await expect(service.activate({...f.context,principalId:id(8)},pending.id,pending.hash)).rejects.toThrow("SOURCE_HEAD_CHANGED");
+    expect(f.query.mock.calls.filter(([q])=>q.includes("SET status='active'"))).toHaveLength(0);
+    expect((await service.activate({...f.context,principalId:id(8)},pending.id,pending.hash)).status).toBe("active");
+    expect(check).toHaveBeenCalledTimes(4);expect(f.signer.sign).not.toHaveBeenCalled();
+  }finally{check.mockRestore();await f.database.destroy();}
 });

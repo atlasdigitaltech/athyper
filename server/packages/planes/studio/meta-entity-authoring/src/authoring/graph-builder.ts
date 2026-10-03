@@ -32,6 +32,8 @@ export interface SharedReferenceDefinition {
   /** Separate capability policy; never merged into reference CRUD operations. */
   readonly capabilities?: MetaEntityGraph["capabilities"];
   readonly entityCode: string;
+  /** The entity's own icon (a semantic icon key), shown wherever the entity is. */
+  readonly iconKey?: string;
   readonly title: string;
   readonly localizedTitle?: EntityRuntimeLocalizedTextV1;
   readonly entityLabel?: EntityRuntimeLocalizedTextV1;
@@ -62,6 +64,7 @@ export interface SharedReferenceDefinition {
     label: string;
     localizedLabel?: EntityRuntimeLocalizedTextV1;
     fields: readonly string[];
+    iconKey?: string;
   }[];
 }
 
@@ -244,6 +247,7 @@ export function buildSharedReferenceGraph(
         isDefault: true,
         layoutConfig: {
           referenceCapability: COMMON_REFERENCE_VIEW_PERMISSION,
+          ...(definition.iconKey ? { iconKey: definition.iconKey } : {}),
           ...(localizedLabels ? { localizedLabels } : {}),
           identityField: definition.codeField,
           defaultState: {
@@ -307,6 +311,7 @@ export function buildSharedReferenceGraph(
           ...(definition.ai ? { ai: definition.ai } : {}),
           recordPresentation: {
             schemaVersion: 1,
+            ...(definition.iconKey ? { iconKey: definition.iconKey } : {}),
             ...(localizedLabels ? { localizedLabels } : {}),
             titleField: definition.titleField,
             codeField: definition.codeField,

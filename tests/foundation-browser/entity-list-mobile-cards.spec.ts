@@ -447,7 +447,7 @@ test("list control sections share one heading style and one search placeholder",
   expect(placeholders).toEqual(["Search fields…", "Search fields…", "Search fields…"]);
 });
 
-for (const [density, row, header, font, button] of [["compact", 32, 32, "13px", 24], ["comfortable", 44, 40, "14px", 32], ["spacious", 56, 48, "15px", 36]] as const)
+for (const [density, row, header, font, button] of [["compact", 32, 32, "14px", 24], ["comfortable", 44, 40, "15px", 32], ["spacious", 56, 48, "16px", 36]] as const)
   test(`${density} density sets exact row rhythm from the density tokens`, async ({ page }) => {
     await mount(page, 1440, "", { rows: 5, path: `?density=${density}` });
     // A non-default ?density= is a list override; the default follows the app density.

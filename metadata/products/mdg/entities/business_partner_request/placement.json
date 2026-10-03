@@ -1,0 +1,13 @@
+{
+  "schema": "athyper.entity-placement/1",
+  "entityCode": "business_partner_request",
+  "name": "Business Partner Requests",
+  "placements": [
+    {
+      "plane": "neon",
+      "workspace": "mdg",
+      "module": "bp",
+      "routeSlug": "requests"
+    }
+  ]
+}

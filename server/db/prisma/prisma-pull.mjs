@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Wrapper for `prisma db pull` that selects the right DATABASE_URL per plane
-// and passes it directly via --url (avoids requiring a local prisma install).
+// and supplies credentials through an environment-backed Prisma configuration.
 //
 // Owned by @athyper/server-db. Run from server/db (via package.json scripts):
 //   node prisma/prisma-pull.mjs --target=neon   --schema prisma/schema.neon.prisma --force
@@ -10,7 +10,8 @@
 import { spawnSync, execSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { createRequire } from "node:module";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 const require = createRequire(import.meta.url);
 
@@ -69,22 +70,28 @@ const nodePath = [
   ...(process.env.NODE_PATH ? process.env.NODE_PATH.split(sep) : []),
 ].join(sep);
 
-const result = spawnSync(
-  process.execPath,
-  [PRISMA_CLI, "db", "pull", "--url", url, ...schemaArgs],
-  {
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      CHECKPOINT_DISABLE: process.env.CHECKPOINT_DISABLE ?? "1",
-      NODE_PATH: nodePath,
+// The config contains no secret; credentials stay out of the process argument list.
+const configDir = mkdtempSync(resolve(tmpdir(), "athyper-prisma-pull-"));
+const configPath = resolve(configDir, "prisma.config.mjs");
+writeFileSync(configPath, 'export default { datasource: { url: process.env.ATHYPER_PRISMA_PULL_URL } };\n', { mode: 0o600 });
+let status = 1;
+try {
+  const result = spawnSync(
+    process.execPath,
+    [PRISMA_CLI, "db", "pull", "--config", configPath, ...schemaArgs],
+    {
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        ATHYPER_PRISMA_PULL_URL: url,
+        CHECKPOINT_DISABLE: process.env.CHECKPOINT_DISABLE ?? "1",
+        NODE_PATH: nodePath,
+      },
     },
-  },
-);
-
-if (result.error) {
-  console.error(result.error.message);
-  process.exit(1);
+  );
+  if (result.error) console.error(result.error.message);
+  status = result.status ?? 1;
+} finally {
+  rmSync(configDir, { recursive: true, force: true });
 }
-
-process.exit(result.status ?? 1);
+process.exit(status);

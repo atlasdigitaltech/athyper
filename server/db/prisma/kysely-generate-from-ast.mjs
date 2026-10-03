@@ -206,7 +206,6 @@ for (const model of models) {
     } else if (enumNames.has(fieldTypeName)) {
       tsType = fieldTypeName;
     } else if (modelNames.has(fieldTypeName)) {
-      if (field.array || field.optional) continue;
       continue;
     } else if (fieldTypeName === "Unsupported") {
       tsType = "unknown";
@@ -227,7 +226,7 @@ for (const model of models) {
     } else if (hasDefault) {
       finalType = `Generated<${tsType}>`;
     } else if (isOptional) {
-      finalType = `${tsType} | null`;
+      finalType = `Generated<${tsType} | null>`;
     } else {
       finalType = tsType;
     }

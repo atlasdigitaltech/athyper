@@ -41,6 +41,8 @@ export interface EntityRecordPresentationV1 {
     readonly placement: "direct" | "overflow";
     readonly scopePrompt?: string;
     readonly relationshipKey?: string;
+    /** Semantic icon key; the runtime falls back when absent or unknown. */
+    readonly iconKey?: string;
   }[];
   readonly actions: readonly {
     readonly key: string;
@@ -91,6 +93,7 @@ export interface EntityRecordHeaderV1 {
     readonly placement: "direct" | "overflow";
     readonly scopePrompt?: string;
     readonly count?: number;
+    readonly iconKey?: string;
   }[];
   readonly readOnly?: boolean;
 }
@@ -168,6 +171,7 @@ export function parseEntityRecordPresentation(
         ...(item.component === undefined ? {} : {component: parseEntitySectionComponent(item.component, list(item.fields ?? []).map(key))}),
         ...(item.relationshipKey === undefined ? {} : { relationshipKey: key(item.relationshipKey) }),
         ...(item.scopePrompt === undefined ? {} : { scopePrompt: text(item.scopePrompt) }),
+        ...(item.iconKey === undefined ? {} : { iconKey: key(item.iconKey) }),
         placement: choice(item.placement ?? "direct", [
           "direct",
           "overflow",
@@ -366,10 +370,11 @@ export function resolveRecordHeader(
       return value ? [{ key, label: label(key), value }] : [];
     }),
     actions: options.readOnly ? [] : (options.actions ?? []),
-    sections: presentation.sections.map(({ key, label, placement }) => ({
+    sections: presentation.sections.map(({ key, label, placement, iconKey }) => ({
       key,
       label,
       placement,
+      ...(iconKey ? { iconKey } : {}),
     })),
     ...(options.readOnly ? { readOnly: true } : {}),
   };

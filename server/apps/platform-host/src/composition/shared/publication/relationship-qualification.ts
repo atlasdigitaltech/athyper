@@ -17,12 +17,51 @@ export async function qualifyPublishedRelationships(
   graph: MetaEntityGraph,
   tx: Transaction<Record<string, never>>,
 ): Promise<void> {
+  return qualifyRelationshipGraph(graph, tx, []);
+}
+
+/** Qualification only: prospective members do not become active dependencies.
+ * Activation must use a verified, independently authorized group and commit all
+ * heads in the same target transaction. The single-release gate stays strict. */
+export async function qualifyCoordinatedProductRelationships(
+  graphs: readonly MetaEntityGraph[],
+  tx: Transaction<Record<string, never>>,
+): Promise<void> {
+  if (!graphs.length || new Set(graphs.map(g => g.entity.entityCode)).size !== graphs.length
+    || graphs.some(g => g.entity.ownershipModel !== "system" || g.runtimeProfiles?.length !== 1)
+    || new Set(graphs.map(g => g.runtimeProfiles![0]!.storagePlane)).size !== 1
+    || !["studio", "neon", "mesh"].includes(graphs[0]!.runtimeProfiles![0]!.storagePlane ?? ""))
+    throw Error("PUBLICATION_RELATIONSHIP_GROUP_INVALID");
+  const peers = graphs.map(relationshipDescriptor);
+  for (const graph of graphs) await qualifyRelationshipGraph(graph, tx, peers);
+}
+
+function relationshipDescriptor(graph: MetaEntityGraph) {
+  const profile = graph.runtimeProfiles![0]!;
+  const presentation = graph.surfaces?.find(s => s.layoutConfig?.recordPresentation)?.layoutConfig?.recordPresentation as
+    { entityRelationships?: unknown } | undefined;
+  return {
+    entityCode: graph.entity.entityCode, planeKey: profile.storagePlane!,
+    storage: { schema: profile.storageSchema!, object: profile.storageObject!, tenantField: profile.tenantFieldKey },
+    fields: graph.fields.map(field => ({ key: field.fieldKey, storagePath: field.storagePath!, type: field.dataType,
+      writableOn: field.writeMode === "read_only" ? [] : ["patch"],
+      keyReference: field.typeConfig?.keyReference === undefined ? undefined : parseEntityKeyReference(field.typeConfig.keyReference, field.fieldKey) })),
+    operations: Object.fromEntries(graph.operations.map(operation => [operation.operationKey, true])),
+    recordPresentation: { entityRelationships: parseEntityRelationships(presentation?.entityRelationships ?? []) },
+  };
+}
+
+async function qualifyRelationshipGraph(
+  graph: MetaEntityGraph,
+  tx: Transaction<Record<string, never>>,
+  peers: readonly ReturnType<typeof relationshipDescriptor>[],
+): Promise<void> {
   const profile = graph.runtimeProfiles![0]!;
   const raw = graph.surfaces?.find((s) => s.layoutConfig?.recordPresentation)
     ?.layoutConfig?.recordPresentation as
     { entityRelationships?: unknown } | undefined;
   const relations = parseEntityRelationships(raw?.entityRelationships ?? []);
-  const active = (
+  const published = (
     await sql<{
       artifact: unknown;
       release_id: string;
@@ -45,6 +84,8 @@ export async function qualifyPublishedRelationships(
       { releaseId: row.release_id, releaseNo: row.release_no },
     ),
   );
+  const peerCodes = new Set(peers.map(peer => peer.entityCode));
+  const active = [...published.filter(descriptor => !peerCodes.has(descriptor.entityCode)), ...peers];
   const candidate: EntityRelationshipContract = {
     entityCode: graph.entity.entityCode,
     plane: profile.storagePlane!,
@@ -56,7 +97,7 @@ export async function qualifyPublishedRelationships(
     uniqueKeys: [],
   };
   async function stored(
-    descriptor: EntityRuntimeDescriptor,
+    descriptor: EntityRuntimeDescriptor | ReturnType<typeof relationshipDescriptor>,
   ): Promise<EntityRelationshipContract> {
     const keys = await uniqueKeys(
       descriptor.storage.schema,
@@ -90,12 +131,7 @@ export async function qualifyPublishedRelationships(
     ),
   };
   // Key references point from a stored FK to an independently authorized target.
-  const candidateReference = {
-    entityCode: graph.entity.entityCode, planeKey: profile.storagePlane!,
-    storage: {schema: profile.storageSchema!, object: profile.storageObject!, tenantField: profile.tenantFieldKey},
-    fields: graph.fields.map(field => ({key: field.fieldKey, storagePath: field.storagePath!, type: field.dataType, writableOn: field.writeMode === "read_only" ? [] : ["patch"], keyReference: field.typeConfig?.keyReference === undefined ? undefined : parseEntityKeyReference(field.typeConfig.keyReference, field.fieldKey)})),
-    operations: Object.fromEntries(graph.operations.map(operation => [operation.operationKey, true])),
-  };
+  const candidateReference = relationshipDescriptor(graph);
   const referenceContracts = [...active.filter(item => item.entityCode !== candidateReference.entityCode), candidateReference];
   for (const owner of referenceContracts) for (const field of owner.fields) {
     const relation = field.keyReference;

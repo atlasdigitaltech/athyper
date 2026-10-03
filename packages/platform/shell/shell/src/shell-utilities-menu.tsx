@@ -6,7 +6,8 @@ import { THEME_FAMILIES, type ThemeFamily } from "@athyper/platform-theme/tokens
 import { useState, type ReactNode } from "react";
 import { useShellI18n } from "./shell-i18n";
 
-/** Client-only appearance switching; persisted per browser, not yet synced across devices. */
+/** Personal preferences: theme, density, design system and language, saved to the
+ * principal's profile so they follow the person to every device. */
 export function UtilitiesMenu({
   applicationName,
   planeDescriptor,
@@ -27,8 +28,8 @@ export function UtilitiesMenu({
   const setPreference = (patch: AppearancePreference) => appearance?.setPreference(patch);
   return (
     <div className="athyper-shell__utilities">
-      {appearance ? (
-        <UtilitiesSection title={t("shell.utilities.appearance")}>
+      <UtilitiesSection title={t("shell.utilities.appearance")}>
+        {appearance ? (<>
           <UtilitiesToggleGroup
             label={t("shell.utilities.theme")}
             value={appearance.profile.appearanceMode === "high_contrast" ? "system" : appearance.profile.appearanceMode}
@@ -55,40 +56,13 @@ export function UtilitiesMenu({
             options={THEME_FAMILIES.map((family) => ({ value: family, label: t(designSystemLabelKey(family)) }))}
             onChange={(value) => appearance.setThemeFamily(value as ThemeFamily)}
           />
-        </UtilitiesSection>
-      ) : null}
-      {localePolicy && localePolicy.enabledLocales.length > 1 && onLocaleChange && currentLocale ? (
-        <UtilitiesSection title={t("shell.utilities.languageRegion")}>
-          <label className="athyper-shell__language athyper-shell__language--utilities">
-            <ChoiceSelect
-              label={t("shell.profile.language")}
-              value={currentLocale}
-              disabled={localePending}
-              onChange={(locale) => {
-                setLocalePending(true);
-                setLocaleError(false);
-                void onLocaleChange(locale as SupportedLocale)
-                  .then(() => setLocalePending(false))
-                  .catch(() => {
-                    setLocalePending(false);
-                    setLocaleError(true);
-                  });
-              }}
-              options={localePolicy.enabledLocales.map((locale) => {
-                const definition = localeDefinition(locale);
-                return {
-                  value: locale,
-                  label:
-                    definition.nativeName === definition.englishName
-                      ? definition.nativeName
-                      : `${definition.nativeName} — ${definition.englishName}`,
-                };
-              })}
-            />
-            {localeError ? <small role="alert">{t("shell.profile.languageError")}</small> : null}
-          </label>
-        </UtilitiesSection>
-      ) : null}
+        </>) : null}
+        <LanguageRow
+          currentLocale={currentLocale}
+          localePolicy={localePolicy}
+          onLocaleChange={onLocaleChange}
+        />
+      </UtilitiesSection>
       <UtilitiesSection title={t("shell.utilities.about")}>
         <dl className="athyper-shell__utilities-about">
           <div>
@@ -112,6 +86,63 @@ export function UtilitiesMenu({
   );
 }
 
+/** Language sits with the other personal preferences. Up to three languages are a
+ * segmented choice, more a select; one enabled language is shown read-only so the
+ * setting never looks missing. */
+function LanguageRow({
+  currentLocale = "en",
+  localePolicy,
+  onLocaleChange,
+}: {
+  readonly currentLocale?: string | undefined;
+  readonly localePolicy?: Readonly<{ enabledLocales: readonly SupportedLocale[] }> | undefined;
+  readonly onLocaleChange?: ((localeCode: SupportedLocale) => Promise<void>) | undefined;
+}) {
+  const t = useShellI18n().message;
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const locales = localePolicy?.enabledLocales ?? [];
+  const name = (locale: string) => { try { return localeDefinition(locale as SupportedLocale).nativeName; } catch { return locale; } };
+  if (locales.length < 2 || !onLocaleChange)
+    return (
+      <div className="athyper-shell__utilities-toggle-group athyper-shell__utilities-readonly">
+        <span>{t("shell.profile.language")}</span>
+        <div><strong>{name(locales[0] ?? currentLocale)}</strong><small>{t("shell.utilities.languageOnly")}</small></div>
+      </div>
+    );
+  const choose = (locale: string) => {
+    if (locale === currentLocale) return;
+    setPending(true);
+    setFailed(false);
+    void onLocaleChange(locale as SupportedLocale).then(() => setPending(false)).catch(() => { setPending(false); setFailed(true); });
+  };
+  return (
+    <>
+      {locales.length <= 3 ? (
+        <UtilitiesToggleGroup
+          label={t("shell.profile.language")}
+          value={currentLocale}
+          disabled={pending}
+          options={locales.map((locale) => ({ value: locale, label: name(locale), lang: locale }))}
+          onChange={choose}
+        />
+      ) : (
+        <div className="athyper-shell__utilities-toggle-group">
+          <span>{t("shell.profile.language")}</span>
+          <ChoiceSelect
+            label={t("shell.profile.language")}
+            value={currentLocale}
+            disabled={pending}
+            onChange={choose}
+            options={locales.map((locale) => ({ value: locale, label: name(locale) }))}
+          />
+        </div>
+      )}
+      {failed ? <small className="athyper-shell__utilities-error" role="alert">{t("shell.profile.languageError")}</small> : null}
+    </>
+  );
+}
+
 function designSystemLabelKey(family: ThemeFamily): "shell.utilities.designSystemModern" | "shell.utilities.designSystemMono" {
   return family === "atlas-mono" ? "shell.utilities.designSystemMono" : "shell.utilities.designSystemModern";
 }
@@ -130,11 +161,13 @@ function UtilitiesToggleGroup({
   value,
   options,
   onChange,
+  disabled = false,
 }: {
   readonly label: string;
   readonly value: string;
-  readonly options: readonly { readonly value: string; readonly label: string }[];
+  readonly options: readonly { readonly value: string; readonly label: string; readonly lang?: string }[];
   readonly onChange: (value: string) => void;
+  readonly disabled?: boolean;
 }) {
   return (
     <div className="athyper-shell__utilities-toggle-group" role="group" aria-label={label}>
@@ -145,6 +178,8 @@ function UtilitiesToggleGroup({
             key={option.value}
             type="button"
             aria-pressed={value === option.value}
+            disabled={disabled}
+            lang={option.lang}
             onClick={() => onChange(option.value)}
           >
             {option.label}

@@ -54,6 +54,8 @@ export function ManagementWorkspace({
 export interface ManagementNavigationItem {
   readonly key: string;
   readonly label: ReactNode;
+  /** Shown before the label at the bar's icon size. */
+  readonly icon?: ReactNode;
   readonly href: string;
   readonly count?: number;
   readonly overflow?: boolean;
@@ -92,6 +94,7 @@ export function ManagementNavigation({
         }
       }}
     >
+      {item.icon}
       {item.label}
       {item.count !== undefined && item.count > 0 ? (
         <span className="a-management-navigation__count">{item.count}</span>

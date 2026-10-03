@@ -209,10 +209,10 @@ export class PinnedCompiledEntityReader {
 }
 
 function releaseKey(value: CompiledEntityReleaseCoordinate): string {
-  // Immutable IR is tenant/plane/preview scoped, never principal-scoped. Principal,
-  // epoch, context and locale belong exclusively to the authorized browser/data
-  // projection key built after this reader returns.
-  return [value.tenantId, value.planeKey, value.entityCode, value.previewScopeKey ?? "", value.releaseId ?? "", value.releaseHash ?? ""].join("\0");
+  // Raw immutable IR may share a cache, but in-flight admission and resolved
+  // coordinates carry the requesting actor. Never give a simultaneous caller
+  // another principal's admission result or artifact-source read.
+  return [value.tenantId, value.principalId, value.planeKey, value.entityCode, value.previewScopeKey ?? "", value.releaseId ?? "", value.releaseHash ?? ""].join("\0");
 }
 function safeKey(value: string): string {
   const normalized = value.trim();

@@ -11,14 +11,14 @@
 .a-metadata-detail__navigation {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--a-space-2);
+  align-items: stretch;
+  gap: 0;
   inline-size: 100%;
 }
 .a-metadata-detail__navigation [role="tablist"] {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--a-space-2);
+  gap: 0;
 }
 .a-metadata-detail__tab-group {
   display: flex;
@@ -42,17 +42,47 @@
   inset-inline-start: 0;
   max-inline-size: calc(100vw - 2rem);
 }
+/* Record mode tabs follow the page navigation bar (workspace, module and activity
+   bars): body text at regular weight, muted until current, 18px icon 8px from the
+   label, the shared height, and a 2px primary underline on the current tab. */
 .a-metadata-detail__navigation [role="tab"] {
-  min-block-size: var(--a-touch-target);
-  padding: var(--a-space-2) var(--a-space-3);
-  color: var(--a-foreground);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--a-space-2);
+  min-block-size: calc(var(--a-control-height) + var(--a-space-2));
+  padding: 0 var(--a-space-4);
+  color: var(--a-muted-foreground);
   background: transparent;
   border: 0;
   border-block-end: 2px solid transparent;
+  border-radius: 0;
   font: inherit;
+  font-size: var(--a-font-size-body);
+  font-weight: var(--a-font-weight-regular);
+  white-space: nowrap;
   cursor: pointer;
 }
+.a-metadata-detail__navigation [role="tab"]:hover {
+  color: var(--a-primary);
+}
 .a-metadata-detail__navigation [role="tab"][aria-selected="true"] {
+  border-block-end-color: var(--a-primary);
+  color: var(--a-primary);
+}
+/* The section chevron stays outside the tablist (it opens a menu, not a tab) but
+   reads as part of the current tab when that tab ends the row: one underline
+   runs under icon, label and chevron. */
+.a-metadata-detail__navigation > .a-entity-record__group > summary {
+  min-block-size: calc(var(--a-control-height) + var(--a-space-2));
+  padding: 0 var(--a-space-2);
+  border-radius: 0;
+  background: transparent;
+}
+.a-metadata-detail__navigation[data-section-menu="joined"] [role="tab"][aria-selected="true"] {
+  padding-inline-end: var(--a-space-1);
+}
+.a-metadata-detail__navigation[data-section-menu="joined"] > .a-entity-record__group[data-active] > summary {
+  padding-inline: 0 var(--a-space-4);
   border-block-end-color: var(--a-primary);
   color: var(--a-primary);
 }

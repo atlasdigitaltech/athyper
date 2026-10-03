@@ -1,0 +1,24 @@
+{
+  "schema": "athyper.reviewed-deployment-permission-retry-install/1",
+  "migration": "20261003_reviewed_deployment_permission_retry.sql",
+  "sha256": "160371c699ed0146416f24f7444f298db472e72401f03fca2df7e660fed68b0c",
+  "applied": true,
+  "checks": [
+    "stale_policy_hash",
+    "stale_compiler",
+    "wrong_actor",
+    "wrong_tenant",
+    "wildcard_attempt",
+    "missing_reviewed_evidence",
+    "concurrent_execution",
+    "terminal_nonpermission_failure",
+    "receipt_already_started",
+    "eight_exact_retries",
+    "idempotent_same_status",
+    "failure_history_retained",
+    "no_direct_worker_update",
+    "all_probe_changes_rolled_back"
+  ],
+  "passed": true,
+  "completedAt": "2026-10-02T23:06:15.408Z"
+}

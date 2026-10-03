@@ -8,7 +8,18 @@ interface Manifest{contractVersion:string;operations:Coordinate[]}
 const url=arg("--database-url"),expected=arg("--expected-database"),plane=arg("--plane") as Plane,action=(arg("--action")??"status") as Action,operation=arg("--operation"),reason=arg("--reason")??`Authorization operation ${action}`,ticket=arg("--ticket")??null;
 if(!url||!expected||!["neon","mesh"].includes(plane)||!["prepare","certify","activate","rollback","status"].includes(action))throw new Error("Explicit URL/database/plane and valid action required");
 if(["activate","rollback"].includes(action)&&!operation)throw new Error(`${action} requires --operation`);
-const manifest=JSON.parse(await readFile(resolve(import.meta.dirname,"../verify/config/authorization-operation-activation-manifest.v1.json"),"utf8")) as Manifest;
+const manifestPath=arg("--manifest");
+if(!manifestPath)throw new Error("--manifest is required: supply reviewed publication source coordinates for authorization rollout");
+const manifest=JSON.parse(await readFile(resolve(manifestPath),"utf8")) as Manifest;
+const coordinateKeys=new Set<string>();
+if(typeof manifest.contractVersion!=="string"||!manifest.contractVersion.trim()||!Array.isArray(manifest.operations)||!manifest.operations.length)throw new Error("Invalid authorization activation manifest");
+for(const c of manifest.operations){
+ if(!c||typeof c!=="object")throw new Error("Invalid activation source coordinate");
+ if(!["neon","mesh"].includes(c.plane)||![c.entityCode,c.operationKey].every(v=>typeof v==="string"&&/^[a-z][a-z0-9_.-]{1,126}$/.test(v))
+  ||typeof c.sourceEntityOperationId!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(c.sourceEntityOperationId)
+  ||![c.sourceReleaseHash,c.sourceArtifactHash].every(v=>typeof v==="string"&&/^[a-f0-9]{64}$/.test(v)))throw new Error("Invalid activation source coordinate");
+ const key=`${c.plane}/${c.entityCode}/${c.operationKey}`;if(coordinateKeys.has(key))throw new Error(`Duplicate activation coordinate: ${key}`);coordinateKeys.add(key);
+}
 const selected=manifest.operations.filter(x=>x.plane===plane&&(!operation||x.operationKey===operation));if(!selected.length)throw new Error("manifest coordinate not found");
 const client=new pg.Client({connectionString:url});await client.connect();
 try{const identity=await client.query<{database_name:string}>("select current_database() database_name");if(identity.rows[0]?.database_name!==expected)throw new Error("Authorization operation database guard rejected target");await client.query("begin");await client.query("select set_config('app.database_plane',$1,true)",[plane]);

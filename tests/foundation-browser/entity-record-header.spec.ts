@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildSync } from "esbuild";
 import { test, expect } from "@playwright/test";
+import { chooseOption } from "./fixtures/choice";
 
 const styles = [
   "packages/platform/foundation/theme/src/styles.css",
@@ -19,7 +20,7 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EntityRecordHeader } from './packages/platform/entity/runtime/form-detail/src/record-header';
 import { EntityPageLayout, useRecordPage } from './packages/platform/shell/shell/src/entity-page-layout';
-const header = { title: 'Northwind Industrial Supplies Ltd', entityLabel: 'Business Partner', iconKey: 'contact', code: 'CATL-BP-001', badges: [{ label: 'Supplier', tone: 'neutral' }, { label: 'Active', tone: 'success' }], context: [{ key: 'organization', label: 'Organization', value: 'CirrusAtlantic UK' }, { key: 'as-of', label: 'As of', value: '2026-09-08' }], actions: [{ key: 'change', label: 'Propose change', placement: 'primary', href: '#change' }, { key: 'role', label: 'Add supplier/customer role', placement: 'overflow', href: '#role' }], sections: ['Overview','Identity','Contacts','Addresses','Identifiers & tax','Banking','Activity'].map((label,index) => ({ key: index === 4 ? 'tax' : label.toLowerCase(), label, placement: index < 5 ? 'direct' : 'overflow', count: index === 0 ? undefined : index })) };
+const header = { title: 'Northwind Industrial Supplies Ltd', entityLabel: 'Business Partner', iconKey: 'contact', code: 'CATL-BP-001', badges: [{ label: 'Supplier', tone: 'neutral' }, { label: 'Active', tone: 'success' }], context: [{ key: 'organization', label: 'Organization', value: 'CirrusAtlantic UK' }, { key: 'as-of', label: 'As of', value: '2026-09-08' }], actions: [{ key: 'change', label: 'Propose change', placement: 'primary', href: '/records/partner/change' }, { key: 'role', label: 'Add supplier/customer role', placement: 'overflow', href: '/records/partner/roles/new' }], sections: ['Overview','Identity','Contacts','Addresses','Identifiers & tax','Banking','Activity'].map((label,index) => ({ key: index === 4 ? 'tax' : label.toLowerCase(), label, placement: index < 5 ? 'direct' : 'overflow', count: index === 0 ? undefined : index })) };
 function Record(){ useRecordPage(); const [section,setSection]=useState('overview'); return <><EntityRecordHeader header={header} activeSection={section} onSelectSection={setSection} contextControls={<label>Role lens <select><option>All roles</option><option>Supplier</option></select></label>} technicalDetails={<dl><div><dt>Partner ID</dt><dd>11111111-2222-4333-8444-555555555555</dd></div></dl>}/><p data-testid='active'>{section}</p></>; }
 createRoot(document.getElementById('root')).render(<EntityPageLayout collectionHeader={<h1>Business Partners</h1>} collectionNavigation={<nav>Manage</nav>}><Record/></EntityPageLayout>);
 `,
@@ -79,7 +80,7 @@ test("record header owns the page and reflows with accessible overflow navigatio
   });
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 844 });
-    await page.getByLabel("Section", { exact: true }).selectOption("activity");
+    await chooseOption(page.getByRole("combobox", { name: "Section", exact: true }), "activity");
     await expect(page.getByTestId("active")).toHaveText("activity");
     expect(
       await page.evaluate(

@@ -1,0 +1,24 @@
+{
+  "schema": "athyper.entity-placement/1",
+  "entityCode": "timezone",
+  "placements": [
+    {
+      "plane": "neon",
+      "workspace": "mdg",
+      "module": "org",
+      "routeSlug": "time-zones"
+    },
+    {
+      "plane": "studio",
+      "workspace": "foundation",
+      "module": "rel",
+      "routeSlug": "time-zones"
+    },
+    {
+      "plane": "mesh",
+      "workspace": "core",
+      "module": "rel",
+      "routeSlug": "time-zones"
+    }
+  ]
+}

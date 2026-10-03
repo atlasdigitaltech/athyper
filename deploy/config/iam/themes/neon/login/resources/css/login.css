@@ -910,10 +910,13 @@ a {
     object-position: center;
   }
 
+  /* Phones: the form starts under the brand instead of floating mid-screen; the
+     footer stays at the bottom through the grid's flexible task row. */
   .kc-panel-right {
-    justify-content: center;
+    align-self: stretch;
+    justify-content: flex-start;
     overflow-y: auto;
-    padding: 2rem var(--a-identity-task-padding) 1rem;
+    padding: 2.5rem var(--a-identity-task-padding) 1.5rem;
   }
 
   .kc-form-wrapper {

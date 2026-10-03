@@ -388,13 +388,19 @@ export const DENSITY_TOKENS = Object.freeze({
     headerHeight: "2rem",
     cellPaddingInline: "0.5rem",
     cellPaddingBlock: "0.125rem",
-    dataFontSize: "0.8125rem",
+    dataFontSize: "0.875rem",
     iconButton: "1.5rem",
     /** Small text controls: chips, drawer tabs, toolbar choices, disclosures. */
     controlHeightSmall: "1.75rem",
     stackGap: "0.5rem",
     sectionGap: "1rem",
     panelGutter: "0.75rem",
+    /** Text roles for work content: values, labels and section headings scale with density; chrome does not. */
+    dataLineHeight: "1.25rem",
+    labelFontSize: "0.8125rem",
+    labelLineHeight: "1.125rem",
+    sectionFontSize: "0.9375rem",
+    sectionLineHeight: "1.375rem",
   }),
   comfortable: Object.freeze({
     controlHeight: "2.5rem",
@@ -405,13 +411,19 @@ export const DENSITY_TOKENS = Object.freeze({
     headerHeight: "2.5rem",
     cellPaddingInline: "0.75rem",
     cellPaddingBlock: "0.25rem",
-    dataFontSize: "0.875rem",
+    dataFontSize: "0.9375rem",
     iconButton: "2rem",
     /** Small text controls: chips, drawer tabs, toolbar choices, disclosures. */
     controlHeightSmall: "2rem",
     stackGap: "0.75rem",
     sectionGap: "1.5rem",
     panelGutter: "1rem",
+    /** Text roles for work content: values, labels and section headings scale with density; chrome does not. */
+    dataLineHeight: "1.375rem",
+    labelFontSize: "0.875rem",
+    labelLineHeight: "1.25rem",
+    sectionFontSize: "1rem",
+    sectionLineHeight: "1.5rem",
   }),
   spacious: Object.freeze({
     controlHeight: "3rem",
@@ -422,13 +434,19 @@ export const DENSITY_TOKENS = Object.freeze({
     headerHeight: "3rem",
     cellPaddingInline: "1rem",
     cellPaddingBlock: "0.375rem",
-    dataFontSize: "0.9375rem",
+    dataFontSize: "1rem",
     iconButton: "2.25rem",
     /** Small text controls: chips, drawer tabs, toolbar choices, disclosures. */
     controlHeightSmall: "2.25rem",
     stackGap: "1rem",
     sectionGap: "2rem",
     panelGutter: "1.25rem",
+    /** Text roles for work content: values, labels and section headings scale with density; chrome does not. */
+    dataLineHeight: "1.5rem",
+    labelFontSize: "0.9375rem",
+    labelLineHeight: "1.375rem",
+    sectionFontSize: "1.0625rem",
+    sectionLineHeight: "1.625rem",
   }),
 });
 

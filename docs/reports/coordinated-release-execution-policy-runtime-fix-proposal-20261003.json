@@ -1,0 +1,9 @@
+{
+  "schema": "athyper.coordinated-policy-proposal/1",
+  "proposedAt": "2026-10-02T21:03:56.271Z",
+  "actor": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+  "id": "06ce6433-5128-48ed-8228-5533b9386bf5",
+  "version": 1,
+  "hash": "c57a426b7a1764020969df89db5df91f46a5c4574e1cf04477fb2c936aad2e44",
+  "status": "pending_approval"
+}

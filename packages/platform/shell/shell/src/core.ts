@@ -7,6 +7,8 @@ export type PlaneNavigationKind = "primary" | "secondary" | "hidden";
 export interface PlaneRouteDefinition {
   readonly id: string;
   readonly moduleCode: string;
+  /** Entities placed in this module (catalog placements), for entity breadcrumbs. */
+  readonly entities?: readonly { readonly code: string; readonly name: string }[];
   readonly href: `/${string}`;
   readonly label: string;
   readonly iconKey: string;
@@ -283,6 +285,25 @@ export function deriveBreadcrumbs(
   navigation: DerivedShellNavigation,
   pathname: string,
 ): readonly Readonly<{ label: string; href?: string }>[] {
+  // Entity pages follow their catalog placement: Workspace › Module › Entity › Record,
+  // through a module route the caller is entitled to.
+  const entityPath = /^\/app\/entity\/([a-z][a-z0-9_]{1,62})(?:\/([^/]+))?/.exec(pathname);
+  if (entityPath) {
+    const code = entityPath[1]!, segment = entityPath[2];
+    const route = navigation.routes.find((candidate) => candidate.entities?.some((entity) => entity.code === code));
+    const entity = route?.entities?.find((candidate) => candidate.code === code);
+    if (route && entity) {
+      const workspace = navigation.workspaces.find((item) => item.code === route.workspaceCode);
+      const crumbs: Readonly<{ label: string; href?: string }>[] = [
+        { label: route.workspaceName, ...(workspace ? { href: workspace.href } : {}) },
+        { label: route.label, href: route.href },
+        { label: entity.name, href: `/app/entity/${code}` },
+      ];
+      // The record page replaces this placeholder with the record's title (useRecordBreadcrumb).
+      if (segment && segment !== "manage") crumbs.push({ label: safeSegment(segment), href: `/app/entity/${code}/${segment}` });
+      return Object.freeze(crumbs);
+    }
+  }
   const workspaceLanding = navigation.workspaces.find(
     (item) => item.href === pathname,
   );
@@ -329,6 +350,9 @@ function byOrder<
 function cleanLabel(value: string | undefined): string | undefined {
   const result = value?.trim();
   return result ? result.slice(0, 100) : undefined;
+}
+function safeSegment(value: string): string {
+  try { return decodeURIComponent(value); } catch { return value; }
 }
 function humanizePathSegment(value: string): string {
   const decoded = decodeURIComponent(value).replace(/[-_]+/g, " ");

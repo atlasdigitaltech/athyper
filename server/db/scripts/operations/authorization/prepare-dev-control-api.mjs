@@ -59,6 +59,8 @@ DO $$ DECLARE f record; BEGIN
  END IF;
 END $$;
 ${controlPolicyRls("11111111-1111-4111-8111-111111111111")}
+${readFileSync(new URL("../../../ddl/planes/studio/metadata/22_product_human_review.sql", import.meta.url), "utf8")}
+${readFileSync(new URL("../../../ddl/planes/studio/control/14_publication_policy_replacement.sql", import.meta.url), "utf8")}
 COMMIT;`;
 try { execFileSync("docker", ["exec", "-i", "athyper-dev-db-1", "sh", "-c", 'exec psql -X -q -U "$POSTGRES_USER" -d athyper_studio -v ON_ERROR_STOP=1'],
   { input: sql, stdio: ["pipe", "pipe", "pipe"] }); } catch { throw Error("Control database provisioning failed; no SQL/credential output is emitted"); }

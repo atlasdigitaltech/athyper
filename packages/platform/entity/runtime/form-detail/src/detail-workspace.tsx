@@ -1,5 +1,5 @@
 "use client";
-import { EntityReferencePreviewProvider } from "./reference-preview";
+import { EntityReferencePreviewProvider, ReferenceOrigin } from "./reference-preview";
 import { EntityRecordFields } from "./record-fields";
 import { RegisteredEntitySection } from "./registered-renderers/entity-section-component";
 import { EntityRelatedSection } from "./related-entity-section";
@@ -20,7 +20,7 @@ import { localizeEntityLabels } from "@athyper/platform-i18n/entity-labels";
 import { DetailCollaboration } from "./detail-collaboration";
 import { EntityRecordHeader } from "./record-header";
 import { RecordSummaryPanel } from "./record/record-summary-panel";
-import { RecordModeNavigation, RecordSectionMenu } from "./record/record-navigation";
+import { MetadataIcon, RecordModeNavigation, RecordSectionMenu } from "./record/record-navigation";
 import {
   EntitySectionNavigation,
   useEntitySectionScroll,
@@ -177,7 +177,7 @@ export function MetadataDetailWorkspace({
     ),
   });
   return (
-    <EntityReferencePreviewProvider sourceKey={`${entityCode}:${record.id}`}><DetailCollaboration
+    <EntityReferencePreviewProvider sourceKey={`${entityCode}:${record.id}`}><ReferenceOrigin recordTitle={header.title}><DetailCollaboration
       entityCode={entityCode}
       recordId={record.id}
       recordTitle={header.title}
@@ -205,7 +205,7 @@ export function MetadataDetailWorkspace({
             sections.length > 1 ||
             summary ||
             collaboration.sections.length ? (
-              <div ref={navigation} className="a-metadata-detail__navigation">
+              <div ref={navigation} className="a-metadata-detail__navigation" data-section-menu={activeTab && activeTab.sectionKeys.length > 1 && tabs[tabs.length - 1]?.key === activeTab.key ? "joined" : undefined}>
                 {tabs.length > 0 ? (
                   <div
                     role="tablist"
@@ -262,14 +262,15 @@ export function MetadataDetailWorkspace({
                           });
                         }}
                       >
-                        {tab.label}
+                        <MetadataIcon role="record-tab" iconKey={tab.iconKey ?? tab.sectionKeys.map((key) => sections.find((section) => section.key === key)?.iconKey).find(Boolean)} />
+                        <span>{tab.label}</span>
                       </button>
                       </div>
                     ))}
                   </div>
                 ) : null}
                 {activeTab && activeTab.sectionKeys.length > 1 ? <RecordSectionMenu
-                  label={activeTab.label} compact active={!collaboration.full}
+                  label={activeTab.label} compact {...(activeTab.iconKey ? { iconKey: activeTab.iconKey } : {})} active={!collaboration.full}
                   sections={activeTab.sectionKeys.flatMap(key => sections.find(section => section.key === key) ?? [])}
                   activeSection={collaboration.full ? "" : selected?.key ?? ""}
                   onSelect={key => select(key, true, collaboration.full ? collaboration.showRecord : undefined)}
@@ -344,16 +345,16 @@ export function MetadataDetailWorkspace({
                     tabIndex={-1}
                     aria-labelledby={`${navigationId}-section-${section.key}`}
                   >
-                    <Card className="a-record-detail-content">
+                    <ReferenceOrigin sectionLabel={section.label}><Card className="a-record-detail-content">
                       <h2 id={`${navigationId}-section-${section.key}`}>
                         {section.label}
                       </h2>
-                      {section.relationshipKey ? <EntityRelatedSection ownerEntityCode={entityCode} ownerRecordId={record.id}
+                      {section.relationshipKey ? <EntityRelatedSection descriptor={descriptor} ownerRecordId={record.id}
                         canCreate={descriptor.relationshipCapabilities?.[section.relationshipKey]?.create ?? false}
-                        relationship={presentation.entityRelationships!.find(relation => relation.key === section.relationshipKey)!} /> :
+                        relationshipKey={section.relationshipKey} sectionLabel={section.label} {...(section.iconKey ? { sectionIconKey: section.iconKey } : {})} /> :
                         section.component ? <RegisteredEntitySection component={section.component} fields={section.fields} renderField={key => <EntityRecordFields descriptor={descriptor} record={record} fieldKeys={[key]} />} /> :
                         <EntityRecordFields descriptor={descriptor} record={record} fieldKeys={section.fields} />}
-                    </Card>
+                    </Card></ReferenceOrigin>
                   </section>
                 ),
               )}
@@ -368,6 +369,6 @@ export function MetadataDetailWorkspace({
           </div>
         </PageWorkspace>
       )}
-    /></EntityReferencePreviewProvider>
+    /></ReferenceOrigin></EntityReferencePreviewProvider>
   );
 }

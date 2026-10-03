@@ -112,15 +112,15 @@ test("Neon overlays preserve generated slugs and reject orphaned runtime module 
   const organization = neonCatalogRoutes
     .flatMap((workspace) => workspace.modules)
     .find((module) => module.code === "org");
-  assert.deepEqual(organization?.entities, [
-    { code: "currency", routeSlug: "currencies", name: "Currencies" },
-  ]);
+  // Placed by each entity's metadata (placement.json), not by the app overlay.
+  assert.deepEqual(organization?.entities.map((entity) => entity.code), ["country", "currency", "language", "locale", "timezone"]);
+  assert.equal(organization?.defaultEntityCode, "currency");
   assert.throws(
     () =>
       applyNeonEntityRoutes(
         PLATFORM_CATALOG_ROUTES.neon.map((w) => ({
           ...w,
-          modules: w.modules.filter((m) => m.code !== "bp"),
+          modules: w.modules.filter((m) => m.code !== "buy"),
         })),
       ),
     /absent catalog module/,

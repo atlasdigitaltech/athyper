@@ -128,6 +128,8 @@ export interface EntityListScopeCoordinateV1 {
   readonly parentEntityCode?: string;
   readonly parentRecordId?: string;
   readonly relationshipKey?: string;
+  /** Loaded parent publication pin; the server still derives and authorizes scope. */
+  readonly parentDescriptorHash?: string;
   readonly companyCodeIds?: readonly string[];
   readonly operatingOrganizationIds?: readonly string[];
   readonly partnerRole?: "supplier" | "customer";

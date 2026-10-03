@@ -1,4 +1,4 @@
-import { collaborationEntityTypes } from "./entity-coordinate.js";
+import { exactCollaborationEntityCoordinates, type CollaborationEntityCoordinates } from "./entity-coordinate.js";
 import { CollaborationError } from "./errors.js";
 import { MAX_COMMENT_THREAD_DEPTH } from "@athyper/contract-platform-rich-text";
 import { sql, type Transaction } from "kysely";
@@ -27,7 +27,8 @@ export function createKyselyPrincipalDirectory(): PrincipalDirectory {
     },
   };
 }
-export function createKyselyCollaborationRepository(): CollaborationRepository<CollaborationTransaction> {
+export function createKyselyCollaborationRepository(entityCoordinates: CollaborationEntityCoordinates = exactCollaborationEntityCoordinates): CollaborationRepository<CollaborationTransaction> {
+  const collaborationEntityTypes = entityCoordinates.entityTypes;
   return {
     async history(input, tx) {
       const owner = (await sql<{status:string;deleted_at:Date|string|null;deleted_by:string|null}>`SELECT status,deleted_at,deleted_by::text FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${input.commentId}::uuid AND commenter_id=${input.context.principalId}::uuid`.execute(tx)).rows[0];
@@ -82,7 +83,7 @@ export function createKyselyCollaborationRepository(): CollaborationRepository<C
           tx,
         );
       const comment = map(required(result.rows[0]));
-      await replaceRelations(command, comment.id, mentions, tx);
+      await replaceRelations(command, comment.id, mentions, tx, collaborationEntityTypes);
       return comment;
     },
     async edit(command, mentions, tx) {
@@ -102,7 +103,7 @@ export function createKyselyCollaborationRepository(): CollaborationRepository<C
         await sql<Row>`UPDATE document.comment SET comment_text=${command.text},content_format=${command.format ?? String(current["content_format"])},content_json=${command.content ? JSON.stringify(command.content) : null}::jsonb,content_html=${command.html ?? null},content_schema=${command.contentSchema ?? null},updated_at=clock_timestamp(),updated_by=${command.context.principalId}::uuid WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.commentId}::uuid RETURNING *`.execute(
           tx,
         );
-      const orphanedAttachmentIds=await replaceRelations(command, command.commentId, mentions, tx);
+      const orphanedAttachmentIds=await replaceRelations(command, command.commentId, mentions, tx, collaborationEntityTypes);
       return {comment:map(required(result.rows[0])),orphanedAttachmentIds,addedMentionIds};
     },
     async softDelete(tenantId, id, principalId, tx) {
@@ -192,6 +193,7 @@ async function replaceRelations(
   commentId: string,
   mentions: readonly string[],
   tx: CollaborationTransaction,
+  collaborationEntityTypes: CollaborationEntityCoordinates["entityTypes"],
 ) {
   const sourceCoordinates =
     "entityType" in command

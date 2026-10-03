@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import process from "node:process";
@@ -37,6 +37,7 @@ export async function verifyCoverage(options = {}) {
     if (actualText !== renderArtifact(expected)) errors.push("Generated inventory is stale; run ddl:coverage:generate");
     if (options.strict) errors.push(...await validateCoverage(actual, { root }));
     await verifyEvidenceReferences(actual, root, errors);
+    await verifyFeatureGateReferences(actual, root, errors);
   }
 
   if (errors.length) throw new Error(`DDL service coverage verification failed:\n- ${errors.join("\n- ")}`);
@@ -45,7 +46,38 @@ export async function verifyCoverage(options = {}) {
     classifiedAndOwned: actual.summary.classifiedAndOwned,
     coveragePercent: actual.summary.coveragePercent,
     reviewRequired: actual.summary.reviewRequired,
+    implementationEvidenceRecorded: actual.summary.implementationEvidenceRecorded,
+    testEvidenceRecorded: actual.summary.testEvidenceRecorded,
   };
+}
+
+/** Check the host's configuration declaration and composition consumer. This is
+ * source wiring evidence, not proof that a gate is enabled on a deployment. */
+export async function verifyFeatureGateReferences(artifact, root, errors) {
+  const gates = [...new Set(artifact.rows.map(row => row.featureGate).filter(Boolean))];
+  if (!gates.length) return;
+  const configPath = resolve(root, "server/apps/platform-host/src/config/environment.ts");
+  const configuration = await readFile(configPath, "utf8");
+  const bindings = new Map([...configuration.matchAll(/\b(\w+)\s*:\s*read(?:Boolean|Choice)\(\s*"([A-Z][A-Z0-9_]+)"/g)]
+    .map(match => [match[2], match[1]]));
+  const composition = await compositionSource(resolve(root, "server/apps/platform-host/src/composition"));
+  for (const gate of gates) {
+    const binding = bindings.get(gate);
+    if (!binding) errors.push(`featureGate ${gate} has no host configuration declaration`);
+    else if (!new RegExp(`\\b${binding}\\b`).test(composition)) errors.push(`featureGate ${gate} has no host composition consumer (${binding})`);
+  }
+}
+
+async function compositionSource(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const sources = await Promise.all(entries.map(async entry => {
+    if (entry.name === "__tests__") return "";
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) return compositionSource(path);
+    if (!entry.name.endsWith(".ts") || /\.(test|spec)\.ts$/.test(entry.name)) return "";
+    return readFile(path, "utf8");
+  }));
+  return sources.join("\n");
 }
 
 export async function verifyEvidenceReferences(artifact, root, errors) {
@@ -73,6 +105,7 @@ async function main() {
     const strict = process.argv.includes("--strict");
     const result = await verifyCoverage({ strict });
   console.log(`Verified ${result.rows} physical DDL tables; ownership coverage ${result.coveragePercent}% (${result.classifiedAndOwned}/${result.rows}); ${result.reviewRequired} remain provisional.`);
+  console.log(`Recorded implementation references: ${result.implementationEvidenceRecorded}; test references: ${result.testEvidenceRecorded}. Reference presence is not executed qualification.`);
   } catch (error) {
     const lines = String(error.stack ?? error.message).split("\n");
     console.error(lines.slice(0, 102).join("\n"));

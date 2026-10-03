@@ -59,9 +59,10 @@ test('link rejects unsafe URLs and cancels without changing the draft',async({pa
 for (const activation of ['pointer','keyboard']) test(`attachment picker cancellation does not reopen tooltip (${activation})`,async({page})=>{
   await page.goto('about:blank');await page.setContent('<div id="root"></div>');await page.evaluate(bundle);
   const button=page.getByRole('button',{name:'Attach files to comment'});
+  await page.bringToFront();
   await button.focus();await expect(page.getByRole('tooltip')).toHaveText('Attach files');
   const chooser=page.waitForEvent('filechooser');
-  if(activation==='keyboard')await page.keyboard.press('Enter');else await button.click();
+  if(activation==='keyboard')await button.press('Enter');else await button.click();
   await chooser;
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   // Model native dialog blur, Cancel, and automatic focus restoration.
@@ -86,6 +87,7 @@ for (const activation of ['pointer','keyboard']) test(`mention selection closes 
   await expect.poll(()=>page.evaluate(()=>(window as any).pendingSearches.length)).toBe(1);
   await page.evaluate(()=>(window as any).pendingSearches[0]([{id:'ann',displayName:'Ann'}]));
   const option=page.getByRole('option',{name:'Ann',exact:true});
+  await expect(option).toBeVisible();
   if(activation==='keyboard'){await query.focus();await query.press('ArrowDown');await query.press('Enter');}else await option.click();
   await expect(page.locator('details.a-rich-comment-composer__mentions')).not.toHaveAttribute('open','');
   await expect(query).toBeHidden();

@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "result": {
+    "id": "3fb88024-bc55-491a-b9a3-a569f80b9e8a",
+    "version": 1,
+    "hash": "ad2aad6886eeff63ba9384bbba7ebc0122b2ef1f9cb43459e2ab8faa5ad9ffa3",
+    "status": "pending_approval"
+  }
+}

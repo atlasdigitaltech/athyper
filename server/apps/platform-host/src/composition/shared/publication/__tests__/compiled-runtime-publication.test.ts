@@ -147,7 +147,7 @@ it("rechecks recovery at every phase and binds its approval into the qualificati
 });
 it("keeps the host adapter product-free with an explicit import boundary", () => {
   const source = readFileSync(new URL("../compiled-runtime.ts", import.meta.url), "utf8");
-  const allowed = new Set(["@athyper/server-platform-ai", "@athyper/server-adapter-publication-signing", "kysely", "@athyper/server-contract-meta-entity-authoring", "@athyper/server-contract-publication", "@athyper/server-plane-studio-meta-entity-authoring", "@athyper/server-service-publication", "./target-qualification.js", "./workload-configuration.js", "./compiler-build.js", "./successor-targets.js", "./compilation-recovery-authority.js"]);
+  const allowed = new Set(["./human-publication-policy.js", "@athyper/server-platform-ai", "@athyper/server-adapter-publication-signing", "kysely", "@athyper/server-contract-meta-entity-authoring", "@athyper/server-contract-publication", "@athyper/server-plane-studio-meta-entity-authoring", "@athyper/server-service-publication", "./target-qualification.js", "./workload-configuration.js", "./compiler-build.js", "./successor-targets.js", "./compilation-recovery-authority.js"]);
   for (const node of ts.createSourceFile("adapter.ts", source, ts.ScriptTarget.Latest, true).statements)
     if (ts.isImportDeclaration(node)) expect(allowed.has((node.moduleSpecifier as ts.StringLiteral).text)).toBe(true);
   expect(source).not.toMatch(/country|currency|business_partner/);

@@ -1,0 +1,9 @@
+{
+  "schema": "athyper.coordinated-policy-activation/1",
+  "activatedAt": "2026-10-02T21:06:52.643Z",
+  "actor": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+  "id": "06ce6433-5128-48ed-8228-5533b9386bf5",
+  "version": 1,
+  "hash": "c57a426b7a1764020969df89db5df91f46a5c4574e1cf04477fb2c936aad2e44",
+  "status": "active"
+}

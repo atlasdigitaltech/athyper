@@ -1,0 +1,13 @@
+{
+  "schema": "athyper.entity-placement/1",
+  "entityCode": "employee",
+  "name": "Employees",
+  "placements": [
+    {
+      "plane": "neon",
+      "workspace": "ppl",
+      "module": "hr",
+      "routeSlug": "employees"
+    }
+  ]
+}

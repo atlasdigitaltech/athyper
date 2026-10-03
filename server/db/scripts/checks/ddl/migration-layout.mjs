@@ -148,6 +148,26 @@ for (const line of equivalents) {
   if (!existsSync(safePath(`ddl/${sentinel}`)))
     errors.push(`Missing foundation sentinel: ${sentinel}`);
 }
+// Preserve installed bytes while requiring transaction ownership for every active upgrade.
+const runnerTransactions = new Map();
+for (const line of readFileSync(resolve(root, "migrations/manifests/runner-transactions.sha256"), "utf8").split(/\r?\n/u).filter(Boolean)) {
+  const [hash, name, ...extra] = line.trim().split(/\s+/u);
+  if (extra.length || !/^[a-f0-9]{64}$/u.test(hash ?? "") || !/^[A-Za-z0-9_.-]+\.sql$/u.test(name ?? "") || runnerTransactions.has(name))
+    errors.push(`Malformed or duplicate runner transaction: ${line}`);
+  else runnerTransactions.set(name, hash);
+}
+for (const [path] of manifested) {
+  const name = path.slice("migrations/".length);
+  const sql = readFileSync(safePath(path), "utf8");
+  const statements = sql.replace(/^\s*--[^\n]*/gmu, "").trim();
+  const wrapped = /^BEGIN\s*;/iu.test(statements) && /\bCOMMIT\s*;$/iu.test(statements);
+  const hash = runnerTransactions.get(name);
+  if (!wrapped && !hash) errors.push(`Unwrapped active migration needs runner transaction: ${name}`);
+  if (hash && (wrapped || hash !== active.get(path)?.sha256)) errors.push(`Runner transaction checksum or wrapper mismatch: ${name}`);
+}
+for (const name of runnerTransactions.keys()) {
+  if (!manifested.has(`migrations/${name}`)) errors.push(`Runner transaction is not an active upgrade: ${name}`);
+}
 if (errors.length) throw new Error(errors.join("\n"));
 console.log(
   `Migration layout verified: ${inventory.entries.length} classified files, ${active.size} retained SQL files.`,

@@ -169,3 +169,15 @@ test("missing scan roots do not throw", () => {
     [],
   );
 });
+
+test("work-content labels and values take font-size only from the density text roles", () => {
+  const root = fixture({
+    "packages/ui/src/record.css":
+      ".a-record-detail-fields dd{font-size:var(--a-font-size-body)}.a-entity-list__table td{font-size:var(--a-density-data-font-size)}" +
+      ".a-form-field>.a-label{font-size:var(--a-density-label-font-size)}.a-data-surface__field>label{font-size:var(--a-font-size-sm)}" +
+      ".a-data-surface__field>p{font-size:var(--a-font-size-sm)}",
+  });
+  const hits = named(root, "work-content-text-role").map((finding) => finding.match);
+  // Help text (the <p>) is not a role target; the two non-role sizes are.
+  assert.deepEqual(hits, ["font-size:var(--a-font-size-body)", "font-size:var(--a-font-size-sm)"]);
+});

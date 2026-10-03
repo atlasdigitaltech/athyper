@@ -33,8 +33,10 @@ CREATE POLICY tenant_read ON onboarding.onboarding_case
 DROP POLICY IF EXISTS case_write ON onboarding.onboarding_case;
 CREATE POLICY case_write ON onboarding.onboarding_case
     FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
 
 DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_target;
 CREATE POLICY tenant_read ON onboarding.onboarding_case_target
@@ -44,8 +46,10 @@ CREATE POLICY tenant_read ON onboarding.onboarding_case_target
 DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_target;
 CREATE POLICY tenant_rw ON onboarding.onboarding_case_target
     FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
 
 DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_step;
 CREATE POLICY tenant_read ON onboarding.onboarding_case_step
@@ -55,8 +59,10 @@ CREATE POLICY tenant_read ON onboarding.onboarding_case_step
 DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_step;
 CREATE POLICY tenant_rw ON onboarding.onboarding_case_step
     FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
 
 DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_step_dependency;
 CREATE POLICY tenant_read ON onboarding.onboarding_step_dependency
@@ -66,8 +72,10 @@ CREATE POLICY tenant_read ON onboarding.onboarding_step_dependency
 DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_step_dependency;
 CREATE POLICY tenant_rw ON onboarding.onboarding_step_dependency
     FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
 
 DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_check;
 CREATE POLICY tenant_read ON onboarding.onboarding_case_check
@@ -77,8 +85,10 @@ CREATE POLICY tenant_read ON onboarding.onboarding_case_check
 DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_check;
 CREATE POLICY tenant_rw ON onboarding.onboarding_case_check
     FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
 
 DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_resource;
 CREATE POLICY tenant_read ON onboarding.onboarding_case_resource
@@ -88,8 +98,10 @@ CREATE POLICY tenant_read ON onboarding.onboarding_case_resource
 DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_resource;
 CREATE POLICY tenant_rw ON onboarding.onboarding_case_resource
     FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
 
 DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_compilation_decision;
 CREATE POLICY tenant_read ON onboarding.onboarding_compilation_decision
@@ -99,8 +111,10 @@ CREATE POLICY tenant_read ON onboarding.onboarding_compilation_decision
 DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_compilation_decision;
 CREATE POLICY tenant_rw ON onboarding.onboarding_compilation_decision
     FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
 
 DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_revision;
 CREATE POLICY tenant_read ON onboarding.onboarding_case_revision
@@ -110,8 +124,10 @@ CREATE POLICY tenant_read ON onboarding.onboarding_case_revision
 DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_revision;
 CREATE POLICY tenant_rw ON onboarding.onboarding_case_revision
     FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
 
 DROP POLICY IF EXISTS tenant_read ON onboarding.onboarding_case_work_item;
 CREATE POLICY tenant_read ON onboarding.onboarding_case_work_item
@@ -121,43 +137,23 @@ CREATE POLICY tenant_read ON onboarding.onboarding_case_work_item
 DROP POLICY IF EXISTS tenant_rw ON onboarding.onboarding_case_work_item;
 CREATE POLICY tenant_rw ON onboarding.onboarding_case_work_item
     FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
+    USING (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+           AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (nullif(current_setting('app.current_onboarding_access_token', true), '') IS NULL
+                AND tenant_id = shared.current_tenant_id_soft());
 
--- Service/admin roles remain fully available for orchestration.
-DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_onboarding_service') THEN
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_case;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_case
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_case_target;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_case_target
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_case_step;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_case_step
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_step_dependency;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_step_dependency
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_case_check;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_case_check
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_case_resource;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_case_resource
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_compilation_decision;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_compilation_decision
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_case_revision;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_case_revision
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_case_work_item;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_case_work_item
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-        DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.onboarding_case_guest_access;
-        CREATE POLICY onboarding_service_admin ON onboarding.onboarding_case_guest_access
-            FOR ALL TO athyper_onboarding_service USING (true) WITH CHECK (true);
-    END IF;
+-- Retire the former cross-tenant service policies on upgrades as well as foundations.
+DO $$
+DECLARE relation_name text;
+BEGIN
+    FOREACH relation_name IN ARRAY ARRAY[
+        'onboarding_case','onboarding_case_target','onboarding_case_step',
+        'onboarding_step_dependency','onboarding_case_check','onboarding_case_resource',
+        'onboarding_compilation_decision','onboarding_case_revision',
+        'onboarding_case_work_item','onboarding_case_guest_access'
+    ] LOOP
+        EXECUTE format('DROP POLICY IF EXISTS onboarding_service_admin ON onboarding.%I', relation_name);
+    END LOOP;
 END $$;
 
 DO $$ BEGIN

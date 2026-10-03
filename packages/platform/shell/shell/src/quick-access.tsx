@@ -253,6 +253,11 @@ function QuickAccessEmpty({ variant, filtered, recentKind, onShowRecent, onShowP
   </>}/>;
 }
 
+/** Recent visits for one plane, tenant and account (browser-local, newest first). */
+export function readQuickAccessRecent(plane: string, tenantId: string, accountScope: string): readonly ShellQuickAccessItem[] {
+  return readStore(quickAccessStorageKey(plane, tenantId, accountScope)).recent;
+}
+
 export function quickAccessStorageKey(plane: string, tenantId: string, accountScope: string): string {
   return `athyper.shell.quick-access.v2:${hashScope(JSON.stringify([plane, tenantId, accountScope]))}`;
 }
@@ -269,10 +274,12 @@ export function useRememberQuickAccessVisit(plane: string, tenantId: string, acc
   const pathname = path.split(/[?#]/)[0]!;
   const resolvedLabel = resolvedRecord?.pathname === pathname ? resolvedRecord.label : undefined;
   useEffect(() => {
-    const visit = `${key}:${pathname}`;
-    if (!enabled || previous.current === visit || !canAccessRoute(navigation, pathname)) return;
+    if (!enabled || !canAccessRoute(navigation, pathname)) return;
     const item = currentQuickAccessItem(pathname, navigation, resolvedLabel);
     if (!item) return;
+    // A record's title can resolve after the visit; the later label replaces the entry.
+    const visit = `${key}:${pathname}:${item.label}`;
+    if (previous.current === visit) return;
     previous.current = visit;
     writeStore(key, rememberVisit(readStore(key), item));
   }, [key, pathname, navigation, enabled, resolvedLabel]);
@@ -285,6 +292,9 @@ function currentQuickAccessItem(path: string, navigation: DerivedShellNavigation
   const last = suffix.at(-1);
   const decoded = last ? safeDecode(last) : undefined;
   const usefulDetail = resolvedLabel ?? (decoded && !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(decoded) ? humanize(decoded) : undefined);
+  // A record known only by an opaque id waits for its resolved title; it is never
+  // remembered under the module's name.
+  if (suffix.length && !usefulDetail) return undefined;
   return {
     id: path,
     href: path,

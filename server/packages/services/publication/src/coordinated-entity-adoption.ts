@@ -1,4 +1,5 @@
 import {sql, type Kysely} from 'kysely';
+import {compiledPublicationTenant} from '@athyper/server-contract-publication';
 import type {PublicationArtifactLoader, PublicationDeploymentBundle, LocalProjectionRepository, LoadedPublicationArtifact} from '@athyper/server-contract-publication';
 import {KyselyLocalProjectionRepository} from './kysely-local-projection-repository.js';
 import {planEntityAdoption, checkEntityAdoptionHeads, type EntityAdoptionPlanInput, type AdoptionMember} from './entity-adoption-plan.js';
@@ -89,4 +90,93 @@ export function entityAdoptionTransaction(database: Kysely<Record<string,never>>
         await sql`SELECT pg_advisory_xact_lock(hashtextextended(${key},0))`.execute(transaction);
     },
   }));
+}
+
+export interface ProductActivationGroup {
+  /** Digest of the independently enrolled source/target plan, before signing.
+   * Each signed member must carry this same digest in its manifest evidence. */
+  readonly coordinationHash: string;
+  readonly plane: 'studio' | 'neon' | 'mesh';
+  readonly environment: string;
+  readonly instance: string;
+  readonly members: readonly {
+    readonly entityCode: string;
+    readonly deployment: PublicationDeploymentBundle;
+    readonly expectedActiveHash: string | null;
+  }[];
+}
+export interface ProductActivationGroupPorts {
+  readonly loader: PublicationArtifactLoader;
+  authorize(group: ProductActivationGroup): Promise<void>;
+  transaction: CoordinatedAdoptionPorts['transaction'];
+  /** Validates the complete prospective set against existing dependencies and
+   * target storage in this transaction. Cannot merely skip missing dependencies. */
+  qualify(group: ProductActivationGroup, artifacts: readonly LoadedPublicationArtifact[], tx: AdoptionTransaction): Promise<void>;
+  invalidate(group: ProductActivationGroup): Promise<void>;
+}
+
+/** Generalizes the existing transactional pair mechanism to product entities
+ * with mutual dependencies. Atomicity is per target database, never cross-plane.
+ * Uncoordinated signed artifacts cannot opt into this path at execution time. */
+export async function activateProductGroup(input: ProductActivationGroup, ports: ProductActivationGroupPorts) {
+  const group = structuredClone(input), hash = /^[a-f0-9]{64}$/;
+  requireAdoption(hash.test(group.coordinationHash) && ['studio','neon','mesh'].includes(group.plane)
+    && !!group.environment && !!group.instance && Array.isArray(group.members) && group.members.length > 0,
+  'PRODUCT_GROUP_INVALID');
+  const keys = group.members.map(m => m.deployment.publicationKey);
+  requireAdoption(new Set(keys).size === keys.length
+    && new Set(group.members.map(m => m.entityCode)).size === keys.length
+    && new Set(group.members.map(m => m.deployment.deploymentId)).size === keys.length, 'PRODUCT_GROUP_DUPLICATE_MEMBER');
+  for (const member of group.members) {
+    const d = member.deployment;
+    requireAdoption(/^[a-z][a-z0-9_]{0,62}$/.test(member.entityCode)
+      && [ `metadata.entity.${member.entityCode}`, `metadata.reference.${member.entityCode}` ].includes(d.publicationKey)
+      && d.targetPlane === group.plane && d.targetEnvironment === group.environment && d.targetInstance === group.instance
+      && hash.test(d.artifactHash) && (member.expectedActiveHash === null || hash.test(member.expectedActiveHash))
+      && member.expectedActiveHash !== d.artifactHash, 'PRODUCT_GROUP_MEMBER_INVALID');
+  }
+  await ports.authorize(structuredClone(group));
+  const loaded = await Promise.all(group.members.map(m => ports.loader.load(structuredClone(m.deployment))));
+  for (let i=0; i<loaded.length; i++) {
+    const artifact = loaded[i]!, member = group.members[i]!, d = member.deployment, e = artifact.document.envelope;
+    requireAdoption(artifact.computedArtifactHash === d.artifactHash && e.publicationKey === d.publicationKey
+      && e.releaseId === d.sourceReleaseId && e.releaseNo === d.sourceReleaseNo && e.targetPlane === group.plane
+      && e.artifactKind === 'compiled_entity_runtime' && compiledPublicationTenant(e.publicationKey, e.payload) === null
+      && e.payload.entityCode === member.entityCode
+      && artifact.verification.signatureVerified && artifact.verification.manifestValid
+      && artifact.verification.runtimeCompatible && artifact.verification.targetPlane === group.plane,
+    'PRODUCT_GROUP_ARTIFACT_MISMATCH');
+    requireAdoption(artifact.document.manifest.evidence?.['coordinationHash'] === group.coordinationHash,
+      'PRODUCT_GROUP_SIGNED_COORDINATION_REQUIRED');
+  }
+  const result = await ports.transaction(async tx => {
+    await tx.lock([...keys].sort());
+    await ports.authorize(structuredClone(group));
+    const active = await Promise.all(keys.map(key => tx.repository.findActive(key)));
+    const complete = active.every((head, i) => head?.artifactHash === group.members[i]!.deployment.artifactHash
+      && head.sourceReleaseId === group.members[i]!.deployment.sourceReleaseId
+      && head.sourceReleaseNo === group.members[i]!.deployment.sourceReleaseNo);
+    if (complete) {
+      await ports.qualify(structuredClone(group), structuredClone(loaded), tx);
+      return { appliedReleaseIds: active.map(head => head!.id), replayed: true };
+    }
+    requireAdoption(active.every((head, i) => (head?.artifactHash ?? null) === group.members[i]!.expectedActiveHash),
+      'PRODUCT_GROUP_HEAD_CHANGED');
+    const staged = [];
+    for (let i=0; i<loaded.length; i++) {
+      const artifact = loaded[i]!;
+      const row = await tx.repository.stage({ deployment: group.members[i]!.deployment, artifact: artifact.document });
+      const verified = await tx.repository.verify({ appliedReleaseId: row.id, computedArtifactHash: artifact.computedArtifactHash,
+        evidence: artifact.verification });
+      requireAdoption(verified.status === 'verified', 'PRODUCT_GROUP_VERIFICATION_FAILED');
+      staged.push(verified);
+    }
+    await ports.qualify(structuredClone(group), structuredClone(loaded), tx);
+    await ports.authorize(structuredClone(group));
+    for (const row of staged) await tx.repository.activate({ appliedReleaseId: row.id,
+      evidence: { coordinationHash: group.coordinationHash, members: keys } });
+    return { appliedReleaseIds: staged.map(row => row.id), replayed: false };
+  });
+  await ports.invalidate(structuredClone(group));
+  return result;
 }

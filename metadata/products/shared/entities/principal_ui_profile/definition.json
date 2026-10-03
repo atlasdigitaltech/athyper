@@ -533,6 +533,16 @@
         "title": "UI Profiles",
         "isDefault": true,
         "layoutConfig": {
+          "localizedLabels": {
+            "entity": {
+              "labelKey": "entity.principal_ui_profile.label",
+              "defaultText": "UI profile"
+            },
+            "title": {
+              "labelKey": "entity.principal_ui_profile.title",
+              "defaultText": "UI profiles"
+            }
+          },
           "identityField": "id",
           "defaultState": {
             "sort": [
@@ -1080,7 +1090,39 @@
         "position": 8,
         "labelOverride": "Week starts on",
         "displayConfig": {
-          "defaultVisible": true
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "0",
+                "label": "Sunday"
+              },
+              {
+                "value": "1",
+                "label": "Monday"
+              },
+              {
+                "value": "2",
+                "label": "Tuesday"
+              },
+              {
+                "value": "3",
+                "label": "Wednesday"
+              },
+              {
+                "value": "4",
+                "label": "Thursday"
+              },
+              {
+                "value": "5",
+                "label": "Friday"
+              },
+              {
+                "value": "6",
+                "label": "Saturday"
+              }
+            ]
+          }
         }
       },
       {
@@ -1288,7 +1330,39 @@
         "position": 8,
         "labelOverride": "Week starts on",
         "displayConfig": {
-          "defaultVisible": true
+          "defaultVisible": true,
+          "lookup": {
+            "options": [
+              {
+                "value": "0",
+                "label": "Sunday"
+              },
+              {
+                "value": "1",
+                "label": "Monday"
+              },
+              {
+                "value": "2",
+                "label": "Tuesday"
+              },
+              {
+                "value": "3",
+                "label": "Wednesday"
+              },
+              {
+                "value": "4",
+                "label": "Thursday"
+              },
+              {
+                "value": "5",
+                "label": "Friday"
+              },
+              {
+                "value": "6",
+                "label": "Saturday"
+              }
+            ]
+          }
         }
       },
       {

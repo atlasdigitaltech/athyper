@@ -377,7 +377,7 @@ export function AtlasWorkspace({
         ) : null}
         <div className="athyper-atlas-workspace__conversation">
           {atlas.automaticBriefsAvailable &&
-          atlas.businessContext?.entityCode === "business_partner" ? (
+          atlas.businessContext ? (
             <div aria-label="Brief controls">
               <label>
                 <input

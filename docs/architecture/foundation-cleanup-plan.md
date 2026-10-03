@@ -262,6 +262,9 @@ both diagnostics and a captured packet, only the packet's actual contents receiv
 | E22 | [A22](#a22) | Working-tree attempt preservation: 4 tests plus 3 preparation tests | unrecorded acceptance pin; implementation-diagnostic only |
 | E23 | [A23](#a23) | Working-tree publication conflict classification: 46 targeted tests | unrecorded new qualification pin; does not replace E20 |
 | E24 | [A24](#a24) | Recorded owner target decision; inspected support matrices; 104 local tests | Owner decision 2026-10-02; unrecorded new source qualification pin |
+| E25 | [A25](#a25), [audit follow-up](../reports/architecture-audit-followup-20261002.md) | Executed docs reproduction/fix, ownership metrics, generic relationship pins and reader concurrency checks; nonempty admin/self/denied DEV journeys; failed model receipts | Private architecture-audit/2026-10-02-followup packet carries candidate identity/results; mounted DEV source is not immutable deployment support; independent fixtures/agreement absent |
+| E26 | [A26](#a26), [audit follow-up](../reports/architecture-audit-followup-20261002.md#follow-up-successful-reference-citations-and-serving-admission) | Country field model/tool citation and deterministic summary citation passed; Principal explicit-support admission blocker isolated | Private atlas-acceptance/2026-10-02/runtime-evidence.json retains actual model/tool records and hashes; independent custody and Principal deployment support remain pending |
+| E27 | [A27](#a27), [qualification writer](../../server/packages/platform/metadata/src/entity-support-qualification.ts) | Shared qualification orchestration and explicit host registration implemented; 80 source tests and both owning package typechecks passed; local source deployment IDs installed and authenticated descriptor readback passed | Dedicated custody authentication/storage/atomic authority and actual registered owner probes remain unconfigured; no deployed support receipt or independent acceptance pass |
 | ED | §§4.1, 4.2, 9 and 11 | Documentary disposition or recorded owner authority only | No runtime pin applicable; does not prove execution or deployment |
 
 #### Deliverable rollups
@@ -286,8 +289,10 @@ All deliverable owners remain unassigned. Evidence IDs resolve to the register a
 The evidence column identifies existing progress, **not proof of the unmet criterion**. All rows
 remain non-terminal. `unassigned` means an accepted owner is still missing. T04 and T06 retain the
 explicit custodian assignments; T05 records the required participants without inventing an accepted
-rules author. Custodians must both differ from the correction proposer and evaluation reviewer;
-those latter two roles also require distinct eligible principals. No fabricated questions, identity,
+rules author. The project owner's 2026-10-02 assignment pairs fixture author/candidate proposer
+under catl.admin and fixture reviewer/publisher/evaluation reviewer under catl.owner. These two
+principals must differ; maker/checker crossover remains forbidden. This supersedes the historical
+four-principal requirement. No fabricated questions, identity,
 review, agreement or successful retry may substitute for independent acceptance.
 
 | Item | State | Item-specific closure criterion | Evidence | Owner | Blocked by |
@@ -298,7 +303,7 @@ review, agreement or successful retry may substitute for independent acceptance.
 | T04 | OPEN | D3: independently author held-out correction/preservation/safety questions with exact capabilities and bounded arguments; not authored | E13, E16, E22 | catl.admin (assigned author) | none |
 | T05 | OPEN | D3: author and record predeclared repetitions, nondeterminism, safety thresholds and attempt rules agreed with catl.admin/catl.owner before acceptance; not authored | E13, E16, E22 | unassigned (custodian agreement required) | none |
 | T06 | OPEN | D3: authenticated independent review/publication, recorded authorship and single-author history with required role separation; account existence is insufficient | E13, E22 | catl.owner (assigned approver) | T04–T05; authenticated session/action authorization |
-| T07 | OPEN | D3: bind candidate/source/fixture/evaluator/artifact to activated release; concurrent edits, stale-source publication and rejected approval exercised | E12, E22 | unassigned | T06; relevant D4 |
+| T07 | OPEN | D3: bind candidate/source/fixture/evaluator/artifact to activated release; concurrent edits, stale-source publication and rejected approval exercised | E12, E22 | catl.admin (proposer), catl.owner (evaluation reviewer) | T06; relevant D4 |
 | T08 | OPEN | D3: retain every semantic/runtime attempt and pass runtime readback, denial, stale/revocation/replay and disclosure cases against the same approved release | E12, E22 | unassigned | T05–T07; relevant D5 |
 | T09 | IN PROGRESS | D4: pinned exact-retry/idempotency receipts on relevant publication and recovery paths | E20 | unassigned | none |
 | T10 | IMPLEMENTED | D4: qualify permanent/conflict/transient classification including E23 repairs in a reproducible packet | E20, E23 | unassigned | none |
@@ -308,15 +313,15 @@ review, agreement or successful retry may substitute for independent acceptance.
 | T14 | OPEN | D4: partial-plane recovery reaches authenticated serving state; preserve per-plane receipts and explicit non-atomic recovery behavior | E20 | unassigned | Serving qualification; T18 |
 | T15 | IN PROGRESS | D4: qualify required schema upgrades on relevant supported baseline with source/baseline/target/per-plane positive and negative evidence | E19–E20 | unassigned | T27–T28 |
 | T16 | IN PROGRESS | D5: answer seven registry contract questions; qualify owner dependencies, historical manifests and conformance authority while preserving historical interpretation | E14, E20–E21 | unassigned | none |
-| T17 | OPEN | D5: nonempty self/admin/denied parent-scoped rows/counts/groups/search/IDs/export and Atlas answers; substitutions, cursor/stale/revoked access and background/transaction refresh guarantees | E15, E20, E24 | unassigned | Authorized actors and nonempty data; T18–T20 |
-| T18 | OPEN | D5: authenticated qualification writer, immutable receipt retention/permissions and authorized mutable pointers/serving-target authority; no fabricated support receipt | E18, E20 | unassigned | Deployment custody |
+| T17 | OPEN | D5: nonempty self/admin/denied parent-scoped rows/counts/groups/search/IDs/export and Atlas answers; substitutions, cursor/stale/revoked access and background/transaction refresh guarantees | E15, E20, E24–E25 | unassigned | Remaining model-answer, revoke/refresh and serving evidence; T18–T20 |
+| T18 | IN PROGRESS | D5: authenticated qualification writer, immutable receipt retention/permissions and authorized mutable pointers/serving-target authority; no fabricated support receipt | E18, E20, E27 | unassigned | Orchestration/host registration implemented; dedicated deployed custody, owner probes, retention and authority acceptance remain |
 | T19 | OPEN | D5: production build and actual serving deployment/configuration/adapter identity bound to receipts and readback; DEV compiler identity alone insufficient | E20–E21 | unassigned | Production identity and serving evidence |
 | T20 | IN PROGRESS | D5: qualify shared evaluator at startup/activation/configuration change/admission; removal/mixed versions/expiry invalidate support, required blocks and optional disappears | E20–E21 | unassigned | T18–T19 |
 | T21 | OPEN | D5: complete authorized tenant inventory and policy-table consumption; support evidence never replaces request authorization | E20–E21 | unassigned | Authorized inventory/serving evidence |
 | T22 | IMPLEMENTED | D5: retain pinned definition.ai authority, permitted edit paths and round-trip qualification; schema changes only for demonstrated governance gap | E20 | unassigned | none |
 | T23 | IN PROGRESS | D5: requalify installed manifest/plane/input/result compatibility repairs for required and optional declarations against the selected source/serving targets | E21 | unassigned | T18–T20 |
 | T24 | IMPLEMENTED | D6: preserve approved Principal-family target and Employee/BP comparison matrices; revalidate selected capability support before extension | E24 | unassigned | Relevant D5 |
-| T25 | OPEN | D6: qualify Principal-family standard list/detail/runtime and nonempty embedded relationships, including summary/field explanation/export/Atlas; Profile AI/PII requires separate declared admission | E15, E24 | unassigned | T17; relevant D5; D7 if schema gap |
+| T25 | OPEN | D6: qualify Principal-family standard list/detail/runtime and nonempty embedded relationships, including summary/field explanation/export/Atlas; Profile AI/PII requires separate declared admission | E15, E24–E25 | unassigned | T17; relevant D5; D7 if schema gap |
 | T26 | OPEN | D6: migrate remaining bp_* consumers through registered capabilities with historical IDs/results and current authorization; declared semantics replace name/regex assumptions; reviewed scanner exceptions | E24 | unassigned | Relevant D5; demonstrated scope under D6 |
 | T27 | OPEN | D7: declare complete supported baseline matrix and resolve historical/DEV/QA starting schemas; reconstructed baselines are not substitutes | E19 | unassigned | none |
 | T28 | IN PROGRESS | D7: rehearse all declared paths on populated disposable databases with nonempty relevant Profile/identity fixtures, preserved data/retries and pinned per-plane receipts; no foundation DDL replay on populated DBs | E19–E20 | unassigned | T27 |
@@ -756,6 +761,9 @@ A21–A24 diagnostics do not supersede A20's pinned packet or qualify A15's serv
 | [A22](#a22) | 22. D3 runtime attempt preservation — 2026-10-02 |
 | [A23](#a23) | 23. D4 publication conflict classification — 2026-10-02 |
 | [A24](#a24) | 24. D6 target decision, support matrices and D9/D10 admission — 2026-10-02 |
+| [A25](#a25) | 25. Architecture audit correction and Principal nonempty diagnostics — 2026-10-02 |
+| [A26](#a26) | 26. Country citations and Principal serving-admission diagnosis — 2026-10-02 |
+| [A27](#a27) | 27. Qualification writer and local deployment identity — 2026-10-02 |
 
 Historical static-policy counts are preserved per run: A16 reports 29/21 then 31/19 across
 50 checks; A16-D8 adds `policy:i18n` to the profile and reports 34/17 across 51 checks, with
@@ -933,12 +941,16 @@ hash/count; it explicitly says `prepared-only` and `independence: not-attested`.
 The tool does not contact DEV, publish, approve, create principals, or certify independence.
 A real designated author must supply the held-out questions and save the graph through existing
 Entity authoring under their own identity. A distinct approver reviews and publishes it. Both
-custodians must differ from the correction proposer and evaluation reviewer; the provider additionally
-requires single-author saved history. No account or human approval may be fabricated to close D3.
+custodians were originally required to differ from the correction proposer and evaluation reviewer;
+that four-principal rule is superseded by the project owner's 2026-10-02 paired assignment below.
+The provider additionally requires single-author saved history. No account or human approval may
+be fabricated to close D3.
 **Custodians assigned by the project owner (2026-10-01):** `catl.admin` is the benchmark
 author; `catl.owner` is the independent approver. Both are active, distinct Studio principals in
 the Cirrus tenant, verified by read-only DEV inspection. The correction proposer and evaluation
-reviewer must be two other eligible principals under the current receipt separation rules.
+reviewer were originally required to be two other eligible principals. The project owner's
+2026-10-02 instruction now assigns candidate proposal to catl.admin and evaluation review to
+catl.owner, retaining separation between the two principals.
 
 Access check: the existing `catl.admin` Studio session matched its principal and tenant, had elevated
 assurance, and read the learning inbox with HTTP 200. The saved `catl.owner` Studio session did not
@@ -2006,3 +2018,120 @@ with the listed source test paths. These are fresh implementation diagnostics,
 not a captured reproducible qualification packet. They do not supersede §20's
 pinned packet, revalidate §15's deployment, or close D3/D5 acceptance. No live
 publication, model/browser journey or deployment change was performed.
+
+
+<a id="a25"></a>
+
+## A25. Historical — 25. Architecture audit correction and Principal nonempty diagnostics — 2026-10-02
+
+The owner authorized the recommended order: correct audit wording/metrics,
+reproduce and fix the full docs gate in a clean checkout, improve generic related
+Entity registration with server enforcement, complete the selected Principal-family
+qualification, and close independent/serving evidence before claiming learning readiness.
+See the [audit follow-up](../reports/architecture-audit-followup-20261002.md) for source
+integration points, exact conclusions, commands/results and retained private evidence.
+
+This increment corrected inventory reporting to 1,291 owned but unverified
+physical declarations, 66 rows with implementation references and zero rows with
+test references. It reproduced 10 docs errors at the detached baseline and passed
+the full 277-task typecheck after the four docs fixes. The final source snapshot
+and verification outcomes are in the private architecture-audit/2026-10-02-followup
+packet; selected working-tree tests are separately identified as diagnostics.
+
+Generic published relationships now select a registered descriptor key and retain
+the loaded parent publication hash through shared list/detail/setup, Records create
+validation and Atlas context. Server-owned predicates and current parent authorization
+remain authoritative. Simultaneous admin/finance journeys exposed cross-principal
+in-flight release coalescing; the shared compiled reader now separates those actor
+coordinates and source admissions. Regression tests cover allowed/denied concurrency.
+
+Normal Neon sessions passed nonempty parent-scoped Notification rows, exact counts,
+search, requested IDs, pagination and cross-parent/stale-pin denials. After the reader
+fix, concurrent admin/finance journeys both passed and cleaned up all disposable
+rows. Profile setup/update also passed. Notification publishes no groupable fields
+or export operation: live grouping/export requests were rejected and controls are
+hidden. These negative checks do not establish successful grouped queries or exports;
+background export remains source-tested on explicitly eligible generic fixtures.
+
+DEV inference admission was recovered using the documented quiescent procedure,
+with the original healthy client images restored and the coordination epoch preserved.
+Principal field explanation still failed after discovery with
+`local_context_budget_exceeded`. A Principal summary and nonempty embedded-list
+model response completed without the required successful reader/citation receipts.
+None of those responses qualifies its intended capability. Failed attempts remain
+retained. This operator recovery does not establish D5 support custody or a production
+serving identity; DEV executes mounted working-tree source.
+
+The refreshed Studio admin/owner sessions are authenticated; both learning inboxes
+returned zero entries. The user subsequently supplied nine Country questions, saved in
+`tooling/scripts/verification/fixtures/country-record-summary.user-supplied.json`
+and validated by the existing declaration parser. They match the shared template;
+independent authorship and agreement to the attempt rules remain unattested. The assigned actors/session refresh are not authorship,
+agreement or approval attestations. No learning candidate, independent review,
+publication, activation, support receipt or Profile AI enrollment was fabricated.
+T04–T08, T17 and T25 remain OPEN; no acceptance state or rollup is promoted by this
+increment. T18–T21 and the unrelated BP catalogue migration retain their existing gates.
+
+
+<a id="a26"></a>
+
+## A26. Historical — 26. Country citations and Principal serving-admission diagnosis — 2026-10-02
+
+E26 records two fresh Country release-13 passes: a field explanation with one
+actual `qwen3:8b` model call and successful field-reader citation, plus a
+deterministic record-summary reader/citation with zero model calls. Both citations
+match the current record and descriptor; both answers pass authorized durable
+history reconstruction. The private
+`atlas-acceptance/2026-10-02/runtime-evidence.json` packet retains model bindings,
+installed digest readback, durable run/tool records, result and evidence hashes,
+container identities and the failed Principal follow-up. See the
+[audit follow-up](../reports/architecture-audit-followup-20261002.md#follow-up-successful-reference-citations-and-serving-admission)
+for exact run IDs and scope.
+
+Principal and Notification published manifest pins match the installed tools, but
+explicit enrollment requires deployment-bound support. The actual source API has
+no `ENTITY_SERVING_DEPLOYMENT_ID`; readiness cannot qualify its optional tools.
+Country lacks explicit manifest bindings and uses legacy compatibility, so its
+success does not qualify those enrolled entities. The missing support also
+explains why Principal discovery falls back to unrelated tools. No budget,
+authorization, manifest pin or readiness requirement was relaxed.
+
+T18 still requires an authenticated qualification writer, retained immutable real
+execution evidence and authorized current-pointer/target custody. A configuration
+ID alone cannot supply those results. The supplied nine questions and proposed
+rules have a private review packet, but independent final authorship, exact rules
+agreement and distinct eligible proposer/evaluator are still absent. No review,
+publication, activation or support receipt was fabricated. T04–T08, T17–T21 and
+T25 retain their existing dispositions; no closure metric changes.
+
+<a id="a27"></a>
+
+## A27. Historical — 27. Qualification writer and local deployment identity — 2026-10-02
+
+E27 advances T18 to IN PROGRESS. Shared metadata now implements qualification
+orchestration through explicit custody, storage and registered owner-probe ports;
+the host composes it through `entitySupportQualification` dependencies. It does
+not silently use the publication writer credential or expose a parallel Entity
+API. Evidence hashes must resolve to retained, target/capability/actor/attempt-bound
+probe results. All installed cases must pass; failed/interrupted attempts remain
+retained and cannot update current support. Revalidation brackets immutable
+retention and atomic pointer replacement. Cancellation and bounded timeouts also
+retain failure when a registered probe does not settle.
+
+80 selected source tests passed (44 metadata, 33 host readiness/storage, 3 host
+qualification registration), as did metadata production/test and host typechecks.
+They use isolated fixtures, not deployed support receipts. The local source
+startup script now supplies stable API/worker deployment identities; both were
+restarted and returned healthy. Normal authenticated Entity readback still shows
+Country 13, Principal 4 and Notification 3. No entity release was published or
+activated by this increment.
+
+The missing identity prerequisite is resolved for this personal source DEV
+instance. Dedicated custody credentials/retention, authenticated atomic support
+and serving-target authority, and actual registered owner probes remain
+unconfigured. No passing deployed receipt or support pointer was fabricated.
+Principal/Notification model-answer acceptance and independent final fixtures,
+exact rules agreement and distinct proposer/evaluator identities remain open.
+The rollup is 5 IMPLEMENTED, 25 OPEN, 8 IN PROGRESS and 2 DEFERRED; none is CLOSED.
+See the [audit follow-up](../reports/architecture-audit-followup-20261002.md#follow-up-qualification-orchestration-and-local-deployment-identity)
+and private `atlas-acceptance/2026-10-02/` evidence packet for bounded results.

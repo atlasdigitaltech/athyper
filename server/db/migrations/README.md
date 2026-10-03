@@ -8,7 +8,7 @@ Maintain final tables, constraints, indexes, functions, triggers, RLS, grants an
 reference seeds in their owning canonical DDL files. Do not replay foundation DDL
 on populated DEV/QA databases or reset their migration receipts.
 
-The current 105-entry inventory records:
+The inventory in `inventory.json` records:
 
 | Disposition                     | Count | Purpose                                              |
 | ------------------------------- | ----: | ---------------------------------------------------- |
@@ -157,3 +157,44 @@ On 2 October 2026, both reconstructed baselines passed their complete Studio, Ne
 and Mesh manifests, preserved populated Country/Principal rows and exact retries,
 and passed 72 positive/negative equivalence probes. Historical/DEV/QA baselines,
 nonempty Profile/binding preservation and serving authorization remain unqualified.
+
+
+Entity Framework security correction (3 October 2026) uses the successor
+`20261003_entity_framework_security.sql` through the existing operational
+ownership-upgrade path, after deployed-signature qualification; previously installed migration bytes
+and ledger hashes remain unchanged. Canonical onboarding guest capabilities are
+read-only and bound to one tenant/case. The service has enumerated reads and
+existing scoped commands, without direct onboarding writes or guest-token-table access.
+The shared ownership generator pins `pg_catalog` first and `pg_temp` last and
+rejects untrusted or runtime-writable schemas without expanding publication
+ownership or independent human-review permissions.
+
+The three retained unwrapped 26 September migrations are checksum-bound in
+`manifests/runner-transactions.sha256`. The runner commits their SQL and success
+receipt together. Explicitly wrapped historical migrations retain their existing
+transaction boundaries and separate success receipt; a crash after their commit
+still requires operator reconciliation. Plane identity is checked independently
+before a migration can set its own plane context. The installed Workforce catalog
+snapshot is immutable; its canonical DDL and operational entrypoint also verify
+the Neon database independently.
+
+Authorization clean-slate reset remains restricted to marked disposable-local
+databases. Truncation, epoch changes, seed application, seed receipts and verified
+postconditions share one connection, transaction and provisioning lock. Seed
+execution receipts remain append-only evidence; new source paths are relative to
+`server/db`, while historical paths do not alter immutable content-hash identity.
+Authorization rollout tooling requires an explicit `--manifest=<path>` containing
+reviewed source operation IDs and release/artifact hashes. It creates no approval
+or human authorship evidence.
+
+On 3 October 2026, the security successor was deployed to the owned shared DEV
+Neon, Studio and Mesh databases after full database/role backups and successful
+rollback rehearsals. SQL and each plane's applied migration receipt committed
+together. All three deployed catalog checks passed with zero errors. Deployed
+Country reads, service token-material/no-context denial, invalid guest-token
+denial and worker no-context/mutation restrictions passed; API readiness and all
+six source workspace services remained healthy. The ordinary runtime has no
+onboarding-service membership, so these checks do not qualify a guest HTTP journey.
+No entity metadata changed or new metadata release was published; no human review
+evidence was created. QA and production remain undeployed. Private backups and
+receipts are under `~/.athyper/instances/dev/artifacts/entity-framework-security/2026-10-03T00-06-35.649Z/`.

@@ -155,7 +155,8 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
              CASE WHEN up.id IS NULL THEN NULL ELSE jsonb_build_object(
                'localeCode', up.locale_code, 'languageCode', up.language_code, 'timezoneCode', up.timezone_code,
                'dateFormat', up.date_format, 'numberFormat', up.number_format, 'weekStart', up.week_start,
-               'appearanceMode', up.appearance_mode, 'densityCode', up.density_code) END AS principal,
+               'appearanceMode', up.appearance_mode, 'densityCode', up.density_code,
+               'themeFamily', up.metadata->>'themeFamily') END AS principal,
              concat_ws(':', COALESCE(tp.updated_at, tp.created_at)::text, COALESCE(up.updated_at, up.created_at)::text) AS revision
       FROM master.tenant t
       LEFT JOIN master.tenant_profile tp ON tp.tenant_id = t.id
@@ -629,6 +630,25 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       return database.isTransaction
         ? write(database)
         : database.transaction().execute(write);
+    });
+  }
+
+  async updatePrincipalAppearance(
+    context: VerifiedRequestContext,
+    patch: Readonly<{ appearanceMode?: string; densityCode?: string; themeFamily?: string }>,
+  ): Promise<void> {
+    await this.withContext(context, async (database) => {
+      // One row per tenant and principal; fields not in the patch keep their values.
+      await sql`
+        INSERT INTO master.principal_ui_profile(tenant_id,principal_id,appearance_mode,density_code,metadata,created_by)
+        VALUES(${context.tenantId}::uuid,${context.principalId}::uuid,${patch.appearanceMode ?? null},${patch.densityCode ?? null},
+               ${patch.themeFamily === undefined ? sql`'{}'::jsonb` : sql`jsonb_build_object('themeFamily', ${patch.themeFamily}::text)`},${context.principalId}::uuid)
+        ON CONFLICT ON CONSTRAINT principal_ui_profile_tenant_principal_uq DO UPDATE
+        SET appearance_mode=COALESCE(${patch.appearanceMode ?? null},master.principal_ui_profile.appearance_mode),
+            density_code=COALESCE(${patch.densityCode ?? null},master.principal_ui_profile.density_code),
+            metadata=CASE WHEN ${patch.themeFamily ?? null}::text IS NULL THEN master.principal_ui_profile.metadata
+                          ELSE COALESCE(master.principal_ui_profile.metadata,'{}'::jsonb) || jsonb_build_object('themeFamily', ${patch.themeFamily ?? null}::text) END,
+            updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(database);
     });
   }
 

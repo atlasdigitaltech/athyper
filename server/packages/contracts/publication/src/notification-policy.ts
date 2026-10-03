@@ -7,6 +7,21 @@ export const NOTIFICATION_CHANNELS = [
   "whatsapp",
   "webhook",
 ] as const;
+/** The notification events each capability publishes; principals may set preferences only for these. */
+export const NOTIFICATION_EVENTS = Object.freeze({
+  comments: Object.freeze([
+    "collaboration.comment.created",
+    "collaboration.comment.mentioned",
+    "collaboration.comment.edited",
+    "collaboration.comment.deleted",
+  ] as const),
+  attachments: Object.freeze([
+    "attachments.finalized",
+    "attachments.archived",
+    "attachments.categorized",
+    "attachments.folder_move",
+  ] as const),
+});
 export type NotificationChannelCode = (typeof NOTIFICATION_CHANNELS)[number];
 export type NotificationCapability = "comments" | "attachments";
 export interface NotificationTemplateReference {
@@ -261,20 +276,7 @@ export function parseEntityNotificationConfiguration(
       "rule",
     );
     const event = str(r.event, "event");
-    const events =
-      kind === "comments"
-        ? [
-            "collaboration.comment.created",
-            "collaboration.comment.mentioned",
-            "collaboration.comment.edited",
-            "collaboration.comment.deleted",
-          ]
-        : [
-            "attachments.finalized",
-            "attachments.archived",
-            "attachments.categorized",
-            "attachments.folder_move",
-          ];
+    const events: readonly string[] = NOTIFICATION_EVENTS[kind];
     if (!events.includes(event) || seen.has(event))
       fail(`Unsupported or duplicate notification event: ${event}`);
     seen.add(event);

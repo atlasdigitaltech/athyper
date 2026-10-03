@@ -1,4 +1,4 @@
-import { qualifyPublishedRelationships } from "./relationship-qualification.js";
+import { qualifyPublishedRelationships, qualifyCoordinatedProductRelationships } from "./relationship-qualification.js";
 import { sql, type Kysely } from "kysely";
 import { assertCommonReferenceGraph } from "@athyper/server-contract-metadata";
 import type { ReferenceFirstPublicationPorts } from "@athyper/server-plane-studio-meta-entity-authoring";
@@ -59,6 +59,7 @@ export async function qualifyReferencePublicationTarget(
     runtime: { qualify(profile: unknown, bindings: unknown): void };
     qualifyCapabilities: ReferenceFirstPublicationPorts["qualify"];
   },
+  coordinatedTargets?: readonly Target[],
 ): Promise<void> {
   const { graph, targetPlane, artifact } = target;
   const tableProduct = graph.surfaces?.some(
@@ -187,7 +188,13 @@ export async function qualifyReferencePublicationTarget(
           }
         }
       }
-      await qualifyPublishedRelationships(graph, tx);
+      if (coordinatedTargets) {
+        if (!coordinatedTargets.length || coordinatedTargets.some(t => t.targetPlane !== targetPlane)
+          || coordinatedTargets.filter(t => t.graph.entity.entityCode === graph.entity.entityCode
+            && t.artifact.contractHash === artifact.contractHash && t.artifact.descriptorHash === artifact.descriptorHash).length !== 1)
+          throw Error("PUBLICATION_COORDINATED_TARGET_MISMATCH");
+        await qualifyCoordinatedProductRelationships(coordinatedTargets.map(t => t.graph), tx);
+      } else await qualifyPublishedRelationships(graph, tx);
       // Compile the actual read against target credentials; catalog visibility alone
       // cannot establish SELECT privilege. No business rows are fetched.
       await sql`SELECT ${sql.join(fields.map((f) => sql.ref(f.storagePath!)))} FROM ${sql.table(`${profile.storageSchema}.${profile.storageObject}`)} LIMIT 0`.execute(

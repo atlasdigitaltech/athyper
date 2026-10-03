@@ -16,31 +16,6 @@ const entityRoutes: Readonly<
     >
   >
 > = Object.freeze({
-  bp: {
-    defaultEntityCode: "business_partner",
-    entities: [
-      {
-        code: "business_partner",
-        routeSlug: "business-partners",
-        name: "Business Partners",
-      },
-      {
-        code: "business_partner_request",
-        routeSlug: "requests",
-        name: "Business Partner Requests",
-      },
-    ],
-  },
-  org: {
-    defaultEntityCode: "currency",
-    entities: [
-      {
-        code: "currency",
-        routeSlug: "currencies",
-        name: "Currencies",
-      },
-    ],
-  },
   buy: {
     defaultEntityCode: "purchase_order",
     entities: [
@@ -68,8 +43,9 @@ const entityRoutes: Readonly<
   },
 });
 
-// The generated catalog owns every workspace/module slug. Entity adapters are
-// overlaid only where the corresponding production runtime exists today.
+// The generated catalog owns every workspace/module slug and, from each entity's
+// placement.json, the entities placed in each module. The overlay below covers only
+// development list fixtures (procurement) that have no repository entity metadata yet.
 export function applyNeonEntityRoutes(
   catalog: readonly CatalogWorkspaceRoute[],
 ): readonly CatalogWorkspaceRoute[] {

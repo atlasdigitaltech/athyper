@@ -14,7 +14,7 @@ export const entityDescriptorClient = Object.freeze({
   form: (client: HttpClient, entityCode: string, mode: "create" | "edit", recordId?: string) => client.request(formDescriptor, { params: { entityCode }, query: { mode, ...(mode === "edit" && recordId ? { recordId } : {}) } }),
   detail: (client: HttpClient, entityCode: string, recordId?: string, signal?: AbortSignal) => client.request(detailDescriptor, { signal, params: { entityCode }, ...(recordId ? { query: { recordId } } : {}) }),
   record: (client: HttpClient, entityCode: string, recordId: string, signal?: AbortSignal) => client.request(recordRead, { signal, params: { entityCode, recordId } }),
-  create: (client: HttpClient, entityCode: string, values: Readonly<Record<string, unknown>>, idempotencyKey: string, parentScope?: {parentEntityCode:string;parentRecordId:string;relationshipKey:string}) => client.request(recordCreate, { params: { entityCode }, body: values, idempotencyKey, ...(parentScope ? {query:parentScope} : {}) }),
+  create: (client: HttpClient, entityCode: string, values: Readonly<Record<string, unknown>>, idempotencyKey: string, parentScope?: {parentEntityCode:string;parentRecordId:string;relationshipKey:string;parentDescriptorHash?:string}) => client.request(recordCreate, { params: { entityCode }, body: values, idempotencyKey, ...(parentScope ? {query:parentScope} : {}) }),
   patch: (client: HttpClient, entityCode: string, recordId: string, values: Readonly<Record<string, unknown>>, version: number, idempotencyKey: string) => client.request(recordPatch, { params: { entityCode, recordId }, body: values, headers: { "If-Match": String(version) }, idempotencyKey }),
 });
 

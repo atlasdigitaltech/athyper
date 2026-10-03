@@ -86,7 +86,7 @@ const descriptor: EntityListDescriptorV1 = {
     },
   ],
   actions: [],
-  scope: { status: "ready", labels: [], fingerprint: "scope-a" },
+  scope: { status: "ready", labels: [], fingerprint: "d".repeat(64) },
   limits: {
     defaultPageSize: 25,
     allowedPageSizes: [25, 50],

@@ -15,8 +15,15 @@ import {
   type CatalogWorkspaceRoute,
 } from "../../packages/contracts/platform/navigation/src/index";
 import { PLATFORM_CATALOG_ROUTES } from "../../packages/contracts/platform/navigation/src/generated-catalog";
-import { SEMANTIC_ICON_KEYS } from "../../packages/platform/foundation/icons/src/index";
+import {
+  ICON_ROLE_FALLBACKS,
+  isSemanticIconKey,
+  resolveIcon,
+  resolveMetadataIcon,
+  SEMANTIC_ICON_KEYS,
+} from "../../packages/platform/foundation/icons/src/index";
 import { orderModuleCodes } from "../../packages/platform/shell/dashboard/src/module-relevance";
+import { labelCap, moreMenuShowsSearch, visibleModules } from "../../packages/platform/shell/dashboard/src/workspace-navigation";
 
 const routes = [
   {
@@ -78,7 +85,12 @@ test("canonical catalog locks the agreed plane sizes and BP ownership", async ()
       routeSlug: "business-partner",
       name: "Business Partners",
       iconKey: "contact",
-      entities: [],
+      // Entities come from each entity's metadata placement.json.
+      entities: [
+        { code: "business_partner_request", routeSlug: "requests", name: "Business Partner Requests" },
+        { code: "business_partner", routeSlug: "business-partners", name: "Business Partners" },
+      ],
+      defaultEntityCode: "business_partner",
     },
   );
   const knownIcons = new Set<string>(SEMANTIC_ICON_KEYS);
@@ -161,6 +173,7 @@ test("catalog generation supplies Home, Workspace, and Module defaults", async (
 test("workspace surfaces render Home and entitled modules as header tabs", async () => {
   const [
     runtime,
+    sharedRuntime,
     meshRuntime,
     studioRuntime,
     navigation,
@@ -170,6 +183,13 @@ test("workspace surfaces render Home and entitled modules as header tabs", async
   ] = await Promise.all([
     readFile(
       new URL("../../apps/neon/lib/experience-runtime.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../../packages/platform/shell/dashboard/src/plane-experience-runtime.tsx",
+        import.meta.url,
+      ),
       "utf8",
     ),
     readFile(
@@ -209,28 +229,28 @@ test("workspace surfaces render Home and entitled modules as header tabs", async
       "utf8",
     ),
   ]);
-  assert.match(runtime, /visibleModuleCodes=\{entitledModuleCodes\}/);
-  assert.match(runtime, /NeonWorkspaceExperience/);
-  assert.match(runtime, /hideHeader=\{surfaceKey\s*===\s*"neon\.home"\}/);
-  assert.match(runtime, /useWorkspaceModuleBadges/);
+  for (const planeRuntime of [runtime, meshRuntime, studioRuntime]) {
+    assert.match(planeRuntime, /<PlaneExperienceSurface config=\{config\}/);
+  }
+  assert.match(sharedRuntime, /visibleModuleCodes=\{entitledModuleCodes\}/);
+  assert.match(sharedRuntime, /hideHeader=\{surfaceKey ===/);
+  assert.match(sharedRuntime, /moduleBadgesFromItems/);
   assert.match(
-    meshRuntime,
-    /extensions:\s*(?:Object\.freeze\()?\{\s*"mesh\.atlas-welcome":\s*AtlasWelcome/,
+    sharedRuntime,
+    /workspace\.modules\.map\(\(item\) => item\.code\)/,
   );
-  assert.match(meshRuntime, /WorkspaceModuleTabs/);
-  assert.match(
-    studioRuntime,
-    /extensions:\s*(?:Object\.freeze\()?\{\s*"studio\.atlas-welcome":\s*AtlasWelcome/,
-  );
-  assert.match(studioRuntime, /WorkspaceModuleTabs/);
-  assert.match(navigation, /name:"Home",href:`\/\$\{workspace\.routeSlug\}`/);
+  assert.match(sharedRuntime, /visible\.has\(block\.id\.slice\(7\)\)/);
+  assert.match(meshRuntime, /"mesh\.atlas-welcome":\s*AtlasWelcome/);
+  assert.match(sharedRuntime, /WorkspaceModuleTabs/);
+  assert.match(studioRuntime, /"studio\.atlas-welcome":\s*AtlasWelcome/);
+  assert.match(navigation, /name:intl\.message\("workspace\.home"\),href:`\/\$\{workspace\.routeSlug\}`/);
   assert.match(navigation, /activeModuleCode\?\?"home"/);
   assert.match(navigation, /athyper-experience__module-tabs--primary/);
   assert.match(navigation, /aria-current=\{active\?"page":undefined\}/);
   assert.match(navigation, /ModuleMoreMenu/);
-  assert.match(navigation, /Search modules/);
+  assert.match(navigation, /intl\.message\("workspace\.searchModules"\)/);
   assert.match(navigation, /useFittingModuleTabLimit/);
-  assert.match(navigation, /scrollWidth>element\.clientWidth/);
+  assert.match(navigation, /function tabsOverflow\(element:HTMLElement\)/);
   assert.match(navigation, /new ResizeObserver/);
   assert.match(renderer, /headerAccessory\?: ReactNode/);
   assert.match(renderer, /headerAccessory \|\| framedHeader/);
@@ -279,23 +299,49 @@ test("workspace surfaces render Home and entitled modules as header tabs", async
   );
 });
 
-test("module relevance is deterministic across pinned, recent, and catalog order", () => {
+test("module order is stable: pinned, then catalog order, never recent use", () => {
   assert.deepEqual(
-    orderModuleCodes(
-      ["bp", "item", "finmd", "org"],
-      ["org", "bp"],
-      ["item", "org"],
-    ),
+    orderModuleCodes(["bp", "item", "finmd", "org"], ["org", "bp"]),
     ["org", "bp", "item", "finmd"],
   );
   assert.deepEqual(
-    orderModuleCodes(
-      ["bp", "item"],
-      ["unauthorized", "item"],
-      ["bp", "unknown"],
-    ),
+    orderModuleCodes(["bp", "item"], ["unauthorized", "item"]),
     ["item", "bp"],
   );
+  assert.deepEqual(orderModuleCodes(["bp", "item", "org"], []), ["bp", "item", "org"]);
+});
+
+test("a module opened from More takes only the last visible slot", () => {
+  const modules = ["bp", "item", "finmd", "org", "tax"].map((code) => ({ code }));
+  assert.deepEqual(visibleModules(modules, 3, "tax").map((module) => module.code), ["bp", "item", "tax"]);
+  assert.deepEqual(visibleModules(modules, 3, "item").map((module) => module.code), ["bp", "item", "finmd"]);
+  assert.deepEqual(visibleModules(modules, 3).map((module) => module.code), ["bp", "item", "finmd"]);
+});
+
+test("label cap trims the longest labels first, just enough to fit", () => {
+  assert.equal(labelCap([100, 200, 300], 700), Infinity);
+  assert.equal(labelCap([100, 200, 300], 500), 200);
+  assert.equal(labelCap([100, 200, 300], 450), 175);
+  assert.equal(labelCap([100, 100], 100), 50);
+});
+
+test("More shows search, count and Recent only from six modules", () => {
+  assert.equal(moreMenuShowsSearch(1), false);
+  assert.equal(moreMenuShowsSearch(5), false);
+  assert.equal(moreMenuShowsSearch(6), true);
+});
+
+test("metadata icons resolve from the first published key, then the role fallback", () => {
+  assert.equal(isSemanticIconKey("history"), true);
+  assert.equal(isSemanticIconKey("not-an-icon"), false);
+  assert.equal(isSemanticIconKey(undefined), false);
+  assert.equal(resolveMetadataIcon("entity", "unknown-key", "history"), resolveIcon("history"));
+  assert.equal(resolveMetadataIcon("entity", undefined, null, "package"), resolveIcon("package"));
+  for (const [role, key] of Object.entries(ICON_ROLE_FALLBACKS)) {
+    assert.ok(SEMANTIC_ICON_KEYS.includes(key), `${role} fallback ${key} must be a semantic key`);
+    assert.equal(resolveMetadataIcon(role as keyof typeof ICON_ROLE_FALLBACKS), resolveIcon(key));
+    assert.equal(resolveMetadataIcon(role as keyof typeof ICON_ROLE_FALLBACKS, "bogus"), resolveIcon(key));
+  }
 });
 
 test("Neon route boundaries are generated for every canonical module", async () => {

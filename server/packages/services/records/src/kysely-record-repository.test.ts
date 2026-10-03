@@ -53,3 +53,41 @@ it("accepts one trusted compiler per scope kind and keeps unregistered kinds clo
     } as never),
   ).toThrow("Unsupported record collection scope kind");
 });
+
+it("admits platform-owned rows to reads only when the descriptor opts in", async () => {
+  const { Kysely, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } = await import("kysely");
+  const statements: string[] = [];
+  const database = new Kysely<Record<string, never>>({
+    dialect: {
+      createAdapter: () => new PostgresAdapter(),
+      createIntrospector: (db) => new PostgresIntrospector(db),
+      createQueryCompiler: () => new PostgresQueryCompiler(),
+      createDriver: () => ({
+        init: async () => undefined,
+        destroy: async () => undefined,
+        releaseConnection: async () => undefined,
+        beginTransaction: async () => undefined,
+        commitTransaction: async () => undefined,
+        rollbackTransaction: async () => undefined,
+        acquireConnection: async () => ({
+          executeQuery: async (query: { sql: string }) => {
+            statements.push(query.sql);
+            return { rows: [] };
+          },
+          streamQuery: () => { throw new Error("unused"); },
+        }),
+      }),
+    },
+  });
+  const shared = {
+    ...descriptor,
+    storage: { schema: "metadata", object: "entity_release", idField: "id", tenantField: "tenant_id", tenantVisibility: "tenant_or_platform" },
+  } satisfies EntityRuntimeDescriptor;
+  const repository = createKyselyRecordRepository({ databases: { neon: database } });
+  await repository.get(shared, "00000000-0000-0000-0000-000000000001", "record", []);
+  await repository.patch(shared, "00000000-0000-0000-0000-000000000001", "record", {}, undefined, database as never).catch(() => undefined);
+  await repository.get({ ...shared, storage: { ...shared.storage, tenantVisibility: "tenant" } }, "00000000-0000-0000-0000-000000000001", "record", []);
+  expect(statements[0]).toContain('("tenant_id" IS NULL OR "tenant_id" = $1::uuid)');
+  expect(statements.slice(1).some((statement) => statement.includes("IS NULL OR"))).toBe(false);
+  expect(statements.at(-1)).toContain('"tenant_id" = $1::uuid');
+});

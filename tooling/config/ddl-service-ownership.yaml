@@ -23,7 +23,7 @@
     "unitTests": [],
     "postgresTests": [],
     "featureGate": null,
-    "rolloutStatus": "code_complete",
+    "rolloutStatus": "unverified",
     "reviewStatus": "reviewed",
     "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
   },
@@ -38,11 +38,11 @@
     },
     {
       "match": { "schema": "authz" },
-      "set": { "serviceOwner": "@athyper/server-platform-iam", "featureGate": "authorization-v2" }
+      "set": { "serviceOwner": "@athyper/server-platform-iam", "featureGate": "AUTHORIZATION_V2_MODE" }
     },
     {
       "match": { "schema": "control" },
-      "set": { "serviceOwner": "@athyper/server-platform-control-admin", "featureGate": "WAVE0_CONTROL_ADMIN_ROUTES_ENABLED" }
+      "set": { "serviceOwner": "@athyper/server-platform-control-admin", "featureGate": "WAVE0_CONTROL_ADMIN_RUNTIME_COMMANDS_ENABLED" }
     },
     {
       "match": { "schema": "governance" },

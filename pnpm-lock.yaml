@@ -1613,15 +1613,24 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../foundation/api-client
+      '@athyper/platform-i18n':
+        specifier: workspace:*
+        version: link:../../foundation/i18n
       '@athyper/platform-icons':
         specifier: workspace:*
         version: link:../../foundation/icons
+      '@athyper/platform-shell':
+        specifier: workspace:*
+        version: link:../shell
       '@athyper/platform-shell-activity-center-data':
         specifier: workspace:*
         version: link:../activity-center-data
       '@athyper/platform-shell-app-foundation':
         specifier: workspace:*
         version: link:../app-foundation
+      '@athyper/platform-ui':
+        specifier: workspace:*
+        version: link:../../foundation/ui
     devDependencies:
       '@athyper/config':
         specifier: workspace:*

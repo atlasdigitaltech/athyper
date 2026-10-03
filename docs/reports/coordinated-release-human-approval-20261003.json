@@ -1,0 +1,267 @@
+{
+  "schema": "athyper.coordinated-human-approval/1",
+  "observedAt": "2026-10-02T18:21:05.715Z",
+  "candidateId": "entity-framework-dev-20261003-01",
+  "status": "approved_awaiting_publication_qualification",
+  "approvalDecision": "Explicit user approval of all six exact drafts after independent Platform Owner login and graph inspection.",
+  "actorId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+  "entries": [
+    {
+      "entityCode": "address",
+      "changeSetId": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+      "revision": 3,
+      "contractHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5",
+      "descriptorHash": "bba105f2f438f741ec8a09120aba0e5e9d8d90efa09224ac3364ce36c753c404",
+      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5",
+          "descriptorHash": "bba105f2f438f741ec8a09120aba0e5e9d8d90efa09224ac3364ce36c753c404"
+        }
+      ]
+    },
+    {
+      "entityCode": "employee",
+      "changeSetId": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+      "revision": 3,
+      "contractHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee",
+      "descriptorHash": "d631d6edb53ef371ed7f23488ec6ef69bc0f0480f4c52225b70ad0da6c20d29a",
+      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee",
+          "descriptorHash": "d631d6edb53ef371ed7f23488ec6ef69bc0f0480f4c52225b70ad0da6c20d29a"
+        }
+      ]
+    },
+    {
+      "entityCode": "external_worker",
+      "changeSetId": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+      "revision": 3,
+      "contractHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82",
+      "descriptorHash": "b19b512795ca534f3db5beed153c3e92c55a6abad97cfe6532058a539859edb4",
+      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82",
+          "descriptorHash": "b19b512795ca534f3db5beed153c3e92c55a6abad97cfe6532058a539859edb4"
+        }
+      ]
+    },
+    {
+      "entityCode": "person",
+      "changeSetId": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+      "revision": 3,
+      "contractHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4",
+      "descriptorHash": "007f62874028f9c4affd6d29af1f558374d5140e0228aa090abac75d661c8e70",
+      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4",
+          "descriptorHash": "007f62874028f9c4affd6d29af1f558374d5140e0228aa090abac75d661c8e70"
+        }
+      ]
+    },
+    {
+      "entityCode": "person_address_use",
+      "changeSetId": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+      "revision": 3,
+      "contractHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211",
+      "descriptorHash": "9d9bec21c8c8cabc1210a5e5989e4a2d3e7c1063e2b220444d90f61f9b7b4c1e",
+      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "targets": [
+        {
+          "plane": "neon",
+          "contractHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211",
+          "descriptorHash": "9d9bec21c8c8cabc1210a5e5989e4a2d3e7c1063e2b220444d90f61f9b7b4c1e"
+        }
+      ]
+    },
+    {
+      "entityCode": "principal_profile",
+      "changeSetId": "7e7dbd68-84a0-42ac-b886-2481ff683bd4",
+      "revision": 4,
+      "contractHash": "4e6ca752a7db5b4098df2784ff795e029501acd787c4122b6036bcd1edbe7ef2",
+      "descriptorHash": "8bdb683a76ef64a62fae0e1dd2a51ba270a96957fc4e6b758cc0c76ab3a9a2af",
+      "createdBy": "f3736ab2-fd72-5fe4-8f6b-e12083af851d",
+      "submittedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approvedBy": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "targets": [
+        {
+          "plane": "studio",
+          "contractHash": "4e6ca752a7db5b4098df2784ff795e029501acd787c4122b6036bcd1edbe7ef2",
+          "descriptorHash": "8bdb683a76ef64a62fae0e1dd2a51ba270a96957fc4e6b758cc0c76ab3a9a2af"
+        },
+        {
+          "plane": "neon",
+          "contractHash": "346ba0a09c46764b8b5042859d3824b966fce6c6f22cfa44d4026d814591d008",
+          "descriptorHash": "fec6ce3e9226622fc194447d63249ffd24009db15914da49f3a05ff3ab237844"
+        },
+        {
+          "plane": "mesh",
+          "contractHash": "e315bc819d500f4298e83444982883a8f8261b5be165a9bc067b07e5bbd2d6ac",
+          "descriptorHash": "8f1941347041b29d581971d794d4fc546cf47c4722d6bd1068fb8915e463c23a"
+        }
+      ]
+    }
+  ],
+  "receipts": [
+    {
+      "observedAt": "2026-10-02T18:19:05.995Z",
+      "httpStatus": 200,
+      "request": {
+        "entityCode": "address",
+        "changeSetId": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+        "body": {
+          "requestId": "0d05dfeb-b247-447a-bdfc-89bd8177074e",
+          "expectedRevision": 2,
+          "expectedContractHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5"
+        }
+      },
+      "response": {
+        "requestId": "0d05dfeb-b247-447a-bdfc-89bd8177074e",
+        "expectedRevision": 2,
+        "expectedContractHash": "5d777168cdbe750694ea19017525bbd24cfd9493672068a423f570698b3db7f5",
+        "changeSetId": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+        "actorId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "action": "approve",
+        "revision": 3,
+        "status": "approved"
+      }
+    },
+    {
+      "observedAt": "2026-10-02T18:19:06.054Z",
+      "httpStatus": 200,
+      "request": {
+        "entityCode": "employee",
+        "changeSetId": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+        "body": {
+          "requestId": "ede1fcb6-8443-451d-8a48-f5adae43ac83",
+          "expectedRevision": 2,
+          "expectedContractHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee"
+        }
+      },
+      "response": {
+        "requestId": "ede1fcb6-8443-451d-8a48-f5adae43ac83",
+        "expectedRevision": 2,
+        "expectedContractHash": "873f1bb5c3223a0b644b08f32c26a050d28aa19fc818b733a42ae4938ee759ee",
+        "changeSetId": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+        "actorId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "action": "approve",
+        "revision": 3,
+        "status": "approved"
+      }
+    },
+    {
+      "observedAt": "2026-10-02T18:19:06.113Z",
+      "httpStatus": 200,
+      "request": {
+        "entityCode": "external_worker",
+        "changeSetId": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+        "body": {
+          "requestId": "b804d8eb-8941-446f-ac0c-6a744f8d7bc3",
+          "expectedRevision": 2,
+          "expectedContractHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82"
+        }
+      },
+      "response": {
+        "requestId": "b804d8eb-8941-446f-ac0c-6a744f8d7bc3",
+        "expectedRevision": 2,
+        "expectedContractHash": "737df06f4d65156a2f8b3a1bf72efb0abd5df6948d8ad03f0a8dff5e8deb8a82",
+        "changeSetId": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+        "actorId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "action": "approve",
+        "revision": 3,
+        "status": "approved"
+      }
+    },
+    {
+      "observedAt": "2026-10-02T18:19:06.182Z",
+      "httpStatus": 200,
+      "request": {
+        "entityCode": "person",
+        "changeSetId": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+        "body": {
+          "requestId": "e6dc17d8-b718-4048-b424-c729138b7f2e",
+          "expectedRevision": 2,
+          "expectedContractHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4"
+        }
+      },
+      "response": {
+        "requestId": "e6dc17d8-b718-4048-b424-c729138b7f2e",
+        "expectedRevision": 2,
+        "expectedContractHash": "6270ecdd7e9ce9284c97fe4df2e0f9a7530873b288e8b51b1a4cecbdb99362e4",
+        "changeSetId": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+        "actorId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "action": "approve",
+        "revision": 3,
+        "status": "approved"
+      }
+    },
+    {
+      "observedAt": "2026-10-02T18:19:06.247Z",
+      "httpStatus": 200,
+      "request": {
+        "entityCode": "person_address_use",
+        "changeSetId": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+        "body": {
+          "requestId": "8a813fcf-f644-41c2-a2fa-7b2afeba786a",
+          "expectedRevision": 2,
+          "expectedContractHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211"
+        }
+      },
+      "response": {
+        "requestId": "8a813fcf-f644-41c2-a2fa-7b2afeba786a",
+        "expectedRevision": 2,
+        "expectedContractHash": "b68442a64e7e27329fea21ee92da440ddd4d188a4c17ca9480a37708ff726211",
+        "changeSetId": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+        "actorId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "action": "approve",
+        "revision": 3,
+        "status": "approved"
+      }
+    },
+    {
+      "observedAt": "2026-10-02T18:19:06.330Z",
+      "httpStatus": 200,
+      "request": {
+        "entityCode": "principal_profile",
+        "changeSetId": "7e7dbd68-84a0-42ac-b886-2481ff683bd4",
+        "body": {
+          "requestId": "4f6d29e6-5128-47ae-8555-f37572ea15bd",
+          "expectedRevision": 3,
+          "expectedContractHash": "4e6ca752a7db5b4098df2784ff795e029501acd787c4122b6036bcd1edbe7ef2"
+        }
+      },
+      "response": {
+        "requestId": "4f6d29e6-5128-47ae-8555-f37572ea15bd",
+        "expectedRevision": 3,
+        "expectedContractHash": "4e6ca752a7db5b4098df2784ff795e029501acd787c4122b6036bcd1edbe7ef2",
+        "changeSetId": "7e7dbd68-84a0-42ac-b886-2481ff683bd4",
+        "actorId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+        "action": "approve",
+        "revision": 4,
+        "status": "approved"
+      }
+    }
+  ],
+  "authenticatedReadbackVerified": true,
+  "publicationPerformed": false,
+  "deploymentPerformed": false,
+  "evidenceDirectory": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/human-approval",
+  "readbackFix": "Removed unnecessary SELECT FOR UPDATE from inspection; entity advisory locking, serializable transactions and native UPDATE checks retained. Real-role rollback regression covers approved inspection and exact retry."
+}

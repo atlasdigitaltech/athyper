@@ -444,3 +444,31 @@ describe("localization concurrent requests", () => {
     expect(result.catalogs.find(row=>row.localeCode==="ar")).toMatchObject({qualified:false,linguisticReviewPassed:false});
   });
 });
+
+describe("principal appearance preferences", () => {
+  it("saves only the given theme, density and design system and returns the refreshed profile", async () => {
+    let saved: Record<string, unknown> | undefined;
+    const projection = service(repository({
+      async readProfile() { return { principal: { appearanceMode: "dark", densityCode: saved?.densityCode ?? "comfortable", themeFamily: saved?.themeFamily }, revision: `appearance:${JSON.stringify(saved ?? {})}` }; },
+      async updatePrincipalAppearance(_context, patch) { saved = { ...patch }; },
+    }));
+    const result = await projection.updatePrincipalAppearance(context, { densityCode: "compact", themeFamily: "atlas-mono" });
+    expect(saved).toEqual({ densityCode: "compact", themeFamily: "atlas-mono" });
+    expect(result.profile).toMatchObject({ appearanceMode: "dark", densityCode: "compact", themeFamily: "atlas-mono" });
+  });
+
+  it.each([[{}], [{ densityCode: "huge" }], [{ appearanceMode: "neon" }], [{ themeFamily: "Bad Family" }], [{ densityCode: "compact", appearanceMode: "neon" }]])(
+    "rejects %j without writing", async (patch) => {
+      const projection = service(repository({ async updatePrincipalAppearance() { throw new Error("must not write"); } }));
+      await expect(projection.updatePrincipalAppearance(context, patch)).rejects.toMatchObject({ status: 400, code: "EXPERIENCE_APPEARANCE_INVALID" });
+    });
+
+  it("refuses an inactive principal before saving", async () => {
+    const base = repository();
+    const projection = service(repository({
+      async readIdentity(ctx, at) { return { ...(await base.readIdentity(ctx, at))!, principalStatus: "disabled" }; },
+      async updatePrincipalAppearance() { throw new Error("must not write"); },
+    }));
+    await expect(projection.updatePrincipalAppearance(context, { densityCode: "compact" })).rejects.toMatchObject({ status: 403 });
+  });
+});

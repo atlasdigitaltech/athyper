@@ -4,11 +4,13 @@ import type { Application } from "express";
 import { sql } from "kysely";
 import { calculateDefinitionHash, createKyselyPolicyRepository } from "@athyper/server-platform-policy";
 import { canonicalJson } from "@athyper/server-plane-studio-meta-entity-authoring";
-import { parseEnrollablePublicationPolicy } from "./enrollment-contract.js";
+import { parsePublicationPolicyProposal } from "./enrollment-contract.js";
+import { executeHumanReviewedPublication } from "./human-publication-execution.js";
 import { defineRouteContract, HttpError, registerContractRoute } from "@athyper/server-runtime-http";
 import { createDevelopmentPublicationWorkload, type DevelopmentPublicationWorkloadConfiguration, type DevelopmentPublicationWorkloadDependencies } from "../../../development/publication-workload.js";
 import { MACHINE_PUBLICATION_PERMISSION } from "./machine-policy.js";
 import { executeCompilationRecovery } from "./compilation-recovery-execution.js";
+import { executeDeploymentRecovery } from "./deployment-recovery-execution.js";
 
 type Configuration = Omit<DevelopmentPublicationWorkloadConfiguration, "policy" | "policyHash" | "machinePolicy">;
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -62,7 +64,17 @@ export function registerPublicationWorkloadRoutes(app: Application, options: {
       if (definition.rules[0]!.action !== "allow" || enrollment.schema !== "athyper.machine-publication-enrollment/1"
         || enrollment.environment !== "dev" || enrollment.tenantId !== config.tenantId || enrollment.permissionCode !== MACHINE_PUBLICATION_PERMISSION)
         throw new HttpError(403, "PUBLICATION_WORKLOAD_POLICY_DENIED", "The enrolled policy does not authorize this workload");
-      const policy = parseEnrollablePublicationPolicy(enrollment.policy);
+      const policy = parsePublicationPolicyProposal(enrollment.policy);
+      if (policy.schema === "athyper.dev-deployment-recovery-compiler/1")
+        throw new HttpError(403, "PUBLICATION_WORKLOAD_POLICY_DENIED", "Execute the original recovery policy; compiler approval does not create deployment commands");
+      if (policy.schema === "athyper.dev-coordinated-deployment-recovery/1") {
+        res.json(await executeDeploymentRecovery(config, policy, pin, options.dependencies));
+        return;
+      }
+      if (policy.schema === "athyper.dev-human-reviewed-publication/1") {
+        res.json(await executeHumanReviewedPublication(config, credentials, policy, pin, options.dependencies));
+        return;
+      }
       if (policy.schema === "athyper.dev-compilation-recovery-policy/1") {
         res.json(await executeCompilationRecovery(config, policy, pin, options.dependencies));
         return;
@@ -77,7 +89,7 @@ export function registerPublicationWorkloadRoutes(app: Application, options: {
       const code = error instanceof Error ? error.message : "";
       if (/^(MACHINE_PUBLICATION|REFERENCE_WORKLOAD|REFERENCE_ONBOARDING|PUBLICATION)_[A-Z0-9_]{1,100}$/.test(code))
         console.warn(JSON.stringify({ event: "publication.workload.denied", code }));
-      if (/MACHINE_PUBLICATION_|REFERENCE_WORKLOAD_|REFERENCE_ONBOARDING_|ENTITY_SUCCESSOR_|COMPILATION_RECOVERY_|PUBLICATION_POLICY_SCHEMA_INVALID/.test(code))
+      if (/MACHINE_PUBLICATION_|REFERENCE_WORKLOAD_|REFERENCE_ONBOARDING_|HUMAN_PUBLICATION_|ENTITY_SUCCESSOR_|COMPILATION_RECOVERY_|DEPLOYMENT_RECOVERY_|PUBLICATION_POLICY_SCHEMA_INVALID/.test(code))
         return next(new HttpError(403, "PUBLICATION_WORKLOAD_DENIED", "Publication authority or source admission was denied"));
       next(error);
     }

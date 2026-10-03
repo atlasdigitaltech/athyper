@@ -22,6 +22,19 @@ export const updatePrincipalLocaleOperation: Operation<
   response: "json",
 });
 
+/** Saves the principal's theme, density and design system to their profile. */
+export const updatePrincipalAppearanceOperation: Operation<
+  ExperienceBootstrap,
+  Readonly<{ appearanceMode?: "system" | "light" | "dark" | "high_contrast"; densityCode?: "comfortable" | "compact" | "spacious"; themeFamily?: string }>
+> = Object.freeze({
+  method: "PATCH",
+  path: "/api/platform/profile/appearance",
+  parse: parseExperienceBootstrap,
+  requestClass: "interactive",
+  idempotency: "forbidden",
+  response: "json",
+});
+
 export const localePolicyOperation: Operation<ExperienceLocalePolicy> = Object.freeze({
   method: "GET",
   path: localePolicyPath,

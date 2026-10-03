@@ -191,6 +191,7 @@ export interface Container {
     };
     authorizer?: Authorizer;
     entityReadiness?: ReturnType<typeof import("../composition/shared/entity-runtime/deployment-readiness.js").createHostEntityReadiness>;
+    entitySupportQualification?: ReturnType<typeof import("@athyper/server-platform-metadata").createEntitySupportQualificationWriter<import("@athyper/server-contract-auth").VerifiedRequestContext>>;
     metadata?: MetadataReader;
     /** Shared immutable split-artifact reader; browser/data projections remain separate. */
     compiledEntityReader?: PinnedCompiledEntityReader;

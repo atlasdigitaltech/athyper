@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { sql } from "kysely";
-import { collaborationEntityTypes } from "@athyper/server-platform-collaboration";
+import { exactCollaborationEntityCoordinates, type CollaborationEntityCoordinates } from "@athyper/server-platform-collaboration";
 import { canReplyAtDepth } from "@athyper/server-platform-experience";
 import { commentDescendants } from "./comment-descendants.js";
 import type {
@@ -11,7 +11,9 @@ import type {
 /** Called only after entity-runtime section/capability admission; row visibility remains enforced in SQL. */
 export function createCommentSectionProvider(
   transactions: CollaborationTransactions,
+  entityCoordinates: CollaborationEntityCoordinates = exactCollaborationEntityCoordinates,
 ): CollaborationSectionProvider {
+  const collaborationEntityTypes = entityCoordinates.entityTypes;
   return {
     async read({
       context,
@@ -32,6 +34,7 @@ export function createCommentSectionProvider(
       const pageLimit = threadRootId ? Math.min(limit, 20) : limit;
       const descendants = (root: ReturnType<typeof sql>) =>
         commentDescendants({
+          entityCoordinates,
           tenantId: context.tenantId,
           principalId: context.principalId,
           entityType: core.entityCode,

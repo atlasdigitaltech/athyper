@@ -182,6 +182,7 @@ test("related records use one detail request, published creation capability and 
       expect(url.searchParams.get('parentEntityCode')).toBe('principal');
       expect(url.searchParams.get('parentRecordId')).toBe(id);
       expect(url.searchParams.get('relationshipKey')).toBe('profile');
+      expect(url.searchParams.get('parentDescriptorHash')).toBe(hash);
       return route.fulfill({json:{schemaVersion:1,descriptorHash:hash,scopeFingerprint:hash,queryHash:hash,rows:[{id:childId,values:{name:"Profile fixture"}}],pagination:{pageSize:2,hasNext:false,hasPrevious:false,countMode:"none"}}});
     }
     if(path.endsWith('/principal_profile/records/'+childId+'/detail'))return route.fulfill({json:{descriptor:{schema:"athyper.entity-detail-descriptor/1",plane:"neon",entity:{code:"principal_profile",label:"Profile",pluralLabel:"Profiles"},revision,pageKind:"detail",titleField:"name",fields:[{key:"name",label:"Name",kind:"string",required:true,readOnly:true}],actions:[]},record:{id:childId,values:{name:"Profile fixture"}}}});
@@ -190,8 +191,10 @@ test("related records use one detail request, published creation capability and 
   });
   await page.goto('http://context.test/?entityFixture=principal');
   await page.addScriptTag({content:(await script).outputFiles[0]!.text});
-  await page.getByRole('navigation',{name:'Record sections'}).getByRole('button',{name:'Profile',exact:true}).click();
+  await page.locator('summary[aria-label="Overview sections"]').click();
+  await page.getByRole('menuitem',{name:'Profile',exact:true}).click();
   await expect(page.getByText('Profile fixture')).toBeVisible();
+  await expect(page.getByRole('region',{name:'Profile',exact:true}).getByRole('button',{name:/create|add/i})).toHaveCount(0);
   expect(paths.filter(path=>path.endsWith('/principal_profile/records/'+childId+'/detail'))).toHaveLength(1);
   expect(paths.some(path=>path.endsWith('/form-descriptor')||path.endsWith('/detail-descriptor')||path.endsWith('/records/'+childId))).toBe(false);
 });

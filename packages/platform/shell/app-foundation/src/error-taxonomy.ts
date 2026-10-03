@@ -15,7 +15,7 @@ export type AppErrorKind =
   | "offline"
   | "unexpected";
 
-export type AppErrorAction = "login" | "complete-action" | "select-context" | "reload-compare" | "correct-fields" | "retry-later" | "retry" | "reset" | "none";
+export type AppErrorAction = "login" | "complete-action" | "verify-identity" | "select-context" | "reload-compare" | "correct-fields" | "retry-later" | "retry" | "reset" | "none";
 
 export interface AppErrorModel {
   readonly kind: AppErrorKind;
@@ -50,6 +50,7 @@ export function classifyAppError(input: ClassifyAppErrorInput): AppErrorModel {
 
   if (facts.status === 401 || facts.transportKind === "authentication") return model("authentication", "Sign in required", "Your session is no longer available. Sign in again to continue.", "login", false, false, common);
   if (facts.code === "AUTH_CONTEXT_MISMATCH") return model("context-mismatch", "Your access context changed", "Choose an active context before continuing.", "select-context", false, false, common);
+  if (facts.status === 403 && ["STEP_UP_REQUIRED", "MFA_REQUIRED"].includes(facts.code ?? "")) return model("required-action", "Verify your identity", "Complete MFA verification to view this resource. You will return to this page afterward.", "verify-identity", false, true, common);
   if ((facts.status === 403 && REQUIRED_ACTION_CODES.has(facts.code ?? "")) || requiredActions.length > 0) return model("required-action", "Action required", "Complete the required identity action before continuing.", "complete-action", false, true, common);
   if (facts.status === 403 || facts.transportKind === "authorization") return model("permission-denied", "Access denied", "You do not have permission to view this resource.", "none", false, false, common);
   if (facts.status === 404 && facts.code === "ENTITY_DESCRIPTOR_NOT_FOUND") return model("service-unavailable", `${input.applicationName?.trim() || "This entity"} is not configured for this workspace`, "An administrator needs to publish and activate the entity configuration for this workspace. This does not mean the business records are missing.", "none", false, false, common);

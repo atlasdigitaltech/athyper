@@ -222,7 +222,6 @@ planes/mesh/mesh/15_bank_disclosure_source.sql
 common/master/19_entity_saved_views.sql
 common/control/17_process_task_rule_publication.sql
 common/document/12_collaboration_integrity.sql
-common/shared/99_security_definer_hardening.sql
 
 common/master/21_reference_choice_recent.sql
 common/master/22_principal_surface_arrangement.sql
@@ -234,3 +233,6 @@ planes/mesh/master/26_entity_owner_access.sql
 common/authz/20_common_identity_permissions.sql
 common/authz/21_entity_default_access.sql
 common/master/23_projected_profile_source.sql
+
+common/shared/98_security_definer_privileges.sql
+common/shared/99_security_definer_hardening.sql

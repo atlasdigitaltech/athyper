@@ -1,0 +1,21 @@
+{
+  "schema": "athyper.human-publication-integration-install/1",
+  "environment": "dev",
+  "plane": "studio",
+  "migration": "20261003_human_reviewed_publication.sql",
+  "sha256": "95a54024cd5db4c90c6d49189b6f46bd4401c2f917c08abc93c4fff63603a9ed",
+  "applied": true,
+  "qualifiedFunctions": 20,
+  "publicationStateUnchanged": true,
+  "before": {
+    "releases": 38,
+    "human_receipts": 18,
+    "execution_policies": 38
+  },
+  "after": {
+    "releases": 38,
+    "human_receipts": 18,
+    "execution_policies": 38
+  },
+  "completedAt": "2026-10-02T19:51:01.579Z"
+}

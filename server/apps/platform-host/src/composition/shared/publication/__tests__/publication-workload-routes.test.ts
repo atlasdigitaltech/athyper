@@ -67,7 +67,7 @@ it.each(["qa", "staging", "production"])("does not mount DEV execution in %s", a
 });
 it("keeps workload mounting independent of legacy product code", () => {
   const text = readFileSync(new URL("../workload-routes.ts", import.meta.url), "utf8");
-  const allowed = new Set(["node:crypto", "express", "kysely", "@athyper/server-platform-policy", "@athyper/server-plane-studio-meta-entity-authoring", "@athyper/server-runtime-http", "../../../development/publication-workload.js", "./machine-policy.js", "./enrollment-contract.js", "./compilation-recovery-execution.js"]);
+  const allowed = new Set(["./deployment-recovery-execution.js", "./human-publication-execution.js", "node:crypto", "express", "kysely", "@athyper/server-platform-policy", "@athyper/server-plane-studio-meta-entity-authoring", "@athyper/server-runtime-http", "../../../development/publication-workload.js", "./machine-policy.js", "./enrollment-contract.js", "./compilation-recovery-execution.js"]);
   for (const node of ts.createSourceFile("routes.ts", text, ts.ScriptTarget.Latest, true).statements)
     if (ts.isImportDeclaration(node)) expect(allowed.has((node.moduleSpecifier as ts.StringLiteral).text) || (node.moduleSpecifier as ts.StringLiteral).text === "@athyper/server-foundation/context").toBe(true);
   expect(text).not.toMatch(/country|currency|business_partner|dev-publication\.js/);

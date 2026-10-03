@@ -13,6 +13,7 @@ import { lowerNativeRuntimePublication, compileCompiledEntityArtifacts, compiled
   type CompiledRuntimePublication, type CompiledRuntimeSource } from "@athyper/server-service-publication";
 import { qualifyReferencePublicationTarget } from "./target-qualification.js";
 import type { PublicationWorkloadConfiguration } from "./workload-configuration.js";
+import { parseHumanReviewedExecutionPolicy } from "./human-publication-policy.js";
 
 type Database = Kysely<Record<string, never>>;
 type SourceRow = {
@@ -40,7 +41,9 @@ export function createCompiledRuntimePublication(options: {
   if (configuration.environment !== "local" || configuration.instance !== "dev" || configuration.domainSuffix !== "dev.athyper.test")
     throw Error("PUBLICATION_WORKLOAD_DEV_ONLY");
 
-  async function persisted(releaseId: string, plane: PublicationPlane): Promise<CompiledRuntimeSource & { recoveryEvidence?: unknown }> {
+  async function persisted(releaseId: string, plane: PublicationPlane): Promise<CompiledRuntimeSource & {
+    recoveryEvidence?: unknown; humanTargets?: ReturnType<typeof compileSystemEntityTarget>[];
+  }> {
     return options.authority.transaction().setIsolationLevel("repeatable read").execute(async tx => {
       await sql`SET TRANSACTION READ ONLY`.execute(tx);
       await sql`SELECT set_config('app.database_plane','studio',true),set_config('app.current_tenant_id',${configuration.tenantId},true),
@@ -59,6 +62,36 @@ export function createCompiledRuntimePublication(options: {
           || r.source_entity_id !== row.source_entity_id || r.source_release_hash !== row.source_release_hash
           || r.release_key !== row.release_key || sha256(r.contract_json) !== sha256(row.contract_json)))
         throw Error("COMPILED_PUBLICATION_APPROVED_SOURCE_REQUIRED");
+      const human = (await sql<{ human: boolean }>`SELECT metadata ? 'humanExecutionPolicy' AS human
+        FROM publication.release WHERE id=${releaseId}::uuid`.execute(tx)).rows[0]?.human === true;
+      const execution = human ? (await sql<{ execution: { policy: unknown; coordinationHash: string;
+        sources: { changeSetId: string; graph: MetaEntityGraph }[] } | null }>`SELECT publication.fn_human_execution_context(${releaseId}::uuid) execution`.execute(tx)).rows[0]?.execution : undefined;
+      if (human && !execution) throw Error("HUMAN_PUBLICATION_EXECUTION_CONTEXT_REQUIRED");
+      let humanTargets: ReturnType<typeof compileSystemEntityTarget>[] | undefined;
+      if (execution) {
+        const policy = parseHumanReviewedExecutionPolicy(execution.policy);
+        assertPublicationCompilerIdentity(policy.compiler);
+        if (policy.authorityTenantId !== configuration.tenantId || policy.publisherPrincipalId !== configuration.publisher.principalId
+          || sha256(policy.plan) !== execution.coordinationHash || !Array.isArray(execution.sources)
+          || execution.sources.length !== policy.plan.members.length
+          || new Set(execution.sources.map(s => s.changeSetId)).size !== execution.sources.length)
+          throw Error("HUMAN_PUBLICATION_EXECUTION_CONTEXT_CHANGED");
+        humanTargets = [];
+        for (const member of policy.plan.members) {
+          const graph = execution.sources.find(s => s.changeSetId === member.changeSetId)?.graph;
+          if (!graph || compileGraph(graph).contractHash !== member.contractHash || compileGraph(graph).descriptorHash !== member.descriptorHash)
+            throw Error("HUMAN_PUBLICATION_GROUP_SOURCE_CHANGED");
+          const targetPin = member.targets.find(t => t.plane === plane);
+          if (!targetPin) continue;
+          const target = compileSystemEntityTarget(graph, plane);
+          if (target.artifact.contractHash !== targetPin.contractHash || target.artifact.descriptorHash !== targetPin.descriptorHash)
+            throw Error("HUMAN_PUBLICATION_GROUP_TARGET_CHANGED");
+          humanTargets.push(target);
+        }
+        if (!policy.plan.members.some(m => m.entityId === row.source_entity_id
+          && m.contractHash === compileGraph(row.contract_json).contractHash))
+          throw Error("HUMAN_PUBLICATION_GROUP_MEMBER_REQUIRED");
+      }
       const successor = Number(row.release_no) > 1 ? parseDevEntitySuccessorPolicy(row.successor_policy) : undefined;
       let recoveryEvidence: unknown;
       if (successor && successor.compiler.buildHash !== publicationCompilerIdentity().buildHash) {
@@ -74,7 +107,8 @@ export function createCompiledRuntimePublication(options: {
         entityCode: row.entity_code, revisionId: row.revision_id, sourceEntityId: row.source_entity_id, sourceReleaseHash: row.source_release_hash, sourceContractHash: sha256(row.contract_json),
         sourceDescriptorHash: sha256(row.compiled_json), generatedAt: new Date(row.created_at).toISOString(),
         native: row.compiled_json, contract: row.contract_json as unknown as Record<string, unknown>,
-        ...(expectedPredecessor ? { expectedPredecessor } : {}), ...(recoveryEvidence ? { recoveryEvidence } : {}) };
+        ...(expectedPredecessor ? { expectedPredecessor } : {}), ...(recoveryEvidence ? { recoveryEvidence } : {}),
+        ...(execution ? { coordinationHash: execution.coordinationHash, humanTargets } : {}) };
     });
   }
   async function catalog(plane: PublicationPlane) {
@@ -103,14 +137,14 @@ export function createCompiledRuntimePublication(options: {
   }
   async function lower(source: CompiledRuntimeSource) {
     const saved = await persisted(source.releaseId, source.plane);
-    const { recoveryEvidence: _recovery, ...originalSource } = saved;
-    const { recoveryEvidence: _providedRecovery, ...providedSource } = source as typeof saved;
+    const { recoveryEvidence: _recovery, humanTargets: _targets, ...originalSource } = saved;
+    const { recoveryEvidence: _providedRecovery, humanTargets: _providedTargets, ...providedSource } = source as typeof saved;
     if (sha256(originalSource) !== sha256(providedSource)) throw Error("COMPILED_PUBLICATION_SOURCE_CHANGED");
     const graph = saved.contract as unknown as MetaEntityGraph;
     const target = compileSystemEntityTarget(graph, saved.plane);
     if (sha256(target.artifact.descriptor) !== saved.sourceDescriptorHash || compileGraph(graph).contractHash !== saved.sourceContractHash)
       throw Error("COMPILED_PUBLICATION_TARGET_SOURCE_MISMATCH");
-    await qualifyReferencePublicationTarget(target, options.targets());
+    await qualifyReferencePublicationTarget(target, options.targets(), saved.humanTargets);
     const profile = target.graph.runtimeProfiles![0]!;
     return lowerNativeRuntimePublication(saved, { registration: {
       entityCode: saved.entityCode, plane: saved.plane,
@@ -126,7 +160,8 @@ export function createCompiledRuntimePublication(options: {
     const source = await persisted(input.releaseId, input.plane);
     if (source.publicationKey !== input.publicationKey || source.revisionId !== input.sourceRevisionId
       || source.sourceContractHash !== input.sourceContractHash || source.sourceDescriptorHash !== input.sourceDescriptorHash
-      || JSON.stringify(source.expectedPredecessor ?? null) !== JSON.stringify(input.expectedPredecessor ?? null))
+      || JSON.stringify(source.expectedPredecessor ?? null) !== JSON.stringify(input.expectedPredecessor ?? null)
+      || source.coordinationHash !== input.coordinationHash)
       throw Error("COMPILED_PUBLICATION_SOURCE_PIN_MISMATCH");
     if (source.expectedPredecessor) await assertSuccessorTargetHeads([source.expectedPredecessor], options.targets().databases);
     const lowered = await lower(source);

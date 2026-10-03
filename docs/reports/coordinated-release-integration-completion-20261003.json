@@ -1,0 +1,79 @@
+{
+  "schema": "athyper.coordinated-release-integration-completion/1",
+  "completedAt": "2026-10-02T20:03:24.203217+00:00",
+  "scope": "Shared Entity Framework database, publisher and worker integration plus independent execution-policy enrollment",
+  "status": "integration-installed-policy-active-runtime-qualification-outstanding",
+  "selectedSources": 6,
+  "targetPublications": 8,
+  "targets": {
+    "neon": 6,
+    "mesh": 1,
+    "studio": 1
+  },
+  "implementation": {
+    "humanSourceReceiptsPreserved": true,
+    "nativeReleaseAllocation": true,
+    "compiledManifestCoordinationBinding": true,
+    "transactionalTargetGroupActivation": true,
+    "exactReleaseRedispatch": true,
+    "runtimeGuardsRetained": true,
+    "tenantReadCompatibilityRetained": true,
+    "crossPlaneAtomicity": false
+  },
+  "installedMigrations": [
+    "20261003_human_reviewed_publication.sql",
+    "20261003_product_publication_tenant_reads.sql"
+  ],
+  "executionPolicy": {
+    "schema": "athyper.coordinated-policy-activation/1",
+    "activatedAt": "2026-10-02T19:55:46.804Z",
+    "actor": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+    "proposedBy": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+    "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+    "version": 1,
+    "hash": "b924f8a65d0e55fdc8052458b6f7f289903a284c0d859f266e0e84c4682fe5ae",
+    "status": "active"
+  },
+  "validation": {
+    "hostPublicationTests": 210,
+    "nativeHumanPublicationTests": 15,
+    "publicationWorkerAndActivationTests": 55,
+    "postgresRollbackQualificationTests": 1,
+    "focusedTotal": 292,
+    "typechecks": [
+      "platform-host",
+      "meta-entity-authoring including tests",
+      "publication service including tests"
+    ],
+    "migrationLayoutPassed": true,
+    "generatedOwnershipContractPassed": true,
+    "workerCompilerMatchesPolicy": true,
+    "securityBoundaryTests": 11,
+    "disposableThreePlaneDatabaseQualificationPassed": true
+  },
+  "evidence": [
+    "docs/reports/coordinated-release-database-integration-20261003.json",
+    "docs/reports/coordinated-release-database-tenant-read-compatibility-20261003.json",
+    "docs/reports/coordinated-release-execution-policy-proposal-20261003.json",
+    "docs/reports/coordinated-release-execution-policy-activation-20261003.json",
+    "docs/reports/coordinated-release-runtime-integration-20261003.json"
+  ],
+  "publication": {
+    "executed": false,
+    "reason": "Serving deployment support is not qualified; retain live activation checks rather than queueing an unqualified release set."
+  },
+  "remaining": [
+    "Configure a stable ENTITY_SERVING_DEPLOYMENT_ID for the serving API.",
+    "Compose the authenticated qualification authority, dedicated evidence custody and real capability owner probes through the existing shared qualification writer.",
+    "Retain passing capability support and activation-target evidence for exact serving build/configuration/artifact hashes.",
+    "Recheck compiler policy pin if production code changes, then execute coordinated publication and verify all eight active target heads and user flows."
+  ],
+  "databaseBoundaryInventory": {
+    "report": "docs/reports/coordinated-release-database-boundary-inventory-20261003.json",
+    "scope": "Read-only whole-installation inventory; not a claim that broad pending ownership hardening is installed.",
+    "fullCatalogQualified": false,
+    "broaderOwnershipMigrationInstalled": false,
+    "publicationFunctionsAssignedToQualifiedBoundedOwner": 20,
+    "scopedProductOwnerErrors": []
+  }
+}

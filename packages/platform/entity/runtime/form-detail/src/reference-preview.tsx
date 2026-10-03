@@ -2,6 +2,8 @@
 import {
   createContext,
   useContext,
+  Fragment,
+  useMemo,
   useState,
   useRef,
   type ReactNode,
@@ -22,8 +24,8 @@ import {
   useSessionIdentity,
 } from "@athyper/platform-shell-app-foundation";
 import { WorkspaceToolPanel } from "@athyper/platform-shell";
-import { Badge, InlineStatus, PanelHeader } from "@athyper/platform-ui";
-import { InfoIcon } from "@athyper/platform-icons";
+import { Badge, InlineStatus, PanelContextRow, PanelFooter, PanelHeader } from "@athyper/platform-ui";
+import { ChevronRightIcon, resolveMetadataIcon } from "@athyper/platform-icons";
 import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { localizeEntityLabels } from "@athyper/platform-i18n/entity-labels";
 import { useAsyncResource } from "./use-async-resource";
@@ -34,8 +36,20 @@ type Selection = {
   sourceRecord: string;
   field: string;
   reference: ResolvedEntityReferenceV1;
+  origin?: ReferenceOriginValue;
   scope: string;
 };
+
+/** Where a reference sits on the page: the record's title and the section's label. */
+type ReferenceOriginValue = Readonly<{ recordTitle?: string; sectionLabel?: string }>;
+const ReferenceOriginContext = createContext<ReferenceOriginValue>({});
+/** Record pages and their sections name the place a reference preview is opened from;
+ * nested origins add to the outer one (record, then section). */
+export function ReferenceOrigin({ recordTitle, sectionLabel, children }: ReferenceOriginValue & { children: ReactNode }) {
+  const outer = useContext(ReferenceOriginContext);
+  const value = useMemo(() => ({ ...outer, ...(recordTitle ? { recordTitle } : {}), ...(sectionLabel ? { sectionLabel } : {}) }), [outer, recordTitle, sectionLabel]);
+  return <ReferenceOriginContext.Provider value={value}>{children}</ReferenceOriginContext.Provider>;
+}
 const PreviewContext = createContext<
   ((value: Omit<Selection, "scope">, opener: HTMLElement) => void) | undefined
 >(undefined);
@@ -51,6 +65,7 @@ export function EntityReferenceLink({
   reference: ResolvedEntityReferenceV1;
 }) {
   const open = useContext(PreviewContext);
+  const origin = useContext(ReferenceOriginContext);
   const intl = useEntityI18n();
   return (
     <a
@@ -70,13 +85,15 @@ export function EntityReferenceLink({
         )
           return;
         event.preventDefault();
-        open({ sourceEntity, sourceRecord, field, reference }, event.currentTarget);
+        open({ sourceEntity, sourceRecord, field, reference, origin }, event.currentTarget);
       }}
     >
       {reference.label}
       {reference.label !== reference.value ? (
         <small> · {reference.value}</small>
       ) : null}
+      {/* Always laid out, shown only on hover / focus, so the value never shifts. */}
+      <ChevronRightIcon className="a-entity-reference-link__cue" size={14} aria-hidden="true" />
     </a>
   );
 }
@@ -155,12 +172,13 @@ function ReferencePreview({
         reference.recordId !== selection.reference.recordId
       )
         throw Error("Reference unavailable");
-      return entityDescriptorClient.detailRead(
+      const target = await entityDescriptorClient.detailRead(
         client,
         reference.entityCode,
         reference.recordId,
         signal,
       );
+      return { ...target, source: source.descriptor };
     },
     [client, selection],
   );
@@ -168,6 +186,9 @@ function ReferencePreview({
     ? localizeEntityLabels(loaded.data.descriptor, intl)
     : undefined;
   const record = loaded.data?.record;
+  // Where the preview was opened from: the source entity and the reference field.
+  const source = loaded.data ? localizeEntityLabels(loaded.data.source, intl) : undefined;
+  const sourceField = source?.fields.find((field) => field.key === selection.field)?.label;
   const header =
     descriptor?.presentation && record
       ? resolveRecordHeader(descriptor.presentation, record.values, {
@@ -220,33 +241,52 @@ function ReferencePreview({
         resize: intl.message("list.controls.resize"),
       }}
     >
-      {({ capabilities }) => (
-        <>
-          <PanelHeader
-            icon={<InfoIcon size={20} />}
-            title={header?.title ?? intl.message("reference.preview")}
-            subtitle={descriptor?.entity.label}
-            capabilities={capabilities}
-          />
-          <div className="a-entity-reference-preview__body">
-            {loaded.loading ? (
-              <InlineStatus tone="neutral">
-                {intl.message("detail.loadingRecord")}
-              </InlineStatus>
-            ) : loaded.error ? (
-              <>
-                <p role="alert">{intl.message("reference.unavailable")}</p>
-                <button type="button" onClick={loaded.reload}>
-                  {intl.message("entity.retry")}
-                </button>
-              </>
-            ) : descriptor && record ? (
-              <>
-                {header?.badges.map((badge, index) => (
-                  <Badge key={index} tone={badge.tone}>
-                    {badge.label}
-                  </Badge>
-                ))}
+      {({ capabilities }) => {
+        // The shared panel anatomy (as Manage views): entity icon tile, record title
+        // with its status, context row, body, pinned footer action.
+        const Icon = resolveMetadataIcon("entity", header?.iconKey);
+        const subtitle = descriptor
+          ? header?.code && header.code !== header.title
+            ? `${descriptor.entity.label} · ${header.code}`
+            : descriptor.entity.label
+          : undefined;
+        return (
+          <>
+            <PanelHeader
+              icon={<Icon size={20} />}
+              title={
+                <>
+                  {header?.title ?? intl.message("reference.preview")}
+                  {header?.badges.map((badge, index) => (
+                    <Badge key={index} tone={badge.tone} className="a-entity-reference-preview__badge">
+                      {badge.label}
+                    </Badge>
+                  ))}
+                </>
+              }
+              {...(subtitle ? { subtitle } : {})}
+              capabilities={capabilities}
+            />
+            {source && sourceField ? (
+              <ReferenceOriginRow
+                parts={selection.origin?.recordTitle && selection.origin.sectionLabel
+                  ? [selection.origin.recordTitle, selection.origin.sectionLabel, sourceField]
+                  : [source.entity.label, sourceField]}
+              />
+            ) : null}
+            <div className="a-entity-reference-preview__body">
+              {loaded.loading ? (
+                <InlineStatus tone="neutral">
+                  {intl.message("detail.loadingRecord")}
+                </InlineStatus>
+              ) : loaded.error ? (
+                <>
+                  <p role="alert">{intl.message("reference.unavailable")}</p>
+                  <button type="button" onClick={loaded.reload}>
+                    {intl.message("entity.retry")}
+                  </button>
+                </>
+              ) : descriptor && record ? (
                 <EntityRecordFields
                   descriptor={descriptor}
                   record={record}
@@ -254,18 +294,50 @@ function ReferencePreview({
                     descriptor.referenceSummaryFields ?? [descriptor.titleField]
                   }
                 />
+              ) : null}
+            </div>
+            {descriptor && record ? (
+              <PanelFooter className="a-entity-reference-preview__footer">
                 <a
-                  className="a-entity-reference-preview__open"
+                  className="a-button a-button--secondary a-button--small"
                   href={href}
                   onClick={navigate}
                 >
-                  {intl.message("reference.openRecord")}
+                  {intl.message("reference.openEntity", { entity: descriptor.entity.label })}
+                  <ChevronRightIcon size={16} aria-hidden="true" />
                 </a>
-              </>
+              </PanelFooter>
             ) : null}
-          </div>
-        </>
-      )}
+          </>
+        );
+      }}
     </WorkspaceToolPanel>
+  );
+}
+
+/** "From Catl Admin › UI Profile › Locale": the same path as the page breadcrumb. One
+ * line; the record title gives way first so the section and field stay readable. */
+function ReferenceOriginRow({ parts }: { parts: readonly string[] }) {
+  const intl = useEntityI18n();
+  const path = parts.join(" › ");
+  return (
+    <PanelContextRow
+      className="a-entity-reference-preview__origin"
+      title={intl.message("reference.openedFromPath", { path })}
+      scope={{
+        kind: "record",
+        label: (
+          <>
+            <span className="a-entity-reference-preview__origin-lead">{intl.message("reference.openedFromLead")}</span>
+            {parts.map((part, index) => (
+              <Fragment key={index}>
+                {index ? <span className="a-entity-reference-preview__origin-separator">›</span> : null}
+                <span className="a-entity-reference-preview__origin-part" data-first={index === 0 || undefined}>{part}</span>
+              </Fragment>
+            ))}
+          </>
+        ),
+      }}
+    />
   );
 }

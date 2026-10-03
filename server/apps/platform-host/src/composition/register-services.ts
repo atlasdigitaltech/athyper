@@ -1,6 +1,8 @@
 import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
+import { businessPartnerCollaborationBinding } from "@athyper/server-service-master-data";
 import { assertRollbackEntityReadiness } from "./shared/publication/rollback-readiness.js";
 import { admitEntityDescriptor, createHostEntityReadiness } from "./shared/entity-runtime/deployment-readiness.js";
+import { registerEntitySupportQualification, type EntitySupportQualificationRegistration } from "./shared/entity-runtime/support-qualification.js";
 import { createEntityReadinessHealth } from "./shared/entity-runtime/readiness-inventory.js";
 import { createEntityReadinessInventory } from "@athyper/server-platform-metadata";
 import { publicationCompilerIdentity as entityServingBuildIdentity } from "./shared/publication/compiler-build.js";
@@ -54,10 +56,6 @@ import {
   type EntityActivityProvider,
 } from "@athyper/server-platform-experience";
 
-import {
-  collaborationEntityCode,
-  collaborationEntityTypes,
-} from "@athyper/server-platform-collaboration";
 import { parseCollectionState } from "@athyper/contract-platform-collection";
 import {
   activityCollectionState,
@@ -130,6 +128,7 @@ import { registerPublicationWorkloadRoutes } from "./shared/publication/workload
 import { createCapabilityQualification } from "./shared/publication/capability-qualification.js";
 import { qualifyPreviewRenderer } from "@athyper/server-adapter-preview-renderer";
 import { loadPublicationWorkloadConfiguration } from "./shared/publication/workload-configuration.js";
+import { coordinatedApplyPrincipal } from "./shared/publication/apply-identity.js";
 import { createCompiledRuntimePublication } from "./shared/publication/compiled-runtime.js";
 import { createRecordDisplayChoices } from "./shared/entity-runtime/record-display-choices.js";
 import type { EntityAuthorizationRuntimeRegistration } from "@athyper/server-contract-metadata";
@@ -302,6 +301,7 @@ import {
 } from "@athyper/server-platform-preferences";
 import {
   createCollaborationService,
+  createCollaborationEntityCoordinates,
   createKyselyCollaborationRepository,
   createKyselyPrincipalDirectory,
   registerCollaborationRoutes,
@@ -370,6 +370,8 @@ import {
   AtlasToolRegistry,
   createAtlasRecordDataGateway,
   AtlasToolService,
+  createAtlasGatedToolAuthority,
+  createAtlasGatedPlaneAdmission,
   AtlasExperienceConfigurationService,
   KyselyAtlasAttachmentContextResolver,
   KyselyAtlasExperienceConfigurationRepository,
@@ -603,6 +605,7 @@ import { randomUUID } from "node:crypto";
 type RecordTransaction = Transaction<Record<string, never>>;
 
 export interface ServiceRegistrationDependencies {
+  readonly entitySupportQualification?: EntitySupportQualificationRegistration;
   readonly activityAdapters?: readonly import("./shared/entity-runtime/activity-recording.js").ActivityAdapterRegistration[];
   readonly compiledRuntimePublication?: ConstructorParameters<
     typeof KyselyPublicationAuthorityWork
@@ -772,6 +775,9 @@ export function registerServices(
   plan?: RegistrationPlan,
 ): void {
   // Explicit entrypoints validate MODE. Direct composition callers retain API defaults.
+  const collaborationCoordinates = createCollaborationEntityCoordinates([businessPartnerCollaborationBinding]);
+  const collaborationEntityCode = collaborationCoordinates.entityCode;
+  const collaborationEntityTypes = collaborationCoordinates.entityTypes;
   const role =
     config?.mode === "worker" || config?.mode === "scheduler"
       ? config.mode
@@ -2019,6 +2025,7 @@ export function registerServices(
     transactions,
     dependencies.metadata,
   );
+  registerEntitySupportQualification(container, dependencies.entitySupportQualification);
   let readPublishedParent:
     Parameters<typeof createPublishedParentAdmission>[0]["read"] | undefined;
   let readPublishedHeader:
@@ -3008,7 +3015,7 @@ export function registerServices(
       },
       authorizer,
       principals: createKyselyPrincipalDirectory(),
-      repository: createKyselyCollaborationRepository(),
+      repository: createKyselyCollaborationRepository(collaborationCoordinates),
       commandExecutions:
         createKyselyCommandExecutionStore<
           import("@athyper/server-contract-collaboration").CommentRecord
@@ -4722,6 +4729,10 @@ export function registerAtlas(
     config?.atlas.toolsEnabled &&
     config.atlas.generationEnabled !== false,
   );
+  const toolFeatureGates = {
+    toolsEnabled,
+    mutationsEnabled: Boolean(config?.atlas.mutationsEnabled),
+  };
   if (!routesEnabled) {
     if (container.platform.experience)
       container.platform.httpRegistrars.push((application) =>
@@ -4844,34 +4855,35 @@ export function registerAtlas(
       ? new AtlasToolService({
           registry: localRegistry,
           proposals: ledger,
-          authority: {
-            async authorize({ context, manifest }) {
-              const allowed =
-                (context.planeKey === "neon" ||
-                  manifest.toolCode === "entity_read_record" ||
-                  entityContextTool(manifest.toolCode) ||
-                  entityLookupTool(manifest.toolCode)) &&
-                localAvailable(manifest.access) &&
-                context.permissions.allowed.includes(
-                  `${context.planeKey}.ai.agent.use`,
-                ) &&
-                !context.permissions.denied.includes(
-                  `${context.planeKey}.ai.agent.use`,
-                ) &&
-                !context.permissions.planLocked.includes(
-                  `${context.planeKey}.ai.agent.use`,
-                ) &&
-                !context.permissions.planeExcluded.includes(
-                  `${context.planeKey}.ai.agent.use`,
-                ) &&
-                (manifest.access === "read" ||
-                  Boolean(config?.atlas.mutationsEnabled));
-              return {
-                allowed,
-                policyRevision: `atlas-local-tools-v2:mutations-${Boolean(config?.atlas.mutationsEnabled)}`,
-              };
+          authority: createAtlasGatedToolAuthority(
+            {
+              async authorize({ context, manifest }) {
+                const allowed =
+                  (context.planeKey === "neon" ||
+                    manifest.toolCode === "entity_read_record" ||
+                    entityContextTool(manifest.toolCode) ||
+                    entityLookupTool(manifest.toolCode)) &&
+                  localAvailable(manifest.access) &&
+                  context.permissions.allowed.includes(
+                    `${context.planeKey}.ai.agent.use`,
+                  ) &&
+                  !context.permissions.denied.includes(
+                    `${context.planeKey}.ai.agent.use`,
+                  ) &&
+                  !context.permissions.planLocked.includes(
+                    `${context.planeKey}.ai.agent.use`,
+                  ) &&
+                  !context.permissions.planeExcluded.includes(
+                    `${context.planeKey}.ai.agent.use`,
+                  );
+                return {
+                  allowed,
+                  policyRevision: `atlas-local-tools-v2:mutations-${Boolean(config?.atlas.mutationsEnabled)}`,
+                };
+              },
             },
-          },
+            toolFeatureGates,
+          ),
           records: {
             async query(input) {
               const metadata = container.platform.metadata,
@@ -5178,7 +5190,10 @@ export function registerAtlas(
   ]);
   const tools = new AtlasToolService({
     registry,
-    authority: dependencies.toolAuthority,
+    authority: createAtlasGatedToolAuthority(
+      dependencies.toolAuthority,
+      toolFeatureGates,
+    ),
     proposals: ledger,
     records: dependencies.recordGateway,
     confirmations: dependencies.confirmations,
@@ -5187,6 +5202,10 @@ export function registerAtlas(
   const coordinator = toolsEnabled
     ? new AtlasRegisteredToolCoordinator(registry, tools, atlasMetadata)
     : undefined;
+  const admission = createAtlasGatedPlaneAdmission(
+    dependencies.admission,
+    toolFeatureGates,
+  );
   const quotas =
     dependencies.quotas ??
     new KyselyAtlasTenantQuotaManager({
@@ -5213,7 +5232,7 @@ export function registerAtlas(
         }).resolve(context, value);
       },
     },
-    admission: dependencies.admission,
+    admission,
     modelPolicy: dependencies.modelPolicy,
     bindings,
     providers,
@@ -5254,7 +5273,7 @@ export function registerAtlas(
     registerAtlasRoutes(application as never, {
       authenticate: createIamAuthenticationMiddleware(iam),
       readContext: readVerifiedRequestContext,
-      admission: dependencies.admission,
+      admission,
       feedback: new AtlasResponseFeedbackService(
         new KyselyAtlasResponseFeedbackStore(transactions),
         threads,
@@ -5278,7 +5297,7 @@ export function registerAtlas(
     const surfaceDrafts = new AtlasSurfaceDraftGenerator({
       runtime,
       threads,
-      admission: dependencies.admission,
+      admission,
       surfaces: container.platform.experience.service,
     });
     container.platform.httpRegistrars.push((application) =>
@@ -5804,6 +5823,7 @@ function registerPublication(
   const authorityDatabase = databases.studio;
   if (!authorityDatabase)
     throw new Error("Publication requires the Studio authority database");
+  const coordinatedWorkload = loadPublicationWorkloadConfiguration(process.env, config.env);
   const devConfiguration = loadDevPublicationConfiguration(
     process.env,
     config.env,
@@ -5837,6 +5857,7 @@ function registerPublication(
   const authority = new KyselyPublicationAuthorityRepository(authorityDatabase);
   const { projections, orchestrators, loaders } = createPublicationTargets({
     authorityDatabase,
+    coordinatedWorkload,
     databases,
     targetPlanes: config.publication.applyEnabled
       ? config.publication.targetPlanes
@@ -6163,12 +6184,13 @@ function registerPublication(
       bucket: container.adapters.objectStorageArtifactsBucket,
       signingKeyId: config.publication.signingKeyId!,
       targetEnvironment: config.env,
+      targetInstance: coordinatedWorkload?.instance ?? process.env["ATHYPER_INSTANCE"],
       targetPlanes: config.publication.targetPlanes,
     });
     const handlers = createPublicationAuthorityHandlers(
       work,
       container.runtimes.jobs,
-      async (execution, plane) => {
+      async (execution, plane, deploymentId) => {
         if (!execution.tenantId)
           throw new Error("PUBLICATION_APPLIER_TENANT_REQUIRED");
         const adapter =
@@ -6182,6 +6204,9 @@ function registerPublication(
         const database = adapter.database as unknown as Kysely<
           Record<string, never>
         >;
+        const coordinatedPrincipal = await coordinatedApplyPrincipal({ authority: authorityDatabase, target: database,
+          configuration: coordinatedWorkload, execution, plane, deploymentId });
+        if (coordinatedPrincipal) return { ...execution, planeKey: plane, principalId: coordinatedPrincipal };
         const principalId = await database
           .transaction()
           .execute(async (transaction) => {

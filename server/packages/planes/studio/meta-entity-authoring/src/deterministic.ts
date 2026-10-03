@@ -554,6 +554,7 @@ export function compileGraph(
     validateRelatedPresentationOwner(
       recordPresentation.related,
       graph.entity.entityCode,
+      recordPresentation.entityRelationships,
     );
   const formBindings = (graph.surfaces ?? []).filter(surface => surface.status !== "deprecated" && surface.layoutConfig?.formPresentation !== undefined);
   if (formBindings.length > 1) throw TypeError("Ambiguous form presentation");

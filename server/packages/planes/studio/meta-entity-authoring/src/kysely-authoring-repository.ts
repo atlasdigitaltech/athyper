@@ -96,10 +96,17 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease
     >`
       SELECT r.id::text, e.entity_code AS "entityCode", r.change_set_id::text AS "changeSetId",
+        CASE WHEN r.tenant_id IS NULL THEN 'product' ELSE 'tenant' END AS "sourceScope",
+        r.tenant_id::text AS "sourceTenantId",
         r.release_no::integer AS "releaseNo", r.contract_hash AS "contractHash",
         r.target_planes AS "targetPlanes", r.published_at::text AS "publishedAt"
       FROM metadata.entity_release r JOIN metadata.entity e ON e.id=r.entity_id
-      WHERE r.tenant_id=${tenantId}::uuid
+        AND e.tenant_id IS NOT DISTINCT FROM r.tenant_id
+      JOIN metadata.entity_change_set cs ON cs.id=r.change_set_id AND cs.entity_id=r.entity_id
+        AND cs.tenant_id IS NOT DISTINCT FROM r.tenant_id
+      WHERE (r.tenant_id=${tenantId}::uuid OR
+        (r.tenant_id IS NULL AND e.ownership_model='system' AND r.release_kind='publish'
+          AND cs.status='published'))
       ORDER BY r.release_no DESC LIMIT 100`.execute(this.database);
     return result.rows;
   }
@@ -110,15 +117,23 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       legacyHashMatches: boolean;
     }>`
       SELECT jsonb_build_object('id',r.id,'entityCode',e.entity_code,'changeSetId',r.change_set_id,
+        'sourceScope',CASE WHEN r.tenant_id IS NULL THEN 'product' ELSE 'tenant' END,
+        'sourceTenantId',r.tenant_id,
         'releaseNo',r.release_no,'contractHash',r.contract_hash,'targetPlanes',r.target_planes,
         'publishedAt',r.published_at) AS release, snapshot.contract_json AS graph,
         (snapshot.contract_hash=r.contract_hash AND
           encode(sha256(convert_to(snapshot.contract_json::text,'UTF8')),'hex')=r.contract_hash)
           AS "legacyHashMatches"
       FROM metadata.entity_release r JOIN metadata.entity e ON e.id=r.entity_id
+        AND e.tenant_id IS NOT DISTINCT FROM r.tenant_id
+      JOIN metadata.entity_change_set cs ON cs.id=r.change_set_id AND cs.entity_id=r.entity_id
+        AND cs.tenant_id IS NOT DISTINCT FROM r.tenant_id
       JOIN snapshot.entity_contract_revision snapshot ON snapshot.id=r.revision_id
-        AND snapshot.tenant_id=r.tenant_id AND snapshot.entity_id=r.entity_id
-      WHERE r.tenant_id=${tenantId}::uuid AND r.id=${releaseId}::uuid`.execute(
+        AND snapshot.tenant_id IS NOT DISTINCT FROM r.tenant_id AND snapshot.entity_id=r.entity_id
+        AND snapshot.change_set_id=r.change_set_id
+      WHERE (r.tenant_id=${tenantId}::uuid OR
+        (r.tenant_id IS NULL AND e.ownership_model='system' AND r.release_kind='publish'
+          AND cs.status='published')) AND r.id=${releaseId}::uuid`.execute(
       this.database,
     );
     const row = result.rows[0];
@@ -219,6 +234,8 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     if (!/^[a-z][a-z0-9_]{1,62}$/.test(input.entityCode))
       throw new TypeError("Canonical entity code required");
     const registration = parseEntityRegistration(input.registration);
+    if (input.productBase && (!input.tenantId || registration || input.baseRelease))
+      throw new AuthoringPolicyError("FORBIDDEN", "Product ancestry requires an isolated tenant knowledge draft");
     if (registration && !input.tenantId)
       throw new AuthoringPolicyError(
         "FORBIDDEN",
@@ -228,6 +245,8 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       await sql`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify([input.tenantId, input.entityCode])},0))`.execute(
         tx,
       );
+      if (input.productBase)
+        await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`system-entity-release:${input.entityId}`},0))`.execute(tx);
       if (registration) {
         // Inserts only a draft identity. Conflicts fail; no existing identity,
         // publication, grant, or retired row is reactivated.
@@ -244,7 +263,10 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
           );
       }
       const entity =
-        await sql`SELECT id FROM metadata.entity WHERE id=${input.entityId}::uuid AND tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid AND entity_code=${input.entityCode} AND status IN ('draft','active') FOR SHARE`.execute(
+        await sql`SELECT id FROM metadata.entity WHERE id=${input.entityId}::uuid
+          AND (tenant_id IS NOT DISTINCT FROM ${input.tenantId}::uuid
+            OR (${Boolean(input.productBase)} AND tenant_id IS NULL AND ownership_model='system'))
+          AND entity_code=${input.entityCode} AND status IN ('draft','active') ${input.productBase ? sql`` : sql`FOR SHARE`}`.execute(
           tx,
         );
       if (entity.rows.length !== 1)
@@ -268,9 +290,21 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
             "Draft predecessor is not the current published release for this entity and tenant",
           );
       }
+      if (input.productBase) {
+        const base = (await sql`SELECT r.id FROM metadata.entity_release r
+          JOIN metadata.entity_change_set c ON c.id=r.change_set_id AND c.tenant_id IS NULL
+          WHERE r.id=${input.productBase.releaseId}::uuid AND r.release_hash=${input.productBase.releaseHash}
+            AND r.entity_id=${input.entityId}::uuid AND r.tenant_id IS NULL
+            AND c.status='published' AND r.release_kind='publish'
+            AND r.contract_signature IS NOT NULL AND r.signature_algorithm='Ed25519'
+            AND c.approved_by IS NOT NULL AND c.approved_by<>c.created_by AND c.approved_by IS DISTINCT FROM c.submitted_by
+            AND NOT EXISTS(SELECT 1 FROM metadata.entity_release newer WHERE newer.entity_id=r.entity_id
+              AND newer.tenant_id IS NULL AND newer.release_no>r.release_no)`.execute(tx)).rows;
+        if (base.length !== 1) throw new AuthoringConflictError("The pinned product predecessor changed");
+      }
       const result =
         await sql<ChangeSetRow>`INSERT INTO metadata.entity_change_set(id,tenant_id,entity_id,change_set_code,branch_code,title,created_by,base_release_id)
-      VALUES(${id}::uuid,${input.tenantId}::uuid,${input.entityId}::uuid,${code},${input.branchCode},${input.title},${input.actorId}::uuid,${input.baseRelease?.releaseId ?? null}::uuid) RETURNING *`.execute(
+      VALUES(${id}::uuid,${input.tenantId}::uuid,${input.entityId}::uuid,${code},${input.branchCode},${input.title},${input.actorId}::uuid,${input.baseRelease?.releaseId ?? input.productBase?.releaseId ?? null}::uuid) RETURNING *`.execute(
           tx,
         );
       return this.map({
@@ -563,6 +597,13 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
           )
         ).rows[0],
       );
+      // Tenant knowledge drafts may reference a shared product identity. They
+      // cannot enter the legacy full-entity publication path: compiled extension
+      // delivery and runtime ancestry admission must be registered first.
+      const sharedProduct = (await sql<{ shared_product: boolean }>`SELECT EXISTS(SELECT 1 FROM metadata.entity
+        WHERE id=${cs["entity_id"]}::uuid AND tenant_id IS NULL AND ownership_model='system') AS shared_product`.execute(tx)).rows[0];
+      if (sharedProduct?.shared_product)
+        throw new AuthoringPolicyError("LEARNING_EXTENSION_PUBLICATION_UNAVAILABLE", "Tenant product extensions require qualified compiled publication and runtime ancestry admission");
       await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${cs["tenant_id"] ?? "global"}:${cs["entity_id"]}`},0))`.execute(
         tx,
       );
@@ -622,6 +663,19 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     });
   }
   async getSignedRelease(id: string) {
+    // Coordinated recovery must redispatch the originally signed native graph,
+    // not pair its signature with a target-specific descriptor or SQL ledger hash.
+    const native = (await sql<{ contract_json: MetaEntityGraph; contract_signature: string;
+      signature_algorithm: string; signing_key_id: string }>`SELECT s.contract_json,r.contract_signature,
+      r.signature_algorithm,r.signing_key_id FROM metadata.entity_release r
+      JOIN snapshot.entity_contract_revision s ON s.id=r.revision_id AND s.entity_id=r.entity_id AND s.tenant_id IS NULL
+      JOIN publication.entity_release_link l ON l.entity_release_id=r.id
+      JOIN publication.release p ON p.id=l.publication_release_id
+      WHERE r.id=${id}::uuid AND r.tenant_id IS NULL AND p.tenant_id=shared.current_tenant_id_soft()
+        AND p.metadata ? 'humanExecutionPolicy' AND r.published_by=master.current_principal_id_soft()`
+      .execute(this.database)).rows[0];
+    if (native) return { ...compileGraph(native.contract_json), signature: native.contract_signature,
+      signatureAlgorithm: native.signature_algorithm, signingKeyId: native.signing_key_id };
     const result =
       await sql<ArtifactRow>`SELECT r.contract_hash,r.signature_algorithm,r.signing_key_id,r.contract_signature,a.compiled_hash,a.compiled_json FROM metadata.entity_release r JOIN snapshot.entity_release_artifact a ON a.source_release_id=r.id WHERE r.id=${id}::uuid ORDER BY a.plane_key LIMIT 1`.execute(
         this.database,

@@ -443,6 +443,7 @@ SET search_path = pg_catalog, mesh SET row_security = off AS $$
                        JOIN mesh.catalog_item item ON item.id=value.catalog_item_id
                       WHERE item.catalog_id=catalog.id)
   ) FROM mesh.catalog catalog WHERE catalog.id=p_catalog_id
+      AND catalog.tenant_id=shared.current_tenant_id_soft()
 $$;
 
 INSERT INTO mesh.catalog_revision(

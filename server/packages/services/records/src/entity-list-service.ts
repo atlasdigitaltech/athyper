@@ -112,6 +112,9 @@ export interface EntityListService {
     recordId: string,
   ): Promise<EntityRecordV1>;
   list(query: ListRecordsQuery): Promise<EntityListResultV1>;
+  /** The caller's own record of an owner-scoped entity (its owner field names the
+   * caller), through the same authorized list execution; 404 when there is not exactly one. */
+  ownRecord(context: VerifiedRequestContext, entityCode: string): Promise<{ readonly recordId: string }>;
 }
 
 export const ENTITY_LIST_MAX_SORT_LEVELS = 3;
@@ -645,6 +648,39 @@ export function createEntityListService(options: {
           "The governed record was not found",
         );
       return {...normalizeRecord(descriptor, data), ...await referencePresentation(context,descriptor,data)};
+    },
+    async ownRecord(context: VerifiedRequestContext, entityCode: string) {
+      const descriptor = await descriptorFor(options.metadata, context, entityCode),
+        ownerField = descriptor.ownerAccess?.ownerField;
+      // The record is the principal itself (owner field = record id, as for `principal`):
+      // its id is the caller's principal id; the governed read confirms the caller may see it.
+      if (ownerField && ownerField === descriptor.storage.idField) {
+        if (!options.queries)
+          throw new RecordServiceError(503, "ENTITY_RECORD_ADAPTER_UNAVAILABLE", "The normalized entity record adapter is unavailable");
+        const { data } = await options.queries.get({ context, entityCode, recordId: context.principalId });
+        if (!data)
+          throw new RecordServiceError(404, "ENTITY_OWN_RECORD_NOT_FOUND", "No single record is owned by the caller");
+        return Object.freeze({ recordId: context.principalId });
+      }
+      // Otherwise the same rule as the ownership standard view: the owner field must be published filterable.
+      if (!ownerField || !descriptor.fields.find((field) => field.key === ownerField)?.filterable)
+        throw new RecordServiceError(404, "ENTITY_OWN_RECORD_UNSUPPORTED", "This entity has no owner-scoped records");
+      const { result, descriptor: executed } = await options.listExecutor.execute({
+        context,
+        entityCode,
+        filters: [{ field: ownerField, operator: "eq", value: context.principalId }],
+        limit: 2,
+        fields: [],
+      }).catch((error: unknown) => {
+        // A caller who may not read the owner field cannot resolve an own record.
+        if (error instanceof RecordServiceError && error.code === "FILTER_FIELD_NOT_ALLOWED")
+          throw new RecordServiceError(404, "ENTITY_OWN_RECORD_NOT_FOUND", "No single record is owned by the caller");
+        throw error;
+      });
+      const ids = result.data.map((row) => row[executed.storage.idField]).filter((id): id is string => typeof id === "string");
+      if (ids.length !== 1)
+        throw new RecordServiceError(404, "ENTITY_OWN_RECORD_NOT_FOUND", "No single record is owned by the caller");
+      return Object.freeze({ recordId: ids[0]! });
     },
     async list(query: ListRecordsQuery) {
       if ((query.sort?.length ?? 0) > 10)

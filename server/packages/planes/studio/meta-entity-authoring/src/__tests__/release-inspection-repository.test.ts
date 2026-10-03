@@ -31,7 +31,7 @@ it("loads the release's referenced immutable snapshot and binds tenant/id as SQL
       unknown[],
     ];
     expect(query).toContain("snapshot.id=r.revision_id");
-    expect(query).toContain("snapshot.tenant_id=r.tenant_id");
+    expect(query).toContain("snapshot.tenant_id IS NOT DISTINCT FROM r.tenant_id");
     expect(query).toContain("r.tenant_id=$1::uuid");
     expect(query).not.toContain("e.entity_code='business_partner'");
     expect(parameters).toEqual(["tenant-a", "release"]);

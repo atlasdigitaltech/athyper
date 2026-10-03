@@ -3,10 +3,9 @@ import { useEntityI18n } from "@athyper/platform-i18n/entity-react";
 import { useEffect, useRef } from "react";
 import {
   ChevronDownIcon,
-  FileTextIcon,
-  HistoryIcon,
-  MessageCircleIcon,
   SettingsIcon,
+  resolveMetadataIcon,
+  type IconRole,
 } from "@athyper/platform-icons";
 import { Button } from "@athyper/platform-ui";
 import type { EntityRuntimeActionPlan } from "@athyper/platform-entity-descriptor-client";
@@ -63,7 +62,8 @@ export function RecordModeNavigation({
               }
               onClick={() => navigation.onSelectSection(section.key)}
             >
-              {section.label}
+              <MetadataIcon role="record-section" iconKey={section.iconKey} />
+              <span>{section.label}</span>
             </button>
           ))
         : null}
@@ -92,7 +92,8 @@ export function RecordModeNavigation({
               selectSection(navigation, tab.sectionKeys[0]!, tab.key)
             }
           >
-            {intl.text(tab.label)}
+            <MetadataIcon role="record-tab" iconKey={tabIconKey(tab, available)} />
+            <span>{intl.text(tab.label)}</span>
           </button>
         ),
       )}
@@ -109,11 +110,7 @@ export function RecordModeNavigation({
           aria-label={intl.message("navigation.openSection", {section: section.key === "attachments" ? intl.message("collaboration.files") : section.key === "comments" ? intl.message("collaboration.comments") : section.label})}
           onClick={() => onOpenCollaboration(section.key)}
         >
-          {section.key === "activity" ? <HistoryIcon aria-hidden="true" /> : section.key === "comments" ? (
-            <MessageCircleIcon aria-hidden="true" />
-          ) : (
-            <FileTextIcon aria-hidden="true" />
-          )}
+          <MetadataIcon role={collaborationRole(section.key)} iconKey={section.iconKey} />
           <span>{section.key === "attachments" ? intl.message("collaboration.files") : section.key === "comments" ? intl.message("collaboration.comments") : section.label}</span>
         </button>
       ))}
@@ -170,16 +167,19 @@ function SectionTabGroup({
   active: boolean;
 }) {
   const intl = useEntityI18n();
-  return <RecordSectionMenu label={intl.text(tab.label)} active={active}
+  const available = new Map(navigation.sections.map((section) => [section.key, section]));
+  return <RecordSectionMenu label={intl.text(tab.label)} active={active} iconKey={tabIconKey(tab, available)}
     sections={tab.sectionKeys.flatMap(key => navigation.sections.find(section => section.key === key) ?? [])}
     activeSection={navigation.activeSection}
     onSelect={key => selectSection(navigation, key, tab.key)} />;
 }
 
 /** Shared section picker for both record compositions; receives authorized sections only. */
-export function RecordSectionMenu({ label, sections, activeSection, active, onSelect, compact = false }: {
+export function RecordSectionMenu({ label, sections, activeSection, active, onSelect, compact = false, iconKey }: {
   label: string;
-  sections: readonly { key: string; label: string }[];
+  sections: readonly { key: string; label: string; iconKey?: string }[];
+  /** Metadata icon for the group's tab; the record-tab fallback applies when absent. */
+  iconKey?: string;
   activeSection: string;
   active: boolean;
   onSelect: (key: string) => void;
@@ -199,7 +199,8 @@ export function RecordSectionMenu({ label, sections, activeSection, active, onSe
           menu.current?.setAttribute("open", "");
           menu.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
         }}>
-        {compact ? null : label} <ChevronDownIcon aria-hidden="true" />
+        {compact ? null : <><MetadataIcon role="record-tab" iconKey={iconKey} /><span>{label}</span></>}
+        <ChevronDownIcon className="a-entity-record__group-chevron" aria-hidden="true" />
       </summary>
       <div role="menu" aria-label={`${label} sections`} onKeyDown={event => {
         const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
@@ -209,7 +210,7 @@ export function RecordSectionMenu({ label, sections, activeSection, active, onSe
           : event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : undefined;
         if (next !== undefined) { event.preventDefault(); event.stopPropagation(); items[next]?.focus(); }
       }}>
-        {sections.map(({key, label: sectionLabel}) => (
+        {sections.map(({key, label: sectionLabel, iconKey: sectionIconKey}) => (
           <button
             key={key}
             type="button"
@@ -221,13 +222,34 @@ export function RecordSectionMenu({ label, sections, activeSection, active, onSe
               onSelect(key);
             }}
           >
-            {sectionLabel}
+            <MetadataIcon role="record-section" iconKey={sectionIconKey} />
+            <span>{sectionLabel}</span>
           </button>
         ))}
       </div>
     </details>
   );
 }
+/** Metadata first: the tab's own icon, then its first authorized section's icon;
+ * the record-tab role fallback applies when neither is published. */
+function tabIconKey(
+  tab: NonNullable<EntityRuntimeHeaderNavigation["navigation"]>["tabs"][number],
+  available: ReadonlyMap<string, { readonly iconKey?: string }>,
+): string | undefined {
+  return tab.iconKey ?? tab.sectionKeys.map((key) => available.get(key)?.iconKey).find(Boolean);
+}
+
+/** Collaboration capabilities are platform sections; their key names the role. */
+function collaborationRole(sectionKey: string): IconRole {
+  return sectionKey === "comments" || sectionKey === "attachments" || sectionKey === "activity" ? sectionKey : "record-section";
+}
+
+/** Record navigation icon: published metadata first, then the role fallback. */
+export function MetadataIcon({ role, iconKey }: { readonly role: IconRole; readonly iconKey?: string | undefined }) {
+  const Icon = resolveMetadataIcon(role, iconKey);
+  return <Icon className="a-entity-record__tab-icon" aria-hidden="true" />;
+}
+
 function useDismissibleDetails() {
   const ref = useRef<HTMLDetailsElement>(null);
   useEffect(() => {

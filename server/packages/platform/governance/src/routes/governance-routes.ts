@@ -5,6 +5,7 @@ import {
   optionalBody,
 } from "./route-validation.js";
 import { parseBusinessDate } from "@athyper/platform-temporal";
+import { governanceSubjectTypes } from "@athyper/server-contract-governance";
 import type {
   Authorizer,
   VerifiedRequestContext,
@@ -92,12 +93,7 @@ export function registerGovernanceRoutes(
             "whatsapp",
             "push",
           ] as const),
-          subjectType = choice(body["subjectType"], [
-            "principal",
-            "person",
-            "contact_person",
-            "business_partner",
-          ] as const);
+          subjectType = choice(body["subjectType"], governanceSubjectTypes);
         const decision = await options.consent.record({
           context,
           subjectType: subjectType as GovernanceSubjectType,

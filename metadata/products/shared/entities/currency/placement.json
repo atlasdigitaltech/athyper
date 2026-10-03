@@ -1,0 +1,25 @@
+{
+  "schema": "athyper.entity-placement/1",
+  "entityCode": "currency",
+  "placements": [
+    {
+      "plane": "neon",
+      "workspace": "mdg",
+      "module": "org",
+      "routeSlug": "currencies",
+      "default": true
+    },
+    {
+      "plane": "studio",
+      "workspace": "foundation",
+      "module": "rel",
+      "routeSlug": "currencies"
+    },
+    {
+      "plane": "mesh",
+      "workspace": "core",
+      "module": "rel",
+      "routeSlug": "currencies"
+    }
+  ]
+}

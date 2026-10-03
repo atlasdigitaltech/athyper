@@ -1,5 +1,4 @@
 "use client";
-import { ChoiceSelect } from "@athyper/platform-ui";
 import { viewportQuery } from "@athyper/platform-theme/tokens";
 import {
   WorkspaceSidePanelContext,
@@ -40,9 +39,8 @@ import {
   MenuIcon,
   NetworkIcon,
   RefreshCwIcon,
-  UserIcon,
 } from "@athyper/platform-icons";
-import { localeDefinition, type SupportedLocale } from "@athyper/platform-i18n";
+import { type SupportedLocale } from "@athyper/platform-i18n";
 import {
   useCallback,
   useEffect,
@@ -131,6 +129,7 @@ export interface ShellChromeProps {
   readonly accountInitials?: string;
   readonly accountLoginId?: string;
   readonly accountEmail?: string;
+  readonly profileHref?: string;
   readonly accountSecondaryLabel?: string;
   readonly transactionContext?: ShellTransactionContext;
   readonly workContextControl?: ReactNode;
@@ -164,6 +163,7 @@ export function ShellChrome({
   accountInitials,
   accountLoginId,
   accountEmail,
+  profileHref,
   accountSecondaryLabel,
   transactionContext,
   workContextControl,
@@ -314,12 +314,16 @@ export function ShellChrome({
     setHeaderAction(undefined);
     setDrawerOpen(true);
   };
-  const crumbs = deriveEntityBreadcrumbs(
-    navigation,
-    path,
-    routeState?.binding,
-    routeState?.record,
-  );
+  // Notifications and Inbox are shell pages, not catalog routes: they name
+  // themselves, as a workspace landing does.
+  const crumbs = isShellActivityRoute(path)
+    ? [{ label: t(path === "/inbox" ? "shell.actions.inbox" : "shell.actions.notifications") }]
+    : deriveEntityBreadcrumbs(
+        navigation,
+        path,
+        routeState?.binding,
+        routeState?.record,
+      );
   const homeRoute = path === "/" || path === homeHref,
     atlasRoute = path === "/atlas" || path.startsWith("/atlas/");
   const systemRoute =
@@ -594,9 +598,7 @@ export function ShellChrome({
                   tenantLabel={tenantLabel}
                   tenantSecondaryLabel={tenantSecondaryLabel}
                   transactionContext={transactionContext}
-                  currentLocale={currentLocale}
-                  localePolicy={localePolicy}
-                  onLocaleChange={onLocaleChange}
+                  {...(profileHref ? { profileHref } : {})}
                 />
               }
             />
@@ -1216,10 +1218,9 @@ function SidebarProfile({
   tenantLabel,
   tenantSecondaryLabel,
   transactionContext,
-  currentLocale,
-  localePolicy,
-  onLocaleChange,
+  profileHref,
 }: {
+  readonly profileHref?: string;
   readonly accountLabel: string;
   readonly accountInitials?: string;
   readonly loginId?: string;
@@ -1227,15 +1228,8 @@ function SidebarProfile({
   readonly tenantLabel: string;
   readonly tenantSecondaryLabel?: string;
   readonly transactionContext?: ShellTransactionContext;
-  readonly currentLocale: string;
-  readonly localePolicy?: Readonly<{
-    enabledLocales: readonly SupportedLocale[];
-  }>;
-  readonly onLocaleChange?: (localeCode: SupportedLocale) => Promise<void>;
 }) {
   const t = useShellI18n().message;
-  const [localePending, setLocalePending] = useState(false),
-    [localeError, setLocaleError] = useState(false);
   const details = useRef<HTMLDetailsElement>(null),
     initials =
       accountInitials?.trim() ||
@@ -1301,62 +1295,32 @@ function SidebarProfile({
         className="athyper-shell__profile-panel"
         aria-label={t("shell.profile.label")}
       >
+        {/* Identity: the same initials as the sidebar, the login id, and the way to
+            the person's own profile record. Rows appear only when they have a value. */}
         <header>
-          <span className="athyper-shell__profile-logo" aria-hidden="true">
-            <UserIcon size={20} />
+          <span className="athyper-shell__avatar athyper-shell__profile-avatar" aria-hidden="true">
+            {initials}
           </span>
           <span>
             <small>{t("shell.profile.account")}</small>
             <strong>{accountLabel}</strong>
+            {loginId ? <em>{loginId}</em> : null}
           </span>
+          {profileHref ? (
+            <a className="athyper-shell__profile-link" href={profileHref}>
+              {t("shell.profile.myProfile")}
+            </a>
+          ) : null}
         </header>
-        <dl className="athyper-shell__identity-details">
-          <div>
-            <dt>{t("shell.profile.loginId")}</dt>
-            <dd>{loginId ?? t("shell.profile.notProvided")}</dd>
-          </div>
-          <div>
-            <dt>{t("shell.profile.email")}</dt>
-            <dd>{email ?? t("shell.profile.notProvided")}</dd>
-          </div>
-        </dl>
-        {localePolicy &&
-        localePolicy.enabledLocales.length > 1 &&
-        onLocaleChange ? (
-          <label className="athyper-shell__language">
-            <span>
-              <strong>{t("shell.profile.language")}</strong>
-              <small>
-                {localePending
-                  ? t("shell.profile.languageSaving")
-                  : localeError
-                    ? t("shell.profile.languageError")
-                    : t("shell.profile.languageHelp")}
-              </small>
-            </span>
-            <ChoiceSelect
-              value={currentLocale ?? ""}
-              disabled={localePending}
-              onChange={(locale) => {
-                setLocalePending(true);
-                setLocaleError(false);
-                void onLocaleChange(locale as SupportedLocale).catch(() => {
-                  setLocalePending(false);
-                  setLocaleError(true);
-                });
-              }}
-              options={localePolicy.enabledLocales.map((locale) => {
-                const definition = localeDefinition(locale);
-                return {
-                  value: locale,
-                  label:
-                    definition.nativeName === definition.englishName
-                      ? definition.nativeName
-                      : `${definition.nativeName} — ${definition.englishName}`,
-                };
-              })}
-            />
-          </label>
+        {/* Email comes from the sign-in identity and is not editable here, so it shows
+            only when known; there is no placeholder row or dead link. */}
+        {email ? (
+          <dl className="athyper-shell__identity-details">
+            <div>
+              <dt>{t("shell.profile.email")}</dt>
+              <dd>{email}</dd>
+            </div>
+          </dl>
         ) : null}
         <ProfileContext
           icon={<NetworkIcon />}
@@ -1418,14 +1382,7 @@ function ProfileContext({
         >
           <RefreshCwIcon />
         </button>
-      ) : (
-        <span
-          className="athyper-shell__profile-na"
-          aria-label={t("shell.profile.notApplicable")}
-        >
-          —
-        </span>
-      )}
+      ) : null}
     </section>
   );
 }

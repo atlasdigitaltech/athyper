@@ -1,3 +1,4 @@
+import { captureOperationalError } from "../../../diagnostics/telemetry/error-collector.js";
 import {
   registerExperienceRoutes,
   registerEntityRuntimeRoutes,
@@ -88,6 +89,10 @@ export function createEntityHttpRegistrars(options: EntityHttpOptions) {
           authenticate,
           readContext,
           lists,
+          // A placed entity the workspace directory could not serve is left out for the
+          // caller and reported here, so one entity never blanks a workspace silently.
+          onEntityUnavailable: (entityCode, error) =>
+            captureOperationalError(error, { route: "entity-runtime.directory", entityCode }),
           applicationDescriptor: (context, entityCode, scopeCoordinate) => {
             return lists.applicationDescriptor(
               context,

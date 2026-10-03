@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, it, vi } from "vitest";
-import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
 import {
   compileGraph,
@@ -104,18 +104,20 @@ function fixture(plane: "studio" | "neon" | "mesh") {
       await memory.repository.get(d, c.tenantId, recordId, [d.storage.idField]),
     ),
   );
+  const authorize = vi.fn<Authorizer["authorize"]>(async (r) =>
+    r.context.permissions.allowed.includes(r.permissionCode)
+      ? { allowed: true }
+      : { allowed: false, reason: "missing_permission" },
+  );
   const authorizer = createPublishedTenantRecordAuthorizer({
-    authority: {
-      authorize: async (r) => ({
-        allowed: r.context.permissions.allowed.includes(r.permissionCode),
-      }),
-    },
+    authority: { authorize },
     metadata,
     refreshContext,
     exists,
   });
   return {
     context,
+    authorize,
     authorizer,
     exists,
     refreshContext,
@@ -284,3 +286,58 @@ it("masks protected values and denies querying masked fields", async () => {
     }),
   ).rejects.toThrow();
 });
+
+// Synthetic entities deliberately have no relationship to their permission names.
+// Published bindings, rather than a domain allowlist, must select exact permissions.
+it.each(["studio", "neon", "mesh"] as const)(
+  "uses metadata permissions for previously unknown entities on %s",
+  async (plane) => {
+    const f = fixture(plane);
+    const entityCode = "review_fixture_asset";
+    const permissionCode = "catalog.fixture.inspect";
+    const descriptor = {
+      ...f.descriptor,
+      entityCode,
+      operations: Object.fromEntries(Object.entries(f.descriptor.operations).map(
+        ([key, operation]) => [key, { ...operation, permissionCode }],
+      )),
+      authorization: {
+        ...f.descriptor.authorization!,
+        entityCode,
+        operations: f.descriptor.authorization!.operations.map(operation => ({
+          ...operation, permissionCode,
+        })),
+      },
+    };
+    f.replace(descriptor);
+    f.refreshContext.mockResolvedValue({
+      ...f.context,
+      permissions: { ...f.context.permissions, allowed: [permissionCode] },
+    });
+    const request = {
+      context: f.context,
+      permissionCode,
+      resource: { tenantId: f.context.tenantId, entityCode, operationKey: "list" },
+    };
+    expect(await f.authorizer.authorize(request)).toMatchObject({ allowed: true });
+    expect(f.authorize).toHaveBeenLastCalledWith(expect.objectContaining({
+      permissionCode,
+      resource: expect.objectContaining({ entityCode, operationKey: "list" }),
+    }));
+
+    // Even a valid IAM grant cannot replace the permission bound in metadata.
+    f.authorize.mockClear();
+    expect(await f.authorizer.authorize({
+      ...request, permissionCode: "catalog.fixture.other",
+    })).toMatchObject({ allowed: false, reason: "entity_authorization_unmapped" });
+    expect(f.authorize).not.toHaveBeenCalled();
+
+    // A supported published descriptor must never convert a policy denial to allow.
+    f.authorize.mockResolvedValue({
+      allowed: false, reason: "hard_policy_evidence_required",
+    });
+    expect(await f.authorizer.authorize(request)).toMatchObject({
+      allowed: false, reason: "hard_policy_evidence_required",
+    });
+  },
+);

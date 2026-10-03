@@ -1,0 +1,214 @@
+{
+  "observedAt": "2026-10-02T21:39:47.498Z",
+  "policies": [
+    {
+      "id": "06ce6433-5128-48ed-8228-5533b9386bf5",
+      "status": "retired",
+      "definition_hash": "c57a426b7a1764020969df89db5df91f46a5c4574e1cf04477fb2c936aad2e44"
+    },
+    {
+      "id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91",
+      "status": "active",
+      "definition_hash": "f83745496f6130b300dcb1da6514d4f6079a5c2af720594908b576e9a92da76f"
+    },
+    {
+      "id": "ac05ec86-daa6-4e57-8473-51c14046a31c",
+      "status": "retired",
+      "definition_hash": "b924f8a65d0e55fdc8052458b6f7f289903a284c0d859f266e0e84c4682fe5ae"
+    }
+  ],
+  "releases": [
+    {
+      "entity_code": "address",
+      "id": "e872c81c-1212-49ef-b7dd-ccf23c897fb7",
+      "change_set_id": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+      "contract_hash": "79ef28f5faab0d44ed6d9558eb9e7037f26577f70e266fe7ae761e54a0491960",
+      "source_status": "published",
+      "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "publication_id": "e872c81c-1212-49ef-b7dd-ccf23c897fb7",
+      "release_key": "metadata.entity.address",
+      "status": "approved",
+      "policy_id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91"
+    },
+    {
+      "entity_code": "employee",
+      "id": "121f93fc-2e4e-4415-8d4d-9fd1674b3657",
+      "change_set_id": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+      "contract_hash": "d50c9c27b7b524a821cae689609499e7e90844622d0acc93f57a94409c0ece76",
+      "source_status": "published",
+      "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "publication_id": "121f93fc-2e4e-4415-8d4d-9fd1674b3657",
+      "release_key": "metadata.entity.employee",
+      "status": "approved",
+      "policy_id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91"
+    },
+    {
+      "entity_code": "external_worker",
+      "id": "51f63a89-114d-43b2-a041-b28dbe609f97",
+      "change_set_id": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+      "contract_hash": "b812f3c3445bd3b032a5dc911d8fa0b1041e5769bdc7691be803ea0b638644ff",
+      "source_status": "published",
+      "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "publication_id": "51f63a89-114d-43b2-a041-b28dbe609f97",
+      "release_key": "metadata.entity.external_worker",
+      "status": "approved",
+      "policy_id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91"
+    },
+    {
+      "entity_code": "person",
+      "id": "782c57d9-6ac7-42ac-a82f-81895d80cd19",
+      "change_set_id": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+      "contract_hash": "0c144729366b2903500b52f3a7733b26988d03f9b3deb8788df33641f4331be5",
+      "source_status": "published",
+      "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "publication_id": "782c57d9-6ac7-42ac-a82f-81895d80cd19",
+      "release_key": "metadata.entity.person",
+      "status": "approved",
+      "policy_id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91"
+    },
+    {
+      "entity_code": "person_address_use",
+      "id": "f36219ac-8038-4195-b6c5-4de688240617",
+      "change_set_id": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+      "contract_hash": "5432a008afea6f5092c57908a8b6168bd0e0ed60b7d9aaa7f8dedf65fe427585",
+      "source_status": "published",
+      "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "publication_id": "f36219ac-8038-4195-b6c5-4de688240617",
+      "release_key": "metadata.entity.person_address_use",
+      "status": "approved",
+      "policy_id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91"
+    },
+    {
+      "entity_code": "principal_profile",
+      "id": "016845ee-21de-42d8-979e-e8060827cd22",
+      "change_set_id": "7e7dbd68-84a0-42ac-b886-2481ff683bd4",
+      "contract_hash": "9f9d2959706376dc1bdff21e5eb1ba943fd9ca393dee1839b11599cd16d38d0b",
+      "source_status": "published",
+      "submitted_by": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+      "approved_by": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+      "publication_id": "016845ee-21de-42d8-979e-e8060827cd22",
+      "release_key": "metadata.entity.principal_profile",
+      "status": "approved",
+      "policy_id": "7886bdc7-6a64-4145-9e71-d610ca9a3a91"
+    }
+  ],
+  "deliveries": [
+    {
+      "release_key": "metadata.entity.address",
+      "plane_code": "neon",
+      "content_hash": "31e60ba1f76c459fc75c94f8c8cb1c898a40ad76aa4754297fe35e71a83d10b2",
+      "artifact_status": "signed",
+      "deployment_id": "01a0fe8e-5608-7f31-bc4d-1288d632d71a",
+      "status": "dispatched",
+      "failure_code": null,
+      "failure_detail": null
+    },
+    {
+      "release_key": "metadata.entity.employee",
+      "plane_code": "neon",
+      "content_hash": "7543a36f94ad412eb46791ed63b75818176f19b3e355e3b185da242dbafe365a",
+      "artifact_status": "signed",
+      "deployment_id": "01a0fe8e-5895-75f8-8f3f-2dee40df92da",
+      "status": "dispatched",
+      "failure_code": null,
+      "failure_detail": null
+    },
+    {
+      "release_key": "metadata.entity.external_worker",
+      "plane_code": "neon",
+      "content_hash": "3eb3998f396c2730ba06d796aec90e892f03b23bf8fee3075a5ded2440b2be20",
+      "artifact_status": "signed",
+      "deployment_id": "01a0fe8e-5c92-7858-8a0a-f166b48078c0",
+      "status": "dispatched",
+      "failure_code": null,
+      "failure_detail": null
+    },
+    {
+      "release_key": "metadata.entity.person",
+      "plane_code": "neon",
+      "content_hash": "80264f70e7268d4e912cab31b9efbaa44a20844cd3a8e1943767f7e3e71877d8",
+      "artifact_status": "signed",
+      "deployment_id": "01a0fe8e-61fa-7cbb-a4b6-9d3058e3e5fb",
+      "status": "dispatched",
+      "failure_code": null,
+      "failure_detail": null
+    },
+    {
+      "release_key": "metadata.entity.person_address_use",
+      "plane_code": "neon",
+      "content_hash": "9726e018f32ad0a3a73395a260602a382bdfec549fab98e53f6c00454b5fc75c",
+      "artifact_status": "signed",
+      "deployment_id": "01a0fe8e-6498-79d4-9d77-5b51ed87747f",
+      "status": "dispatched",
+      "failure_code": null,
+      "failure_detail": null
+    },
+    {
+      "release_key": "metadata.entity.principal_profile",
+      "plane_code": "mesh",
+      "content_hash": "a8d284430b9294a3e436cccb0b89287a8b0007db27c974d8f267fc548676025d",
+      "artifact_status": "signed",
+      "deployment_id": "01a0fe8e-6ba3-7b70-a311-48ca6b624434",
+      "status": "dispatched",
+      "failure_code": null,
+      "failure_detail": null
+    },
+    {
+      "release_key": "metadata.entity.principal_profile",
+      "plane_code": "neon",
+      "content_hash": "5af998ef5b2936905a8ff68d7c8a62ca88c2080637475d4dc41924f906674cb9",
+      "artifact_status": "signed",
+      "deployment_id": "01a0fe8e-6e39-7b26-a3e4-f11317cc2ca5",
+      "status": "dispatched",
+      "failure_code": null,
+      "failure_detail": null
+    },
+    {
+      "release_key": "metadata.entity.principal_profile",
+      "plane_code": "studio",
+      "content_hash": "a68d8adb9ef19a94cce20d756ad9c452ca0c6b04d9e603eb2e51db83723e5b53",
+      "artifact_status": "signed",
+      "deployment_id": "01a0fe8e-6dc0-737f-9207-49db73fd985c",
+      "status": "dispatched",
+      "failure_code": null,
+      "failure_detail": null
+    }
+  ],
+  "targets": [
+    {
+      "plane": "neon",
+      "publication_key": "metadata.entity.principal_profile",
+      "artifact_hash": "6cc90e7b5f40d59f8eeb6b69c640c60e9158c38fca6bda94ec49fa1eab0fbc81",
+      "source_release_id": "36193db0-63d2-4677-a047-a9bd1c4dff6c",
+      "status": "active",
+      "verified_at": "2026-10-01T11:45:55.079Z",
+      "activated_at": "2026-10-01T11:45:55.094Z",
+      "applied_release_id": "01a0f749-0d47-71c4-b301-64f599f1f574"
+    },
+    {
+      "plane": "mesh",
+      "publication_key": "metadata.entity.principal_profile",
+      "artifact_hash": "b4ad111037c2c794a59bd9304742157131f2cc449606965dc76b3f40fbacc909",
+      "source_release_id": "36193db0-63d2-4677-a047-a9bd1c4dff6c",
+      "status": "active",
+      "verified_at": "2026-10-01T11:45:54.914Z",
+      "activated_at": "2026-10-01T11:45:54.936Z",
+      "applied_release_id": "01a0f749-0cb7-7149-81db-8d0fdad0f5d4"
+    },
+    {
+      "plane": "studio",
+      "publication_key": "metadata.entity.principal_profile",
+      "artifact_hash": "f01066f4443c829aa860c616c7c415ba06e1f5c81c7e56c73e0c173eab547325",
+      "source_release_id": "36193db0-63d2-4677-a047-a9bd1c4dff6c",
+      "status": "active",
+      "verified_at": "2026-10-01T11:45:55.178Z",
+      "activated_at": "2026-10-01T11:45:55.197Z",
+      "applied_release_id": "01a0f749-0dc0-765f-91e0-d2d4b1f2e426"
+    }
+  ]
+}

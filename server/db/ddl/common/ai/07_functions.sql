@@ -665,7 +665,8 @@ CREATE OR REPLACE FUNCTION ai.fn_is_atlas_conversation(p_tenant_id uuid, p_conve
  SET search_path TO 'pg_catalog', 'ai'
  SET row_security TO 'off'
 AS $function$
-    SELECT EXISTS (
+    SELECT p_tenant_id = nullif(current_setting('app.current_tenant_id', true), '')::uuid
+    AND EXISTS (
         SELECT 1
           FROM document.conversation AS c
          WHERE c.tenant_id = p_tenant_id

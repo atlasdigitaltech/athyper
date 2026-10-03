@@ -1,0 +1,55 @@
+{
+  "status": 200,
+  "result": {
+    "status": "deployment_recovery_queued",
+    "policy": {
+      "id": "0f16bcd4-1a3a-40b9-9431-974b1687f3fa",
+      "version": 1,
+      "hash": "34436e277df236506d94a0af47385efc486efe8e76a7299504c9498e80d23067"
+    },
+    "targets": [
+      {
+        "deploymentId": "01a0fed5-6a18-748f-ac85-fdc8c10615f0",
+        "targetPlane": "neon"
+      },
+      {
+        "deploymentId": "01a0fed5-6a72-7000-862f-bb15119c0d18",
+        "targetPlane": "neon"
+      },
+      {
+        "deploymentId": "01a0fed5-6aca-7152-9f7a-fefd52741cbd",
+        "targetPlane": "neon"
+      },
+      {
+        "deploymentId": "01a0fed5-6b28-7f5b-a5d6-ca6b2cea2e46",
+        "targetPlane": "neon"
+      },
+      {
+        "deploymentId": "01a0fed5-6b82-77a1-a31a-a9c3a920bc99",
+        "targetPlane": "neon"
+      },
+      {
+        "deploymentId": "01a0fed5-6bde-72ab-8bc0-4a3b4373b7c9",
+        "targetPlane": "mesh"
+      },
+      {
+        "deploymentId": "01a0fed5-6c3b-7607-9e9c-b4ac82db05f2",
+        "targetPlane": "studio"
+      },
+      {
+        "deploymentId": "01a0fed5-6c95-7870-9e41-0f017cc35ed2",
+        "targetPlane": "neon"
+      }
+    ],
+    "jobs": [
+      "athyper-a51f4b2df3a48467342a4ad681904d852a811a83ba2d516c38cc20477df5d97f",
+      "athyper-823421f75fdc7a6a8727a5918e180166cefe5f63746f53e9d94f2cc5bf652c60",
+      "athyper-3f27e9a1b67076107a577198b91b0976067eecf88b2e6a93bf32a1091c268a16",
+      "athyper-83e7de930cf51bf56480cc7602c5e82551873563779b5b4ff1c7a434265266f5",
+      "athyper-ed894fa098f0a1437af129082dec1bc28b3546b068a5f5af17b5edbd3a8e06d3",
+      "athyper-0835ecb284956d662cd2cf23bd7708b0a7badf34c70cc80bbe18a7f841ee17bf",
+      "athyper-b6f4c08120893dfda50ae62a9c57c2a6dfd1fa5ef9c29120722c60c6bdac62f5",
+      "athyper-4bf20637192509ea7a8cb7fa073a5d4f850b30ae722b97958e63f8b6a1708f98"
+    ]
+  }
+}

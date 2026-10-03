@@ -533,7 +533,11 @@ test("release instances use an image-contained fail-closed forward migration run
   // Existing migrations must retain their ledger checksums. These legacy
   // files have no explicit wrapper, so the runner supplies their transaction.
   // Pin both the registry and SQL contents; all other migrations require boundaries.
-  const legacyUnwrapped = new Map();
+  const legacyUnwrapped = new Map([
+    ["20260926_entity_execution_binding_storage.sql", "3ef87b26ad0f35e8b2483fee8edb8bf41f7adc2a70cf9ba7605e0433f63d9ea1"],
+    ["20260926_studio_entity_operation_bindings.sql", "76144a44d3ac0c80944a75a6366719c857ef150765be8c53955a2c5295044945"],
+    ["20260926_common_reference_permission.sql", "69a5a8a474b4fe7475640349937b72cf92163fc9870810b2aec705f2ab13fdf9"],
+  ]);
   const transactions = readFileSync(
     join(repoRoot, "server/db/migrations/manifests/runner-transactions.sha256"),
     "utf8",
@@ -547,7 +551,7 @@ test("release instances use an image-contained fail-closed forward migration run
     });
   assert.deepEqual(transactions, [...legacyUnwrapped]);
   assert.match(runner, /set -- --single-transaction/u);
-  assert.match(runner, /run_sql "\$database" "\$@" --file "\$file"/u);
+  assert.match(runner, /run_sql "\$database" "\$@"[\s\S]*--file "\$file" --file -/u);
   for (const plane of ["studio", "neon", "mesh"]) {
     const manifest = readFileSync(
       join(repoRoot, `server/db/migrations/manifests/${plane}.txt`),

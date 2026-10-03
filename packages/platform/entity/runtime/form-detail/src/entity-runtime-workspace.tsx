@@ -59,7 +59,7 @@ export function EntityRuntimeWorkspace({
     return () => container.removeEventListener("scroll", activateFirstAtTop);
   }, [continuousScrollRoot, continuousSections, onObserveSection, scrollRequest, workspace.bootstrap, workspace.activeSectionKey, workspace.observeSection]);
   const { bootstrap } = workspace;
-  const sectionItems = useMemo(() => bootstrap?.plan.sections.map(section => ({key:section.key,label:section.label?.defaultText ?? section.key})) ?? [],[bootstrap?.plan.sections]);
+  const sectionItems = useMemo(() => bootstrap?.plan.sections.map(section => ({key:section.key,label:section.label?.defaultText ?? section.key,...(section.iconKey ? {iconKey:section.iconKey} : {})})) ?? [],[bootstrap?.plan.sections]);
   const activeSection = workspace.activeSectionKey ?? bootstrap?.plan.sections[0]?.key;
   const collaborationKeys = JSON.stringify(collaborationSectionKeys);
   const collaborationSections = useMemo(() => (JSON.parse(collaborationKeys) as string[]).flatMap(key => sectionItems.find(section => section.key === key) ?? []),[collaborationKeys,sectionItems]);
@@ -196,12 +196,13 @@ function ContinuousSection({ item, selected, initial, state, scrollRoot, scrollT
 }
 
 export interface EntityRuntimeHeaderNavigation {
-  readonly sections: readonly { readonly key: string; readonly label: string }[];
+  /** `iconKey` is the section's published metadata icon, when it declares one. */
+  readonly sections: readonly { readonly key: string; readonly label: string; readonly iconKey?: string }[];
   readonly activeSection: string; readonly navigation?: EntityRuntimeNavigationPlan; readonly summaryView?: EntityRuntimeSummaryViewPlan;
   readonly onSelectSection: (sectionKey: string, tabKey?: string) => void;
   /** A browser projection backed by this workspace's admitted section cache. */
   readonly collaboration?: Readonly<{
-    readonly sections: readonly { readonly key: string; readonly label: string }[];
+    readonly sections: readonly { readonly key: string; readonly label: string; readonly iconKey?: string }[];
     readonly preloadSection: (sectionKey: string) => void;
     readonly renderSection: (sectionKey: string) => ReactNode;
   }>;

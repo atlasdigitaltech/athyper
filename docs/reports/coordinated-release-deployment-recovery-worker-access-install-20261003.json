@@ -1,0 +1,24 @@
+{
+  "schema": "athyper.deployment-recovery-install/1",
+  "environment": "dev",
+  "migration": "20261003_deployment_recovery_worker_access.sql",
+  "sha256": "7610c07de981b6c1584355c0023af61e94598931e4178bc2665a6350b04972e5",
+  "applied": true,
+  "sourceChecks": [
+    "athyper_control_api:df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+    "athyper_control_api:41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+    "athyper_runtime:c0febdd1-491c-46b8-8113-160be767b88d",
+    "athyper_worker:c0febdd1-491c-46b8-8113-160be767b88d"
+  ],
+  "denialChecks": [
+    "wrong_tenant",
+    "wrong_actor",
+    "stale_hash",
+    "no_runtime_table_update"
+  ],
+  "rollbackAndReplayPassed": true,
+  "reused": false,
+  "policyArtifactDeploymentStateUnchanged": true,
+  "passed": true,
+  "completedAt": "2026-10-02T23:03:24.385Z"
+}

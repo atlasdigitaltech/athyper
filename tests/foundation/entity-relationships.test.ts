@@ -9,6 +9,7 @@ import {
 import {
   parseEntityRelationships,
   qualifyEntityRelationship,
+  bindEntityRelationship,
 } from "../../packages/contracts/platform/entity-runtime/src/entity-relationship";
 const product = JSON.parse(
   readFileSync(
@@ -50,6 +51,26 @@ test("independent child tabs are metadata-driven and filtered by relationship au
   assert.ok(
     withProfile.sections.every((s) => s.relationshipKey !== "notifications"),
   );
+});
+test("related binding uses any registered entity and pins its parent publication", () => {
+  const relation = { ...presentation.entityRelationships![0]!, key: "settings", targetEntity: "sample_setting" };
+  const descriptor = {
+    entity: { code: "sample_owner", label: "Owner", pluralLabel: "Owners" },
+    revision: { release: 7, descriptorHash: "a".repeat(64), surfaceHash: "b".repeat(64) },
+    presentation: { ...presentation, entityRelationships: [relation] },
+  };
+  const recordId = "10000000-0000-4000-8000-000000000001";
+  const binding = bindEntityRelationship(descriptor, recordId, "settings");
+  assert.equal(binding.relationship.targetEntity, "sample_setting");
+  assert.deepEqual(binding.scope, {
+    parentEntityCode: "sample_owner", parentRecordId: recordId,
+    relationshipKey: "settings", parentDescriptorHash: "a".repeat(64),
+  });
+  assert.throws(() => bindEntityRelationship(descriptor, recordId, "invented"), /Unregistered/);
+  assert.throws(() => bindEntityRelationship({ ...descriptor, revision: { ...descriptor.revision, descriptorHash: "" } }, recordId, "settings"));
+  assert.throws(() => bindEntityRelationship({ ...descriptor, presentation: { ...descriptor.presentation, entityRelationships: [relation, relation] } }, recordId, "settings"), /Duplicate/);
+  const successor = bindEntityRelationship({ ...descriptor, revision: { ...descriptor.revision, descriptorHash: "c".repeat(64) } }, recordId, "settings");
+  assert.notDeepEqual(successor.scope, binding.scope);
 });
 test("relationship parsing rejects unsupported operations and client-shaped tenant joins", () => {
   const relation = presentation.entityRelationships![0]!;

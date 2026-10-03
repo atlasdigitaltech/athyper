@@ -1,0 +1,61 @@
+{
+  "schema": "athyper.coordinated-release-proposal-preflight/1",
+  "capturedAt": "2026-10-02T17:00:12.736Z",
+  "candidateId": "entity-framework-dev-20261003-01",
+  "checks": [
+    {
+      "entityCode": "address",
+      "changeSetId": "ae88cd34-5d07-4885-862b-cc9bd6627d2c",
+      "revisionUnchanged": true,
+      "graphHashUnchanged": true,
+      "targetsUnchanged": true,
+      "stillSelected": true
+    },
+    {
+      "entityCode": "employee",
+      "changeSetId": "3f0d61d0-45eb-4e12-9add-20a8511f456c",
+      "revisionUnchanged": true,
+      "graphHashUnchanged": true,
+      "targetsUnchanged": true,
+      "stillSelected": true
+    },
+    {
+      "entityCode": "external_worker",
+      "changeSetId": "5b863f1d-ae3d-4b0e-884d-40acc0f9fd33",
+      "revisionUnchanged": true,
+      "graphHashUnchanged": true,
+      "targetsUnchanged": true,
+      "stillSelected": true
+    },
+    {
+      "entityCode": "person",
+      "changeSetId": "7b8bbfab-24ee-4c72-98d2-2ab9a30fd982",
+      "revisionUnchanged": true,
+      "graphHashUnchanged": true,
+      "targetsUnchanged": true,
+      "stillSelected": true
+    },
+    {
+      "entityCode": "person_address_use",
+      "changeSetId": "4bbfa46d-918d-4265-ba21-4cf740237ba1",
+      "revisionUnchanged": true,
+      "graphHashUnchanged": true,
+      "targetsUnchanged": true,
+      "stillSelected": true
+    },
+    {
+      "entityCode": "principal_profile",
+      "changeSetId": "7e7dbd68-84a0-42ac-b886-2481ff683bd4",
+      "revisionUnchanged": true,
+      "graphHashUnchanged": true,
+      "targetsUnchanged": true,
+      "stillSelected": true
+    }
+  ],
+  "authenticationEvidence": "/home/chandravel_natarajan/.athyper/instances/dev/artifacts/coordinated-release-20261003/proposal-access/session-readback.json",
+  "status": "awaiting_authenticated_platform_admin",
+  "submissionPerformed": false,
+  "approvalPerformed": false,
+  "publicationPerformed": false,
+  "requirementSource": "AGENTS.md: Platform Admin authors/proposes; Platform Owner independently reviews/approves."
+}

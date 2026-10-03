@@ -1,0 +1,959 @@
+Entity, permission and MFA hardcoding audit
+3 October 2026 — Asia/Kuala_Lumpur
+
+Scanned: 2993 TS/TSX files. Flagged: 712 distinct files.
+These are static review candidates, not an assertion that every file violates policy.
+
+Scope | Scanned | Any candidate | Permission | Entity | MFA
+declaration_generated | 15 | 5 | 0 | 3 | 3
+application_source | 1652 | 213 | 102 | 97 | 43
+test_fixture | 1037 | 442 | 194 | 325 | 48
+tooling_operations | 289 | 52 | 15 | 29 | 24
+
+Literal-only permission files: 297 overall; 90 application source.
+MFA literal/configuration files: 90 overall; 28 application source. Other MFA matches are identifiers/references.
+Manually reviewed: 38 findings in 36 files; 19 files with confirmed concrete entity/permission hardcoding.
+
+READ THIS FIRST
+The newly introduced workforce allowlist is an architectural defect. Successful MFA-session requests did not establish compliance.
+The four unfinished MFA changes from the preceding turn remain in the workspace. They were not completed, validated, rolled back or approved by this audit.
+Your no-permission-defined rule is not implemented end-to-end: parsing, read admission, list actions, mutation admission and operation dispatch contain mandatory-permission assumptions.
+Generic IAM enforcement, existing platform-control MFA, test literals and generated navigation are not automatically defects. Do not remove them solely from this count.
+
+MANUALLY REVIEWED FINDINGS
+
+R01 [high; confirmed_entity_permission_hardcoding] server/packages/services/workforce/src/identity/workforce-read-policy.ts:11
+Fixed five-entity array; permission strings constructed at lines 20 and 42.
+Impact: New entities require code edits. Authorization selection is inferred from entity names. This was introduced by this assistant.
+Proposed review direction: Replace only after an approved design with published exact permission/policy bindings through the shared framework.
+
+R02 [high; confirmed_entity_permission_hardcoding] server/apps/platform-host/src/composition/register-services.ts:852
+Host creates workforce-specific authority and dispatches through workforceReadPermission at lines 866–867.
+Impact: The entity-specific allowlist controls the host authorization path.
+Proposed review direction: Use registered, reusable policy capabilities selected from validated metadata; preserve existing checks.
+
+R03 [high; confirmed_entity_permission_hardcoding] server/packages/planes/studio/src/catalog-metadata-reader.ts:6
+Complete metadata_entity descriptor, permissions and fields embedded in TypeScript; named entity selected at line 34.
+Impact: This source code supplies entity configuration instead of an ordinary published entity definition.
+Proposed review direction: Review bootstrap constraints and onboard the read model through governed entity metadata.
+
+R04 [high; confirmed_entity_permission_hardcoding] server/packages/services/publication/src/entity-operation-binding-compiler.ts:13
+Constructs bp_company_setup_request permission codes; pins named business-partner publication identities and entity validation.
+Impact: Shared publication code requires specific entity names and permission naming conventions.
+Proposed review direction: Move entity configuration into published contracts and resolve exact operation permission bindings.
+
+R05 [high; confirmed_entity_permission_hardcoding] server/packages/services/publication/src/entity-foundation-definition.ts:816
+Embeds business-partner read/reveal permission mapping and extensive supplier/customer configuration.
+Impact: Product/entity configuration lives in a shared publication service.
+Proposed review direction: Separate governed product definition data from generic publication mechanics.
+
+R06 [approval_required; mfa_configuration_review] server/packages/services/publication/src/entity-foundation-definition.ts:589
+mfaAtDecision: true is embedded at lines 589, 621 and 641.
+Impact: Entity workflow MFA requirements are code-defined. Prior approval cannot be determined from source alone.
+Proposed review direction: Owner must review intended policy and provenance; do not change MFA without explicit approval.
+
+R07 [high; confirmed_entity_permission_hardcoding] server/packages/services/workforce/src/identity/principal-person-link-action.ts:14
+Pins principal as entity and repeatedly uses neon.workforce.profile.write in handler authorization.
+Impact: Permission and entity binding are repeated in domain implementation rather than supplied by exact published registration.
+Proposed review direction: Keep business validation in the domain; resolve authorization and entity binding through governed framework contracts.
+
+R08 [high; confirmed_entity_permission_hardcoding] server/apps/platform-host/src/composition/shared/entity-runtime/ui-profile-mutation-policy.ts:8
+Mutation policy checks master.principal_ui_profile storage explicitly.
+Impact: Host/shared runtime contains entity-specific storage knowledge.
+Proposed review direction: Bind a reusable domain policy through metadata and registered ports.
+
+R09 [high; confirmed_entity_permission_hardcoding] packages/planes/neon/list-view/src/scope-adapters.tsx:91
+Selects BusinessPartnerScopeAdapter when entityCode is business_partner.
+Impact: New scope behavior is dispatched by entity name.
+Proposed review direction: Select scope adapters by published supported scope capability.
+
+R10 [high; confirmed_entity_permission_hardcoding] server/packages/planes/neon/src/record-collection-scope.ts:431
+Scope resolver identifies business_partner and fixed storage objects.
+Impact: Server collection scope dispatch relies on entity identity.
+Proposed review direction: Use validated published scope bindings; retain server-side locked scope.
+
+R11 [medium; confirmed_entity_permission_hardcoding] apps/neon/lib/entity-application-layout.tsx:17
+business_partner receives a special layout branch.
+Impact: Shared entity layout has entity-specific behavior.
+Proposed review direction: Select published layout/surface capability instead of entity name.
+
+R12 [medium; confirmed_entity_permission_hardcoding] apps/neon/lib/catalog-routes.ts:102
+Business Partner public aliases and internal entity route are stored in a fixed array.
+Impact: Navigation onboarding requires source-code configuration.
+Proposed review direction: Resolve routes/aliases from the governed route and entity metadata.
+
+R13 [high; confirmed_entity_permission_hardcoding] apps/neon/lib/experience-runtime.tsx:10
+Home props include fixed business-partner permissions; workspace accessory checks the same code.
+Impact: Entity access and entry points are duplicated in UI source.
+Proposed review direction: Consume framework capability/permission results derived from the entity metadata.
+
+R14 [medium; confirmed_entity_permission_hardcoding] server/packages/contracts/metadata/src/entity-ai.ts:70
+AI provider registry pins several providers to business_partner.
+Impact: Entity binding is embedded in a shared metadata contract registry.
+Proposed review direction: Register provider capabilities and keep entity selection in published bindings.
+
+R15 [medium; confirmed_entity_permission_hardcoding] packages/platform/shell/shell/src/atlas-context-inspector.tsx:88
+Inspector has a business_partner-specific rendering condition.
+Impact: Shared shell UI branches on a named entity.
+Proposed review direction: Drive supported inspection surfaces from the published entity contract.
+
+R16 [high; confirmed_entity_permission_hardcoding] server/apps/platform-host/src/composition/spaces/neon/entity-case-backend-mapping.ts:9
+Pins entity_case; line 23 also falls back to the last segment of permissionCode for operation identity.
+Impact: Entity dispatch and operation inference are tied to source literals and permission naming.
+Proposed review direction: Use exact published operation and entity bindings; no naming-convention fallback.
+
+R17 [high; confirmed_entity_permission_hardcoding] server/packages/planes/mesh/src/network-relationship-import.ts:12
+Import supports predicate checks network_relationship by entity name.
+Impact: Import adapter selection is entity-specific.
+Proposed review direction: Select registered adapter through a validated metadata capability binding.
+
+R18 [high; confirmed_entity_permission_hardcoding] server/packages/planes/mesh/src/record-collection-scope.ts:42
+Scope resolver directly checks network_relationship identity and storage.
+Impact: Scope behavior is coupled to a single entity.
+Proposed review direction: Select through published scope contracts while retaining tenant/network isolation.
+
+R19 [high; confirmed_entity_permission_hardcoding] server/packages/planes/studio/src/metadata-draft-import.ts:13
+Import supports predicate directly checks metadata_entity and fixed storage.
+Impact: Studio entity import uses source-defined dispatch.
+Proposed review direction: Express entity/adapter binding in governed metadata.
+
+R20 [high; confirmed_entity_permission_hardcoding] server/packages/planes/studio/src/record-collection-scope.ts:8
+Scope resolution directly checks metadata_entity.
+Impact: Studio scope logic is tied to named entity identity.
+Proposed review direction: Use a registered scope capability selected from metadata.
+
+R21 [medium; permission_catalog_review] server/packages/contracts/metadata/src/identity-permissions.ts:2
+Eight literal identity permission codes with fixed risk tiers.
+Impact: Catalog vocabulary/risk configuration is source-defined; this is a catalog, not proof of an authorization bypass.
+Proposed review direction: Review which values must be published Meta Entity properties versus platform catalog contracts.
+
+R22 [medium; permission_catalog_review] server/packages/contracts/metadata/src/common-reference-permission.ts:4
+Common reference permission is a source constant.
+Impact: Country/reference implementation currently depends on this capability contract.
+Proposed review direction: Account for reference capability semantics when designing metadata-only permissions; do not delete controls blindly.
+
+R23 [high; missing_permission_semantics_conflict] server/packages/platform/metadata/src/descriptor-parser.ts:102
+Operation permissionCode is parsed as a required string.
+Impact: The new no-permission-defined behavior may be rejected before runtime.
+Proposed review direction: Design and validate optional permission semantics at the published schema/compiler boundary first.
+
+R24 [high; missing_permission_semantics_conflict] server/packages/services/records/src/record-read-access.ts:16
+Absent permission causes ENTITY_OPERATION_UNAVAILABLE; line 66 also restricts fields when the profile exists.
+Impact: A valid operation without a permission is not treated as accessible under the new instruction.
+Proposed review direction: Distinguish valid absence from missing operation, invalid metadata and unresolved references.
+
+R25 [high; missing_permission_semantics_conflict] server/packages/services/records/src/query-service.ts:704
+Query authorization throws when permissionCode is absent.
+Impact: Read path conflicts with optional-permission semantics.
+Proposed review direction: Apply the same governed optional-permission contract consistently.
+
+R26 [high; missing_permission_semantics_conflict] server/packages/services/records/src/entity-list-service.ts:839
+operationAllowed returns false when permissionCode is absent.
+Impact: List capability availability can differ from the new Meta Entity rule.
+Proposed review direction: Reconcile descriptor admission, capability discovery and actual execution together.
+
+R27 [high; missing_permission_semantics_conflict] server/packages/services/records/src/mutation-service.ts:178
+Mutation admission returns Boolean(permissionCode && authorization).
+Impact: Valid unpermissioned operations are denied by permission presence.
+Proposed review direction: Preserve operation support, transaction, record scope and validation independently of an optional permission.
+
+R28 [high; missing_permission_semantics_conflict] server/packages/services/records/src/list-experience.ts:29
+List action discovery skips actions without a plane permission entry.
+Impact: Actions can disappear solely due to absent permission configuration.
+Proposed review direction: Make absence semantics explicit in published action metadata, distinct from missing target bindings.
+
+R29 [high; missing_permission_semantics_conflict] server/packages/platform/experience/src/entity-operation-dispatcher.ts:137
+Dispatcher rejects absent permission before executing the operation.
+Impact: Published UI/operation dispatch has its own mandatory-permission assumption.
+Proposed review direction: Use the shared exact authorization contract for both discovery and execution.
+
+R30 [approval_required; unfinished_mfa_edits_from_this_session] server/packages/services/records/src/record-read-access.ts:36
+New mfa_required-to-STEP_UP_REQUIRED translation remains in source.
+Impact: This assistant started the change before the pause. Later owner instruction requires explicit MFA approval; this patch was not completed/validated as a unit.
+Proposed review direction: Keep pending for explicit owner decision; no further MFA implementation in this audit.
+
+R31 [approval_required; unfinished_mfa_edits_from_this_session] packages/platform/shell/app-foundation/src/error-taxonomy.ts:53
+New verify-identity classification and action remain in source.
+Impact: Pending MFA-specific UI behavior from this assistant.
+Proposed review direction: Owner review required before continuation; no runtime changes in this audit.
+
+R32 [approval_required; unfinished_mfa_edits_from_this_session] packages/platform/shell/app-foundation/src/boundaries.tsx:82
+New IdentityVerificationButton posts to the MFA step-up endpoint.
+Impact: MFA UI implementation remains in the paused workspace.
+Proposed review direction: Owner review required; do not infer approval from the access-error request.
+
+R33 [approval_required; unfinished_mfa_edits_from_this_session] packages/platform/entity/runtime/list-view/src/index.tsx:5096
+Entity error UI now references the new MFA verification button.
+Impact: Pending shared Entity UI change is not the same as an approved MFA policy.
+Proposed review direction: Owner review required; preserve evidence and unrelated edits.
+
+R34 [approval_required; existing_mfa_control_review] server/apps/platform-host/src/composition/shared/identity/platform-authority.ts:27
+Platform authority requires elevated assurance unconditionally.
+Impact: This is an independent platform-control security boundary, not automatically an entity hardcoding defect.
+Proposed review direction: Preserve until owner reviews the security requirement; no inferred removal.
+
+R35 [retain; generic_metadata_driven_control] server/packages/platform/iam/src/permission-authorizer.ts:117
+Checks requirement.requiresMfa before checking elevated assurance.
+Impact: MFA vocabulary is hardcoded, but the requirement comes from the resolved catalog. This is not evidence of a per-entity MFA allowlist.
+Proposed review direction: Retain shared enforcement; review requirement provenance separately.
+
+R36 [retain; generic_metadata_driven_control] server/packages/platform/iam/src/kysely-permission-resolver.ts:506
+Reads requires_mfa and other requirements from authz.permission.
+Impact: Metadata/catalog-driven requirement lookup; not a new page-specific MFA rule.
+Proposed review direction: Do not count this as a confirmed defect solely because it contains MFA identifiers.
+
+R37 [medium; contract_entity_mapping_review] packages/contracts/platform/entity-runtime/src/related-presentation.ts:76
+RELATED_RECORD_MODELS embeds external_reference, contact_person and address identities.
+Impact: DTO schemas may be reusable contracts, but their concrete entity binding requires review.
+Proposed review direction: Separate model capability contracts from entity bindings in metadata.
+
+R38 [high; permission_naming_constraint_review] server/packages/services/publication/src/entity-authorization-compiler.ts:189
+Validates permission naming by plane-prefix regex, with a common-reference exception.
+Impact: Compiler imposes naming constraints beyond an exact published permission reference.
+Proposed review direction: Review against the no-inference rule; distinguish catalog syntax validation from authorization selection.
+
+REMEDIATION ORDER — PROPOSAL ONLY
+1. Freeze the unapproved workaround and MFA edits for owner decision; preserve unrelated work.
+2. Agree the published Meta Entity permission-property contract, including valid absence versus invalid/unavailable metadata and explicit denies.
+3. Review schemas/compiler/runtime together, including read/list/detail/fields/mutations/actions/import/export and capability discovery.
+4. Replace named-entity dispatch and derived permission strings with registered capability contracts and exact published bindings.
+5. Migrate product/entity configuration from source constants to governed metadata, retaining the approval/publication lifecycle.
+6. Address MFA only after explicit owner approval. Existing security controls stay in effect.
+7. Validate alternate entities, missing permission, defined-but-ungranted permission, explicit deny, wrong tenant, missing publication, and stale metadata. Report code, publication and live acceptance separately.
+
+METHOD AND LIMITS
+{
+  "scope": "Current working tree, tracked/untracked/ignored TS and TSX source, including unfinished changes. No uppercase .TS/.TSX files found.",
+  "enumeration": "rg --files --hidden --no-ignore; exclude node_modules, dist, build, .next*, .git, coverage, .turbo, test-results, playwright-report, .tmp.",
+  "analysis": "TypeScript 6.0.3 AST: string/template literals, entity-code assignments/comparisons, known metadata/DDL permission vocabulary, permission-containing declarations, MFA identifiers/literals/boolean settings, and selected permission-presence/parser guards. Comments alone do not count.",
+  "counting": "A category count is distinct files; categories overlap. anyCandidate is their union. Scope classes are exclusive. Findings count AST locations, not independent bugs.",
+  "knownEntityCount": 62,
+  "knownPermissionCount": 256,
+  "classification": "Tests/specs/test helpers/fixtures separated from tooling/scripts, declarations/generated sources, and remaining application source. Application source includes contracts, adapters, development hosts and platform infrastructure; not every file is reachable in DEV.",
+  "limits": [
+    "Static review is not a reachability or deployment audit.",
+    "Literal names may be model properties, schema contracts or registered domain identities rather than improper behavior.",
+    "MFA identifier references include generic IAM/session implementation and are not evidence of unapproved MFA requirements.",
+    "Prior human approval history cannot be established from source alone.",
+    "Heuristics can miss aliases, indirect maps, concatenations and names outside the discovered vocabulary. The scan is exhaustive over the stated file inventory, not proof of every semantic violation.",
+    "SQL, JSON, MJS, CJS, JS, JSX, YAML and .mts/.cts are not counted; metadata JSON and DDL are consulted only to discover vocabulary. Database policy values and authorization effects were not changed or exhaustively audited.",
+    "Missing permission must remain distinct from unsupported operation, invalid metadata, missing active publication, explicit deny or cross-tenant scope."
+  ],
+  "sourceMutations": "None in this audit. No approval, deployment, DB change, rollback, or MFA behavior change performed. Only report artifacts written.",
+  "priorAssistantWork": "Workforce allowlist and host dispatch remain in source. Four unfinished MFA-related source edits remain after the stop instruction; this audit does not complete, approve or revert them.",
+  "validation": "Counts and file hashes checked; no application tests or live flow acceptance claimed for this static audit."
+}
+
+FILE INVENTORY
+apps/mesh/app/api/auth/mfa/verify/route.ts [application_source] mfa
+apps/mesh/app/api/auth/step-up/start/route.ts [application_source] mfa
+apps/neon/app/api/auth/mfa/verify/route.ts [application_source] mfa
+apps/neon/app/api/auth/step-up/start/route.ts [application_source] mfa
+apps/neon/lib/catalog-routes.ts [application_source] entity
+apps/neon/lib/entity-application-layout.tsx [application_source] entity
+apps/neon/lib/experience-runtime.tsx [application_source] permission,entity
+apps/studio/app/api/auth/mfa/verify/route.ts [application_source] mfa
+apps/studio/app/api/auth/step-up/start/route.ts [application_source] mfa
+packages/contracts/neon/party/src/request-profile-values.ts [application_source] entity
+packages/contracts/platform/ai/src/__tests__/business-context.test.ts [test_fixture] entity
+packages/contracts/platform/ai/src/__tests__/protocol.test.ts [test_fixture] entity
+packages/contracts/platform/ai/src/business-context.ts [application_source] entity
+packages/contracts/platform/ai/src/parent-scope.test.ts [test_fixture] entity
+packages/contracts/platform/auth-session/src/index.ts [application_source] entity,mfa
+packages/contracts/platform/dashboard/src/generated-defaults.ts [declaration_generated] entity
+packages/contracts/platform/dashboard/src/index.ts [application_source] entity
+packages/contracts/platform/entity-list/src/experience.ts [application_source] entity
+packages/contracts/platform/entity-list/src/scope-filters.ts [application_source] entity
+packages/contracts/platform/entity-list/src/standard-views.ts [application_source] entity
+packages/contracts/platform/entity-list/src/types.ts [application_source] entity
+packages/contracts/platform/entity-runtime/src/access-decision.ts [application_source] mfa
+packages/contracts/platform/entity-runtime/src/governed-workflow.ts [application_source] entity
+packages/contracts/platform/entity-runtime/src/related-presentation.test.ts [test_fixture] entity
+packages/contracts/platform/entity-runtime/src/related-presentation.ts [application_source] entity
+packages/contracts/platform/entity-runtime/src/section-component.ts [application_source] entity
+packages/contracts/platform/navigation/src/generated-catalog.ts [declaration_generated] entity
+packages/planes/mesh/shell/src/index.tsx [application_source] entity
+packages/planes/neon/list-view/src/scope-adapters.tsx [application_source] entity
+packages/planes/neon/shell/src/index.tsx [application_source] entity
+packages/planes/studio/shell/src/index.tsx [application_source] entity
+packages/planes/studio/shell/src/navigation.ts [application_source] permission
+packages/platform/ai/agent-ui/src/business-context.ts [application_source] entity
+packages/platform/entity/runtime/form-detail/src/entity-edit-collaboration.tsx [application_source] entity
+packages/platform/entity/runtime/form-detail/src/protected-value.tsx [application_source] mfa
+packages/platform/entity/runtime/form-detail/src/record-action.tsx [application_source] mfa
+packages/platform/entity/runtime/form-detail/src/related-record.tsx [application_source] entity
+packages/platform/entity/runtime/list-view/src/data-operations.tsx [application_source] entity
+packages/platform/entity/runtime/list-view/src/index.tsx [application_source] mfa
+packages/platform/foundation/api-client/src/bootstrap.ts [application_source] entity
+packages/platform/foundation/api-client/src/entity-list.ts [application_source] entity
+packages/platform/foundation/api-client/src/network-account.ts [application_source] entity
+packages/platform/foundation/api-client/src/operating-organization.ts [application_source] entity
+packages/platform/foundation/i18n/src/index.ts [application_source] entity
+packages/platform/gateway/bff-relay/src/index.ts [application_source] permission,entity,mfa
+packages/platform/iam/auth-bff/src/environment.ts [application_source] mfa
+packages/platform/iam/auth-bff/src/index.ts [application_source] mfa
+packages/platform/iam/identity-gate/src/workspace-showcase-data.ts [application_source] entity,mfa
+packages/platform/iam/session-store/src/index.ts [application_source] mfa
+packages/platform/iam/session/src/index.ts [application_source] mfa
+packages/platform/shell/activity-center-data/src/notification-controls.tsx [application_source] permission
+packages/platform/shell/app-foundation/src/boundaries.tsx [application_source] mfa
+packages/platform/shell/app-foundation/src/error-taxonomy.ts [application_source] mfa
+packages/platform/shell/shell/src/atlas-action-history.tsx [application_source] permission
+packages/platform/shell/shell/src/atlas-answer.tsx [application_source] permission
+packages/platform/shell/shell/src/atlas-context-inspector.tsx [application_source] permission,entity
+packages/platform/shell/shell/src/atlas-workspace.tsx [application_source] permission
+packages/platform/shell/shell/src/home.tsx [application_source] entity
+server/apps/platform-host/scripts/db-verification/provisioning/company-profile-overlay.test.ts [test_fixture] entity
+server/apps/platform-host/scripts/db-verification/provisioning/company-profile-overlay.ts [tooling_operations] entity
+server/apps/platform-host/scripts/db-verification/provisioning/publish-development-compiled-entity-runtime.test.ts [test_fixture] entity
+server/apps/platform-host/scripts/db-verification/provisioning/publish-development-compiled-entity-runtime.ts [tooling_operations] entity
+server/apps/platform-host/scripts/operations/rehearse-recovery-compiler.ts [tooling_operations] mfa
+server/apps/platform-host/scripts/qualification/check-dev-principal-relationships.ts [tooling_operations] entity
+server/apps/platform-host/scripts/qualification/check-dev-reference-relationships.ts [tooling_operations] entity
+server/apps/platform-host/src/__tests__/config.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/__tests__/authorization-management-api.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/__tests__/collection-preparation.postgres.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/__tests__/entity-authority.test.ts [test_fixture] permission,entity,mfa
+server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts [test_fixture] mfa
+server/apps/platform-host/src/composition/__tests__/iam-audit-vertical.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/__tests__/native-runtime-lowering.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/__tests__/policy-vertical.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/__tests__/studio-collection-compilation.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/atlas-feature-gates.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/control-plane/__tests__/control-session.test.ts [test_fixture] entity,mfa
+server/apps/platform-host/src/composition/control-plane/control-plane.ts [application_source] permission
+server/apps/platform-host/src/composition/control-plane/product-review.postgres.test.ts [test_fixture] permission,mfa
+server/apps/platform-host/src/composition/control-plane/product-review.test.ts [test_fixture] mfa
+server/apps/platform-host/src/composition/control-plane/product-review.ts [application_source] permission
+server/apps/platform-host/src/composition/control-plane/session.ts [application_source] mfa
+server/apps/platform-host/src/composition/register-platform.ts [application_source] permission
+server/apps/platform-host/src/composition/register-services.ts [application_source] permission,entity,mfa
+server/apps/platform-host/src/composition/shared/atlas-entity-context.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/atlas-entity-lookup.test.ts [test_fixture] permission,mfa
+server/apps/platform-host/src/composition/shared/collaboration/__tests__/collaboration-section-providers.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/documents/__tests__/entity-attachment-admission.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/documents/attachment-admission.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/documents/attachment-admission.ts [application_source] entity
+server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.test.ts [test_fixture] permission,mfa
+server/apps/platform-host/src/composition/shared/entity-governance/meta-entity-authoring-authorizer.ts [application_source] permission
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/country-authorization-boundary.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/entity-activity-provider.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/entity-route-admission.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/entity-scope-registry.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/experience-composition.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/persisted-scopes.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/published-parent-admission.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/record-display-choices.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/revision-authorizer-context.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/shared/entity-runtime/__tests__/service-composition.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/shared/entity-runtime/deployment-readiness.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/entity-export-registrations.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/published-action-authorizer.test.ts [test_fixture] permission,entity,mfa
+server/apps/platform-host/src/composition/shared/entity-runtime/published-owner-authorizer.test.ts [test_fixture] entity,mfa
+server/apps/platform-host/src/composition/shared/entity-runtime/published-tenant-authorizer.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/shared/entity-runtime/read-evidence.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/shared/entity-runtime/readiness-inventory.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/record-scope-sql.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/reference-baseline.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/revision-authorizer.test.ts [test_fixture] permission,mfa
+server/apps/platform-host/src/composition/shared/entity-runtime/ui-profile-mutation-policy.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/ui-profile-mutation-policy.ts [application_source] entity
+server/apps/platform-host/src/composition/shared/entity-runtime/workforce-read-policy.test.ts [test_fixture] entity,mfa
+server/apps/platform-host/src/composition/shared/identity/platform-authority.ts [application_source] mfa
+server/apps/platform-host/src/composition/shared/identity/trusted-device-routes.ts [application_source] mfa
+server/apps/platform-host/src/composition/shared/publication/__tests__/capability-qualification.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/shared/publication/__tests__/compiled-runtime-publication.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/shared/publication/__tests__/entity-authorization-activation.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/shared/publication/__tests__/machine-publication-policy.test.ts [test_fixture] permission,mfa
+server/apps/platform-host/src/composition/shared/publication/__tests__/publication-policy-enrollment.test.ts [test_fixture] permission,mfa
+server/apps/platform-host/src/composition/shared/publication/__tests__/runtime-qualification.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/shared/publication/__tests__/table-entity-publication.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/publication/capability-qualification.ts [application_source] mfa
+server/apps/platform-host/src/composition/shared/publication/coordinated-relationship-qualification.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/publication/deployment-recovery-compiler.postgres.test.ts [test_fixture] mfa
+server/apps/platform-host/src/composition/shared/publication/deployment-recovery.postgres.test.ts [test_fixture] mfa
+server/apps/platform-host/src/composition/shared/publication/entity-ai-manifest-publication.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/publication/human-publication-activation.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/publication/human-publication.postgres.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/shared/publication/machine-policy.ts [application_source] permission
+server/apps/platform-host/src/composition/shared/publication/policy-enrollment.ts [application_source] permission
+server/apps/platform-host/src/composition/shared/publication/policy-replacement.postgres.test.ts [test_fixture] mfa
+server/apps/platform-host/src/composition/shared/publication/provenance-recovery.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/shared/publication/tenant-rollback.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/shared/verification-permissions.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/shared/verification.ts [application_source] permission
+server/apps/platform-host/src/composition/shared/verification/__tests__/routes.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/spaces/mesh/exchange-readiness.ts [application_source] permission
+server/apps/platform-host/src/composition/spaces/mesh/record-scope-sql.ts [application_source] entity
+server/apps/platform-host/src/composition/spaces/neon/__tests__/finance-routes.test.ts [test_fixture] permission
+server/apps/platform-host/src/composition/spaces/neon/ai/__tests__/atlas-attachment-knowledge.test.ts [test_fixture] permission,entity
+server/apps/platform-host/src/composition/spaces/neon/ai/__tests__/atlas-document-grounding.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/spaces/neon/ai/__tests__/atlas-retrieval-disconnect.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/spaces/neon/ai/__tests__/atlas-semantic-index.test.ts [test_fixture] entity
+server/apps/platform-host/src/composition/spaces/neon/ai/atlas-attachment-knowledge.ts [application_source] permission
+server/apps/platform-host/src/composition/spaces/neon/ai/atlas-document-grounding.ts [application_source] permission
+server/apps/platform-host/src/composition/spaces/neon/entity-case-backend-mapping.ts [application_source] entity
+server/apps/platform-host/src/composition/spaces/neon/finance-routes.ts [application_source] permission
+server/apps/platform-host/src/composition/spaces/neon/partner-section-contract.ts [application_source] entity
+server/apps/platform-host/src/composition/spaces/neon/record-scope-sql.ts [application_source] entity
+server/apps/platform-host/src/composition/spaces/studio/onboarding/register-studio-onboarding.ts [application_source] permission
+server/apps/platform-host/src/development/graph-preview.ts [application_source] permission
+server/apps/platform-host/src/development/publication-workload.test.ts [test_fixture] permission
+server/apps/platform-host/src/development/publication-workload.ts [application_source] permission
+server/apps/platform-host/src/development/publication.test.ts [test_fixture] entity
+server/apps/platform-host/src/development/publication.ts [application_source] permission
+server/apps/platform-host/src/development/runtime-publication.test.ts [test_fixture] entity
+server/apps/platform-host/src/scripts/submit-derivative-scan-backfill.ts [tooling_operations] entity
+server/db/scripts/__tests__/activity/activity-ddl.test.ts [test_fixture] mfa
+server/db/scripts/__tests__/activity/activity-permissions.test.ts [test_fixture] permission,mfa
+server/db/scripts/__tests__/activity/entity-activity-preparation.test.ts [test_fixture] permission,entity
+server/db/scripts/__tests__/authorization/authorization-clean-slate.test.ts [test_fixture] permission
+server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts [test_fixture] permission
+server/db/scripts/__tests__/authorization/common-identity-catalog.test.ts [test_fixture] permission,mfa
+server/db/scripts/__tests__/authorization/common-reference-catalog.test.ts [test_fixture] permission,mfa
+server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts [test_fixture] entity,mfa
+server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts [test_fixture] permission
+server/db/scripts/__tests__/authorization/inventory-promotion.test.ts [test_fixture] permission,mfa
+server/db/scripts/__tests__/authorization/mesh-authorization-inventory.test.ts [test_fixture] permission,entity,mfa
+server/db/scripts/__tests__/authorization/neon-authorization-inventory.test.ts [test_fixture] permission,mfa
+server/db/scripts/__tests__/authorization/three-tenant-demo-authorization.test.ts [test_fixture] permission,mfa
+server/db/scripts/__tests__/authorization/workflow-permission-seed.test.ts [test_fixture] permission
+server/db/scripts/__tests__/provisioning/development-phase1-list-runtimes.test.ts [test_fixture] permission,entity
+server/db/scripts/__tests__/provisioning/three-plane-provision.test.ts [test_fixture] entity
+server/db/scripts/checks/ddl/three-plane-model.ts [tooling_operations] entity
+server/db/scripts/operations/publication/identity-operation-projection.test.ts [test_fixture] permission,entity
+server/db/scripts/operations/publication/successor-release.test.ts [test_fixture] permission
+server/db/scripts/operations/publication/system-entity-commands.test.ts [test_fixture] permission
+server/db/scripts/operations/studio/project-meta-entity-admin-identities.ts [tooling_operations] mfa
+server/db/scripts/operations/studio/provision-meta-entity-authority.ts [tooling_operations] permission
+server/db/scripts/provisioning/authorization-pack-applicator.ts [tooling_operations] entity,mfa
+server/db/scripts/provisioning/cirrusatlantic-demo-authorization-model.ts [tooling_operations] permission,entity
+server/db/scripts/provisioning/prepare-entity-activity.ts [tooling_operations] permission
+server/db/scripts/provisioning/provision-development-northwind-mesh-fixture.ts [tooling_operations] permission,entity
+server/db/scripts/provisioning/provision-development-phase1-list-fixtures.ts [tooling_operations] entity
+server/db/scripts/provisioning/provision-development-phase1-list-runtimes.ts [tooling_operations] permission,entity
+server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts [tooling_operations] permission,mfa
+server/db/scripts/provisioning/publish-development-list-experience.ts [tooling_operations] permission,entity
+server/db/scripts/provisioning/publish-development-record-presentation.ts [tooling_operations] permission,entity
+server/db/scripts/provisioning/publish-document-relationship.ts [tooling_operations] entity
+server/db/scripts/provisioning/three-plane-model.ts [tooling_operations] entity,mfa
+server/db/scripts/reports/mesh-authorization-quality.ts [tooling_operations] entity
+server/db/scripts/reports/neon-authorization-quality.ts [tooling_operations] entity
+server/db/scripts/seed/canonical-catalog-v2-model.ts [tooling_operations] mfa
+server/db/scripts/seed/compile-final-authorization-seed-packs.ts [tooling_operations] permission,mfa
+server/db/scripts/seed/compile-inventory-promotion.ts [tooling_operations] mfa
+server/db/scripts/seed/compile-mesh-authorization-inventory.ts [tooling_operations] mfa
+server/db/scripts/seed/compile-neon-authorization-inventory.ts [tooling_operations] mfa
+server/db/scripts/seed/entity-operation-projection-compiler.ts [tooling_operations] permission
+server/db/scripts/seed/exact-scope-compatibility-model.ts [tooling_operations] permission,entity
+server/db/scripts/seed/inventory-promotion-model.ts [tooling_operations] entity,mfa
+server/db/scripts/seed/mesh-authorization-inventory-model.ts [tooling_operations] entity,mfa
+server/db/scripts/seed/neon-authorization-inventory-model.ts [tooling_operations] entity,mfa
+server/db/scripts/seed/tenant-authority-projection.ts [tooling_operations] permission,entity
+server/db/scripts/seed/validate-canonical-catalogs.ts [tooling_operations] mfa
+server/db/scripts/tests/integration/ci-integrity.ts [tooling_operations] mfa
+server/db/scripts/tests/integration/collaboration-phase1-review.ts [tooling_operations] entity
+server/db/scripts/tests/integration/comment-draft-ca07.ts [tooling_operations] entity
+server/db/scripts/tests/integration/customer-portal-source-probe.ts [tooling_operations] entity
+server/db/scripts/tests/integration/effective-lock-scenarios.ts [tooling_operations] mfa
+server/db/scripts/tests/integration/end-to-end-pipeline.ts [tooling_operations] mfa
+server/db/scripts/verification/inspect-dev-workforce-authority.ts [tooling_operations] permission,entity
+server/packages/adapters/communications/src/__tests__/capture.adapter.test.ts [test_fixture] entity
+server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts [declaration_generated] mfa
+server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts [declaration_generated] mfa
+server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts [declaration_generated] entity,mfa
+server/packages/adapters/experience-postgres/src/experience.postgres.test.ts [test_fixture] permission
+server/packages/adapters/experience-postgres/src/index.ts [application_source] entity
+server/packages/contracts/ai/src/__tests__/business-context.test.ts [test_fixture] entity
+server/packages/contracts/auth/src/authorization.ts [application_source] mfa
+server/packages/contracts/auth/src/identity.ts [application_source] mfa
+server/packages/contracts/auth/src/management.ts [application_source] permission
+server/packages/contracts/content/src/index.ts [application_source] entity
+server/packages/contracts/control-admin/src/index.ts [application_source] permission
+server/packages/contracts/entity-governance/src/entity-change-case.ts [application_source] permission,entity
+server/packages/contracts/experience/src/ports.ts [application_source] entity
+server/packages/contracts/finance/src/foundation.ts [application_source] entity
+server/packages/contracts/finance/src/index.test.ts [test_fixture] permission
+server/packages/contracts/finance/src/permissions.ts [application_source] permission
+server/packages/contracts/governance/src/compliance.ts [application_source] permission
+server/packages/contracts/governance/src/index.test.ts [test_fixture] permission
+server/packages/contracts/governance/src/index.ts [application_source] permission,entity
+server/packages/contracts/master-data/src/ports.ts [application_source] entity
+server/packages/contracts/master-data/src/supplier-onboarding-requirement.ts [application_source] permission
+server/packages/contracts/meta-entity-authoring/src/model.ts [application_source] mfa
+server/packages/contracts/metadata/src/__tests__/api.test.ts [test_fixture] entity
+server/packages/contracts/metadata/src/__tests__/entity-ai.test.ts [test_fixture] entity
+server/packages/contracts/metadata/src/__tests__/entity-canonical-read-admission.test.ts [test_fixture] permission
+server/packages/contracts/metadata/src/atlas-learning.ts [application_source] entity
+server/packages/contracts/metadata/src/collection-relationship.ts [application_source] entity
+server/packages/contracts/metadata/src/common-reference-permission.ts [application_source] permission
+server/packages/contracts/metadata/src/descriptors.ts [application_source] permission
+server/packages/contracts/metadata/src/entity-ai.ts [application_source] entity
+server/packages/contracts/metadata/src/identity-permissions.ts [application_source] permission
+server/packages/contracts/publication/src/__tests__/activity-binding.test.ts [test_fixture] permission
+server/packages/contracts/publication/src/__tests__/activity-collections.test.ts [test_fixture] permission,entity
+server/packages/contracts/publication/src/__tests__/activity-profile.test.ts [test_fixture] permission
+server/packages/contracts/publication/src/__tests__/capability-profile.test.ts [test_fixture] permission
+server/packages/contracts/publication/src/__tests__/common-capability-permissions.test.ts [test_fixture] permission,entity
+server/packages/contracts/publication/src/__tests__/compiled-entity-artifact.test.ts [test_fixture] entity
+server/packages/contracts/publication/src/__tests__/entity-capabilities.test.ts [test_fixture] permission,entity
+server/packages/contracts/publication/src/__tests__/notification-policy.test.ts [test_fixture] entity
+server/packages/contracts/publication/src/activity-permissions.ts [application_source] permission
+server/packages/contracts/publication/src/activity-policy.ts [application_source] permission
+server/packages/contracts/publication/src/common-capability-permissions.ts [application_source] permission
+server/packages/contracts/publication/src/notification-policy.ts [application_source] entity
+server/packages/contracts/records/src/ports.ts [application_source] entity
+server/packages/contracts/records/src/query.ts [application_source] entity
+server/packages/foundation/src/transaction/__tests__/exact-plane.test.ts [test_fixture] entity
+server/packages/planes/mesh/src/network-relationship-import.ts [application_source] entity
+server/packages/planes/mesh/src/record-collection-scope.ts [application_source] entity
+server/packages/planes/neon/src/finance-http.test.ts [test_fixture] permission
+server/packages/planes/neon/src/finance-http.ts [application_source] permission
+server/packages/planes/neon/src/finance-jobs.test.ts [test_fixture] permission
+server/packages/planes/neon/src/finance-jobs.ts [application_source] permission
+server/packages/planes/neon/src/record-collection-scope.test.ts [test_fixture] permission,entity
+server/packages/planes/neon/src/record-collection-scope.ts [application_source] entity
+server/packages/planes/neon/src/register-finance.ts [application_source] permission
+server/packages/planes/studio/control-authoring/src/cycle-config-authoring-service.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/amend-successor-collaboration.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/capability-profile-files.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/collection-configuration.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/collection-relationship.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/development-publication.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/document-collection-publication.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/entity-ai.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/entity-registration.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/execution-binding-storage.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-builder.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-editor-routes.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-preview.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-inbox.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-route-scope.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/list-experience.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/notification-inspection-routes.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/product.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/publication-workflow.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/release-inspection-repository.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/release-inspection-routes.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/reviewer-read-routes.test.ts [test_fixture] permission,mfa
+server/packages/planes/studio/meta-entity-authoring/src/__tests__/table-product.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/authoring/country-ai.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/authoring/principal-products.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/authoring/reference-batch.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/authoring/reference-choices.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/authoring/table-product-ai.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/authoring/table-product-permissions.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/authoring/table-product-storage-plane.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/authoring/workforce-products.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/collection-authoring-routes.ts [application_source] permission
+server/packages/planes/studio/meta-entity-authoring/src/development-publication.ts [application_source] permission
+server/packages/planes/studio/meta-entity-authoring/src/entity-authorization.ts [application_source] entity
+server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts [application_source] mfa
+server/packages/planes/studio/meta-entity-authoring/src/learning-evaluation-receipt.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/learning-inbox.ts [application_source] permission
+server/packages/planes/studio/meta-entity-authoring/src/list-experience.ts [application_source] mfa
+server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts [application_source] permission
+server/packages/planes/studio/meta-entity-authoring/src/product-review.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/publication-ownership.test.ts [test_fixture] permission
+server/packages/planes/studio/meta-entity-authoring/src/publication/amend-successor-ai.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/publication/human-reviewed-publication.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/publication/publication-workflow.ts [application_source] permission
+server/packages/planes/studio/meta-entity-authoring/src/publication/table-successor.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/published-learning-fixtures.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/routes.ts [application_source] permission,mfa
+server/packages/planes/studio/meta-entity-authoring/src/tenant-learning-extension.postgres.test.ts [test_fixture] entity
+server/packages/planes/studio/meta-entity-authoring/src/tenant-learning-extension.test.ts [test_fixture] permission,entity
+server/packages/planes/studio/meta-entity-authoring/src/tenant-learning-extension.ts [application_source] permission
+server/packages/planes/studio/meta-entity-authoring/src/testing/authoring-graph.ts [test_fixture] entity
+server/packages/planes/studio/onboarding/src/maintenance.ts [application_source] permission
+server/packages/planes/studio/onboarding/src/saga.test.ts [test_fixture] entity
+server/packages/planes/studio/src/catalog-metadata-reader.ts [application_source] permission,entity
+server/packages/planes/studio/src/metadata-draft-import.test.ts [test_fixture] permission
+server/packages/planes/studio/src/metadata-draft-import.ts [application_source] entity
+server/packages/planes/studio/src/record-collection-scope.ts [application_source] entity
+server/packages/platform/ai/src/__tests__/a2-operations.test.ts [test_fixture] permission
+server/packages/platform/ai/src/__tests__/admin-contracts.test.ts [test_fixture] permission
+server/packages/platform/ai/src/__tests__/business-context-http.test.ts [test_fixture] entity
+server/packages/platform/ai/src/__tests__/direct-section-selection.test.ts [test_fixture] entity
+server/packages/platform/ai/src/__tests__/entity-section-tool.test.ts [test_fixture] permission,entity
+server/packages/platform/ai/src/__tests__/experience-configuration.test.ts [test_fixture] permission,entity
+server/packages/platform/ai/src/__tests__/experience-routes.test.ts [test_fixture] permission
+server/packages/platform/ai/src/__tests__/governance.test.ts [test_fixture] permission,entity
+server/packages/platform/ai/src/__tests__/insight-disclosure.test.ts [test_fixture] entity
+server/packages/platform/ai/src/__tests__/insight-history.test.ts [test_fixture] entity
+server/packages/platform/ai/src/__tests__/local-generation.test.ts [test_fixture] permission
+server/packages/platform/ai/src/__tests__/record-citation.test.ts [test_fixture] entity
+server/packages/platform/ai/src/__tests__/redis-insight-cache.test.ts [test_fixture] entity
+server/packages/platform/ai/src/__tests__/repository-review.test.ts [test_fixture] permission
+server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts [test_fixture] permission
+server/packages/platform/ai/src/__tests__/route-review.test.ts [test_fixture] permission
+server/packages/platform/ai/src/__tests__/runtime.test.ts [test_fixture] permission,entity
+server/packages/platform/ai/src/__tests__/structured-intent.test.ts [test_fixture] entity
+server/packages/platform/ai/src/__tests__/surface-draft-routes.test.ts [test_fixture] permission
+server/packages/platform/ai/src/atlas-admin-routes.ts [application_source] permission
+server/packages/platform/ai/src/atlas-experience-routes.ts [application_source] permission
+server/packages/platform/ai/src/atlas-route-schemas.ts [application_source] entity
+server/packages/platform/ai/src/atlas-routes.ts [application_source] permission
+server/packages/platform/ai/src/atlas-surface-draft-routes.ts [application_source] permission
+server/packages/platform/ai/src/business-context-admission.test.ts [test_fixture] entity,mfa
+server/packages/platform/ai/src/business-context.ts [application_source] entity
+server/packages/platform/ai/src/entity-context-tools.test.ts [test_fixture] permission,entity
+server/packages/platform/ai/src/entity-lookup-tools.test.ts [test_fixture] permission
+server/packages/platform/ai/src/entity-parent-scope.test.ts [test_fixture] permission,entity
+server/packages/platform/ai/src/entity-tool-manifest.test.ts [test_fixture] permission,entity
+server/packages/platform/ai/src/learning-evaluation.test.ts [test_fixture] entity
+server/packages/platform/ai/src/message-lineage-batch.test.ts [test_fixture] permission,entity
+server/packages/platform/ai/src/production-learning-evaluation.test.ts [test_fixture] permission,entity
+server/packages/platform/ai/src/record-data-gateway.test.ts [test_fixture] entity
+server/packages/platform/ai/src/surface-draft-generation.ts [application_source] permission
+server/packages/platform/ai/src/tool-registry-identity.test.ts [test_fixture] permission
+server/packages/platform/audit/src/audit-routes.ts [application_source] permission
+server/packages/platform/collaboration/src/__tests__/collaboration-repository.test.ts [test_fixture] entity
+server/packages/platform/collaboration/src/__tests__/collaboration-routes.test.ts [test_fixture] entity
+server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts [test_fixture] entity
+server/packages/platform/collaboration/src/__tests__/entity-coordinate.test.ts [test_fixture] entity
+server/packages/platform/collaboration/src/collaboration-service.ts [application_source] permission
+server/packages/platform/control-admin/src/authorization-management-routes.ts [application_source] permission
+server/packages/platform/control-admin/src/authorization-management-service.test.ts [test_fixture] permission
+server/packages/platform/control-admin/src/authorization-writers.postgres.test.ts [test_fixture] permission,entity
+server/packages/platform/control-admin/src/bank-validation.test.ts [test_fixture] permission
+server/packages/platform/control-admin/src/control-service-routes.ts [application_source] permission
+server/packages/platform/control-admin/src/cycle/cycle-config-routes.test.ts [test_fixture] permission
+server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts [test_fixture] permission
+server/packages/platform/control-admin/src/cycle/cycle-test-fixtures.ts [application_source] entity
+server/packages/platform/control-admin/src/cycle/process-selection-compiler.test.ts [test_fixture] entity
+server/packages/platform/control-admin/src/kysely-authorization-management-repository.ts [application_source] permission
+server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts [test_fixture] permission,mfa
+server/packages/platform/control-admin/src/lookup-control.test.ts [test_fixture] permission
+server/packages/platform/control-admin/src/parameter-routes.test.ts [test_fixture] entity
+server/packages/platform/control-admin/src/rounding-control.test.ts [test_fixture] entity
+server/packages/platform/control-admin/src/rounding-routes.test.ts [test_fixture] entity
+server/packages/platform/control-admin/src/runtime-command-routes.test.ts [test_fixture] entity
+server/packages/platform/control-admin/src/runtime-command-routes.ts [application_source] permission
+server/packages/platform/experience/src/contracts.ts [application_source] entity
+server/packages/platform/experience/src/effective-collaboration-controls.test.ts [test_fixture] entity
+server/packages/platform/experience/src/entity-activity-policy.test.ts [test_fixture] permission
+server/packages/platform/experience/src/entity-capability-policy.test.ts [test_fixture] entity
+server/packages/platform/experience/src/entity-collaboration-service.test.ts [test_fixture] entity
+server/packages/platform/experience/src/entity-intake-operation-routes.test.ts [test_fixture] entity
+server/packages/platform/experience/src/entity-operation-admission.test.ts [test_fixture] permission,entity
+server/packages/platform/experience/src/entity-operation-dispatcher.test.ts [test_fixture] permission,entity
+server/packages/platform/experience/src/entity-operation-dispatcher.ts [application_source] permission
+server/packages/platform/experience/src/entity-page-planner.test.ts [test_fixture] permission,entity
+server/packages/platform/experience/src/entity-section-service.test.ts [test_fixture] permission,entity
+server/packages/platform/experience/src/neon-action-policy-registry.ts [application_source] permission
+server/packages/platform/experience/src/record-participants.test.ts [test_fixture] entity
+server/packages/platform/experience/src/routes.test.ts [test_fixture] permission
+server/packages/platform/experience/src/routes.ts [application_source] permission
+server/packages/platform/experience/src/service.test.ts [test_fixture] permission,entity
+server/packages/platform/experience/src/service.ts [application_source] permission,entity
+server/packages/platform/governance/src/compliance/kysely-compliance-repositories.test.ts [test_fixture] entity
+server/packages/platform/governance/src/compliance/report-pack-service.test.ts [test_fixture] entity
+server/packages/platform/governance/src/consent/channel-consent-service.test.ts [test_fixture] entity
+server/packages/platform/governance/src/cycles/cycle-execution-services.test.ts [test_fixture] entity
+server/packages/platform/governance/src/cycles/kysely-cycle-execution-repository.test.ts [test_fixture] entity
+server/packages/platform/governance/src/process-selection/fixture.test-helper.ts [test_fixture] entity
+server/packages/platform/governance/src/repositories/kysely-governance-repository.test.ts [test_fixture] entity
+server/packages/platform/governance/src/routes/governance-http.test.ts [test_fixture] entity
+server/packages/platform/governance/src/routes/governance-routes.test.ts [test_fixture] permission,entity
+server/packages/platform/governance/src/routes/governance-routes.ts [application_source] permission
+server/packages/platform/iam/src/__tests__/customer-portal-delivery.test.ts [test_fixture] entity
+server/packages/platform/iam/src/__tests__/external-worker-identity-intent.test.ts [test_fixture] entity
+server/packages/platform/iam/src/__tests__/iam-service.test.ts [test_fixture] permission
+server/packages/platform/iam/src/__tests__/identity-replay-approval.test.ts [test_fixture] mfa
+server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts [test_fixture] mfa
+server/packages/platform/iam/src/__tests__/identity-saga.test.ts [test_fixture] entity
+server/packages/platform/iam/src/__tests__/keycloak-identity-provider.test.ts [test_fixture] entity
+server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts [test_fixture] permission,mfa
+server/packages/platform/iam/src/__tests__/provisioning-routes.test.ts [test_fixture] entity
+server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts [test_fixture] permission
+server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts [test_fixture] entity
+server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts [test_fixture] entity,mfa
+server/packages/platform/iam/src/external-worker-identity-intent.ts [application_source] entity
+server/packages/platform/iam/src/iam-plane-selection.test.ts [test_fixture] entity
+server/packages/platform/iam/src/iam-routes.ts [application_source] permission
+server/packages/platform/iam/src/iam-service.ts [application_source] mfa
+server/packages/platform/iam/src/identity-provisioning-service.ts [application_source] permission
+server/packages/platform/iam/src/identity-replay-approval.ts [application_source] permission,mfa
+server/packages/platform/iam/src/identity-replay-routes.ts [application_source] permission,mfa
+server/packages/platform/iam/src/identity-saga.ts [application_source] entity
+server/packages/platform/iam/src/kysely-identity-source-coordinate.test.ts [test_fixture] entity
+server/packages/platform/iam/src/kysely-permission-resolver.ts [application_source] entity,mfa
+server/packages/platform/iam/src/permission-authorizer.ts [application_source] mfa
+server/packages/platform/iam/src/provisioning-vertical.ts [application_source] permission
+server/packages/platform/iam/src/trustiam-authority.ts [application_source] entity
+server/packages/platform/jobs/src/job-admin-routes.ts [application_source] permission,entity
+server/packages/platform/metadata/src/__tests__/activity-reader.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/authorized-browser-projection.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/capability-profile-reader.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/collection-relationship.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/compiled-entity-flow-reader.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/compiled-entity-reader.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/compiled-runtime-contract.test.ts [test_fixture] permission
+server/packages/platform/metadata/src/__tests__/compiled-source-tenant.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/dev-publication-resolution.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/directory-scope.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/entity-ai.test.ts [test_fixture] permission,entity
+server/packages/platform/metadata/src/__tests__/entity-authorization.test.ts [test_fixture] permission
+server/packages/platform/metadata/src/__tests__/intake-projection.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/__tests__/metadata-service.test.ts [test_fixture] permission,entity
+server/packages/platform/metadata/src/__tests__/native-list-application.test.ts [test_fixture] permission,entity
+server/packages/platform/metadata/src/compiled-entity-flow-reader.ts [application_source] entity
+server/packages/platform/metadata/src/compiled-entity-reader-concurrency.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/descriptor-parser.test.ts [test_fixture] permission,entity
+server/packages/platform/metadata/src/descriptor-parser.ts [application_source] permission
+server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts [test_fixture] permission,entity
+server/packages/platform/metadata/src/entity-readiness-declaration.test.ts [test_fixture] permission,entity
+server/packages/platform/metadata/src/entity-readiness-inventory.fixtures.ts [test_fixture] permission,entity
+server/packages/platform/metadata/src/entity-readiness-inventory.postgres.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/entity-readiness-inventory.test.ts [test_fixture] entity
+server/packages/platform/metadata/src/form-presentation.test.ts [test_fixture] permission,entity
+server/packages/platform/metadata/src/native-runtime-projection.ts [application_source] permission
+server/packages/platform/notifications/src/__tests__/activity-query.test.ts [test_fixture] entity
+server/packages/platform/notifications/src/__tests__/entity-notification-delivery.test.ts [test_fixture] entity
+server/packages/platform/notifications/src/__tests__/entity-notification-planner.test.ts [test_fixture] entity
+server/packages/platform/notifications/src/__tests__/entity-notification-routing.test.ts [test_fixture] entity
+server/packages/platform/notifications/src/__tests__/notification-record-policy.test.ts [test_fixture] entity
+server/packages/platform/notifications/src/entity-notification-delivery.ts [application_source] entity
+server/packages/platform/notifications/src/kysely-notification-preferences.ts [application_source] entity
+server/packages/platform/notifications/src/notification-operations.ts [application_source] permission
+server/packages/platform/notifications/src/notification-planner.ts [application_source] entity
+server/packages/platform/policy/src/__tests__/policy-routes.test.ts [test_fixture] permission,entity
+server/packages/platform/policy/src/__tests__/task-edit-policy.test.ts [test_fixture] entity
+server/packages/platform/policy/src/policy-route-contracts.ts [application_source] permission
+server/packages/platform/policy/src/policy-routes.ts [application_source] permission
+server/packages/platform/preferences/src/entity-views-routes.test.ts [test_fixture] entity
+server/packages/platform/preferences/src/kysely-saved-view-repository.test.ts [test_fixture] entity
+server/packages/platform/preferences/src/preferences.test.ts [test_fixture] entity
+server/packages/platform/preferences/src/reference-choice-routes.test.ts [test_fixture] entity
+server/packages/platform/preferences/src/saved-view-routes.test.ts [test_fixture] entity
+server/packages/platform/reference-data/src/index.ts [application_source] entity
+server/packages/platform/reference-data/src/reference-data.test.ts [test_fixture] entity
+server/packages/platform/search/src/__tests__/document-search-service.test.ts [test_fixture] permission
+server/packages/platform/search/src/document-search-service.ts [application_source] permission
+server/packages/platform/workflow/src/__tests__/task-governance.test.ts [test_fixture] mfa
+server/packages/platform/workflow/src/__tests__/workflow-repository.test.ts [test_fixture] entity
+server/packages/platform/workflow/src/__tests__/workflow-routes.test.ts [test_fixture] entity
+server/packages/platform/workflow/src/__tests__/workflow-service.test.ts [test_fixture] permission,entity
+server/packages/platform/workflow/src/sla-automation.ts [application_source] permission
+server/packages/platform/workflow/src/workflow-service.ts [application_source] permission
+server/packages/runtime/http/src/__tests__/http-runtime.test.ts [test_fixture] permission,entity
+server/packages/runtime/http/src/http-runtime.ts [application_source] permission
+server/packages/services/attachments/src/attachment-discovery.test.ts [test_fixture] entity
+server/packages/services/attachments/src/attachment-lifecycle.test.ts [test_fixture] entity
+server/packages/services/attachments/src/attachment-routes.test.ts [test_fixture] permission,entity
+server/packages/services/attachments/src/attachment-routes.ts [application_source] permission,entity,mfa
+server/packages/services/attachments/src/attachment-security.test.ts [test_fixture] entity
+server/packages/services/attachments/src/folder-scope.test.ts [test_fixture] entity
+server/packages/services/attachments/src/retrieval-admission.test.ts [test_fixture] permission,entity
+server/packages/services/attachments/src/retrieval-admission.ts [application_source] permission
+server/packages/services/content/src/content-service.ts [application_source] permission,entity
+server/packages/services/content/src/kysely-content-acl.ts [application_source] entity
+server/packages/services/content/src/kysely-content-subjects.ts [application_source] entity
+server/packages/services/content/src/ports.ts [application_source] entity
+server/packages/services/document-processing/src/__tests__/search-backfill.test.ts [test_fixture] entity
+server/packages/services/documents/src/__tests__/document-repositories.test.ts [test_fixture] entity
+server/packages/services/documents/src/__tests__/document-routes.test.ts [test_fixture] entity
+server/packages/services/documents/src/__tests__/document-service.test.ts [test_fixture] permission,entity
+server/packages/services/documents/src/document-routes.ts [application_source] entity
+server/packages/services/documents/src/document-service.ts [application_source] permission
+server/packages/services/finance/src/closing/closing-services.test.ts [test_fixture] entity
+server/packages/services/finance/src/inventory/f4-acceptance.test.ts [test_fixture] permission,entity
+server/packages/services/finance/src/ledger/f3-acceptance.test.ts [test_fixture] entity
+server/packages/services/finance/src/shared/finance-foundation.test.ts [test_fixture] permission,entity
+server/packages/services/finance/src/tax/tax-services.test.ts [test_fixture] permission,entity
+server/packages/services/integration/src/__tests__/integration-routes.test.ts [test_fixture] entity
+server/packages/services/jobs/src/kysely-job-repositories.ts [application_source] entity
+server/packages/services/master-data/src/business-partner/collaboration-coordinates.ts [application_source] entity
+server/packages/services/publication/src/__tests__/activity-publication.test.ts [test_fixture] permission
+server/packages/services/publication/src/__tests__/authenticated-entity-release-review.test.ts [test_fixture] entity,mfa
+server/packages/services/publication/src/__tests__/authorization-activation-hold.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/bp2-source-admission.test.ts [test_fixture] permission,entity
+server/packages/services/publication/src/__tests__/canonical-read-catalog.test.ts [test_fixture] permission,entity
+server/packages/services/publication/src/__tests__/capability-profile-compilation.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/compiled-entity-collection-compiler.test.ts [test_fixture] permission,entity
+server/packages/services/publication/src/__tests__/compiled-publication-scope.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/coordinated-entity-adoption.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/dev-publication-boundaries.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/dev-publication-classifier.test.ts [test_fixture] permission
+server/packages/services/publication/src/__tests__/entity-adoption-plan.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/entity-authorization-compiler.test.ts [test_fixture] permission,entity
+server/packages/services/publication/src/__tests__/entity-authorization-publication-review.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/entity-case-contract.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/entity-definition.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/entity-operation-binding-compiler.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/local-definition-preview.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/notification-artifact.test.ts [test_fixture] entity
+server/packages/services/publication/src/__tests__/operation-projection.test.ts [test_fixture] permission
+server/packages/services/publication/src/__tests__/studio-authority-ddl.test.ts [test_fixture] permission
+server/packages/services/publication/src/authenticated-entity-release-review.ts [application_source] mfa
+server/packages/services/publication/src/coordinated-entity-adoption.ts [application_source] mfa
+server/packages/services/publication/src/coordinated-product-activation.test.ts [test_fixture] entity
+server/packages/services/publication/src/entity-authorization-compiler.ts [application_source] permission,entity
+server/packages/services/publication/src/entity-case-contract-routes.ts [application_source] permission
+server/packages/services/publication/src/entity-definition-compiler.ts [application_source] entity
+server/packages/services/publication/src/entity-definition-consumer.ts [application_source] entity
+server/packages/services/publication/src/entity-definition-routes.ts [application_source] permission
+server/packages/services/publication/src/entity-foundation-definition.ts [application_source] permission,entity,mfa
+server/packages/services/publication/src/entity-initial-case-schema.ts [application_source] entity
+server/packages/services/publication/src/entity-operation-binding-compiler.ts [application_source] permission,entity
+server/packages/services/publication/src/publication-rollback.test.ts [test_fixture] entity
+server/packages/services/publication/src/publication-routes.ts [application_source] permission
+server/packages/services/publication/src/shared/authorization/operation-projection.ts [application_source] entity
+server/packages/services/records/src/__tests__/advanced-records.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/authorized-aggregate.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/canonical-read-backend.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/canonical-read-diagnostics.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/collection-comparison.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/collection-scope-sql.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/document-collection-read.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/entity-authorization.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/entity-list-read-routes.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/entity-list-service.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/intake-form-choices.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/list-context-discovery.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/list-experience.test.ts [test_fixture] permission
+server/packages/services/records/src/__tests__/masked-record-projection.test.ts [test_fixture] permission
+server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/parent-collection-scope.test.ts [test_fixture] permission
+server/packages/services/records/src/__tests__/record-bookmark-routes.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/record-bookmark-service.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/record-history.postgres-case.ts [test_fixture] permission
+server/packages/services/records/src/__tests__/record-read-access.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/records-vertical.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/snapshot-repository.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/snapshot-service.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/__tests__/standard-views.postgres.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/standard-views.test.ts [test_fixture] entity
+server/packages/services/records/src/__tests__/transfer-jobs.test.ts [test_fixture] permission
+server/packages/services/records/src/actions/transactional-action-service.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/authorized-aggregate.test.ts [test_fixture] entity
+server/packages/services/records/src/bookmarks/record-bookmark-routes.ts [application_source] entity
+server/packages/services/records/src/choice-disclosure.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/entity-authorization.ts [application_source] entity,mfa
+server/packages/services/records/src/entity-backend-authorizer.ts [application_source] mfa
+server/packages/services/records/src/entity-detail-read.test.ts [test_fixture] permission
+server/packages/services/records/src/entity-directory.test.ts [test_fixture] entity
+server/packages/services/records/src/entity-list-parent-scope-routes.test.ts [test_fixture] entity
+server/packages/services/records/src/entity-list-routes.ts [application_source] entity
+server/packages/services/records/src/entity-list-service.ts [application_source] permission
+server/packages/services/records/src/entity-list-view-read.test.ts [test_fixture] entity
+server/packages/services/records/src/entity-reference-reader.test.ts [test_fixture] permission
+server/packages/services/records/src/entity-section-component.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/field-validation.ts [application_source] permission
+server/packages/services/records/src/in-memory-record-repository.ts [application_source] entity
+server/packages/services/records/src/kysely-record-repository.test.ts [test_fixture] entity
+server/packages/services/records/src/list-context-discovery.ts [application_source] permission
+server/packages/services/records/src/list-scope-coordinate.ts [application_source] entity
+server/packages/services/records/src/masked-disclosure.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/mutation-service.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/mutation-service.ts [application_source] permission
+server/packages/services/records/src/own-record.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/parent-scope.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/published-tenant-authorizer.ts [application_source] permission
+server/packages/services/records/src/query-service.ts [application_source] permission
+server/packages/services/records/src/record-read-access.ts [application_source] permission,mfa
+server/packages/services/records/src/records-parent-create-routes.test.ts [test_fixture] entity
+server/packages/services/records/src/snapshots/snapshot-routes.ts [application_source] permission
+server/packages/services/records/src/source-aware-read.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/standard-view-relationship-sql.ts [application_source] entity
+server/packages/services/records/src/standard-views.ts [application_source] entity
+server/packages/services/records/src/transfer/export-preflight.test.ts [test_fixture] permission,entity
+server/packages/services/records/src/transfer/parent-export-scope.test.ts [test_fixture] permission
+server/packages/services/records/src/transfer/transfer-jobs.ts [application_source] permission
+server/packages/services/records/src/transfer/transfer-service.ts [application_source] permission
+server/packages/services/records/src/transfer/xlsx-workbook-codec.test.ts [test_fixture] entity
+server/packages/services/workforce/src/adapters/kysely-profile-source-reader.test.ts [test_fixture] entity
+server/packages/services/workforce/src/identity/principal-person-link-action.test.ts [test_fixture] permission,entity
+server/packages/services/workforce/src/identity/principal-person-link-action.ts [application_source] permission,entity
+server/packages/services/workforce/src/identity/verified-profile-source.test.ts [test_fixture] entity
+server/packages/services/workforce/src/identity/workforce-read-policy.ts [application_source] permission,entity,mfa
+tests/contracts/access-consumption-phase9.test.ts [test_fixture] permission
+tests/contracts/app-relay-composition.test.ts [test_fixture] entity
+tests/contracts/atlas-answer-envelope.test.ts [test_fixture] entity
+tests/contracts/atlas-grounded-answer.test.ts [test_fixture] entity
+tests/contracts/atlas-relay-startup.test.ts [test_fixture] entity
+tests/contracts/auth-deep-link.test.ts [test_fixture] mfa
+tests/contracts/auth-session-foundation.test.ts [test_fixture] mfa
+tests/contracts/backchannel-logout-retry.test.ts [test_fixture] mfa
+tests/contracts/bff-relay-security.test.ts [test_fixture] entity
+tests/contracts/bff-runtime-configuration.test.ts [test_fixture] entity
+tests/contracts/context-refresh-race.test.ts [test_fixture] mfa
+tests/contracts/e2e-auth-state.test.ts [test_fixture] mfa
+tests/contracts/entity-identity.test.ts [test_fixture] entity
+tests/contracts/entity-list-contract.test.ts [test_fixture] permission,entity
+tests/contracts/entity-reference-preview.test.ts [test_fixture] entity
+tests/contracts/frontend-spine-browser-contracts.test.ts [test_fixture] permission
+tests/contracts/home-personalization-phase3.test.ts [test_fixture] permission
+tests/contracts/mesh-network-account-contract.test.ts [test_fixture] entity
+tests/contracts/mesh-url-review.test.ts [test_fixture] entity
+tests/contracts/neon-application-url-review.test.ts [test_fixture] entity
+tests/contracts/neon-work-context-contract.test.ts [test_fixture] permission
+tests/contracts/platform-catalog-experience.test.ts [test_fixture] entity
+tests/contracts/profile-preferences.test.ts [test_fixture] entity
+tests/contracts/query-provider-lifecycle.test.ts [test_fixture] entity,mfa
+tests/contracts/refresh-touch-race.test.ts [test_fixture] mfa
+tests/contracts/session-store-index-expiry.test.ts [test_fixture] mfa
+tests/contracts/session-store-rotation.test.ts [test_fixture] mfa
+tests/contracts/shared-shell-navigation.test.ts [test_fixture] permission,entity
+tests/contracts/studio-publication-navigation.test.ts [test_fixture] permission
+tests/contracts/three-plane-list-scope.test.ts [test_fixture] permission,entity
+tests/contracts/trusted-device-authentication.test.ts [test_fixture] mfa
+tests/e2e/global-setup.ts [test_fixture] mfa
+tests/e2e/production/customer-onboarding.spec.ts [test_fixture] entity
+tests/e2e/production/fixtures.ts [test_fixture] mfa
+tests/e2e/production/surface-matrix.spec.ts [test_fixture] mfa
+tests/foundation-browser/activity-hydration.spec.ts [test_fixture] entity
+tests/foundation-browser/activity-query.spec.ts [test_fixture] entity
+tests/foundation-browser/bank-country-rules.spec.ts [test_fixture] entity
+tests/foundation-browser/bank-editor.spec.ts [test_fixture] entity
+tests/foundation-browser/entity-audit-regressions.spec.ts [test_fixture] entity
+tests/foundation-browser/entity-list-refresh-navigation.spec.ts [test_fixture] entity
+tests/foundation-browser/entity-read-route-adapter.spec.ts [test_fixture] entity
+tests/foundation-browser/entity-reference-preview.spec.ts [test_fixture] entity
+tests/foundation-browser/fixtures/activity-data.ts [test_fixture] entity
+tests/foundation-browser/fixtures/bp-shared-record.tsx [test_fixture] entity
+tests/foundation-browser/metadata-detail-navigation.spec.ts [test_fixture] entity
+tests/foundation-browser/neon-context.spec.ts [test_fixture] entity
+tests/foundation-browser/shared-shell.spec.ts [test_fixture] entity
+tests/foundation-browser/ui-baseline.spec.ts [test_fixture] entity
+tests/foundation/atlas-answer.test.tsx [test_fixture] entity
+tests/foundation/atlas-business-context.test.tsx [test_fixture] entity
+tests/foundation/atlas-history-interactions.test.tsx [test_fixture] entity
+tests/foundation/attachment-browse-lifecycle.test.tsx [test_fixture] entity
+tests/foundation/attachment-client-coordinate.test.ts [test_fixture] entity
+tests/foundation/bank-country-rules.test.ts [test_fixture] entity
+tests/foundation/bank-editor.test.ts [test_fixture] entity
+tests/foundation/country-detail-read.test.ts [test_fixture] entity
+tests/foundation/entity-list-columns.test.ts [test_fixture] entity
+tests/foundation/entity-list-phase1a.test.tsx [test_fixture] entity
+tests/foundation/entity-localization.test.ts [test_fixture] entity
+tests/foundation/entity-relationships.test.ts [test_fixture] entity
+tests/foundation/entity-request-lifecycle.test.ts [test_fixture] entity
+tests/foundation/entity-work-context.test.ts [test_fixture] entity
+tests/foundation/error-boundaries.test.tsx [test_fixture] mfa
+tests/foundation/i18n-foundation.test.ts [test_fixture] entity
+tests/foundation/neon-scope-adapters.test.ts [test_fixture] entity
+tests/foundation/neon-work-context-state.test.ts [test_fixture] entity
+tests/foundation/reference-choice-policy.test.ts [test_fixture] entity
+tests/foundation/reference-history-store.test.ts [test_fixture] entity
+tooling/config/playwright.config.ts [tooling_operations] mfa
+tooling/scripts/iam/verify-federated-assurance.ts [tooling_operations] mfa
+tooling/scripts/iam/verify-mfa-authority.ts [tooling_operations] mfa
+tooling/scripts/iam/verify-testing-foundation.ts [tooling_operations] mfa
+tooling/scripts/verification/appearance-browser-entry.tsx [tooling_operations] mfa
+tooling/scripts/verification/entity-route-admission.test.ts [test_fixture] permission
+tooling/scripts/verification/entity-section-component.test.ts [test_fixture] entity
+tooling/scripts/verification/localized-reference-fixture.ts [tooling_operations] entity
+tooling/scripts/verification/neon-context-browser-entry.tsx [tooling_operations] mfa
+tooling/scripts/verification/notification-controls-fixture.tsx [tooling_operations] permission
+tooling/scripts/verification/prepare-atlas-controlled-benchmark.test.ts [test_fixture] entity
+tooling/scripts/verification/render-boundary-fixture.tsx [tooling_operations] mfa
+tooling/scripts/verification/shell-browser-entry.tsx [tooling_operations] entity
+tooling/scripts/verification/ui-baseline-entry.tsx [tooling_operations] permission,entity

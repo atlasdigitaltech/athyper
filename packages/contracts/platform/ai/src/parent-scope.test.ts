@@ -7,8 +7,10 @@ it("accepts only a complete bounded parent relationship selector and freezes it"
   const parsed = parseAtlasBusinessContext({ ...page, parentScope });
   expect(parsed.parentScope).toEqual(parentScope);
   expect(Object.isFrozen(parsed.parentScope)).toBe(true);
+  const pinned = { ...parentScope, parentDescriptorHash: "a".repeat(64) };
+  expect(parseAtlasBusinessContext({ ...page, parentScope: pinned }).parentScope).toEqual(pinned);
   for (const value of [ {}, { parentEntityCode: "principal" }, { ...parentScope, parentRecordId: "invalid" },
     { ...parentScope, relationshipKey: "notifications;sql" }, { ...parentScope, tenantId: id },
-    { ...parentScope, parentDescriptorHash: "a".repeat(64) }, { ...parentScope, predicates: [] } ])
+    { ...parentScope, parentDescriptorHash: "invalid" }, { ...parentScope, predicates: [] } ])
     expect(() => parseAtlasBusinessContext({ ...page, parentScope: value })).toThrow();
 });

@@ -123,6 +123,11 @@ fi
 # Source mode is restricted to the personal local DEV instance.
 if [ "${ATHYPER_LOCAL_SOURCE:-0}" = 1 ]; then
   [ "${ATHYPER_DOMAIN_SUFFIX:-}" = dev.athyper.test ] || { echo "Source mode requires local DEV" >&2; exit 1; }
+  # Stable identity for this personal source instance. Evidence still must match
+  # its exact configuration, installed build and published artifact. Cloud and
+  # image-based deployments supply their own explicit deployment identity.
+  : "${ENTITY_SERVING_DEPLOYMENT_ID:=athyper-dev-source-${MODE:-api}-1}"
+  export ENTITY_SERVING_DEPLOYMENT_ID
   export NODE_ENV=development LOCAL_DEVELOPMENT_MANAGED=1
   cd "${ATHYPER_SOURCE_CHECKOUT:?Source checkout is required}"
   exec node tooling/scripts/local-dev/watch-runtime.mjs

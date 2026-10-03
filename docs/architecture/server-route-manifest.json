@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1220,
+    "identities": 1223,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 352,
+    "currentOnly": 355,
     "legacyOccurrences": 898,
-    "currentOccurrences": 418
+    "currentOccurrences": 421
   },
   "routes": [
     {
@@ -952,7 +952,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/routes.ts",
-          "line": 46,
+          "line": 47,
           "declaredPath": "/api/platform/experience/surfaces/:surfaceKey/arrangement",
           "kind": "contract"
         }
@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 3805,
+          "line": 3811,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 3195,
+          "line": 3201,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -2849,7 +2849,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 339,
+          "line": 372,
           "declaredPath": "/api/entity-runtime/:entityCode/application-descriptor",
           "kind": "contract"
         }
@@ -2864,7 +2864,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 394,
+          "line": 427,
           "declaredPath": "/api/entity-runtime/:entityCode/detail-descriptor",
           "kind": "contract"
         }
@@ -2879,7 +2879,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 372,
+          "line": 405,
           "declaredPath": "/api/entity-runtime/:entityCode/form-descriptor",
           "kind": "contract"
         }
@@ -2894,7 +2894,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 449,
+          "line": 496,
           "declaredPath": "/api/entity-runtime/:entityCode/list",
           "kind": "contract"
         }
@@ -2909,8 +2909,23 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 356,
+          "line": 389,
           "declaredPath": "/api/entity-runtime/:entityCode/list-descriptor",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/entity-runtime/:param/own-record",
+      "method": "GET",
+      "path": "/api/entity-runtime/:param/own-record",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 450,
+          "declaredPath": "/api/entity-runtime/:entityCode/own-record",
           "kind": "contract"
         }
       ],
@@ -2924,7 +2939,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 434,
+          "line": 481,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId",
           "kind": "contract"
         }
@@ -2969,7 +2984,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 417,
+          "line": 464,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/detail",
           "kind": "contract"
         }
@@ -3029,8 +3044,23 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 338,
+          "line": 371,
           "declaredPath": "/api/entity-runtime/:entityCode/references/:fieldKey",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/entity-runtime/directory",
+      "method": "GET",
+      "path": "/api/entity-runtime/directory",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 344,
+          "declaredPath": "/api/entity-runtime/directory",
           "kind": "contract"
         }
       ],
@@ -4349,7 +4379,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 547,
+          "line": 543,
           "declaredPath": "/api/governance/cycle-runs/:runId/readiness",
           "kind": "contract"
         }
@@ -7180,7 +7210,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/routes.ts",
-          "line": 44,
+          "line": 45,
           "declaredPath": "/api/platform/experience/surfaces/:surfaceKey",
           "kind": "contract"
         }
@@ -7225,7 +7255,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/routes.ts",
-          "line": 47,
+          "line": 48,
           "declaredPath": "/api/platform/navigation/slug-redirect",
           "kind": "contract"
         }
@@ -9028,7 +9058,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/routes.ts",
-          "line": 40,
+          "line": 41,
           "declaredPath": "/api/studio/experience-surfaces",
           "kind": "contract"
         }
@@ -10322,6 +10352,21 @@
           "line": 185,
           "declaredPath": "/api/platform/preferences/saved-views/:id/actions/:action",
           "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "PATCH /api/platform/profile/appearance",
+      "method": "PATCH",
+      "path": "/api/platform/profile/appearance",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 38,
+          "declaredPath": "/api/platform/profile/appearance",
+          "kind": "contract"
         }
       ],
       "status": "current-only"
@@ -13253,7 +13298,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 524,
+          "line": 520,
           "declaredPath": "/api/governance/channel-consents",
           "kind": "contract"
         }
@@ -13290,7 +13335,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 625,
+          "line": 621,
           "declaredPath": "/api/governance/cycle-certifications/:certificationId/certify",
           "kind": "contract"
         }
@@ -13305,7 +13350,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 631,
+          "line": 627,
           "declaredPath": "/api/governance/cycle-certifications/:certificationId/reject",
           "kind": "contract"
         }
@@ -13335,7 +13380,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 619,
+          "line": 615,
           "declaredPath": "/api/governance/cycle-certifications/:certificationId/submit",
           "kind": "contract"
         }
@@ -13365,7 +13410,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 607,
+          "line": 603,
           "declaredPath": "/api/governance/cycle-deviations/:deviationId/carry-forward",
           "kind": "contract"
         }
@@ -13402,7 +13447,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 595,
+          "line": 591,
           "declaredPath": "/api/governance/cycle-deviations/:deviationId/resolve",
           "kind": "contract"
         }
@@ -13432,7 +13477,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 601,
+          "line": 597,
           "declaredPath": "/api/governance/cycle-deviations/:deviationId/waive",
           "kind": "contract"
         }
@@ -13454,7 +13499,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 535,
+          "line": 531,
           "declaredPath": "/api/governance/cycle-runs",
           "kind": "contract"
         }
@@ -13491,7 +13536,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 613,
+          "line": 609,
           "declaredPath": "/api/governance/cycle-runs/:runId/certifications",
           "kind": "contract"
         }
@@ -13558,7 +13603,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 589,
+          "line": 585,
           "declaredPath": "/api/governance/cycle-runs/:runId/deviations",
           "kind": "contract"
         }
@@ -13588,7 +13633,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 541,
+          "line": 537,
           "declaredPath": "/api/governance/cycle-runs/:runId/transitions",
           "kind": "contract"
         }
@@ -13603,7 +13648,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 571,
+          "line": 567,
           "declaredPath": "/api/governance/cycle-tasks/:taskId/block",
           "kind": "contract"
         }
@@ -13618,7 +13663,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 553,
+          "line": 549,
           "declaredPath": "/api/governance/cycle-tasks/:taskId/claim",
           "kind": "contract"
         }
@@ -13640,7 +13685,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 565,
+          "line": 561,
           "declaredPath": "/api/governance/cycle-tasks/:taskId/complete",
           "kind": "contract"
         }
@@ -13685,7 +13730,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 583,
+          "line": 579,
           "declaredPath": "/api/governance/cycle-tasks/:taskId/reopen",
           "kind": "contract"
         }
@@ -13707,7 +13752,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 559,
+          "line": 555,
           "declaredPath": "/api/governance/cycle-tasks/:taskId/start",
           "kind": "contract"
         }
@@ -13722,7 +13767,7 @@
       "current": [
         {
           "source": "server/packages/platform/governance/src/routes/governance-routes.ts",
-          "line": 577,
+          "line": 573,
           "declaredPath": "/api/governance/cycle-tasks/:taskId/waive",
           "kind": "contract"
         }
@@ -17430,7 +17475,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/routes.ts",
-          "line": 42,
+          "line": 43,
           "declaredPath": "/api/studio/experience-surfaces/:releaseId/publish",
           "kind": "contract"
         }
@@ -17445,7 +17490,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/routes.ts",
-          "line": 41,
+          "line": 42,
           "declaredPath": "/api/studio/experience-surfaces/:releaseId/rollback",
           "kind": "contract"
         }
@@ -17475,7 +17520,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/routes.ts",
-          "line": 39,
+          "line": 40,
           "declaredPath": "/api/studio/experience-surfaces/drafts",
           "kind": "contract"
         }
@@ -17490,7 +17535,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/routes.ts",
-          "line": 48,
+          "line": 49,
           "declaredPath": "/api/studio/navigation/slug-redirects",
           "kind": "contract"
         }
@@ -18682,7 +18727,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/routes.ts",
-          "line": 45,
+          "line": 46,
           "declaredPath": "/api/platform/experience/surfaces/:surfaceKey/arrangement",
           "kind": "contract"
         }

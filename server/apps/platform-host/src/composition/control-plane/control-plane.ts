@@ -9,6 +9,7 @@ import { type PlatformAuthority } from "../shared/identity/platform-authority.js
 import { createPublicationPolicyEnrollment, PUBLICATION_POLICY_PERMISSIONS } from "../shared/publication/policy-enrollment.js";
 import { registerPublicationPolicyEnrollmentRoutes } from "../shared/publication/policy-enrollment-routes.js";
 import { registerControlSession } from "./session.js";
+import { registerControlProductReview } from "./product-review.js";
 
 /** Closed route surface. Never call the combined host's registration chain here. */
 export function registerControlPlane(application: Application, options: {
@@ -22,6 +23,7 @@ export function registerControlPlane(application: Application, options: {
   domainSuffix: string;
 }) {
   registerControlSession(application, options.authenticator, options.authority);
+  registerControlProductReview(application, options);
   const authorizer = createRevisionAuthorizer({ permissions: {
     read: "studio.metadata.contract.view", author: PUBLICATION_POLICY_PERMISSIONS.propose, publish: PUBLICATION_POLICY_PERMISSIONS.activate,
   }, get: (tenantId, revisionId, principalId) => options.database.transaction().execute(async tx => {

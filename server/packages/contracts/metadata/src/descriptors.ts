@@ -342,6 +342,10 @@ export interface EntityRuntimeDescriptor {
     readonly object: string;
     readonly idField: string;
     readonly tenantField?: string;
+    /** Read visibility for `tenantField`. `tenant_or_platform` also admits
+     * platform-owned rows (null tenant) to reads; writes stay tenant-exact so a
+     * tenant can never mutate the platform baseline. Defaults to `tenant`. */
+    readonly tenantVisibility?: "tenant" | "tenant_or_platform";
     readonly versionField?: string;
     readonly softDeleteField?: string;
     readonly statusField?: string;

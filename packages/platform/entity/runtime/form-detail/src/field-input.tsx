@@ -61,7 +61,8 @@ export function FieldInput({
               required={field.required}
               disabled={field.readOnly}
               placeholder={intl.message("form.select")}
-              onChange={onChange}
+              // Published options are strings; a numeric field keeps its number type.
+              onChange={(next) => onChange(field.kind === "integer" || field.kind === "decimal" ? (next === "" ? null : Number(next)) : next)}
               options={[
                 // An optional field can be cleared, as with the native empty option.
                 ...(field.required ? [] : [{ value: "", label: intl.message("form.select") }]),

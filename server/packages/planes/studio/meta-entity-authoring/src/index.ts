@@ -12,6 +12,9 @@ export * from "./graph-dependencies.js";
 export * from "./kysely-authoring-repository.js";
 export * from "./publication-adapter.js";
 export * from "./routes.js";
+export * from "./product-review.js";
+export * from "./product-review-routes.js";
+export * from "./publication/human-reviewed-publication.js";
 export * from "./learning-inbox.js";
 export * from "./learning-routes.js";
 export * from "./learning-publication.js";
@@ -51,3 +54,8 @@ export { amendSuccessorCapabilities } from "./publication/amend-successor-capabi
 export { amendSuccessorCollaboration } from "./publication/amend-successor-collaboration.js";
 export { amendSuccessorLocalization } from "./publication/amend-successor-localization.js";
 export { adoptCapabilityProfiles } from "./authoring/adopt-capability-profiles.js";
+export {
+  parseTenantLearningAncestry, tenantLearningAncestry, readProductLearningSource,
+  compileTenantLearningDescriptor, prepareTenantLearningExtensionDraft,
+  type TenantLearningAncestry, type ProductLearningSource,
+} from "./tenant-learning-extension.js";
