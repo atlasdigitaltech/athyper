@@ -3,6 +3,20 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20261003_partner_child_read_models.sql",
+      "path": "migrations/20261003_partner_child_read_models.sql",
+      "sha256": "5ac7761867b4e8edf82c23a2105610e53bdef3202d8c4d6cae59d5832dc67de5",
+      "planes": [
+        "neon"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Add security-invoker BP banking, industry and qualification read models for governed Entity Framework projection; no metadata activation or permission retirement.",
+      "canonicalPaths": [
+        "ddl/planes/neon/master/37_partner_child_read_models.sql"
+      ]
+    },
+    {
       "originalPath": "migrations/20261003_entity_framework_security.sql",
       "path": "migrations/20261003_entity_framework_security.sql",
       "sha256": "8b07d28e9ba39ae9d543bfc5bd6de3f26577c73ab5eb5842660c9a0d5af88626",

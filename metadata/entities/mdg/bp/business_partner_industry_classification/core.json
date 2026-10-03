@@ -15,21 +15,23 @@
     }
   },
   "storage": {
-    "kind": "handler_projection",
+    "kind": "field_projection",
     "sourceObjects": [
       "master.business_partner_industry_classification",
-      "shared.industry_code"
+      "shared.industry_code",
+      "master.v_partner_industry_read"
     ],
     "primaryObject": "master.business_partner_industry_classification",
     "idField": "id",
     "tenantField": "tenant_id",
-    "genericWriteEnabled": false
+    "genericWriteEnabled": false,
+    "readObject": "master.v_partner_industry_read"
   },
   "fields": [
     {
       "key": "tenant_id",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "tenant_id"
       },
       "dataType": "uuid",
@@ -50,7 +52,7 @@
     {
       "key": "id",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "id"
       },
       "dataType": "uuid",
@@ -71,9 +73,12 @@
     {
       "key": "business_partner_id",
       "writePolicy": "system_managed",
-      "uiFacets": { "visibility": "hidden", "editability": "readonly" },
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "business_partner_id"
       },
       "dataType": "uuid",
@@ -89,11 +94,15 @@
     {
       "key": "industry_domain_code",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "industry_domain_code"
       },
       "dataType": "enum",
-      "display": { "lookup": { "code": "shared.classification_scheme" } },
+      "display": {
+        "lookup": {
+          "code": "shared.classification_scheme"
+        }
+      },
       "storageType": "text",
       "nullable": false,
       "label": {
@@ -105,7 +114,7 @@
     {
       "key": "industry_code_id",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "industry_code_id"
       },
       "dataType": "uuid",
@@ -120,7 +129,7 @@
     {
       "key": "assignment_kind",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "assignment_kind"
       },
       "dataType": "enum",
@@ -162,7 +171,7 @@
     {
       "key": "confidence",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "confidence"
       },
       "dataType": "integer",
@@ -177,7 +186,7 @@
     {
       "key": "source_system",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "source_system"
       },
       "dataType": "string",
@@ -192,7 +201,7 @@
     {
       "key": "source_reference",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "source_reference"
       },
       "dataType": "string",
@@ -207,7 +216,7 @@
     {
       "key": "is_primary",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "is_primary"
       },
       "dataType": "boolean",
@@ -222,7 +231,7 @@
     {
       "key": "effective_from",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "effective_from"
       },
       "dataType": "date",
@@ -237,7 +246,7 @@
     {
       "key": "effective_until",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "effective_until"
       },
       "dataType": "date",
@@ -252,7 +261,7 @@
     {
       "key": "status",
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
+        "sourceObject": "master.v_partner_industry_read",
         "column": "status"
       },
       "dataType": "enum",
@@ -301,8 +310,8 @@
     {
       "key": "industry_code",
       "binding": {
-        "sourceObject": "shared.industry_code",
-        "column": "code"
+        "sourceObject": "master.v_partner_industry_read",
+        "column": "industry_code"
       },
       "dataType": "string",
       "storageType": "text",
@@ -322,8 +331,8 @@
     {
       "key": "industry_name",
       "binding": {
-        "sourceObject": "shared.industry_code",
-        "column": "name"
+        "sourceObject": "master.v_partner_industry_read",
+        "column": "industry_name"
       },
       "dataType": "string",
       "storageType": "text",
@@ -363,8 +372,8 @@
         }
       },
       "binding": {
-        "sourceObject": "master.business_partner_industry_classification",
-        "column": "verified_at"
+        "sourceObject": "master.v_partner_industry_read",
+        "column": "verification_status"
       },
       "dataType": "string",
       "storageType": "text",
@@ -414,7 +423,9 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": ["platform/core-field-defaults.v1"],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
@@ -448,6 +459,5 @@
     "search": [],
     "filters": [],
     "sorts": []
-  },
-  "artifactHash": "sha256:13ed8c12994bb428ab3a41020ecb0160646128eeed5c500d391c12764f5119da"
+  }
 }

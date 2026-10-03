@@ -1,5 +1,7 @@
 # BP child-read cutover build — existing DEV, 3 October 2026
 
+**Latest implementation checkpoint:** [BP projection readers and predecessor reconciliation](bp-projection-reader-and-predecessor-review-20261003.md). Banking, industry and qualification SQL read models and draft shared read/list bindings are implemented and fixture-qualified; complete runtime publication and nested coverage presentation remain gated. Five of seven predecessor source blockers are recovered but have additional source changes to review; two remain unresolved. Context references will be unavailable as approved. No permission retirement or independent release approval has occurred. Earlier counts and statuses below describe their recorded checkpoints.
+
 **Source changes and safety gates implemented; DEV cutover is not complete.** The
 owner selected the existing DEV deployment. No additional deployment was created,
 no DEV permission or grant was changed, and no approval or publication receipt

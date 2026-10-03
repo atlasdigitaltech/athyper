@@ -277,3 +277,5 @@ planes/neon/authz/28_retire_bp_child_reads.sql
 
 common/shared/98_security_definer_privileges.sql
 common/shared/99_security_definer_hardening.sql
+
+planes/neon/master/37_partner_child_read_models.sql

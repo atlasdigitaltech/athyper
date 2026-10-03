@@ -1,5 +1,7 @@
 # Per-entity source integration matrix and current plan
 
+**Latest implementation checkpoint:** [BP projection readers and predecessor reconciliation](bp-projection-reader-and-predecessor-review-20261003.md). Banking, industry and qualification SQL read models and draft shared read/list bindings are implemented and fixture-qualified; complete runtime publication and nested coverage presentation remain gated. Five of seven predecessor source blockers are recovered but have additional source changes to review; two remain unresolved. Context references will be unavailable as approved. No permission retirement or independent release approval has occurred. Earlier counts and statuses below describe their recorded checkpoints.
+
 **Current BP scope correction:** banking and tax use tenant plus mandatory BP parent scope, with no company relation at this stage per the owner. Organization assignment declares the shared organization-field binding. See [implementation and publication status](bp-child-scope-implementation-20261003.md); none of these draft changes establishes DEV activation.
 
 **Current review gate:** the [authoring-module decision](entity-authoring-module-contract-decision-20261003.md) must precede further registry successor preparation. Studio registry identity, domain module and runtime navigation are separate concerns; declaring Studio authorship does not prove publication in any target plane. The proposed separation and five affected products await an owner decision.

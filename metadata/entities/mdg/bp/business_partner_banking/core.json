@@ -15,15 +15,16 @@
     }
   },
   "storage": {
-    "kind": "handler_projection",
+    "kind": "field_projection",
     "sourceObjects": [
       "master.v_business_partner_bank_account",
       "master.bank_account",
       "master.payment_instrument",
-      "shared.v_bank_directory"
+      "shared.v_bank_directory",
+      "master.v_partner_banking_read"
     ],
     "primaryObject": "master.bank_account",
-    "readObject": "master.v_business_partner_bank_account",
+    "readObject": "master.v_partner_banking_read",
     "idField": "id",
     "tenantField": "tenant_id",
     "genericWriteEnabled": false
@@ -32,7 +33,7 @@
     {
       "key": "tenant_id",
       "binding": {
-        "sourceObject": "master.v_business_partner_bank_account",
+        "sourceObject": "master.v_partner_banking_read",
         "column": "tenant_id"
       },
       "dataType": "uuid",
@@ -53,7 +54,7 @@
     {
       "key": "business_partner_id",
       "binding": {
-        "sourceObject": "master.v_business_partner_bank_account",
+        "sourceObject": "master.v_partner_banking_read",
         "column": "business_partner_id"
       },
       "dataType": "uuid",
@@ -74,8 +75,8 @@
     {
       "key": "bank_name",
       "binding": {
-        "sourceObject": "shared.v_bank_directory",
-        "column": "name"
+        "sourceObject": "master.v_partner_banking_read",
+        "column": "bank_name"
       },
       "dataType": "string",
       "storageType": "text",
@@ -91,7 +92,7 @@
     {
       "key": "branch_name",
       "binding": {
-        "sourceObject": "shared.v_bank_directory",
+        "sourceObject": "master.v_partner_banking_read",
         "column": "branch_name"
       },
       "dataType": "string",
@@ -108,7 +109,7 @@
     {
       "key": "branch_code",
       "binding": {
-        "sourceObject": "shared.v_bank_directory",
+        "sourceObject": "master.v_partner_banking_read",
         "column": "branch_code"
       },
       "dataType": "string",
@@ -124,7 +125,10 @@
     },
     {
       "key": "bic",
-      "binding": { "sourceObject": "shared.v_bank_directory", "column": "bic" },
+      "binding": {
+        "sourceObject": "master.v_partner_banking_read",
+        "column": "bic"
+      },
       "dataType": "string",
       "storageType": "text",
       "nullable": true,
@@ -139,7 +143,7 @@
     {
       "key": "status",
       "binding": {
-        "sourceObject": "master.payment_instrument",
+        "sourceObject": "master.v_partner_banking_read",
         "column": "status"
       },
       "dataType": "enum",
@@ -190,7 +194,7 @@
     {
       "key": "id",
       "binding": {
-        "sourceObject": "master.v_business_partner_bank_account",
+        "sourceObject": "master.v_partner_banking_read",
         "column": "id"
       },
       "dataType": "uuid",
@@ -211,7 +215,7 @@
     {
       "key": "account_holder_name",
       "binding": {
-        "sourceObject": "master.bank_account",
+        "sourceObject": "master.v_partner_banking_read",
         "column": "account_holder_name"
       },
       "dataType": "string",
@@ -227,7 +231,7 @@
     {
       "key": "account_last4",
       "binding": {
-        "sourceObject": "master.bank_account",
+        "sourceObject": "master.v_partner_banking_read",
         "column": "account_last4"
       },
       "dataType": "string",
@@ -242,9 +246,13 @@
     },
     {
       "key": "currency_code",
-      "display": { "lookup": { "code": "shared.currency" } },
+      "display": {
+        "lookup": {
+          "code": "shared.currency"
+        }
+      },
       "binding": {
-        "sourceObject": "master.bank_account",
+        "sourceObject": "master.v_partner_banking_read",
         "column": "currency_code"
       },
       "dataType": "string",
@@ -256,6 +264,27 @@
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
       "storageType": "character(3)"
+    },
+    {
+      "key": "reveal_link_id",
+      "binding": {
+        "sourceObject": "master.v_partner_banking_read",
+        "column": "reveal_link_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_banking.reveal_link_id",
+        "defaultText": "Bank link"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      }
     }
   ],
   "businessContext": {
@@ -290,7 +319,9 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": ["platform/core-field-defaults.v1"],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
@@ -357,6 +388,5 @@
     "search": [],
     "filters": [],
     "sorts": []
-  },
-  "artifactHash": "sha256:2d95cd3dc57d91651ba1124620d985664920f4aabb22726ee778a39200d2c1de"
+  }
 }

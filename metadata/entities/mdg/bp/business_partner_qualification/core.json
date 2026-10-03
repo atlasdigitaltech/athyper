@@ -15,18 +15,23 @@
     }
   },
   "storage": {
-    "kind": "handler_projection",
-    "sourceObjects": ["control.business_partner_qualification"],
+    "kind": "field_projection",
+    "sourceObjects": [
+      "control.business_partner_qualification",
+      "control.business_partner_decision_scope",
+      "control.v_partner_qualification_read"
+    ],
     "primaryObject": "control.business_partner_qualification",
     "idField": "id",
     "tenantField": "tenant_id",
-    "genericWriteEnabled": false
+    "genericWriteEnabled": false,
+    "readObject": "control.v_partner_qualification_read"
   },
   "fields": [
     {
       "key": "tenant_id",
       "binding": {
-        "sourceObject": "control.business_partner_qualification",
+        "sourceObject": "control.v_partner_qualification_read",
         "column": "tenant_id"
       },
       "dataType": "uuid",
@@ -47,7 +52,7 @@
     {
       "key": "business_partner_id",
       "binding": {
-        "sourceObject": "control.business_partner_qualification",
+        "sourceObject": "control.v_partner_qualification_read",
         "column": "business_partner_id"
       },
       "dataType": "uuid",
@@ -75,7 +80,11 @@
       "nullable": true,
       "valueOrigin": "derived",
       "readPolicy": "authorized_projection",
-      "writePolicy": "system_managed"
+      "writePolicy": "system_managed",
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "id"
+      }
     },
     {
       "key": "qualification_type_code",
@@ -92,6 +101,10 @@
         "lookup": {
           "code": "control.business_partner_qualification_type"
         }
+      },
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "qualification_type_code"
       }
     },
     {
@@ -145,6 +158,10 @@
             }
           ]
         }
+      },
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "context_kind"
       }
     },
     {
@@ -205,6 +222,10 @@
             }
           }
         ]
+      },
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "context_reference"
       }
     },
     {
@@ -272,6 +293,10 @@
             }
           ]
         }
+      },
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "decision"
       }
     },
     {
@@ -640,6 +665,10 @@
             "writePolicy": "system_managed"
           }
         ]
+      },
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "coverage"
       }
     },
     {
@@ -700,6 +729,10 @@
             }
           }
         ]
+      },
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "condition_summaries"
       }
     },
     {
@@ -712,7 +745,11 @@
       "nullable": true,
       "valueOrigin": "derived",
       "readPolicy": "authorized_projection",
-      "writePolicy": "system_managed"
+      "writePolicy": "system_managed",
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "recorded_condition_count"
+      }
     },
     {
       "key": "effective_from",
@@ -724,7 +761,11 @@
       "nullable": true,
       "valueOrigin": "derived",
       "readPolicy": "authorized_projection",
-      "writePolicy": "system_managed"
+      "writePolicy": "system_managed",
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "effective_from"
+      }
     },
     {
       "key": "effective_until",
@@ -736,7 +777,11 @@
       "nullable": true,
       "valueOrigin": "derived",
       "readPolicy": "authorized_projection",
-      "writePolicy": "system_managed"
+      "writePolicy": "system_managed",
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "effective_until"
+      }
     },
     {
       "key": "next_review_at",
@@ -748,7 +793,11 @@
       "nullable": true,
       "valueOrigin": "derived",
       "readPolicy": "authorized_projection",
-      "writePolicy": "system_managed"
+      "writePolicy": "system_managed",
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "next_review_at"
+      }
     },
     {
       "key": "date_window",
@@ -794,6 +843,10 @@
             }
           ]
         }
+      },
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "date_window"
       }
     },
     {
@@ -806,7 +859,11 @@
       "nullable": true,
       "valueOrigin": "derived",
       "readPolicy": "authorized_projection",
-      "writePolicy": "system_managed"
+      "writePolicy": "system_managed",
+      "binding": {
+        "sourceObject": "control.v_partner_qualification_read",
+        "column": "assessed_at"
+      }
     }
   ],
   "businessContext": {
@@ -839,7 +896,9 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": ["platform/core-field-defaults.v1"],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",

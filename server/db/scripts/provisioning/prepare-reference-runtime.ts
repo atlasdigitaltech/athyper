@@ -8,7 +8,7 @@ import { capabilityAuthoringMode, capabilityArtifactMembers, prepareActivityCapa
 import { compileNativeRuntimeProjection } from "@athyper/server-platform-metadata";
 import type { AuthoringPlane } from "@athyper/server-contract-meta-entity-authoring";
 
-export function loadReferenceProduct(directory: string) {
+export function loadReferenceProduct(directory: string, profileRoot = fileURLToPath(new URL("../../../../metadata/profiles/", import.meta.url))) {
   const root = resolveSourcePath(resolve(directory));
   const capabilityPath = join(root, "capabilities.json");
   const members = existsSync(capabilityPath) ? JSON.parse(readFileSync(resolveSourcePath(capabilityPath), "utf8")) : [];
@@ -26,7 +26,7 @@ export function loadReferenceProduct(directory: string) {
       const directory = member.capabilityKey === "activity" ? "activity" : "collaboration";
       let lookup = lookups.get(directory);
       if (!lookup) {
-        lookup = createCapabilityProfileFileResolver(fileURLToPath(new URL(`../../../../metadata/profiles/${directory}/`, import.meta.url)));
+        lookup = createCapabilityProfileFileResolver(join(profileRoot, directory));
         lookups.set(directory, lookup);
       }
       member.profileDefinition = lookup(member.profile?.code, member.profile?.version);
@@ -35,7 +35,7 @@ export function loadReferenceProduct(directory: string) {
   const activityPath = join(root, "activity.json");
   if (existsSync(activityPath)) {
     if (members.some(member => member.capabilityKey === "activity")) throw Error("CAPABILITY_POLICY_DUPLICATE_SOURCE");
-    const lookup = createCapabilityProfileFileResolver(fileURLToPath(new URL("../../../../metadata/profiles/activity/", import.meta.url)));
+    const lookup = createCapabilityProfileFileResolver(join(profileRoot, "activity"));
     members.push(prepareActivityCapabilityMember(definition.definition?.entityCode, JSON.parse(readFileSync(resolveSourcePath(activityPath), "utf8")), lookup,
       { versionHistoryAvailable: false, automaticCaptureAvailable: false, writableOperations: [] }));
   }
