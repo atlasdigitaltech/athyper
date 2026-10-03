@@ -102,3 +102,77 @@ The shared table-product compiler currently rewrites plane-prefixed permission c
 These are common platform entities with one source home each. Three-plane availability is required, not an optional expansion. Preserve server-resolved My Account self scope and separately authorized administrative Principal/child surfaces in every plane. Enforce exact published operation permissions, tenant isolation and locked relationship scope. Availability does not authorize cross-tenant access, automatic data replication, or an Employee dependency for every Principal.
 
 Include all 12 IAM entity/plane combinations in the publication evidence gate, alongside 45 required reference combinations (57 required total). The seven recommended Person/Address/Contact entities add 21 combinations if adopted. Native target declarations alone do not prove storage/provider readiness, reviewed activation or working user flows. No source metadata, permissions, MFA or active releases changed in this documentation update.
+
+
+## Successor exposure matrix — next activity completed
+
+The [successor surface proposal](entity-metadata-surface-proposal-20261003.json) records one row per proposed entity/surface, backed by current source pointers and SHA-256 hashes. It covers all 48 current-scope entities plus the preserved deferred request entity. All 202 source files match the frozen source inventory after resolving current homes. Historical evidence remains unchanged. This is a review artifact, never an alternate discovery registry or metadata input.
+
+Each JSON surface row records audience, exposure mode, intended owner, scope, proposed navigation, observed identity/columns/navigation/relationships/providers/operations/authorization, target planes, release-evidence status and gaps. Exact successor permissions and final navigation order remain explicitly unresolved where the contracts or owner decisions are missing. No absence is converted into an authorization allow. Existing operations are evidence, not proof that each proposed surface supports Edit.
+
+The table below indexes the individual surface rows. `Required ×3` means Neon/Mesh/Studio coverage; `Recommended ×3` remains the Person/Address/Contact recommendation; `Existing` preserves the current declared scope. Existing source identity and navigation are captured in JSON without choosing display fields or inventing section order.
+
+| Entity | Proposed surfaces (individual JSON rows) | Plane decision |
+| --- | --- | --- |
+| `address` | `directory`, `parent_business_partner`, `parent_employee`, `parent_external_worker` | Recommended ×3 |
+| `address_link` | `parent`, `stewardship_relationship` | Recommended ×3 |
+| `bank_branch` | `directory`, `lookup` | Required ×3 |
+| `bank_identifier` | `directory`, `lookup` | Required ×3 |
+| `bank_institution` | `directory`, `lookup` | Required ×3 |
+| `business_partner` | `directory` | Existing |
+| `business_partner_alias` | `parent` | Existing |
+| `business_partner_bank_account_link` | `parent` | Existing |
+| `business_partner_bank_provisional_reference` | `parent` | Existing |
+| `business_partner_banking` | `parent` | Existing |
+| `business_partner_commodity_classification` | `parent` | Existing |
+| `business_partner_governance_relation` | `parent` | Existing |
+| `business_partner_identifier` | `parent` | Existing |
+| `business_partner_industry_classification` | `parent` | Existing |
+| `business_partner_operating_organization_assignment` | `parent` | Existing |
+| `business_partner_qualification` | `parent` | Existing |
+| `business_partner_relationship` | `parent` | Existing |
+| `business_partner_request` | `deferred` | Deferred |
+| `business_partner_restriction` | `parent` | Existing |
+| `business_partner_tax_registration` | `parent` | Existing |
+| `certification` | `unresolved` | Existing |
+| `classification_scheme` | `directory`, `lookup` | Required ×3 |
+| `commodity_code` | `directory`, `lookup` | Required ×3 |
+| `commodity_crosswalk` | `directory`, `lookup` | Required ×3 |
+| `contact_channel` | `directory`, `parent_business_partner`, `parent_employee`, `parent_external_worker`, `parent_contact_person` | Recommended ×3 |
+| `contact_person` | `directory`, `parent_business_partner`, `parent_employee`, `parent_external_worker` | Recommended ×3 |
+| `contact_person_role` | `directory`, `parent_contact_person` | Recommended ×3 |
+| `country` | `directory`, `lookup` | Required ×3 |
+| `currency` | `directory`, `lookup` | Required ×3 |
+| `customer` | `parent` | Existing |
+| `customer_company_profile` | `parent` | Existing |
+| `employee` | `directory` | Existing |
+| `external_worker` | `directory` | Existing |
+| `industry_code` | `directory`, `lookup` | Required ×3 |
+| `industry_crosswalk` | `directory`, `lookup` | Required ×3 |
+| `language` | `directory`, `lookup` | Required ×3 |
+| `locale` | `directory`, `lookup` | Required ×3 |
+| `person` | `directory`, `parent_employee`, `parent_external_worker` | Recommended ×3 |
+| `person_address_use` | `parent`, `stewardship_relationship` | Recommended ×3 |
+| `principal` | `self`, `administration` | Required ×3 |
+| `principal_notification_preference` | `self`, `administration` | Required ×3 |
+| `principal_profile` | `self`, `administration` | Required ×3 |
+| `principal_ui_profile` | `self`, `administration` | Required ×3 |
+| `state_region` | `directory`, `lookup` | Required ×3 |
+| `supplier` | `parent` | Existing |
+| `supplier_company_profile` | `parent` | Existing |
+| `timezone` | `directory`, `lookup` | Required ×3 |
+| `uom` | `directory`, `lookup` | Required ×3 |
+| `workforce` | `unresolved` | Existing |
+
+### Review conclusions and next implementation boundary
+
+- Reference directories and lookup surfaces are distinct. Nine split-only references still need supported multi-target authoring/release membership; the six native references need explicit permission reconciliation and actual delivery evidence.
+- IAM has separate self and administrative surfaces for each of its four entities. Existing three-plane declarations do not prove either surface's effective access or publication.
+- Person/Address/Contact have independent stewardship and parent-scoped proposals. Address Link and Person Address Use are relationship surfaces under authorized records, not newly proposed raw standalone directories. Contact Person Role retains Contact Person as its intended parent.
+- Employee and External Worker remain peers. Their Person links and other proposed shared-record views require exact relationship validation. Person navigation currently references Employee/External Worker; Mesh/Studio publication must resolve these dependencies explicitly without silently expanding workforce targets or hiding invalid bindings.
+- Every BP child and Customer/Supplier surface is accounted for. Parent read is a proposal for scoped viewing, not implemented permission inheritance. Company profiles also need explicit company scope. Field reveal and capability management stay distinct.
+- Workforce projection and Certification remain explicit unresolved rows. The BP request source is preserved as deferred, including all current governed-operation dependencies.
+
+The next deliverable is the exact before/after permission ledger and shared-contract design, starting with explicit reference permissions and table-product target bindings. This matrix captures existing authorization declarations but deliberately leaves unresolved successor bindings unselected. Address's competing reads and Contact's owner/request gaps must be resolved before dependent metadata edits. Existing permissions and MFA controls remain unchanged.
+
+The publication tracker contains 57 required and 21 recommended entity/plane rows, each with explicit pending release, review, provider, activation and runtime evidence. No publication or runtime completion is claimed. Validation for this activity is limited to offline source hashes, JSON pointers, inventory counts and document links/whitespace; no tests, builds, database actions or runtime probes ran.
