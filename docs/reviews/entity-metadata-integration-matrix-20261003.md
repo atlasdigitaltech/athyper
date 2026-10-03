@@ -173,6 +173,13 @@ The table below indexes the individual surface rows. `Required ×3` means Neon/M
 - Every BP child and Customer/Supplier surface is accounted for. Parent read is a proposal for scoped viewing, not implemented permission inheritance. Company profiles also need explicit company scope. Field reveal and capability management stay distinct.
 - Workforce projection and Certification remain explicit unresolved rows. The BP request source is preserved as deferred, including all current governed-operation dependencies.
 
-The next deliverable is the exact before/after permission ledger and shared-contract design, starting with explicit reference permissions and table-product target bindings. This matrix captures existing authorization declarations but deliberately leaves unresolved successor bindings unselected. Address's competing reads and Contact's owner/request gaps must be resolved before dependent metadata edits. Existing permissions and MFA controls remain unchanged.
+The [exact before/after permission ledger and shared-contract design](entity-metadata-reconciliation-20261003.md#exact-permission-ledger-and-shared-contract-design--3-october-2026) is now recorded, starting with explicit reference permissions and table-product target bindings. This matrix captures existing authorization declarations but deliberately leaves unresolved successor bindings unselected. Address's competing reads and Contact's owner/request gaps must be resolved before dependent metadata edits. Existing permissions and MFA controls remain unchanged.
 
 The publication tracker contains 57 required and 21 recommended entity/plane rows, each with explicit pending release, review, provider, activation and runtime evidence. No publication or runtime completion is claimed. Validation for this activity is limited to offline source hashes, JSON pointers, inventory counts and document links/whitespace; no tests, builds, database actions or runtime probes ran.
+
+
+## Permission ledger handoff
+
+The [exact permission ledger](entity-metadata-permission-ledger-20261003.json) records 248 source permission-property occurrences, all 83 proposed surface transitions, 90 reference list/read target rows and nine explicit collaboration migration pairs. It preserves four existing MFA properties. Source/profile/compiler observations remain distinct from active permissions. Unresolved targets are not permission omissions or access grants.
+
+See the [shared-contract design](entity-metadata-reconciliation-20261003.md#exact-permission-ledger-and-shared-contract-design--3-october-2026) for reusable integration points, self/parent/directory boundaries, exact plane bindings, migration ordering and acceptance criteria. No source bindings or runtime behavior changed. Next is implementation of the shared contract changes, preserving current permission semantics before any governed migration.
