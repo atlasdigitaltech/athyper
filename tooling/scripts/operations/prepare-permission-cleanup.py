@@ -19,9 +19,10 @@ def prepare(manifest, apply=False):
         raise ValueError('Exact permission-cleanup/1 manifest required')
     if manifest['plane'] not in ('neon', 'mesh', 'studio') or not manifest['purpose']:
         raise ValueError('Explicit plane and purpose required')
-    if not isinstance(manifest['actorId'], str):
-        raise ValueError('Explicit audited actor UUID required')
-    uuid.UUID(manifest['actorId'])
+    if apply or manifest['actorId'] is not None:
+        if not isinstance(manifest['actorId'], str):
+            raise ValueError('Explicit audited actor UUID required')
+        uuid.UUID(manifest['actorId'])
     if not isinstance(manifest['purpose'], str) or len(manifest['purpose']) > 1000:
         raise ValueError('Bounded correction purpose required')
     if not manifest['tenantIds'] or len(set(manifest['tenantIds'])) != len(manifest['tenantIds']):
@@ -62,7 +63,8 @@ JOIN LATERAL jsonb_array_elements(i.value->'permissions') x ON true
 WHERE p.canonical_code=x.value->>'code';
 SELECT jsonb_build_object('permission', t.canonical_code, 'status', t.status,
  'rolePermissionId', rp.id, 'tenantId', rp.tenant_id, 'roleId', rp.role_id,
- 'roleStatus', r.status, 'groupId', gr.group_id) AS affected_relationship
+ 'roleStatus', r.status, 'groupId', gr.group_id, 'groupRoleId', gr.id,
+ 'groupRoleStatus', gr.status, 'scopeTargetId', gr.scope_target_id) AS affected_relationship
 FROM cleanup_targets t LEFT JOIN authz.role_permission rp ON rp.permission_id=t.id
 LEFT JOIN authz.role r ON r.id=rp.role_id AND r.tenant_id=rp.tenant_id
 LEFT JOIN authz.group_role gr ON gr.role_id=rp.role_id AND gr.tenant_id=rp.tenant_id;
@@ -79,6 +81,16 @@ BEGIN
  END LOOP;
 END $report$;
 TABLE cleanup_dependencies;
+-- Show the exact active publications that must be superseded, including tenant
+-- overrides. A new platform release alone cannot hide an old tenant reference.
+SELECT a.publication_key, a.source_release_id, a.artifact_hash, p.tenant_id,
+ jsonb_agg(t.canonical_code ORDER BY t.canonical_code) AS obsolete_references
+FROM runtime_meta.release_activation_head h
+JOIN runtime_meta.applied_release a ON a.id=h.applied_release_id AND a.status='active'
+JOIN runtime_meta.applied_release_payload p ON p.applied_release_id=a.id
+CROSS JOIN cleanup_targets t
+WHERE jsonb_path_exists(p.payload_json, '$.** ? (@ == $code)', jsonb_build_object('code',t.canonical_code))
+GROUP BY a.publication_key,a.source_release_id,a.artifact_hash,p.tenant_id;
 """
     if not apply:
         return sql + 'ROLLBACK;\n'
@@ -130,7 +142,7 @@ BEGIN
    FROM runtime_meta.release_activation_head h
    JOIN runtime_meta.applied_release a ON a.id=h.applied_release_id AND a.status='active'
    JOIN runtime_meta.applied_release_payload p ON p.applied_release_id=a.id
-   CROSS JOIN LATERAL jsonb_array_elements(p.payload_json->'release'->'artifacts') artifact
+   CROSS JOIN LATERAL jsonb_array_elements(p.payload_json->'artifacts') artifact
    WHERE a.source_release_id=(row.requested->>'successorReleaseId')::uuid
      AND a.artifact_hash=row.requested->>'successorArtifactHash'
      AND p.artifact_kind='compiled_entity_runtime'
@@ -148,11 +160,11 @@ BEGIN
  END LOOP;
 END $guard$;
 -- Existing role audit/version/epoch triggers remain authoritative.
+SELECT set_config('app.current_principal_id',value->>'actorId',true) FROM cleanup_input;
 DELETE FROM authz.role_permission rp USING cleanup_targets t WHERE rp.permission_id=t.id
 RETURNING rp.id AS removed_role_permission_id, rp.tenant_id, rp.role_id, rp.permission_id;
 -- Retain immutable catalog identity/history. Retired permissions cannot be assigned.
-UPDATE authz.permission p SET status='retired', status_changed_at=clock_timestamp(),
- status_changed_by=(i.value->>'actorId')::uuid, updated_at=clock_timestamp(), updated_by=(i.value->>'actorId')::uuid
+UPDATE authz.permission p SET status='retired', updated_by=(i.value->>'actorId')::uuid
 FROM cleanup_targets t, cleanup_input i WHERE p.id=t.id AND p.status<>'retired';
 SELECT jsonb_build_object('purpose',i.value->>'purpose','plane',i.value->>'plane',
  'tenantIds',i.value->'tenantIds','permissions',i.value->'permissions','status','retired',

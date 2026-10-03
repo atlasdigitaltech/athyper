@@ -791,43 +791,7 @@
     },
     {
       "kind": "permission",
-      "key": "neon.business_partner_banking.read",
-      "status": "source_seed_verified",
-      "source": "server/db/ddl/planes/neon/authz/16_compiled_entity_runtime_permission.sql"
-    },
-    {
-      "kind": "permission",
       "key": "neon.business_partner_commodity_capability.read",
-      "status": "source_seed_verified",
-      "source": "server/db/ddl/planes/neon/authz/16_compiled_entity_runtime_permission.sql"
-    },
-    {
-      "kind": "permission",
-      "key": "neon.business_partner_governance_relation.read",
-      "status": "source_seed_verified",
-      "source": "server/db/ddl/planes/neon/authz/16_compiled_entity_runtime_permission.sql"
-    },
-    {
-      "kind": "permission",
-      "key": "neon.business_partner_identifier.read",
-      "status": "source_seed_verified",
-      "source": "server/db/ddl/planes/neon/authz/16_compiled_entity_runtime_permission.sql"
-    },
-    {
-      "kind": "permission",
-      "key": "neon.business_partner_industry_classification.read",
-      "status": "source_seed_verified",
-      "source": "server/db/ddl/planes/neon/authz/16_compiled_entity_runtime_permission.sql"
-    },
-    {
-      "kind": "permission",
-      "key": "neon.business_partner_operating_organization_assignment.read",
-      "status": "source_seed_verified",
-      "source": "server/db/ddl/planes/neon/authz/16_compiled_entity_runtime_permission.sql"
-    },
-    {
-      "kind": "permission",
-      "key": "neon.business_partner_qualification.read",
       "status": "source_seed_verified",
       "source": "server/db/ddl/planes/neon/authz/16_compiled_entity_runtime_permission.sql"
     },
@@ -864,12 +828,6 @@
     {
       "kind": "permission",
       "key": "neon.business_partner_request.save_draft",
-      "status": "source_seed_verified",
-      "source": "server/db/ddl/planes/neon/authz/16_compiled_entity_runtime_permission.sql"
-    },
-    {
-      "kind": "permission",
-      "key": "neon.business_partner_tax_registration.read",
       "status": "source_seed_verified",
       "source": "server/db/ddl/planes/neon/authz/16_compiled_entity_runtime_permission.sql"
     },

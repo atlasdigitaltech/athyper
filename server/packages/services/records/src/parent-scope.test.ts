@@ -6,6 +6,7 @@ import { createParentCollectionScopeResolver } from "./parent-collection-scope.j
 import { createInMemoryRecordPersistence } from "./in-memory-record-repository.js";
 import { createRecordQueryService } from "./query-service.js";
 import { parseEntityListScopeCoordinate } from "./list-scope-coordinate.js";
+import { createPublishedTenantRecordAuthorizer } from "./published-tenant-authorizer.js";
 const tenant = "10000000-0000-4000-8000-000000000001";
 const self = "10000000-0000-4000-8000-000000000002";
 const other = "10000000-0000-4000-8000-000000000003";
@@ -20,10 +21,14 @@ function fixture() {
   const child: EntityRuntimeDescriptor = { ...make("principal_notification_preference"), compiledHash: "b".repeat(64), fields: [...make("child").fields, field("principal_id", "uuid")], operations: { read: { code: "read", permissionCode: "child.read" }, list: { code: "list", permissionCode: "child.read" } } };
   const metadata: MetadataReader = { getEntityDescriptor: async (_, code) => code === parent.entityCode ? parent : code === child.entityCode ? child : null };
   let admin = true, revoked = false;
-  const authorizer: Authorizer = { authorize: async ({ context: c, permissionCode }) => !revoked && c.permissions.allowed.includes(permissionCode) ? { allowed: true } : { allowed: false, reason: "denied" } };
+  const authority: Authorizer = { authorize: async ({ context: c, permissionCode }) => !revoked && c.permissions.allowed.includes(permissionCode) ? { allowed: true } : { allowed: false, reason: "denied" } };
   const persistence = createInMemoryRecordPersistence();
   persistence.seed(parent, tenant, [{ id: self, tenant_id: tenant, name: "Self", version: 1 }, { id: other, tenant_id: tenant, name: "Other", version: 1 }]);
   persistence.seed(child, tenant, [1, 2, 3, 4].map(n => ({ id: childId(n), tenant_id: tenant, principal_id: n < 3 ? self : other, name: n < 3 ? `Self ${n}` : "OTHER_SENTINEL", version: 1 })));
+  const authorizer = createPublishedTenantRecordAuthorizer({ metadata, authority,
+    refreshContext: async context => context,
+    exists: async (context, descriptor, id) => Boolean(await persistence.repository.get(descriptor, context.tenantId, id, ['id'])),
+  });
   let queries: RecordQueryService;
   const collectionScopes = createParentCollectionScopeResolver({ metadata, readParent: input => queries.get(input) });
   queries = createRecordQueryService({ ...persistence, metadata, authorizer, collectionScopes, ownerAccess: { prepare: async ({ context: c, descriptor }) => admin ? {} : { [descriptor.ownerAccess!.ownerField]: c.principalId } } });
@@ -83,14 +88,27 @@ it("names the parent scope by its published title, never by its id when the titl
   expect(fallback.labels.find((label) => label.key === "parent")?.value).toBe(f.scope.parentRecordId);
 });
 
+it.each(['company', 'organization', 'organization_company'])('does not replace required %s scope with tenant scope when the registered resolver is missing', async mode => {
+  const f = fixture();
+  Object.assign(f.child, { directoryScope: { schemaVersion: 1, mode, parent: { entityCode: f.parent.entityCode, relationshipKey: f.scope.relationshipKey } } });
+  await expect(f.list()).rejects.toMatchObject({ code: 'DIRECTORY_SCOPE_RESOLVER_REQUIRED' });
+});
+
 it.each([['account_root', 'account_line'], ['shipment', 'shipment_item']])(
   'requires published parent admission for %s/%s without a child grant', async (parentCode, childCode) => {
     const f = fixture();
     Object.assign(f.parent, { entityCode: parentCode, recordPresentation: { ...f.parent.recordPresentation, titleField: 'name' } });
     Object.assign(f.child, {
       entityCode: childCode,
-      operations: { read: { code: 'read', permissionCode: 'parent.read' }, list: { code: 'list', permissionCode: 'parent.read' } },
+      operations: { read: { code: 'read' }, list: { code: 'list' } },
       directoryScope: { schemaVersion: 1, mode: 'tenant', parent: { entityCode: parentCode, relationshipKey: 'notifications' } },
+      authorizationRuntime: { schemaVersion: 1, runtimeVersion: 'entity-authorization.v1', bindings: ['list', 'read'].map(operation => ({ operation, handler: `entity.record.${operation}.v1`, resolver: 'tenant.record.v1' })) },
+      authorization: { schemaVersion: 1, entityCode: childCode, planeKey: 'neon', ownership: 'tenant.record.v1',
+        directory: { operation: 'list', population: 'tenant' }, recordReadOperation: 'read',
+        operations: ['list', 'read'].map(key => ({ key, scope: 'tenant.record.v1', target: key === 'list' ? 'collection' : 'existing', effect: 'read', requiresParentRead: false, requiresPreflight: false })),
+        fieldPolicies: [{ key: 'stored', fields: f.child.fields.map(field => field.key), readOperation: 'read', representation: 'plain', writeOperations: [], queryUses: ['search', 'filter', 'sort', 'group'] }],
+        surfaces: [], relationships: [],
+      },
     });
     const relation = f.parent.recordPresentation!.entityRelationships![0]!;
     Object.assign(relation, { targetEntity: childCode });

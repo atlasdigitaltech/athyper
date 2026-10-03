@@ -23,6 +23,27 @@
   },
   "fields": [
     {
+      "key": "tenant_id",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "tenant_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner.tenant_id",
+        "defaultText": "Tenant"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      }
+    },
+    {
       "key": "supplier_enabled",
       "binding": {
         "sourceObject": "master.business_partner",
@@ -1033,6 +1054,120 @@
     "companyOwnership": "not_applicable",
     "operatingOrganizationOwnership": "not_applicable"
   },
+  "entityRelationships": [
+    {
+      "key": "business_partner_banking",
+      "targetEntity": "business_partner_banking",
+      "cardinality": "many",
+      "fields": [
+        {
+          "source": "id",
+          "target": "business_partner_id"
+        }
+      ],
+      "tenant": {
+        "source": "tenant_id",
+        "target": "tenant_id"
+      },
+      "readOperation": "list"
+    },
+    {
+      "key": "business_partner_governance_relation",
+      "targetEntity": "business_partner_governance_relation",
+      "cardinality": "many",
+      "fields": [
+        {
+          "source": "id",
+          "target": "business_partner_id"
+        }
+      ],
+      "tenant": {
+        "source": "tenant_id",
+        "target": "tenant_id"
+      },
+      "readOperation": "list"
+    },
+    {
+      "key": "business_partner_identifier",
+      "targetEntity": "business_partner_identifier",
+      "cardinality": "many",
+      "fields": [
+        {
+          "source": "id",
+          "target": "business_partner_id"
+        }
+      ],
+      "tenant": {
+        "source": "tenant_id",
+        "target": "tenant_id"
+      },
+      "readOperation": "list"
+    },
+    {
+      "key": "business_partner_industry_classification",
+      "targetEntity": "business_partner_industry_classification",
+      "cardinality": "many",
+      "fields": [
+        {
+          "source": "id",
+          "target": "business_partner_id"
+        }
+      ],
+      "tenant": {
+        "source": "tenant_id",
+        "target": "tenant_id"
+      },
+      "readOperation": "list"
+    },
+    {
+      "key": "business_partner_operating_organization_assignment",
+      "targetEntity": "business_partner_operating_organization_assignment",
+      "cardinality": "many",
+      "fields": [
+        {
+          "source": "id",
+          "target": "business_partner_id"
+        }
+      ],
+      "tenant": {
+        "source": "tenant_id",
+        "target": "tenant_id"
+      },
+      "readOperation": "list"
+    },
+    {
+      "key": "business_partner_qualification",
+      "targetEntity": "business_partner_qualification",
+      "cardinality": "many",
+      "fields": [
+        {
+          "source": "id",
+          "target": "business_partner_id"
+        }
+      ],
+      "tenant": {
+        "source": "tenant_id",
+        "target": "tenant_id"
+      },
+      "readOperation": "list"
+    },
+    {
+      "key": "business_partner_tax_registration",
+      "targetEntity": "business_partner_tax_registration",
+      "cardinality": "many",
+      "fields": [
+        {
+          "source": "id",
+          "target": "business_partner_id"
+        }
+      ],
+      "tenant": {
+        "source": "tenant_id",
+        "target": "tenant_id"
+      },
+      "readOperation": "list"
+    }
+  ],
   "relations": [
     {
       "relationKey": "business_partner.contact_person",

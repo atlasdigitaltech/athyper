@@ -6,6 +6,14 @@
   "artifactKey": "business_partner_tax_registration/core",
   "entityCode": "business_partner_tax_registration",
   "plane": "neon",
+  "directoryScope": {
+    "schemaVersion": 1,
+    "mode": "company",
+    "parent": {
+      "entityCode": "business_partner",
+      "relationshipKey": "business_partner_tax_registration"
+    }
+  },
   "storage": {
     "kind": "table",
     "sourceObjects": [
@@ -17,6 +25,27 @@
     "genericWriteEnabled": false
   },
   "fields": [
+    {
+      "key": "tenant_id",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "tenant_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_tax_registration.tenant_id",
+        "defaultText": "Tenant"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      }
+    },
     {
       "key": "id",
       "binding": {
@@ -40,6 +69,8 @@
     },
     {
       "key": "business_partner_id",
+      "writePolicy": "system_managed",
+      "uiFacets": {"visibility": "hidden", "editability": "readonly"},
       "binding": {
         "sourceObject": "master.business_partner_tax_registration",
         "column": "business_partner_id"

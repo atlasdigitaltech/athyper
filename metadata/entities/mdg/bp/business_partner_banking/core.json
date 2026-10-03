@@ -6,19 +6,71 @@
   "artifactKey": "business_partner_banking/core",
   "entityCode": "business_partner_banking",
   "plane": "neon",
+  "directoryScope": {
+    "schemaVersion": 1,
+    "mode": "company",
+    "parent": {
+      "entityCode": "business_partner",
+      "relationshipKey": "business_partner_banking"
+    }
+  },
   "storage": {
     "kind": "handler_projection",
     "sourceObjects": [
+      "master.v_business_partner_bank_account",
       "master.bank_account",
       "master.payment_instrument",
       "shared.v_bank_directory"
     ],
     "primaryObject": "master.bank_account",
+    "readObject": "master.v_business_partner_bank_account",
     "idField": "id",
     "tenantField": "tenant_id",
     "genericWriteEnabled": false
   },
   "fields": [
+    {
+      "key": "tenant_id",
+      "binding": {
+        "sourceObject": "master.v_business_partner_bank_account",
+        "column": "tenant_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_banking.tenant_id",
+        "defaultText": "Tenant"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "business_partner_id",
+      "binding": {
+        "sourceObject": "master.v_business_partner_bank_account",
+        "column": "business_partner_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_banking.business_partner_id",
+        "defaultText": "Business Partner"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      }
+    },
     {"key":"bank_name","binding":{"sourceObject":"shared.v_bank_directory","column":"name"},"dataType":"string","storageType":"text","nullable":true,"label":{"labelKey":"entity.business_partner_banking.bank_name","defaultText":"Bank"},"valueOrigin":"derived","readPolicy":"authorized_projection","writePolicy":"system_managed"},
     {"key":"branch_name","binding":{"sourceObject":"shared.v_bank_directory","column":"branch_name"},"dataType":"string","storageType":"text","nullable":true,"label":{"labelKey":"entity.business_partner_banking.branch_name","defaultText":"Branch"},"valueOrigin":"derived","readPolicy":"authorized_projection","writePolicy":"system_managed"},
     {"key":"branch_code","binding":{"sourceObject":"shared.v_bank_directory","column":"branch_code"},"dataType":"string","storageType":"text","nullable":true,"label":{"labelKey":"entity.business_partner_banking.branch_code","defaultText":"Directory branch identifier"},"valueOrigin":"derived","readPolicy":"authorized_projection","writePolicy":"system_managed"},
@@ -44,7 +96,7 @@
     {
       "key": "id",
       "binding": {
-        "sourceObject": "master.bank_account",
+        "sourceObject": "master.v_business_partner_bank_account",
         "column": "id"
       },
       "dataType": "uuid",

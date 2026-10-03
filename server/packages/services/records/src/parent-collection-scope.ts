@@ -19,6 +19,8 @@ export function createParentCollectionScopeResolver(options: {
       if (required && (parentEntityCode !== required.entityCode || relationshipKey !== required.relationshipKey ||
           !parentRecordId || !parentDescriptorHash))
         return { status: "forbidden" as const, code: "ENTITY_PARENT_ACCESS_DENIED", message: "Published parent scope is required.", labels: [] };
+      if (required && input.descriptor.directoryScope?.mode !== "tenant" && !options.fallback)
+        return { status: "forbidden" as const, code: "DIRECTORY_SCOPE_RESOLVER_REQUIRED", message: "The published organization or company scope requires an installed resolver.", labels: [] };
       const baseline = (await options.fallback?.resolve({
         ...input,
         coordinate: rest,

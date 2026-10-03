@@ -192,3 +192,13 @@ Use the [cleanup input](entity-metadata-permission-cleanup-20261003.json) and [c
 The current 82-code input records 18 keep, 19 replace, 14 remove and 31 review-required decisions. Explicit worksheet removals are not deferred merely because onboarding is deferred. A full active system inventory and runtime verification remain outstanding. No new active permission, grant, MFA behavior or bespoke route/provider is introduced by these review artifacts.
 
 The [BP child-read implementation checkpoint](entity-metadata-reconciliation-20261003.md#bp-child-read-implementation-checkpoint--3-october-2026) now supplies tested required-parent scope in the shared query path and a guarded cleanup SQL generator. The seven-row cleanup template remains intentionally unresolved for tenant/actor/parent/release coordinates; no catalog deletion or actual BP projection qualification is claimed.
+
+### BP child-read successor build — existing DEV, 3 October 2026
+
+The [DEV build report](bp-child-read-dev-cutover-20261003.md) records the seven
+source permission removals, all 14 verified owner/tenant UUID bindings, required
+parent-runtime validation and guarded cleanup/rebuild work. The seven entities
+remain **runtime/provider qualification and publication incomplete**. No DEV
+permission/grant changed. The two active BP payloads still reference the old codes;
+20 role-permission relationships span three tenants. Do not mark these rows
+published, activated or runtime-verified based on this source build.

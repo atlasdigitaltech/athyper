@@ -7,6 +7,8 @@ import type {
 import { parseEntityRuntimeDescriptor } from "./descriptor-parser.js";
 import type { PinnedCompiledEntityReader } from "./compiled-entity-reader.js";
 import type { CompiledEntityResolvedRelease } from "./artifact-resolution.js";
+import { validateRequiredParentContracts } from "./required-parent-contract.js";
+import { parseEntityRelationships } from "@athyper/contract-platform-entity-runtime";
 
 /** Server-only lowering output, signed as a member of the same release as the UI.
  * The descriptor DTO is retained for existing consumers, not as a second store,
@@ -48,9 +50,11 @@ export function validateCompiledRuntimeContracts(
   const byKey = new Map(
     artifacts.map((artifact) => [artifact.artifactKey, artifact]),
   );
+  const descriptors: EntityRuntimeDescriptor[] = [];
   for (const core of artifacts.filter(artifact => artifact.artifactType === "core")) {
     const scope = core.content.directoryScope === undefined ? undefined : parseEntityDirectoryScope(core.content.directoryScope);
-    if (scope?.parent !== undefined && !byKey.has(`${core.entityCode}/runtime`))
+    const relationships = core.content.entityRelationships === undefined ? undefined : parseEntityRelationships(core.content.entityRelationships);
+    if ((scope?.parent !== undefined || relationships !== undefined) && !byKey.has(`${core.entityCode}/runtime`))
       throw new Error("COMPILED_ENTITY_PARENT_RUNTIME_REQUIRED");
   }
   for (const artifact of artifacts.filter(
@@ -60,10 +64,15 @@ export function validateCompiledRuntimeContracts(
       releaseId: "00000000-0000-4000-8000-000000000001",
       releaseNo: 1,
     });
+    descriptors.push(descriptor);
     const core = byKey.get(`${artifact.entityCode}/core`);
     const operation = byKey.get(`${artifact.entityCode}/operation`);
     if (!core || !operation)
       throw new Error("COMPILED_ENTITY_RUNTIME_DEPENDENCY_MISSING");
+    if (core.content.entityRelationships !== undefined &&
+        JSON.stringify(parseEntityRelationships(core.content.entityRelationships)) !==
+        JSON.stringify(descriptor.recordPresentation?.entityRelationships))
+      throw new Error("COMPILED_ENTITY_PARENT_RELATIONSHIP_MISMATCH");
     const coreScope = core.content.directoryScope === undefined ? undefined : parseEntityDirectoryScope(core.content.directoryScope);
     if (JSON.stringify(coreScope?.parent ?? null) !== JSON.stringify(descriptor.directoryScope?.parent ?? null) ||
         (coreScope?.parent !== undefined && coreScope.mode !== descriptor.directoryScope?.mode))
@@ -117,6 +126,7 @@ export function validateCompiledRuntimeContracts(
         );
     }
   }
+  validateRequiredParentContracts(descriptors);
 }
 
 export async function readCompiledRuntimeContract(

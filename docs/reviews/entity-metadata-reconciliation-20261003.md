@@ -326,3 +326,14 @@ Run generated SQL only through the existing authorized database administration p
 Checkpoint push limitation: the normal pre-push check passes brand, server inventory, route manifest, authorization-disposition artifacts and changed-file formatting, but `urls:check` fails to resolve the existing `${base}/graph` declaration at `server/packages/planes/studio/meta-entity-authoring/src/product-review-routes.ts:74`. This checkpoint uses the hook's documented `ATHYPER_SKIP_DRIFT=1` work-in-progress option; it does not claim a clean full CI run. The cleanup database fixture also verifies that a missing successor plane fails closed.
 
 Validation: 63 focused records tests, one directory-scope contract test and eight compiled-runtime-contract tests passed. Production TypeScript checks passed for records, metadata contracts and platform metadata. The full records test typecheck reports existing optional-permission fixture errors outside this change. The cleanup script passed against a network-isolated disposable PostgreSQL 16 fixture: read-only report rollback, active-role refusal, deny dependency refusal, out-of-scope tenant refusal, active old-code refusal, wrong/missing successor refusal, role/group preservation, retirement and repeat execution. The fixture does not certify production schema triggers, grants or live release state. No MFA settings/code, active entity definitions, applied migrations or live permissions changed.
+
+## Existing DEV cutover build — 3 October 2026
+
+The [DEV build report](bp-child-read-dev-cutover-20261003.md) supersedes the earlier
+checkpoint's source and inventory status. All seven draft read permission bindings
+and draft registry entries are removed; explicit BP owner mappings, publication
+gates and a fresh-baseline retirement correction are implemented. Existing DEV
+still has all seven published permissions, 20 role-permission edges across three
+tenants, and two active old-code payloads. Executable child projections and scoped
+runtime publication remain incomplete; no live cleanup or human approval is
+claimed. Use the report and environment-specific cleanup manifest for manual review.

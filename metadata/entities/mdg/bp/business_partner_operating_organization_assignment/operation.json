@@ -9,8 +9,6 @@
   "operations": [
     {
       "key": "read",
-      "permissionCode": "neon.business_partner_operating_organization_assignment.read",
-      "permissionStatus": "proposed_requires_catalog_verification",
       "execution": {
         "handlerKey": "neon.business_partner_operating_organization_assignment.read.v1",
         "registryRequired": true

@@ -18,8 +18,6 @@
     },
     {
       "key": "read",
-      "permissionCode": "neon.business_partner_identifier.read",
-      "permissionStatus": "proposed_requires_catalog_verification",
       "execution": {
         "handlerKey": "neon.business_partner_identifier.read.v1",
         "registryRequired": true

@@ -6,6 +6,14 @@
   "artifactKey": "business_partner_industry_classification/core",
   "entityCode": "business_partner_industry_classification",
   "plane": "neon",
+  "directoryScope": {
+    "schemaVersion": 1,
+    "mode": "tenant",
+    "parent": {
+      "entityCode": "business_partner",
+      "relationshipKey": "business_partner_industry_classification"
+    }
+  },
   "storage": {
     "kind": "handler_projection",
     "sourceObjects": [
@@ -18,6 +26,27 @@
     "genericWriteEnabled": false
   },
   "fields": [
+    {
+      "key": "tenant_id",
+      "binding": {
+        "sourceObject": "master.business_partner_industry_classification",
+        "column": "tenant_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_industry_classification.tenant_id",
+        "defaultText": "Tenant"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      }
+    },
     {
       "key": "id",
       "binding": {
@@ -41,6 +70,8 @@
     },
     {
       "key": "business_partner_id",
+      "writePolicy": "system_managed",
+      "uiFacets": {"visibility": "hidden", "editability": "readonly"},
       "binding": {
         "sourceObject": "master.business_partner_industry_classification",
         "column": "business_partner_id"

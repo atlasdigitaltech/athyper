@@ -1,0 +1,135 @@
+{
+  "environment": "existing DEV",
+  "database": "athyper_neon",
+  "capturedOn": "2026-10-03",
+  "readOnly": true,
+  "mappings": [
+    {
+      "field": "tenant_id",
+      "entity": "business_partner_banking",
+      "present": true,
+      "column_name": "tenant_id",
+      "object_name": "v_business_partner_bank_account",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "business_partner_id",
+      "entity": "business_partner_banking",
+      "present": true,
+      "column_name": "business_partner_id",
+      "object_name": "v_business_partner_bank_account",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "tenant_id",
+      "entity": "business_partner_governance_relation",
+      "present": true,
+      "column_name": "tenant_id",
+      "object_name": "business_partner_governance_relation",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "business_partner_id",
+      "entity": "business_partner_governance_relation",
+      "present": true,
+      "column_name": "business_partner_id",
+      "object_name": "business_partner_governance_relation",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "tenant_id",
+      "entity": "business_partner_identifier",
+      "present": true,
+      "column_name": "tenant_id",
+      "object_name": "business_partner_identifier",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "business_partner_id",
+      "entity": "business_partner_identifier",
+      "present": true,
+      "column_name": "business_partner_id",
+      "object_name": "business_partner_identifier",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "tenant_id",
+      "entity": "business_partner_industry_classification",
+      "present": true,
+      "column_name": "tenant_id",
+      "object_name": "business_partner_industry_classification",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "business_partner_id",
+      "entity": "business_partner_industry_classification",
+      "present": true,
+      "column_name": "business_partner_id",
+      "object_name": "business_partner_industry_classification",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "tenant_id",
+      "entity": "business_partner_operating_organization_assignment",
+      "present": true,
+      "column_name": "tenant_id",
+      "object_name": "business_partner_operating_organization_assignment",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "business_partner_id",
+      "entity": "business_partner_operating_organization_assignment",
+      "present": true,
+      "column_name": "business_partner_id",
+      "object_name": "business_partner_operating_organization_assignment",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "tenant_id",
+      "entity": "business_partner_qualification",
+      "present": true,
+      "column_name": "tenant_id",
+      "object_name": "business_partner_qualification",
+      "schema_name": "control",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "business_partner_id",
+      "entity": "business_partner_qualification",
+      "present": true,
+      "column_name": "business_partner_id",
+      "object_name": "business_partner_qualification",
+      "schema_name": "control",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "tenant_id",
+      "entity": "business_partner_tax_registration",
+      "present": true,
+      "column_name": "tenant_id",
+      "object_name": "business_partner_tax_registration",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    },
+    {
+      "field": "business_partner_id",
+      "entity": "business_partner_tax_registration",
+      "present": true,
+      "column_name": "business_partner_id",
+      "object_name": "business_partner_tax_registration",
+      "schema_name": "master",
+      "databaseType": "uuid"
+    }
+  ],
+  "runtimeProvidersQualified": false
+}

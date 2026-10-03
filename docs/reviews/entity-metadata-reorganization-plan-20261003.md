@@ -405,3 +405,14 @@ The immediate next activity is comprehensive active permission/consumer inventor
 ## BP child-read implementation status
 
 The [implementation checkpoint and cleanup procedure](entity-metadata-reconciliation-20261003.md#bp-child-read-implementation-checkpoint--3-october-2026) records the first shared-framework change and the retained cleanup script. Mandatory published parent scope now has focused list/detail denial coverage; generated cleanup SQL has disposable PostgreSQL verification. This is **not completion of the seven BP permission removals**: actual owner projections/runtime bindings, governed successors and the rebuild/non-recreation correction remain pending. Existing source codes remain enforced until those prerequisites are completed; their final disposition remains remove, not keep.
+
+### BP child-read build status in existing DEV — 3 October 2026
+
+See the [DEV cutover build report](bp-child-read-dev-cutover-20261003.md).
+The seven redundant read requirements are removed from draft entity operations
+and the draft registry. Explicit parent/tenant mapping and fail-closed publication
+checks are implemented, together with guarded existing-install cleanup and
+fresh-baseline retirement. Live DEV removal is incomplete: child runtime/provider
+qualification, scoped reads, platform/tenant successor review and activation, and
+20 governed role-permission removals remain. Source changes are not publication
+receipts; preserve the independent-review and no-MFA-change requirements.
