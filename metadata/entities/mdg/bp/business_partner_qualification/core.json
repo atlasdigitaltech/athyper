@@ -16,9 +16,7 @@
   },
   "storage": {
     "kind": "handler_projection",
-    "sourceObjects": [
-      "control.business_partner_qualification"
-    ],
+    "sourceObjects": ["control.business_partner_qualification"],
     "primaryObject": "control.business_partner_qualification",
     "idField": "id",
     "tenantField": "tenant_id",
@@ -841,9 +839,7 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": [
-    "platform/core-field-defaults.v1"
-  ],
+  "dependencies": ["platform/core-field-defaults.v1"],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",

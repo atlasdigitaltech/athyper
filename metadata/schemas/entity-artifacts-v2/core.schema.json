@@ -45,9 +45,7 @@
                   "maxLength": 127
                 }
               },
-              "required": [
-                "enabled"
-              ]
+              "required": ["enabled"]
             },
             {
               "type": "object",
@@ -71,12 +69,7 @@
                   "const": false
                 }
               },
-              "required": [
-                "enabled",
-                "serviceKey",
-                "ownerEntityCode",
-                "load"
-              ]
+              "required": ["enabled", "serviceKey", "ownerEntityCode", "load"]
             }
           ]
         },
@@ -95,9 +88,7 @@
                   "maxLength": 127
                 }
               },
-              "required": [
-                "enabled"
-              ]
+              "required": ["enabled"]
             },
             {
               "type": "object",
@@ -121,12 +112,7 @@
                   "const": false
                 }
               },
-              "required": [
-                "enabled",
-                "serviceKey",
-                "ownerEntityCode",
-                "load"
-              ]
+              "required": ["enabled", "serviceKey", "ownerEntityCode", "load"]
             }
           ]
         }
@@ -168,29 +154,18 @@
     "directoryScope": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "schemaVersion",
-        "mode"
-      ],
+      "required": ["schemaVersion", "mode"],
       "properties": {
         "schemaVersion": {
           "const": 1
         },
         "mode": {
-          "enum": [
-            "tenant",
-            "organization",
-            "company",
-            "organization_company"
-          ]
+          "enum": ["tenant", "organization", "company", "organization_company"]
         },
         "parent": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "entityCode",
-            "relationshipKey"
-          ],
+          "required": ["entityCode", "relationshipKey"],
           "properties": {
             "entityCode": {
               "type": "string",
@@ -228,10 +203,7 @@
             "pattern": "^[a-z][a-z0-9_]{1,62}$"
           },
           "cardinality": {
-            "enum": [
-              "many",
-              "zero_or_one"
-            ]
+            "enum": ["many", "zero_or_one"]
           },
           "fields": {
             "type": "array",
@@ -240,10 +212,7 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "source",
-                "target"
-              ],
+              "required": ["source", "target"],
               "properties": {
                 "source": {
                   "type": "string",
@@ -259,10 +228,7 @@
           "tenant": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "source",
-              "target"
-            ],
+            "required": ["source", "target"],
             "properties": {
               "source": {
                 "type": "string",

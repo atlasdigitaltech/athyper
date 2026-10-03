@@ -70,7 +70,7 @@
     {
       "key": "business_partner_id",
       "writePolicy": "system_managed",
-      "uiFacets": {"visibility": "hidden", "editability": "readonly"},
+      "uiFacets": { "visibility": "hidden", "editability": "readonly" },
       "binding": {
         "sourceObject": "master.business_partner_operating_organization_assignment",
         "column": "business_partner_id"
@@ -155,11 +155,7 @@
     "recordOwnershipSource": "persisted_record",
     "selectorMayChangeOwnership": false,
     "aggregateAccess": "explicit_authorization_only",
-    "requiredCoordinates": [
-      "companyCodeId",
-      "operatingOrganizationId",
-      "asOf"
-    ],
+    "requiredCoordinates": ["companyCodeId", "operatingOrganizationId", "asOf"],
     "legalEntitySource": "selected_company_code",
     "requiredCapability": "role_dependent",
     "eligibilityChecks": [
@@ -201,9 +197,7 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": [
-    "platform/core-field-defaults.v1"
-  ],
+  "dependencies": ["platform/core-field-defaults.v1"],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",

@@ -51,10 +51,21 @@ export function validateCompiledRuntimeContracts(
     artifacts.map((artifact) => [artifact.artifactKey, artifact]),
   );
   const descriptors: EntityRuntimeDescriptor[] = [];
-  for (const core of artifacts.filter(artifact => artifact.artifactType === "core")) {
-    const scope = core.content.directoryScope === undefined ? undefined : parseEntityDirectoryScope(core.content.directoryScope);
-    const relationships = core.content.entityRelationships === undefined ? undefined : parseEntityRelationships(core.content.entityRelationships);
-    if ((scope?.parent !== undefined || relationships !== undefined) && !byKey.has(`${core.entityCode}/runtime`))
+  for (const core of artifacts.filter(
+    (artifact) => artifact.artifactType === "core",
+  )) {
+    const scope =
+      core.content.directoryScope === undefined
+        ? undefined
+        : parseEntityDirectoryScope(core.content.directoryScope);
+    const relationships =
+      core.content.entityRelationships === undefined
+        ? undefined
+        : parseEntityRelationships(core.content.entityRelationships);
+    if (
+      (scope?.parent !== undefined || relationships !== undefined) &&
+      !byKey.has(`${core.entityCode}/runtime`)
+    )
       throw new Error("COMPILED_ENTITY_PARENT_RUNTIME_REQUIRED");
   }
   for (const artifact of artifacts.filter(
@@ -69,13 +80,23 @@ export function validateCompiledRuntimeContracts(
     const operation = byKey.get(`${artifact.entityCode}/operation`);
     if (!core || !operation)
       throw new Error("COMPILED_ENTITY_RUNTIME_DEPENDENCY_MISSING");
-    if (core.content.entityRelationships !== undefined &&
-        JSON.stringify(parseEntityRelationships(core.content.entityRelationships)) !==
-        JSON.stringify(descriptor.recordPresentation?.entityRelationships))
+    if (
+      core.content.entityRelationships !== undefined &&
+      JSON.stringify(
+        parseEntityRelationships(core.content.entityRelationships),
+      ) !== JSON.stringify(descriptor.recordPresentation?.entityRelationships)
+    )
       throw new Error("COMPILED_ENTITY_PARENT_RELATIONSHIP_MISMATCH");
-    const coreScope = core.content.directoryScope === undefined ? undefined : parseEntityDirectoryScope(core.content.directoryScope);
-    if (JSON.stringify(coreScope?.parent ?? null) !== JSON.stringify(descriptor.directoryScope?.parent ?? null) ||
-        (coreScope?.parent !== undefined && coreScope.mode !== descriptor.directoryScope?.mode))
+    const coreScope =
+      core.content.directoryScope === undefined
+        ? undefined
+        : parseEntityDirectoryScope(core.content.directoryScope);
+    if (
+      JSON.stringify(coreScope?.parent ?? null) !==
+        JSON.stringify(descriptor.directoryScope?.parent ?? null) ||
+      (coreScope?.parent !== undefined &&
+        coreScope.mode !== descriptor.directoryScope?.mode)
+    )
       throw new Error("COMPILED_ENTITY_PARENT_SCOPE_MISMATCH");
     const storage = core.content.storage as Record<string, unknown> | undefined;
     if (

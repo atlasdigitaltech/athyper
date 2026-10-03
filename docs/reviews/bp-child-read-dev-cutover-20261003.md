@@ -52,15 +52,15 @@ included because one group can carry several scoped relationships to a role.
 The 83 joined relationship rows represent **20 distinct role-permission edges**,
 not 83 grants to remove.
 
-| Permission suffix after `neon.` | Published catalog | Role-permission edges |
-| --- | --- | ---: |
-| `business_partner_banking.read` | yes | 2 |
-| `business_partner_governance_relation.read` | yes | 2 |
-| `business_partner_identifier.read` | yes | 2 |
-| `business_partner_industry_classification.read` | yes | 8 |
-| `business_partner_operating_organization_assignment.read` | yes | 2 |
-| `business_partner_qualification.read` | yes | 2 |
-| `business_partner_tax_registration.read` | yes | 2 |
+| Permission suffix after `neon.`                           | Published catalog | Role-permission edges |
+| --------------------------------------------------------- | ----------------- | --------------------: |
+| `business_partner_banking.read`                           | yes               |                     2 |
+| `business_partner_governance_relation.read`               | yes               |                     2 |
+| `business_partner_identifier.read`                        | yes               |                     2 |
+| `business_partner_industry_classification.read`           | yes               |                     8 |
+| `business_partner_operating_organization_assignment.read` | yes               |                     2 |
+| `business_partner_qualification.read`                     | yes               |                     2 |
+| `business_partner_tax_registration.read`                  | yes               |                     2 |
 
 The affected tenant IDs are explicitly recorded in the [DEV cleanup manifest](bp-child-read-cleanup-dev-20261003.json):
 `11111111-1111-4111-8111-111111111111`,
@@ -146,3 +146,11 @@ have been removed from DEV.
   `master/18_business_partner_business_profile.sql` source and an old CA08
   candidate referencing removed `business_partner_commodity_capability/core`.
   Neither historical input was silently regenerated.
+
+Push verification: brand, generated server inventory, route manifest and
+authorization-disposition checks passed. `urls:check` remains blocked by the
+existing Studio `${base}/graph` route expression. The workspace-wide formatting
+check also includes unrelated concurrent metadata work; that work was preserved.
+All formatter-supported files in this change were formatted and checked directly.
+The branch is pushed using the repository hook's documented `ATHYPER_SKIP_DRIFT=1`
+WIP option. This does not establish a passing full CI run.

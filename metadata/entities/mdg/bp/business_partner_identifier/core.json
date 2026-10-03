@@ -16,9 +16,7 @@
   },
   "storage": {
     "kind": "table",
-    "sourceObjects": [
-      "master.business_partner_identifier"
-    ],
+    "sourceObjects": ["master.business_partner_identifier"],
     "primaryObject": "master.business_partner_identifier",
     "idField": "id",
     "tenantField": "tenant_id",
@@ -70,7 +68,7 @@
     {
       "key": "business_partner_id",
       "writePolicy": "system_managed",
-      "uiFacets": {"visibility": "hidden", "editability": "readonly"},
+      "uiFacets": { "visibility": "hidden", "editability": "readonly" },
       "binding": {
         "sourceObject": "master.business_partner_identifier",
         "column": "business_partner_id"
@@ -106,10 +104,18 @@
           "maskedDisplay": "••••",
           "plaintextInNormalQueries": false
         },
-        "sensitivity": "restricted"
-        ,"reveal": {
+        "sensitivity": "restricted",
+        "reveal": {
           "operationKey": "reveal",
-          "purposes": [{"value":"partner_review","label":{"labelKey":"business_partner.reveal.purpose.partner_review","defaultText":"Partner review"}}],
+          "purposes": [
+            {
+              "value": "partner_review",
+              "label": {
+                "labelKey": "business_partner.reveal.purpose.partner_review",
+                "defaultText": "Partner review"
+              }
+            }
+          ],
           "permissionCode": "neon.relationship.business_partner_identifier.reveal",
           "requiresElevatedAssurance": true,
           "historicalSnapshotAllowed": false,
@@ -121,7 +127,9 @@
     },
     {
       "key": "scheme_code",
-      "display": {"lookup":{"code":"master.business_partner_identifier_scheme"}},
+      "display": {
+        "lookup": { "code": "master.business_partner_identifier_scheme" }
+      },
       "binding": {
         "sourceObject": "master.business_partner_identifier",
         "column": "scheme_code"
@@ -138,7 +146,7 @@
     },
     {
       "key": "issuing_country_code",
-      "display": {"lookup":{"code":"shared.country"}},
+      "display": { "lookup": { "code": "shared.country" } },
       "binding": {
         "sourceObject": "master.business_partner_identifier",
         "column": "issuing_country_code"
@@ -218,9 +226,7 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": [
-    "platform/core-field-defaults.v1"
-  ],
+  "dependencies": ["platform/core-field-defaults.v1"],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",

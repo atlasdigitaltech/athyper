@@ -16,9 +16,7 @@
   },
   "storage": {
     "kind": "table",
-    "sourceObjects": [
-      "master.business_partner_tax_registration"
-    ],
+    "sourceObjects": ["master.business_partner_tax_registration"],
     "primaryObject": "master.business_partner_tax_registration",
     "idField": "id",
     "tenantField": "tenant_id",
@@ -70,7 +68,7 @@
     {
       "key": "business_partner_id",
       "writePolicy": "system_managed",
-      "uiFacets": {"visibility": "hidden", "editability": "readonly"},
+      "uiFacets": { "visibility": "hidden", "editability": "readonly" },
       "binding": {
         "sourceObject": "master.business_partner_tax_registration",
         "column": "business_partner_id"
@@ -87,7 +85,9 @@
     },
     {
       "key": "registration_type_code",
-      "display": {"lookup":{"code":"master.business_partner_tax_registration_type"}},
+      "display": {
+        "lookup": { "code": "master.business_partner_tax_registration_type" }
+      },
       "binding": {
         "sourceObject": "master.business_partner_tax_registration",
         "column": "registration_type_code"
@@ -157,7 +157,15 @@
         },
         "reveal": {
           "operationKey": "reveal",
-          "purposes": [{"value":"partner_review","label":{"labelKey":"business_partner.reveal.purpose.partner_review","defaultText":"Partner review"}}],
+          "purposes": [
+            {
+              "value": "partner_review",
+              "label": {
+                "labelKey": "business_partner.reveal.purpose.partner_review",
+                "defaultText": "Partner review"
+              }
+            }
+          ],
           "permissionCode": "neon.relationship.business_partner_tax.reveal",
           "requiresElevatedAssurance": true,
           "historicalSnapshotAllowed": false,
@@ -233,9 +241,7 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "dependencies": [
-    "platform/core-field-defaults.v1"
-  ],
+  "dependencies": ["platform/core-field-defaults.v1"],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",

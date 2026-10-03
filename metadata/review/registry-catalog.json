@@ -5,10 +5,26 @@
     "scope": "draft registry evidence"
   },
   "entries": [
-    {"kind":"permission","key":"neon.relationship.business_partner.capability_supplier_manage","status":"requires_registry_publication"},
-    {"kind":"permission","key":"neon.relationship.business_partner.capability_customer_manage","status":"requires_registry_publication"},
-    {"kind":"handler","key":"neon.bp.capability.supplier.v1","status":"requires_registry_publication"},
-    {"kind":"handler","key":"neon.bp.capability.customer.v1","status":"requires_registry_publication"},
+    {
+      "kind": "permission",
+      "key": "neon.relationship.business_partner.capability_supplier_manage",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "permission",
+      "key": "neon.relationship.business_partner.capability_customer_manage",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.capability.supplier.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.capability.customer.v1",
+      "status": "requires_registry_publication"
+    },
     {
       "kind": "permission",
       "key": "neon.relationship.business_partner_restriction.read",
