@@ -264,4 +264,5 @@ export { SearchField, type SearchFieldProps } from "./search-field";
 export { FilterChipGroup, ChoiceChips, type FilterChipItem } from "./filter-chip-group";
 export { ViewSelector } from "./view-selector";
 export { SegmentedControl, type SegmentedOption } from "./segmented-control";
+export { SettingsMenu, SettingsSwitch, SettingsChoice } from "./settings-menu";
 export { ChoiceSelect, type ChoiceOption, type ChoiceSelectProps } from "./choice-select";

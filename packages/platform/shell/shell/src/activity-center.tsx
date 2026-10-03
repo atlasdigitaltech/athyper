@@ -354,9 +354,9 @@ export function ActivityFeed({
     <>
       {actionError ? <p role="alert">{actionError}</p> : null}
       {/* One surface with the list's group bands, in the panel and on the page. */}
-      <div className="athyper-activity-feed">
+      <div className="athyper-activity-feed a-panel-list">
       {groupItems(items).map((group) => (
-        <section className="athyper-activity-center__group" key={group.label}>
+        <section className="athyper-activity-center__group a-panel-list__group" key={group.label}>
           {group.label ? (
             <header>
               <strong>{group.label}</strong>
@@ -511,16 +511,16 @@ export function ActivityNotificationRow({
   const context = item.recordLabel ?? "";
   return (
     <article
-      className="athyper-activity-row"
+      className="athyper-activity-row a-panel-row"
       data-unread={!!item.unread}
       data-available={item.href ? undefined : "false"}
       {...select?.article}
     >
-      <span className="athyper-activity-row__icon" data-tone={item.tone} aria-hidden="true">
+      <span className="athyper-activity-row__icon a-panel-row__icon" data-tone={item.tone} aria-hidden="true">
         <NotificationTypeIcon item={item} />
       </span>
-      <div className="athyper-activity-row__copy">
-        <div className="athyper-activity-row__heading">
+      <div className="athyper-activity-row__copy a-panel-row__copy">
+        <div className="athyper-activity-row__heading a-panel-row__heading">
           {/* Titles, summaries and record names are user content: they keep their own direction. */}
           <strong dir="auto">{select ? <button {...select.button}>{item.title}</button> : item.title}</strong>
           {item.unread ? <span className="athyper-visually-hidden">, {intl.message("activity.unread")}</span> : null}
@@ -532,7 +532,7 @@ export function ActivityNotificationRow({
           </time>
         </div>
         {item.detail ? <p dir="auto">{item.detail}</p> : null}
-        <div className="athyper-activity-row__meta">
+        <div className="athyper-activity-row__meta a-panel-row__meta">
           {item.href ? (
             <a
               className="athyper-activity-row__link"
@@ -554,7 +554,7 @@ export function ActivityNotificationRow({
       </div>
       {onDismiss || (item.unread && onMarkRead) ? (
         <details
-          className="athyper-activity-row__menu"
+          className="athyper-activity-row__menu a-panel-row__menu"
           onKeyDown={(event) => {
             if (event.key === "Escape") event.currentTarget.open = false;
           }}
@@ -598,12 +598,12 @@ export function ActivityInboxRow({
   const select = selectable(item.id, selection);
   const context = [item.recordLabel, item.statusLabel, item.assigneeLabel].filter(Boolean).join(" · ");
   return (
-    <article className="athyper-activity-row" data-available={item.href ? undefined : "false"} {...select?.article}>
-      <span className="athyper-activity-row__icon" data-priority={item.priority} aria-hidden="true">
+    <article className="athyper-activity-row a-panel-row" data-available={item.href ? undefined : "false"} {...select?.article}>
+      <span className="athyper-activity-row__icon a-panel-row__icon" data-priority={item.priority} aria-hidden="true">
         <ClipboardCheckIcon />
       </span>
-      <div className="athyper-activity-row__copy">
-        <div className="athyper-activity-row__heading">
+      <div className="athyper-activity-row__copy a-panel-row__copy">
+        <div className="athyper-activity-row__heading a-panel-row__heading">
           <strong dir="auto">{select ? <button {...select.button}>{item.title}</button> : item.title}</strong>
           {item.dueLabel ? (
             <span className="athyper-activity-row__due" data-overdue={item.overdue}>
@@ -612,7 +612,7 @@ export function ActivityInboxRow({
           ) : null}
         </div>
         {item.detail ? <p dir="auto">{item.detail}</p> : null}
-        <div className="athyper-activity-row__meta">
+        <div className="athyper-activity-row__meta a-panel-row__meta">
           {item.href ? (
             <a className="athyper-activity-row__link" href={item.href}>
               {item.actionLabel ?? intl.message("activity.detail.openTask")}

@@ -45,9 +45,8 @@ describe("shell activity center", () => {
       inbox: [{ id: "inbox-1", title: "Review purchase order", priority: "high" }],
     }}><section><h1>Dashboard</h1></section></ShellChrome>));
 
-    const recent = host.querySelector<HTMLButtonElement>('button[aria-label="Open recent items"]')!;
-    await click(recent);
-    assert.ok(host.querySelector('#athyper-quick-access'));
+    await click(host.querySelector<HTMLButtonElement>('button[data-slot="quick-access"]')!);
+    assert.ok(document.body.querySelector('#athyper-quick-access'));
 
     const notifications = host.querySelector<HTMLButtonElement>('button[data-slot="notifications"]')!;
     notifications.focus();
@@ -55,7 +54,8 @@ describe("shell activity center", () => {
 
     const drawer = document.body.querySelector<HTMLElement>('#athyper-activity-center')!;
     assert.ok(drawer);
-    assert.equal(host.querySelector('#athyper-quick-access'), null);
+    // Both are app bar panels in the one right-edge slot: Notifications replaces Quick access.
+    assert.equal(document.body.querySelector('#athyper-quick-access'), null);
     assert.equal(host.querySelector('#athyper-activity-center'), null);
     assert.match(drawer.textContent ?? "", /Invoice approved/);
     // Browser alerts live in Notification preferences, not the panel.
@@ -76,16 +76,13 @@ describe("shell activity center", () => {
     assert.equal(document.activeElement, inbox);
   });
 
-  it("uses contextual recent counts and makes clearing recoverable", async () => {
+  it("counts recent work on its section chip and makes clearing recoverable", async () => {
     await act(async () => root.render(<ShellChrome applicationName="Neon" tenantId="tenant-alpha" tenantLabel="Tenant Alpha" accountLabel="User One" navigation={navigation}><section><h1>Dashboard</h1></section></ShellChrome>));
 
-    await click(host.querySelector<HTMLButtonElement>('button[aria-label="Open recent items"]')!);
-    const panel = host.querySelector<HTMLElement>('#athyper-quick-access')!;
-    // Section counts are badges now ("Records 0", "Pages 1").
-    assert.match(panel.textContent ?? "", /Records0/);
-
-    await click(Array.from(panel.querySelectorAll("button")).find((button) => button.textContent?.includes("Show recent pages"))!);
-    assert.match(panel.textContent ?? "", /Pages1/);
+    await click(host.querySelector<HTMLButtonElement>('button[data-slot="quick-access"]')!);
+    const panel = document.body.querySelector<HTMLElement>('#athyper-quick-access')!;
+    // Records and pages share one Recent list; the section chip carries the count.
+    assert.match(panel.textContent ?? "", /Recent1/);
     assert.match(panel.textContent ?? "", /Core Accounting/);
 
     await click(Array.from(panel.querySelectorAll("button")).find((button) => button.textContent === "Clear all recent")!);
@@ -94,7 +91,7 @@ describe("shell activity center", () => {
     assert.match(panel.textContent ?? "", /Recent history cleared/);
 
     await click(Array.from(panel.querySelectorAll("button")).find((button) => button.textContent === "Undo")!);
-    assert.match(panel.textContent ?? "", /Pages1/);
+    assert.match(panel.textContent ?? "", /Recent1/);
     assert.match(panel.textContent ?? "", /Core Accounting/);
   });
 });

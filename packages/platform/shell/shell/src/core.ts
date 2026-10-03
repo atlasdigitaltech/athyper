@@ -259,11 +259,53 @@ export function isShellActivityRoute(pathname: string): boolean {
   return pathname === "/inbox" || pathname === "/notifications";
 }
 
+/** Entity application paths: the list (`/app/entity/<code>`, `/manage`) or one record. */
+const ENTITY_PATH = /^\/app\/entity\/([a-z][a-z0-9_]{1,62})(?:\/(manage|[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}))?$/i;
+const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/** The entity an entity page shows (its list, or one record), when the caller has the
+ * published admission for that page: list for the list, read for a record. */
+export function admittedEntityPath(
+  navigation: DerivedShellNavigation,
+  pathname: string,
+): { readonly entityCode: string; readonly recordId?: string } | undefined {
+  const entity = ENTITY_PATH.exec(pathname);
+  if (!entity || !canAccessRoute(navigation, pathname)) return undefined;
+  return entity[2] && RECORD_ID.test(entity[2]) ? { entityCode: entity[1]!, recordId: entity[2] } : { entityCode: entity[1]! };
+}
+/** The entity record a record page shows, when the caller has its published read admission. */
+export function admittedEntityRecord(
+  navigation: DerivedShellNavigation,
+  pathname: string,
+): { readonly entityCode: string; readonly recordId: string } | undefined {
+  const entity = admittedEntityPath(navigation, pathname);
+  return entity?.recordId ? { entityCode: entity.entityCode, recordId: entity.recordId } : undefined;
+}
+/** The record page for a published entity, or undefined when the caller has no published
+ * read admission for it. Same grammar that canAccessRoute authorizes. */
+export function admittedEntityRecordHref(
+  navigation: DerivedShellNavigation,
+  entityCode: string,
+  recordId: string,
+): `/${string}` | undefined {
+  const href = `/app/entity/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}` as const;
+  return canAccessRoute(navigation, href) ? href : undefined;
+}
+/** The module route whose catalog placement holds this entity, with the entity's name. */
+export function entityPlacement(
+  navigation: DerivedShellNavigation,
+  entityCode: string,
+): { readonly route: DerivedShellRoute; readonly entityName: string } | undefined {
+  for (const route of navigation.routes) {
+    const entity = route.entities?.find((candidate) => candidate.code === entityCode);
+    if (entity) return { route, entityName: entity.name };
+  }
+  return undefined;
+}
 export function canAccessRoute(
   navigation: DerivedShellNavigation,
   pathname: string,
 ): boolean {
-  const entity = /^\/app\/entity\/([a-z][a-z0-9_]{1,62})(?:\/(manage|[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}))?$/i.exec(pathname);
+  const entity = ENTITY_PATH.exec(pathname);
   if (entity) return (navigation.entityRoutes ?? []).some(route => route.entityCode === entity[1]
     && route.operation === (!entity[2] || entity[2] === "manage" ? "list" : "read"));
   return (

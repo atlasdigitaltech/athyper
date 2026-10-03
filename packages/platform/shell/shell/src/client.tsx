@@ -222,10 +222,13 @@ export function ShellChrome({
     });
   }, [setAtlasOpen]);
   const previousScope = useRef({ path, tenantId });
+  // A pinned app bar panel sits beside the page as part of the workspace, so it stays
+  // open across navigation; overlays (unpinned) close as before. Set from the slot below.
+  const pinnedSurfacePanel = useRef(false);
   useEffect(() => {
     const previous = previousScope.current;
     if (previous.tenantId !== tenantId) dismissContext();
-    else if (previous.path !== path) dismissTransient();
+    else if (previous.path !== path && !pinnedSurfacePanel.current) dismissTransient();
     previousScope.current = { path, tenantId };
   }, [path, tenantId, dismissContext, dismissTransient]);
   useEffect(() => {
@@ -338,6 +341,9 @@ export function ShellChrome({
     writeShellPreference("athyper.atlas.pinned", next);
   };
   const [sidePanel, setSidePanel] = useState<WorkspaceSidePanelRegistration>();
+  pinnedSurfacePanel.current = Boolean(
+    sidePanel?.pinned && SHELL_SURFACE_PANELS.has(sidePanel.id),
+  );
   const shellRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const shell = shellRef.current;

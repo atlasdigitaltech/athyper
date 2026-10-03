@@ -80,7 +80,7 @@ export function ActivityDetail({
     );
     header = (
       <>
-        <span className="athyper-activity-row__icon" data-tone={notification.tone} aria-hidden="true">
+        <span className="athyper-activity-row__icon a-panel-row__icon" data-tone={notification.tone} aria-hidden="true">
           <NotificationTypeIcon item={notification} />
         </span>
         <div className="athyper-activity-detail__heading">
@@ -134,7 +134,7 @@ export function ActivityDetail({
     );
     header = (
       <>
-        <span className="athyper-activity-row__icon" data-priority={task.priority} aria-hidden="true">
+        <span className="athyper-activity-row__icon a-panel-row__icon" data-priority={task.priority} aria-hidden="true">
           <ClipboardCheckIcon />
         </span>
         <div className="athyper-activity-detail__heading">

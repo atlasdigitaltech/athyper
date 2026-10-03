@@ -82,22 +82,22 @@ test("provider Summary is lazy, supplementary, and aborts when disabled", async 
   await mount(page, undefined, "", {...country, summaryView: {schemaVersion:1,cards:[{key:"identity",label:"Identity summary",provider:"platform.record.identity.v1",rendererKey:"platform.record.identity.v1"}]}});
   expect(await page.evaluate(() => (window as any).summaryReads ?? 0)).toBe(0);
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("button", {name:"Summary view"}).click();
+  await page.getByRole("switch", { name: "Summary view" }).click();
   await expect(page.getByLabel("Record summary", {exact:true})).toContainText("Authorized summary");
   await expect(page.locator('[data-detail-section="overview"]')).toBeVisible();
   expect(await page.evaluate(() => (window as any).summaryReads)).toBe(1);
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("button", {name:"Section view"}).click();
+  await page.getByRole("switch", { name: "Section view" }).click();
   expect(await page.evaluate(() => (window as any).summaryReads)).toBe(1);
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("button", {name:"Summary view"}).click();
+  await page.getByRole("switch", { name: "Summary view" }).click();
   await expect(page.getByLabel("Record summary", {exact:true})).toHaveCount(0);
   expect(await page.evaluate(() => (window as any).summaryAborts)).toBe(1);
 });
 test("an entity without authorized summary cards has no Summary setting", async ({page}) => {
   await mount(page, undefined, "", country);
   await page.locator('summary[aria-label="View settings"]').click();
-  await expect(page.getByRole("button", {name:"Summary view"})).toHaveCount(0);
+  await expect(page.getByRole("switch", { name: "Summary view" })).toHaveCount(0);
 });
 test("record navigation fills the available shell width, including docking and mobile", async ({page}) => {
   await page.setViewportSize({width:1440,height:900});
@@ -302,7 +302,7 @@ test("explicit single Overview contains every Country section and keeps scrollin
   await expect(page.locator("[data-detail-section]")).toHaveCount(4);
   await expect(page.locator('[data-detail-section="phone"]')).toBeInViewport();
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("button", { name: "Section view" }).click();
+  await page.getByRole("switch", { name: "Section view" }).click();
   const rail = page.getByRole("navigation", { name: "Record sections", exact: true });
   await rail.getByRole("button", { name: "Audit", exact: true }).click();
   await expect(page.locator('[data-detail-section="audit"]')).toBeFocused();
@@ -313,7 +313,7 @@ test("explicit single Overview contains every Country section and keeps scrollin
   expect(await page.evaluate(() => history.length)).toBe(entries);
   await expect(page.locator('[data-detail-section="audit"]')).toBeFocused();
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("button", { name: "Section view" }).click();
+  await page.getByRole("switch", { name: "Section view" }).click();
   await expect(page.locator("[data-detail-section]")).toHaveCount(4);
   await expect(page.getByRole("combobox", { name: "Record sections" })).toHaveCount(0);
   await page.locator('summary[aria-label="Overview sections"]').click();
@@ -345,7 +345,7 @@ test("legacy selected sections do not silently become continuous", async ({
   await page.goBack();
   await expect(page.locator('[data-detail-section="identity"]')).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Summary view" }),
+    page.getByRole("switch", { name: "Summary view" }),
   ).toHaveCount(0);
 });
 test("metadata modes use manual keyboard activation without section-scroll feedback", async ({
@@ -383,7 +383,7 @@ test("deep links restore the final section and view settings do not change navig
     page.locator('[data-detail-section="contacts"]'),
   ).toBeInViewport();
   await page.locator('summary[aria-label="View settings"]').click();
-  await page.getByRole("button", { name: "Section view" }).click();
+  await page.getByRole("switch", { name: "Section view" }).click();
   await expect(page.locator('[data-rail="true"]')).toBeVisible();
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(

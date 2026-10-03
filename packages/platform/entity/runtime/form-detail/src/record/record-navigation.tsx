@@ -7,7 +7,7 @@ import {
   resolveMetadataIcon,
   type IconRole,
 } from "@athyper/platform-icons";
-import { Button } from "@athyper/platform-ui";
+import { Button, SettingsMenu, SettingsSwitch } from "@athyper/platform-ui";
 import type { EntityRuntimeActionPlan } from "@athyper/platform-entity-descriptor-client";
 import type { EntityRuntimeHeaderNavigation } from "../entity-runtime-workspace";
 export function RecordModeNavigation({
@@ -34,7 +34,6 @@ export function RecordModeNavigation({
   readonly sectionSettings?: boolean;
 }) {
   const intl = useEntityI18n();
-  const viewMenu = useDismissibleDetails();
   const available = new Map(
     navigation.sections.map((section) => [section.key, section]),
   );
@@ -114,46 +113,11 @@ export function RecordModeNavigation({
           <span>{section.key === "attachments" ? intl.message("collaboration.files") : section.key === "comments" ? intl.message("collaboration.comments") : section.label}</span>
         </button>
       ))}
-      {sectionSettings || navigation.summaryView ? <details ref={viewMenu} className="a-entity-record__view-control">
-        <summary aria-label={intl.message("navigation.settings")}>
-          <SettingsIcon aria-hidden="true" />
-        </summary>
-        <div role="group" aria-label={intl.message("navigation.settings")}>
-          <p>{intl.message("navigation.settings")}</p>
-          <button
-            type="button"
-            aria-pressed="true"
-            disabled
-          >
-            <span className="a-entity-record__view-setting-copy">{intl.message("navigation.contentView")}</span>
-            <span className="a-entity-record__toggle" aria-hidden="true" />
-          </button>
-          {sectionSettings ? <button
-            type="button"
-            aria-pressed={sectionView}
-            onClick={() => {
-              onSectionViewChange(!sectionView);
-              viewMenu.current?.removeAttribute("open");
-            }}
-          >
-            <span className="a-entity-record__view-setting-copy">{intl.message("navigation.sectionView")}</span>
-            <span className="a-entity-record__toggle" aria-hidden="true" />
-          </button> : null}
-          {navigation.summaryView ? (
-            <button
-              type="button"
-              aria-pressed={view === "summary"}
-              onClick={() => {
-                onViewChange(view === "summary" ? "content" : "summary");
-                viewMenu.current?.removeAttribute("open");
-              }}
-            >
-              <span className="a-entity-record__view-setting-copy">{intl.message("navigation.summaryView")}</span>
-              <span className="a-entity-record__toggle" aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
-      </details> : null}
+      {sectionSettings || navigation.summaryView ? <SettingsMenu className="a-entity-record__view-control" label={intl.message("navigation.settings")} icon={<SettingsIcon aria-hidden="true" />}>
+        <SettingsSwitch label={intl.message("navigation.contentView")} checked disabled />
+        {sectionSettings ? <SettingsSwitch label={intl.message("navigation.sectionView")} checked={sectionView} closeOnChange onCheckedChange={() => onSectionViewChange(!sectionView)} /> : null}
+        {navigation.summaryView ? <SettingsSwitch label={intl.message("navigation.summaryView")} checked={view === "summary"} closeOnChange onCheckedChange={() => onViewChange(view === "summary" ? "content" : "summary")} /> : null}
+      </SettingsMenu> : null}
     </nav>
   );
 }

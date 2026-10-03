@@ -1,11 +1,11 @@
 "use client";
 
-import { FilterChipGroup, SearchField, PanelHeader, PanelTabs, PanelEmptyState, Button, type PanelHeaderCapabilities } from "@athyper/platform-ui";
+import { FilterChipGroup, SearchField, PanelHeader, PanelContextRow, PanelEmptyState, Button, SettingsMenu, SettingsChoice, SettingsSwitch, readBrowserStorage, writeBrowserStorage, type PanelHeaderCapabilities } from "@athyper/platform-ui";
 import { parseInstant } from "@athyper/platform-temporal";
 import * as React from "react";
-import { ChevronRightIcon, ClockIcon, CloseIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, PanelsTopLeftIcon, StarIcon } from "@athyper/platform-icons";
+import { ChevronDownIcon, ChevronRightIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, MoreHorizontalIcon, PanelsTopLeftIcon, SettingsIcon, StarIcon } from "@athyper/platform-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { canAccessRoute, type DerivedShellNavigation } from "./core";
+import { admittedEntityPath, admittedEntityRecord, admittedEntityRecordHref, canAccessRoute, entityPlacement, type DerivedShellNavigation } from "./core";
 import type { RecordBreadcrumbBinding } from "./route-state";
 import { useShellI18n } from "./shell-i18n";
 import { WorkspaceToolPanel } from "./workspace-tool-panel";
@@ -51,15 +51,15 @@ interface ShellQuickAccessProps {
 const EMPTY_STORE: QuickAccessStore = Object.freeze({ favourites: Object.freeze([]), recent: Object.freeze([]) });
 const MAX_RECENT_ITEMS = 50;
 
-/** Favourites and Recent in the shared right-edge tool panel, like Notifications, Inbox and Atlas.
- * It is a launcher, so it never pins beside the page: choosing an item navigates and closes it. */
+/** Favourites and Recent in the shared right-edge tool panel, with the Notifications
+ * anatomy: header (pin, close), scope row, search, section chips with the bulk action,
+ * then the shared grouped list. No full view: Quick access has no page of its own. */
 export function ShellQuickAccess(props: ShellQuickAccessProps) {
   const t = useShellI18n().message;
   return <WorkspaceToolPanel
     id="quick-access"
     open
     onOpenChange={(open) => { if (!open) props.onClose(); }}
-    canPin={false}
     labels={{ region: t("shell.quick.label"), close: t("shell.quick.close"), pin: t("panel.pin"), unpin: t("panel.unpin"), resize: t("shell.quick.resize") }}
     className="athyper-quick-access"
     panelProps={{ id: "athyper-quick-access", "aria-labelledby": "athyper-quick-access-title" }}
@@ -72,7 +72,6 @@ function QuickAccessContent({ plane = "shared", activeTab, tenantId, accountScop
   const storageKey = useMemo(() => quickAccessStorageKey(plane, tenantId, accountScope), [plane, tenantId, accountScope]);
   const [localStore, setLocalStore] = useState<QuickAccessStore>(EMPTY_STORE);
   const [query, setQuery] = useState("");
-  const [recentKind, setRecentKind] = useState<ShellQuickAccessKind>("record");
   const [confirmClear, setConfirmClear] = useState(false);
   const [undoRecent, setUndoRecent] = useState<readonly ShellQuickAccessItem[]>();
   const search = useRef<HTMLInputElement>(null);
@@ -95,14 +94,18 @@ function QuickAccessContent({ plane = "shared", activeTab, tenantId, accountScop
   const recent = (dataSource?.recent ?? localStore.recent).filter((item) => canAccessRoute(navigation, item.href.split(/[?#]/)[0]!));
   const favouriteHrefs = useMemo(() => new Set(favourites.map((item) => item.href)), [favourites]);
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const matchingFavourites = useMemo(() => favourites.filter((item) => matchesItem(item, normalizedQuery)), [favourites, normalizedQuery]);
-  const recentCounts = useMemo(() => ({
-    record: recent.filter((item) => (item.kind ?? "page") === "record").length,
-    page: recent.filter((item) => (item.kind ?? "page") === "page").length,
-  }), [recent]);
-  const matchingRecent = useMemo(() => recent.filter((item) => (item.kind ?? "page") === recentKind && matchesItem(item, normalizedQuery)), [recent, recentKind, normalizedQuery]);
+  const [view, setView] = useState<QuickAccessView>(DEFAULT_VIEW);
+  useEffect(() => setView(readView()), []);
+  const updateView = (change: Partial<QuickAccessView>) => setView((current) => {
+    const next = { ...current, ...change };
+    writeBrowserStorage(VIEW_PREFERENCE, JSON.stringify(next));
+    return next;
+  });
+  const shown = (item: ShellQuickAccessItem) => view.show === "all" || (item.kind ?? "page") === view.show;
+  const matchingFavourites = useMemo(() => favourites.filter((item) => shown(item) && matchesItem(item, normalizedQuery)), [favourites, normalizedQuery, view.show]);
+  const matchingRecent = useMemo(() => recent.filter((item) => shown(item) && matchesItem(item, normalizedQuery)), [recent, normalizedQuery, view.show]);
   const favouriteGroups = useMemo(() => groupFavourites(matchingFavourites), [matchingFavourites]);
-  const recentGroups = useMemo(() => groupRecent(matchingRecent), [matchingRecent]);
+  const recentGroups = useMemo(() => view.groupBy === "type" ? groupByType(matchingRecent) : groupRecent(matchingRecent), [matchingRecent, view.groupBy]);
   const favouritesControlled = dataSource?.favourites !== undefined;
   const recentControlled = dataSource?.recent !== undefined;
   const canToggleFavourite = !favouritesControlled || Boolean(dataSource?.onToggleFavourite);
@@ -115,10 +118,13 @@ function QuickAccessContent({ plane = "shared", activeTab, tenantId, accountScop
       dataSource?.onToggleFavourite?.(item, favourite);
       return;
     }
-    if (item.id.startsWith("record-bookmark:")) {
-      if (!favourite) void durableRecords.remove(item.id);
-      return;
-    }
+    // A record bookmark and its Recent visit share the record page; un-starring either removes the bookmark.
+    const bookmark = item.id.startsWith("record-bookmark:") ? item : durableRecords.items.find((candidate) => candidate.href === item.href);
+    if (bookmark && !favourite) void durableRecords.remove(bookmark.id);
+    if (item.id.startsWith("record-bookmark:")) return;
+    // Starring a record you can open creates its server bookmark; pages stay browser favourites.
+    const record = favourite ? admittedEntityRecord(navigation, item.href) : undefined;
+    if (record) { void durableRecords.add(record.entityCode, record.recordId, item.label); return; }
     const next = favourite
       ? { ...localStore, favourites: [item, ...localStore.favourites.filter((candidate) => candidate.href !== item.href)] }
       : { ...localStore, favourites: localStore.favourites.filter((candidate) => candidate.href !== item.href) };
@@ -142,8 +148,9 @@ function QuickAccessContent({ plane = "shared", activeTab, tenantId, accountScop
       dataSource?.onClearRecent?.();
       return;
     }
+    // Clearing follows the Show setting: only the records, or only the pages, when filtered.
     const snapshot = localStore.recent;
-    const next = { ...localStore, recent: [] };
+    const next = { ...localStore, recent: view.show === "all" ? [] : localStore.recent.filter((item) => (item.kind ?? "page") !== view.show) };
     setLocalStore(next);
     writeStore(storageKey, next);
     setUndoRecent(snapshot);
@@ -160,38 +167,59 @@ function QuickAccessContent({ plane = "shared", activeTab, tenantId, accountScop
     if (undoTimer.current) clearTimeout(undoTimer.current);
   };
 
-  const visibleCount = activeTab === "favourites" ? matchingFavourites.length : matchingRecent.length;
-  const visibleNoun = activeTab === "favourites" ? "favourite" : recentKind;
-  const showClearRecent = activeTab === "recent" && recent.length > 0 && canClearRecent && (!normalizedQuery || visibleCount > 0);
-  const summary = `${visibleCount} of ${activeTab === "favourites" ? favourites.length : recentCounts[recentKind]} ${visibleNoun}s`;
+  const recentTab = activeTab === "recent";
+  const groups = recentTab ? recentGroups : favouriteGroups;
+  const kindFiltered = view.show !== "all";
+  const shownRecent = kindFiltered ? recent.filter(shown).length : recent.length;
+  const shownFavourites = kindFiltered ? favourites.filter(shown).length : favourites.length;
+  // A supplied (authoritative) history can only be cleared whole.
+  const showClearRecent = recentTab && shownRecent > 0 && canClearRecent && !(kindFiltered && recentControlled);
+  const clearLabel = view.show === "record" ? "Clear recent records" : view.show === "page" ? "Clear recent pages" : "Clear all recent";
+  // Collapsed groups are remembered per section (and, for Recent, per grouping).
+  const groupKey = (label: string) => recentTab ? `recent:${view.groupBy}:${label}` : `favourites:${label}`;
+  const collapsed = new Set(view.collapsed);
+  const allCollapsed = groups.length > 0 && groups.every((group) => collapsed.has(groupKey(group.label)));
+  const toggleGroup = (label: string) => {
+    const key = groupKey(label);
+    updateView({ collapsed: collapsed.has(key) ? view.collapsed.filter((candidate) => candidate !== key) : [...view.collapsed, key] });
+  };
+  const collapseAll = (collapse: boolean) => {
+    const keys = groups.map((group) => groupKey(group.label));
+    updateView({ collapsed: collapse ? [...new Set([...view.collapsed, ...keys])] : view.collapsed.filter((key) => !keys.includes(key)) });
+  };
+  const of = (count: number, total: number, noun: string) => kindFiltered ? `${count} of ${total} ${noun}` : `${total} ${noun}`;
   return <>
-    <PanelHeader icon={<StarIcon/>} title="Quick access" titleId="athyper-quick-access-title" subtitle="Your saved and recently opened work" capabilities={capabilities}/>
-    <PanelTabs label="Quick access views" value={activeTab} onValueChange={key=>onTabChange(key as ShellQuickAccessTab)} items={[{key:"favourites",label:"Favourites",count:favourites.length,id:"quick-access-tab-favourites",panelId:"quick-access-favourites"},{key:"recent",label:"Recent",count:recent.length,id:"quick-access-tab-recent",panelId:"quick-access-recent"}]}/>
-
-    <SearchField className="athyper-quick-access__search" ref={search} label="Filter quick access items" value={query} onValueChange={setQuery} clearLabel="Clear filter" placeholder={activeTab === "favourites" ? "Search favourites" : "Search recent work"} maxLength={80} autoComplete="off"/>
-
-
-    {activeTab === "recent" ? <FilterChipGroup className="athyper-quick-access__scope" label="Recent item type" value={recentKind} onValueChange={value=>setRecentKind(value as ShellQuickAccessKind)} items={[{value:"record",label:"Records",count:recentCounts.record},{value:"page",label:"Pages",count:recentCounts.page}]}/> : null}
-
-    {(normalizedQuery && visibleCount > 0) || showClearRecent ? <div className="athyper-quick-access__summary" aria-live="polite">
-      <span>{normalizedQuery && visibleCount > 0 ? summary : null}</span>
-      {showClearRecent ? confirmClear
-        ? <span className="athyper-quick-access__clear-confirm"><button type="button" onClick={() => setConfirmClear(false)}>Cancel</button><button type="button" onClick={clearRecent}>Clear all</button></span>
-        : <button type="button" onClick={() => setConfirmClear(true)}>Clear all recent</button> : null}
-    </div> : null}
-
-    <div className="athyper-quick-access__content" id={`quick-access-${activeTab}`} role="tabpanel" aria-labelledby={`quick-access-tab-${activeTab}`}>
-      {activeTab === "favourites" && !favouriteGroups.length ? <QuickAccessEmpty variant="favourites" filtered={Boolean(normalizedQuery)} onClearFilter={() => setQuery("")} onShowRecent={() => { setQuery(""); onTabChange("recent"); }} /> : null}
-      {activeTab === "recent" && !recentGroups.length ? <QuickAccessEmpty variant="recent" filtered={Boolean(normalizedQuery)} recentKind={recentKind} onClearFilter={() => setQuery("")} onShowPeer={recentCounts[recentKind === "record" ? "page" : "record"] > 0 ? () => setRecentKind(recentKind === "record" ? "page" : "record") : undefined} /> : null}
-      {activeTab === "favourites" ? favouriteGroups.map((group) => <QuickAccessGroup key={group.label} label={group.label} items={group.items} favouriteHrefs={favouriteHrefs} onToggleFavourite={canToggleFavourite ? toggleFavourite : undefined} />) : null}
-      {activeTab === "recent" ? recentGroups.map((group) => <QuickAccessGroup key={group.label} label={group.label} items={group.items} favouriteHrefs={favouriteHrefs} onToggleFavourite={canToggleFavourite ? toggleFavourite : undefined} onDismiss={canDismissRecent ? dismissRecent : undefined} showTime />) : null}
+    <PanelHeader icon={<StarIcon/>} title="Quick access" titleId="athyper-quick-access-title" capabilities={capabilities}/>
+    <PanelContextRow scope={{ kind: "global", label: "Your saved and recent work", detail: recentTab ? of(shownRecent, recent.length, "recent") : of(shownFavourites, favourites.length, favourites.length === 1 ? "favourite" : "favourites") }}/>
+    <div className="athyper-quick-access__search-row">
+      <SearchField className="athyper-quick-access__search" ref={search} label="Filter quick access items" value={query} onValueChange={setQuery} clearLabel="Clear filter" placeholder={recentTab ? "Search recent work" : "Search favourites"} maxLength={80} autoComplete="off"/>
+      {/* The shared View settings menu (as on record pages); the dot shows a Show filter is on. */}
+      <SettingsMenu label="View settings" icon={<SettingsIcon aria-hidden="true" />} indicator={kindFiltered}>
+        <SettingsChoice label="Show" value={view.show} options={[{ value: "all", label: "All" }, { value: "record", label: "Records" }, { value: "page", label: "Pages" }]} onValueChange={(show) => { setConfirmClear(false); updateView({ show }); }} />
+        {recentTab ? <SettingsChoice label="Group by" value={view.groupBy} options={[{ value: "day", label: "Day" }, { value: "type", label: "Type" }]} onValueChange={(groupBy) => updateView({ groupBy })} /> : null}
+        <SettingsSwitch label="Collapse all groups" checked={allCollapsed} disabled={!groups.length} onCheckedChange={collapseAll} />
+      </SettingsMenu>
+    </div>
+    {/* Like All activity | Unread: the section chips, then the section's bulk action. */}
+    <div className="athyper-quick-access__toolbar">
+      <FilterChipGroup label="Quick access section" value={activeTab} onValueChange={(value) => { setConfirmClear(false); onTabChange(value as ShellQuickAccessTab); }} items={[{ value: "recent", label: "Recent", count: recent.length }, { value: "favourites", label: "Favourites", count: favourites.length }]}/>
+      {showClearRecent ? <div className="athyper-quick-access__actions">{confirmClear
+        ? <><Button size="small" variant="ghost" onClick={() => setConfirmClear(false)}>Cancel</Button><Button size="small" variant="danger" onClick={clearRecent}>Clear all</Button></>
+        : <Button size="small" variant="ghost" onClick={() => setConfirmClear(true)}>{clearLabel}</Button>}</div> : null}
+    </div>
+    <div className="athyper-quick-access__content" aria-live="polite">
+      <div role="region" id={`quick-access-${activeTab}`} aria-label={recentTab ? "Recent" : "Favourites"}>
+        {groups.length
+          ? <div className="a-panel-list">{groups.map((group) => <QuickAccessGroup key={group.label} label={group.label} items={group.items} collapsed={collapsed.has(groupKey(group.label))} onToggle={() => toggleGroup(group.label)} favouriteHrefs={favouriteHrefs} onToggleFavourite={canToggleFavourite ? toggleFavourite : undefined} onDismiss={recentTab && canDismissRecent ? dismissRecent : undefined} showTime={recentTab} />)}</div>
+          : <QuickAccessEmpty variant={activeTab} filtered={Boolean(normalizedQuery) || kindFiltered} clearLabel={kindFiltered ? "Show all" : "Clear search"} onClearFilter={() => { setQuery(""); if (kindFiltered) updateView({ show: "all" }); }} onShowRecent={() => { setQuery(""); onTabChange("recent"); }} />}
+      </div>
     </div>
     {undoRecent?.length ? <div className="athyper-quick-access__undo" role="status"><span>Recent history cleared</span><button type="button" onClick={restoreRecent}>Undo</button></div> : null}
   </>;
 }
 
 interface DurableBookmarkRow { readonly entityCode: string; readonly recordId: string; readonly label?: string; readonly createdAt: string; }
-function useDurableRecordFavourites(navigation: DerivedShellNavigation, disabled: boolean): { readonly items: readonly ShellQuickAccessItem[]; remove(id: string): Promise<void> } {
+function useDurableRecordFavourites(navigation: DerivedShellNavigation, disabled: boolean): { readonly items: readonly ShellQuickAccessItem[]; add(entityCode: string, recordId: string, label: string): Promise<void>; remove(id: string): Promise<void> } {
   const [rows, setRows] = useState<readonly DurableBookmarkRow[]>([]);
   const load = React.useCallback(async () => {
     if (disabled) return;
@@ -203,12 +231,16 @@ function useDurableRecordFavourites(navigation: DerivedShellNavigation, disabled
     } catch { /* Quick Access keeps local page favourites available offline. */ }
   }, [disabled]);
   useEffect(() => { void load(); const changed = () => void load(); window.addEventListener("athyper:record-bookmarks-changed", changed); return () => window.removeEventListener("athyper:record-bookmarks-changed", changed); }, [load]);
+  // A bookmark opens its record page, resolved through the published entity routes (read
+  // admission) and the entity's catalog placement; never matched by URL or entity name.
+  // Without a read admission it stays hidden (fail closed); without a readable label it is
+  // not shown, since technical ids never appear in lists.
   const items = useMemo(() => rows.flatMap((row): ShellQuickAccessItem[] => {
-    const route = navigation.routes.find((candidate) => candidate.href.endsWith(`/${row.entityCode}`) || candidate.id === row.entityCode);
-    if (!route) return [];
-    const label = row.label ?? row.recordId;
-    const href = route ? `${route.href}?q=${encodeURIComponent(label)}` : navigation.landingHref ?? "/";
-    return [{ id: `record-bookmark:${row.entityCode}:${row.recordId}`, href, label, description: route.label, group: route.label, kind: "record", visitedAt: row.createdAt }];
+    const href = admittedEntityRecordHref(navigation, row.entityCode, row.recordId);
+    const label = row.label?.trim();
+    if (!href || !label) return [];
+    const placement = entityPlacement(navigation, row.entityCode);
+    return [{ id: `record-bookmark:${row.entityCode}:${row.recordId}`, href, label, ...(placement ? { description: `${placement.entityName} · ${placement.route.label}`, group: placement.entityName } : {}), kind: "record", visitedAt: row.createdAt }];
   }), [rows, navigation]);
   const remove = React.useCallback(async (id: string) => {
     const match = /^record-bookmark:([a-z][a-z0-9_.-]{0,126}):([0-9a-f-]{36})$/iu.exec(id);
@@ -223,42 +255,61 @@ function useDurableRecordFavourites(navigation: DerivedShellNavigation, disabled
       window.dispatchEvent(new CustomEvent("athyper:record-bookmarks-changed", { detail: { entityCode, operation: "remove", recordIds: [recordId] } }));
     } catch { setRows(previous); }
   }, [rows]);
-  return { items, remove };
+  // The same server bookmark the list star creates (PUT, idempotent), so a star follows the
+  // person across devices and shows on the list; the change event refreshes both.
+  const add = React.useCallback(async (entityCode: string, recordId: string, label: string) => {
+    const csrf = readCookie("__Host-athyper-csrf") ?? readCookie("athyper-csrf");
+    if (!csrf) return;
+    const previous = rows; setRows((current) => [...current.filter((row) => !(row.entityCode === entityCode && row.recordId === recordId)), { entityCode, recordId, label, createdAt: new Date().toISOString() }]);
+    try {
+      const response = await fetch(`/api/relay/record-bookmarks/${encodeURIComponent(entityCode)}`, { method: "PUT", credentials: "same-origin", headers: { accept: "application/json", "content-type": "application/json", "x-csrf-token": csrf, "idempotency-key": `quick-access:add:${crypto.randomUUID()}` }, body: JSON.stringify({ records: [{ id: recordId, label }] }) });
+      if (!response.ok) throw new Error("add failed");
+      window.dispatchEvent(new CustomEvent("athyper:record-bookmarks-changed", { detail: { entityCode, operation: "add", recordIds: [recordId] } }));
+    } catch { setRows(previous); }
+  }, [rows]);
+  return { items, add, remove };
 }
 
 function mergeFavourites(durable: readonly ShellQuickAccessItem[], local: readonly ShellQuickAccessItem[]): readonly ShellQuickAccessItem[] { const hrefs = new Set(durable.map((item) => item.href)); return [...durable, ...local.filter((item) => !hrefs.has(item.href))]; }
 function readCookie(name: string): string | undefined { const prefix = `${name}=`; const value = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length); if (!value) return undefined; try { return decodeURIComponent(value); } catch { return undefined; } }
 
-function QuickAccessGroup({ label, items, favouriteHrefs, onToggleFavourite, onDismiss, showTime = false }: { readonly label: string; readonly items: readonly ShellQuickAccessItem[]; readonly favouriteHrefs: ReadonlySet<string>; readonly onToggleFavourite?: (item: ShellQuickAccessItem) => void; readonly onDismiss?: (item: ShellQuickAccessItem) => void; readonly showTime?: boolean }) {
-  return <section className="athyper-quick-access__group" aria-labelledby={`quick-group-${slug(label)}`}>
-    <header><strong id={`quick-group-${slug(label)}`}>{label}</strong><span>{items.length}</span></header>
-    <ul>{items.map((item) => {
+function QuickAccessGroup({ label, items, collapsed, onToggle, favouriteHrefs, onToggleFavourite, onDismiss, showTime = false }: { readonly label: string; readonly items: readonly ShellQuickAccessItem[]; readonly collapsed: boolean; readonly onToggle: () => void; readonly favouriteHrefs: ReadonlySet<string>; readonly onToggleFavourite?: (item: ShellQuickAccessItem) => void; readonly onDismiss?: (item: ShellQuickAccessItem) => void; readonly showTime?: boolean }) {
+  const headingId = `quick-group-${slug(label)}`, listId = `${headingId}-items`;
+  return <section className="a-panel-list__group" aria-labelledby={headingId}>
+    <header><button type="button" className="a-panel-list__toggle" aria-expanded={!collapsed} aria-controls={listId} onClick={onToggle}><ChevronDownIcon aria-hidden="true" /><strong id={headingId}>{label}</strong><span>{items.length}</span></button></header>
+    <ul id={listId} hidden={collapsed}>{items.map((item) => {
       const favourite = favouriteHrefs.has(item.href);
-      return <li key={item.id} className="athyper-quick-access__item">
-        <span className="athyper-quick-access__item-icon" data-kind={item.kind ?? "page"} aria-hidden="true"><QuickAccessItemIcon item={item}/></span>
-        <a href={item.href}>
-          <strong>{item.label}</strong>
-          <span>{item.description ?? item.group ?? (item.kind === "record" ? "Business record" : "Workspace page")}</span>
-          {showTime && item.visitedAt ? <small><ClockIcon />{relativeTime(item.visitedAt)}</small> : null}
-        </a>
-        {onToggleFavourite || onDismiss ? <span className="athyper-quick-access__item-actions">
-          {onToggleFavourite ? <button type="button" aria-label={favourite ? `Remove ${item.label} from favourites` : `Add ${item.label} to favourites`} aria-pressed={favourite} title={favourite ? "Remove from favourites" : "Add to favourites"} onClick={() => onToggleFavourite(item)}><StarIcon data-filled={favourite ? "true" : undefined} /></button> : null}
-          {onDismiss ? <button type="button" aria-label={`Remove ${item.label} from recent history`} title="Remove from recent" onClick={() => onDismiss(item)}><CloseIcon /></button> : null}
-        </span> : null}
-        <ChevronRightIcon />
+      return <li key={item.id}>
+        <article className="a-panel-row athyper-quick-access__row">
+          <span className="a-panel-row__icon" data-kind={item.kind ?? "page"} aria-hidden="true"><QuickAccessItemIcon item={item}/></span>
+          <div className="a-panel-row__copy">
+            <div className="a-panel-row__heading">
+              {/* The title is the row's link; star and ⋯ sit above it. */}
+              <strong dir="auto"><a href={item.href}>{item.label}</a></strong>
+              {showTime && item.visitedAt ? <time dateTime={item.visitedAt}>{relativeTime(item.visitedAt)}</time> : null}
+            </div>
+            <p dir="auto">{item.description ?? item.group ?? (item.kind === "record" ? "Business record" : "Workspace page")}</p>
+          </div>
+          {onToggleFavourite || onDismiss ? <div className="a-panel-row__actions">
+            {onToggleFavourite ? <button type="button" className="a-panel-row__action" aria-label={favourite ? `Remove ${item.label} from favourites` : `Add ${item.label} to favourites`} aria-pressed={favourite} title={favourite ? "Remove from favourites" : "Add to favourites"} onClick={() => onToggleFavourite(item)}><StarIcon size={16} data-filled={favourite ? "true" : undefined} /></button> : null}
+            {onDismiss ? <details className="a-panel-row__menu" onKeyDown={(event) => { if (event.key === "Escape") event.currentTarget.open = false; }}>
+              <summary aria-label={`Actions for ${item.label}`}><MoreHorizontalIcon size={18} aria-hidden="true" /></summary>
+              <div><Button variant="ghost" aria-label={`Remove ${item.label} from recent history`} onClick={() => onDismiss(item)}>Remove from recent</Button></div>
+            </details> : null}
+          </div> : null}
+        </article>
       </li>;
     })}</ul>
   </section>;
 }
 
-function QuickAccessEmpty({ variant, filtered, recentKind, onShowRecent, onShowPeer, onClearFilter }: { readonly variant: ShellQuickAccessTab; readonly filtered: boolean; readonly recentKind?: ShellQuickAccessKind; readonly onShowRecent?: () => void; readonly onShowPeer?: () => void; readonly onClearFilter?: () => void }) {
+function QuickAccessEmpty({ variant, filtered, clearLabel = "Clear search", onShowRecent, onClearFilter }: { readonly variant: ShellQuickAccessTab; readonly filtered: boolean; readonly clearLabel?: string; readonly onShowRecent?: () => void; readonly onClearFilter?: () => void }) {
   const favourites = variant === "favourites";
-  const title = filtered ? (favourites ? "No matching favourites" : "No matching recent items") : favourites ? "No favourites yet" : `No recent ${recentKind === "record" ? "records" : "pages"}`;
-  const detail = filtered ? "Try another name, code, or workspace." : favourites ? "Star an item in Recent to keep it here." : `Open ${recentKind === "record" ? "a business record" : "another workspace page"} and it will appear here automatically.`;
+  const title = filtered ? (favourites ? "No matching favourites" : "No matching recent items") : favourites ? "No favourites yet" : "No recent work";
+  const detail = filtered ? "Try another name, code, or workspace, or show all items." : favourites ? "Star an item in Recent to keep it here." : "Open a business record or workspace page and it will appear here automatically.";
   return <PanelEmptyState className="athyper-quick-access__empty" icon={favourites ? <StarIcon/> : <HistoryIcon/>} title={title} description={detail} action={<>
-    {filtered && onClearFilter ? <Button variant="secondary" type="button" onClick={onClearFilter}>Clear search</Button> : null}
+    {filtered && onClearFilter ? <Button variant="secondary" type="button" onClick={onClearFilter}>{clearLabel}</Button> : null}
     {!filtered && favourites && onShowRecent ? <Button variant="secondary" type="button" onClick={onShowRecent}>Browse recent work <ChevronRightIcon /></Button> : null}
-    {!filtered && !favourites && onShowPeer ? <Button variant="secondary" type="button" onClick={onShowPeer}>Show recent {recentKind === "record" ? "pages" : "records"} <ChevronRightIcon /></Button> : null}
   </>}/>;
 }
 
@@ -295,6 +346,25 @@ export function useRememberQuickAccessVisit(plane: string, tenantId: string, acc
 }
 
 function currentQuickAccessItem(path: string, navigation: DerivedShellNavigation, resolvedLabel?: string): ShellQuickAccessItem | undefined {
+  // Entity pages are published entity routes, not plane menu routes: resolve them through
+  // their admission and catalog placement. A record waits for its resolved title; a list
+  // takes the entity's catalog name; neither is ever remembered under a technical id.
+  const entity = admittedEntityPath(navigation, path);
+  if (entity) {
+    const placement = entityPlacement(navigation, entity.entityCode);
+    const label = entity.recordId ? resolvedLabel?.trim() : placement?.entityName;
+    if (!label) return undefined;
+    return {
+      id: path,
+      href: path,
+      label,
+      ...(entity.recordId
+        ? (placement ? { description: `${placement.entityName} · ${placement.route.label}`, group: placement.entityName } : {})
+        : (placement ? { description: `${placement.route.label} · ${placement.route.workspaceName}`, group: placement.route.label } : {})),
+      kind: entity.recordId ? "record" : "page",
+      visitedAt: new Date().toISOString(),
+    };
+  }
   const route = [...navigation.routes].sort((left, right) => right.href.length - left.href.length).find((candidate) => candidate.href === path || (candidate.href !== "/" && path.startsWith(`${candidate.href}/`)));
   if (!route || path.startsWith("/auth/") || path === "/select-context") return undefined;
   const suffix = path.slice(route.href === "/" ? 1 : route.href.length + 1).split("/").filter(Boolean);
@@ -326,6 +396,33 @@ function groupFavourites(items: readonly ShellQuickAccessItem[]): readonly { rea
     groups.set(label, [...(groups.get(label) ?? []), item]);
   }
   return [...groups].map(([label, groupedItems]) => ({ label, items: groupedItems }));
+}
+
+/** Group by what the item is: records under their entity (People, Countries), then pages. */
+function groupByType(items: readonly ShellQuickAccessItem[]): readonly { readonly label: string; readonly items: readonly ShellQuickAccessItem[] }[] {
+  const records = new Map<string, ShellQuickAccessItem[]>(), pages: ShellQuickAccessItem[] = [];
+  for (const item of items) {
+    if ((item.kind ?? "page") !== "record") { pages.push(item); continue; }
+    const label = item.group?.trim() || "Records";
+    records.set(label, [...(records.get(label) ?? []), item]);
+  }
+  return [...[...records].map(([label, grouped]) => ({ label, items: grouped })), ...(pages.length ? [{ label: "Pages", items: pages }] : [])];
+}
+
+type QuickAccessShow = "all" | ShellQuickAccessKind;
+interface QuickAccessView { readonly show: QuickAccessShow; readonly groupBy: "day" | "type"; readonly collapsed: readonly string[] }
+const VIEW_PREFERENCE = "athyper.shell.quick-access.view";
+const DEFAULT_VIEW: QuickAccessView = Object.freeze({ show: "all", groupBy: "day", collapsed: Object.freeze([]) });
+/** View settings are a per-browser convenience; anything unreadable falls back to the defaults. */
+function readView(): QuickAccessView {
+  try {
+    const value = JSON.parse(readBrowserStorage(VIEW_PREFERENCE) ?? "{}") as Record<string, unknown>;
+    return {
+      show: value.show === "record" || value.show === "page" ? value.show : "all",
+      groupBy: value.groupBy === "type" ? "type" : "day",
+      collapsed: Array.isArray(value.collapsed) ? value.collapsed.filter((key): key is string => typeof key === "string").slice(0, 100) : [],
+    };
+  } catch { return DEFAULT_VIEW; }
 }
 
 function groupRecent(items: readonly ShellQuickAccessItem[]): readonly { readonly label: string; readonly items: readonly ShellQuickAccessItem[] }[] {

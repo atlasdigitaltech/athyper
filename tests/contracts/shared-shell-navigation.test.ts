@@ -410,11 +410,13 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   );
   assert.match(source, /className="athyper-shell__brand-tooltip"/);
   assert.match(source, /className="athyper-shell__navigation-peek"/);
+  // Quick access opens from the app bar into the shared right-edge panel; the rail only navigates.
+  assert.doesNotMatch(source, /QuickAccessRailActions/);
   assert.match(
     source,
-    /<QuickAccessRailActions[^>]*onPeek=\{setNavigationPeek\}/,
+    /<HeaderActionButton\s+kind="quick-access"\s+label=\{t\("shell\.quick\.label"\)\}[^>]*controls="athyper-quick-access"/,
   );
-  assert.match(source, /workspace:\s*t\("shell\.quick\.label"\)/);
+  assert.match(source, /onQuickAccessToggle=\{toggleQuickAccess\}/);
   assert.match(
     source,
     /data-activity-open=\{\s*headerAction === "notifications" \|\| headerAction === "inbox"\s*\}/,
