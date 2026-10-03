@@ -26,7 +26,7 @@
     "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 369,
+    "operational-scripts:new": 372,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
@@ -16866,6 +16866,42 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/parameter-validation-preflight.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:partner-capability-commands",
+      "category": "operational-scripts",
+      "key": "partner-capability-commands",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/partner-capability-commands.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:partner-child-read-models",
+      "category": "operational-scripts",
+      "key": "partner-child-read-models",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/partner-child-read-models.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:partner-identity-read-models",
+      "category": "operational-scripts",
+      "key": "partner-identity-read-models",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/partner-identity-read-models.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
