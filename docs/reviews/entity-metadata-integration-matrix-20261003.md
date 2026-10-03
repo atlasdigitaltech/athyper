@@ -1,5 +1,7 @@
 # Per-entity source integration matrix and current plan
 
+**Current review gate:** the [authoring-module decision](entity-authoring-module-contract-decision-20261003.md) must precede further registry successor preparation. Studio registry identity, domain module and runtime navigation are separate concerns; declaring Studio authorship does not prove publication in any target plane. The proposed separation and five affected products await an owner decision.
+
 Date: 3 October 2026. Static source inventory; effective publication and runtime behavior are unverified. Exact operation, permission, policy, ownership, scope, profile, navigation and storage declarations are recorded with source JSON pointers in [the full matrix](entity-metadata-integration-matrix-20261003.json). Null evidence is not an authorization decision.
 
 Current scope is Entity **View and Edit modes** through the shared Entity Framework. `business_partner_request` is removed from the current plan; intake and case requests are deferred to a later phase. Its existing source, table bindings and controls remain intact. The full JSON matrix retains the original 49-entity source inventory, including pre-move paths and deferred request bindings; the [successor relocation evidence](entity-metadata-shared-domain-relocation-20261003.json) maps moved paths and preserves byte hashes; the table below covers 48 entities in the current plan.

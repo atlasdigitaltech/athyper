@@ -1,5 +1,7 @@
 # Entity metadata reorganization review plan
 
+**Next action after the checkpoint review:** decide the [authoring-module contract](entity-authoring-module-contract-decision-20261003.md) before preparing more registry successors. The recommendation separates Studio authoring identity from domain ownership and per-plane navigation. It is proposed, not approved. BP DEV cleanup remains gated on qualified projection readers, complete scope bindings and governed platform/tenant successors.
+
 Date: 3 October 2026. Status: revised grouping and access plan ready for manual review. The original checkpoint, flat-layout repairs, recursive discovery and initial domain relocation are recorded as complete. Follow-up shared-domain moves exist in the working tree; their commit/publication status is separate. Format/property corrections, permission reconciliation, builds, publication and runtime acceptance remain pending.
 
 This plan preserves existing entity definitions, completes their interrupted relocation, organizes sources by owning domain, and separates format consolidation from property corrections. Country and Principal supply applicable framework conventions; Principal Profile also supplies the reference record-navigation experience.
